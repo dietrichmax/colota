@@ -1,0 +1,670 @@
+/**
+ * Copyright (C) 2026 Max Dietrich
+ * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
+ */
+
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  Alert,
+  Switch,
+  DeviceEventEmitter,
+} from "react-native";
+import { WebView } from "react-native-webview";
+import { SvgXml } from "react-native-svg";
+import { useTheme } from "../hooks/useTheme";
+import NativeLocationService from "../services/NativeLocationService";
+import { Geofence, ScreenProps, LocationCoords } from "../types/global";
+import { useTracking } from "../contexts/TrackingProvider";
+import { Container, SectionTitle, Card, Divider } from "../components";
+
+export function GeofenceScreen({ navigation }: ScreenProps) {
+  const { coords, tracking } = useTracking();
+  const { colors, mode } = useTheme();
+  const isDark = mode === "dark";
+
+  const [geofences, setGeofences] = useState<Geofence[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newRadius, setNewRadius] = useState("50");
+  const [placingGeofence, setPlacingGeofence] = useState(false);
+  const [isCentered, setIsCentered] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
+  const [hasInitialCoords, setHasInitialCoords] = useState(false);
+  const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(null);
+
+  const webviewRef = useRef<WebView>(null);
+  const initialCoords = useRef<LocationCoords | null>(null);
+
+  // Set initial coords
+  useEffect(() => {
+    if (!initialCoords.current && coords) {
+      initialCoords.current = coords;
+      setHasInitialCoords(true);
+    }
+  }, [coords]);
+
+  const centerIconXml = useMemo(() => `
+    <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 72 72">
+      <g transform="translate(0,72) scale(0.1,-0.1)" fill="${colors.text}">
+        <path d="M340 622 c0 -25 -5 -29 -47 -40 -64 -18 -137 -91 -155 -155 -11 -42 -15 -47 -40 -47 -21 0 -28 -5 -28 -20 0 -15 7 -20 28 -20 25 0 29 -5 40 -47 18 -64 91 -137 155 -155 42 -11 47 -15 47 -40 0 -21 5 -28 20 -28 15 0 20 7 20 28 0 25 5 29 47 40 64 18 137 91 155 155 11 42 15 47 40 47 21 0 28 5 28 20 0 15 -7 20 -28 20 -25 0 -29 5 -40 47 -18 65 -91 137 -155 154 -42 10 -47 14 -47 40 0 22 -5 29 -20 29 -15 0 -20 -7 -20 -28z m88 -87 c77 -33 115 -90 116 -177 1 -47 -4 -64 -29 -100 -34 -49 -102 -87 -155 -88 -52 0 -120 38 -155 88 -50 72 -38 179 27 239 54 50 130 65 196 38z"/>
+      </g>
+    </svg>
+  `, [colors.text]);
+
+  // Load geofences
+  const loadGeofences = useCallback(async () => {
+    try {
+      const data = await NativeLocationService.getGeofences();
+      setGeofences(data);
+    } catch (err) {
+      console.error("[GeofenceScreen] Failed to load geofences:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadGeofences();
+  }, [loadGeofences]);
+
+  // Check for silent zone
+  useEffect(() => {
+    const checkSilentZone = async () => {
+      try {
+        const zoneName = await NativeLocationService.checkCurrentSilentZone();
+        setCurrentSilentZone(zoneName);
+      } catch (err) {
+        console.error("[GeofenceScreen] Failed to check silent zone:", err);
+      }
+    };
+
+    checkSilentZone();
+    const listener = DeviceEventEmitter.addListener("geofenceUpdated", checkSilentZone);
+    return () => listener.remove();
+  }, []);
+
+  // Update user position
+  useEffect(() => {
+    if (webviewRef.current && mapReady && coords) {
+      webviewRef.current.postMessage(
+        JSON.stringify({
+          action: "update_user_pos",
+          coords,
+          tracking,
+          isPaused: !!currentSilentZone,
+        })
+      );
+    }
+  }, [coords, mapReady, tracking, currentSilentZone]);
+
+  // Update geofences
+  useEffect(() => {
+    if (webviewRef.current && mapReady) {
+      webviewRef.current.postMessage(
+        JSON.stringify({
+          action: "update_geofences",
+          geofences,
+        })
+      );
+    }
+  }, [geofences, mapReady]);
+
+  const onMessage = useCallback(async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+
+      if (data.type === "MAP_READY") setMapReady(true);
+      if (data.type === "CENTERED") setIsCentered(data.value);
+
+      if (data.action === "map_click") {
+        try {
+          await NativeLocationService.createGeofence({
+            name: newName,
+            lat: data.latitude,
+            lon: data.longitude,
+            radius: Number(newRadius),
+            enabled: true,
+            pauseTracking: true,
+          });
+
+          setNewName("");
+          setNewRadius("50");
+          setPlacingGeofence(false);
+          await loadGeofences();
+          DeviceEventEmitter.emit("geofenceUpdated");
+        } catch (err) {
+          Alert.alert("Error", "Failed to create geofence.");
+        }
+      }
+    } catch (err) {
+      console.error("[GeofenceScreen] Message error:", err);
+    }
+  }, [newName, newRadius, loadGeofences]);
+
+  const startPlacingGeofence = useCallback(() => {
+    if (!newName.trim()) {
+      Alert.alert("Missing Name", "Please enter a name.");
+      return;
+    }
+
+    const radius = Number(newRadius);
+    if (!radius || radius <= 0) {
+      Alert.alert("Invalid Radius", "Please enter a valid radius.");
+      return;
+    }
+
+    setPlacingGeofence(true);
+    webviewRef.current?.postMessage(JSON.stringify({ action: "place_geofence", radius }));
+  }, [newName, newRadius]);
+
+  const handleCenterMe = useCallback(() => {
+    if (coords) {
+      webviewRef.current?.postMessage(JSON.stringify({ action: "center_map", coords }));
+    }
+  }, [coords]);
+
+  const togglePause = useCallback(async (id: number, value: boolean) => {
+    try {
+      await NativeLocationService.updateGeofence({ id, pauseTracking: value });
+      await loadGeofences();
+      DeviceEventEmitter.emit("geofenceUpdated");
+    } catch (err) {
+      Alert.alert("Error", "Failed to update geofence.");
+    }
+  }, [loadGeofences]);
+
+  const handleZoomToGeofence = useCallback((item: Geofence) => {
+    if (!webviewRef.current) return;
+    
+    webviewRef.current.postMessage(
+      JSON.stringify({
+        action: "zoom_to_geofence",
+        lat: item.lat,
+        lon: item.lon,
+        radius: item.radius,
+      })
+    );
+  }, []);
+
+  const handleDelete = useCallback((item: Geofence) => {
+    Alert.alert(
+      "Delete Geofence",
+      `Delete "${item.name}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await NativeLocationService.deleteGeofence(item.id!);
+              await loadGeofences();
+              DeviceEventEmitter.emit("geofenceUpdated");
+            } catch (err) {
+              Alert.alert("Error", "Failed to delete geofence.");
+            }
+          },
+        },
+      ]
+    );
+  }, [loadGeofences]);
+
+  const html = useMemo(() => {
+    if (!hasInitialCoords || !initialCoords.current) return "";
+
+    const lon = initialCoords.current.longitude;
+    const lat = initialCoords.current.latitude;
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@7.4.0/ol.css">
+  <style>
+    html, body, #map {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background: ${colors.background};
+    }
+
+    .ol-zoom {
+      right: auto !important;
+      left: 10px;
+      top: 10px;
+      background: transparent !important;
+      padding: 0 !important;
+      z-index: 100 !important;
+    }
+
+    .ol-zoom button {
+      width: 44px !important;
+      height: 44px !important;
+      background: ${colors.card} !important;
+      color: ${colors.text} !important;
+      border-radius: ${colors.borderRadius}px !important;
+      margin: 4px 0 !important;
+      font-size: 20px !important;
+      font-weight: bold !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+      -webkit-tap-highlight-color: transparent !important;
+      touch-action: manipulation !important;
+    }
+
+    .ol-zoom button:active {
+      background: ${colors.primary} !important;
+      color: white !important;
+      transform: scale(0.92) !important;
+    }
+
+    .ol-zoom button:focus {
+      outline: none !important;
+    }
+
+    .marker {
+      width: 24px;
+      height: 24px;
+      background: ${colors.primary};
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 2;
+    }
+
+    .marker-pulse {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      border: 3px solid ${colors.primary};
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      pointer-events: none;
+      z-index: 1;
+      transform-origin: center center;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(4);
+        opacity: 0;
+      }
+    }
+
+    .ol-attribution {
+      background: ${isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)"} !important;
+      border-radius: 6px !important;
+      padding: 4px 8px !important;
+      font-size: 11px !important;
+      -webkit-font-smoothing: antialiased !important;
+      -moz-osx-font-smoothing: grayscale !important;
+    }
+
+    .ol-attribution ul {
+      color: ${colors.textSecondary} !important;
+      text-shadow: none !important;
+    }
+
+    .ol-attribution a {
+      color: ${colors.primary} !important;
+      text-decoration: none !important;
+    }
+
+    ${isDark ? ".ol-layer canvas { filter: brightness(0.6) contrast(1.2) saturate(0.8); }" : ""}
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://cdn.jsdelivr.net/npm/ol@7.4.0/dist/ol.js"></script>
+  <script>
+    const vectorSource = new ol.source.Vector();
+    
+    const map = new ol.Map({
+      target: "map",
+      layers: [
+        new ol.layer.Tile({ source: new ol.source.OSM() }),
+        new ol.layer.Vector({ source: vectorSource }),
+      ],
+      view: new ol.View({
+        center: ol.proj.fromLonLat([${lon}, ${lat}]),
+        zoom: 17,
+      }),
+    });
+
+    const markerEl = document.createElement("div");
+    markerEl.innerHTML = \`
+      <div class="marker-pulse" style="display:none"></div>
+      <div class="marker"></div>
+    \`;
+
+    const markerOverlay = new ol.Overlay({
+      element: markerEl,
+      positioning: "center-center",
+      stopEvent: false
+    });
+    map.addOverlay(markerOverlay);
+    markerOverlay.setPosition(ol.proj.fromLonLat([${lon}, ${lat}]));
+
+    function isMapCentered() {
+      const center = map.getView().getCenter();
+      const marker = markerOverlay.getPosition();
+      if (!center || !marker) return true;
+      const dx = center[0] - marker[0];
+      const dy = center[1] - marker[1];
+      return Math.sqrt(dx * dx + dy * dy) < 20;
+    }
+
+    function drawGeofences(geofences) {
+      vectorSource.clear();
+      geofences.forEach(zone => {
+        const center = ol.proj.fromLonLat([zone.lon, zone.lat]);
+        const circle = new ol.geom.Circle(center, zone.radius);
+        const feature = new ol.Feature(circle);
+        
+        feature.setStyle(
+          new ol.style.Style({
+            stroke: new ol.style.Stroke({
+              color: zone.pauseTracking ? "${colors.warning}" : "${colors.info}",
+              width: 2,
+              lineDash: zone.pauseTracking ? null : [5, 5]
+            }),
+            fill: new ol.style.Fill({
+              color: zone.pauseTracking ? "rgba(255, 165, 0, 0.3)" : "rgba(0, 122, 255, 0.1)"
+            }),
+          })
+        );
+
+        const label = new ol.Feature(new ol.geom.Point(center));
+        label.setStyle(
+          new ol.style.Style({
+            text: new ol.style.Text({
+              text: zone.name,
+              font: "bold 12px sans-serif",
+              fill: new ol.style.Fill({
+                color: zone.pauseTracking ? "${colors.warning}" : "${colors.info}"
+              }),
+              stroke: new ol.style.Stroke({ color: "#fff", width: 3 }),
+              offsetY: -25
+            }),
+          })
+        );
+
+        vectorSource.addFeature(feature);
+        vectorSource.addFeature(label);
+      });
+    }
+
+    let placing = false;
+
+    function handleInternalMessage(e) {
+      let data;
+      try {
+        data = JSON.parse(e.data);
+      } catch(err) {
+        return;
+      }
+
+      if (data.action === "update_user_pos") {
+        const newPos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
+        markerOverlay.setPosition(newPos);
+        map.getView().animate({ center: newPos, duration: 500 });
+        
+        const markerIcon = markerEl.querySelector(".marker");
+        const markerPulse = markerEl.querySelector(".marker-pulse");
+        
+        if (markerIcon && markerPulse) {
+          const isActive = data.tracking && !data.isPaused;
+          const markerColor = data.isPaused ? "${colors.textDisabled}" : "${colors.primary}";
+          markerIcon.style.background = markerColor;
+          markerPulse.style.borderColor = markerColor;
+          markerPulse.style.display = isActive ? "block" : "none";
+        }
+      }
+      
+      if (data.action === "center_map") {
+        const pos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
+        map.getView().animate({ center: pos, zoom: 16, duration: 400 });
+      }
+
+      if (data.action === "zoom_to_geofence") {
+        const center = ol.proj.fromLonLat([data.lon, data.lat]);
+        const circle = new ol.geom.Circle(center, data.radius);
+        const extent = circle.getExtent();
+        map.getView().fit(extent, {
+          duration: 600,
+          padding: [80, 80, 80, 80],
+          maxZoom: 18
+        });
+      }
+      
+      if (data.action === "place_geofence") {
+        placing = true;
+      }
+      
+      if (data.action === "update_geofences") {
+        drawGeofences(data.geofences);
+      }
+    }
+
+    window.addEventListener("message", handleInternalMessage);
+    document.addEventListener("message", handleInternalMessage);
+
+    map.on("singleclick", e => {
+      if (!placing) return;
+      placing = false;
+      const ll = ol.proj.toLonLat(e.coordinate);
+      window.ReactNativeWebView.postMessage(
+        JSON.stringify({ action: "map_click", latitude: ll[1], longitude: ll[0] })
+      );
+    });
+
+    map.on("moveend", () => {
+      window.ReactNativeWebView.postMessage(
+        JSON.stringify({ type: "CENTERED", value: isMapCentered() })
+      );
+    });
+
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: "MAP_READY" }));
+  </script>
+</body>
+</html>
+`;
+  }, [colors, isDark, hasInitialCoords]);
+
+  const renderItem = useCallback(({ item }: { item: Geofence }) => (
+    <Card style={styles.card}>
+      <View style={styles.row}>
+        <TouchableOpacity 
+          style={styles.info}
+          onPress={() => handleZoomToGeofence(item)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
+          <Text style={[styles.radius, { color: colors.textSecondary }]}>
+            {item.radius}m • Tap to view
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.actions}>
+          <View style={styles.pauseSwitch}>
+            <Text style={[styles.pauseLabel, { color: colors.textSecondary }]}>
+              Pause
+            </Text>
+            <Switch
+              value={item.pauseTracking}
+              onValueChange={(val) => togglePause(item.id!, val)}
+              trackColor={{ false: colors.border, true: colors.warning + "80" }}
+              thumbColor={item.pauseTracking ? colors.warning : "#f4f3f4"}
+            />
+          </View>
+
+          <TouchableOpacity
+            onPress={() => handleDelete(item)}
+            style={[styles.deleteBtn, { backgroundColor: colors.error + "15" }]}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.deleteText, { color: colors.error }]}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Card>
+  ), [colors, handleDelete, togglePause, handleZoomToGeofence]);
+
+  if (!html) {
+    return (
+      <Container>
+        <View style={styles.loading}>
+          <Text style={[styles.loadingText, { color: colors.text }]}>
+            Waiting for location...
+          </Text>
+        </View>
+      </Container>
+    );
+  }
+
+  return (
+    <Container>
+      <View style={[styles.map, { borderRadius: colors.borderRadius }]}>
+        <WebView
+          ref={webviewRef}
+          originWhitelist={["*"]}
+          source={{ html }}
+          style={styles.webview}
+          scrollEnabled={false}
+          onMessage={onMessage}
+        />
+
+        {!isCentered && (
+          <TouchableOpacity
+            style={[styles.centerBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={handleCenterMe}
+            activeOpacity={0.7}
+          >
+            <SvgXml xml={centerIconXml} width="28" height="28" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <FlatList
+        data={geofences}
+        keyExtractor={(item) => item.id!.toString()}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <>
+            <View style={styles.section}>
+              <SectionTitle>Create Geofence</SectionTitle>
+              <Card>
+                <Text style={[styles.hint, { color: colors.textSecondary }]}>
+                  Enter details, then tap Place and click the map
+                </Text>
+
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, { flex: 2 }]}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+                      placeholder="Home, Office..."
+                      placeholderTextColor={colors.placeholder}
+                      value={newName}
+                      onChangeText={setNewName}
+                    />
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 0, minWidth: 90 }]}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Radius (m)</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border, textAlign: "center" }]}
+                      placeholder="50"
+                      placeholderTextColor={colors.placeholder}
+                      value={newRadius}
+                      keyboardType="numeric"
+                      onChangeText={setNewRadius}
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.placeBtn, { backgroundColor: colors.primary }]}
+                  onPress={startPlacingGeofence}
+                  disabled={placingGeofence}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.placeBtnText}>
+                    {placingGeofence ? "Tap Map to Place..." : "Place Geofence"}
+                  </Text>
+                </TouchableOpacity>
+              </Card>
+            </View>
+
+            {geofences.length > 0 && (
+              <View style={styles.section}>
+                <SectionTitle>Active Geofences ({geofences.length})</SectionTitle>
+              </View>
+            )}
+          </>
+        }
+        ListEmptyComponent={
+          geofences.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                No geofences yet
+              </Text>
+              <Text style={[styles.emptyHint, { color: colors.textLight }]}>
+                Create a geofence to pause tracking in specific areas
+              </Text>
+            </View>
+          ) : null
+        }
+        renderItem={renderItem}
+      />
+    </Container>
+  );
+}
+
+const styles = StyleSheet.create({
+  map: { height: 300, overflow: "hidden" },
+  webview: { flex: 1 },
+  centerBtn: { position: "absolute", right: 12, bottom: 12, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", borderWidth: 1, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 3 },
+  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { fontSize: 16, fontWeight: "600" },
+  list: { padding: 20, paddingBottom: 40 },
+  section: { marginBottom: 16 },
+  hint: { fontSize: 13, lineHeight: 18, marginBottom: 16 },
+  inputRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
+  inputGroup: { flex: 1 },
+  label: { fontSize: 12, fontWeight: "600", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 },
+  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: 15 },
+  placeBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
+  placeBtnText: { color: "#f8f7f7", fontSize: 15, fontWeight: "600" },
+  card: { marginBottom: 12, padding: 14 },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  info: { flex: 1, marginRight: 12 },
+  name: { fontSize: 15, fontWeight: "600", marginBottom: 2 },
+  radius: { fontSize: 12 },
+  actions: { flexDirection: "row", alignItems: "center", gap: 12 },
+  pauseSwitch: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pauseLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.3 },
+  deleteBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  deleteText: { fontSize: 18, fontWeight: "600" },
+  empty: { alignItems: "center", paddingVertical: 40 },
+  emptyText: { fontSize: 15, fontWeight: "600", marginBottom: 6 },
+  emptyHint: { fontSize: 13, textAlign: "center", maxWidth: 260, lineHeight: 18 },
+});

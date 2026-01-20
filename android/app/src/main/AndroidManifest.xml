@@ -1,0 +1,84 @@
+<!--
+  Copyright (C) 2026 Max Dietrich
+  Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
+-->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Basic location permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Background location (Android 10+) -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    
+    <!-- Foreground service permission (Android 9+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    
+    <!-- Foreground service type (Android 10+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- Notification permission (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Network permission -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Boot Receiver -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <application
+        android:name=".MainApplication"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:theme="@style/AppTheme"
+        android:supportsRtl="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/app_name"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustPan"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Foreground location service -->
+        <service
+            android:name=".LocationForegroundService"
+            android:enabled="true"
+            android:exported="false" 
+            android:foregroundServiceType="location"
+        >
+            <intent-filter>
+                <action android:name="com.Colota.RECHECK_SILENT_ZONE" />
+                <action android:name="com.Colota.ACTION_MANUAL_FLUSH" />
+            </intent-filter>
+        </service>
+
+        <!-- Boot Receiver -->
+        <receiver
+            android:name=".LocationBootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.ACTION_BOOT_COMPLETED" />
+                <category android:name="android.intent.CATEGORY_DEFAULT" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>

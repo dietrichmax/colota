@@ -1,0 +1,102 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  pr-checks:
+    name: PR Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code formatting
+        run: |
+          npm run format:check || echo "::warning::Code formatting issues found. Run 'npm run format' locally."
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Check TypeScript
+        run: npx tsc --noEmit
+
+      - name: Run tests with coverage
+        run: npm test -- --coverage --watchAll=false
+
+      - name: Check test coverage
+        run: |
+          COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+          echo "Test coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+            echo "::warning::Test coverage is below 70%"
+          fi
+
+      - name: Size analysis
+        run: |
+          npm run build || echo "Build command not found, skipping"
+          du -sh node_modules/ || true
+
+      - name: Comment PR with build info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let coverage = 'N/A';
+            try {
+              const coverageData = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              coverage = `${coverageData.total.lines.pct.toFixed(2)}%`;
+            } catch (e) {}
+            
+            const comment = `## Build Status ✅
+            
+            - **Linting**: Passed
+            - **TypeScript**: Passed  
+            - **Tests**: Passed
+            - **Coverage**: ${coverage}
+            
+            Ready for review!`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  security-check:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Check for vulnerable dependencies
+        run: |
+          npm install -g npm-audit-resolver
+          npm audit --json | npm-audit-resolver --audit-level=moderate
+        continue-on-error: true
