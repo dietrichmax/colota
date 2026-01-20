@@ -5,6 +5,7 @@
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple.svg)](https://kotlinlang.org)
 ![Android Build](https://github.com/dietrichmax/colota/workflows/Android%20Build%20and%20Test/badge.svg)
 ![Release](https://github.com/dietrichmax/colota/workflows/Release/badge.svg)
+[![Support Colota on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Colota-29abe0?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/maxdietrich)
 
 **Self-hosted GPS tracking app for Android**
 
