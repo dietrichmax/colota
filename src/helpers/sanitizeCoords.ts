@@ -54,7 +54,7 @@ export function sanitizeCoords(coords: LocationCoords): SanitizedCoords {
     speed: Math.round(coords.speed ?? 0),
     battery:
       coords.battery !== undefined ? Math.round(coords.battery) : undefined,
-    batteryStatus: coords.batteryStatus ?? 0,
+    batteryStatus: coords.battery_status ?? 0,
   };
 }
 
