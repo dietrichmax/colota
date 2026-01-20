@@ -4,11 +4,17 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { Text, StyleSheet, TextInput, View, ScrollView, TouchableOpacity } from "react-native";
+import {
+  Text,
+  StyleSheet,
+  TextInput,
+  View,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { FieldMap, DEFAULT_FIELD_MAP, ScreenProps } from "../types/global";
 import { useTheme } from "../hooks/useTheme";
 import { useTracking } from "../contexts/TrackingProvider";
-import { Button } from "../components";
 import {
   SectionTitle,
   FloatingSaveIndicator,
@@ -39,7 +45,7 @@ const FIELD_DESCRIPTIONS: Record<keyof FieldMap, string> = {
  * - Cleaner, more compact design
  * - Better touch targets
  */
-export function ApiSettingsScreen({ navigation }: ScreenProps) {
+export function ApiSettingsScreen({}: ScreenProps) {
   const { settings, setSettings, restartTracking } = useTracking();
   const { colors } = useTheme();
 
@@ -128,7 +134,7 @@ export function ApiSettingsScreen({ navigation }: ScreenProps) {
     (key: keyof FieldMap) => {
       const newFieldMap = { ...localFieldMap, [key]: DEFAULT_FIELD_MAP[key] };
       setLocalFieldMap(newFieldMap);
-      
+
       // Cancel debounce and save immediately
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -161,9 +167,9 @@ export function ApiSettingsScreen({ navigation }: ScreenProps) {
   }, []);
 
   // Check if any field is modified
-  const hasModifications = (Object.keys(DEFAULT_FIELD_MAP) as Array<keyof FieldMap>).some(
-    (key) => isModified(key)
-  );
+  const hasModifications = (
+    Object.keys(DEFAULT_FIELD_MAP) as Array<keyof FieldMap>
+  ).some((key) => isModified(key));
 
   return (
     <Container>
@@ -180,7 +186,6 @@ export function ApiSettingsScreen({ navigation }: ScreenProps) {
             Customize field names sent to your server
           </Text>
         </View>
-
 
         {/* Field Mapping Section */}
         <View style={styles.fieldsSection}>
@@ -212,11 +217,18 @@ export function ApiSettingsScreen({ navigation }: ScreenProps) {
                     {/* Left: Key info */}
                     <View style={styles.keyColumn}>
                       <View style={styles.keyHeader}>
-                        <Text style={[styles.fieldLabel, { color: colors.text }]}>
+                        <Text
+                          style={[styles.fieldLabel, { color: colors.text }]}
+                        >
                           {key.toUpperCase()}
                         </Text>
                         {isModified(key) && (
-                          <View style={[styles.modifiedBadge, { backgroundColor: colors.primary }]}>
+                          <View
+                            style={[
+                              styles.modifiedBadge,
+                              { backgroundColor: colors.primary },
+                            ]}
+                          >
                             <Text style={styles.modifiedText}>Modified</Text>
                           </View>
                         )}
@@ -239,7 +251,9 @@ export function ApiSettingsScreen({ navigation }: ScreenProps) {
                           style={[
                             styles.fieldInput,
                             {
-                              borderColor: isModified(key) ? colors.primary : colors.border,
+                              borderColor: isModified(key)
+                                ? colors.primary
+                                : colors.border,
                               color: colors.text,
                               backgroundColor: colors.background,
                             },
@@ -254,9 +268,17 @@ export function ApiSettingsScreen({ navigation }: ScreenProps) {
                         {isModified(key) && (
                           <TouchableOpacity
                             onPress={() => handleResetField(key)}
-                            style={[styles.resetButton, { backgroundColor: colors.border }]}
+                            style={[
+                              styles.resetButton,
+                              { backgroundColor: colors.border },
+                            ]}
                           >
-                            <Text style={[styles.resetIcon, { color: colors.textSecondary }]}>
+                            <Text
+                              style={[
+                                styles.resetIcon,
+                                { color: colors.textSecondary },
+                              ]}
+                            >
                               ↺
                             </Text>
                           </TouchableOpacity>
@@ -280,7 +302,10 @@ export function ApiSettingsScreen({ navigation }: ScreenProps) {
           <View
             style={[
               styles.exampleCard,
-              { backgroundColor: colors.backgroundElevated, borderColor: colors.border },
+              {
+                backgroundColor: colors.backgroundElevated,
+                borderColor: colors.border,
+              },
             ]}
           >
             <Text style={[styles.exampleCode, { color: colors.textSecondary }]}>

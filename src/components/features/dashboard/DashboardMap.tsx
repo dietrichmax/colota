@@ -3,20 +3,28 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useRef, useEffect, useMemo, useState } from "react";
-import { useIsFocused } from "@react-navigation/native";
+import React, {
+  useRef,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import {
   View,
   StyleSheet,
   Text,
   ActivityIndicator,
   TouchableOpacity,
+  DeviceEventEmitter,
+  Platform,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { LocationCoords } from "../../../types/global";
 import { useTheme } from "../../../hooks/useTheme";
 import NativeLocationService from "../../../services/NativeLocationService";
 import { SvgXml } from "react-native-svg";
+import RNFS from "react-native-fs";
 
 type Props = {
   coords: LocationCoords | null;
@@ -25,29 +33,30 @@ type Props = {
   activeZoneName: string | null;
 };
 
-export function DashboardMap({
-  coords,
-  tracking,
-  isPaused,
-  activeZoneName,
-}: Props) {
+export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
   const webviewRef = useRef<WebView>(null);
   const { colors, mode } = useTheme();
   const isDark = mode === "dark";
+  const [olCss, setOlCss] = useState("");
+  const [olJs, setOlJs] = useState("");
   const [geofences, setGeofences] = useState<any[]>([]);
-  const isFocused = useIsFocused();
   const [isCentered, setIsCentered] = useState(true);
-  const initialCoords = useRef<LocationCoords | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const initialCoords = useRef<LocationCoords | null>(null);
+  const [hasInitialCoords, setHasInitialCoords] = useState(false);
+
+  const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(
+    null
+  );
 
   const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
     return c !== null && c.latitude !== 0 && c.longitude !== 0;
   };
 
   useEffect(() => {
-    if (!initialCoords.current && isValidCoords(coords)) {
+    if (!initialCoords.current && coords) {
       initialCoords.current = coords;
-      setMapReady(true);
+      setHasInitialCoords(true);
     }
   }, [coords]);
 
@@ -59,76 +68,132 @@ export function DashboardMap({
     </svg>
   `;
 
+  const loadGeofences = useCallback(async () => {
+    try {
+      const data = await NativeLocationService.getGeofences();
+      setGeofences(data);
+    } catch (err) {
+      console.error("[GeofenceScreen] Failed to load geofences:", err);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchZones = async () => {
+    loadGeofences();
+  }, [loadGeofences]);
+
+  // Check for silent zone
+  useEffect(() => {
+    const checkSilentZone = async () => {
       try {
-        const zones = await NativeLocationService.getGeofences();
-        setGeofences(zones);
-      } catch (error) {
-        console.error("Failed to fetch geofences:", error);
+        const zoneName = await NativeLocationService.checkCurrentSilentZone();
+        setCurrentSilentZone(zoneName);
+      } catch (err) {
+        console.error("[GeofenceScreen] Failed to check silent zone:", err);
       }
     };
 
-    if (isFocused) {
-      fetchZones();
+    checkSilentZone();
+    const listener = DeviceEventEmitter.addListener("geofenceUpdated", () => {
+      checkSilentZone();
+      loadGeofences(); // Reload geofences when they're updated
+    });
+    return () => listener.remove();
+  }, [loadGeofences]);
+
+  // Update user position
+  useEffect(() => {
+    if (webviewRef.current && mapReady && coords) {
+      webviewRef.current.postMessage(
+        JSON.stringify({
+          action: "update_user_pos",
+          coords,
+          tracking,
+          isPaused: !!currentSilentZone,
+        })
+      );
     }
-  }, [isFocused]);
+    console.log("Map is ready, sending coords", coords);
+  }, [coords, mapReady, tracking, currentSilentZone]);
+
+  /*const onMessage = useCallback(async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+
+      if (data.type === "MAP_READY") setMapReady(true);
+      if (data.type === "CENTERED") setIsCentered(data.value);
+
+  }, [loadGeofences]);*/
+
+  // Update geofences
+  useEffect(() => {
+    if (webviewRef.current && mapReady) {
+      webviewRef.current.postMessage(
+        JSON.stringify({
+          action: "update_geofences",
+          geofences,
+        })
+      );
+    }
+  }, [geofences, mapReady]);
+
+  const handleCenterMe = useCallback(() => {
+    if (coords) {
+      webviewRef.current?.postMessage(
+        JSON.stringify({ action: "center_map", coords })
+      );
+    }
+  }, [coords]);
 
   useEffect(() => {
-    if (!webviewRef.current || !isValidCoords(coords)) return;
+    const loadAssets = async () => {
+      try {
+        let css, js;
 
-    const message = JSON.stringify({
-      type: "UPDATE_LOCATION",
-      latitude: coords.latitude,
-      longitude: coords.longitude,
-      tracking: tracking,
-      isPaused: isPaused,
-      activeZoneName: activeZoneName,
-      colors: {
-        primary: colors.primary,
-        textDisabled: colors.textDisabled,
-      },
-    });
+        if (Platform.OS === "android") {
+          // Read from Android Assets folder (app/src/main/assets)
+          css = await RNFS.readFileAssets("openlayers/ol.css", "utf8");
+          js = await RNFS.readFileAssets("openlayers/ol.js", "utf8");
+        } else {
+          // iOS uses MainBundlePath
+          const cssPath = `${RNFS.MainBundlePath}/openlayers/ol.css`;
+          const jsPath = `${RNFS.MainBundlePath}/openlayers/ol.js`;
+          css = await RNFS.readFile(cssPath, "utf8");
+          js = await RNFS.readFile(jsPath, "utf8");
+        }
 
-    webviewRef.current.postMessage(message);
-  }, [coords, tracking, isPaused, activeZoneName, colors]);
+        setOlCss(css);
+        setOlJs(js);
+      } catch (err) {
+        console.error("Failed to load OpenLayers assets:", err);
+      }
+    };
 
-  const handleCenterMe = () => {
-    if (webviewRef.current && isValidCoords(coords)) {
-      const payload = JSON.stringify({
-        type: "CENTER_MAP",
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-      });
-      webviewRef.current.postMessage(payload);
-    }
-  };
+    loadAssets();
+  }, []);
 
   const html = useMemo(() => {
-    if (!initialCoords.current || !mapReady) {
+    if (!hasInitialCoords || !initialCoords.current || !olCss || !olJs)
       return "";
-    }
 
-    const startLon = initialCoords.current.longitude;
-    const startLat = initialCoords.current.latitude;
+    const lon = initialCoords.current.longitude;
+    const lat = initialCoords.current.latitude;
 
     return `
 <!DOCTYPE html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.4.0/ol.css">
+    <link rel="stylesheet" href="openlayers/ol.css">
     <style>
-      html, body, #map { 
-        margin: 0; 
-        padding: 0; 
-        height: 100%; 
-        width: 100%; 
-        overflow: hidden; 
-        background: ${colors.background}; 
+      html, body, #map {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        background: ${colors.background};
       }
-      
-      .ol-zoom { 
+
+      .ol-zoom {
         right: auto !important;
         left: 10px;
         top: 10px;
@@ -136,38 +201,34 @@ export function DashboardMap({
         padding: 0 !important;
         z-index: 100 !important;
       }
-      
+
       .ol-zoom button {
         width: 44px !important;
         height: 44px !important;
         background: ${colors.card} !important;
         color: ${colors.text} !important;
         border-radius: ${colors.borderRadius}px !important;
-        margin: 4px 0 !important;
+        margin: 8px 0 !important;
         font-size: 20px !important;
         font-weight: bold !important;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
         -webkit-tap-highlight-color: transparent !important;
         touch-action: manipulation !important;
       }
-      
+
       .ol-zoom button:active {
         background: ${colors.primary} !important;
         color: white !important;
         transform: scale(0.92) !important;
       }
-      
+
       .ol-zoom button:focus {
         outline: none !important;
       }
-      
-      .ol-zoom button:disabled {
-        opacity: 0.5 !important;
-        pointer-events: none !important;
-      }
-      
-      .marker-icon {
-        width: 24px; 
+
+      .marker {
+        position: relative;
+        width: 24px;
         height: 24px;
         background: ${colors.primary};
         border: 3px solid white;
@@ -176,12 +237,12 @@ export function DashboardMap({
         position: relative;
         z-index: 2;
       }
-      
+
       .marker-pulse {
         position: absolute;
-        top: 50%; 
+        top: 50%;
         left: 50%;
-        width: 20px; 
+        width: 20px;
         height: 20px;
         border: 3px solid ${colors.primary};
         border-radius: 50%;
@@ -190,7 +251,7 @@ export function DashboardMap({
         z-index: 1;
         transform-origin: center center;
       }
-      
+
       @keyframes pulse {
         0% {
           transform: translate(-50%, -50%) scale(1);
@@ -201,7 +262,7 @@ export function DashboardMap({
           opacity: 0;
         }
       }
-      
+
       .ol-attribution {
         background: ${
           isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)"
@@ -212,17 +273,17 @@ export function DashboardMap({
         -webkit-font-smoothing: antialiased !important;
         -moz-osx-font-smoothing: grayscale !important;
       }
-      
+
       .ol-attribution ul {
         color: ${colors.textSecondary} !important;
         text-shadow: none !important;
       }
-      
+
       .ol-attribution a {
         color: ${colors.primary} !important;
         text-decoration: none !important;
       }
-      
+
       ${
         isDark
           ? ".ol-layer canvas { filter: brightness(0.6) contrast(1.2) saturate(0.8); }"
@@ -232,48 +293,36 @@ export function DashboardMap({
   </head>
   <body>
     <div id="map"></div>
-    <script src="https://cdn.jsdelivr.net/npm/ol@v7.4.0/dist/ol.js"></script>
+    <script src="openlayers/ol.js"></script>
     <script>
-      let userCoords = [${startLon}, ${startLat}];
-      const initialPos = ol.proj.fromLonLat(userCoords);
-      
       const vectorSource = new ol.source.Vector();
-      const vectorLayer = new ol.layer.Vector({ source: vectorSource });
 
       const map = new ol.Map({
-        target: 'map',
+        target: "map",
         layers: [
           new ol.layer.Tile({ source: new ol.source.OSM() }),
-          vectorLayer
+          new ol.layer.Vector({ source: vectorSource }),
         ],
-        view: new ol.View({ 
-          center: initialPos, 
+        view: new ol.View({
+          center: ol.proj.fromLonLat([${lon}, ${lat}]),
           zoom: 17,
-          maxZoom: 19,
-          minZoom: 10
-        })
+        }),
       });
 
-      const markerEl = document.createElement('div');
+      const markerEl = document.createElement("div");
       markerEl.innerHTML = \`
-        <div class="marker-pulse" style="display: none"></div>
-        <div class="marker-icon"></div>
+        <div class="marker-pulse" style="display:none"></div>
+        <div class="marker"></div>
       \`;
 
       const markerOverlay = new ol.Overlay({
         element: markerEl,
-        positioning: 'center-center',
+        positioning: "center-center",
         stopEvent: false
       });
-      
+
       map.addOverlay(markerOverlay);
-      markerOverlay.setPosition(ol.proj.fromLonLat(userCoords));
-
-      let shouldAutoFollow = true;
-
-      map.on('pointerdrag', () => {
-        shouldAutoFollow = false;
-      });
+      markerOverlay.setPosition(ol.proj.fromLonLat([${lon}, ${lat}]))
 
       function isMapCentered() {
         const center = map.getView().getCenter();
@@ -284,98 +333,145 @@ export function DashboardMap({
         return Math.sqrt(dx * dx + dy * dy) < 20;
       }
 
-      const geofences = ${JSON.stringify(geofences)};
       
-      function drawGeofences() {
+      function drawGeofences(geofences) {
         vectorSource.clear();
-        
         geofences.forEach(zone => {
-          if (!zone.lon || !zone.lat) return;
-
           const center = ol.proj.fromLonLat([zone.lon, zone.lat]);
           const circle = new ol.geom.Circle(center, zone.radius);
           const feature = new ol.Feature(circle);
-
-          const labelFeature = new ol.Feature(new ol.geom.Point(center));
           
-          feature.setStyle(new ol.style.Style({
-            fill: new ol.style.Fill({ 
-              color: zone.pauseTracking ? 'rgba(255, 165, 0, 0.3)' : 'rgba(0, 122, 255, 0.1)' 
-            }),
-            stroke: new ol.style.Stroke({ 
-              color: zone.pauseTracking ? "${colors.warning}" : "${colors.info}",
-              width: 2,
-              lineDash: zone.pauseTracking ? null : [5, 5]
-            })
-          }));
-
-          labelFeature.setStyle(new ol.style.Style({
-            text: new ol.style.Text({
-              text: zone.name,
-              font: 'bold 12px sans-serif',
-              fill: new ol.style.Fill({ 
-                color: zone.pauseTracking ? "${colors.warning}" : "${colors.info}" 
+          console.log("zone" + zone.pauseTracking)
+          feature.setStyle(
+            new ol.style.Style({
+              stroke: new ol.style.Stroke({
+                color: zone.pauseTracking ? "${colors.warning}" : "${
+      colors.info
+    }",
+                width: 2,
+                lineDash: zone.pauseTracking ? null : [5, 5]
               }),
-              stroke: new ol.style.Stroke({ color: '#fff', width: 3 }),
-              offsetY: -15
+              fill: new ol.style.Fill({
+                color: zone.pauseTracking ? "${colors.warning}4D" : "${
+      colors.info
+    }1A"
+              }),
             })
-          }));
+          );
 
-          vectorSource.addFeatures([feature, labelFeature]);
+          const label = new ol.Feature(new ol.geom.Point(center));
+          label.setStyle(
+            new ol.style.Style({
+              text: new ol.style.Text({
+                text: zone.name,
+                font: "bold 12px sans-serif",
+                fill: new ol.style.Fill({
+                  color: zone.pauseTracking ? "${colors.warning}" : "${
+      colors.info
+    }"
+                }),
+                stroke: new ol.style.Stroke({ color: "#fff", width: 3 }),
+                offsetY: -25
+              }),
+            })
+          );
+
+          vectorSource.addFeature(feature);
+          vectorSource.addFeature(label);
         });
       }
 
-      drawGeofences();
+      function animateMarker(newPos, duration = 500) {
+        const startPos = markerOverlay.getPosition();
+        if (!startPos) {
+          markerOverlay.setPosition(newPos);
+          return;
+        }
+        const startTime = Date.now();
+        function step() {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const easing = progress * (2 - progress);
+          const currentPos = [
+            startPos[0] + (newPos[0] - startPos[0]) * easing,
+            startPos[1] + (newPos[1] - startPos[1]) * easing
+          ];
+          markerOverlay.setPosition(currentPos);
+          if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      }
 
-      function handleMessage(e) {
+      function handleInternalMessage(e) {
+        let data;
         try {
-          const data = JSON.parse(e.data);
+          data = JSON.parse(e.data);
+        } catch(err) {
+          return;
+        }
 
-          if (data.type === 'CENTER_MAP') {
-            shouldAutoFollow = true;
-            const pos = ol.proj.fromLonLat([data.longitude, data.latitude]);
-            map.getView().animate({ center: pos, duration: 400 });
-          }
-
-          if (data.type === 'UPDATE_LOCATION') {
-            const newPos = ol.proj.fromLonLat([data.longitude, data.latitude]);
-            markerOverlay.setPosition(newPos);
+        if (data.action === "update_user_pos") {
+          const newPos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
+          
+          animateMarker(newPos, 500);
+          map.getView().animate({ center: newPos, duration: 500, easing: ol.easing.linear });
+          
+          const markerIcon = markerEl.querySelector(".marker");
+          const markerPulse = markerEl.querySelector(".marker-pulse");
+          
+          
+          console.log("markerIcon" + markerIcon)
+          console.log("markerPulse" + markerPulse)
+          if (markerIcon && markerPulse) {
+            const isActive = data.tracking && !data.isPaused;
+            const markerColor = data.isPaused ? "${colors.textDisabled}" : "${
+      colors.primary
+    }";
+            markerIcon.style.background = markerColor;
+            markerPulse.style.borderColor = markerColor;
             
-            if (shouldAutoFollow) {
-              map.getView().animate({ center: newPos, duration: 500 });
-            }
-
-            const icon = markerEl.querySelector('.marker-icon');
-            const pulse = markerEl.querySelector('.marker-pulse');
-            
-            if (icon && pulse) {
-              const isActive = data.tracking && !data.isPaused;
-              const markerColor = isActive ? data.colors.primary : data.colors.textDisabled;
-              
-              icon.style.background = markerColor;
-              pulse.style.borderColor = markerColor;
-              pulse.style.display = isActive ? 'block' : 'none';
-            }
+            console.log("isActive" + isActive)
+            markerPulse.style.display = isActive ? "block" : "none";
           }
-        } catch (err) {
-          console.error('Map message error:', err);
+        }
+        
+        if (data.action === "center_map") {
+          const pos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
+          map.getView().animate({ center: pos, zoom: 16, duration: 400 });
+        }
+
+        if (data.action === "zoom_to_geofence") {
+          const center = ol.proj.fromLonLat([data.lon, data.lat]);
+          const circle = new ol.geom.Circle(center, data.radius);
+          const extent = circle.getExtent();
+          map.getView().fit(extent, {
+            duration: 600,
+            padding: [80, 80, 80, 80],
+            maxZoom: 18
+          });
+        }
+        
+        if (data.action === "update_geofences") {
+          drawGeofences(data.geofences);
         }
       }
 
-      document.addEventListener('message', handleMessage);
-      window.addEventListener('message', handleMessage);
+      window.addEventListener("message", handleInternalMessage);
+      document.addEventListener("message", handleInternalMessage)
 
-      map.on('moveend', () => {
-        const centered = isMapCentered();
-        window.ReactNativeWebView?.postMessage(
-          JSON.stringify({ type: 'CENTERED', value: centered && shouldAutoFollow })
+      
+      map.on("moveend", () => {
+        window.ReactNativeWebView.postMessage(
+          JSON.stringify({ type: "CENTERED", value: isMapCentered() })
         );
       });
+
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "MAP_READY" }));
     </script>
   </body>
 </html>
 `;
-  }, [tracking, isPaused, isDark, colors, geofences, mapReady]);
+  }, [olCss, olJs, colors, isDark, hasInitialCoords]);
 
   if (!tracking) {
     return (
@@ -414,7 +510,11 @@ export function DashboardMap({
       >
         <ActivityIndicator size="large" color={colors.primary} />
         <Text
-          style={[styles.stateTitle, { color: colors.text, marginTop: 20 }]}
+          style={[
+            styles.stateTitle,
+            styles.stateTitleSpaced,
+            { color: colors.text },
+          ]}
         >
           Searching GPS...
         </Text>
@@ -431,13 +531,46 @@ export function DashboardMap({
         <WebView
           ref={webviewRef}
           originWhitelist={["*"]}
-          source={{ html: html }}
+          source={{
+            html: html,
+            baseUrl:
+              Platform.OS === "android"
+                ? "file:///android_asset/"
+                : RNFS.MainBundlePath + "/",
+          }}
           style={styles.webview}
           scrollEnabled={false}
           startInLoadingState={false}
           onMessage={(event) => {
             try {
               const data = JSON.parse(event.nativeEvent.data);
+
+              if (data.type === "MAP_READY") {
+                setMapReady(true);
+
+                // 1. Send Geofences immediately on ready
+                if (geofences.length > 0) {
+                  webviewRef.current?.postMessage(
+                    JSON.stringify({
+                      action: "update_geofences",
+                      geofences,
+                    })
+                  );
+                }
+
+                // 2. Send current position immediately on ready
+                if (coords) {
+                  webviewRef.current?.postMessage(
+                    JSON.stringify({
+                      action: "update_user_pos",
+                      coords,
+                      tracking,
+                      isPaused: !!currentSilentZone,
+                    })
+                  );
+                }
+              }
+
               if (data.type === "CENTERED") {
                 setIsCentered(data.value);
               }
@@ -450,7 +583,11 @@ export function DashboardMap({
         <View style={[styles.stateContainer, { backgroundColor: colors.card }]}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text
-            style={[styles.stateTitle, { color: colors.text, marginTop: 20 }]}
+            style={[
+              styles.stateTitle,
+              styles.stateTitleSpaced,
+              { color: colors.text },
+            ]}
           >
             Loading Map...
           </Text>
@@ -509,6 +646,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   stateTitle: { fontSize: 18, fontWeight: "bold", textAlign: "center" },
+  stateTitleSpaced: {
+    marginTop: 20,
+  },
   stateSubtext: {
     fontSize: 14,
     textAlign: "center",
@@ -539,7 +679,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     elevation: 8,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     borderLeftWidth: 5,

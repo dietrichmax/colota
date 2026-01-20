@@ -95,12 +95,49 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
   // Ref to track if component is mounted (prevents state updates after unmount)
   const isMountedRef = useRef(true);
 
+  // Ref to track if initialization has been done (prevents re-running on dependency changes)
+  const hasInitializedRef = useRef(false);
+
+  /**
+   * Batch updates settings across both UI state and Native storage.
+   * Wrapped in useCallback to maintain referential equality.
+   */
+  const setSettings = useCallback(async (newSettings: Settings) => {
+    try {
+      console.log("[TrackingContext] 💾 Batch syncing to Native storage...");
+      // SettingsService handles unit conversion (seconds -> ms)
+      await SettingsService.updateMultiple(newSettings);
+
+      if (isMountedRef.current) {
+        setSettingsState(newSettings);
+        setError(null); // Clear any previous errors
+      }
+    } catch (err) {
+      console.error("[TrackingContext] Persistence failed:", err);
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err : new Error(String(err)));
+      }
+      throw err; // Re-throw to allow caller to handle
+    }
+  }, []);
+
+  const {
+    coords,
+    tracking,
+    startTracking: internalStart,
+    stopTracking: internalStop,
+    restartTracking: internalRestart,
+  } = useLocationTracking(settings);
+
   /**
    * Initial Hydration Effect.
    * Performs a "Type Conversion Bridge" where SQLite results (which are always strings)
    * are parsed into their respective JS types (Numbers, Booleans, and JSON objects).
    */
   useEffect(() => {
+    // Only run initialization once
+    if (hasInitializedRef.current) return;
+
     const init = async () => {
       try {
         console.log("[TrackingContext] 📂 Hydrating settings and state...");
@@ -138,6 +175,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
         if (isMountedRef.current) {
           setIsLoading(false);
         }
+        hasInitializedRef.current = true;
       }
     };
 
@@ -147,38 +185,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMountedRef.current = false;
     };
-  }, []); // Empty dependency array - run once on mount
-
-  /**
-   * Batch updates settings across both UI state and Native storage.
-   * Wrapped in useCallback to maintain referential equality.
-   */
-  const setSettings = useCallback(async (newSettings: Settings) => {
-    try {
-      console.log("[TrackingContext] 💾 Batch syncing to Native storage...");
-      // SettingsService handles unit conversion (seconds -> ms)
-      await SettingsService.updateMultiple(newSettings);
-
-      if (isMountedRef.current) {
-        setSettingsState(newSettings);
-        setError(null); // Clear any previous errors
-      }
-    } catch (err) {
-      console.error("[TrackingContext] Persistence failed:", err);
-      if (isMountedRef.current) {
-        setError(err instanceof Error ? err : new Error(String(err)));
-      }
-      throw err; // Re-throw to allow caller to handle
-    }
-  }, []);
-
-  const {
-    coords,
-    tracking,
-    startTracking: internalStart,
-    stopTracking: internalStop,
-    restartTracking: internalRestart,
-  } = useLocationTracking(settings);
+  }, [internalStart, setSettings]); // Include dependencies as required by ESLint
 
   /**
    * Wrapped tracking controls with useCallback for stable references

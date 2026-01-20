@@ -2,7 +2,6 @@
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
-
 import React, { useState } from "react";
 import {
   View,
@@ -51,11 +50,10 @@ export function CollapsibleSection({
         style={styles.header}
       >
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-        <Text style={{ color: colors.primary, fontSize: 12 }}>
+        <Text style={[styles.toggleText, { color: colors.primary }]}>
           {isOpen ? "▲ Hide" : "▼ Show details"}
         </Text>
       </TouchableOpacity>
-
       {isOpen && <View style={styles.content}>{children}</View>}
     </View>
   );
@@ -78,6 +76,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.2,
     textTransform: "uppercase",
+  },
+  toggleText: {
+    fontSize: 12,
   },
   content: {
     marginTop: 8,

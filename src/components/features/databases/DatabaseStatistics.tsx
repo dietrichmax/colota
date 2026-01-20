@@ -2,7 +2,6 @@
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
-
 import React from "react";
 import { Text, StyleSheet, View } from "react-native";
 import { SectionTitle, Card } from "../..";
@@ -15,7 +14,6 @@ type DatabaseStatisticsProps = {
 
 export function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
   const { colors } = useTheme();
-
   const queuedColor = getQueueColor(stats.queued, colors);
 
   return (
@@ -26,9 +24,9 @@ export function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
         <View style={styles.statsGrid}>
           <Card
             style={[
+              styles.statCard,
               {
                 backgroundColor: colors.backgroundElevated,
-                alignItems: "center",
               },
             ]}
           >
@@ -44,9 +42,9 @@ export function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
           </Card>
           <Card
             style={[
+              styles.statCard,
               {
                 backgroundColor: colors.backgroundElevated,
-                alignItems: "center",
               },
             ]}
           >
@@ -61,13 +59,12 @@ export function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
             </Text>
           </Card>
         </View>
-
-        <View style={[styles.statsGrid, { marginTop: 12 }]}>
+        <View style={[styles.statsGrid, styles.statsGridSpaced]}>
           <Card
             style={[
+              styles.statCard,
               {
                 backgroundColor: colors.backgroundElevated,
-                alignItems: "center",
               },
             ]}
           >
@@ -83,9 +80,9 @@ export function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
           </Card>
           <Card
             style={[
+              styles.statCard,
               {
                 backgroundColor: colors.backgroundElevated,
-                alignItems: "center",
               },
             ]}
           >
@@ -107,9 +104,23 @@ export function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
 
 // --- Styles ---
 const styles = StyleSheet.create({
-  metricsSection: { marginBottom: 24 },
-  statsGrid: { flexDirection: "row", gap: 12 },
-  statUnit: { fontSize: 11, fontWeight: "500" },
+  metricsSection: {
+    marginBottom: 24,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  statsGridSpaced: {
+    marginTop: 12,
+  },
+  statCard: {
+    alignItems: "center",
+  },
+  statUnit: {
+    fontSize: 11,
+    fontWeight: "500",
+  },
   statLabel: {
     fontSize: 10,
     fontWeight: "600",

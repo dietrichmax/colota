@@ -142,19 +142,19 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   }, [updateSilentZone]);
 
   useEffect(() => {
-  const silentZoneListener = DeviceEventEmitter.addListener(
-    "onSilentZoneChange",
-    (data: { entered: boolean; zoneName: string | null }) => {
-      if (data.entered) {
-        setCurrentSilentZone(data.zoneName);
-      } else {
-        setCurrentSilentZone(null);
+    const silentZoneListener = DeviceEventEmitter.addListener(
+      "onSilentZoneChange",
+      (data: { entered: boolean; zoneName: string | null }) => {
+        if (data.entered) {
+          setCurrentSilentZone(data.zoneName);
+        } else {
+          setCurrentSilentZone(null);
+        }
       }
-    }
-  );
+    );
 
-  return () => silentZoneListener.remove();
-}, []);
+    return () => silentZoneListener.remove();
+  }, []);
 
   return (
     <Container>
@@ -166,7 +166,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
       >
         {/* Map Section */}
         <View style={styles.mapSection}>
-          <View 
+          <View
             style={styles.mapWrapper}
             onTouchStart={() => setScrollEnabled(false)}
             onTouchEnd={() => setScrollEnabled(true)}

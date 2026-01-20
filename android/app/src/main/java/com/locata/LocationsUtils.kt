@@ -57,6 +57,7 @@ class LocationUtils(private val context: Context) {
         payload: JSONObject, 
         endpoint: String
     ): Boolean = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Reached sendToEndpoint")
         // Validate endpoint
         if (endpoint.isBlank()) {
             Log.w(TAG, "Empty endpoint provided")
@@ -94,6 +95,7 @@ class LocationUtils(private val context: Context) {
         var connection: java.net.HttpURLConnection? = null
         
         try {
+            Log.d(TAG, "Sending")
             val url = URL(endpoint)
             connection = url.openConnection() as java.net.HttpURLConnection
             
@@ -119,6 +121,8 @@ class LocationUtils(private val context: Context) {
             val responseCode = connection.responseCode
             
             if (responseCode in 200..299) {
+                
+                Log.d(TAG, "Location successfully sent")
                 // Success - optionally read response body
                 // connection.inputStream.use { it.bufferedReader().readText() }
                 true

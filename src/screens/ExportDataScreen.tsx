@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Text,
   StyleSheet,
@@ -32,7 +32,7 @@ interface LocationData {
   battery: number;
 }
 
-type ExportFormat = "csv" | "geojson" | "gpx";
+type ExportFormat = "csv" | "geojson" | "gpx" | "kml";
 
 interface ExportStats {
   totalLocations: number;
@@ -53,24 +53,17 @@ export function ExportDataScreen() {
     null
   );
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  // Update size estimate when format changes
-  useEffect(() => {
-    if (stats.totalLocations > 0) {
-      updateSizeEstimate();
-    }
-  }, [selectedFormat]);
-
-  const updateSizeEstimate = () => {
-    const formatSizes = {
+  const formatSizes = React.useMemo(
+    () => ({
       csv: 120,
       geojson: 250,
       gpx: 350,
-    };
+      kml: 400,
+    }),
+    []
+  );
 
+  const updateSizeEstimate = useCallback(() => {
     const formatBytes = (bytes: number): string => {
       if (bytes < 1024) return `${bytes} B`;
       if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -92,9 +85,9 @@ export function ExportDataScreen() {
       ...prev,
       estimatedSize: getEstimatedSize(),
     }));
-  };
+  }, [selectedFormat, stats.totalLocations, formatSizes]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const data = await NativeLocationService.getExportData();
 
@@ -110,8 +103,12 @@ export function ExportDataScreen() {
           return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
         };
 
-        const minBytes = data.length * 120; // CSV
-        const maxBytes = data.length * 350; // GPX
+        const sizesArray = Object.values(formatSizes);
+        const minSize = Math.min(...sizesArray);
+        const maxSize = Math.max(...sizesArray);
+
+        const minBytes = data.length * minSize; // CSV
+        const maxBytes = data.length * maxSize; // GPX
         const estimatedSize = `${formatBytes(minBytes)} - ${formatBytes(
           maxBytes
         )}`;
@@ -128,7 +125,18 @@ export function ExportDataScreen() {
     } catch (error) {
       console.error("[ExportDataScreen] Failed to load stats:", error);
     }
-  };
+  }, [formatSizes]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  // Update size estimate when format changes
+  useEffect(() => {
+    if (stats.totalLocations > 0) {
+      updateSizeEstimate();
+    }
+  }, [stats.totalLocations, updateSizeEstimate]);
 
   const handleExport = async (format: ExportFormat) => {
     if (stats.totalLocations === 0) {
@@ -166,6 +174,11 @@ export function ExportDataScreen() {
           content = convertToGPX(data);
           fileExtension = ".gpx";
           mimeType = "application/gpx+xml";
+          break;
+        case "kml":
+          content = convertToKML(data);
+          fileExtension = ".kml";
+          mimeType = "application/vnd.google-earth.kml+xml";
           break;
       }
 
@@ -321,6 +334,20 @@ export function ExportDataScreen() {
               onPress={() => setSelectedFormat("gpx")}
               colors={colors}
             />
+
+            <Divider />
+
+            {/* KML Option */}
+            <FormatOption
+              icon="🌍"
+              title="KML"
+              subtitle="Keyhole Markup Language"
+              description="Google Earth, Google Maps, ArcGIS"
+              extension=".kml"
+              selected={selectedFormat === "kml"}
+              onPress={() => setSelectedFormat("kml")}
+              colors={colors}
+            />
           </Card>
         </View>
 
@@ -394,81 +421,83 @@ const FormatOption = ({
   selected: boolean;
   onPress: () => void;
   colors: ThemeColors;
-}) => (
-  <TouchableOpacity
-    style={[
-      styles.formatOption,
-      selected && {
-        backgroundColor: colors.primary + "12",
-      },
-    ]}
-    onPress={onPress}
-    activeOpacity={0.7}
-  >
-    {/* Selection indicator bar */}
-    {selected && (
-      <View
-        style={[styles.selectionBar, { backgroundColor: colors.primary }]}
-      />
-    )}
+}) => {
+  const backgroundColor = selected ? colors.primary + "12" : "transparent";
+  const radioBgColor = selected ? colors.primary + "20" : "transparent";
 
-    <View style={styles.formatContent}>
-      {/* Left side - Icon and text */}
-      <View style={styles.leftContent}>
-        <Text style={styles.formatIcon}>{icon}</Text>
-        <View style={styles.textContent}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.formatTitle, { color: colors.text }]}>
-              {title}
-            </Text>
-            <View
-              style={[
-                styles.extensionBadge,
-                {
-                  backgroundColor: selected
-                    ? colors.primary + "20"
-                    : colors.primary + "15",
-                  borderColor: selected
-                    ? colors.primary + "60"
-                    : colors.primary + "30",
-                },
-              ]}
-            >
-              <Text style={[styles.extensionText, { color: colors.primary }]}>
-                {extension}
+  return (
+    <TouchableOpacity
+      style={[styles.formatOption, { backgroundColor }]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      {/* Selection indicator bar */}
+      {selected && (
+        <View
+          style={[styles.selectionBar, { backgroundColor: colors.primary }]}
+        />
+      )}
+
+      <View style={styles.formatContent}>
+        {/* Left side - Icon and text */}
+        <View style={styles.leftContent}>
+          <Text style={styles.formatIcon}>{icon}</Text>
+          <View style={styles.textContent}>
+            <View style={styles.titleRow}>
+              <Text style={[styles.formatTitle, { color: colors.text }]}>
+                {title}
               </Text>
+              <View
+                style={[
+                  styles.extensionBadge,
+                  {
+                    backgroundColor: selected
+                      ? colors.primary + "20"
+                      : colors.primary + "15",
+                    borderColor: selected
+                      ? colors.primary + "60"
+                      : colors.primary + "30",
+                  },
+                ]}
+              >
+                <Text style={[styles.extensionText, { color: colors.primary }]}>
+                  {extension}
+                </Text>
+              </View>
             </View>
+            <Text
+              style={[styles.formatSubtitle, { color: colors.textSecondary }]}
+            >
+              {subtitle}
+            </Text>
+            <Text
+              style={[styles.formatDescription, { color: colors.textLight }]}
+            >
+              {description}
+            </Text>
           </View>
-          <Text
-            style={[styles.formatSubtitle, { color: colors.textSecondary }]}
-          >
-            {subtitle}
-          </Text>
-          <Text style={[styles.formatDescription, { color: colors.textLight }]}>
-            {description}
-          </Text>
+        </View>
+
+        {/* Right side - Radio button */}
+        <View
+          style={[
+            styles.radio,
+            {
+              borderColor: selected ? colors.primary : colors.border,
+              backgroundColor: radioBgColor,
+            },
+          ]}
+        >
+          {selected && (
+            <View
+              style={[styles.radioInner, { backgroundColor: colors.primary }]}
+            />
+          )}
         </View>
       </View>
-
-      {/* Right side - Radio button */}
-      <View
-        style={[
-          styles.radio,
-          {
-            borderColor: selected ? colors.primary : colors.border,
-            backgroundColor: selected ? colors.primary + "20" : "transparent",
-          },
-        ]}
-      >
-        {selected && (
-          <View
-            style={[styles.radioInner, { backgroundColor: colors.primary }]}
-          />
-        )}
-      </View>
-    </View>
-  </TouchableOpacity>
-);
+    </TouchableOpacity>
+  );
+};
 
 // --- Format Conversion Functions ---
 
@@ -560,6 +589,57 @@ const convertToGPX = (data: LocationData[]): string => {
   </trk>
 </gpx>`;
   return gpx;
+};
+
+const convertToKML = (data: LocationData[]): string => {
+  let kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Colota Location Export</name>
+    <description>Exported tracks from Colota Tracking</description>
+    <Style id="pathStyle">
+      <LineStyle>
+        <color>ff0000ff</color>
+        <width>4</width>
+      </LineStyle>
+    </Style>
+    <Placemark>
+      <name>Track Path</name>
+      <styleUrl>#pathStyle</styleUrl>
+      <LineString>
+        <tessellate>1</tessellate>
+        <coordinates>
+          ${data
+            .map(
+              (item) =>
+                `${item.longitude},${item.latitude},${item.altitude || 0}`
+            )
+            .join("\n          ")}
+        </coordinates>
+      </LineString>
+    </Placemark>`;
+
+  // Add individual points as Placemarks
+  data.forEach((item) => {
+    const time = new Date(item.timestamp).toISOString();
+    kml += `
+    <Placemark>
+      <TimeStamp><when>${time}</when></TimeStamp>
+      <description>Accuracy: ${item.accuracy}m, Speed: ${
+      item.speed
+    }m/s</description>
+      <Point>
+        <coordinates>${item.longitude},${item.latitude},${
+      item.altitude || 0
+    }</coordinates>
+      </Point>
+    </Placemark>`;
+  });
+
+  kml += `
+  </Document>
+</kml>`;
+  return kml;
 };
 
 // --- Styles ---

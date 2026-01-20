@@ -5,7 +5,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { ThemeColors } from "../../../types/global";
-import { Divider } from "../../ui/Divider";
 import { getQueueColor } from "../../../helpers/queueStatus";
 
 interface StatsCardProps {

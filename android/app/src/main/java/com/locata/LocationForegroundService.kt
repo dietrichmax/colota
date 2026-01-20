@@ -631,6 +631,7 @@ class LocationForegroundService : Service() {
 
         // Immediate send mode (syncInterval = 0)
         if (syncIntervalSeconds == 0) {
+            Log.d(TAG, "Instant send")
             val success = locationUtils.sendToEndpoint(payload, endpoint)
             
             if (success) {
@@ -641,6 +642,7 @@ class LocationForegroundService : Service() {
                 dbHelper.incrementRetryCount(queueId, "Send failed")
             }
         }
+        Log.d(TAG, "Waiting for sync")
         // If syncInterval > 0, the periodic sync job will handle it
     }
 

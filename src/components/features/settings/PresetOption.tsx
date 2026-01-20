@@ -36,6 +36,8 @@ export function PresetOption({
   const showRecommendedBadge = preset === "balanced";
   const showWarningBadge = config.batteryImpact === "High";
 
+  const radioBgColor = isSelected ? colors.primary + "20" : "transparent";
+
   return (
     <TouchableOpacity
       style={[
@@ -108,9 +110,7 @@ export function PresetOption({
             styles.radio,
             {
               borderColor: isSelected ? colors.primary : colors.border,
-              backgroundColor: isSelected
-                ? colors.primary + "20"
-                : "transparent",
+              backgroundColor: radioBgColor,
             },
           ]}
         >

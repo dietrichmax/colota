@@ -67,7 +67,9 @@ export const PermissionDashboard = () => {
 
   return (
     <Container>
-      <Text style={[styles.title, { color: colors.text }]}>Tracking-Status</Text>
+      <Text style={[styles.title, { color: colors.text }]}>
+        Tracking-Status
+      </Text>
 
       <PermissionRow
         label="Standort (Präzise)"

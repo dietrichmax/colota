@@ -64,7 +64,7 @@ export function ServerConnection({
 
       // Strategy 3: If endpoint still fails, try root domain
       if (!response.ok) {
-        const match = endpoint.match(/^(https?:\/\/[^\/]+)/);
+        const match = endpoint.match(/^(https?:\/\/[^/]+)/);
         if (match) {
           const rootUrl = match[1];
           response = await fetch(rootUrl, {
@@ -76,7 +76,7 @@ export function ServerConnection({
 
       setServerStatus(response.ok ? "connected" : "error");
       hasChecked.current = true;
-    } catch (err: any) {
+    } catch {
       setServerStatus("error");
       hasChecked.current = true;
     } finally {
@@ -154,7 +154,6 @@ export function ServerConnection({
           backgroundColor: colors.card,
           borderLeftColor: config.color,
           borderColor: colors.border,
-          borderWidth: 1, // Optional für bessere Sichtbarkeit
         },
       ]}
     >
@@ -189,6 +188,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 16,
     marginBottom: 24,
+    borderWidth: 1,
   },
   serverHeader: {
     flexDirection: "row",

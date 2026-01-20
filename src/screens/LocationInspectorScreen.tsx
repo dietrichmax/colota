@@ -234,8 +234,8 @@ export function LocationInspectorScreen() {
               {
                 backgroundColor: colors.card,
                 borderColor: colors.border,
-                opacity: autoRefresh ? 0.5 : 1,
               },
+              autoRefresh && styles.refreshBtnDisabled,
             ]}
           >
             <Text style={[styles.btnText, { color: colors.primary }]}>
@@ -263,7 +263,9 @@ export function LocationInspectorScreen() {
               <Text
                 style={[
                   styles.limitBtnText,
-                  { color: limit === v ? "#FFFFFF" : colors.text },
+                  limit === v
+                    ? styles.limitBtnTextActive
+                    : { color: colors.text },
                 ]}
               >
                 {v}
@@ -367,27 +369,31 @@ const Metric = ({ label, value, colors }: MetricProps) => (
   </View>
 );
 
-const Tab = ({ label, active, onPress, colors }: TabProps) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[
-      styles.tab,
-      { borderBottomColor: active ? colors.primary : "transparent" },
-    ]}
-  >
-    <Text
+const Tab = ({ label, active, onPress, colors }: TabProps) => {
+  const borderBottomColor = active ? colors.primary : "transparent";
+  const textColor = active ? colors.primary : colors.textSecondary;
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
       style={[
-        styles.tabText,
-        {
-          color: active ? colors.primary : colors.textSecondary,
-          fontWeight: active ? "700" : "400",
-        },
+        styles.tab,
+        active ? styles.tabActive : styles.tabInactive,
+        { borderBottomColor },
       ]}
     >
-      {label}
-    </Text>
-  </TouchableOpacity>
-);
+      <Text
+        style={[
+          styles.tabText,
+          active ? styles.tabTextActive : styles.tabTextInactive,
+          { color: textColor },
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   headerRow: {
@@ -421,6 +427,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
   },
+  refreshBtnDisabled: {
+    opacity: 0.5,
+  },
   btnText: {
     fontSize: 12,
     fontWeight: "bold",
@@ -446,6 +455,9 @@ const styles = StyleSheet.create({
   limitBtnText: {
     fontSize: 12,
     fontWeight: "600",
+  },
+  limitBtnTextActive: {
+    color: "#FFFFFF",
   },
   paginationRow: {
     flexDirection: "row",
@@ -473,8 +485,20 @@ const styles = StyleSheet.create({
     padding: 12,
     borderBottomWidth: 2,
   },
+  tabActive: {
+    // Additional styles for active tab if needed
+  },
+  tabInactive: {
+    // Additional styles for inactive tab if needed
+  },
   tabText: {
     fontSize: 14,
+  },
+  tabTextActive: {
+    fontWeight: "700",
+  },
+  tabTextInactive: {
+    fontWeight: "400",
   },
   listContent: {
     paddingHorizontal: 12,

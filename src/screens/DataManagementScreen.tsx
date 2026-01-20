@@ -20,7 +20,7 @@ import { useTheme } from "../hooks/useTheme";
 import NativeLocationService from "../services/NativeLocationService";
 import { Button, SectionTitle, Card, Container, Divider } from "../components";
 
-export function DataManagementScreen({ }: ScreenProps) {
+export function DataManagementScreen({}: ScreenProps) {
   const { colors } = useTheme();
 
   const [stats, setStats] = useState<DatabaseStats>({
@@ -163,7 +163,7 @@ export function DataManagementScreen({ }: ScreenProps) {
   return (
     <Container>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.keyboardAvoid}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -290,7 +290,7 @@ export function DataManagementScreen({ }: ScreenProps) {
                   <Button
                     style={[
                       { backgroundColor: colors.errorLight },
-                      isProcessing && { opacity: 0.5 },
+                      isProcessing && styles.buttonDisabled,
                     ]}
                     onPress={handleDeleteOlderThan}
                     disabled={isProcessing}
@@ -382,6 +382,9 @@ const ActionRow = ({
 
 // --- Styles ---
 const styles = StyleSheet.create({
+  keyboardAvoid: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 40,
@@ -472,6 +475,9 @@ const styles = StyleSheet.create({
   daysLabel: {
     fontSize: 15,
     fontWeight: "500",
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   feedbackContainer: {
     position: "absolute",

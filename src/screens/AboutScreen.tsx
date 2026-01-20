@@ -14,7 +14,7 @@ import {
   Image,
 } from "react-native";
 import DeviceInfo from "react-native-device-info";
-import { ScreenProps } from "../types/global";
+import { ScreenProps, ThemeColors } from "../types/global";
 import { useTheme } from "../hooks/useTheme";
 import { SectionTitle, Card, Container, Divider, Footer } from "../components";
 import NativeLocationService from "../services/NativeLocationService";
@@ -42,6 +42,61 @@ function getAndroidVersion(sdkVersion: number): string {
   };
   return versions[sdkVersion] || "Unknown";
 }
+
+// Moved outside of AboutScreen component
+const LinkButton = ({
+  icon,
+  title,
+  subtitle,
+  url,
+  colors,
+  onOpenURL,
+}: {
+  icon: string;
+  title: string;
+  subtitle: string;
+  url: string;
+  colors: ThemeColors;
+  onOpenURL: (url: string) => void;
+}) => (
+  <TouchableOpacity
+    style={[styles.linkButton, { backgroundColor: colors.background }]}
+    onPress={() => onOpenURL(url)}
+    activeOpacity={0.7}
+  >
+    <View style={styles.linkContent}>
+      <Text style={styles.linkIcon}>{icon}</Text>
+      <View style={styles.linkTextContainer}>
+        <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.linkSubtitle, { color: colors.textSecondary }]}>
+          {subtitle}
+        </Text>
+      </View>
+      <Text style={[styles.chevron, { color: colors.textLight }]}>›</Text>
+    </View>
+  </TouchableOpacity>
+);
+
+// Moved outside of AboutScreen component
+const TechRow = ({
+  label,
+  value,
+  colors,
+}: {
+  label: string;
+  value: string;
+  colors: ThemeColors;
+}) => (
+  <>
+    <View style={styles.techRow}>
+      <Text style={[styles.techLabel, { color: colors.textSecondary }]}>
+        {label}
+      </Text>
+      <Text style={[styles.techValue, { color: colors.text }]}>{value}</Text>
+    </View>
+    <Divider />
+  </>
+);
 
 export function AboutScreen({}: ScreenProps) {
   const { colors } = useTheme();
@@ -91,49 +146,6 @@ export function AboutScreen({}: ScreenProps) {
       console.error("Failed to open URL:", err)
     );
   };
-
-  const LinkButton = ({
-    icon,
-    title,
-    subtitle,
-    url,
-  }: {
-    icon: string;
-    title: string;
-    subtitle: string;
-    url: string;
-  }) => (
-    <TouchableOpacity
-      style={[styles.linkButton, { backgroundColor: colors.background }]}
-      onPress={() => handleOpenURL(url)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.linkContent}>
-        <Text style={styles.linkIcon}>{icon}</Text>
-        <View style={styles.linkTextContainer}>
-          <Text style={[styles.linkTitle, { color: colors.text }]}>
-            {title}
-          </Text>
-          <Text style={[styles.linkSubtitle, { color: colors.textSecondary }]}>
-            {subtitle}
-          </Text>
-        </View>
-        <Text style={[styles.chevron, { color: colors.textLight }]}>›</Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const TechRow = ({ label, value }: { label: string; value: string }) => (
-    <>
-      <View style={styles.techRow}>
-        <Text style={[styles.techLabel, { color: colors.textSecondary }]}>
-          {label}
-        </Text>
-        <Text style={[styles.techValue, { color: colors.text }]}>{value}</Text>
-      </View>
-      <Divider />
-    </>
-  );
 
   // Fallback if buildConfig is not available
   if (!buildConfig) {
@@ -216,12 +228,16 @@ export function AboutScreen({}: ScreenProps) {
             title="Privacy Policy"
             subtitle="How your data is handled"
             url={PRIVACY_POLICY_URL}
+            colors={colors}
+            onOpenURL={handleOpenURL}
           />
           <LinkButton
             icon="💻"
             title="View Source Code"
             subtitle="GitHub Repository"
             url={REPO_URL}
+            colors={colors}
+            onOpenURL={handleOpenURL}
           />
         </View>
 
@@ -259,8 +275,16 @@ export function AboutScreen({}: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>APP VERSION</SectionTitle>
           <Card>
-            <TechRow label="Version" value={`${buildConfig.VERSION_NAME}`} />
-            <TechRow label="Build" value={`${buildConfig.VERSION_CODE}`} />
+            <TechRow
+              label="Version"
+              value={`${buildConfig.VERSION_NAME}`}
+              colors={colors}
+            />
+            <TechRow
+              label="Build"
+              value={`${buildConfig.VERSION_CODE}`}
+              colors={colors}
+            />
             <View style={styles.techRow}>
               <Text style={[styles.techLabel, { color: colors.textSecondary }]}>
                 Framework
@@ -285,6 +309,7 @@ export function AboutScreen({}: ScreenProps) {
                   } (Android ${getAndroidVersion(
                     buildConfig.TARGET_SDK_VERSION
                   )})`}
+                  colors={colors}
                 />
                 <TechRow
                   label="Min SDK"
@@ -293,18 +318,22 @@ export function AboutScreen({}: ScreenProps) {
                   } (Android ${getAndroidVersion(
                     buildConfig.MIN_SDK_VERSION
                   )})`}
+                  colors={colors}
                 />
                 <TechRow
                   label="Compile SDK"
                   value={buildConfig.COMPILE_SDK_VERSION.toString()}
+                  colors={colors}
                 />
                 <TechRow
                   label="Build Tools"
                   value={buildConfig.BUILD_TOOLS_VERSION}
+                  colors={colors}
                 />
                 <TechRow
                   label="Kotlin Version"
                   value={buildConfig.KOTLIN_VERSION}
+                  colors={colors}
                 />
                 <View style={styles.techRow}>
                   <Text
@@ -325,10 +354,23 @@ export function AboutScreen({}: ScreenProps) {
                 <TechRow
                   label="OS Version"
                   value={`Android ${deviceInfo.systemVersion}`}
+                  colors={colors}
                 />
-                <TechRow label="API Level" value={deviceInfo.apiLevel} />
-                <TechRow label="Device Model" value={DeviceInfo.getModel()} />
-                <TechRow label="Device Brand" value={DeviceInfo.getBrand()} />
+                <TechRow
+                  label="API Level"
+                  value={deviceInfo.apiLevel}
+                  colors={colors}
+                />
+                <TechRow
+                  label="Device Model"
+                  value={DeviceInfo.getModel()}
+                  colors={colors}
+                />
+                <TechRow
+                  label="Device Brand"
+                  value={DeviceInfo.getBrand()}
+                  colors={colors}
+                />
                 <View style={styles.techRow}>
                   <Text
                     style={[styles.techLabel, { color: colors.textSecondary }]}

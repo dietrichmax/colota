@@ -78,7 +78,12 @@ export function SettingsScreen({ navigation }: ScreenProps) {
     setIntervalInput(settings.interval.toString());
     setDistanceInput(settings.distance?.toString() || "0");
     setEndpointInput(settings.endpoint || "");
-  }, [settings.interval, settings.distance, settings.endpoint, settings.accuracyThreshold]);
+  }, [
+    settings.interval,
+    settings.distance,
+    settings.endpoint,
+    settings.accuracyThreshold,
+  ]);
 
   // Animate advanced panel
   useEffect(() => {
@@ -88,7 +93,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
       tension: 50,
       friction: 10,
     }).start();
-  }, [showAdvanced]);
+  }, [showAdvanced, advancedHeight]);
 
   /** Update stats */
   const updateStats = useCallback(async () => {
@@ -154,7 +159,11 @@ export function SettingsScreen({ navigation }: ScreenProps) {
 
   /** Generic numeric input handler */
   const handleNumericChange = useCallback(
-    (key: "interval" | "distance" | "accuracyTreshold", value: string, min: number = 0) => {
+    (
+      key: "interval" | "distance" | "accuracyTreshold",
+      value: string,
+      min: number = 0
+    ) => {
       if (key === "interval") setIntervalInput(value);
       if (key === "distance") setDistanceInput(value);
       if (key === "accuracyTreshold") setAccuracyTresholdInput(value);
@@ -172,21 +181,34 @@ export function SettingsScreen({ navigation }: ScreenProps) {
   /** Ensure valid numbers on blur */
   const handleNumericBlur = useCallback(
     (key: "interval" | "distance" | "accuracyTreshold", min: number = 0) => {
-      const currentStr = key === "interval" ? intervalInput : distanceInput;
+      const currentStr =
+        key === "interval"
+          ? intervalInput
+          : key === "distance"
+          ? distanceInput
+          : accuracyTresholdInput;
       let val = Number(currentStr);
 
       if (isNaN(val) || val < min) {
         val = min;
         if (key === "interval") setIntervalInput(min.toString());
         if (key === "distance") setDistanceInput(min.toString());
-        if (key === "accuracyTreshold") setAccuracyTresholdInput(min.toString());
+        if (key === "accuracyTreshold")
+          setAccuracyTresholdInput(min.toString());
 
         const next = { ...settings, [key]: val };
         setSettings(next);
         immediateSave(next);
       }
     },
-    [intervalInput, distanceInput, accuracyTresholdInput, settings, setSettings, immediateSave]
+    [
+      intervalInput,
+      distanceInput,
+      accuracyTresholdInput,
+      settings,
+      setSettings,
+      immediateSave,
+    ]
   );
 
   const handlePresetSelect = useCallback(
@@ -231,9 +253,11 @@ export function SettingsScreen({ navigation }: ScreenProps) {
       if (fieldMap.vel) payload[fieldMap.vel] = 0;
       if (fieldMap.batt) payload[fieldMap.batt] = 0;
       if (fieldMap.bs) payload[fieldMap.bs] = 0;
-      if (fieldMap.tst)
-        (payload[fieldMap.tst] = Math.floor(Date.now() / 1000)),
-          console.log(payload);
+      if (fieldMap.tst) {
+        payload[fieldMap.tst] = Math.floor(Date.now() / 1000);
+        console.log(payload);
+      }
+
       const response = await fetch(endpointInput, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -429,7 +453,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                       colors={colors}
                     />
                     {index < Object.keys(TRACKING_PRESETS).length - 1 && (
-                      <View style={{ height: 8 }} />
+                      <View style={styles.presetSpacer} />
                     )}
                   </View>
                 )
@@ -440,10 +464,10 @@ export function SettingsScreen({ navigation }: ScreenProps) {
             <TouchableOpacity
               style={[
                 styles.advancedToggle,
+                showAdvanced
+                  ? styles.advancedToggleActive
+                  : styles.advancedToggleInactive,
                 {
-                  backgroundColor: showAdvanced
-                    ? colors.primary + "10"
-                    : "transparent",
                   borderColor: showAdvanced ? colors.primary : colors.border,
                 },
               ]}
@@ -702,7 +726,8 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                     <Text
                       style={[
                         styles.blockHint,
-                        { color: colors.textSecondary, marginTop: 8 },
+                        styles.retryHint,
+                        { color: colors.textSecondary },
                       ]}
                     >
                       {settings.maxRetries === 0
@@ -764,7 +789,9 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                       <NumericInput
                         label="Accuracy Threshold"
                         value={accuracyTresholdInput}
-                        onChange={(val) => handleNumericChange("accuracyTreshold", val, 50)}
+                        onChange={(val) =>
+                          handleNumericChange("accuracyTreshold", val, 50)
+                        }
                         onBlur={() => handleNumericBlur("accuracyTreshold", 50)}
                         unit="meters"
                         placeholder="50"
@@ -955,6 +982,9 @@ const styles = StyleSheet.create({
   presetsContainer: {
     marginBottom: 16,
   },
+  presetSpacer: {
+    height: 8,
+  },
 
   // Advanced Toggle
   advancedToggle: {
@@ -964,6 +994,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     marginTop: 8,
+  },
+  advancedToggleActive: {
+    backgroundColor: "transparent", // Will be overridden by dynamic color
+  },
+  advancedToggleInactive: {
+    backgroundColor: "transparent",
   },
   advancedText: {
     fontSize: 15,
@@ -1047,6 +1083,9 @@ const styles = StyleSheet.create({
   retryChipText: {
     fontSize: 16,
     fontWeight: "700",
+  },
+  retryHint: {
+    marginTop: 8,
   },
 
   // Nested Settings

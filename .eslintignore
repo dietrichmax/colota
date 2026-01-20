@@ -1,0 +1,3 @@
+# .eslintignore
+*.min.js
+**/openlayers/*.js
