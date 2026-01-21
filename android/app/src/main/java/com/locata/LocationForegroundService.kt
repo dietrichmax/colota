@@ -24,6 +24,7 @@ class LocationForegroundService : Service() {
     private lateinit var notificationManager: NotificationManager
     private lateinit var dbHelper: LocationDatabaseHelper
     private lateinit var locationUtils: LocationUtils
+    private lateinit var deviceInfoHelper: DeviceInfoHelper
     
     // Properly manage scope lifecycle to prevent memory leak
     private var serviceScope: CoroutineScope? = null
@@ -32,6 +33,7 @@ class LocationForegroundService : Service() {
     private var locationCallback: LocationCallback? = null
     private var syncJob: Job? = null
     private var lastSyncTime: Long = 0
+    private var lastSuccessfulSyncTime: Long = 0
     private var syncInitialized = false
     private var insideSilentZone = false
     private var currentZoneName: String? = null
@@ -49,12 +51,6 @@ class LocationForegroundService : Service() {
     // Location caching
     private var lastKnownLocation: android.location.Location? = null
     private var lastNotificationCoords: Pair<Double, Double>? = null 
-    
-    // Battery check throttling
-    private var cachedBatteryLevel: Int = 100
-    private var cachedBatteryStatus: Int = 0
-    private var lastBatteryCheck: Long = 0
-    private val BATTERY_CHECK_INTERVAL_MS = 60000L
 
     // Batch limit to prevent infinite syncing
     private val MAX_BATCHES_PER_SYNC = 10 // Max 500 items per sync cycle
@@ -90,6 +86,7 @@ class LocationForegroundService : Service() {
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         dbHelper = LocationDatabaseHelper.getInstance(this)
         locationUtils = LocationUtils(this)
+        deviceInfoHelper = DeviceInfoHelper(this)
 
         createNotificationChannel()
     }
@@ -192,13 +189,11 @@ class LocationForegroundService : Service() {
             }
         }
 
-        // Use cached battery status
-        val (batteryLevel, batteryStatus) = getCachedBatteryStatus()
-        
-        // Stop service if battery critical AND not charging
-        if (batteryLevel < 5 && batteryStatus == 1) {
+        // Check if battery is critically low using DeviceInfoHelper
+        if (deviceInfoHelper.isBatteryCritical(threshold = 5)) {
+            val (level, _) = deviceInfoHelper.getCachedBatteryStatus()
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Battery critical ($batteryLevel%) and unplugged - stopping service")
+                Log.d(TAG, "Battery critical ($level%) and unplugged - stopping service")
             }
             stopForegroundServiceWithReason("Battery critical")
             return // Exit early - don't setup location updates
@@ -348,8 +343,8 @@ class LocationForegroundService : Service() {
             }
         }
 
-        // Use cached battery
-        val (battery, batteryStatus) = getCachedBatteryStatus()
+        // Use cached battery from DeviceInfoHelper
+        val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
         val timestampSec = location.time / 1000
 
         // Save to database
@@ -438,24 +433,11 @@ class LocationForegroundService : Service() {
     }
 
     // ========================================
-    // BATTERY OPTIMIZATIONS (New Methods)
+    // BATTERY OPTIMIZATIONS
     // ========================================
-
-    /**
-     * Cached battery status.
-     */
-    private fun getCachedBatteryStatus(): Pair<Int, Int> {
-        val now = System.currentTimeMillis()
-        
-        if (now - lastBatteryCheck > BATTERY_CHECK_INTERVAL_MS) {
-            val (level, batteryStatus) = locationUtils.getBatteryStatus()
-            cachedBatteryLevel = level
-            cachedBatteryStatus = batteryStatus  // Now stores Int instead of Boolean
-            lastBatteryCheck = now
-        }
-        
-        return Pair(cachedBatteryLevel, cachedBatteryStatus)
-    }
+    // Battery-related functionality has been moved to DeviceInfoHelper.kt
+    // Use deviceInfoHelper.getCachedBatteryStatus() for cached battery info
+    // Use deviceInfoHelper.isBatteryCritical() to check critical battery state
 
     /**
      * Cached queue count.
@@ -517,7 +499,13 @@ class LocationForegroundService : Service() {
         // Invalidate cache after sync
         lastQueueCountCheck = 0
         
-        return countAfter < countBefore || countAfter == 0
+        // Update last successful sync time if queue was reduced
+        val success = countAfter < countBefore || countAfter == 0
+        if (success && countAfter == 0) {
+            lastSuccessfulSyncTime = System.currentTimeMillis()
+        }
+        
+        return success
     }
 
     private suspend fun applyBackoffDelay() {
@@ -622,6 +610,11 @@ class LocationForegroundService : Service() {
         
         // Invalidate cache after all syncing is done
         lastQueueCountCheck = 0
+        
+        // Update last successful sync time if we processed items
+        if (totalProcessed > 0) {
+            lastSuccessfulSyncTime = System.currentTimeMillis()
+        }
     }
 
     private suspend fun queueAndSend(
@@ -651,6 +644,7 @@ class LocationForegroundService : Service() {
             if (success) {
                 dbHelper.removeFromQueueByLocationId(locationId)
                 lastQueueCountCheck = 0
+                lastSuccessfulSyncTime = System.currentTimeMillis()
             } else {
                 // Increment retry count using the queue ID we got from insert
                 dbHelper.incrementRetryCount(queueId, "Send failed")
@@ -725,6 +719,26 @@ class LocationForegroundService : Service() {
     }
 
     /**
+     * Format time since last sync in human-readable format.
+     */
+    private fun getTimeSinceLastSync(): String {
+        if (lastSuccessfulSyncTime == 0L) {
+            return "Never synced"
+        }
+        
+        val elapsedMs = System.currentTimeMillis() - lastSuccessfulSyncTime
+        val elapsedMinutes = (elapsedMs / 60000).toInt()
+        
+        return when {
+            elapsedMinutes < 1 -> "Just now"
+            elapsedMinutes == 1 -> "1 min ago"
+            elapsedMinutes < 60 -> "$elapsedMinutes min ago"
+            elapsedMinutes < 120 -> "1h ago"
+            else -> "${elapsedMinutes / 60} h ago"
+        }
+    }
+
+    /**
     * Smart notification updates with throttling and distance checking.
     * Only updates when:
     * - Zone status changes (immediate)
@@ -782,7 +796,11 @@ class LocationForegroundService : Service() {
             isCurrentlyPaused -> "Paused: ${activeZone ?: "Unknown"}"
             lat != null && lon != null -> {
                 val coords = "%.5f, %.5f".format(lat, lon)
-                if (queuedCount > 0) "$coords ($queuedCount pending)" else "$coords (Synced)"
+                if (queuedCount > 0) {
+                    "$coords (Last sync: ${getTimeSinceLastSync()})"
+                } else {
+                    "$coords (Synced)"
+                }
             }
             else -> "Searching GPS..."
         }
@@ -857,13 +875,7 @@ class LocationForegroundService : Service() {
         }
 
         if (BuildConfig.DEBUG) {
-            val batteryStatus = when(cachedBatteryStatus) {
-                0 -> "Unknown"
-                1 -> "Unplugged/Discharging"
-                2 -> "Charging"
-                3 -> "Full"
-                else -> "Unknown ($cachedBatteryStatus)"
-            }
+            val batteryStatusStr = deviceInfoHelper.getBatteryStatusString()
             
             Log.d(TAG, """
                 ╔════════════════════════════════════════════════════════════════╗
@@ -888,7 +900,7 @@ class LocationForegroundService : Service() {
                 ║ PERFORMANCE OPTIMIZATION                                        ║
                 ╟────────────────────────────────────────────────────────────────╢
                 ║  Queue Count Cache:      ${QUEUE_COUNT_CACHE_MS/1000}s
-                ║  Battery Check Cache:    ${BATTERY_CHECK_INTERVAL_MS/1000}s
+                ║  Battery Check Cache:    60s (managed by DeviceInfoHelper)
                 ║  Notification Throttle:  ${NOTIFICATION_THROTTLE_MS/1000}s
                 ╟────────────────────────────────────────────────────────────────╢
                 ║ FIELD MAPPING                                                   ║
@@ -904,8 +916,9 @@ class LocationForegroundService : Service() {
                 ╟────────────────────────────────────────────────────────────────╢
                 ║  Tracking Status:        ✓ ACTIVE
                 ║  Silent Zone:            ${if(insideSilentZone) "⏸️  PAUSED in '$currentZoneName'" else "✓ Not in zone"}
-                ║  Battery Level:          $cachedBatteryLevel% ($batteryStatus)
+                ║  Battery Level:          $batteryStatusStr
                 ║  Queued Locations:       $cachedQueuedCount items
+                ║  Last Sync:              ${getTimeSinceLastSync()}
                 ║  Last Location:          ${if(lastKnownLocation != null) "%.5f, %.5f".format(lastKnownLocation!!.latitude, lastKnownLocation!!.longitude) else "N/A"}
                 ╚════════════════════════════════════════════════════════════════╝
             """.trimIndent())
