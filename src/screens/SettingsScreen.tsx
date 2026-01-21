@@ -255,7 +255,6 @@ export function SettingsScreen({ navigation }: ScreenProps) {
       if (fieldMap.bs) payload[fieldMap.bs] = 0;
       if (fieldMap.tst) {
         payload[fieldMap.tst] = Math.floor(Date.now() / 1000);
-        console.log(payload);
       }
 
       const response = await fetch(endpointInput, {

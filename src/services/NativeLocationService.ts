@@ -377,6 +377,20 @@ class NativeLocationService {
     );
   }
 
+  /**
+   * Triggers immediate recheck of silent zone settings
+   * Use after modifying geofence pause settings to update notification instantly
+   */
+  static async recheckZoneSettings(): Promise<void> {
+    this.ensureModule();
+    console.log("[NativeLocationService] Triggering zone settings recheck");
+    try {
+      await LocationServiceModule.recheckZoneSettings();
+    } catch (error) {
+      console.error("[NativeLocationService] ❌ Recheck failed:", error);
+    }
+  }
+
   // ============================================================================
   // SETTINGS OPERATIONS
   // ============================================================================

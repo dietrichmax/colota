@@ -33,17 +33,34 @@ class LocationUtils(private val context: Context) {
     companion object {
         private const val TAG = "LocationUtils"
         private const val EARTH_RADIUS_METERS = 6371000.0
-        private const val CONNECTION_TIMEOUT = 15000
-        private const val READ_TIMEOUT = 15000
+        private const val CONNECTION_TIMEOUT = 10000
+        private const val READ_TIMEOUT = 10000
     }
 
     // Lazy initialization - only created when first accessed
     private val dbHelper by lazy { LocationDatabaseHelper.getInstance(context) }
     
     // Cache connectivity manager to avoid repeated getSystemService calls
-    private val connectivityManager by lazy { 
-        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager 
+    private val connectivityManager: ConnectivityManager by lazy {
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     }
+    
+    @Volatile
+    private var cachedGeofences: List<CachedGeofence>? = null
+    private var lastGeofenceCacheTime: Long = 0
+    private val GEOFENCE_CACHE_MS = 30000L // 30 seconds
+
+    data class CachedGeofence(
+        val name: String,
+        val lat: Double,
+        val lon: Double,
+        val radius: Double
+    )
+    
+    @Volatile
+    private var lastNetworkCheck: Boolean = true
+    private var lastNetworkCheckTime: Long = 0
+    private val NETWORK_CHECK_CACHE_MS = 5000L // 5 seconds
 
     // ========================================
     // NETWORK & SYNC
@@ -95,7 +112,6 @@ class LocationUtils(private val context: Context) {
         var connection: java.net.HttpURLConnection? = null
         
         try {
-            Log.d(TAG, "Sending")
             val url = URL(endpoint)
             connection = url.openConnection() as java.net.HttpURLConnection
             
@@ -121,10 +137,9 @@ class LocationUtils(private val context: Context) {
             val responseCode = connection.responseCode
             
             if (responseCode in 200..299) {
-                
-                Log.d(TAG, "Location successfully sent")
-                // Success - optionally read response body
-                // connection.inputStream.use { it.bufferedReader().readText() }
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "Location successfully sent")
+                }
                 true
             } else {
                 // Read error body for debugging
@@ -147,21 +162,43 @@ class LocationUtils(private val context: Context) {
     }
 
     /**
-     * Checks for an active, validated internet connection.
-     * Uses cached ConnectivityManager for better performance.
-     */
+    * Checks for an active, validated internet connection.
+    * Cached to avoid excessive system calls.
+    */
     fun isNetworkAvailable(): Boolean {
-        return try {
-            val activeNetwork = connectivityManager.activeNetwork ?: return false
-            val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) 
-                ?: return false
+        val now = System.currentTimeMillis()
+        
+        // Return cached result if fresh
+        if ((now - lastNetworkCheckTime) < NETWORK_CHECK_CACHE_MS) {
+            return lastNetworkCheck
+        }
+        
+        lastNetworkCheck = try {
+            val network = connectivityManager.activeNetwork
+            if (network == null) {
+                lastNetworkCheckTime = now
+                return false
+            }
+
+            val capabilities = connectivityManager.getNetworkCapabilities(network)
+            if (capabilities == null) {
+                lastNetworkCheckTime = now
+                return false
+            }
             
+            // Check for both internet capability and that the OS has validated the connection
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         } catch (e: SecurityException) {
             Log.e(TAG, "Missing network permission", e)
             false
+        } catch (e: Exception) {
+            Log.e(TAG, "Network check failed", e)
+            false
         }
+        
+        lastNetworkCheckTime = now
+        return lastNetworkCheck
     }
 
     // ========================================
@@ -182,6 +219,27 @@ class LocationUtils(private val context: Context) {
                 cos(lat1Rad) * cos(lat2Rad) * sin(dLon / 2).pow(2)
         
         return EARTH_RADIUS_METERS * 2 * atan2(sqrt(a), sqrt(1 - a))
+    }
+
+    /**
+    * Fast distance check without square root for geofence detection.
+    * Returns true if within radius (cheaper than full Haversine).
+    */
+    fun isWithinRadius(lat1: Double, lon1: Double, lat2: Double, lon2: Double, radiusMeters: Double): Boolean {
+        // Quick rejection test using simple lat/lon differences
+        val latDiff = Math.abs(lat1 - lat2)
+        val lonDiff = Math.abs(lon1 - lon2)
+        
+        // Rough approximation: 1 degree ≈ 111km at equator
+        val maxDegreeDiff = radiusMeters / 111000.0
+        
+        // Quick rejection: if way outside bounding box, skip expensive calculation
+        if (latDiff > maxDegreeDiff || lonDiff > maxDegreeDiff) {
+            return false
+        }
+        
+        // Only do full Haversine if within rough bounding box
+        return calculateDistance(lat1, lon1, lat2, lon2) <= radiusMeters
     }
 
     // ========================================
@@ -289,26 +347,86 @@ class LocationUtils(private val context: Context) {
     // ========================================
 
     /**
-     * Checks if location is within any active silent zone.
-     * Returns immediately on first match for better performance.
-     */
-    fun getSilentZone(location: Location): String? {
+    * Refreshes geofence cache from database
+    */
+    private fun refreshGeofenceCache(): List<CachedGeofence> {
+        val fences = mutableListOf<CachedGeofence>()
+        
         dbHelper.readableDatabase.query(
             LocationDatabaseHelper.TABLE_GEOFENCES, 
             arrayOf("name", "latitude", "longitude", "radius"),
             "enabled = 1 AND pause_tracking = 1",
             null, null, null, null
         ).use { cursor ->
+            val nameIdx = cursor.getColumnIndexOrThrow("name")
+            val latIdx = cursor.getColumnIndexOrThrow("latitude")
+            val lonIdx = cursor.getColumnIndexOrThrow("longitude")
+            val radiusIdx = cursor.getColumnIndexOrThrow("radius")
+            
             while (cursor.moveToNext()) {
-                val fenceLat = cursor.getDouble(1)
-                val fenceLon = cursor.getDouble(2)
-                val radius = cursor.getDouble(3)
-                
-                if (calculateDistance(location.latitude, location.longitude, fenceLat, fenceLon) <= radius) {
-                    return cursor.getString(0)
-                }
+                fences.add(CachedGeofence(
+                    cursor.getString(nameIdx),
+                    cursor.getDouble(latIdx),
+                    cursor.getDouble(lonIdx),
+                    cursor.getDouble(radiusIdx)
+                ))
             }
         }
+        
+        cachedGeofences = fences
+        lastGeofenceCacheTime = System.currentTimeMillis()
+        
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "Geofence cache refreshed: ${fences.size} zones")
+        }
+        
+        return fences
+    }
+
+    /**
+    * Gets geofences from cache or refreshes if stale
+    */
+    private fun getGeofences(): List<CachedGeofence> {
+        val now = System.currentTimeMillis()
+        
+        return if (cachedGeofences == null || (now - lastGeofenceCacheTime) > GEOFENCE_CACHE_MS) {
+            refreshGeofenceCache()
+        } else {
+            cachedGeofences!!
+        }
+    }
+
+    /**
+    * Invalidates cache when geofences change
+    */
+    fun invalidateGeofenceCache() {
+        cachedGeofences = null
+        lastGeofenceCacheTime = 0
+        
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "Geofence cache invalidated")
+        }
+    }
+
+    /**
+     * Checks if location is within any active silent zone.
+     * Returns immediately on first match for better performance.
+     */
+    fun getSilentZone(location: Location): String? {
+        val fences = getGeofences()
+        
+        for (fence in fences) {
+            if (isWithinRadius(
+                    location.latitude, 
+                    location.longitude, 
+                    fence.lat, 
+                    fence.lon,
+                    fence.radius
+                )) {
+                return fence.name
+            }
+        }
+        
         return null
     }
 

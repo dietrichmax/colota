@@ -94,7 +94,6 @@ export function useLocationTracking(
   useEffect(() => {
     if (tracking && !listenerRef.current) {
       console.log("[useLocationTracking] 📡 Attaching native listener");
-
       listenerRef.current = locationEventEmitter.addListener(
         "onLocationUpdate",
         (event: any) => {

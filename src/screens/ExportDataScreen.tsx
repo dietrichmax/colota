@@ -16,21 +16,11 @@ import {
 } from "react-native";
 import { Container, Card, SectionTitle, Divider } from "../components";
 import { useTheme } from "../hooks/useTheme";
-import { ThemeColors } from "../types/global";
+import { ThemeColors, LocationCoords } from "../types/global";
 import NativeLocationService from "../services/NativeLocationService";
 import RNFS from "react-native-fs";
 import Share from "react-native-share"; // Use react-native-share instead
 
-interface LocationData {
-  id: number;
-  timestamp: number;
-  latitude: number;
-  longitude: number;
-  accuracy: number;
-  altitude: number;
-  speed: number;
-  battery: number;
-}
 
 type ExportFormat = "csv" | "geojson" | "gpx" | "kml";
 
@@ -151,7 +141,7 @@ export function ExportDataScreen() {
     setExportProgress("Fetching location data...");
 
     try {
-      const data: LocationData[] = await NativeLocationService.getExportData();
+      const data: LocationCoords[] = await NativeLocationService.getExportData();
 
       setExportProgress(`Converting ${data.length} locations...`);
 
@@ -501,14 +491,15 @@ const FormatOption = ({
 
 // --- Format Conversion Functions ---
 
-const convertToCSV = (data: LocationData[]): string => {
+const convertToCSV = (data: LocationCoords[]): string => {
   const headers =
     "id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,battery\n";
   const rows = data
-    .map((item) => {
-      const isoTime = new Date(item.timestamp).toISOString();
+    .map((item, i) => {
+      const timestamp = item.timestamp ?? Date.now();
+      const isoTime = new Date(timestamp).toISOString();
       return [
-        item.id,
+        i,
         item.timestamp,
         isoTime,
         item.latitude,
@@ -523,8 +514,8 @@ const convertToCSV = (data: LocationData[]): string => {
   return headers + rows;
 };
 
-const convertToGeoJSON = (data: LocationData[]): string => {
-  const features = data.map((item) => {
+const convertToGeoJSON = (data: LocationCoords[]): string => {
+  const features = data.map((item, i) => {
     const timestamp = item.timestamp ? new Date(item.timestamp) : new Date();
     const timeStr = isNaN(timestamp.getTime())
       ? new Date().toISOString()
@@ -537,7 +528,7 @@ const convertToGeoJSON = (data: LocationData[]): string => {
         coordinates: [item.longitude || 0, item.latitude || 0],
       },
       properties: {
-        id: item.id,
+        id: i,
         accuracy: item.accuracy,
         altitude: item.altitude,
         speed: item.speed,
@@ -557,7 +548,7 @@ const convertToGeoJSON = (data: LocationData[]): string => {
   );
 };
 
-const convertToGPX = (data: LocationData[]): string => {
+const convertToGPX = (data: LocationCoords[]): string => {
   let gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Colota" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
@@ -569,13 +560,14 @@ const convertToGPX = (data: LocationData[]): string => {
     <trkseg>`;
 
   data.forEach((item) => {
-    const time = new Date(item.timestamp).toISOString();
+      const timestamp = item.timestamp ?? Date.now();
+      const isoTime = new Date(timestamp).toISOString();
     gpx += `
       <trkpt lat="${item.latitude.toFixed(6)}" lon="${item.longitude.toFixed(
       6
     )}">
         <ele>${item.altitude || 0}</ele>
-        <time>${time}</time>
+        <time>${isoTime}</time>
         <extensions>
           <accuracy>${item.accuracy || 0}</accuracy>
           <speed>${item.speed || 0}</speed>
@@ -591,7 +583,7 @@ const convertToGPX = (data: LocationData[]): string => {
   return gpx;
 };
 
-const convertToKML = (data: LocationData[]): string => {
+const convertToKML = (data: LocationCoords[]): string => {
   let kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
@@ -621,10 +613,12 @@ const convertToKML = (data: LocationData[]): string => {
 
   // Add individual points as Placemarks
   data.forEach((item) => {
-    const time = new Date(item.timestamp).toISOString();
+    
+      const timestamp = item.timestamp ?? Date.now();
+      const isoTime = new Date(timestamp).toISOString();
     kml += `
     <Placemark>
-      <TimeStamp><when>${time}</when></TimeStamp>
+      <TimeStamp><when>${isoTime}</when></TimeStamp>
       <description>Accuracy: ${item.accuracy}m, Speed: ${
       item.speed
     }m/s</description>

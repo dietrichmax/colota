@@ -10,8 +10,6 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.net.Uri
 import android.content.Intent
-import android.net.Network
-import android.net.ConnectivityManager.NetworkCallback
 import android.os.Build
 import android.util.Log
 import com.facebook.react.bridge.*
@@ -34,43 +32,10 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     private val dbHelper = LocationDatabaseHelper.getInstance(reactContext)
     
     // Use a fixed thread pool instead of unlimited threads
-    private val dbExecutor: ExecutorService = Executors.newFixedThreadPool(2)
-    
-    // Cache connectivity manager
-    private val connectivityManager by lazy {
-        reactContext.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-    }
-    
-    // Network state listener to avoid polling
-    private val networkCallback = object : NetworkCallback() {
-        override fun onAvailable(network: Network) {
-            // Network just became available
-            dbExecutor.execute {
-                val queuedCount = dbHelper.getQueuedCount()
-                if (queuedCount > 0) {
-                    val syncInterval = dbHelper.getSetting("syncInterval", "0")?.toIntOrNull() ?: 0
-                    
-                    if (syncInterval == 0) {
-                        if (BuildConfig.DEBUG) {
-                            Log.d(TAG, "Network available, triggering manual flush for $queuedCount items")
-                        }
-                        val intent = Intent(
-                            reactApplicationContext,
-                            LocationForegroundService::class.java
-                        ).apply {
-                            action = "com.Colota.ACTION_MANUAL_FLUSH"
-                        }
-                        try {
-                            reactApplicationContext.startService(intent)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to trigger manual flush", e)
-                        }
-                    } else if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "Network available, $queuedCount items queued for next sync interval")
-                    }
-                }
-            }
-        }
+    private val dbExecutor: ExecutorService = if (Config.DB_THREAD_POOL_SIZE == 1) {
+        Executors.newSingleThreadExecutor()
+    } else {
+        Executors.newFixedThreadPool(Config.DB_THREAD_POOL_SIZE)
     }
 
     // Coroutine scope for async operations
@@ -79,15 +44,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     init {
         reactContextStatic = reactContext
         reactContext.addLifecycleEventListener(this)
-        
-        // Register network callback
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                connectivityManager.registerDefaultNetworkCallback(networkCallback)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to register network callback", e)
-            }
-        }
     }
 
     companion object {
@@ -97,11 +53,16 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         @Volatile
         private var isAppInForeground: Boolean = true
 
+        private object Config {
+            const val DB_THREAD_POOL_SIZE = 1
+            const val EXECUTOR_SHUTDOWN_TIMEOUT_MS = 800L
+        }
+
         /**
          * Emits location updates to the React Native 'onLocationUpdate' listener.
          */
         @JvmStatic
-        fun sendLocationEvent(location: android.location.Location): Boolean {
+        fun sendLocationEvent(location: android.location.Location, battery: Int, batteryStatus: Int): Boolean {
             // Check foreground state first (cheapest check)
             if (!isAppInForeground) return false
             
@@ -123,6 +84,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     putDouble("speed", location.speed.toDouble())
                     putDouble("bearing", if (location.hasBearing()) location.bearing.toDouble() else 0.0)
                     putDouble("timestamp", location.time.toDouble())
+                    putInt("battery", battery) 
+                    putInt("batteryStatus", batteryStatus)
                 }
                 
                 context
@@ -173,19 +136,19 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     override fun onHostDestroy() { 
         isAppInForeground = false
         
-        // Cleanup network callback
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                connectivityManager.unregisterNetworkCallback(networkCallback)
-            } catch (e: Exception) {
-                // Already unregistered or never registered
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Network callback cleanup: ${e.message}")
-                }
-            }
-        }
-        
+        // Cancel coroutines
         moduleScope.cancel()
+        
+        // Properly shutdown executor (YOU REMOVED THIS!)
+        dbExecutor.shutdown()
+        try {
+            if (!dbExecutor.awaitTermination(Config.EXECUTOR_SHUTDOWN_TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                dbExecutor.shutdownNow()
+            }
+        } catch (e: InterruptedException) {
+            dbExecutor.shutdownNow()
+            Thread.currentThread().interrupt()
+        }
     }
 
     // ==============================================================
@@ -323,10 +286,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun manualFlush(promise: Promise) {
         try {
-            val intent = Intent(reactApplicationContext, LocationForegroundService::class.java).apply {
-                action = "com.Colota.ACTION_MANUAL_FLUSH"
-            }
-            reactApplicationContext.startService(intent)
+            startServiceWithAction(LocationForegroundService.ACTION_MANUAL_FLUSH)
             promise.resolve(true)
         } catch (e: Exception) {
             Log.e(TAG, "Manual flush failed", e)
@@ -372,6 +332,19 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     // GEOFENCE OPERATIONS
     // ==============================================================
 
+    // Helper function to reduce duplication
+    private fun triggerZoneRecheck() {
+        try {
+            startServiceWithAction(LocationForegroundService.ACTION_RECHECK_ZONE)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to trigger zone recheck", e)
+        }
+    }
+
+    /**
+    * Creates a geofence and invalidates cache to ensure the 
+    * Foreground Service recognizes the change immediately.
+    */
     @ReactMethod
     fun createGeofence(
         name: String, 
@@ -382,22 +355,17 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         promise: Promise
     ) = executeAsync(promise) { 
         val result = locationUtils.insertGeofence(name, lat, lon, radius, pause)
-        
-        // OPTIMIZATION 8: Trigger zone recheck after creating geofence
         if (result > 0) {
-            try {
-                val intent = Intent(reactApplicationContext, LocationForegroundService::class.java).apply {
-                    action = "com.Colota.RECHECK_SILENT_ZONE"
-                }
-                reactApplicationContext.startService(intent)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to trigger zone recheck", e)
-            }
+            locationUtils.invalidateGeofenceCache()
+            triggerZoneRecheck()
         }
-        
         result
     }
 
+    /**
+    * Fetches all geofences for the UI.
+    * Does not invalidate cache as this is a read-only operation.
+    */
     @ReactMethod
     fun getGeofences(promise: Promise) = executeAsync(promise) { 
         locationUtils.getGeofencesAsArray() 
@@ -415,38 +383,24 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         promise: Promise
     ) = executeAsync(promise) { 
         val result = locationUtils.updateGeofence(id, name, lat, lon, radius, enabled, pause)
-        
-        // Trigger zone recheck after updating geofence
         if (result) {
-            try {
-                val intent = Intent(reactApplicationContext, LocationForegroundService::class.java).apply {
-                    action = "com.Colota.RECHECK_SILENT_ZONE"
-                }
-                reactApplicationContext.startService(intent)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to trigger zone recheck", e)
-            }
+            locationUtils.invalidateGeofenceCache() 
+            triggerZoneRecheck()
         }
-        
         result
     }
 
-    @ReactMethod
+    /**
+    * Deletes a geofence and invalidates cache to ensure the 
+    * Foreground Service recognizes the change immediately.
+    */
+   @ReactMethod
     fun deleteGeofence(id: Int, promise: Promise) = executeAsync(promise) { 
         val result = locationUtils.deleteGeofence(id)
-        
-        // Trigger zone recheck after deleting geofence
         if (result) {
-            try {
-                val intent = Intent(reactApplicationContext, LocationForegroundService::class.java).apply {
-                    action = "com.Colota.RECHECK_SILENT_ZONE"
-                }
-                reactApplicationContext.startService(intent)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to trigger zone recheck", e)
-            }
+            locationUtils.invalidateGeofenceCache()
+            triggerZoneRecheck()
         }
-        
         result
     }
 
@@ -463,7 +417,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 if (loc == null) {
                     promise.resolve(null)
                 } else {
-                    // Run on executor to avoid blocking
                     dbExecutor.execute { 
                         try {
                             promise.resolve(locationUtils.getSilentZone(loc))
@@ -483,24 +436,40 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun recheckZoneSettings(promise: Promise) {
+        triggerZoneRecheck() 
+        promise.resolve(null)
+    }
+
+    @ReactMethod
     fun forceExitZone(promise: Promise) {
         try {
-            val intent = Intent(reactApplicationContext, LocationForegroundService::class.java).apply {
-                action = LocationForegroundService.ACTION_FORCE_EXIT_ZONE
-            }
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                reactApplicationContext.startForegroundService(intent)
-            } else {
-                reactApplicationContext.startService(intent)
-            }
-            
+            startServiceWithAction(LocationForegroundService.ACTION_FORCE_EXIT_ZONE)
             promise.resolve(true)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to force exit zone", e)
             promise.reject("FORCE_EXIT_ERROR", e.message, e)
         }
     }
+
+    // ==============================================================
+    // STATISTICS & ANALYTICS (Future)
+    // ==============================================================
+
+    // TODO: Add when implementing statistics feature
+    // @ReactMethod
+    // fun getLocationStats(timeRange: String, promise: Promise) = executeAsync(promise) {
+    //     // Implementation here
+    // }
+
+    // @ReactMethod
+    // fun getDistanceTraveled(startTime: Long, endTime: Long, promise: Promise) = executeAsync(promise) {
+    //     // Implementation here
+    // }
+
+    // @ReactMethod
+    // fun getSpeedAnalytics(promise: Promise) = executeAsync(promise) {
+    //     // Implementation here
+    // }
 
     // ==============================================================
     // SETTINGS PERSISTENCE
@@ -578,6 +547,24 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             } catch (e2: Exception) {
                 promise.reject("ERROR", e2.message, e2)
             }
+        }
+    }
+
+    // Add helper for all service intents
+    private fun startServiceWithAction(action: String) {
+        try {
+            val intent = Intent(reactApplicationContext, LocationForegroundService::class.java).apply {
+                this.action = action
+            }
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                reactApplicationContext.startForegroundService(intent)
+            } else {
+                reactApplicationContext.startService(intent)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start service with action: $action", e)
+            throw e
         }
     }
 }

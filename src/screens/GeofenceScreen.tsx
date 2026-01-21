@@ -201,6 +201,7 @@ export function GeofenceScreen({}: ScreenProps) {
         });
         await loadGeofences();
         DeviceEventEmitter.emit("geofenceUpdated");
+        await NativeLocationService.recheckZoneSettings();
       } catch {
         Alert.alert("Error", "Failed to update geofence.");
       }
