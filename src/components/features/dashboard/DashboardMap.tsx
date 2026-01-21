@@ -25,6 +25,7 @@ import { useTheme } from "../../../hooks/useTheme";
 import NativeLocationService from "../../../services/NativeLocationService";
 import { SvgXml } from "react-native-svg";
 import RNFS from "react-native-fs";
+import { loadOpenLayersAssets } from "../../../helpers/openlayersLoader"
 
 type Props = {
   coords: LocationCoords | null;
@@ -145,31 +146,11 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
   }, [coords]);
 
   useEffect(() => {
-    const loadAssets = async () => {
-      try {
-        let css, js;
-
-        if (Platform.OS === "android") {
-          // Read from Android Assets folder (app/src/main/assets)
-          css = await RNFS.readFileAssets("openlayers/ol.css", "utf8");
-          js = await RNFS.readFileAssets("openlayers/ol.js", "utf8");
-        } else {
-          // iOS uses MainBundlePath
-          const cssPath = `${RNFS.MainBundlePath}/openlayers/ol.css`;
-          const jsPath = `${RNFS.MainBundlePath}/openlayers/ol.js`;
-          css = await RNFS.readFile(cssPath, "utf8");
-          js = await RNFS.readFile(jsPath, "utf8");
-        }
-
-        setOlCss(css);
-        setOlJs(js);
-      } catch (err) {
-        console.error("Failed to load OpenLayers assets:", err);
-      }
-    };
-
-    loadAssets();
-  }, []);
+  loadOpenLayersAssets().then(({ css, js }) => {
+    setOlCss(css);
+    setOlJs(js);
+  });
+}, []);
 
   const html = useMemo(() => {
     if (!hasInitialCoords || !initialCoords.current || !olCss || !olJs)
