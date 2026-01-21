@@ -7,6 +7,7 @@ package com.Colota
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.core.content.FileProvider
 import com.facebook.react.bridge.*
 import java.io.File
@@ -27,12 +28,13 @@ class FileOperations(private val context: ReactApplicationContext) {
     }
     
     /**
-     * Shares a file using Android's native share sheet
-     * @param filePath Absolute path to the file
-     * @param mimeType MIME type of the file
-     * @param title Share dialog title
-     */
-    fun shareFile(filePath: String, mimeType: String, title: String) {
+    * Shares a file using Android's native share sheet.
+    * @param filePath Absolute path to the file
+    * @param mimeType MIME type of the file
+    * @param title Share dialog title
+    * @return true if the share intent was started
+    */
+    fun shareFile(filePath: String, mimeType: String, title: String): Boolean {
         val file = File(filePath)
         if (!file.exists()) {
             throw IllegalArgumentException("File does not exist: $filePath")
@@ -58,7 +60,7 @@ class FileOperations(private val context: ReactApplicationContext) {
 
         context.startActivity(chooser)
     
-        // Schedule deletion after 30 seconds
+        // Schedule deletion after 60 seconds
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try {
                 if (file.exists()) {
@@ -70,7 +72,7 @@ class FileOperations(private val context: ReactApplicationContext) {
             } catch (e: Exception) {
                 Log.w("FileOperations", "Failed to cleanup file", e)
             }
-        }, 30000)
+        }, 60000)
         
         return true
     }

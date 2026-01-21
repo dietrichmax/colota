@@ -20,15 +20,14 @@ import {
   Alert,
   Switch,
   DeviceEventEmitter,
-  Image,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import centerIcon from "../assets/icons/center.png";
 import { useTheme } from "../hooks/useTheme";
 import NativeLocationService from "../services/NativeLocationService";
 import { Geofence, ScreenProps, LocationCoords } from "../types/global";
 import { useTracking } from "../contexts/TrackingProvider";
 import { Container, SectionTitle, Card } from "../components";
+import { MapCenterButton } from "../components/features/map/MapCenterButton";
 
 export function GeofenceScreen({}: ScreenProps) {
   const { coords, tracking } = useTracking();
@@ -486,7 +485,7 @@ export function GeofenceScreen({}: ScreenProps) {
       
       if (data.action === "center_map") {
         const pos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
-        map.getView().animate({ center: pos, zoom: 16, duration: 400 });
+        map.getView().animate({ center: pos, zoom: 17, duration: 400 });
       }
 
       if (data.action === "zoom_to_geofence") {
@@ -603,21 +602,7 @@ export function GeofenceScreen({}: ScreenProps) {
           onMessage={onMessage}
         />
 
-        {!isCentered && (
-          <TouchableOpacity
-            style={[
-              styles.centerBtn,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-            onPress={handleCenterMe}
-            activeOpacity={0.7}
-          >
-            <Image 
-              source={centerIcon} 
-              style={{ width: 28, height: 28, tintColor: colors.text }}
-            />
-          </TouchableOpacity>
-        )}
+        <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />
       </View>
 
       <FlatList
@@ -764,6 +749,9 @@ const styles = StyleSheet.create({
   input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: 15 },
   inputCentered: {
     textAlign: "center",
+  },
+  centerIcon: {
+    width: 28, height: 28, 
   },
   placeBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
   placeBtnText: { color: "#f8f7f7", fontSize: 15, fontWeight: "600" },
