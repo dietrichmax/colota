@@ -11,7 +11,6 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-  Platform,
   TouchableOpacity,
 } from "react-native";
 import { Container, Card, SectionTitle, Divider } from "../components";

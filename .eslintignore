@@ -1,3 +1,4 @@
 # .eslintignore
 *.min.js
+coverage
 **/openlayers/*.js

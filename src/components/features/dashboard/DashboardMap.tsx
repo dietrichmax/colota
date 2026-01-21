@@ -15,7 +15,6 @@ import {
   StyleSheet,
   Text,
   ActivityIndicator,
-  TouchableOpacity,
   DeviceEventEmitter,
   Image,
 } from "react-native";
@@ -23,7 +22,7 @@ import { WebView } from "react-native-webview";
 import { LocationCoords } from "../../../types/global";
 import { useTheme } from "../../../hooks/useTheme";
 import NativeLocationService from "../../../services/NativeLocationService";
-import centerIcon from "../../../assets/icons/center.png";
+import { MapCenterButton } from "../map/MapCenterButton";
 import icon from "../../../assets/icons/icon.png"
 
 type Props = {
@@ -136,8 +135,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.4.0/ol.css">
-    <!-- <link rel="stylesheet" href="openlayers/ol.css"> -->
+    <link rel="stylesheet" href="openlayers/ol.css">
     <style>
       html, body, #map {
         margin: 0;
@@ -247,8 +245,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
   </head>
   <body>
     <div id="map"></div>
-    <script src="https://cdn.jsdelivr.net/npm/ol@v10.4.0/dist/ol.js"></script>
-    <!-- <script src="openlayers/ol.js"></script> -->
+    <script src="openlayers/ol.js"></script>
     <script>
       const vectorSource = new ol.source.Vector();
 
@@ -387,7 +384,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         
         if (data.action === "center_map") {
           const pos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
-          map.getView().animate({ center: pos, zoom: 16, duration: 400 });
+          map.getView().animate({ center: pos, zoom: 17, duration: 400 });
         }
 
         if (data.action === "zoom_to_geofence") {
@@ -434,7 +431,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
             <Image 
               source={icon} 
-              style={{ width: 52, height: 52,  }}
+              style={styles.icon}
             />
         </View>
         <Text style={[styles.stateTitle, { color: colors.text }]}>
@@ -480,7 +477,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           originWhitelist={["*"]}
           source={{
             html: html,
-            //baseUrl: "file:///android_asset/",
+            baseUrl: "file:///android_asset/",
           }}
           style={styles.webview}
           scrollEnabled={false}
@@ -538,20 +535,10 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         </View>
       )}
 
-      {!isCentered && (
-        <TouchableOpacity
-          style={[
-            styles.centerButton,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-          onPress={handleCenterMe}
-        >
-          <Image 
-              source={centerIcon} 
-              style={{ width: 28, height: 28, tintColor: colors.text }}
-            />
-        </TouchableOpacity>
-      )}
+  <MapCenterButton 
+      visible={!isCentered} 
+      onPress={handleCenterMe} 
+    />
 
       {activeZoneName && (
         <View
@@ -578,66 +565,16 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, width: "100%", overflow: "hidden" },
   webview: { flex: 1 },
-  stateContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
+  stateContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
+  icon: { width: 64, height: 64 },
+  iconCircle: { width: 80, height: 80, borderRadius: 40, justifyContent: "center", alignItems: "center", marginBottom: 16 },
   stateTitle: { fontSize: 18, fontWeight: "bold", textAlign: "center" },
-  stateTitleSpaced: {
-    marginTop: 20,
-  },
-  stateSubtext: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 20,
-  },
-  centerButton: {
-    position: "absolute",
-    bottom: 30,
-    right: 10,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    borderWidth: 1,
-  },
+  stateTitleSpaced: { marginTop: 20 },
+  stateSubtext: { fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 },
   topInfoCard: {
-    position: "absolute",
-    top: 20,
-    left: 80,
-    right: 20,
-    padding: 16,
-    borderRadius: 16,
-    elevation: 8,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    borderLeftWidth: 5,
-    zIndex: 5,
+    position: "absolute", top: 20, left: 80, right: 20, padding: 16,
+    borderRadius: 16, elevation: 8, shadowOpacity: 0.2, borderLeftWidth: 5, zIndex: 5,
   },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 2,
-  },
-  infoSub: {
-    fontSize: 13,
-  },
+  infoTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 2 },
+  infoSub: { fontSize: 13 },
 });

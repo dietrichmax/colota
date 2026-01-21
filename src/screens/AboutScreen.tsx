@@ -45,14 +45,14 @@ function getAndroidVersion(sdkVersion: number): string {
 
 // Moved outside of AboutScreen component
 const LinkButton = ({
-  icon,
+  iconLabel,
   title,
   subtitle,
   url,
   colors,
   onOpenURL,
 }: {
-  icon: string;
+  iconLabel: string;
   title: string;
   subtitle: string;
   url: string;
@@ -65,7 +65,7 @@ const LinkButton = ({
     activeOpacity={0.7}
   >
     <View style={styles.linkContent}>
-      <Text style={styles.linkIcon}>{icon}</Text>
+      <Text style={styles.linkIcon}>{iconLabel}</Text>
       <View style={styles.linkTextContainer}>
         <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
         <Text style={[styles.linkSubtitle, { color: colors.textSecondary }]}>
@@ -233,7 +233,7 @@ export function AboutScreen({}: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>QUICK LINKS</SectionTitle>
           <LinkButton
-            icon="📄"
+            iconLabel="📄"
             title="Privacy Policy"
             subtitle="How your data is handled"
             url={PRIVACY_POLICY_URL}
@@ -241,7 +241,7 @@ export function AboutScreen({}: ScreenProps) {
             onOpenURL={handleOpenURL}
           />
           <LinkButton
-            icon="💻"
+            iconLabel="💻"
             title="View Source Code"
             subtitle="GitHub Repository"
             url={REPO_URL}
