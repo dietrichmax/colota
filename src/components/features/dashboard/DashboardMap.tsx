@@ -17,15 +17,14 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   DeviceEventEmitter,
-  Platform,
+  Image,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { LocationCoords } from "../../../types/global";
 import { useTheme } from "../../../hooks/useTheme";
 import NativeLocationService from "../../../services/NativeLocationService";
-import { SvgXml } from "react-native-svg";
-import RNFS from "react-native-fs";
-import { loadOpenLayersAssets } from "../../../helpers/openlayersLoader"
+import centerIcon from "../../../assets/icons/center.png";
+import icon from "../../../assets/icons/icon.png"
 
 type Props = {
   coords: LocationCoords | null;
@@ -38,8 +37,6 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
   const webviewRef = useRef<WebView>(null);
   const { colors, mode } = useTheme();
   const isDark = mode === "dark";
-  const [olCss, setOlCss] = useState("");
-  const [olJs, setOlJs] = useState("");
   const [geofences, setGeofences] = useState<any[]>([]);
   const [isCentered, setIsCentered] = useState(true);
   const [mapReady, setMapReady] = useState(false);
@@ -60,14 +57,6 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
       setHasInitialCoords(true);
     }
   }, [coords]);
-
-  const centerIconXml = `
-    <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 72 72">
-      <g transform="translate(0,72) scale(0.1,-0.1)" fill="${colors.text}">
-        <path d="M340 622 c0 -25 -5 -29 -47 -40 -64 -18 -137 -91 -155 -155 -11 -42 -15 -47 -40 -47 -21 0 -28 -5 -28 -20 0 -15 7 -20 28 -20 25 0 29 -5 40 -47 18 -64 91 -137 155 -155 42 -11 47 -15 47 -40 0 -21 5 -28 20 -28 15 0 20 7 20 28 0 25 5 29 47 40 64 18 137 91 155 155 11 42 15 47 40 47 21 0 28 5 28 20 0 15 -7 20 -28 20 -25 0 -29 5 -40 47 -18 65 -91 137 -155 154 -42 10 -47 14 -47 40 0 22 -5 29 -20 29 -15 0 -20 -7 -20 -28z m88 -87 c77 -33 115 -90 116 -177 1 -47 -4 -64 -29 -100 -34 -49 -102 -87 -155 -88 -52 0 -120 38 -155 88 -50 72 -38 179 27 239 54 50 130 65 196 38z"/>
-      </g>
-    </svg>
-  `;
 
   const loadGeofences = useCallback(async () => {
     try {
@@ -113,17 +102,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         })
       );
     }
-    console.log("Map is ready, sending coords", coords);
   }, [coords, mapReady, tracking, currentSilentZone]);
-
-  /*const onMessage = useCallback(async (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-
-      if (data.type === "MAP_READY") setMapReady(true);
-      if (data.type === "CENTERED") setIsCentered(data.value);
-
-  }, [loadGeofences]);*/
 
   // Update geofences
   useEffect(() => {
@@ -144,16 +123,8 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
       );
     }
   }, [coords]);
-
-  useEffect(() => {
-  loadOpenLayersAssets().then(({ css, js }) => {
-    setOlCss(css);
-    setOlJs(js);
-  });
-}, []);
-
   const html = useMemo(() => {
-    if (!hasInitialCoords || !initialCoords.current || !olCss || !olJs)
+    if (!hasInitialCoords || !initialCoords.current)
       return "";
 
     const lon = initialCoords.current.longitude;
@@ -164,7 +135,9 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="stylesheet" href="openlayers/ol.css">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.4.0/ol.css">
+    <!-- <link rel="stylesheet" href="openlayers/ol.css"> -->
     <style>
       html, body, #map {
         margin: 0;
@@ -274,7 +247,8 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
   </head>
   <body>
     <div id="map"></div>
-    <script src="openlayers/ol.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ol@v10.4.0/dist/ol.js"></script>
+    <!-- <script src="openlayers/ol.js"></script> -->
     <script>
       const vectorSource = new ol.source.Vector();
 
@@ -447,7 +421,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
   </body>
 </html>
 `;
-  }, [olCss, olJs, colors, isDark, hasInitialCoords]);
+  }, [colors, isDark, hasInitialCoords]);
 
   if (!tracking) {
     return (
@@ -458,13 +432,10 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         ]}
       >
         <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
-          <SvgXml
-            xml={centerIconXml}
-            width="52"
-            height="52"
-            color={colors.primary}
-            fill={colors.primary}
-          />
+            <Image 
+              source={icon} 
+              style={{ width: 52, height: 52,  }}
+            />
         </View>
         <Text style={[styles.stateTitle, { color: colors.text }]}>
           Tracking Disabled
@@ -509,10 +480,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           originWhitelist={["*"]}
           source={{
             html: html,
-            baseUrl:
-              Platform.OS === "android"
-                ? "file:///android_asset/"
-                : RNFS.MainBundlePath + "/",
+            //baseUrl: "file:///android_asset/",
           }}
           style={styles.webview}
           scrollEnabled={false}
@@ -578,7 +546,10 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           ]}
           onPress={handleCenterMe}
         >
-          <SvgXml xml={centerIconXml} width="28" height="28" />
+          <Image 
+              source={centerIcon} 
+              style={{ width: 28, height: 28, tintColor: colors.text }}
+            />
         </TouchableOpacity>
       )}
 

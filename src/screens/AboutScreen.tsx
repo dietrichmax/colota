@@ -13,11 +13,11 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
-import DeviceInfo from "react-native-device-info";
 import { ScreenProps, ThemeColors } from "../types/global";
 import { useTheme } from "../hooks/useTheme";
 import { SectionTitle, Card, Container, Divider, Footer } from "../components";
 import NativeLocationService from "../services/NativeLocationService";
+import icon from "../assets/icons/icon.png";
 
 const REPO_URL = "https://github.com/dietrichmax/colota";
 const PRIVACY_POLICY_URL = "https://mxd.codes/colota/privacy-policy";
@@ -103,6 +103,9 @@ export function AboutScreen({}: ScreenProps) {
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [tapCount, setTapCount] = useState(0);
   const [deviceInfo, setDeviceInfo] = useState({
+    model: "...",
+    brand: "...",
+    deviceId: "...",
     systemVersion: "...",
     apiLevel: "...",
   });
@@ -130,12 +133,18 @@ export function AboutScreen({}: ScreenProps) {
 
   useEffect(() => {
     const loadDeviceInfo = async () => {
-      const apiLevel = await DeviceInfo.getApiLevel();
-
-      setDeviceInfo({
-        systemVersion: DeviceInfo.getSystemVersion(),
-        apiLevel: apiLevel.toString(),
-      });
+      try {
+        const info = await NativeLocationService.getDeviceInfo();
+        setDeviceInfo({
+          model: info.model,
+          brand: info.brand,
+          deviceId: info.deviceId,
+          systemVersion: info.systemVersion,
+          apiLevel: info.apiLevel.toString(),
+        });
+      } catch (err) {
+        console.error("Failed to load device info:", err);
+      }
     };
 
     loadDeviceInfo();
@@ -174,7 +183,7 @@ export function AboutScreen({}: ScreenProps) {
             activeOpacity={0.8}
           >
             <Image
-              source={require("../../assets/icon.png")}
+              source={icon}
               style={styles.appIcon}
               resizeMode="contain"
             />
@@ -363,12 +372,12 @@ export function AboutScreen({}: ScreenProps) {
                 />
                 <TechRow
                   label="Device Model"
-                  value={DeviceInfo.getModel()}
+                  value={deviceInfo.model}
                   colors={colors}
                 />
                 <TechRow
                   label="Device Brand"
-                  value={DeviceInfo.getBrand()}
+                  value={deviceInfo.brand}
                   colors={colors}
                 />
                 <View style={styles.techRow}>
@@ -378,7 +387,7 @@ export function AboutScreen({}: ScreenProps) {
                     Device ID
                   </Text>
                   <Text style={[styles.techValue, { color: colors.text }]}>
-                    {DeviceInfo.getDeviceId()}
+                    {deviceInfo.deviceId}
                   </Text>
                 </View>
               </Card>

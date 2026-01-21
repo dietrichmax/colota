@@ -30,6 +30,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     private val locationUtils = LocationUtils(reactContext)
     private val dbHelper = LocationDatabaseHelper.getInstance(reactContext)
+    private val fileOps = FileOperations(reactContext)
+    private val deviceInfo = DeviceInfoHelper(reactContext) 
     
     // Use a fixed thread pool instead of unlimited threads
     private val dbExecutor: ExecutorService = if (Config.DB_THREAD_POOL_SIZE == 1) {
@@ -512,41 +514,22 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         reactApplicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
     }
 
+    // ==============================================================
+    // BATTERY OPTIMIZATION (Delegated to DeviceInfoHelper)
+    // ==============================================================
+
     @ReactMethod
     fun isIgnoringBatteryOptimizations(promise: Promise) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            promise.resolve(powerManager.isIgnoringBatteryOptimizations(reactApplicationContext.packageName))
-        } else {
-            promise.resolve(true)
-        }
+        promise.resolve(deviceInfo.isIgnoringBatteryOptimizations())
     }
 
     @ReactMethod
     fun requestIgnoreBatteryOptimizations(promise: Promise) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            promise.resolve(true)
-            return
-        }
-
         try {
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:${reactApplicationContext.packageName}")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            reactApplicationContext.startActivity(intent)
-            promise.resolve(true)
+            val result = deviceInfo.requestIgnoreBatteryOptimizations()
+            promise.resolve(result)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to open battery optimization settings", e)
-            // Fallback to general settings
-            try {
-                val fallbackIntent = Intent(Settings.ACTION_SETTINGS).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                reactApplicationContext.startActivity(fallbackIntent)
-                promise.resolve(false)
-            } catch (e2: Exception) {
-                promise.reject("ERROR", e2.message, e2)
-            }
+            promise.reject("ERROR", e.message, e)
         }
     }
 
@@ -567,6 +550,72 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             throw e
         }
     }
+
+    // ==============================================================
+    // DEVICE INFORMATION (Delegated to DeviceInfoHelper)
+    // ==============================================================
+
+    /**
+     * Returns device information as a map
+     */
+    @ReactMethod
+    fun getDeviceInfo(promise: Promise) {
+        try {
+            promise.resolve(deviceInfo.getDeviceInfo())
+        } catch (e: Exception) {
+            promise.reject("DEVICE_INFO_ERROR", e.message)
+        }
+    }
+
+    /**
+     * Individual getters for compatibility
+     */
+    @ReactMethod
+    fun getSystemVersion(promise: Promise) {
+        promise.resolve(deviceInfo.getSystemVersion())
+    }
+
+    @ReactMethod
+    fun getApiLevel(promise: Promise) {
+        promise.resolve(deviceInfo.getApiLevel())
+    }
+
+    @ReactMethod
+    fun getModel(promise: Promise) {
+        promise.resolve(deviceInfo.getModel())
+    }
+
+    @ReactMethod
+    fun getBrand(promise: Promise) {
+        promise.resolve(deviceInfo.getBrand())
+    }
+
+    @ReactMethod
+    fun getDeviceId(promise: Promise) {
+        promise.resolve(deviceInfo.getDeviceId())
+    }
+
+    // ==============================================================
+    // File Operations (Delegated to FileOperations)
+    // ==============================================================
+
+    @ReactMethod
+    fun writeFile(fileName: String, content: String, promise: Promise) = 
+        executeAsync(promise) { fileOps.writeFile(fileName, content) }
+
+
+    @ReactMethod
+    fun shareFile(filePath: String, mimeType: String, title: String, promise: Promise) = 
+        executeAsync(promise) { fileOps.shareFile(filePath, mimeType, title) }
+
+    
+    @ReactMethod
+    fun deleteFile(filePath: String, promise: Promise) = 
+        executeAsync(promise) { fileOps.deleteFile(filePath) }
+
+    @ReactMethod
+    fun getCacheDirectory(promise: Promise) = 
+        executeAsync(promise) { fileOps.getCacheDirectory() }
 }
 
 // Extension functions for safer ReadableMap access

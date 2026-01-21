@@ -20,24 +20,20 @@ import {
   Alert,
   Switch,
   DeviceEventEmitter,
-  Platform,
+  Image,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import { SvgXml } from "react-native-svg";
+import centerIcon from "../assets/icons/center.png";
 import { useTheme } from "../hooks/useTheme";
 import NativeLocationService from "../services/NativeLocationService";
 import { Geofence, ScreenProps, LocationCoords } from "../types/global";
 import { useTracking } from "../contexts/TrackingProvider";
 import { Container, SectionTitle, Card } from "../components";
-import RNFS from "react-native-fs";
-import { loadOpenLayersAssets } from "../helpers/openlayersLoader";
 
 export function GeofenceScreen({}: ScreenProps) {
   const { coords, tracking } = useTracking();
   const { colors, mode } = useTheme();
   const isDark = mode === "dark";
-  const [olCss, setOlCss] = useState("");
-  const [olJs, setOlJs] = useState("");
 
   const [geofences, setGeofences] = useState<Geofence[]>([]);
   const [newName, setNewName] = useState("");
@@ -60,17 +56,6 @@ export function GeofenceScreen({}: ScreenProps) {
       setHasInitialCoords(true);
     }
   }, [coords]);
-
-  const centerIconXml = useMemo(
-    () => `
-    <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 72 72">
-      <g transform="translate(0,72) scale(0.1,-0.1)" fill="${colors.text}">
-        <path d="M340 622 c0 -25 -5 -29 -47 -40 -64 -18 -137 -91 -155 -155 -11 -42 -15 -47 -40 -47 -21 0 -28 -5 -28 -20 0 -15 7 -20 28 -20 25 0 29 -5 40 -47 18 -64 91 -137 155 -155 42 -11 47 -15 47 -40 0 -21 5 -28 20 -28 15 0 20 7 20 28 0 25 5 29 47 40 64 18 137 91 155 155 11 42 15 47 40 47 21 0 28 5 28 20 0 15 -7 20 -28 20 -25 0 -29 5 -40 47 -18 65 -91 137 -155 154 -42 10 -47 14 -47 40 0 22 -5 29 -20 29 -15 0 -20 -7 -20 -28z m88 -87 c77 -33 115 -90 116 -177 1 -47 -4 -64 -29 -100 -34 -49 -102 -87 -155 -88 -52 0 -120 38 -155 88 -50 72 -38 179 27 239 54 50 130 65 196 38z"/>
-      </g>
-    </svg>
-  `,
-    [colors.text]
-  );
 
   // Load geofences
   const loadGeofences = useCallback(async () => {
@@ -244,15 +229,8 @@ export function GeofenceScreen({}: ScreenProps) {
     [loadGeofences]
   );
 
-  useEffect(() => {
-    loadOpenLayersAssets().then(({ css, js }) => {
-      setOlCss(css);
-      setOlJs(js);
-    });
-  }, [])
-
   const html = useMemo(() => {
-    if (!hasInitialCoords || !initialCoords.current || !olCss || !olJs)
+    if (!hasInitialCoords || !initialCoords.current)
       return "";
 
     const lon = initialCoords.current.longitude;
@@ -554,7 +532,7 @@ export function GeofenceScreen({}: ScreenProps) {
 </body>
 </html>
 `;
-  }, [olCss, olJs, colors, isDark, hasInitialCoords]);
+  }, [colors, isDark, hasInitialCoords]);
 
   const renderItem = useCallback(
     ({ item }: { item: Geofence }) => (
@@ -618,10 +596,7 @@ export function GeofenceScreen({}: ScreenProps) {
           originWhitelist={["*"]}
           source={{
             html: html,
-            baseUrl:
-              Platform.OS === "android"
-                ? "file:///android_asset/"
-                : RNFS.MainBundlePath + "/",
+            baseUrl: "file:///android_asset/"
           }}
           style={styles.webview}
           scrollEnabled={false}
@@ -637,7 +612,10 @@ export function GeofenceScreen({}: ScreenProps) {
             onPress={handleCenterMe}
             activeOpacity={0.7}
           >
-            <SvgXml xml={centerIconXml} width="28" height="28" />
+            <Image 
+              source={centerIcon} 
+              style={{ width: 28, height: 28, tintColor: colors.text }}
+            />
           </TouchableOpacity>
         )}
       </View>
