@@ -30,7 +30,7 @@ interface LocationData {
   accuracy?: number;
   bearing?: number;
   battery: number;
-  batteryStatus: number;
+  battery_status: number;
   last_error?: string;
 }
 
@@ -60,14 +60,15 @@ type TableType = "locations" | "queue";
  */
 const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
   const getBatteryStatus = (status: number): string => {
+    console.log("batterystatus" + status)
     switch (status) {
+      case 0:
+        return "Unknown";
+      case 1:
+        return "Unplugged";
       case 2:
-        return "⚡ Charging";
+        return "Charging";
       case 3:
-        return "Discharging";
-      case 4:
-        return "Not Charging";
-      case 5:
         return "Full";
       default:
         return "Unknown";
@@ -123,8 +124,8 @@ const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
       >
         <Metric label="Battery" value={`${item.battery}%`} colors={colors} />
         <Metric
-          label="Status"
-          value={getBatteryStatus(item.batteryStatus)}
+          label="Battery Status"
+          value={getBatteryStatus(item.battery_status)}
           colors={colors}
         />
         <View style={styles.spacer} />

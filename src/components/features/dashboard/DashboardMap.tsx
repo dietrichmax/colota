@@ -321,8 +321,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           const center = ol.proj.fromLonLat([zone.lon, zone.lat]);
           const circle = new ol.geom.Circle(center, zone.radius);
           const feature = new ol.Feature(circle);
-          
-          console.log("zone" + zone.pauseTracking)
+
           feature.setStyle(
             new ol.style.Style({
               stroke: new ol.style.Stroke({
@@ -400,9 +399,6 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           const markerIcon = markerEl.querySelector(".marker");
           const markerPulse = markerEl.querySelector(".marker-pulse");
           
-          
-          console.log("markerIcon" + markerIcon)
-          console.log("markerPulse" + markerPulse)
           if (markerIcon && markerPulse) {
             const isActive = data.tracking && !data.isPaused;
             const markerColor = data.isPaused ? "${colors.textDisabled}" : "${
@@ -411,7 +407,6 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
             markerIcon.style.background = markerColor;
             markerPulse.style.borderColor = markerColor;
             
-            console.log("isActive" + isActive)
             markerPulse.style.display = isActive ? "block" : "none";
           }
         }

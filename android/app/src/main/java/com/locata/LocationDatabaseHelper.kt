@@ -410,12 +410,12 @@ class LocationDatabaseHelper private constructor(context: Context) :
      */
     @Synchronized
     fun incrementRetryCount(queueId: Long, error: String? = null) {
-        incrementRetryStmt?.let { stmt ->
-            stmt.clearBindings()
-            stmt.bindString(1, error ?: "")
-            stmt.bindLong(2, queueId)
-            stmt.executeUpdateDelete()
-        }
+        val stmt = incrementRetryStmt ?: return // Exit if statement is null
+        
+        stmt.clearBindings()
+        stmt.bindString(1, error ?: "")
+        stmt.bindLong(2, queueId)
+        stmt.executeUpdateDelete()
     }
 
     // ========================== STATS OPERATIONS ==========================
@@ -508,9 +508,10 @@ class LocationDatabaseHelper private constructor(context: Context) :
     }
 
     /**
-     * Synchronous vacuum for backward compatibility.
-     *  Can block UI for seconds. Use vacuumAsync() instead.
-     */
+    * Optimizes database by reclaiming unused space.
+    * WARNING: Can block for several seconds on large databases.
+    * Call from background thread only.
+    */
     fun vacuum() {
         writableDatabase.execSQL("VACUUM")
         writableDatabase.execSQL("ANALYZE")
