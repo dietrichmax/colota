@@ -18,8 +18,6 @@ import { Container, Card, SectionTitle, Divider } from "../components";
 import { useTheme } from "../hooks/useTheme";
 import { ThemeColors, LocationCoords } from "../types/global";
 import NativeLocationService from "../services/NativeLocationService";
-import RNFS from "react-native-fs";
-import Share from "react-native-share"; // Use react-native-share instead
 
 
 type ExportFormat = "csv" | "geojson" | "gpx" | "kml";
@@ -176,8 +174,7 @@ export function ExportDataScreen() {
 
       setExportProgress("Saving file...");
 
-      const filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
-      await RNFS.writeFile(filePath, content, "utf8");
+      const filePath = await NativeLocationService.writeFile(fileName, content);
 
       // File is ready, close loading overlay
       setExporting(false);
@@ -186,36 +183,24 @@ export function ExportDataScreen() {
       // Wait for overlay to close before showing share dialog
       await new Promise<void>((resolve) => setTimeout(resolve, 300));
 
-      // Now show share dialog using react-native-share
-      const shareOptions = {
-        title: "Export Location Data",
-        message: `Colota location export: ${stats.totalLocations} locations`,
-        url: Platform.OS === "android" ? `file://${filePath}` : filePath,
-        type: mimeType,
-        filename: fileName,
-        subject: fileName, // For email
-      };
-
       try {
-        await Share.open(shareOptions);
+        await NativeLocationService.shareFile(
+          filePath,
+          mimeType,
+          `Colota Export - ${stats.totalLocations} locations`
+        );
       } catch (shareError: any) {
-        // User cancelled or share failed
-        if (
-          shareError?.message &&
-          !shareError.message.includes("User did not share")
-        ) {
-          console.warn("[ExportDataScreen] Share error:", shareError);
-        }
+        console.warn("[ExportDataScreen] Share error:", shareError);
       }
 
       // Clean up temp file after sharing
       setTimeout(async () => {
         try {
-          await RNFS.unlink(filePath);
+          await NativeLocationService.deleteFile(filePath);
         } catch (err) {
           console.warn("[ExportDataScreen] Failed to cleanup temp file:", err);
         }
-      }, 1000);
+      }, 2000);
     } catch (error) {
       console.error("[ExportDataScreen] Export failed:", error);
       Alert.alert(

@@ -482,6 +482,94 @@ class NativeLocationService {
     }
     return BuildConfigModule;
   }
+
+  // ============================================================================
+  // DEVICE INFORMATION
+  // ============================================================================
+
+  /**
+   * Get all device information at once
+   */
+  static async getDeviceInfo(): Promise<{
+    model: string;
+    brand: string;
+    manufacturer: string;
+    device: string;
+    deviceId: string;
+    systemVersion: string;
+    apiLevel: number;
+  }> {
+    this.ensureModule();
+    return LocationServiceModule.getDeviceInfo();
+  }
+
+  /**
+   * Individual getters (for drop-in replacement compatibility)
+   */
+  static async getSystemVersion(): Promise<string> {
+    this.ensureModule();
+    return LocationServiceModule.getSystemVersion();
+  }
+
+  static async getApiLevel(): Promise<number> {
+    this.ensureModule();
+    return LocationServiceModule.getApiLevel();
+  }
+
+  static async getModel(): Promise<string> {
+    this.ensureModule();
+    return LocationServiceModule.getModel();
+  }
+
+  static async getBrand(): Promise<string> {
+    this.ensureModule();
+    return LocationServiceModule.getBrand();
+  }
+
+  static async getDeviceId(): Promise<string> {
+    this.ensureModule();
+    return LocationServiceModule.getDeviceId();
+  }
+
+  // ============================================================================
+  // FILE MANAGEMENT
+  // ============================================================================
+
+  /**
+   * Writes content to a file in cache directory
+   */
+  static async writeFile(fileName: string, content: string): Promise<string> {
+    this.ensureModule();
+    return LocationServiceModule.writeFile(fileName, content);
+  }
+
+  /**
+   * Shares a file using native share sheet
+   */
+  static async shareFile(
+    filePath: string,
+    mimeType: string,
+    title: string
+  ): Promise<boolean> {
+    this.ensureModule();
+    return LocationServiceModule.shareFile(filePath, mimeType, title);
+  }
+
+  /**
+   * Deletes a file
+   */
+  static async deleteFile(filePath: string): Promise<boolean> {
+    this.ensureModule();
+    return LocationServiceModule.deleteFile(filePath);
+  }
+
+  /**
+   * Gets cache directory path
+   */
+  static async getCacheDirectory(): Promise<string> {
+    this.ensureModule();
+    return LocationServiceModule.getCacheDirectory();
+  }
 }
 
 export default NativeLocationService;
