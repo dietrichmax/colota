@@ -429,7 +429,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 if (loc == null) {
                     promise.resolve(null)
                 } else {
-                    else {
                     executeAsync(promise) { 
                         locationUtils.getSilentZone(loc) 
                     }
