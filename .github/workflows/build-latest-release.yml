@@ -1,0 +1,125 @@
+name: Build Latest Release
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+concurrency:
+  group: latest-release
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+
+  build-and-release:
+    name: Build & Update Latest
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node & Java
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create gradle.properties
+        run: |
+          cat <<EOF >> android/gradle.properties
+          org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m
+          android.useAndroidX=true
+          android.enableJetifier=true
+          hermesEnabled=true
+          newArchEnabled=true
+          reactNativeArchitectures=arm64-v8a
+
+          MYAPP_UPLOAD_STORE_FILE=release.keystore
+          MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}
+          MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.KEY_ALIAS }}
+          MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+          EOF
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo $KEYSTORE_BASE64 | base64 -d > android/app/release.keystore
+
+
+      - name: Validate signing inputs
+        run: |
+          test -f android/app/release.keystore || (echo "Keystore missing" && exit 1)
+          test -n "${{ secrets.KEYSTORE_PASSWORD }}" || exit 1
+          test -n "${{ secrets.KEY_ALIAS }}" || exit 1
+          test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
+
+
+      - name: Build Release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          # Gradle heap explicitly set here to avoid OOM
+          ./gradlew assembleRelease --no-daemon \
+            -PhermesEnabled=true \
+            -Pandroid.useAndroidX=true \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+
+
+      - name: Update Latest Tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f latest
+          git push -f origin latest
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Latest Development Build"
+          body: |
+            ## 🚀 Automated Build (Tests Passed ✅)
+            Built from commit: `${{ github.sha }}`
+          draft: false
+          prerelease: true
+          files: |
+            android/app/build/outputs/apk/release/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Secure Cleanup
+        if: always()
+        run: |
+          echo "Cleaning up sensitive files..."
+          rm -f android/app/release.keystore
+          rm -f android/gradle.properties
+

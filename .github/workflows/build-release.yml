@@ -1,14 +1,15 @@
-name: Latest Release
+name: Build Tagged Release
 
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*.*.*'
     paths-ignore:
       - '**.md'
   workflow_dispatch:
 
 concurrency:
-  group: latest-release
+  group: tagged-release
   cancel-in-progress: true
 
 jobs:
@@ -27,12 +28,12 @@ jobs:
       - run: npm test
 
   build-and-release:
-    name: Build & Update Latest
+    name: Build & Publish Release
     needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -74,7 +75,6 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: echo $KEYSTORE_BASE64 | base64 -d > android/app/release.keystore
 
-
       - name: Validate signing inputs
         run: |
           test -f android/app/release.keystore || (echo "Keystore missing" && exit 1)
@@ -82,39 +82,14 @@ jobs:
           test -n "${{ secrets.KEY_ALIAS }}" || exit 1
           test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
 
-
       - name: Build Release APK
         run: |
           cd android
           chmod +x gradlew
-          # Gradle heap explicitly set here to avoid OOM
           ./gradlew assembleRelease --no-daemon \
             -PhermesEnabled=true \
             -Pandroid.useAndroidX=true \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
-
-
-      - name: Update Latest Tag
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f latest
-          git push -f origin latest
-
-      - name: Publish to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: "Latest Development Build"
-          body: |
-            ## 🚀 Automated Build (Tests Passed ✅)
-            Built from commit: `${{ github.sha }}`
-          draft: false
-          prerelease: true
-          files: |
-            android/app/build/outputs/apk/release/app-release.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Secure Cleanup
         if: always()
@@ -122,4 +97,3 @@ jobs:
           echo "Cleaning up sensitive files..."
           rm -f android/app/release.keystore
           rm -f android/gradle.properties
-

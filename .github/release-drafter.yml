@@ -1,29 +1,29 @@
-name-template: "v$RESOLVED_VERSION"
-tag-template: "v$RESOLVED_VERSION"
+name-template: 'v$NEXT_PATCH_VERSION 🌍'
+tag-template: 'v$NEXT_PATCH_VERSION'
 categories:
-  - title: "💥 Breaking-Changes"
-    labels: ["breaking-change"]
-  - title: "🚀 Features"
-    labels: ["feature"]
-  - title: "✨ Enhancements"
-    labels: ["enhancement"]
-  - title: "🐛 Bug Fixes"
-    labels: ["fix", "bugfix", "bug", "patch"]
-  - title: "🧹 Maintenance "
-    labels: ["refactor", "maintenance", "chores"]
-  - title: "📚 Documentation"
-    label: ["documentation"]
-change-template: "🔹 $TITLE (#$NUMBER) by @$AUTHOR"
-change-title-escapes: '\<*_&'
-version-resolver:
-  major:
-    labels: ["breaking-change"]
-  minor:
-    labels: ["feature", "enhancement"]
-  patch:
-    labels: ["fix", "bugfix", "bug", "patch"]
-  default: patch
+  - title: '🚀 New Features'
+    labels:
+      - enhancement
+      - feature
+  - title: '🐛 Bug Fixes'
+    labels:
+      - bug
+      - fix
+  - title: '🛠 Refactoring / Maintenance'
+    labels:
+      - refactor
+      - maintenance
+  - title: '📚 Documentation'
+    labels:
+      - documentation
+  - title: '🧪 Tests'
+    labels:
+      - tests
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+no-changes-template: '- No changes'
 template: |
-  ## What's Changed
+  ## What’s new
 
   $CHANGES
+
+  ---
