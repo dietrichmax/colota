@@ -156,7 +156,6 @@ class LocationUtils(private val context: Context) {
             Log.e(TAG, "Network error: ${e.message}", e)
             false
         } finally {
-            // Manual cleanup since we can't use .use{}
             connection?.disconnect()
         }
     }

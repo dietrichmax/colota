@@ -97,23 +97,19 @@ export function CoordinateDisplay({ coords }: Props) {
 }
 
 const styles = StyleSheet.create({
-  /** Main container with vertical spacing between rows */
   container: {
     gap: 10,
   },
-  /** Horizontal row container for coordinate cards */
   row: {
     flexDirection: "row",
     gap: 10,
   },
-  /** Individual coordinate card styling */
   coordCard: {
     flex: 1,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
   },
-  /** Label text style (uppercase, small, secondary color) */
   coordLabel: {
     fontSize: 10,
     fontWeight: "600",
@@ -121,13 +117,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: "uppercase",
   },
-  /** Main coordinate value text style */
   coordValue: {
     fontSize: 15,
     fontWeight: "700",
     letterSpacing: -0.3,
   },
-  /** Unit text style (smaller, semi-transparent) */
   coordUnit: {
     fontSize: 12,
     fontWeight: "500",

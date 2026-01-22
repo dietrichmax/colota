@@ -13,8 +13,6 @@ import {
 import { useTheme } from "../../../hooks/useTheme";
 import { Container, Button } from "../..";
 
-// ✅ FIXED: Moved outside to avoid "unstable-nested-components"
-// Passed colors as a prop to keep it functional and clean
 type RowProps = {
   label: string;
   isGranted: boolean;
@@ -110,7 +108,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 12, // Increased for better tap target
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   label: { fontSize: 14 },

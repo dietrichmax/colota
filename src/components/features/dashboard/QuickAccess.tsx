@@ -20,7 +20,7 @@ interface NavItem {
   color: string;
   onPress?: () => void;
   comingSoon?: boolean;
-  subtitle?: string; // NEW: Add subtitle for context
+  subtitle?: string;
 }
 
 interface QuickAccessProps {
@@ -138,17 +138,16 @@ const styles = StyleSheet.create({
   navGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12, // Increased gap
+    gap: 12,
   },
   navItem: {
     width: "31%",
-    aspectRatio: 1, // Square cards
+    aspectRatio: 1,
     padding: 12,
-    borderRadius: 16, // More rounded
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    // Add subtle shadow
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -165,7 +164,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   navIcon: {
-    fontSize: 24, // Slightly larger
+    fontSize: 24,
   },
   navLabel: {
     fontSize: 12,

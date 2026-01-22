@@ -891,8 +891,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 40,
   },
-
-  // Header
   header: {
     marginBottom: 20,
   },
@@ -901,8 +899,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: -0.5,
   },
-
-  // Setting Rows
   settingRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -922,8 +918,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-
-  // Inputs
   inputGroup: {
     marginBottom: 12,
   },
@@ -952,8 +946,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: 15,
   },
-
-  // Buttons
   testButton: {
     padding: 16,
     borderRadius: 12,
@@ -963,8 +955,6 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.5,
   },
-
-  // Response
   responseBox: {
     marginTop: 12,
     padding: 14,
@@ -976,16 +966,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-
-  // Presets
   presetsContainer: {
     marginBottom: 16,
   },
   presetSpacer: {
     height: 8,
   },
-
-  // Advanced Toggle
   advancedToggle: {
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -995,7 +981,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   advancedToggleActive: {
-    backgroundColor: "transparent", // Will be overridden by dynamic color
+    backgroundColor: "transparent",
   },
   advancedToggleInactive: {
     backgroundColor: "transparent",
@@ -1004,8 +990,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
   },
-
-  // Advanced Panel
   advancedPanel: {
     marginTop: 16,
   },
@@ -1019,8 +1003,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
   },
-
-  // Parameter Groups
   paramGroup: {
     marginBottom: 4,
   },
@@ -1032,8 +1014,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     opacity: 0.6,
   },
-
-  // Setting Blocks
   settingBlock: {
     marginBottom: 20,
   },
@@ -1047,8 +1027,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 18,
   },
-
-  // Grid Options
   optionsGrid: {
     flexDirection: "row",
     gap: 8,
@@ -1066,8 +1044,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-
-  // Retry Grid
   retryGrid: {
     flexDirection: "row",
     gap: 10,
@@ -1086,16 +1062,12 @@ const styles = StyleSheet.create({
   retryHint: {
     marginTop: 8,
   },
-
-  // Nested Settings
   nestedSetting: {
     marginTop: 12,
     paddingLeft: 16,
     borderLeftWidth: 3,
     borderLeftColor: "rgba(0,0,0,0.1)",
   },
-
-  // Links
   linkRow: {
     flexDirection: "row",
     justifyContent: "space-between",

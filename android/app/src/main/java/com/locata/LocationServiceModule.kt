@@ -310,7 +310,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     // GEOFENCE OPERATIONS
     // ==============================================================
 
-    // Helper function to reduce duplication
+    // Helper function to trigger zone Rechecks
     private fun triggerZoneRecheck() {
         try {
             startServiceWithAction(LocationForegroundService.ACTION_RECHECK_ZONE)
@@ -426,26 +426,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     // ==============================================================
-    // STATISTICS & ANALYTICS (Future)
-    // ==============================================================
-
-    // TODO: Add when implementing statistics feature
-    // @ReactMethod
-    // fun getLocationStats(timeRange: String, promise: Promise) = executeAsync(promise) {
-    //     // Implementation here
-    // }
-
-    // @ReactMethod
-    // fun getDistanceTraveled(startTime: Long, endTime: Long, promise: Promise) = executeAsync(promise) {
-    //     // Implementation here
-    // }
-
-    // @ReactMethod
-    // fun getSpeedAnalytics(promise: Promise) = executeAsync(promise) {
-    //     // Implementation here
-    // }
-
-    // ==============================================================
     // SETTINGS PERSISTENCE
     // ==============================================================
 
@@ -505,7 +485,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    // Add helper for all service intents
+    // helper for all service intents
     private fun startServiceWithAction(action: String) {
         try {
             val intent = Intent(reactApplicationContext, LocationForegroundService::class.java).apply {

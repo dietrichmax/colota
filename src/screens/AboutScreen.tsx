@@ -77,7 +77,6 @@ const LinkButton = ({
   </TouchableOpacity>
 );
 
-// Moved outside of AboutScreen component
 const TechRow = ({
   label,
   value,
@@ -124,7 +123,7 @@ export function AboutScreen({}: ScreenProps) {
     const newCount = tapCount + 1;
     setTapCount(newCount);
 
-    // Enable debug mode after 7 taps (like Android's Developer Options)
+    // Enable debug mode after 7 taps
     if (newCount >= 7) {
       setShowDebugInfo(true);
       setTapCount(0);

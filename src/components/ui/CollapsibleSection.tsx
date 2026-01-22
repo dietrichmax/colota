@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { useTheme } from "../../hooks/useTheme";
 
-// Enable LayoutAnimation for Android
 if (
   Platform.OS === "android" &&
   UIManager.setLayoutAnimationEnabledExperimental
@@ -37,7 +36,6 @@ export function CollapsibleSection({
   const { colors } = useTheme();
 
   const toggle = () => {
-    // This creates the smooth "slide" effect when opening
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsOpen(!isOpen);
   };

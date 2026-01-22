@@ -7,7 +7,6 @@ import { View, StyleSheet } from "react-native";
 import { useTheme } from "../../hooks/useTheme";
 
 export const Divider = () => {
-  // Hook must be called inside the function body
   const { colors } = useTheme();
 
   return <View style={[styles.divider, { backgroundColor: colors.divider }]} />;

@@ -3,10 +3,6 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-/**
- * Core type definitions for Colota location tracking app
- */
-
 // ============================================================================
 // NAVIGATION & UI
 // ============================================================================
