@@ -15,8 +15,6 @@ import android.util.Log
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.google.android.gms.location.LocationServices
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import org.json.JSONObject
 import kotlinx.coroutines.*
 
@@ -32,13 +30,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     private val dbHelper = LocationDatabaseHelper.getInstance(reactContext)
     private val fileOps = FileOperations(reactContext)
     private val deviceInfo = DeviceInfoHelper(reactContext) 
-    
-    // Use a fixed thread pool instead of unlimited threads
-    private val dbExecutor: ExecutorService = if (Config.DB_THREAD_POOL_SIZE == 1) {
-        Executors.newSingleThreadExecutor()
-    } else {
-        Executors.newFixedThreadPool(Config.DB_THREAD_POOL_SIZE)
-    }
 
     // Coroutine scope for async operations
     private val moduleScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -54,12 +45,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         
         @Volatile
         private var isAppInForeground: Boolean = true
-
-        private object Config {
-            const val DB_THREAD_POOL_SIZE = 1
-            const val EXECUTOR_SHUTDOWN_TIMEOUT_MS = 800L
-        }
-
+        
         /**
          * Emits location updates to the React Native 'onLocationUpdate' listener.
          */
@@ -136,22 +122,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
     
     override fun onHostDestroy() { 
-        isAppInForeground = false
-        
-        // Cancel coroutines
+    isAppInForeground = false
+        // Cancel all running coroutines safely
         moduleScope.cancel()
-        
-        // Properly shutdown executor (YOU REMOVED THIS!)
-        dbExecutor.shutdown()
-        try {
-            if (!dbExecutor.awaitTermination(Config.EXECUTOR_SHUTDOWN_TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)) {
-                dbExecutor.shutdownNow()
-            }
-        } catch (e: InterruptedException) {
-            dbExecutor.shutdownNow()
-            Thread.currentThread().interrupt()
-        }
     }
+
 
     // ==============================================================
     // HELPERS
@@ -162,24 +137,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
      * Runs operation on database executor to avoid blocking main thread.
      * Checks if executor is active to prevent RejectedExecutionException.
      */
-    private fun executeAsync(promise: Promise, operation: () -> Any?) {
-        if (dbExecutor.isShutdown || dbExecutor.isTerminated) {
-            promise.reject("SERVICE_SHUTDOWN", "Module is shutting down, operation cancelled.")
-            return
-        }
-
-        try {
-            dbExecutor.execute {
-                try {
-                    val result = operation()
-                    promise.resolve(result)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Database operation failed", e)
-                    promise.reject("DB_ERROR", e.message, e)
-                }
+    private fun executeAsync(promise: Promise, operation: suspend () -> Any?) {
+        moduleScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { operation() }
+                promise.resolve(result)
+            } catch (e: Exception) {
+                Log.e(TAG, "Database operation failed", e)
+                promise.reject("DB_ERROR", e.message, e)
             }
-        } catch (e: java.util.concurrent.RejectedExecutionException) {
-            promise.reject("EXECUTION_REJECTED", "Task rejected: ${e.message}")
         }
     }
 
@@ -195,7 +161,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         Log.d(TAG, "Starting Service with config")
         
         // Don't block on DB write - do it async
-        dbExecutor.execute {
+        moduleScope.launch(Dispatchers.IO) { 
             dbHelper.saveSetting("tracking_enabled", "true")
         }
 
@@ -239,7 +205,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         reactApplicationContext.stopService(intent)
         
         // Save disabled state async (don't block)
-        dbExecutor.execute {
+        moduleScope.launch(Dispatchers.IO) { 
             dbHelper.saveSetting("tracking_enabled", "false")
         }
     }
@@ -309,28 +275,28 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod 
     fun clearSentHistory(promise: Promise) = executeAsync(promise) { 
         val deleted = dbHelper.clearSentHistory()
-        dbExecutor.execute { dbHelper.vacuum() }
+        moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
         deleted
     }
     
     @ReactMethod 
     fun clearQueue(promise: Promise) = executeAsync(promise) { 
         val deleted = dbHelper.clearQueue()
-        dbExecutor.execute { dbHelper.vacuum() }
+        moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
         deleted 
     }
     
     @ReactMethod 
     fun clearAllLocations(promise: Promise) = executeAsync(promise) { 
         val deleted = dbHelper.clearAllLocations()
-        dbExecutor.execute { dbHelper.vacuum() }
+        moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
         deleted
     }
     
     @ReactMethod
     fun deleteOlderThan(days: Int, promise: Promise) = executeAsync(promise) { 
         val deleted = dbHelper.deleteOlderThan(days)
-        dbExecutor.execute { dbHelper.vacuum() }
+        moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
         deleted 
     }
     

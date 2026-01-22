@@ -119,5 +119,7 @@ jobs:
       - name: Secure Cleanup
         if: always()
         run: |
-          [ -f android/app/release.keystore ] && shred -u android/app/release.keystore
-          [ -f gradle.properties ] && shred -u gradle.properties
+          echo "Cleaning up sensitive files..."
+          rm -f android/app/release.keystore
+          rm -f android/gradle.properties
+
