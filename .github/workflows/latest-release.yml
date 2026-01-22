@@ -53,11 +53,19 @@ jobs:
 
       - name: Create gradle.properties
         run: |
+          # 1. Increase Java Heap Space to 4GB
+          echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m" >> android/gradle.properties
+          
+          # 2. Existing necessary flags
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
           echo "hermesEnabled=true" >> android/gradle.properties
           echo "newArchEnabled=true" >> android/gradle.properties
-          # These allow your build.gradle logic to work without secrets in Git
+          
+          # 3. Build ONLY arm64-v8a to save memory/time (Recommended for Dev builds)
+          echo "reactNativeArchitectures=arm64-v8a" >> android/gradle.properties
+
+          # 4. Injecting secrets
           echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
           echo "MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
           echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
