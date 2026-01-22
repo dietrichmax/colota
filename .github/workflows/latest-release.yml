@@ -66,6 +66,7 @@ jobs:
           echo "reactNativeArchitectures=arm64-v8a" >> android/gradle.properties
 
           # 4. Injecting secrets
+          echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
           echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
           echo "MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
           echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
