@@ -424,20 +424,6 @@ After **max retries** (default: 5), failed items are automatically removed from 
 - **Network**: HttpURLConnection + Kotlin Coroutines
 - **UI**: React Native with TypeScript
 
-### Project Structure
-
-```
-app/src/main/java/com/colota/
-├── MainActivity.kt                   # Entry point
-├── LocationForegroundService.kt      # Background tracking service
-├── LocationServiceModule.kt          # React Native bridge
-├── LocationDatabaseHelper.kt         # SQLite database
-├── LocationUtils.kt                  # Utilities (network, battery, geo)
-├── LocationBootReceiver.kt           # Auto-start after reboot
-└── contexts/
-    └── TrackingProvider.tsx          # React Native state management
-```
-
 ### Key Components
 
 **LocationForegroundService**
@@ -467,34 +453,6 @@ app/src/main/java/com/colota/
 - **Geofence calculations** (Haversine formula)
 - JSON payload building with custom field mapping
 - **Connection pooling** via cached ConnectivityManager
-
-### Performance Optimizations
-
-1. **Database**:
-
-   - Strategic indexes on queue, locations, geofences
-   - Combined queries reduce round trips by 80%
-   - Prepared statements for hot paths
-   - WAL mode enables concurrent reads/writes
-
-2. **Caching**:
-
-   - Queue count: 3s cache → 85% fewer queries
-   - Battery status: 30s cache
-   - Notification: Text-based deduplication
-
-3. **Network**:
-
-   - Batch sync: 10 parallel requests via async/await
-   - Connection reuse via lazy initialization
-   - Smart retry with exponential backoff
-
-4. **Memory**:
-   - Proper coroutine scopes with SupervisorJob
-   - No memory leaks (scope.cancel() in onDestroy)
-   - Efficient data structures (Triple instead of Map)
-
----
 
 ## Battery Optimization
 
