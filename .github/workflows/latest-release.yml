@@ -55,8 +55,7 @@ jobs:
 
       - name: Create gradle.properties
         run: |
-          # Root gradle.properties (IMPORTANT)
-          cat <<EOF >> gradle.properties
+          cat <<EOF >> android/gradle.properties
           org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m
           android.useAndroidX=true
           android.enableJetifier=true
@@ -75,12 +74,14 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: echo $KEYSTORE_BASE64 | base64 -d > android/app/release.keystore
 
+
       - name: Validate signing inputs
         run: |
           test -f android/app/release.keystore || (echo "Keystore missing" && exit 1)
           test -n "${{ secrets.KEYSTORE_PASSWORD }}" || exit 1
           test -n "${{ secrets.KEY_ALIAS }}" || exit 1
           test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
+
 
       - name: Build Release APK
         run: |

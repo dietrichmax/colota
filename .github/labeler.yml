@@ -1,0 +1,17 @@
+cli:
+  - ".github/**"
+
+android:
+  - "android/**"
+
+ios:
+  - "ios/**"
+
+documentation:
+  - "README.md"
+
+frontend:
+  - "src/**"
+
+tests:
+  - "__tests__/**"

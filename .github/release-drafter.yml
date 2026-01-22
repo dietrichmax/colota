@@ -1,0 +1,29 @@
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+categories:
+  - title: "💥 Breaking-Changes"
+    labels: ["breaking-change"]
+  - title: "🚀 Features"
+    labels: ["feature"]
+  - title: "✨ Enhancements"
+    labels: ["enhancement"]
+  - title: "🐛 Bug Fixes"
+    labels: ["fix", "bugfix", "bug", "patch"]
+  - title: "🧹 Maintenance "
+    labels: ["refactor", "maintenance", "chores"]
+  - title: "📚 Documentation"
+    label: ["documentation"]
+change-template: "🔹 $TITLE (#$NUMBER) by @$AUTHOR"
+change-title-escapes: '\<*_&'
+version-resolver:
+  major:
+    labels: ["breaking-change"]
+  minor:
+    labels: ["feature", "enhancement"]
+  patch:
+    labels: ["fix", "bugfix", "bug", "patch"]
+  default: patch
+template: |
+  ## What's Changed
+
+  $CHANGES
