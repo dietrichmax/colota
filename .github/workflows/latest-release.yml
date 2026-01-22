@@ -70,6 +70,12 @@ jobs:
           MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
           EOF
 
+      - name: Validate signing inputs
+        run: |
+          test -f android/app/release.keystore || (echo "Keystore missing" && exit 1)
+          test -n "${{ secrets.KEYSTORE_PASSWORD }}" || exit 1
+          test -n "${{ secrets.KEY_ALIAS }}" || exit 1
+          test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
 
       - name: Decode keystore
         env:
@@ -80,10 +86,12 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          # We pass the flags here as well to be 100% safe with Gradle 9.0
+          # Gradle heap explicitly set here to avoid OOM
           ./gradlew assembleRelease --no-daemon \
             -PhermesEnabled=true \
-            -Pandroid.useAndroidX=true
+            -Pandroid.useAndroidX=true \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+
 
       - name: Update Latest Tag
         run: |
