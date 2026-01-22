@@ -845,8 +845,6 @@ See [LICENSE](LICENSE) file for full text.
 
 - **Issues**: [GitHub Issues](https://github.com/dietrichmax/colota/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/dietrichmax/colota/discussions)
-- **Email**: support@colota.app
-- **Documentation**: [Wiki](https://github.com/dietrichmax/colota/wiki)
 
 ---
 
@@ -860,9 +858,3 @@ If you find this app useful, consider supporting development:
 Your support helps maintain and improve Colota for the entire self-hosting community!
 
 ---
-
-**Made with ❤️ for the self-hosting community**
-
-_Privacy-focused • Self-hosted • Open Source_
-
-[⬆ Back to top](#colota)
