@@ -83,8 +83,8 @@ android {
         applicationId "com.Colota"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "1.4.1"
+        versionCode 9
+        versionName "1.4.2"
 
         // Expose build config to the module
         buildConfigField "int", "MIN_SDK_VERSION", "${rootProject.ext.minSdkVersion}"
