@@ -30,12 +30,12 @@ const styles = StyleSheet.create({
   comingSoonRibbon: {
     position: "absolute",
     top: 8,
-    right: -10, // push it a bit outside for the angled effect
+    right: -10,
     paddingVertical: 2,
     paddingHorizontal: 14,
     transform: [{ rotate: "45deg" }],
     zIndex: 10,
-    elevation: 10, // Android shadow
+    elevation: 10,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.3,
     shadowRadius: 2,

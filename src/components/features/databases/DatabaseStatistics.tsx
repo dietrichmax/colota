@@ -102,7 +102,6 @@ export function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
   );
 }
 
-// --- Styles ---
 const styles = StyleSheet.create({
   metricsSection: {
     marginBottom: 24,

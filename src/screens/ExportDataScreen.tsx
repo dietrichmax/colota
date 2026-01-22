@@ -95,7 +95,7 @@ export function ExportDataScreen() {
         const maxSize = Math.max(...sizesArray);
 
         const minBytes = data.length * minSize; // CSV
-        const maxBytes = data.length * maxSize; // GPX
+        const maxBytes = data.length * maxSize; // kml
         const estimatedSize = `${formatBytes(minBytes)} - ${formatBytes(
           maxBytes
         )}`;
@@ -620,13 +620,11 @@ const convertToKML = (data: LocationCoords[]): string => {
   return kml;
 };
 
-// --- Styles ---
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
 
-  // Header
   header: {
     marginTop: 20,
     marginBottom: 20,
@@ -637,8 +635,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: -0.5,
   },
-
-  // Stats Container - Matching StatsCard style
   statsContainer: {
     borderRadius: 16,
     borderWidth: 2,
@@ -672,14 +668,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     opacity: 0.3,
   },
-
-  // Section
   section: {
     paddingHorizontal: 20,
     marginBottom: 24,
   },
-
-  // Format Option - Matching PresetOption style
   formatOption: {
     paddingVertical: 8,
     paddingHorizontal: 0,
@@ -752,8 +744,6 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
   },
-
-  // Export Button
   exportSection: {
     paddingHorizontal: 20,
   },
@@ -787,13 +777,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     opacity: 0.9,
   },
-
-  // Disabled State
   disabledButton: {
     opacity: 0.5,
   },
-
-  // Loader
   loader: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 999,

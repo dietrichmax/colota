@@ -37,7 +37,7 @@ const TrackingContext = createContext<TrackingContextType | null>(null);
 function parseRawSettings(allRaw: Record<string, string>): Settings {
   return {
     ...DEFAULT_SETTINGS,
-    // Convert Android milliseconds back to JS-friendly seconds
+    // Convert Android milliseconds back to seconds (UNIX-Timestamp)
     interval: allRaw.interval
       ? parseInt(allRaw.interval, 10) / 1000
       : DEFAULT_SETTINGS.interval,
@@ -135,7 +135,6 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
    * are parsed into their respective JS types (Numbers, Booleans, and JSON objects).
    */
   useEffect(() => {
-    // Only run initialization once
     if (hasInitializedRef.current) return;
 
     const init = async () => {
@@ -185,7 +184,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMountedRef.current = false;
     };
-  }, [internalStart, setSettings]); // Include dependencies as required by ESLint
+  }, [internalStart, setSettings]);
 
   /**
    * Wrapped tracking controls with useCallback for stable references

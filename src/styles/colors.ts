@@ -10,7 +10,7 @@ export const lightColors: ThemeColors = {
   primary: "#7986CB",
   primaryDark: "#1A237E",
   primaryLight: "#C5CAE9",
-  secondary: "#FF7043", // Warm orange for secondary actions
+  secondary: "#FF7043",
   secondaryDark: "#E64A19",
   secondaryLight: "#FFCCBC",
 
@@ -21,9 +21,9 @@ export const lightColors: ThemeColors = {
   warning: "#FF9800",
   warningDark: "#F57C00",
   warningLight: "#FFE0B2",
-  error: "#D32F2F", // ✅ Fixed: Strong, assertive red
+  error: "#D32F2F",
   errorDark: "#B71C1C",
-  errorLight: "#FFCDD2", // ✅ Fixed: Now actually lighter than base
+  errorLight: "#FFCDD2",
   info: "#1976D2",
   infoDark: "#0D47A1",
   infoLight: "#BBDEFB",
@@ -48,8 +48,8 @@ export const lightColors: ThemeColors = {
 
   // Interactive
   placeholder: "#9AA0A6",
-  link: "#5C6BC0", // ✅ Fixed: Slightly lighter than primary for better hierarchy
-  linkVisited: "#7986CB", // ✅ Fixed: Visited links are now lighter (standard convention)
+  link: "#5C6BC0",
+  linkVisited: "#7986CB",
   overlay: "rgba(0, 0, 0, 0.5)",
   shadow: "rgba(0, 0, 0, 0.1)",
 
@@ -71,10 +71,10 @@ export const darkColors: ThemeColors = {
   success: "#4CAF50",
   successDark: "#388E3C",
   successLight: "#C8E6C9",
-  warning: "#FF9800", // ✅ Fixed: Consistent with light mode
+  warning: "#FF9800",
   warningDark: "#F57C00",
   warningLight: "#FFE0B2",
-  error: "#EF5350", // ✅ Fixed: Brighter red for dark backgrounds
+  error: "#EF5350",
   errorDark: "#D32F2F",
   errorLight: "#FFCDD2",
   info: "#4285F4",
@@ -101,8 +101,8 @@ export const darkColors: ThemeColors = {
 
   // Interactive
   placeholder: "#AAAAAA",
-  link: "#9FA8DA", // ✅ Fixed: Lighter indigo for better visibility on dark
-  linkVisited: "#7986CB", // ✅ Fixed: Visited links are now darker (standard convention)
+  link: "#9FA8DA",
+  linkVisited: "#7986CB",
   overlay: "rgba(0, 0, 0, 0.7)",
   shadow: "rgba(0, 0, 0, 0.3)",
 

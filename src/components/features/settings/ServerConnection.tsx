@@ -123,7 +123,7 @@ export function ServerConnection({
         description: "Configure an endpoint in settings to start syncing data.",
       },
       offline: {
-        color: colors.textSecondary, // Neutralere Farbe für Offline
+        color: colors.textSecondary,
         label: "Offline Mode",
         description: "Syncing is paused. Data is only collected locally.",
       },

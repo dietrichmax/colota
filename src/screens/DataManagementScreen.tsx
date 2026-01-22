@@ -380,7 +380,6 @@ const ActionRow = ({
   </TouchableOpacity>
 );
 
-// --- Styles ---
 const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,

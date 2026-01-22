@@ -14,17 +14,10 @@ import {
 } from "react-native";
 import { useTheme } from "../../hooks/useTheme";
 
-/**
- * Props for the Button component
- */
 type Props = {
-  /** Text to display inside the button */
   title: string;
-  /** Function to call when button is pressed */
   onPress: (event: GestureResponderEvent) => void;
-  /** Disable button interaction (default: false) */
   disabled?: boolean;
-  /** Additional styles for the button container */
   style?: StyleProp<ViewStyle>;
   activeOpacity?: number;
   color?: string;
@@ -78,14 +71,12 @@ export function Button({
 }
 
 const styles = StyleSheet.create({
-  /** Button container base styles */
   button: {
     paddingVertical: 12,
     paddingHorizontal: 24,
     alignItems: "center",
     marginVertical: 8,
   },
-  /** Button text styles */
   text: {
     fontSize: 16,
     fontWeight: "600",
