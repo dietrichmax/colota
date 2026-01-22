@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*.*.*'
+    paths-ignore:
+      - '**.md'
 
 jobs:
   # 1. Validation Job: Must pass before building artifacts
