@@ -426,13 +426,12 @@ After **max retries** (default: 5), failed items are automatically removed from 
 
 ### Tech Stack
 
-- **Language**: Kotlin 1.9+
+- **Language**: Kotlin 2.3
 - **Min SDK**: 26 (Android 8.0)
-- **Target SDK**: 35 (Android 15)
-- **Architecture**: MVVM with Kotlin Coroutines
-- **Database**: SQLite with Write-Ahead Logging (WAL)
+- **Target SDK**: 36 (Android 16)
+- **Database**: SQLite
 - **Location**: Google Play Services (FusedLocationProvider)
-- **Network**: HttpURLConnection + Kotlin Coroutines
+- **Network**: HttpURLConnection
 - **UI**: React Native with TypeScript
 
 ### Key Components
@@ -573,15 +572,6 @@ Contributions are welcome! Please follow these guidelines:
 - Add unit tests for new features
 - Ensure no memory leaks (proper coroutine lifecycle)
 - Update README if adding user-facing features
-
-### Areas Needing Help
-
-- [ ] iOS version (Swift/SwiftUI)
-- [ ] Wear OS companion app
-- [ ] Alternative location providers (non-Google)
-- [ ] Advanced analytics/visualization
-- [ ] Additional backend integrations
-- [ ] Internationalization (i18n)
 
 ---
 
