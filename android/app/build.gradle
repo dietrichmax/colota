@@ -107,14 +107,12 @@ android {
         }
         
         release {
-            if (System.getenv("CI")) {
-                // GitHub Actions environment
-                storeFile file("release.keystore")
-                storePassword System.getenv("KEYSTORE_PASSWORD")
-                keyAlias System.getenv("KEY_ALIAS")
-                keyPassword System.getenv("KEY_PASSWORD")
-            } else if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
-                // Local development with gradle.properties
+            if (
+                project.hasProperty('MYAPP_UPLOAD_STORE_FILE') &&
+                project.hasProperty('MYAPP_UPLOAD_STORE_PASSWORD') &&
+                project.hasProperty('MYAPP_UPLOAD_KEY_ALIAS') &&
+                project.hasProperty('MYAPP_UPLOAD_KEY_PASSWORD')
+            ) {
                 storeFile file(MYAPP_UPLOAD_STORE_FILE)
                 storePassword MYAPP_UPLOAD_STORE_PASSWORD
                 keyAlias MYAPP_UPLOAD_KEY_ALIAS
