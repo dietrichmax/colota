@@ -160,16 +160,26 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     /**
      * Standardized wrapper to resolve or reject a Promise.
      * Runs operation on database executor to avoid blocking main thread.
+     * Checks if executor is active to prevent RejectedExecutionException.
      */
     private fun executeAsync(promise: Promise, operation: () -> Any?) {
-        dbExecutor.execute {
-            try {
-                val result = operation()
-                promise.resolve(result)
-            } catch (e: Exception) {
-                Log.e(TAG, "Database operation failed", e)
-                promise.reject("DB_ERROR", e.message, e)
+        if (dbExecutor.isShutdown || dbExecutor.isTerminated) {
+            promise.reject("SERVICE_SHUTDOWN", "Module is shutting down, operation cancelled.")
+            return
+        }
+
+        try {
+            dbExecutor.execute {
+                try {
+                    val result = operation()
+                    promise.resolve(result)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Database operation failed", e)
+                    promise.reject("DB_ERROR", e.message, e)
+                }
             }
+        } catch (e: java.util.concurrent.RejectedExecutionException) {
+            promise.reject("EXECUTION_REJECTED", "Task rejected: ${e.message}")
         }
     }
 
@@ -419,12 +429,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 if (loc == null) {
                     promise.resolve(null)
                 } else {
-                    dbExecutor.execute { 
-                        try {
-                            promise.resolve(locationUtils.getSilentZone(loc))
-                        } catch (e: Exception) {
-                            promise.reject("ERROR", e.message, e)
-                        }
+                    else {
+                    executeAsync(promise) { 
+                        locationUtils.getSilentZone(loc) 
                     }
                 }
             }.addOnFailureListener { e ->
