@@ -806,32 +806,6 @@ A: **Total** = all locations captured. **Sent** = successfully synced to server.
 
 ---
 
-## Roadmap
-
-### Planned Features
-
-- [ ] **GPX/KML export** for location history
-- [ ] **iOS version** (Swift/SwiftUI)
-- [ ] **Wear OS companion app** for quick start/stop
-- [ ] **Advanced statistics** (distance traveled, time spent in zones)
-- [ ] **Automation rules** (e.g., start tracking when leaving home)
-- [ ] **Multiple profiles** (work, personal, travel)
-- [ ] **Bluetooth beacon support** for indoor tracking
-- [ ] **Alternative location providers** (non-Google)
-- [ ] **Dark/Light theme customization**
-- [ ] **Widgets** for quick access
-- [ ] **Internationalization** (multi-language support)
-
-### Under Consideration
-
-- Tile/OSM map provider option
-- Activity recognition (driving, walking, biking)
-- OBD-II integration for vehicle tracking
-- NFC tag triggers for automation
-- Web dashboard for visualization
-
----
-
 ## License
 
 ```
