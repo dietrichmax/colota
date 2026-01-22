@@ -60,6 +60,9 @@ react {
  */
 def enableProguardInReleaseBuilds = true
 
+// Use project.findProperty to safely check for the variable
+def isHermesEnabled = project.findProperty('hermesEnabled') == 'true'
+
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
  *
