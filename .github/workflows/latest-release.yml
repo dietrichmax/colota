@@ -69,6 +69,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
+          # Grant execution permission to the gradlew wrapper
+          chmod +x gradlew 
           ./gradlew assembleRelease --no-daemon
 
       - name: Update Latest Tag
