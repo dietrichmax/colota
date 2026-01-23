@@ -11,7 +11,7 @@ import {
   ViewStyle,
   StyleProp,
 } from "react-native";
-import { useTheme } from "@react-navigation/native";
+import { useTheme } from "../../../hooks/useTheme";
 
 interface Props {
   onPress: () => void;
@@ -21,6 +21,7 @@ interface Props {
 
 export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) => {
   const { colors } = useTheme();
+
 
   if (!visible) return null;
 
