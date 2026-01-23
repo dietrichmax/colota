@@ -3,7 +3,6 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple.svg)](https://kotlinlang.org)
-![Release](https://github.com/dietrichmax/colota/workflows/Release/badge.svg)
 [![Shield: Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-yellow?logo=buymeacoffee)](https://ko-fi.com/maxdietrich)
 
 **Self-hosted GPS tracking app for Android**
@@ -87,6 +86,7 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
 
 ## Screenshots
 
+**Light Mode**
 <table>
   <tr>
     <td><img src="https://github.com/dietrichmax/colota/blob/main/screenshots/mobile/original/Dashboard.png" alt="Dashboard" width="200"/></td>
@@ -101,6 +101,9 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
     <td align="center">Database</td>
   </tr>
 </table>
+
+**Dark Mode**
+tbd
 
 ---
 
