@@ -20,7 +20,7 @@ jobs:
       - name: Apply Labels
         uses: actions/labeler@v4
         with:
-          repo-token: ${{ secrets.LABELER_TOKEN }}
+          repo-token: ${{ github.token }}
           configuration-path: .github/labeler.yml
           sync-labels: false
           dot: false
