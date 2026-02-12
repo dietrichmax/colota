@@ -84,7 +84,7 @@ const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
           #{item.id || item.location_id}
         </Text>
         <Text style={[styles.time, { color: colors.textSecondary }]}>
-          {new Date(timestamp).toLocaleTimeString()}
+          {new Date(timestamp * 1000).toLocaleTimeString()}
         </Text>
       </View>
 
