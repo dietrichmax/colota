@@ -208,7 +208,9 @@ export function LocationInspectorScreen() {
                 }
               ]}
             >
-              <Text style={[styles.limitBtnText, { color: limit === v ? "#fff" : colors.text }]}>{v}</Text>
+              <Text style={[styles.limitBtnText, limit === v ? styles.limitBtnTextActive : { color: colors.text }]}>
+                {v}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -364,6 +366,9 @@ const styles = StyleSheet.create({
   limitBtnText: {
     fontSize: 12,
     fontWeight: "600"
+  },
+  limitBtnTextActive: {
+    color: "#fff"
   },
   paginationRow: {
     flexDirection: "row",
