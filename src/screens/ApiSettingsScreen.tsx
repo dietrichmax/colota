@@ -81,6 +81,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
     settings.apiTemplate || "custom"
   );
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -130,11 +131,20 @@ export function ApiSettingsScreen({}: ScreenProps) {
         };
 
         await setSettings(newSettings);
-        await restartTracking(newSettings);
 
-        setSaving(false);
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2000);
+        // Debounce the restart — only fires once after settings stabilize
+        if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = setTimeout(async () => {
+          try {
+            await restartTracking(newSettings);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 2000);
+          } catch (err) {
+            console.error("[ApiSettingsScreen] Restart failed:", err);
+          } finally {
+            setSaving(false);
+          }
+        }, 1500);
       } catch (err) {
         setSaving(false);
         console.error("[ApiSettingsScreen] Failed to save settings:", err);
@@ -271,12 +281,11 @@ export function ApiSettingsScreen({}: ScreenProps) {
     [localCustomFields, localFieldMap, localTemplate, saveAllSettings]
   );
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
     };
   }, []);
 

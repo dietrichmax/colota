@@ -49,6 +49,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load config on mount
   useEffect(() => {
@@ -68,6 +69,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
     };
   }, []);
 
@@ -76,13 +78,23 @@ export function AuthSettingsScreen({}: ScreenProps) {
       setSaving(true);
       try {
         await NativeLocationService.saveAuthConfig(newConfig);
-        await restartTracking(settings);
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2000);
+
+        // Debounce the restart — only fires once after settings stabilize
+        if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = setTimeout(async () => {
+          try {
+            await restartTracking(settings);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 2000);
+          } catch (err) {
+            console.error("[AuthSettingsScreen] Restart failed:", err);
+          } finally {
+            setSaving(false);
+          }
+        }, AUTOSAVE_DEBOUNCE_MS);
       } catch (err) {
-        console.error("[AuthSettingsScreen] Save failed:", err);
-      } finally {
         setSaving(false);
+        console.error("[AuthSettingsScreen] Save failed:", err);
       }
     },
     [restartTracking, settings]
