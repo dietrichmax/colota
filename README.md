@@ -9,18 +9,6 @@
 
 Colota is an open-source GPS tracker designed for users who run their own server infrastructure. Track your location with complete privacy and control—no cloud dependency, no third-party services, no data sharing.
 
-**Colota is currently in closed beta!**
-
-I need 12 beta testers for Google Play requirements (14 days)
-
-If you have:
-
-- ✅ Android phone
-- ✅ Your own server (or want to test offline mode)
-- ✅ 5 minutes to install and give feedback
-
-You can join the Google Group https://groups.google.com/g/colota-beta-testing/ and then you can download the beta version at https://play.google.com/apps/testing/com.Colota
-
 [Download on Google Play](#) | [View Screenshots](#screenshots) | [Documentation](#documentation)
 
 ---
@@ -32,7 +20,7 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
 - **Optional REST API connection** to your own server
 - **Works completely offline** without any server
 - **HTTPS-encrypted** data transmission (HTTP allowed for localhost development)
-- Compatible with **Dawarich**, **OwnTracks**, **Home Assistant**, **Traccar**, **NodeRED**
+- Compatible with **Dawarich**, **OwnTracks**, **Home Assistant**, **Traccar**, **NodeRED** or custom backend
 - Free choice of backend system
 
 ### 📍 GPS Tracking
@@ -50,9 +38,8 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
 - **Unlimited geofence zones** (silent zones)
 - **Automatic tracking pause** in defined areas
 - Freely adjustable radius
-- Event notifications on zone entry/exit
 - **Battery optimization** through GPS pause in zones
-- **Instant zone detection** with Haversine distance calculation
+- **Instant zone detection**
 
 ### 📡 Sync Modes
 
@@ -63,16 +50,6 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
 - **Intelligent retry**: Failed uploads retry with backoff (30s → 60s → 5min → 15min)
 - **Network-aware**: Auto-sync when network becomes available
 - **Queue management**: Automatic cleanup of permanently failed items
-
-### 🔋 Battery Optimized
-
-- **Up to 12 hours continuous runtime** in high-accuracy mode
-- **85% fewer database queries** through intelligent caching
-- **Notification throttling** (max 1 update per 5 seconds)
-- **Battery status caching** (checked every 30s instead of per location)
-- **Memory leak fixes** with proper coroutine lifecycle management
-- **Automatic stop at critical battery** (<5% unplugged)
-- **Batch processing** (50 items per sync, 10 parallel requests)
 
 ### 🔐 Privacy & Security
 
@@ -106,6 +83,21 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
 
 **Dark Mode**
 tbd
+
+<table>
+  <tr>
+    <td><img src="" alt="Dashboard" width="200"/></td>
+    <td><img src="" alt="Geofences" width="200"/></td>
+    <td><img src="" alt="Settings" width="200"/></td>
+    <td><img src="" alt="Database" width="200"/></td>
+  </tr>
+  <tr>
+    <td align="center">Dashboard</td>
+    <td align="center">Geofences</td>
+    <td align="center">Settings</td>
+    <td align="center">Database</td>
+  </tr>
+</table>
 
 ---
 
@@ -146,55 +138,6 @@ APK will be in `android/app/build/outputs/apk/release/`
 
 **That's it!** The app works completely offline.
 
-### 2. Server Integration
-
-#### Option A: Dawarich
-
-```bash
-# In Colota settings:
-Endpoint: https://dawarich.yourdomain.com/api/v1/owntracks/points?api_key=YOUR_KEY
-Sync Mode: Instant or Batch (5 minutes recommended)
-```
-
-#### Option B: Home Assistant
-
-```yaml
-# configuration.yaml
-rest_command:
-  colota_location:
-    url: "https://homeassistant.local/api/webhook/colota"
-    method: POST
-    content_type: "application/json"
-```
-
-#### Option C: Custom Server
-
-Create a simple endpoint that accepts POST requests:
-
-```javascript
-// Node.js example
-app.post("/api/location", (req, res) => {
-  const { lat, lon, acc, alt, vel, batt, bs, tst, bear } = req.body;
-
-  // Validate required fields
-  if (!lat || !lon) {
-    return res.status(400).send("Missing coordinates");
-  }
-
-  // Save to database
-  saveLocation({ lat, lon, acc, alt, vel, batt, bs, tst, bear });
-
-  res.status(200).send("OK");
-});
-```
-
-```bash
-# In Colota settings:
-Endpoint: https://yourserver.com/api/location
-Sync Mode: Batch (5 minutes)
-Max Retries: 5
-```
-
 ---
 
 ## Server Setup
@@ -211,26 +154,6 @@ Max Retries: 5
    Field Mapping: Default (OwnTracks compatible)
    Sync Mode: Batch (5 minutes)
    ```
-
-### OwnTracks Integration
-
-```bash
-# Colota endpoint:
-https://owntracks.yourdomain.com/pub
-
-# Compatible with OwnTracks Recorder
-# Uses OwnTracks-compatible JSON format
-```
-
-### Traccar Integration
-
-```bash
-# Colota endpoint:
-https://traccar.yourdomain.com/api/positions
-
-# Use Traccar's REST API
-# May require custom field mapping
-```
 
 ### Custom Backend
 
@@ -427,61 +350,15 @@ After **max retries** (default: 5), failed items are automatically removed from 
 
 ---
 
-## Architecture
-
-### Tech Stack
-
-- **Language**: Kotlin 2.3
-- **Min SDK**: 26 (Android 8.0)
-- **Target SDK**: 36 (Android 16)
-- **Database**: SQLite
-- **Location**: Google Play Services (FusedLocationProvider)
-- **Network**: HttpURLConnection
-- **UI**: React Native with TypeScript
-
-### Key Components
-
-**LocationForegroundService**
-
-- Manages GPS tracking lifecycle with coroutine scopes
-- Handles geofence detection with Haversine calculations
-- Queues and syncs data to server with retry logic
-- **Battery optimizations**:
-  - Notification throttling (5s max)
-  - Database query caching (3s cache)
-  - Battery status caching (30s cache)
-  - Batch processing (50 items, 10 parallel)
-
-**LocationDatabaseHelper**
-
-- SQLite database with WAL mode enabled
-- **Optimized indexes** on frequently queried columns
-- **Prepared statements** for retry count increments
-- Queue management with automatic cleanup
-- **Combined stats query** (1 query instead of 5)
-- Settings persistence with CONFLICT_REPLACE
-
-**LocationUtils**
-
-- Network communication with proper HTTP/HTTPS handling
-- **Battery status monitoring** with caching
-- **Geofence calculations** (Haversine formula)
-- JSON payload building with custom field mapping
-- **Connection pooling** via cached ConnectivityManager
-
 ## Battery Optimization
 
 Colota is heavily optimized for long-running background tracking:
 
 ### Optimizations Applied
 
-- **Notification throttling**: Max 1 update per 5 seconds (was unlimited)
-- **DB query caching**: 85% reduction in database queries
-- **Battery status caching**: Checked every 30s instead of per location
+- **Notification throttling**: Max 1 update per 5 seconds
 - **Batch processing**: 50 items per batch, 10 concurrent network requests
-- **Memory leak fixes**: Proper coroutine lifecycle management
 - **Smart sync**: Only syncs when queue has items and network available
-- **Geofence caching**: Optional 1-minute cache for zone calculations
 
 ### Battery Life Estimates
 
@@ -577,84 +454,6 @@ Contributions are welcome! Please follow these guidelines:
 - Add unit tests for new features
 - Ensure no memory leaks (proper coroutine lifecycle)
 - Update README if adding user-facing features
-
----
-
-## Development
-
-### Prerequisites
-
-- Android Studio Iguana (2023.2.1) or newer
-- JDK 17
-- Android SDK (API 26-35)
-- Node.js 18+ (for React Native)
-- npm or yarn
-
-### Setup Development Environment
-
-```bash
-# Clone repository
-git clone https://github.com/dietrichmax/colota.git
-cd colota
-
-# Install dependencies
-npm install
-
-# Start Metro bundler
-npm start
-
-# In another terminal, run on Android
-npm run android
-
-# View logs
-npx react-native log-android
-```
-
-### Build APK
-
-```bash
-# Debug build
-cd android
-./gradlew assembleDebug
-
-# Release build (requires keystore)
-./gradlew assembleRelease
-
-# APK location:
-# Debug: android/app/build/outputs/apk/debug/app-debug.apk
-# Release: android/app/build/outputs/apk/release/app-release.apk
-```
-
-### Run Tests
-
-```bash
-# Kotlin unit tests
-cd android
-./gradlew test
-
-# Instrumented tests (requires connected device/emulator)
-./gradlew connectedAndroidTest
-
-# React Native tests
-npm test
-```
-
-### Debugging
-
-```bash
-# View Android logs
-adb logcat | grep -E "Colota|LocationService|LocationDB"
-
-# View all app logs
-adb logcat --pid=$(adb shell pidof -s com.Colota)
-
-# Clear app data
-adb shell pm clear com.Colota
-
-# View database
-adb pull /data/data/com.Colota/databases/Colota.db
-sqlite3 Colota.db
-```
 
 ---
 
@@ -822,17 +621,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 ```
 
 See [LICENSE](LICENSE) file for full text.
-
----
-
-## Acknowledgments
-
-- [React Native](https://reactnative.dev/) - Cross-platform mobile framework
-- [Google Play Services](https://developers.google.com/android/guides/overview) - Location APIs
-- [Dawarich](https://github.com/Freika/dawarich) - Self-hosted location history service
-- [OwnTracks](https://owntracks.org/) - Inspiration for self-hosted tracking
-- [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html) - Async programming
-- All contributors and testers who helped improve Colota
 
 ---
 

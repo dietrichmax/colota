@@ -218,7 +218,6 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         background: ${
           isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)"
         } !important;
-        border-radius: 6px !important;
         padding: 4px 8px !important;
         font-size: 11px !important;
         -webkit-font-smoothing: antialiased !important;
