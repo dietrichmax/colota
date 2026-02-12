@@ -118,16 +118,16 @@ export function ExportDataScreen() {
           break
       }
 
-      const fileSize = getByteSize(content)
+      const exportSize = getByteSize(content)
 
-      if (fileSize > LARGE_FILE_THRESHOLD) {
+      if (exportSize > LARGE_FILE_THRESHOLD) {
         setExporting(false)
         setExportProgress("")
 
         const confirmed = await new Promise<boolean>((resolve) => {
           Alert.alert(
             "Large Export",
-            `The export file is ${formatBytes(fileSize)}. This may take a moment to save and share. Continue?`,
+            `The export file is ${formatBytes(exportSize)}. This may take a moment to save and share. Continue?`,
             [
               {
                 text: "Cancel",
@@ -150,7 +150,7 @@ export function ExportDataScreen() {
 
       const fileName = `colota_export_${Date.now()}${fileExtension}`
 
-      setExportProgress(`Saving file (${formatBytes(fileSize)})...`)
+      setExportProgress(`Saving file (${formatBytes(exportSize)})...`)
 
       const filePath = await NativeLocationService.writeFile(fileName, content)
 
@@ -290,8 +290,10 @@ export function ExportDataScreen() {
               <View style={styles.exportContent}>
                 <Text style={styles.exportIcon}>📤</Text>
                 <View style={styles.exportText}>
-                  <Text style={[styles.exportTitle, { color: "#fff" }]}>Export {selectedFormat.toUpperCase()}</Text>
-                  <Text style={[styles.exportSubtitle, { color: "#fff" }]}>
+                  <Text style={[styles.exportTitle, styles.exportButtonText]}>
+                    Export {selectedFormat.toUpperCase()}
+                  </Text>
+                  <Text style={[styles.exportSubtitle, styles.exportButtonText]}>
                     {stats.totalLocations.toLocaleString()} locations
                     {fileSize ? ` • ${fileSize}` : ""}
                   </Text>
@@ -658,6 +660,9 @@ const styles = StyleSheet.create({
   },
   exportText: {
     flex: 1
+  },
+  exportButtonText: {
+    color: "#fff"
   },
   exportTitle: {
     fontSize: 17,
