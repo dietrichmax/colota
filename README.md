@@ -1,6 +1,7 @@
 # Colota
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+![Version](https://img.shields.io/github/v/release/dietrichmax/colota)
 [![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple.svg)](https://kotlinlang.org)
 [![Shield: Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-yellow?logo=buymeacoffee)](https://ko-fi.com/maxdietrich)
@@ -8,6 +9,18 @@
 **Self-hosted GPS tracking app for Android**
 
 Colota is an open-source GPS tracker designed for users who run their own server infrastructure. Track your location with complete privacy and control—no cloud dependency, no third-party services, no data sharing.
+
+**Colota is currently in closed beta!**
+
+I need 12 beta testers for Google Play requirements (14 days)
+
+If you have:
+
+- ✅ Android phone
+- ✅ Your own server (or want to test offline mode)
+- ✅ 5 minutes to install and give feedback
+
+You can join the Google Group https://groups.google.com/g/colota-beta-testing/ and then you can download the beta version at https://play.google.com/apps/testing/com.Colota
 
 [Download on Google Play](#) | [View Screenshots](#screenshots) | [Documentation](#documentation)
 
