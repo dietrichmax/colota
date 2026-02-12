@@ -32,7 +32,11 @@ class NetworkManager(private val context: Context) {
     /**
      * Executes an asynchronous POST request to the server.
      */
-    suspend fun sendToEndpoint(payload: JSONObject, endpoint: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun sendToEndpoint(
+        payload: JSONObject,
+        endpoint: String,
+        extraHeaders: Map<String, String> = emptyMap()
+    ): Boolean = withContext(Dispatchers.IO) {
         if (endpoint.isBlank()) {
             if (BuildConfig.DEBUG) Log.d(TAG, "Empty endpoint provided")
             return@withContext false
@@ -62,10 +66,26 @@ class NetworkManager(private val context: Context) {
                 requestMethod = "POST"
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 setRequestProperty("Accept", "application/json")
+                extraHeaders.forEach { (key, value) ->
+                    setRequestProperty(key, value)
+                }
                 doOutput = true
                 connectTimeout = CONNECTION_TIMEOUT
                 readTimeout = READ_TIMEOUT
                 useCaches = false
+            }
+
+            // Log request details
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "=== HTTP REQUEST ===")
+                Log.d(TAG, "Endpoint: $endpoint")
+                Log.d(TAG, "Method: POST")
+                Log.d(TAG, "Headers:")
+                connection.requestProperties.forEach { (key, values) ->
+                    Log.d(TAG, "$key: ${values.joinToString()}")
+                }
+                Log.d(TAG, "Body: ${payload.toString(2)}") // Pretty print JSON
+                Log.d(TAG, "===================")
             }
 
             // Write payload

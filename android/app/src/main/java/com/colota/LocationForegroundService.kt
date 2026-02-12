@@ -27,6 +27,7 @@ class LocationForegroundService : Service() {
     private lateinit var deviceInfoHelper: DeviceInfoHelper
     private lateinit var networkManager: NetworkManager
     private lateinit var geofenceHelper: GeofenceHelper
+    private lateinit var secureStorage: SecureStorageHelper
     
     // Properly manage scope lifecycle to prevent memory leak
     private var serviceScope: CoroutineScope? = null
@@ -60,6 +61,7 @@ class LocationForegroundService : Service() {
     // --- Configuration (use ServiceConfig) ---
     private lateinit var config: ServiceConfig
     private var fieldMap: Map<String, String>? = null
+    private var authHeaders: Map<String, String> = emptyMap()
     private var consecutiveFailures = 0
 
     private val CHANNEL_ID = "location_service_channel"
@@ -91,6 +93,7 @@ class LocationForegroundService : Service() {
         deviceInfoHelper = DeviceInfoHelper(this)
         networkManager = NetworkManager(this)
         geofenceHelper = GeofenceHelper(this)
+        secureStorage = SecureStorageHelper.getInstance(this)
 
         createNotificationChannel()
     }
@@ -571,7 +574,8 @@ class LocationForegroundService : Service() {
                     async {
                         val success = networkManager.sendToEndpoint(
                             JSONObject(item.payload),
-                            endpoint
+                            endpoint,
+                            authHeaders
                         )
                         item.queueId to success
                     }
@@ -643,7 +647,7 @@ class LocationForegroundService : Service() {
         // Immediate send mode (syncInterval = 0)
         if (config.syncIntervalSeconds == 0) {
             Log.d(TAG, "Instant send")
-            val success = networkManager.sendToEndpoint(payload, endpoint)
+            val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders)
             
             if (success) {
                 dbHelper.removeFromQueueByLocationId(locationId)
@@ -871,7 +875,10 @@ class LocationForegroundService : Service() {
         } else {
             ServiceConfig.fromDatabase(dbHelper)
         }
-        
+
+        // Load auth headers from encrypted storage
+        authHeaders = secureStorage.getAuthHeaders()
+
         // Parse fieldMap separately (remains as Map for payload building)
         config.fieldMap?.let {
             if (it.isNotBlank()) fieldMap = locationUtils.parseFieldMap(it)
