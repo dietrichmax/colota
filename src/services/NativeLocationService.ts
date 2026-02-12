@@ -219,12 +219,11 @@ class NativeLocationService {
 
   /**
    * Fetches all locations for export
-   * @param limit Maximum records to export (default: 5000)
    */
-  static async getExportData(limit: number = 5000): Promise<any[]> {
+  static async getExportData(): Promise<any[]> {
     this.ensureModule();
     return this.safeExecute(
-      () => LocationServiceModule.getTableData("locations", limit, 0),
+      () => LocationServiceModule.getTableData("locations", 1000000, 0),
       [],
       "getExportData failed"
     );
