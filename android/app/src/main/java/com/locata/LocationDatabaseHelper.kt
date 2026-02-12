@@ -243,7 +243,7 @@ class LocationDatabaseHelper private constructor(context: Context) :
             put("battery_status", battery_status)
             put("timestamp", timestamp)
             put("endpoint", endpoint)
-            put("created_at", System.currentTimeMillis())
+            put("created_at", System.currentTimeMillis() / 1000)
         }
         return writableDatabase.insert(TABLE_LOCATIONS, null, values)
     }
@@ -579,8 +579,9 @@ class LocationDatabaseHelper private constructor(context: Context) :
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
+        }.timeInMillis / 1000 // convert to seconds
     }
+
 }
 
 /**
