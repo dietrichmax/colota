@@ -26,6 +26,7 @@ export const SettingsService = {
           break;
 
         case "fieldMap":
+        case "customFields":
           // Object → JSON string
           stringValue = JSON.stringify(value);
           break;

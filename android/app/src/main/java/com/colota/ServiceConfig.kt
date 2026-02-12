@@ -24,7 +24,8 @@ data class ServiceConfig(
     val filterInaccurateLocations: Boolean = true,
     val retryIntervalSeconds: Int = 300,
     val isOfflineMode: Boolean = false,
-    val fieldMap: String? = null
+    val fieldMap: String? = null,
+    val customFields: String? = null
 ) {
     companion object {
         /**
@@ -43,7 +44,8 @@ data class ServiceConfig(
                 filterInaccurateLocations = saved["filterInaccurateLocations"]?.toBoolean() ?: true,
                 retryIntervalSeconds = saved["retryInterval"]?.toIntOrNull() ?: 300,
                 isOfflineMode = saved["isOfflineMode"]?.toBoolean() ?: false,
-                fieldMap = saved["fieldMap"]
+                fieldMap = saved["fieldMap"],
+                customFields = saved["customFields"]
             )
         }
         
@@ -66,7 +68,8 @@ data class ServiceConfig(
                 filterInaccurateLocations = extras.getBooleanOrDefault("filterInaccurateLocations", dbConfig.filterInaccurateLocations),
                 retryIntervalSeconds = extras.getIntOrDefault("retryInterval", dbConfig.retryIntervalSeconds),
                 isOfflineMode = extras.getBooleanOrDefault("isOfflineMode", dbConfig.isOfflineMode),
-                fieldMap = extras.getStringOrDefault("fieldMap", dbConfig.fieldMap)
+                fieldMap = extras.getStringOrDefault("fieldMap", dbConfig.fieldMap),
+                customFields = extras.getStringOrDefault("customFields", dbConfig.customFields)
             )
         }
     }
@@ -86,6 +89,7 @@ data class ServiceConfig(
             putExtra("retryInterval", retryIntervalSeconds)
             putExtra("isOfflineMode", isOfflineMode)
             fieldMap?.let { putExtra("fieldMap", it) }
+            customFields?.let { putExtra("customFields", it) }
         }
     }
 }
