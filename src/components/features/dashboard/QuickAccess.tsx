@@ -2,33 +2,27 @@
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
-import React from "react";
-import {
-  View,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Linking,
-} from "react-native";
-import { useTheme } from "../../../hooks/useTheme";
-import { SectionTitle } from "../../ui/SectionTitle";
-import { ComingSoonRibbon } from "./ComingSoonRibbon";
+import React from "react"
+import { View, StyleSheet, Text, TouchableOpacity, Linking } from "react-native"
+import { useTheme } from "../../../hooks/useTheme"
+import { SectionTitle } from "../../ui/SectionTitle"
+import { ComingSoonRibbon } from "./ComingSoonRibbon"
 
 interface NavItem {
-  name: string;
-  icon: string;
-  color: string;
-  onPress?: () => void;
-  comingSoon?: boolean;
-  subtitle?: string;
+  name: string
+  icon: string
+  color: string
+  onPress?: () => void
+  comingSoon?: boolean
+  subtitle?: string
 }
 
 interface QuickAccessProps {
-  navigation: any;
+  navigation: any
 }
 
 export function QuickAccess({ navigation }: QuickAccessProps) {
-  const { colors } = useTheme();
+  const { colors } = useTheme()
 
   const navItems: NavItem[] = [
     {
@@ -36,44 +30,44 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
       icon: "⚙️",
       color: colors.primary,
       subtitle: "Configure tracking",
-      onPress: () => navigation.navigate("Settings"),
+      onPress: () => navigation.navigate("Settings")
     },
     {
       name: "Geofences",
       icon: "🏡",
       color: colors.success,
       subtitle: "Manage zones",
-      onPress: () => navigation.navigate("Geofences"),
+      onPress: () => navigation.navigate("Geofences")
     },
     {
       name: "Inspector",
       icon: "🔍",
       color: colors.info,
       subtitle: "View locations",
-      onPress: () => navigation.navigate("Locations Inspector"),
+      onPress: () => navigation.navigate("Locations Inspector")
     },
     {
       name: "Export",
       icon: "📤",
       color: colors.warning,
       subtitle: "Download data",
-      onPress: () => navigation.navigate("Export Data"),
+      onPress: () => navigation.navigate("Export Data")
     },
     {
       name: "About",
       icon: "ℹ️",
       color: colors.info,
       subtitle: "App info",
-      onPress: () => navigation.navigate("About Colota"),
+      onPress: () => navigation.navigate("About Colota")
     },
     {
       name: "Support",
       icon: "💖",
       color: colors.error,
       subtitle: "Help us grow",
-      onPress: () => Linking.openURL("https://mxd.codes/colota/support"),
-    },
-  ];
+      onPress: () => Linking.openURL("https://mxd.codes/colota/support")
+    }
+  ]
 
   return (
     <View style={styles.container}>
@@ -87,8 +81,8 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
               styles.navItem,
               {
                 backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
+                borderColor: colors.border
+              }
             ]}
             onPress={item.onPress}
           >
@@ -98,27 +92,21 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
                 styles.navIconBox,
                 {
                   backgroundColor: item.color + "15",
-                  borderColor: item.color + "30",
-                },
+                  borderColor: item.color + "30"
+                }
               ]}
             >
               <Text style={styles.navIcon}>{item.icon}</Text>
             </View>
 
             {/* Title */}
-            <Text
-              style={[styles.navLabel, { color: colors.text }]}
-              numberOfLines={1}
-            >
+            <Text style={[styles.navLabel, { color: colors.text }]} numberOfLines={1}>
               {item.name}
             </Text>
 
             {/* Subtitle */}
             {item.subtitle && (
-              <Text
-                style={[styles.navSubtitle, { color: colors.textSecondary }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.navSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
                 {item.subtitle}
               </Text>
             )}
@@ -128,17 +116,17 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
         ))}
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 16
   },
   navGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 12
   },
   navItem: {
     width: "31%",
@@ -152,7 +140,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 2
   },
   navIconBox: {
     width: 48,
@@ -161,21 +149,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
-    borderWidth: 1,
+    borderWidth: 1
   },
   navIcon: {
-    fontSize: 24,
+    fontSize: 24
   },
   navLabel: {
     fontSize: 12,
     fontWeight: "700",
     textAlign: "center",
     letterSpacing: 0.3,
-    marginBottom: 2,
+    marginBottom: 2
   },
   navSubtitle: {
     fontSize: 10,
     textAlign: "center",
-    opacity: 0.7,
-  },
-});
+    opacity: 0.7
+  }
+})

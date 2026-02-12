@@ -3,86 +3,76 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useRef, useCallback, memo } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
-  Switch,
-} from "react-native";
-import { Container, Card } from "../components";
-import { useTheme } from "../hooks/useTheme";
-import { ThemeColors } from "../types/global";
-import NativeLocationService from "../services/NativeLocationService";
+import React, { useState, useEffect, useRef, useCallback, memo } from "react"
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Switch } from "react-native"
+import { Container, Card } from "../components"
+import { useTheme } from "../hooks/useTheme"
+import { ThemeColors } from "../types/global"
+import NativeLocationService from "../services/NativeLocationService"
 
 // Types
 interface LocationData {
-  id?: number;
-  location_id?: number;
-  timestamp?: number;
-  created_at?: number;
-  latitude: number;
-  longitude: number;
-  altitude?: number;
-  speed?: number;
-  accuracy?: number;
-  bearing?: number;
-  battery: number;
-  battery_status: number;
-  last_error?: string;
+  id?: number
+  location_id?: number
+  timestamp?: number
+  created_at?: number
+  latitude: number
+  longitude: number
+  altitude?: number
+  speed?: number
+  accuracy?: number
+  bearing?: number
+  battery: number
+  battery_status: number
+  last_error?: string
 }
 
 interface LocationItemProps {
-  item: LocationData;
-  colors: ThemeColors;
-  isQueue: boolean;
+  item: LocationData
+  colors: ThemeColors
+  isQueue: boolean
 }
 
 interface MetricProps {
-  label: string;
-  value: string;
-  colors: ThemeColors;
+  label: string
+  value: string
+  colors: ThemeColors
 }
 
 interface TabProps {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-  colors: ThemeColors;
+  label: string
+  active: boolean
+  onPress: () => void
+  colors: ThemeColors
 }
 
-type TableType = "locations" | "queue";
+type TableType = "locations" | "queue"
 
 /**
  * Memoized row component to prevent re-renders during scrolling
  */
 const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
   const getBatteryStatus = (status: number): string => {
-    console.log("batterystatus" + status);
     switch (status) {
       case 0:
-        return "Unknown";
+        return "Unknown"
       case 1:
-        return "Unplugged";
+        return "Unplugged"
       case 2:
-        return "Charging";
+        return "Charging"
       case 3:
-        return "Full";
+        return "Full"
       default:
-        return "Unknown";
+        return "Unknown"
     }
-  };
+  }
 
-  const timestamp = item.timestamp || item.created_at || Date.now();
+  const timestamp = item.timestamp || item.created_at || Date.now()
 
   return (
     <Card style={styles.itemCard}>
       <View style={styles.row}>
-        <Text style={[styles.id, { color: colors.primary }]}>
-          #{item.id || item.location_id}
-        </Text>
+        <Text style={[styles.id, { color: colors.primary }]}>#{item.id || item.location_id}</Text>
         <Text style={[styles.time, { color: colors.textSecondary }]}>
           {new Date(timestamp * 1000).toLocaleTimeString()}
         </Text>
@@ -93,133 +83,92 @@ const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
       </Text>
 
       <View style={[styles.metricsGrid, { borderTopColor: colors.border }]}>
-        <Metric
-          label="Altitude"
-          value={`${item.altitude?.toFixed(1) ?? 0}m`}
-          colors={colors}
-        />
-        <Metric
-          label="Speed"
-          value={`${item.speed?.toFixed(1) ?? 0}m/s`}
-          colors={colors}
-        />
-        <Metric
-          label="Accuracy"
-          value={`±${item.accuracy?.toFixed(1) ?? 0}m`}
-          colors={colors}
-        />
-        <Metric
-          label="Bearing"
-          value={`${item.bearing?.toFixed(0) ?? 0}°`}
-          colors={colors}
-        />
+        <Metric label="Altitude" value={`${item.altitude?.toFixed(1) ?? 0}m`} colors={colors} />
+        <Metric label="Speed" value={`${item.speed?.toFixed(1) ?? 0}m/s`} colors={colors} />
+        <Metric label="Accuracy" value={`±${item.accuracy?.toFixed(1) ?? 0}m`} colors={colors} />
+        <Metric label="Bearing" value={`${item.bearing?.toFixed(0) ?? 0}°`} colors={colors} />
       </View>
 
-      <View
-        style={[
-          styles.metricsGrid,
-          styles.batteryGrid,
-          { borderTopColor: colors.border },
-        ]}
-      >
+      <View style={[styles.metricsGrid, styles.batteryGrid, { borderTopColor: colors.border }]}>
         <Metric label="Battery" value={`${item.battery}%`} colors={colors} />
-        <Metric
-          label="Battery Status"
-          value={getBatteryStatus(item.battery_status)}
-          colors={colors}
-        />
+        <Metric label="Battery Status" value={getBatteryStatus(item.battery_status)} colors={colors} />
         <View style={styles.spacer} />
         <View style={styles.spacer} />
       </View>
 
       {isQueue && item.last_error && (
-        <Text style={[styles.errorText, { color: colors.error }]}>
-          ⚠ {item.last_error}
-        </Text>
+        <Text style={[styles.errorText, { color: colors.error }]}>⚠ {item.last_error}</Text>
       )}
     </Card>
-  );
-});
+  )
+})
 
-LocationItem.displayName = "LocationItem";
+LocationItem.displayName = "LocationItem"
 
 export function LocationInspectorScreen() {
-  const { colors } = useTheme();
-  const [activeTable, setActiveTable] = useState<TableType>("locations");
-  const [data, setData] = useState<LocationData[]>([]);
-  const [limit, setLimit] = useState(50);
-  const [page, setPage] = useState(0);
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const refreshInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { colors } = useTheme()
+  const [activeTable, setActiveTable] = useState<TableType>("locations")
+  const [data, setData] = useState<LocationData[]>([])
+  const [limit, setLimit] = useState(50)
+  const [page, setPage] = useState(0)
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const refreshInterval = useRef<ReturnType<typeof setInterval> | null>(null)
 
   /** Fetches data based on current pagination and table selection */
   const fetchData = useCallback(async () => {
     try {
-      const offset = page * limit;
-      const result = await NativeLocationService.getTableData(
-        activeTable,
-        limit,
-        offset
-      );
-      setData(result || []);
+      const offset = page * limit
+      const result = await NativeLocationService.getTableData(activeTable, limit, offset)
+      setData(result || [])
     } catch (err) {
-      console.error("[LocationInspector] Fetch error:", err);
-      setData([]);
+      console.error("[LocationInspector] Fetch error:", err)
+      setData([])
     }
-  }, [activeTable, limit, page]);
+  }, [activeTable, limit, page])
 
   /** Fetch data when dependencies change */
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData()
+  }, [fetchData])
 
   /** Auto-refresh logic */
   useEffect(() => {
     if (autoRefresh) {
-      setPage(0); // Always show newest data in live mode
-      refreshInterval.current = setInterval(fetchData, 3000);
+      setPage(0) // Always show newest data in live mode
+      refreshInterval.current = setInterval(fetchData, 3000)
     } else {
       if (refreshInterval.current) {
-        clearInterval(refreshInterval.current);
+        clearInterval(refreshInterval.current)
       }
     }
     return () => {
       if (refreshInterval.current) {
-        clearInterval(refreshInterval.current);
+        clearInterval(refreshInterval.current)
       }
-    };
-  }, [autoRefresh, fetchData]);
+    }
+  }, [autoRefresh, fetchData])
 
   const handleTableChange = (table: TableType) => {
-    setActiveTable(table);
-    setPage(0);
-  };
+    setActiveTable(table)
+    setPage(0)
+  }
 
   const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit);
-    setPage(0);
-  };
+    setLimit(newLimit)
+    setPage(0)
+  }
 
   return (
     <Container>
       {/* Header with Live Mode Toggle */}
       <View style={styles.headerRow}>
-        <Text
-          style={[
-            styles.statusText,
-            { color: autoRefresh ? colors.primary : colors.textSecondary },
-          ]}
-        >
+        <Text style={[styles.statusText, { color: autoRefresh ? colors.primary : colors.textSecondary }]}>
           {autoRefresh ? "● Live Mode" : "Manual Mode"}
         </Text>
 
         <View style={styles.controls}>
           <View style={styles.toggleContainer}>
-            <Text
-              style={[styles.controlLabel, { color: colors.textSecondary }]}
-            >
-              LIVE
-            </Text>
+            <Text style={[styles.controlLabel, { color: colors.textSecondary }]}>LIVE</Text>
             <Switch
               value={autoRefresh}
               onValueChange={setAutoRefresh}
@@ -234,14 +183,12 @@ export function LocationInspectorScreen() {
               styles.refreshBtn,
               {
                 backgroundColor: colors.card,
-                borderColor: colors.border,
+                borderColor: colors.border
               },
-              autoRefresh && styles.refreshBtnDisabled,
+              autoRefresh && styles.refreshBtnDisabled
             ]}
           >
-            <Text style={[styles.btnText, { color: colors.primary }]}>
-              Refresh
-            </Text>
+            <Text style={[styles.btnText, { color: colors.primary }]}>Refresh</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -257,18 +204,11 @@ export function LocationInspectorScreen() {
                 styles.limitBtn,
                 {
                   backgroundColor: limit === v ? colors.primary : colors.card,
-                  borderColor: colors.border,
-                },
+                  borderColor: colors.border
+                }
               ]}
             >
-              <Text
-                style={[
-                  styles.limitBtnText,
-                  { color: limit === v ? "#fff" : colors.text },
-                ]}
-              >
-                {v}
-              </Text>
+              <Text style={[styles.limitBtnText, { color: limit === v ? "#fff" : colors.text }]}>{v}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -284,16 +224,14 @@ export function LocationInspectorScreen() {
                 style={[
                   styles.pageBtnText,
                   {
-                    color: page === 0 ? colors.textDisabled : colors.primary,
-                  },
+                    color: page === 0 ? colors.textDisabled : colors.primary
+                  }
                 ]}
               >
                 ◀
               </Text>
             </TouchableOpacity>
-            <Text style={[styles.pageIndicator, { color: colors.text }]}>
-              {page + 1}
-            </Text>
+            <Text style={[styles.pageIndicator, { color: colors.text }]}>{page + 1}</Text>
             <TouchableOpacity
               onPress={() => setPage((p) => p + 1)}
               disabled={data.length < limit}
@@ -303,11 +241,8 @@ export function LocationInspectorScreen() {
                 style={[
                   styles.pageBtnText,
                   {
-                    color:
-                      data.length < limit
-                        ? colors.textDisabled
-                        : colors.primary,
-                  },
+                    color: data.length < limit ? colors.textDisabled : colors.primary
+                  }
                 ]}
               >
                 ▶
@@ -338,61 +273,36 @@ export function LocationInspectorScreen() {
         data={data}
         contentContainerStyle={styles.listContent}
         keyExtractor={(item, index) => `${activeTable}-${item.id || index}`}
-        ListEmptyComponent={
-          <Text style={[styles.emptyText, { color: colors.textLight }]}>
-            No data available
-          </Text>
-        }
-        renderItem={({ item }) => (
-          <LocationItem
-            item={item}
-            colors={colors}
-            isQueue={activeTable === "queue"}
-          />
-        )}
+        ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textLight }]}>No data available</Text>}
+        renderItem={({ item }) => <LocationItem item={item} colors={colors} isQueue={activeTable === "queue"} />}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
       />
     </Container>
-  );
+  )
 }
 
 // Subcomponents
 const Metric = ({ label, value, colors }: MetricProps) => (
   <View style={styles.metricItem}>
-    <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-      {label}
-    </Text>
+    <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{label}</Text>
     <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
   </View>
-);
+)
 
 const Tab = ({ label, active, onPress, colors }: TabProps) => {
-  const borderBottomColor = active ? colors.primary : "transparent";
-  const textColor = active ? colors.primary : colors.textSecondary;
+  const borderBottomColor = active ? colors.primary : "transparent"
+  const textColor = active ? colors.primary : colors.textSecondary
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[
-        styles.tab,
-        active ? styles.tabActive : styles.tabInactive,
-        { borderBottomColor },
-      ]}
-    >
-      <Text
-        style={[
-          styles.tabText,
-          active ? styles.tabTextActive : styles.tabTextInactive,
-          { color: textColor },
-        ]}
-      >
+    <TouchableOpacity onPress={onPress} style={[styles.tab, { borderBottomColor }]}>
+      <Text style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive, { color: textColor }]}>
         {label}
       </Text>
     </TouchableOpacity>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   headerRow: {
@@ -400,38 +310,38 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 12,
-    paddingTop: 12,
+    paddingTop: 12
   },
   statusText: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "600"
   },
   controls: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "center"
   },
   toggleContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 12
   },
   controlLabel: {
     fontSize: 10,
     fontWeight: "700",
-    marginRight: 6,
+    marginRight: 6
   },
   refreshBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
-    borderWidth: 1,
+    borderWidth: 1
   },
   refreshBtnDisabled: {
-    opacity: 0.5,
+    opacity: 0.5
   },
   btnText: {
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: "bold"
   },
   limitBar: {
     flexDirection: "row",
@@ -439,125 +349,119 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     marginTop: 12,
-    marginBottom: 12,
+    marginBottom: 12
   },
   limitOptions: {
-    flexDirection: "row",
+    flexDirection: "row"
   },
   limitBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
     marginRight: 6,
-    borderWidth: 1,
+    borderWidth: 1
   },
   limitBtnText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "600"
   },
   paginationRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "center"
   },
   pageBtn: {
-    padding: 8,
+    padding: 8
   },
   pageBtnText: {
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: 16
   },
   pageIndicator: {
     fontSize: 14,
     fontWeight: "bold",
-    marginHorizontal: 8,
+    marginHorizontal: 8
   },
   tabBar: {
     flexDirection: "row",
-    marginBottom: 12,
+    marginBottom: 12
   },
   tab: {
     flex: 1,
     alignItems: "center",
     padding: 12,
-    borderBottomWidth: 2,
-  },
-  tabActive: {
-    // Additional styles for active tab if needed
-  },
-  tabInactive: {
-    // Additional styles for inactive tab if needed
+    borderBottomWidth: 2
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 14
   },
   tabTextActive: {
-    fontWeight: "700",
+    fontWeight: "700"
   },
   tabTextInactive: {
-    fontWeight: "400",
+    fontWeight: "400"
   },
   listContent: {
     paddingHorizontal: 12,
-    paddingBottom: 20,
+    paddingBottom: 20
   },
   itemCard: {
     marginBottom: 10,
-    padding: 12,
+    padding: 12
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 6
   },
   id: {
     fontWeight: "bold",
-    fontSize: 12,
+    fontSize: 12
   },
   time: {
-    fontSize: 11,
+    fontSize: 11
   },
   coords: {
     fontFamily: "monospace",
     fontSize: 15,
     fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 8
   },
   metricsGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: 8,
-    marginTop: 4,
+    marginTop: 4
   },
   batteryGrid: {
     paddingTop: 6,
-    marginTop: 2,
+    marginTop: 2
   },
   metricItem: {
     flex: 1,
-    alignItems: "flex-start",
+    alignItems: "flex-start"
   },
   metricLabel: {
     fontSize: 9,
     fontWeight: "bold",
-    textTransform: "uppercase",
+    textTransform: "uppercase"
   },
   metricValue: {
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 2
   },
   spacer: {
-    flex: 1,
+    flex: 1
   },
   emptyText: {
     textAlign: "center",
     marginTop: 40,
     fontSize: 14,
-    fontStyle: "italic",
+    fontStyle: "italic"
   },
   errorText: {
     fontSize: 11,
     marginTop: 8,
-    fontStyle: "italic",
-  },
-});
+    fontStyle: "italic"
+  }
+})

@@ -3,91 +3,76 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, {
-  useRef,
-  useEffect,
-  useMemo,
-  useState,
-  useCallback,
-} from "react";
-import {
-  View,
-  StyleSheet,
-  Text,
-  ActivityIndicator,
-  DeviceEventEmitter,
-  Image,
-} from "react-native";
-import { WebView } from "react-native-webview";
-import { LocationCoords } from "../../../types/global";
-import { useTheme } from "../../../hooks/useTheme";
-import NativeLocationService from "../../../services/NativeLocationService";
-import { MapCenterButton } from "../map/MapCenterButton";
-import icon from "../../../assets/icons/icon.png";
+import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
+import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image } from "react-native"
+import { WebView } from "react-native-webview"
+import { LocationCoords } from "../../../types/global"
+import { useTheme } from "../../../hooks/useTheme"
+import NativeLocationService from "../../../services/NativeLocationService"
+import { MapCenterButton } from "../map/MapCenterButton"
+import icon from "../../../assets/icons/icon.png"
 
 type Props = {
-  coords: LocationCoords | null;
-  tracking: boolean;
-  isPaused: boolean;
-  activeZoneName: string | null;
-};
+  coords: LocationCoords | null
+  tracking: boolean
+  isPaused: boolean
+  activeZoneName: string | null
+}
 
 export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
-  const webviewRef = useRef<WebView>(null);
-  const { colors, mode } = useTheme();
-  const isDark = mode === "dark";
-  const [geofences, setGeofences] = useState<any[]>([]);
-  const [isCentered, setIsCentered] = useState(true);
-  const [mapReady, setMapReady] = useState(false);
-  const initialCoords = useRef<LocationCoords | null>(null);
-  const [hasInitialCoords, setHasInitialCoords] = useState(false);
+  const webviewRef = useRef<WebView>(null)
+  const { colors, mode } = useTheme()
+  const isDark = mode === "dark"
+  const [geofences, setGeofences] = useState<any[]>([])
+  const [isCentered, setIsCentered] = useState(true)
+  const [mapReady, setMapReady] = useState(false)
+  const initialCoords = useRef<LocationCoords | null>(null)
+  const [hasInitialCoords, setHasInitialCoords] = useState(false)
 
-  const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(
-    null
-  );
+  const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(null)
 
   const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
-    return c !== null && c.latitude !== 0 && c.longitude !== 0;
-  };
+    return c !== null && c.latitude !== 0 && c.longitude !== 0
+  }
 
   useEffect(() => {
     if (!initialCoords.current && coords) {
-      initialCoords.current = coords;
-      setHasInitialCoords(true);
+      initialCoords.current = coords
+      setHasInitialCoords(true)
     }
-  }, [coords]);
+  }, [coords])
 
   const loadGeofences = useCallback(async () => {
     try {
-      const data = await NativeLocationService.getGeofences();
-      setGeofences(data);
+      const data = await NativeLocationService.getGeofences()
+      setGeofences(data)
     } catch (err) {
-      console.error("[GeofenceScreen] Failed to load geofences:", err);
+      console.error("[GeofenceScreen] Failed to load geofences:", err)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    loadGeofences();
-  }, [loadGeofences]);
+    loadGeofences()
+  }, [loadGeofences])
 
   // Check for silent zone
   useEffect(() => {
     const checkSilentZone = async () => {
       try {
-        const zoneName = await NativeLocationService.checkCurrentSilentZone();
-        setCurrentSilentZone(zoneName);
+        const zoneName = await NativeLocationService.checkCurrentSilentZone()
+        setCurrentSilentZone(zoneName)
       } catch (err) {
-        console.error("[GeofenceScreen] Failed to check silent zone:", err);
+        console.error("[GeofenceScreen] Failed to check silent zone:", err)
       }
-    };
+    }
 
-    checkSilentZone();
+    checkSilentZone()
     const listener = DeviceEventEmitter.addListener("geofenceUpdated", () => {
-      checkSilentZone();
-      loadGeofences(); // Reload geofences when they're updated
-    });
-    return () => listener.remove();
-  }, [loadGeofences]);
+      checkSilentZone()
+      loadGeofences() // Reload geofences when they're updated
+    })
+    return () => listener.remove()
+  }, [loadGeofences])
 
   // Update user position
   useEffect(() => {
@@ -97,11 +82,11 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           action: "update_user_pos",
           coords,
           tracking,
-          isPaused: !!currentSilentZone,
+          isPaused: !!currentSilentZone
         })
-      );
+      )
     }
-  }, [coords, mapReady, tracking, currentSilentZone]);
+  }, [coords, mapReady, tracking, currentSilentZone])
 
   // Update geofences
   useEffect(() => {
@@ -109,24 +94,22 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
       webviewRef.current.postMessage(
         JSON.stringify({
           action: "update_geofences",
-          geofences,
+          geofences
         })
-      );
+      )
     }
-  }, [geofences, mapReady]);
+  }, [geofences, mapReady])
 
   const handleCenterMe = useCallback(() => {
     if (coords) {
-      webviewRef.current?.postMessage(
-        JSON.stringify({ action: "center_map", coords })
-      );
+      webviewRef.current?.postMessage(JSON.stringify({ action: "center_map", coords }))
     }
-  }, [coords]);
+  }, [coords])
   const html = useMemo(() => {
-    if (!hasInitialCoords || !initialCoords.current) return "";
+    if (!hasInitialCoords || !initialCoords.current) return ""
 
-    const lon = initialCoords.current.longitude;
-    const lat = initialCoords.current.latitude;
+    const lon = initialCoords.current.longitude
+    const lat = initialCoords.current.latitude
 
     return `
 <!DOCTYPE html>
@@ -215,9 +198,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
       }
 
       .ol-attribution {
-        background: ${
-          isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)"
-        } !important;
+        background: ${isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)"} !important;
         padding: 4px 8px !important;
         font-size: 11px !important;
         -webkit-font-smoothing: antialiased !important;
@@ -234,11 +215,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         text-decoration: none !important;
       }
 
-      ${
-        isDark
-          ? ".ol-layer canvas { filter: brightness(0.6) contrast(1.2) saturate(0.8); }"
-          : ""
-      }
+      ${isDark ? ".ol-layer canvas { filter: brightness(0.6) contrast(1.2) saturate(0.8); }" : ""}
     </style>
   </head>
   <body>
@@ -304,16 +281,12 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           feature.setStyle(
             new ol.style.Style({
               stroke: new ol.style.Stroke({
-                color: zone.pauseTracking ? "${colors.warning}" : "${
-      colors.info
-    }",
+                color: zone.pauseTracking ? "${colors.warning}" : "${colors.info}",
                 width: 2,
                 lineDash: zone.pauseTracking ? null : [5, 5]
               }),
               fill: new ol.style.Fill({
-                color: zone.pauseTracking ? "${colors.warning}4D" : "${
-      colors.info
-    }1A"
+                color: zone.pauseTracking ? "${colors.warning}4D" : "${colors.info}1A"
               }),
             })
           );
@@ -325,9 +298,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
                 text: zone.name,
                 font: "bold 12px sans-serif",
                 fill: new ol.style.Fill({
-                  color: zone.pauseTracking ? "${colors.warning}" : "${
-      colors.info
-    }"
+                  color: zone.pauseTracking ? "${colors.warning}" : "${colors.info}"
                 }),
                 stroke: new ol.style.Stroke({ color: "#fff", width: 3 }),
                 offsetY: -25
@@ -388,9 +359,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           
           if (markerIcon && markerPulse) {
             const isActive = data.tracking && !data.isPaused;
-            const markerColor = data.isPaused ? "${colors.textDisabled}" : "${
-      colors.primary
-    }";
+            const markerColor = data.isPaused ? "${colors.textDisabled}" : "${colors.primary}";
             markerIcon.style.background = markerColor;
             markerPulse.style.borderColor = markerColor;
             
@@ -444,53 +413,31 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
     </script>
   </body>
 </html>
-`;
-  }, [colors, isDark, hasInitialCoords]);
+`
+  }, [colors, isDark, hasInitialCoords])
 
   if (!tracking) {
     return (
-      <View
-        style={[
-          styles.stateContainer,
-          { backgroundColor: colors.card, borderRadius: colors.borderRadius },
-        ]}
-      >
+      <View style={[styles.stateContainer, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
         <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
           <Image source={icon} style={styles.icon} />
         </View>
-        <Text style={[styles.stateTitle, { color: colors.text }]}>
-          Tracking Disabled
-        </Text>
+        <Text style={[styles.stateTitle, { color: colors.text }]}>Tracking Disabled</Text>
         <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
           Start tracking to see your position and zones.
         </Text>
       </View>
-    );
+    )
   }
 
   if (!isValidCoords(coords)) {
     return (
-      <View
-        style={[
-          styles.stateContainer,
-          { backgroundColor: colors.card, borderRadius: colors.borderRadius },
-        ]}
-      >
+      <View style={[styles.stateContainer, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text
-          style={[
-            styles.stateTitle,
-            styles.stateTitleSpaced,
-            { color: colors.text },
-          ]}
-        >
-          Searching GPS...
-        </Text>
-        <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
-          Waiting for valid location signal.
-        </Text>
+        <Text style={[styles.stateTitle, styles.stateTitleSpaced, { color: colors.text }]}>Searching GPS...</Text>
+        <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Waiting for valid location signal.</Text>
       </View>
-    );
+    )
   }
 
   return (
@@ -501,26 +448,26 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           originWhitelist={["*"]}
           source={{
             html: html,
-            baseUrl: "file:///android_asset/",
+            baseUrl: "file:///android_asset/"
           }}
           style={styles.webview}
           scrollEnabled={false}
           startInLoadingState={false}
           onMessage={(event) => {
             try {
-              const data = JSON.parse(event.nativeEvent.data);
+              const data = JSON.parse(event.nativeEvent.data)
 
               if (data.type === "MAP_READY") {
-                setMapReady(true);
+                setMapReady(true)
 
                 // 1. Send Geofences immediately on ready
                 if (geofences.length > 0) {
                   webviewRef.current?.postMessage(
                     JSON.stringify({
                       action: "update_geofences",
-                      geofences,
+                      geofences
                     })
-                  );
+                  )
                 }
 
                 // 2. Send current position immediately on ready
@@ -530,32 +477,24 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
                       action: "update_user_pos",
                       coords,
                       tracking,
-                      isPaused: !!currentSilentZone,
+                      isPaused: !!currentSilentZone
                     })
-                  );
+                  )
                 }
               }
 
               if (data.type === "CENTERED") {
-                setIsCentered(data.value);
+                setIsCentered(data.value)
               }
             } catch (err) {
-              console.error("WebView message error:", err);
+              console.error("WebView message error:", err)
             }
           }}
         />
       ) : (
         <View style={[styles.stateContainer, { backgroundColor: colors.card }]}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text
-            style={[
-              styles.stateTitle,
-              styles.stateTitleSpaced,
-              { color: colors.text },
-            ]}
-          >
-            Loading Map...
-          </Text>
+          <Text style={[styles.stateTitle, styles.stateTitleSpaced, { color: colors.text }]}>Loading Map...</Text>
         </View>
       )}
 
@@ -567,20 +506,16 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
             styles.topInfoCard,
             {
               backgroundColor: colors.card,
-              borderLeftColor: colors.warning,
-            },
+              borderLeftColor: colors.warning
+            }
           ]}
         >
-          <Text style={[styles.infoTitle, { color: colors.text }]}>
-            Paused in {activeZoneName}
-          </Text>
-          <Text style={[styles.infoSub, { color: colors.textSecondary }]}>
-            Location not being recorded
-          </Text>
+          <Text style={[styles.infoTitle, { color: colors.text }]}>Paused in {activeZoneName}</Text>
+          <Text style={[styles.infoSub, { color: colors.textSecondary }]}>Location not being recorded</Text>
         </View>
       )}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -590,7 +525,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    padding: 24
   },
   icon: { width: 64, height: 64 },
   iconCircle: {
@@ -599,7 +534,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 16
   },
   stateTitle: { fontSize: 18, fontWeight: "bold", textAlign: "center" },
   stateTitleSpaced: { marginTop: 20 },
@@ -607,7 +542,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     marginTop: 8,
-    lineHeight: 20,
+    lineHeight: 20
   },
   topInfoCard: {
     position: "absolute",
@@ -619,8 +554,8 @@ const styles = StyleSheet.create({
     elevation: 8,
     shadowOpacity: 0.2,
     borderLeftWidth: 5,
-    zIndex: 5,
+    zIndex: 5
   },
   infoTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 2 },
-  infoSub: { fontSize: 13 },
-});
+  infoSub: { fontSize: 13 }
+})

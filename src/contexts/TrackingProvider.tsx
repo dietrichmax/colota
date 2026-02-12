@@ -3,38 +3,25 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
-import {
-  Settings,
-  DEFAULT_SETTINGS,
-  LocationCoords,
-  ApiTemplateName,
-} from "../types/global";
-import { useLocationTracking } from "../hooks/useLocationTracking";
-import NativeLocationService from "../services/NativeLocationService";
-import SettingsService from "../services/SettingsService";
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { Settings, DEFAULT_SETTINGS, LocationCoords, ApiTemplateName } from "../types/global"
+import { useLocationTracking } from "../hooks/useLocationTracking"
+import NativeLocationService from "../services/NativeLocationService"
+import SettingsService from "../services/SettingsService"
 
 type TrackingContextType = {
-  settings: Settings;
-  setSettings: (s: Settings) => Promise<void>;
-  coords: LocationCoords | null;
-  tracking: boolean;
-  isLoading: boolean;
-  error: Error | null;
-  startTracking: () => Promise<void>;
-  stopTracking: () => void;
-  restartTracking: (newSettings?: Settings) => Promise<void>;
-};
+  settings: Settings
+  setSettings: (s: Settings) => Promise<void>
+  coords: LocationCoords | null
+  tracking: boolean
+  isLoading: boolean
+  error: Error | null
+  startTracking: () => Promise<void>
+  stopTracking: () => void
+  restartTracking: (newSettings?: Settings) => Promise<void>
+}
 
-const TrackingContext = createContext<TrackingContextType | null>(null);
+const TrackingContext = createContext<TrackingContextType | null>(null)
 
 /**
  * Parses raw SQLite settings (all strings) into typed Settings object
@@ -43,25 +30,15 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
   return {
     ...DEFAULT_SETTINGS,
     // Convert Android milliseconds back to seconds (UNIX-Timestamp)
-    interval: allRaw.interval
-      ? parseInt(allRaw.interval, 10) / 1000
-      : DEFAULT_SETTINGS.interval,
+    interval: allRaw.interval ? parseInt(allRaw.interval, 10) / 1000 : DEFAULT_SETTINGS.interval,
 
-    distance: allRaw.minUpdateDistance
-      ? parseFloat(allRaw.minUpdateDistance)
-      : DEFAULT_SETTINGS.distance,
+    distance: allRaw.minUpdateDistance ? parseFloat(allRaw.minUpdateDistance) : DEFAULT_SETTINGS.distance,
 
-    syncInterval: allRaw.syncInterval
-      ? parseInt(allRaw.syncInterval, 10)
-      : DEFAULT_SETTINGS.syncInterval,
+    syncInterval: allRaw.syncInterval ? parseInt(allRaw.syncInterval, 10) : DEFAULT_SETTINGS.syncInterval,
 
-    retryInterval: allRaw.retryInterval
-      ? parseInt(allRaw.retryInterval, 10)
-      : DEFAULT_SETTINGS.retryInterval,
+    retryInterval: allRaw.retryInterval ? parseInt(allRaw.retryInterval, 10) : DEFAULT_SETTINGS.retryInterval,
 
-    maxRetries: allRaw.maxRetries
-      ? parseInt(allRaw.maxRetries, 10)
-      : DEFAULT_SETTINGS.maxRetries,
+    maxRetries: allRaw.maxRetries ? parseInt(allRaw.maxRetries, 10) : DEFAULT_SETTINGS.maxRetries,
 
     accuracyThreshold: allRaw.accuracyThreshold
       ? parseFloat(allRaw.accuracyThreshold)
@@ -72,17 +49,12 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
     syncPreset: (allRaw.syncPreset as any) ?? DEFAULT_SETTINGS.syncPreset,
     filterInaccurateLocations: allRaw.filterInaccurateLocations === "true",
 
-    fieldMap: allRaw.fieldMap
-      ? JSON.parse(allRaw.fieldMap)
-      : DEFAULT_SETTINGS.fieldMap,
+    fieldMap: allRaw.fieldMap ? JSON.parse(allRaw.fieldMap) : DEFAULT_SETTINGS.fieldMap,
 
-    customFields: allRaw.customFields
-      ? JSON.parse(allRaw.customFields)
-      : DEFAULT_SETTINGS.customFields,
+    customFields: allRaw.customFields ? JSON.parse(allRaw.customFields) : DEFAULT_SETTINGS.customFields,
 
-    apiTemplate:
-      (allRaw.apiTemplate as ApiTemplateName) ?? DEFAULT_SETTINGS.apiTemplate,
-  };
+    apiTemplate: (allRaw.apiTemplate as ApiTemplateName) ?? DEFAULT_SETTINGS.apiTemplate
+  }
 }
 
 /**
@@ -100,15 +72,15 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
  * underlying GPS foreground service.
  */
 export function TrackingProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
 
   // Ref to track if component is mounted (prevents state updates after unmount)
-  const isMountedRef = useRef(true);
+  const isMountedRef = useRef(true)
 
   // Ref to track if initialization has been done (prevents re-running on dependency changes)
-  const hasInitializedRef = useRef(false);
+  const hasInitializedRef = useRef(false)
 
   /**
    * Batch updates settings across both UI state and Native storage.
@@ -116,22 +88,22 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
    */
   const setSettings = useCallback(async (newSettings: Settings) => {
     try {
-      console.log("[TrackingContext] 💾 Batch syncing to Native storage...");
+      console.log("[TrackingContext] 💾 Batch syncing to Native storage...")
       // SettingsService handles unit conversion (seconds -> ms)
-      await SettingsService.updateMultiple(newSettings);
+      await SettingsService.updateMultiple(newSettings)
 
       if (isMountedRef.current) {
-        setSettingsState(newSettings);
-        setError(null); // Clear any previous errors
+        setSettingsState(newSettings)
+        setError(null) // Clear any previous errors
       }
     } catch (err) {
-      console.error("[TrackingContext] Persistence failed:", err);
+      console.error("[TrackingContext] Persistence failed:", err)
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err : new Error(String(err)));
+        setError(err instanceof Error ? err : new Error(String(err)))
       }
-      throw err; // Re-throw to allow caller to handle
+      throw err // Re-throw to allow caller to handle
     }
-  }, []);
+  }, [])
 
   const {
     coords,
@@ -139,8 +111,8 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     startTracking: internalStart,
     stopTracking: internalStop,
     restartTracking: internalRestart,
-    reconnect: internalReconnect,
-  } = useLocationTracking(settings);
+    reconnect: internalReconnect
+  } = useLocationTracking(settings)
 
   /**
    * Initial Hydration Effect.
@@ -148,118 +120,114 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
    * are parsed into their respective JS types (Numbers, Booleans, and JSON objects).
    */
   useEffect(() => {
-    if (hasInitializedRef.current) return;
+    if (hasInitializedRef.current) return
 
     const init = async () => {
       try {
-        console.log("[TrackingContext] 📂 Hydrating settings and state...");
-        const allRaw = await NativeLocationService.getAllSettings();
+        console.log("[TrackingContext] 📂 Hydrating settings and state...")
+        const allRaw = await NativeLocationService.getAllSettings()
 
-        if (!isMountedRef.current) return;
+        if (!isMountedRef.current) return
 
         // Initialize DB with defaults if empty
         if (Object.keys(allRaw).length === 0) {
-          console.log("[TrackingContext] 🆕 Initializing DB with defaults");
-          await setSettings(DEFAULT_SETTINGS);
-          return;
+          console.log("[TrackingContext] 🆕 Initializing DB with defaults")
+          await setSettings(DEFAULT_SETTINGS)
+          return
         }
 
         // Parse settings from raw SQLite data
-        const mergedSettings = parseRawSettings(allRaw);
+        const mergedSettings = parseRawSettings(allRaw)
 
-        if (!isMountedRef.current) return;
-        setSettingsState(mergedSettings);
+        if (!isMountedRef.current) return
+        setSettingsState(mergedSettings)
 
         // Auto-reconnect UI if tracking was active
-        const isTrackingActive = allRaw.tracking_enabled === "true";
+        const isTrackingActive = allRaw.tracking_enabled === "true"
         if (isTrackingActive) {
-          console.log(
-            "[TrackingContext] 🔄 Re-syncing UI with active background service"
-          );
-          internalReconnect();
+          console.log("[TrackingContext] 🔄 Re-syncing UI with active background service")
+          internalReconnect()
         }
       } catch (err) {
-        console.error("[TrackingContext] Hydration failed:", err);
+        console.error("[TrackingContext] Hydration failed:", err)
         if (isMountedRef.current) {
-          setError(err instanceof Error ? err : new Error(String(err)));
+          setError(err instanceof Error ? err : new Error(String(err)))
         }
       } finally {
         if (isMountedRef.current) {
-          setIsLoading(false);
+          setIsLoading(false)
         }
-        hasInitializedRef.current = true;
+        hasInitializedRef.current = true
       }
-    };
+    }
 
-    init();
+    init()
 
     // Safety timeout: force isLoading=false if init hangs
     const timeout = setTimeout(() => {
       if (isMountedRef.current && !hasInitializedRef.current) {
-        console.error(
-          "[TrackingContext] Initialization timed out after 5s, forcing ready state"
-        );
-        setIsLoading(false);
-        hasInitializedRef.current = true;
+        console.error("[TrackingContext] Initialization timed out after 5s, forcing ready state")
+        setIsLoading(false)
+        hasInitializedRef.current = true
       }
-    }, 5000);
+    }, 5000)
 
     // Cleanup function
     return () => {
-      isMountedRef.current = false;
-      clearTimeout(timeout);
-    };
-  }, [internalReconnect, setSettings]);
+      isMountedRef.current = false
+      clearTimeout(timeout)
+    }
+  }, [internalReconnect, setSettings])
 
   /**
    * Wrapped tracking controls with useCallback for stable references
    */
   const startTracking = useCallback(async () => {
     try {
-      await internalStart(settings);
+      await internalStart(settings)
       if (isMountedRef.current) {
-        setError(null);
+        setError(null)
       }
     } catch (err) {
-      console.error("[TrackingContext] Failed to start tracking:", err);
+      console.error("[TrackingContext] Failed to start tracking:", err)
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err : new Error(String(err)));
+        setError(err instanceof Error ? err : new Error(String(err)))
       }
-      throw err;
+      throw err
     }
-  }, [settings, internalStart]);
+  }, [settings, internalStart])
 
   const stopTracking = useCallback(() => {
     try {
-      internalStop();
+      internalStop()
       if (isMountedRef.current) {
-        setError(null);
+        setError(null)
       }
     } catch (err) {
-      console.error("[TrackingContext] Failed to stop tracking:", err);
+      console.error("[TrackingContext] Failed to stop tracking:", err)
       if (isMountedRef.current) {
-        setError(err instanceof Error ? err : new Error(String(err)));
+        setError(err instanceof Error ? err : new Error(String(err)))
       }
     }
-  }, [internalStop]);
+  }, [internalStop])
 
   const restartTracking = useCallback(
     async (newSettings?: Settings) => {
       try {
-        await internalRestart(newSettings || settings);
+        await internalRestart(newSettings || settings)
         if (isMountedRef.current) {
-          setError(null);
+          setError(null)
         }
       } catch (err) {
-        console.error("[TrackingContext] Failed to restart tracking:", err);
+        console.error("[TrackingContext] Failed to restart tracking:", err)
         if (isMountedRef.current) {
-          setError(err instanceof Error ? err : new Error(String(err)));
+          setError(err instanceof Error ? err : new Error(String(err)))
         }
-        throw err;
+        throw err
       }
     },
     [settings, internalRestart]
-  );
+  )
 
   /**
    * Memoized context value to prevent unnecessary re-renders of consuming components.
@@ -275,26 +243,12 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
       error,
       startTracking,
       stopTracking,
-      restartTracking,
+      restartTracking
     }),
-    [
-      settings,
-      coords,
-      tracking,
-      isLoading,
-      error,
-      setSettings,
-      startTracking,
-      stopTracking,
-      restartTracking,
-    ]
-  );
+    [settings, coords, tracking, isLoading, error, setSettings, startTracking, stopTracking, restartTracking]
+  )
 
-  return (
-    <TrackingContext.Provider value={value}>
-      {children}
-    </TrackingContext.Provider>
-  );
+  return <TrackingContext.Provider value={value}>{children}</TrackingContext.Provider>
 }
 
 /**
@@ -303,9 +257,9 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
  * @returns {TrackingContextType} Current tracking state and controller functions.
  */
 export function useTracking(): TrackingContextType {
-  const context = useContext(TrackingContext);
+  const context = useContext(TrackingContext)
   if (!context) {
-    throw new Error("useTracking must be used within TrackingProvider");
+    throw new Error("useTracking must be used within TrackingProvider")
   }
-  return context;
+  return context
 }
