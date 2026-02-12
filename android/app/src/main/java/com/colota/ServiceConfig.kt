@@ -30,7 +30,7 @@ data class ServiceConfig(
         /**
          * Loads configuration from database settings.
          */
-        fun fromDatabase(dbHelper: LocationDatabaseHelper): ServiceConfig {
+        fun fromDatabase(dbHelper: DatabaseHelper): ServiceConfig {
             val saved = dbHelper.getAllSettings()
             
             return ServiceConfig(
@@ -50,7 +50,7 @@ data class ServiceConfig(
         /**
          * Loads configuration from Intent extras (for service start).
          */
-        fun fromIntent(intent: Intent, dbHelper: LocationDatabaseHelper): ServiceConfig {
+        fun fromIntent(intent: Intent, dbHelper: DatabaseHelper): ServiceConfig {
             val extras = intent.extras ?: return fromDatabase(dbHelper)
             
             // Load from database first, then override with intent extras

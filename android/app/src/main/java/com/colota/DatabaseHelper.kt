@@ -28,7 +28,7 @@ import org.json.JSONObject
  *
  * @param context The Android [Context] used to open or create the database.
  */
-class LocationDatabaseHelper private constructor(context: Context) :
+class DatabaseHelper private constructor(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
@@ -49,16 +49,16 @@ class LocationDatabaseHelper private constructor(context: Context) :
         private const val TAG = "LocationDB"
 
         @Volatile
-        private var INSTANCE: LocationDatabaseHelper? = null
+        private var INSTANCE: DatabaseHelper? = null
 
         /**
-         * Returns the singleton instance of the [LocationDatabaseHelper].
+         * Returns the singleton instance of the [DatabaseHelper].
          * Using the Application Context prevents memory leaks.
          */
         @JvmStatic
-        fun getInstance(context: Context): LocationDatabaseHelper {
+        fun getInstance(context: Context): DatabaseHelper {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: LocationDatabaseHelper(context.applicationContext).also {
+                INSTANCE ?: DatabaseHelper(context.applicationContext).also {
                     INSTANCE = it
                 }
             }
