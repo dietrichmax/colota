@@ -328,10 +328,10 @@ export function ExportDataScreen() {
               <View style={styles.exportContent}>
                 <Text style={styles.exportIcon}>📤</Text>
                 <View style={styles.exportText}>
-                  <Text style={styles.exportTitle}>
+                  <Text style={[styles.exportTitle, { color: "#fff" }]}>
                     Export {selectedFormat.toUpperCase()}
                   </Text>
-                  <Text style={styles.exportSubtitle}>
+                  <Text style={[styles.exportSubtitle, { color: "#fff" }]}>
                     {stats.totalLocations.toLocaleString()} locations
                     {fileSize ? ` • ${fileSize}` : ""}
                   </Text>
@@ -748,12 +748,10 @@ const styles = StyleSheet.create({
   exportTitle: {
     fontSize: 17,
     fontWeight: "600",
-    color: "#fff",
     marginBottom: 2,
   },
   exportSubtitle: {
     fontSize: 13,
-    color: "#fff",
     opacity: 0.9,
   },
   disabledButton: {

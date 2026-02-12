@@ -18,7 +18,14 @@ import { useFocusEffect } from "@react-navigation/native";
 import { ScreenProps, DatabaseStats } from "../types/global";
 import { useTheme } from "../hooks/useTheme";
 import NativeLocationService from "../services/NativeLocationService";
-import { Button, SectionTitle, Card, Container, Divider } from "../components";
+import {
+  Button,
+  SectionTitle,
+  Card,
+  Container,
+  Divider,
+  FloatingSaveIndicator,
+} from "../components";
 
 export function DataManagementScreen({}: ScreenProps) {
   const { colors } = useTheme();
@@ -322,20 +329,12 @@ export function DataManagementScreen({}: ScreenProps) {
         </ScrollView>
 
         {/* Floating Feedback */}
-        {feedback && (
-          <View style={styles.feedbackContainer}>
-            <View
-              style={[
-                styles.feedbackBadge,
-                {
-                  backgroundColor: isProcessing ? colors.info : colors.success,
-                },
-              ]}
-            >
-              <Text style={styles.feedbackText}>{feedback}</Text>
-            </View>
-          </View>
-        )}
+        <FloatingSaveIndicator
+          saving={isProcessing}
+          success={false}
+          message={feedback}
+          colors={colors}
+        />
       </KeyboardAvoidingView>
     </Container>
   );
@@ -477,28 +476,5 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
-  },
-  feedbackContainer: {
-    position: "absolute",
-    bottom: 20,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    zIndex: 1000,
-    pointerEvents: "none",
-  },
-  feedbackBadge: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 24,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  feedbackText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
   },
 });
