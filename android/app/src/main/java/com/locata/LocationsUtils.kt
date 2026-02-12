@@ -330,40 +330,6 @@ class LocationUtils(private val context: Context) {
     }
 
     // ========================================
-    // DEVICE STATUS
-    // ========================================
-
-    /**
-     * Reads battery level and charging status.
-     */
-    fun getBatteryStatus(): Pair<Int, Int> {
-        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            ?: return Pair(0, 0)  // unknown
-        
-        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-        
-        val percentage = if (scale > 0) {
-            (level * 100 / scale.toFloat()).toInt()
-        } else {
-            0
-        }
-        
-        val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-        
-        // Convert to 0-3 status code
-        val batteryStatus = when (status) {
-            BatteryManager.BATTERY_STATUS_CHARGING -> 2      // charging
-            BatteryManager.BATTERY_STATUS_FULL -> 3          // full
-            BatteryManager.BATTERY_STATUS_DISCHARGING,
-            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> 1  // unplugged
-            else -> 0                                         // unknown
-        }
-                            
-        return Pair(percentage, batteryStatus)
-    }
-
-    // ========================================
     // GEOFENCING
     // ========================================
 
