@@ -68,53 +68,53 @@ class LocationUtils(private val context: Context) {
 
     /**
     * Executes an asynchronous POST request to the server.
-    * Handles both HTTP (for localhost) and HTTPS connections.
+    * Handles HTTP only for private IPs/localhost, HTTPS otherwise.
     */
     suspend fun sendToEndpoint(
-        payload: JSONObject, 
+        payload: JSONObject,
         endpoint: String
     ): Boolean = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Reached sendToEndpoint")
-        // Validate endpoint
+
         if (endpoint.isBlank()) {
-            Log.w(TAG, "Empty endpoint provided")
+            // Endpoint empty, nothing to do
+            if (BuildConfig.DEBUG) Log.d(TAG, "Empty endpoint provided")
             return@withContext false
         }
-        
-        // Determine if localhost/local network
-        val isLocalhost = endpoint.contains("localhost") || 
-                        endpoint.contains("127.0.0.1") || 
-                        endpoint.contains("192.168.") ||
-                        endpoint.contains("10.0.")
-        
-        // Single validation check
-        val isValid = when {
-            endpoint.startsWith("https://", ignoreCase = true) -> true
-            endpoint.startsWith("http://", ignoreCase = true) && isLocalhost -> true
-            endpoint.startsWith("http://", ignoreCase = true) -> {
-                Log.e(TAG, "Insecure endpoint blocked: $endpoint (use HTTPS for non-localhost)")
-                false
-            }
-            else -> {
-                Log.e(TAG, "Invalid protocol: $endpoint (must start with http:// or https://)")
-                false
-            }
+
+        // Parse URL safely
+        val url = try {
+            URL(endpoint)
+        } catch (e: Exception) {
+            Log.e(TAG, "Invalid URL: $endpoint")
+            return@withContext false
         }
-        
-        if (!isValid) return@withContext false
-        
+
+        val protocol = url.protocol.lowercase()
+        val host = url.host ?: return@withContext false
+
+        // Only allow http or https
+        if (protocol != "http" && protocol != "https") {
+            Log.e(TAG, "Invalid protocol: $endpoint")
+            return@withContext false
+        }
+
+        // HTTP only allowed for private IPs / localhost
+        if (protocol == "http" && !isPrivateHost(host)) {
+            Log.e(TAG, "HTTP blocked for non-private host: $endpoint")
+            return@withContext false
+        }
+
         // Check network availability
         if (!isNetworkAvailable()) {
-            Log.d(TAG, "Sync skipped: No internet")
+            if (BuildConfig.DEBUG) Log.d(TAG, "Sync skipped: No internet")
             return@withContext false
         }
-        
+
         var connection: java.net.HttpURLConnection? = null
-        
+
         try {
-            val url = URL(endpoint)
             connection = url.openConnection() as java.net.HttpURLConnection
-            
+
             connection.apply {
                 requestMethod = "POST"
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
@@ -124,39 +124,61 @@ class LocationUtils(private val context: Context) {
                 readTimeout = READ_TIMEOUT
                 useCaches = false
             }
-            
-            // Write payload
+
+            // Write payload to output stream
             val bodyBytes = payload.toString().toByteArray(Charsets.UTF_8)
             connection.setFixedLengthStreamingMode(bodyBytes.size)
-            
-            connection.outputStream.use { outputStream ->
-                outputStream.write(bodyBytes)
-            }
-            
-            // Read response
+
+            connection.outputStream.use { it.write(bodyBytes) }
+
             val responseCode = connection.responseCode
-            
-            if (responseCode in 200..299) {
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Location successfully sent")
-                }
+
+            return@withContext if (responseCode in 200..299) {
+                if (BuildConfig.DEBUG) Log.d(TAG, "Location successfully sent")
                 true
             } else {
-                // Read error body for debugging
                 val errorBody = try {
                     connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     "Could not read error body"
                 }
-                
                 Log.e(TAG, "POST failed: $responseCode - $errorBody")
                 false
             }
+
         } catch (e: Exception) {
             Log.e(TAG, "Network error: ${e.message}", e)
             false
         } finally {
             connection?.disconnect()
+        }
+    }
+
+
+    /**
+    * Checks if the given host is private or local.
+    * Returns true for:
+    * - "localhost"
+    * - Loopback addresses (127.x.x.x, ::1)
+    * - Site-local addresses (RFC1918)
+    * - Any local/unspecified addresses (0.0.0.0, ::)
+    */
+    private fun isPrivateHost(host: String): Boolean {
+        if (host == "localhost") return true // explicit localhost check
+
+        return try {
+            val address = java.net.InetAddress.getByName(host)
+
+            // isAnyLocalAddress: 0.0.0.0 / ::0
+            // isLoopbackAddress: 127.x.x.x / ::1
+            // isSiteLocalAddress: 10.x.x.x, 172.16-31.x.x, 192.168.x.x
+            address.isAnyLocalAddress ||
+            address.isLoopbackAddress ||
+            address.isSiteLocalAddress
+        } catch (e: Exception) {
+            // Could not resolve host; treat as non-private
+            if (BuildConfig.DEBUG) Log.d(TAG, "Host resolution failed for $host: ${e.message}")
+            false
         }
     }
 
