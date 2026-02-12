@@ -229,8 +229,7 @@ export function GeofenceScreen({}: ScreenProps) {
   );
 
   const html = useMemo(() => {
-    if (!hasInitialCoords || !initialCoords.current)
-      return "";
+    if (!hasInitialCoords || !initialCoords.current) return "";
 
     const lon = initialCoords.current.longitude;
     const lat = initialCoords.current.latitude;
@@ -595,7 +594,7 @@ export function GeofenceScreen({}: ScreenProps) {
           originWhitelist={["*"]}
           source={{
             html: html,
-            baseUrl: "file:///android_asset/"
+            baseUrl: "file:///android_asset/",
           }}
           style={styles.webview}
           scrollEnabled={false}
@@ -751,7 +750,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   centerIcon: {
-    width: 28, height: 28, 
+    width: 28,
+    height: 28,
   },
   placeBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
   placeBtnText: { color: "#f8f7f7", fontSize: 15, fontWeight: "600" },
