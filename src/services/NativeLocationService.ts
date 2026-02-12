@@ -3,10 +3,10 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { NativeModules } from "react-native";
-import { AuthConfig, DatabaseStats, Geofence, Settings } from "../types/global";
+import { NativeModules } from "react-native"
+import { AuthConfig, DatabaseStats, Geofence, Settings } from "../types/global"
 
-const { LocationServiceModule, BuildConfigModule } = NativeModules;
+const { LocationServiceModule, BuildConfigModule } = NativeModules
 
 /**
  * Native location service bridge.
@@ -24,25 +24,19 @@ class NativeLocationService {
    */
   private static ensureModule(): void {
     if (!LocationServiceModule) {
-      throw new Error(
-        "[NativeLocationService] Module not available. Check native linking."
-      );
+      throw new Error("[NativeLocationService] Module not available. Check native linking.")
     }
   }
 
   /**
    * Wraps async native calls with error handling
    */
-  private static async safeExecute<T>(
-    operation: () => Promise<T>,
-    fallback: T,
-    errorPrefix: string
-  ): Promise<T> {
+  private static async safeExecute<T>(operation: () => Promise<T>, fallback: T, errorPrefix: string): Promise<T> {
     try {
-      return await operation();
+      return await operation()
     } catch (error) {
-      console.error(`[NativeLocationService] ${errorPrefix}:`, error);
-      return fallback;
+      console.error(`[NativeLocationService] ${errorPrefix}:`, error)
+      return fallback
     }
   }
 
@@ -55,7 +49,7 @@ class NativeLocationService {
    * @param settings Configuration for GPS polling and data transmission
    */
   static async start(settings: Settings): Promise<void> {
-    this.ensureModule();
+    this.ensureModule()
 
     const config = {
       interval: settings.interval * 1000, // s → ms
@@ -67,19 +61,19 @@ class NativeLocationService {
       maxRetries: settings.maxRetries,
       filterInaccurateLocations: settings.filterInaccurateLocations,
       accuracyThreshold: settings.accuracyThreshold,
-      isOfflineMode: settings.isOfflineMode,
-    };
+      isOfflineMode: settings.isOfflineMode
+    }
 
     console.log(
       `[NativeLocationService] Starting service - interval: ${settings.interval}s, distance: ${settings.distance}m, sync: ${settings.syncInterval}s`
-    );
+    )
 
     try {
-      await LocationServiceModule.startService(config);
-      console.log("[NativeLocationService] Service started");
+      await LocationServiceModule.startService(config)
+      console.log("[NativeLocationService] Service started")
     } catch (error) {
-      console.error("[NativeLocationService] Start failed:", error);
-      throw error;
+      console.error("[NativeLocationService] Start failed:", error)
+      throw error
     }
   }
 
@@ -88,33 +82,29 @@ class NativeLocationService {
    */
   static stop(): void {
     if (!LocationServiceModule) {
-      console.warn("[NativeLocationService] Module not available");
-      return;
+      console.warn("[NativeLocationService] Module not available")
+      return
     }
 
-    console.log("[NativeLocationService] Stopping service");
-    LocationServiceModule.stopService();
+    console.log("[NativeLocationService] Stopping service")
+    LocationServiceModule.stopService()
   }
 
   /**
    * Checks if the foreground service is currently running
    */
   static async isServiceRunning(): Promise<boolean> {
-    this.ensureModule();
-    return this.safeExecute(
-      () => LocationServiceModule.isServiceRunning(),
-      false,
-      "isServiceRunning failed"
-    );
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.isServiceRunning(), false, "isServiceRunning failed")
   }
 
   /**
    * Checks if tracking is enabled (from persistent settings)
    */
   static async isTrackingActive(): Promise<boolean> {
-    this.ensureModule();
-    const state = await this.getSetting("tracking_enabled", "false");
-    return state === "true";
+    this.ensureModule()
+    const state = await this.getSetting("tracking_enabled", "false")
+    return state === "true"
   }
 
   // ============================================================================
@@ -126,15 +116,15 @@ class NativeLocationService {
    * @returns True if flush succeeded
    */
   static async manualFlush(): Promise<boolean> {
-    this.ensureModule();
-    console.log("[NativeLocationService] Triggering manual flush");
+    this.ensureModule()
+    console.log("[NativeLocationService] Triggering manual flush")
     try {
-      const result = await LocationServiceModule.manualFlush();
-      console.log("[NativeLocationService] Flush completed");
-      return result;
+      const result = await LocationServiceModule.manualFlush()
+      console.log("[NativeLocationService] Flush completed")
+      return result
     } catch (error) {
-      console.error("[NativeLocationService] Flush failed:", error);
-      throw error;
+      console.error("[NativeLocationService] Flush failed:", error)
+      throw error
     }
   }
 
@@ -148,97 +138,41 @@ class NativeLocationService {
    * @param limit Maximum rows to return
    * @param offset Pagination offset
    */
-  static async getTableData(
-    tableName: string,
-    limit: number,
-    offset: number = 0
-  ): Promise<any[]> {
-    this.ensureModule();
+  static async getTableData(tableName: string, limit: number, offset: number = 0): Promise<any[]> {
+    this.ensureModule()
     return this.safeExecute(
       () => LocationServiceModule.getTableData(tableName, limit, offset),
       [],
       `getTableData(${tableName}) failed`
-    );
+    )
   }
 
   /**
    * Returns database health summary
    */
   static async getStats(): Promise<DatabaseStats> {
-    this.ensureModule();
-    return LocationServiceModule.getStats();
-  }
-
-  /**
-   * Gets count of locations waiting for transmission
-   */
-  static async getQueuedCount(): Promise<number> {
-    this.ensureModule();
-    return this.safeExecute(
-      () => LocationServiceModule.getQueuedLocationsCount(),
-      0,
-      "getQueuedCount failed"
-    );
-  }
-
-  /**
-   * Gets count of successfully sent locations
-   */
-  static async getSentCount(): Promise<number> {
-    this.ensureModule();
-    return this.safeExecute(
-      () => LocationServiceModule.getSentCount(),
-      0,
-      "getSentCount failed"
-    );
-  }
-
-  /**
-   * Gets count of locations captured today
-   */
-  static async getTodayCount(): Promise<number> {
-    this.ensureModule();
-    return this.safeExecute(
-      () => LocationServiceModule.getTodayCount(),
-      0,
-      "getTodayCount failed"
-    );
-  }
-
-  /**
-   * Gets database file size in bytes
-   */
-  static async getDatabaseSize(): Promise<number> {
-    this.ensureModule();
-    return this.safeExecute(
-      () => LocationServiceModule.getDatabaseSize(),
-      0,
-      "getDatabaseSize failed"
-    );
+    this.ensureModule()
+    return LocationServiceModule.getStats()
   }
 
   /**
    * Fetches all locations for export
    */
   static async getExportData(): Promise<any[]> {
-    this.ensureModule();
+    this.ensureModule()
     return this.safeExecute(
       () => LocationServiceModule.getTableData("locations", 1000000, 0),
       [],
       "getExportData failed"
-    );
+    )
   }
 
   /**
    * Gets the most recent location from the database
    */
   static async getMostRecentLocation(): Promise<any | null> {
-    this.ensureModule();
-    return this.safeExecute(
-      () => LocationServiceModule.getMostRecentLocation(),
-      null,
-      "getMostRecentLocation failed"
-    );
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.getMostRecentLocation(), null, "getMostRecentLocation failed")
   }
 
   // ============================================================================
@@ -249,9 +183,9 @@ class NativeLocationService {
    * Deletes all successfully sent locations
    */
   static async clearSentHistory(): Promise<void> {
-    this.ensureModule();
-    console.log("[NativeLocationService] Clearing sent history");
-    await LocationServiceModule.clearSentHistory();
+    this.ensureModule()
+    console.log("[NativeLocationService] Clearing sent history")
+    await LocationServiceModule.clearSentHistory()
   }
 
   /**
@@ -259,9 +193,9 @@ class NativeLocationService {
    * @returns Count of deleted records
    */
   static async clearQueue(): Promise<number> {
-    this.ensureModule();
-    console.log("[NativeLocationService] Clearing queue");
-    return LocationServiceModule.clearQueue();
+    this.ensureModule()
+    console.log("[NativeLocationService] Clearing queue")
+    return LocationServiceModule.clearQueue()
   }
 
   /**
@@ -269,9 +203,9 @@ class NativeLocationService {
    * @returns Count of deleted records
    */
   static async clearAllLocations(): Promise<number> {
-    this.ensureModule();
-    console.log("[NativeLocationService] Clearing all locations");
-    return LocationServiceModule.clearAllLocations();
+    this.ensureModule()
+    console.log("[NativeLocationService] Clearing all locations")
+    return LocationServiceModule.clearAllLocations()
   }
 
   /**
@@ -280,20 +214,18 @@ class NativeLocationService {
    * @returns Count of deleted records
    */
   static async deleteOlderThan(days: number): Promise<number> {
-    this.ensureModule();
-    console.log(
-      `[NativeLocationService] Deleting locations older than ${days} days`
-    );
-    return LocationServiceModule.deleteOlderThan(days);
+    this.ensureModule()
+    console.log(`[NativeLocationService] Deleting locations older than ${days} days`)
+    return LocationServiceModule.deleteOlderThan(days)
   }
 
   /**
    * Runs SQLite VACUUM to reclaim disk space
    */
   static async vacuumDatabase(): Promise<void> {
-    this.ensureModule();
-    console.log("[NativeLocationService] Vacuuming database");
-    await LocationServiceModule.vacuumDatabase();
+    this.ensureModule()
+    console.log("[NativeLocationService] Vacuuming database")
+    await LocationServiceModule.vacuumDatabase()
   }
 
   // ============================================================================
@@ -304,45 +236,37 @@ class NativeLocationService {
    * Fetches all geofences
    */
   static async getGeofences(): Promise<Geofence[]> {
-    this.ensureModule();
-    return this.safeExecute(
-      () => LocationServiceModule.getGeofences(),
-      [],
-      "getGeofences failed"
-    );
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.getGeofences(), [], "getGeofences failed")
   }
 
   /**
    * Creates a new geofence
    * @returns Geofence ID
    */
-  static async createGeofence(
-    geofence: Omit<Geofence, "id" | "createdAt">
-  ): Promise<number> {
-    this.ensureModule();
-    console.log("[NativeLocationService] Creating geofence:", geofence.name);
+  static async createGeofence(geofence: Omit<Geofence, "id" | "createdAt">): Promise<number> {
+    this.ensureModule()
+    console.log("[NativeLocationService] Creating geofence:", geofence.name)
     return LocationServiceModule.createGeofence(
       geofence.name,
       geofence.lat,
       geofence.lon,
       geofence.radius,
       geofence.pauseTracking
-    );
+    )
   }
 
   /**
    * Updates an existing geofence (partial updates supported)
    */
-  static async updateGeofence(
-    update: Partial<Geofence> & { id: number }
-  ): Promise<boolean> {
-    this.ensureModule();
+  static async updateGeofence(update: Partial<Geofence> & { id: number }): Promise<boolean> {
+    this.ensureModule()
 
     if (!update.id) {
-      throw new Error("Geofence ID is required");
+      throw new Error("Geofence ID is required")
     }
 
-    console.log("[NativeLocationService] Updating geofence:", update.id);
+    console.log("[NativeLocationService] Updating geofence:", update.id)
     return LocationServiceModule.updateGeofence(
       update.id,
       update.name ?? null,
@@ -351,16 +275,16 @@ class NativeLocationService {
       update.radius ?? null,
       update.enabled ?? null,
       update.pauseTracking ?? null
-    );
+    )
   }
 
   /**
    * Deletes a geofence
    */
   static async deleteGeofence(id: number): Promise<boolean> {
-    this.ensureModule();
-    console.log("[NativeLocationService] Deleting geofence:", id);
-    return LocationServiceModule.deleteGeofence(id);
+    this.ensureModule()
+    console.log("[NativeLocationService] Deleting geofence:", id)
+    return LocationServiceModule.deleteGeofence(id)
   }
 
   /**
@@ -368,12 +292,8 @@ class NativeLocationService {
    * @returns Silent zone name or null
    */
   static async checkCurrentSilentZone(): Promise<string | null> {
-    this.ensureModule();
-    return this.safeExecute(
-      () => LocationServiceModule.checkCurrentSilentZone(),
-      null,
-      "checkCurrentSilentZone failed"
-    );
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.checkCurrentSilentZone(), null, "checkCurrentSilentZone failed")
   }
 
   /**
@@ -381,12 +301,12 @@ class NativeLocationService {
    * Use after modifying geofence pause settings to update notification instantly
    */
   static async recheckZoneSettings(): Promise<void> {
-    this.ensureModule();
-    console.log("[NativeLocationService] Triggering zone settings recheck");
+    this.ensureModule()
+    console.log("[NativeLocationService] Triggering zone settings recheck")
     try {
-      await LocationServiceModule.recheckZoneSettings();
+      await LocationServiceModule.recheckZoneSettings()
     } catch (error) {
-      console.error("[NativeLocationService] ❌ Recheck failed:", error);
+      console.error("[NativeLocationService] ❌ Recheck failed:", error)
     }
   }
 
@@ -398,31 +318,24 @@ class NativeLocationService {
    * Saves a persistent setting
    */
   static async saveSetting(key: string, value: string): Promise<void> {
-    this.ensureModule();
-    await LocationServiceModule.saveSetting(key, value);
+    this.ensureModule()
+    await LocationServiceModule.saveSetting(key, value)
   }
 
   /**
    * Retrieves a setting by key
    */
-  static async getSetting(
-    key: string,
-    defaultValue: string = ""
-  ): Promise<string | null> {
-    this.ensureModule();
-    return LocationServiceModule.getSetting(key, defaultValue || null);
+  static async getSetting(key: string, defaultValue: string = ""): Promise<string | null> {
+    this.ensureModule()
+    return LocationServiceModule.getSetting(key, defaultValue || null)
   }
 
   /**
    * Retrieves all settings as key-value pairs
    */
   static async getAllSettings(): Promise<Record<string, string>> {
-    this.ensureModule();
-    return this.safeExecute(
-      () => LocationServiceModule.getAllSettings(),
-      {},
-      "getAllSettings failed"
-    );
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.getAllSettings(), {}, "getAllSettings failed")
   }
 
   // ============================================================================
@@ -433,12 +346,12 @@ class NativeLocationService {
    * Checks if app is exempt from battery optimization
    */
   static async isIgnoringBatteryOptimizations(): Promise<boolean> {
-    this.ensureModule();
+    this.ensureModule()
     return this.safeExecute(
       () => LocationServiceModule.isIgnoringBatteryOptimizations(),
       false,
       "isIgnoringBatteryOptimizations failed"
-    );
+    )
   }
 
   /**
@@ -446,15 +359,13 @@ class NativeLocationService {
    * Opens system dialog for user approval
    */
   static async requestIgnoreBatteryOptimizations(): Promise<boolean> {
-    this.ensureModule();
-    console.log(
-      "[NativeLocationService] Requesting battery optimization exemption"
-    );
+    this.ensureModule()
+    console.log("[NativeLocationService] Requesting battery optimization exemption")
     return this.safeExecute(
       () => LocationServiceModule.requestIgnoreBatteryOptimizations(),
       false,
       "requestIgnoreBatteryOptimizations failed"
-    );
+    )
   }
 
   // ============================================================================
@@ -466,20 +377,20 @@ class NativeLocationService {
    * @returns Build config object with SDK versions, tools versions, etc.
    */
   static getBuildConfig(): {
-    MIN_SDK_VERSION: number;
-    TARGET_SDK_VERSION: number;
-    COMPILE_SDK_VERSION: number;
-    BUILD_TOOLS_VERSION: string;
-    KOTLIN_VERSION: string;
-    NDK_VERSION: string;
-    VERSION_NAME: string;
-    VERSION_CODE: number;
+    MIN_SDK_VERSION: number
+    TARGET_SDK_VERSION: number
+    COMPILE_SDK_VERSION: number
+    BUILD_TOOLS_VERSION: string
+    KOTLIN_VERSION: string
+    NDK_VERSION: string
+    VERSION_NAME: string
+    VERSION_CODE: number
   } | null {
     if (!BuildConfigModule) {
-      console.warn("[NativeLocationService] BuildConfigModule not available");
-      return null;
+      console.warn("[NativeLocationService] BuildConfigModule not available")
+      return null
     }
-    return BuildConfigModule;
+    return BuildConfigModule
   }
 
   // ============================================================================
@@ -490,44 +401,16 @@ class NativeLocationService {
    * Get all device information at once
    */
   static async getDeviceInfo(): Promise<{
-    model: string;
-    brand: string;
-    manufacturer: string;
-    device: string;
-    deviceId: string;
-    systemVersion: string;
-    apiLevel: number;
+    model: string
+    brand: string
+    manufacturer: string
+    device: string
+    deviceId: string
+    systemVersion: string
+    apiLevel: number
   }> {
-    this.ensureModule();
-    return LocationServiceModule.getDeviceInfo();
-  }
-
-  /**
-   * Individual getters (for drop-in replacement compatibility)
-   */
-  static async getSystemVersion(): Promise<string> {
-    this.ensureModule();
-    return LocationServiceModule.getSystemVersion();
-  }
-
-  static async getApiLevel(): Promise<number> {
-    this.ensureModule();
-    return LocationServiceModule.getApiLevel();
-  }
-
-  static async getModel(): Promise<string> {
-    this.ensureModule();
-    return LocationServiceModule.getModel();
-  }
-
-  static async getBrand(): Promise<string> {
-    this.ensureModule();
-    return LocationServiceModule.getBrand();
-  }
-
-  static async getDeviceId(): Promise<string> {
-    this.ensureModule();
-    return LocationServiceModule.getDeviceId();
+    this.ensureModule()
+    return LocationServiceModule.getDeviceInfo()
   }
 
   // ============================================================================
@@ -538,36 +421,32 @@ class NativeLocationService {
    * Writes content to a file in cache directory
    */
   static async writeFile(fileName: string, content: string): Promise<string> {
-    this.ensureModule();
-    return LocationServiceModule.writeFile(fileName, content);
+    this.ensureModule()
+    return LocationServiceModule.writeFile(fileName, content)
   }
 
   /**
    * Shares a file using native share sheet
    */
-  static async shareFile(
-    filePath: string,
-    mimeType: string,
-    title: string
-  ): Promise<boolean> {
-    this.ensureModule();
-    return LocationServiceModule.shareFile(filePath, mimeType, title);
+  static async shareFile(filePath: string, mimeType: string, title: string): Promise<boolean> {
+    this.ensureModule()
+    return LocationServiceModule.shareFile(filePath, mimeType, title)
   }
 
   /**
    * Deletes a file
    */
   static async deleteFile(filePath: string): Promise<boolean> {
-    this.ensureModule();
-    return LocationServiceModule.deleteFile(filePath);
+    this.ensureModule()
+    return LocationServiceModule.deleteFile(filePath)
   }
 
   /**
    * Gets cache directory path
    */
   static async getCacheDirectory(): Promise<string> {
-    this.ensureModule();
-    return LocationServiceModule.getCacheDirectory();
+    this.ensureModule()
+    return LocationServiceModule.getCacheDirectory()
   }
 
   // ============================================================================
@@ -578,38 +457,38 @@ class NativeLocationService {
    * Retrieves the full auth configuration from encrypted storage
    */
   static async getAuthConfig(): Promise<AuthConfig> {
-    this.ensureModule();
-    const raw = await LocationServiceModule.getAllAuthConfig();
+    this.ensureModule()
+    const raw = await LocationServiceModule.getAllAuthConfig()
     return {
       authType: raw.authType || "none",
       username: raw.username || "",
       password: raw.password || "",
       bearerToken: raw.bearerToken || "",
-      customHeaders: raw.customHeaders ? JSON.parse(raw.customHeaders) : {},
-    };
+      customHeaders: raw.customHeaders ? JSON.parse(raw.customHeaders) : {}
+    }
   }
 
   /**
    * Saves auth configuration to encrypted storage
    */
   static async saveAuthConfig(config: AuthConfig): Promise<boolean> {
-    this.ensureModule();
+    this.ensureModule()
     return LocationServiceModule.saveAuthConfig({
       authType: config.authType,
       username: config.username,
       password: config.password,
       bearerToken: config.bearerToken,
-      customHeaders: JSON.stringify(config.customHeaders),
-    });
+      customHeaders: JSON.stringify(config.customHeaders)
+    })
   }
 
   /**
    * Returns computed auth + custom headers for HTTP requests
    */
   static async getAuthHeaders(): Promise<Record<string, string>> {
-    this.ensureModule();
-    return LocationServiceModule.getAuthHeaders();
+    this.ensureModule()
+    return LocationServiceModule.getAuthHeaders()
   }
 }
 
-export default NativeLocationService;
+export default NativeLocationService

@@ -1,29 +1,10 @@
+# iOS (not used - Android only)
+ios/
+
 # OSX
-#
 .DS_Store
 
-# Xcode
-#
-build/
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-xcuserdata
-*.xccheckout
-*.moved-aside
-DerivedData
-*.hmap
-*.ipa
-*.xcuserstate
-**/.xcode.env.local
-
 # Android/IntelliJ
-#
 build/
 .idea
 .gradle
@@ -33,7 +14,6 @@ local.properties
 .cxx/
 android/gradle.properties
 android/local.properties
-!debug.keystore
 .kotlin/
 
 # Android Keystores
@@ -41,42 +21,28 @@ android/local.properties
 *.jks
 keystore.properties
 key.properties
-
-# Debug keystore
-debug.keystore
-
-# Release keystore location
+!debug.keystore
 /android/app/release.keystore
 /android/keystores/
 
-# node.js
-#
+# Node.js
 node_modules/
 npm-debug.log
 yarn-error.log
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
-# screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/
 
-**/fastlane/report.xml
-**/fastlane/Preview.html
-**/fastlane/screenshots
-**/fastlane/test_output
+# Ruby / CocoaPods (not used)
+Gemfile
+.bundle/
+**/Pods/
+/vendor/bundle/
+
+# Metro
+.metro-health-check*
 
 # Bundle artifact
 *.jsbundle
 
-# Ruby / CocoaPods
-**/Pods/
-/vendor/bundle/
-
-# Temporary files created by Metro to check the health of the file watcher
-.metro-health-check*
-
-# testing
+# Testing
 /coverage
 
 # Yarn
@@ -87,5 +53,5 @@ yarn-error.log
 !.yarn/sdks
 !.yarn/versions
 
-
+# Misc
 testers

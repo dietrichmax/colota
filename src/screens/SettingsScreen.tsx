@@ -3,71 +3,49 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import {
-  Text,
-  StyleSheet,
-  TextInput,
-  Switch,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-} from "react-native";
-import {
-  ScreenProps,
-  TRACKING_PRESETS,
-  SyncPreset,
-  SelectablePreset,
-  Settings,
-} from "../types/global";
-import { useTheme } from "../hooks/useTheme";
-import NativeLocationService from "../services/NativeLocationService";
-import { useTracking } from "../contexts/TrackingProvider";
-import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator";
-import {
-  Button,
-  SectionTitle,
-  Card,
-  Container,
-  Divider,
-  Footer,
-} from "../components";
-import { StatsCard, PresetOption, NumericInput } from "../components";
+import React, { useState, useCallback, useEffect, useRef } from "react"
+import { Text, StyleSheet, TextInput, Switch, View, ScrollView, TouchableOpacity } from "react-native"
+import { ScreenProps, TRACKING_PRESETS, SyncPreset, SelectablePreset, Settings } from "../types/global"
+import { useTheme } from "../hooks/useTheme"
+import NativeLocationService from "../services/NativeLocationService"
+import { useTracking } from "../contexts/TrackingProvider"
+import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
+import { Button, SectionTitle, Card, Container, Divider, Footer } from "../components"
+import { StatsCard, PresetOption, NumericInput } from "../components"
 
-const AUTOSAVE_DEBOUNCE_MS = 1500;
+const AUTOSAVE_DEBOUNCE_MS = 1500
 
 function isPrivateHost(url: string) {
   try {
     // Strip protocol
-    const stripped = url.replace(/^https?:\/\//, "").split(/[/?#]/)[0];
+    const stripped = url.replace(/^https?:\/\//, "").split(/[/?#]/)[0]
     // Extract host (before any port)
-    const host = stripped.split(":")[0];
+    const host = stripped.split(":")[0]
 
     // Validate host: must be valid IP or hostname
     const ipRegex =
-      /^(127\.0\.0\.1|10\.(\d{1,3}\.){2}\d{1,3}|192\.168\.(\d{1,3}\.)\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.(\d{1,3}\.)\d{1,3})$/;
-    const hostnameRegex = /^localhost$/;
+      /^(127\.0\.0\.1|10\.(\d{1,3}\.){2}\d{1,3}|192\.168\.(\d{1,3}\.)\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.(\d{1,3}\.)\d{1,3})$/
+    const hostnameRegex = /^localhost$/
 
-    return ipRegex.test(host) || hostnameRegex.test(host);
+    return ipRegex.test(host) || hostnameRegex.test(host)
   } catch {
-    return false;
+    return false
   }
 }
 
 function isEndpointAllowed(url: string) {
-  if (!url) return false;
+  if (!url) return false
 
-  const match = url.match(/^(https?):\/\/([^/:]+)(:\d+)?/);
-  if (!match) return false;
+  const match = url.match(/^(https?):\/\/([^/:]+)(:\d+)?/)
+  if (!match) return false
 
-  const protocol = match[1]; // http or https
-  const host = match[2];
+  const protocol = match[1] // http or https
+  const host = match[2]
 
-  if (protocol === "https") return true;
-  if (protocol === "http" && isPrivateHost(host)) return true;
+  if (protocol === "https") return true
+  if (protocol === "http" && isPrivateHost(host)) return true
 
-  return false;
+  return false
 }
 
 /**
@@ -75,277 +53,233 @@ function isEndpointAllowed(url: string) {
  * Features auto-save, presets, and advanced customization.
  */
 export function SettingsScreen({ navigation }: ScreenProps) {
-  const { settings, setSettings, restartTracking } = useTracking();
-  const { mode, toggleTheme, colors } = useTheme();
+  const { settings, setSettings, restartTracking } = useTracking()
+  const { mode, toggleTheme, colors } = useTheme()
 
   // Stats
-  const [queueCount, setQueueCount] = useState(0);
-  const [sentCount, setSentCount] = useState(0);
+  const [queueCount, setQueueCount] = useState(0)
+  const [sentCount, setSentCount] = useState(0)
 
   // Inputs
-  const [intervalInput, setIntervalInput] = useState(
-    settings.interval.toString()
-  );
-  const [endpointInput, setEndpointInput] = useState(settings.endpoint || "");
-  const [distanceInput, setDistanceInput] = useState(
-    settings.distance?.toString() || "0"
-  );
-  const [accuracyTresholdInput, setAccuracyTresholdInput] = useState(
-    settings.accuracyThreshold.toString()
-  );
+  const [intervalInput, setIntervalInput] = useState(settings.interval.toString())
+  const [endpointInput, setEndpointInput] = useState(settings.endpoint || "")
+  const [distanceInput, setDistanceInput] = useState(settings.distance?.toString() || "0")
+  const [accuracyTresholdInput, setAccuracyTresholdInput] = useState(settings.accuracyThreshold.toString())
 
   // UI State
-  const [testing, setTesting] = useState(false);
-  const [testResponse, setTestResponse] = useState<string | null>(null);
-  const [testError, setTestError] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [testing, setTesting] = useState(false)
+  const [testResponse, setTestResponse] = useState<string | null>(null)
+  const [testError, setTestError] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const advancedHeight = useRef(new Animated.Value(0)).current;
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Sync inputs with settings changes
   useEffect(() => {
-    setIntervalInput(settings.interval.toString());
-    setDistanceInput(settings.distance?.toString() || "0");
-    setEndpointInput(settings.endpoint || "");
-  }, [
-    settings.interval,
-    settings.distance,
-    settings.endpoint,
-    settings.accuracyThreshold,
-  ]);
-
-  // Animate advanced panel
-  useEffect(() => {
-    Animated.spring(advancedHeight, {
-      toValue: showAdvanced ? 1 : 0,
-      useNativeDriver: false,
-      tension: 50,
-      friction: 10,
-    }).start();
-  }, [showAdvanced, advancedHeight]);
+    setIntervalInput(settings.interval.toString())
+    setDistanceInput(settings.distance?.toString() || "0")
+    setEndpointInput(settings.endpoint || "")
+  }, [settings.interval, settings.distance, settings.endpoint, settings.accuracyThreshold])
 
   /** Update stats */
   const updateStats = useCallback(async () => {
     try {
-      const stats = await NativeLocationService.getStats();
-      setQueueCount(stats.queued);
-      setSentCount(stats.sent);
+      const stats = await NativeLocationService.getStats()
+      setQueueCount(stats.queued)
+      setSentCount(stats.sent)
     } catch (err) {
-      console.error("[SettingsScreen] Failed to get stats:", err);
+      console.error("[SettingsScreen] Failed to get stats:", err)
     }
-  }, []);
+  }, [])
 
   /** Persist settings to SQLite and schedule a debounced restart */
   const saveAndRestart = useCallback(
     async (newSettings: Settings) => {
-      setSaving(true);
+      setSaving(true)
       try {
-        await setSettings(newSettings);
+        await setSettings(newSettings)
       } catch (err) {
-        console.error("[SettingsScreen] Save failed", err);
+        console.error("[SettingsScreen] Save failed", err)
       }
 
       // Debounce the restart — only fires once after settings stabilize
-      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current)
       restartTimeoutRef.current = setTimeout(async () => {
         try {
-          await restartTracking(newSettings);
-          setSaveSuccess(true);
-          setTimeout(() => setSaveSuccess(false), 2000);
+          await restartTracking(newSettings)
+          setSaveSuccess(true)
+          setTimeout(() => setSaveSuccess(false), 2000)
         } catch (err) {
-          console.error("[SettingsScreen] Restart failed", err);
+          console.error("[SettingsScreen] Restart failed", err)
         } finally {
-          setSaving(false);
+          setSaving(false)
         }
-      }, AUTOSAVE_DEBOUNCE_MS);
+      }, AUTOSAVE_DEBOUNCE_MS)
     },
     [setSettings, restartTracking]
-  );
+  )
 
   const debouncedSave = useCallback(
     (newSettings: Settings) => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(
-        () => saveAndRestart(newSettings),
-        AUTOSAVE_DEBOUNCE_MS
-      );
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = setTimeout(() => saveAndRestart(newSettings), AUTOSAVE_DEBOUNCE_MS)
     },
     [saveAndRestart]
-  );
+  )
 
   const immediateSave = useCallback(
     (newSettings: Settings) => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveAndRestart(newSettings);
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      saveAndRestart(newSettings)
     },
     [saveAndRestart]
-  );
+  )
 
   // Poll stats every 5 seconds
   useEffect(() => {
-    updateStats();
-    const interval = setInterval(updateStats, 5000);
-    return () => clearInterval(interval);
-  }, [updateStats]);
+    updateStats()
+    const interval = setInterval(updateStats, 5000)
+    return () => clearInterval(interval)
+  }, [updateStats])
 
   // Cleanup
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
-    };
-  }, []);
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current)
+    }
+  }, [])
 
   /** Generic numeric input handler */
   const handleNumericChange = useCallback(
-    (
-      key: "interval" | "distance" | "accuracyTreshold",
-      value: string,
-      min: number = 0
-    ) => {
-      if (key === "interval") setIntervalInput(value);
-      if (key === "distance") setDistanceInput(value);
-      if (key === "accuracyTreshold") setAccuracyTresholdInput(value);
+    (key: "interval" | "distance" | "accuracyTreshold", value: string, min: number = 0) => {
+      if (key === "interval") setIntervalInput(value)
+      if (key === "distance") setDistanceInput(value)
+      if (key === "accuracyTreshold") setAccuracyTresholdInput(value)
 
-      const num = Number(value);
+      const num = Number(value)
       if (!isNaN(num) && num >= min) {
-        const next = { ...settings, [key]: num, syncPreset: "custom" as const };
-        setSettings(next);
-        debouncedSave(next);
+        const next = { ...settings, [key]: num, syncPreset: "custom" as const }
+        setSettings(next)
+        debouncedSave(next)
       }
     },
     [settings, setSettings, debouncedSave]
-  );
+  )
 
   /** Ensure valid numbers on blur */
   const handleNumericBlur = useCallback(
     (key: "interval" | "distance" | "accuracyTreshold", min: number = 0) => {
-      const currentStr =
-        key === "interval"
-          ? intervalInput
-          : key === "distance"
-          ? distanceInput
-          : accuracyTresholdInput;
-      let val = Number(currentStr);
+      const currentStr = key === "interval" ? intervalInput : key === "distance" ? distanceInput : accuracyTresholdInput
+      let val = Number(currentStr)
 
       if (isNaN(val) || val < min) {
-        val = min;
-        if (key === "interval") setIntervalInput(min.toString());
-        if (key === "distance") setDistanceInput(min.toString());
-        if (key === "accuracyTreshold")
-          setAccuracyTresholdInput(min.toString());
+        val = min
+        if (key === "interval") setIntervalInput(min.toString())
+        if (key === "distance") setDistanceInput(min.toString())
+        if (key === "accuracyTreshold") setAccuracyTresholdInput(min.toString())
 
-        const next = { ...settings, [key]: val };
-        setSettings(next);
-        immediateSave(next);
+        const next = { ...settings, [key]: val }
+        setSettings(next)
+        immediateSave(next)
       }
     },
-    [
-      intervalInput,
-      distanceInput,
-      accuracyTresholdInput,
-      settings,
-      setSettings,
-      immediateSave,
-    ]
-  );
+    [intervalInput, distanceInput, accuracyTresholdInput, settings, setSettings, immediateSave]
+  )
 
   const handlePresetSelect = useCallback(
     async (preset: SyncPreset) => {
       if (preset === "custom") {
-        const next = { ...settings, syncPreset: "custom" as const };
-        setSettings(next);
-        immediateSave(next);
-        return;
+        const next = { ...settings, syncPreset: "custom" as const }
+        setSettings(next)
+        immediateSave(next)
+        return
       }
 
-      const config = TRACKING_PRESETS[preset];
+      const config = TRACKING_PRESETS[preset]
       const next: Settings = {
         ...settings,
         syncPreset: preset,
         interval: config.interval,
         distance: config.distance,
         syncInterval: config.syncInterval,
-        retryInterval: config.retryInterval,
-      };
-
-      immediateSave(next);
-    },
-    [settings, setSettings, immediateSave]
-  );
-
-  const handleTestEndpoint = useCallback(async () => {
-    if (!endpointInput) return;
-    setTesting(true);
-    setTestResponse(null);
-    setTestError(false);
-
-    try {
-      const recentLocation =
-        await NativeLocationService.getMostRecentLocation();
-      if (!recentLocation) {
-        setTestResponse("No location available yet. Start tracking first.");
-        setTestError(true);
-        return;
+        retryInterval: config.retryInterval
       }
 
-      const fieldMap = settings.fieldMap;
+      immediateSave(next)
+    },
+    [settings, setSettings, immediateSave]
+  )
+
+  const handleTestEndpoint = useCallback(async () => {
+    if (!endpointInput) return
+    setTesting(true)
+    setTestResponse(null)
+    setTestError(false)
+
+    try {
+      const recentLocation = await NativeLocationService.getMostRecentLocation()
+      if (!recentLocation) {
+        setTestResponse("No location available yet. Start tracking first.")
+        setTestError(true)
+        return
+      }
+
+      const fieldMap = settings.fieldMap
       const payload: Record<string, number | boolean> = {
         [fieldMap.lat]: recentLocation.latitude,
         [fieldMap.lon]: recentLocation.longitude,
-        [fieldMap.acc]: Math.round(recentLocation.accuracy),
-      };
-
-      if (fieldMap.alt) payload[fieldMap.alt] = 0;
-      if (fieldMap.vel) payload[fieldMap.vel] = 0;
-      if (fieldMap.batt) payload[fieldMap.batt] = 0;
-      if (fieldMap.bs) payload[fieldMap.bs] = 0;
-      if (fieldMap.tst) {
-        payload[fieldMap.tst] = Math.floor(Date.now() / 1000);
+        [fieldMap.acc]: Math.round(recentLocation.accuracy)
       }
 
-      let authHeaders: Record<string, string> = {};
+      if (fieldMap.alt) payload[fieldMap.alt] = 0
+      if (fieldMap.vel) payload[fieldMap.vel] = 0
+      if (fieldMap.batt) payload[fieldMap.batt] = 0
+      if (fieldMap.bs) payload[fieldMap.bs] = 0
+      if (fieldMap.tst) {
+        payload[fieldMap.tst] = Math.floor(Date.now() / 1000)
+      }
+
+      let authHeaders: Record<string, string> = {}
       try {
-        authHeaders = await NativeLocationService.getAuthHeaders();
+        authHeaders = await NativeLocationService.getAuthHeaders()
       } catch {
         // proceed without auth headers
       }
 
-      console.log(payload);
       const response = await fetch(endpointInput, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify(payload),
-      });
+        body: JSON.stringify(payload)
+      })
 
       if (response.ok) {
-        setTestResponse("✓ Connection successful");
-        const next = { ...settings, endpoint: endpointInput };
-        immediateSave(next);
+        setTestResponse("✓ Connection successful")
+        const next = { ...settings, endpoint: endpointInput }
+        immediateSave(next)
       } else {
-        setTestResponse(`Failed: ${response.status}`);
-        setTestError(true);
+        setTestResponse(`Failed: ${response.status}`)
+        setTestError(true)
       }
     } catch (err: any) {
-      setTestResponse(err.message || "Connection failed");
-      setTestError(true);
+      setTestResponse(err.message || "Connection failed")
+      setTestError(true)
     } finally {
-      setTesting(false);
-      setTimeout(() => setTestResponse(null), 3000);
+      setTesting(false)
+      setTimeout(() => setTestResponse(null), 3000)
     }
-  }, [endpointInput, settings, immediateSave]);
+  }, [endpointInput, settings, immediateSave])
 
   const handleOfflineModeChange = useCallback(
     (enabled: boolean) => {
-      const next = { ...settings, isOfflineMode: enabled };
-      immediateSave(next);
+      const next = { ...settings, isOfflineMode: enabled }
+      immediateSave(next)
     },
     [settings, immediateSave]
-  );
+  )
 
   return (
     <Container>
@@ -376,21 +310,15 @@ export function SettingsScreen({ navigation }: ScreenProps) {
             {/* Offline Mode - Better visual hierarchy */}
             <View style={styles.settingRow}>
               <View style={styles.settingContent}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>
-                  Offline Mode
-                </Text>
-                <Text
-                  style={[styles.settingHint, { color: colors.textSecondary }]}
-                >
-                  Save locally, no network sync
-                </Text>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Offline Mode</Text>
+                <Text style={[styles.settingHint, { color: colors.textSecondary }]}>Save locally, no network sync</Text>
               </View>
               <Switch
                 value={settings.isOfflineMode}
                 onValueChange={handleOfflineModeChange}
                 trackColor={{
                   false: colors.border,
-                  true: colors.primary + "80",
+                  true: colors.primary + "80"
                 }}
                 thumbColor={settings.isOfflineMode ? colors.primary : "#f4f3f4"}
               />
@@ -403,35 +331,27 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                 {/* Endpoint - Improved spacing and visual design */}
                 <View style={styles.inputGroup}>
                   <View style={styles.inputHeader}>
-                    <Text style={[styles.inputLabel, { color: colors.text }]}>
-                      Server Endpoint
-                    </Text>
+                    <Text style={[styles.inputLabel, { color: colors.text }]}>Server Endpoint</Text>
                     {endpointInput && (
                       <View
                         style={[
                           styles.protocolBadge,
                           {
-                            backgroundColor: endpointInput.startsWith(
-                              "https://"
-                            )
+                            backgroundColor: endpointInput.startsWith("https://")
                               ? colors.success + "20"
-                              : colors.warning + "20",
-                          },
+                              : colors.warning + "20"
+                          }
                         ]}
                       >
                         <Text
                           style={[
                             styles.protocolText,
                             {
-                              color: endpointInput.startsWith("https://")
-                                ? colors.success
-                                : colors.warning,
-                            },
+                              color: endpointInput.startsWith("https://") ? colors.success : colors.warning
+                            }
                           ]}
                         >
-                          {endpointInput.startsWith("https://")
-                            ? "HTTPS"
-                            : "HTTP"}
+                          {endpointInput.startsWith("https://") ? "HTTPS" : "HTTP"}
                         </Text>
                       </View>
                     )}
@@ -443,8 +363,8 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                       {
                         borderColor: colors.border,
                         color: colors.text,
-                        backgroundColor: colors.background,
-                      },
+                        backgroundColor: colors.background
+                      }
                     ]}
                     value={endpointInput}
                     onChangeText={setEndpointInput}
@@ -456,14 +376,11 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                   />
 
                   {/* Inline warning for non-private HTTP */}
-                  {endpointInput.startsWith("http://") &&
-                    !isPrivateHost(endpointInput) && (
-                      <Text
-                        style={[styles.httpWarning, { color: colors.warning }]}
-                      >
-                        HTTP only allowed for private IPs / localhost
-                      </Text>
-                    )}
+                  {endpointInput.startsWith("http://") && !isPrivateHost(endpointInput) && (
+                    <Text style={[styles.httpWarning, { color: colors.warning }]}>
+                      HTTP only allowed for private IPs / localhost
+                    </Text>
+                  )}
                 </View>
 
                 {/* Test button with improved styling */}
@@ -471,13 +388,11 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                   style={[
                     styles.testButton,
                     { backgroundColor: colors.primary },
-                    (!endpointInput || !isEndpointAllowed(endpointInput)) &&
-                      styles.disabledButton,
+                    (!endpointInput || !isEndpointAllowed(endpointInput)) && styles.disabledButton
                   ]}
                   onPress={() => {
-                    if (!endpointInput || !isEndpointAllowed(endpointInput))
-                      return; // prevent action
-                    handleTestEndpoint();
+                    if (!endpointInput || !isEndpointAllowed(endpointInput)) return // prevent action
+                    handleTestEndpoint()
                   }}
                   title={testing ? "Testing..." : "Test Connection"}
                   color="#f8f7f7"
@@ -490,17 +405,11 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                       styles.responseBox,
                       {
                         borderColor: testError ? colors.error : colors.success,
-                        backgroundColor:
-                          (testError ? colors.error : colors.success) + "15",
-                      },
+                        backgroundColor: (testError ? colors.error : colors.success) + "15"
+                      }
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.responseText,
-                        { color: testError ? colors.error : colors.success },
-                      ]}
-                    >
+                    <Text style={[styles.responseText, { color: testError ? colors.error : colors.success }]}>
                       {testResponse}
                     </Text>
                   </View>
@@ -514,18 +423,12 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                   activeOpacity={0.6}
                 >
                   <View style={styles.linkContent}>
-                    <Text style={[styles.linkLabel, { color: colors.text }]}>
-                      Authentication & Headers
-                    </Text>
-                    <Text
-                      style={[styles.linkSub, { color: colors.textSecondary }]}
-                    >
+                    <Text style={[styles.linkLabel, { color: colors.text }]}>Authentication & Headers</Text>
+                    <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
                       Basic auth, bearer tokens, custom headers
                     </Text>
                   </View>
-                  <Text style={[styles.linkArrow, { color: colors.textLight }]}>
-                    ›
-                  </Text>
+                  <Text style={[styles.linkArrow, { color: colors.textLight }]}>›</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -538,33 +441,27 @@ export function SettingsScreen({ navigation }: ScreenProps) {
           <Card>
             {/* Presets with improved spacing */}
             <View style={styles.presetsContainer}>
-              {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map(
-                (preset, index) => (
-                  <View key={preset}>
-                    <PresetOption
-                      preset={preset}
-                      isSelected={settings.syncPreset === preset}
-                      onSelect={handlePresetSelect}
-                      colors={colors}
-                    />
-                    {index < Object.keys(TRACKING_PRESETS).length - 1 && (
-                      <View style={styles.presetSpacer} />
-                    )}
-                  </View>
-                )
-              )}
+              {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map((preset, index) => (
+                <View key={preset}>
+                  <PresetOption
+                    preset={preset}
+                    isSelected={settings.syncPreset === preset}
+                    onSelect={handlePresetSelect}
+                    colors={colors}
+                  />
+                  {index < Object.keys(TRACKING_PRESETS).length - 1 && <View style={styles.presetSpacer} />}
+                </View>
+              ))}
             </View>
 
             {/* Advanced Toggle - Better button design */}
             <TouchableOpacity
               style={[
                 styles.advancedToggle,
-                showAdvanced
-                  ? styles.advancedToggleActive
-                  : styles.advancedToggleInactive,
+                showAdvanced ? styles.advancedToggleActive : styles.advancedToggleInactive,
                 {
-                  borderColor: showAdvanced ? colors.primary : colors.border,
-                },
+                  borderColor: showAdvanced ? colors.primary : colors.border
+                }
               ]}
               onPress={() => setShowAdvanced(!showAdvanced)}
               activeOpacity={0.7}
@@ -585,25 +482,17 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                       styles.customBanner,
                       {
                         backgroundColor: colors.info + "15",
-                        borderLeftColor: colors.info,
-                      },
+                        borderLeftColor: colors.info
+                      }
                     ]}
                   >
-                    <Text
-                      style={[styles.customBannerText, { color: colors.info }]}
-                    >
-                      💡 Using custom configuration
-                    </Text>
+                    <Text style={[styles.customBannerText, { color: colors.info }]}>💡 Using custom configuration</Text>
                   </View>
                 )}
 
                 {/* Tracking Parameters Group */}
                 <View style={styles.paramGroup}>
-                  <Text
-                    style={[styles.paramGroupTitle, { color: colors.text }]}
-                  >
-                    Tracking Parameters
-                  </Text>
+                  <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Tracking Parameters</Text>
 
                   <NumericInput
                     label="Tracking Interval"
@@ -632,23 +521,12 @@ export function SettingsScreen({ navigation }: ScreenProps) {
 
                 {/* Network Parameters Group */}
                 <View style={styles.paramGroup}>
-                  <Text
-                    style={[styles.paramGroupTitle, { color: colors.text }]}
-                  >
-                    Network Settings
-                  </Text>
+                  <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Network Settings</Text>
 
                   {/* Sync Interval */}
                   <View style={styles.settingBlock}>
-                    <Text style={[styles.blockLabel, { color: colors.text }]}>
-                      Sync Interval
-                    </Text>
-                    <Text
-                      style={[
-                        styles.blockHint,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
+                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync Interval</Text>
+                    <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
                       How often to upload data to server
                     </Text>
 
@@ -658,9 +536,9 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                           0: "Instant",
                           60: "1 min",
                           300: "5 min",
-                          900: "15 min",
-                        };
-                        const isSelected = settings.syncInterval === sec;
+                          900: "15 min"
+                        }
+                        const isSelected = settings.syncInterval === sec
 
                         return (
                           <TouchableOpacity
@@ -669,21 +547,21 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                               styles.gridOption,
                               {
                                 borderColor: colors.border,
-                                backgroundColor: colors.background,
+                                backgroundColor: colors.background
                               },
                               isSelected && {
                                 borderColor: colors.primary,
-                                backgroundColor: colors.primary + "20",
-                              },
+                                backgroundColor: colors.primary + "20"
+                              }
                             ]}
                             onPress={() => {
                               const next = {
                                 ...settings,
                                 syncInterval: sec,
-                                syncPreset: "custom" as const,
-                              };
-                              setSettings(next);
-                              debouncedSave(next);
+                                syncPreset: "custom" as const
+                              }
+                              setSettings(next)
+                              debouncedSave(next)
                             }}
                             activeOpacity={0.7}
                           >
@@ -691,31 +569,22 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                               style={[
                                 styles.gridLabel,
                                 {
-                                  color: isSelected
-                                    ? colors.primary
-                                    : colors.text,
-                                },
+                                  color: isSelected ? colors.primary : colors.text
+                                }
                               ]}
                             >
                               {labels[sec]}
                             </Text>
                           </TouchableOpacity>
-                        );
+                        )
                       })}
                     </View>
                   </View>
 
                   {/* Retry Interval */}
                   <View style={styles.settingBlock}>
-                    <Text style={[styles.blockLabel, { color: colors.text }]}>
-                      Retry Interval
-                    </Text>
-                    <Text
-                      style={[
-                        styles.blockHint,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
+                    <Text style={[styles.blockLabel, { color: colors.text }]}>Retry Interval</Text>
+                    <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
                       Wait time before retrying failed uploads
                     </Text>
 
@@ -724,9 +593,9 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                         const labels: Record<number, string> = {
                           30: "30s",
                           300: "5m",
-                          900: "15m",
-                        };
-                        const isSelected = settings.retryInterval === sec;
+                          900: "15m"
+                        }
+                        const isSelected = settings.retryInterval === sec
 
                         return (
                           <TouchableOpacity
@@ -735,21 +604,21 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                               styles.gridOption,
                               {
                                 borderColor: colors.border,
-                                backgroundColor: colors.background,
+                                backgroundColor: colors.background
                               },
                               isSelected && {
                                 borderColor: colors.primary,
-                                backgroundColor: colors.primary + "20",
-                              },
+                                backgroundColor: colors.primary + "20"
+                              }
                             ]}
                             onPress={() => {
                               const next = {
                                 ...settings,
                                 retryInterval: sec,
-                                syncPreset: "custom" as const,
-                              };
-                              setSettings(next);
-                              debouncedSave(next);
+                                syncPreset: "custom" as const
+                              }
+                              setSettings(next)
+                              debouncedSave(next)
                             }}
                             activeOpacity={0.7}
                           >
@@ -757,25 +626,21 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                               style={[
                                 styles.gridLabel,
                                 {
-                                  color: isSelected
-                                    ? colors.primary
-                                    : colors.text,
-                                },
+                                  color: isSelected ? colors.primary : colors.text
+                                }
                               ]}
                             >
                               {labels[sec]}
                             </Text>
                           </TouchableOpacity>
-                        );
+                        )
                       })}
                     </View>
                   </View>
 
                   {/* Max Retries */}
                   <View style={styles.settingBlock}>
-                    <Text style={[styles.blockLabel, { color: colors.text }]}>
-                      Max Retry Attempts
-                    </Text>
+                    <Text style={[styles.blockLabel, { color: colors.text }]}>Max Retry Attempts</Text>
                     <View style={styles.retryGrid}>
                       {[3, 5, 10, 0].map((val) => (
                         <TouchableOpacity
@@ -784,21 +649,21 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                             styles.retryChip,
                             {
                               borderColor: colors.border,
-                              backgroundColor: colors.background,
+                              backgroundColor: colors.background
                             },
                             settings.maxRetries === val && {
                               borderColor: colors.primary,
-                              backgroundColor: colors.primary + "20",
-                            },
+                              backgroundColor: colors.primary + "20"
+                            }
                           ]}
                           onPress={() => {
                             const next = {
                               ...settings,
                               maxRetries: val,
-                              syncPreset: "custom" as const,
-                            };
-                            setSettings(next);
-                            debouncedSave(next);
+                              syncPreset: "custom" as const
+                            }
+                            setSettings(next)
+                            debouncedSave(next)
                           }}
                           activeOpacity={0.7}
                         >
@@ -806,11 +671,8 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                             style={[
                               styles.retryChipText,
                               {
-                                color:
-                                  settings.maxRetries === val
-                                    ? colors.primary
-                                    : colors.text,
-                              },
+                                color: settings.maxRetries === val ? colors.primary : colors.text
+                              }
                             ]}
                           >
                             {val === 0 ? "∞" : val}
@@ -818,13 +680,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <Text
-                      style={[
-                        styles.blockHint,
-                        styles.retryHint,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
+                    <Text style={[styles.blockHint, styles.retryHint, { color: colors.textSecondary }]}>
                       {settings.maxRetries === 0
                         ? "⚠️ Unlimited retries may cause queue buildup"
                         : `Give up after ${settings.maxRetries} failed attempts`}
@@ -836,26 +692,13 @@ export function SettingsScreen({ navigation }: ScreenProps) {
 
                 {/* Quality Parameters Group */}
                 <View style={styles.paramGroup}>
-                  <Text
-                    style={[styles.paramGroupTitle, { color: colors.text }]}
-                  >
-                    Quality Filters
-                  </Text>
+                  <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Quality Filters</Text>
 
                   {/* Accuracy Filter */}
                   <View style={styles.settingRow}>
                     <View style={styles.settingContent}>
-                      <Text
-                        style={[styles.settingLabel, { color: colors.text }]}
-                      >
-                        Filter Inaccurate Locations
-                      </Text>
-                      <Text
-                        style={[
-                          styles.settingHint,
-                          { color: colors.textSecondary },
-                        ]}
-                      >
+                      <Text style={[styles.settingLabel, { color: colors.text }]}>Filter Inaccurate Locations</Text>
+                      <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
                         Reject low-accuracy GPS readings
                       </Text>
                     </View>
@@ -864,18 +707,14 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                       onValueChange={(value) =>
                         immediateSave({
                           ...settings,
-                          filterInaccurateLocations: value,
+                          filterInaccurateLocations: value
                         })
                       }
                       trackColor={{
                         false: colors.border,
-                        true: colors.primary + "80",
+                        true: colors.primary + "80"
                       }}
-                      thumbColor={
-                        settings.filterInaccurateLocations
-                          ? colors.primary
-                          : "#f4f3f4"
-                      }
+                      thumbColor={settings.filterInaccurateLocations ? colors.primary : "#f4f3f4"}
                     />
                   </View>
 
@@ -884,9 +723,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                       <NumericInput
                         label="Accuracy Threshold"
                         value={accuracyTresholdInput}
-                        onChange={(val) =>
-                          handleNumericChange("accuracyTreshold", val, 50)
-                        }
+                        onChange={(val) => handleNumericChange("accuracyTreshold", val, 50)}
                         onBlur={() => handleNumericBlur("accuracyTreshold", 50)}
                         unit="meters"
                         placeholder="50"
@@ -907,16 +744,14 @@ export function SettingsScreen({ navigation }: ScreenProps) {
           <Card>
             <View style={styles.settingRow}>
               <View style={styles.settingContent}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>
-                  Dark Mode
-                </Text>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Dark Mode</Text>
               </View>
               <Switch
                 value={mode === "dark"}
                 onValueChange={toggleTheme}
                 trackColor={{
                   false: colors.border,
-                  true: colors.primary + "80",
+                  true: colors.primary + "80"
                 }}
                 thumbColor={mode === "dark" ? colors.primary : "#f4f3f4"}
               />
@@ -934,16 +769,10 @@ export function SettingsScreen({ navigation }: ScreenProps) {
               activeOpacity={0.6}
             >
               <View style={styles.linkContent}>
-                <Text style={[styles.linkLabel, { color: colors.text }]}>
-                  Data Management
-                </Text>
-                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
-                  View queu and clear data
-                </Text>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Data Management</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>View queue and clear data</Text>
               </View>
-              <Text style={[styles.linkArrow, { color: colors.textLight }]}>
-                ›
-              </Text>
+              <Text style={[styles.linkArrow, { color: colors.textLight }]}>›</Text>
             </TouchableOpacity>
 
             <Divider />
@@ -954,16 +783,10 @@ export function SettingsScreen({ navigation }: ScreenProps) {
               activeOpacity={0.6}
             >
               <View style={styles.linkContent}>
-                <Text style={[styles.linkLabel, { color: colors.text }]}>
-                  API Field Mapping
-                </Text>
-                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
-                  Customize JSON payload structure
-                </Text>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>API Field Mapping</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>Customize JSON payload structure</Text>
               </View>
-              <Text style={[styles.linkArrow, { color: colors.textLight }]}>
-                ›
-              </Text>
+              <Text style={[styles.linkArrow, { color: colors.textLight }]}>›</Text>
             </TouchableOpacity>
           </Card>
         </View>
@@ -972,104 +795,100 @@ export function SettingsScreen({ navigation }: ScreenProps) {
         <Footer />
       </ScrollView>
 
-      <FloatingSaveIndicator
-        saving={saving}
-        success={saveSuccess}
-        colors={colors}
-      />
+      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
     </Container>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 40
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 20
   },
   title: {
     fontSize: 28,
     fontWeight: "700",
-    letterSpacing: -0.5,
+    letterSpacing: -0.5
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 24
   },
   settingRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4,
+    paddingVertical: 4
   },
   settingContent: {
     flex: 1,
-    marginRight: 16,
+    marginRight: 16
   },
   settingLabel: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 2,
+    marginBottom: 2
   },
   settingHint: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 18
   },
   inputGroup: {
-    marginBottom: 12,
+    marginBottom: 12
   },
   inputHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 10
   },
   inputLabel: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "600"
   },
   protocolBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 12
   },
   protocolText: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "700"
   },
   input: {
     borderWidth: 1.5,
     padding: 16,
     borderRadius: 12,
-    fontSize: 15,
+    fontSize: 15
   },
   testButton: {
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
-    marginTop: 12,
+    marginTop: 12
   },
   disabledButton: {
-    opacity: 0.5,
+    opacity: 0.5
   },
   responseBox: {
     marginTop: 12,
     padding: 14,
     borderWidth: 1.5,
     borderRadius: 12,
-    alignItems: "center",
+    alignItems: "center"
   },
   responseText: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "600"
   },
   presetsContainer: {
-    marginBottom: 16,
+    marginBottom: 16
   },
   presetSpacer: {
-    height: 8,
+    height: 8
   },
   advancedToggle: {
     paddingVertical: 14,
@@ -1077,33 +896,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 12,
     borderWidth: 1.5,
-    marginTop: 8,
+    marginTop: 8
   },
   advancedToggleActive: {
-    backgroundColor: "transparent",
+    backgroundColor: "transparent"
   },
   advancedToggleInactive: {
-    backgroundColor: "transparent",
+    backgroundColor: "transparent"
   },
   advancedText: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "600"
   },
   advancedPanel: {
-    marginTop: 16,
+    marginTop: 16
   },
   customBanner: {
     padding: 14,
     borderRadius: 10,
     marginBottom: 20,
-    borderLeftWidth: 4,
+    borderLeftWidth: 4
   },
   customBannerText: {
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "500"
   },
   paramGroup: {
-    marginBottom: 4,
+    marginBottom: 4
   },
   paramGroupTitle: {
     fontSize: 13,
@@ -1111,86 +930,86 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 16,
-    opacity: 0.6,
+    opacity: 0.6
   },
   settingBlock: {
-    marginBottom: 20,
+    marginBottom: 20
   },
   blockLabel: {
     fontSize: 15,
     fontWeight: "600",
-    marginBottom: 4,
+    marginBottom: 4
   },
   blockHint: {
     fontSize: 13,
     marginBottom: 12,
-    lineHeight: 18,
+    lineHeight: 18
   },
   optionsGrid: {
     flexDirection: "row",
     gap: 8,
-    flexWrap: "wrap",
+    flexWrap: "wrap"
   },
   gridOption: {
     minWidth: "22%",
     borderWidth: 2,
     borderRadius: 10,
     paddingVertical: 14,
-    alignItems: "center",
+    alignItems: "center"
   },
   gridLabel: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "600"
   },
   retryGrid: {
     flexDirection: "row",
-    gap: 10,
+    gap: 10
   },
   retryChip: {
     flex: 1,
     borderWidth: 2,
     borderRadius: 10,
     paddingVertical: 12,
-    alignItems: "center",
+    alignItems: "center"
   },
   retryChipText: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "700"
   },
   retryHint: {
-    marginTop: 8,
+    marginTop: 8
   },
   nestedSetting: {
     marginTop: 12,
     paddingLeft: 16,
     borderLeftWidth: 3,
-    borderLeftColor: "rgba(0,0,0,0.1)",
+    borderLeftColor: "rgba(0,0,0,0.1)"
   },
   linkRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 12
   },
   linkContent: {
-    flex: 1,
+    flex: 1
   },
   linkLabel: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 2,
+    marginBottom: 2
   },
   linkSub: {
-    fontSize: 13,
+    fontSize: 13
   },
   linkArrow: {
     fontSize: 28,
     fontWeight: "300",
-    marginLeft: 12,
+    marginLeft: 12
   },
   httpWarning: {
     marginTop: 6,
     fontSize: 12,
-    fontWeight: "500",
-  },
-});
+    fontWeight: "500"
+  }
+})

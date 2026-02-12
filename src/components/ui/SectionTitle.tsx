@@ -3,28 +3,24 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React from "react";
-import { View, StyleSheet, ViewStyle, StyleProp, Text } from "react-native";
-import { useTheme } from "../../hooks/useTheme";
+import React from "react"
+import { View, StyleSheet, ViewStyle, StyleProp, Text } from "react-native"
+import { useTheme } from "../../hooks/useTheme"
 
 type SectionTitleProps = {
-  children: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
-  color?: string;
-};
+  children: React.ReactNode
+  style?: StyleProp<ViewStyle>
+  color?: string
+}
 
 export function SectionTitle({ children, style, color }: SectionTitleProps) {
-  const { colors } = useTheme();
+  const { colors } = useTheme()
 
   return (
     <View style={style}>
-      <Text
-        style={[styles.sectionTitle, { color: color ? color : colors.text }]}
-      >
-        {children}
-      </Text>
+      <Text style={[styles.sectionTitle, { color: color ? color : colors.text }]}>{children}</Text>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -34,6 +30,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.2,
     marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-});
+    paddingHorizontal: 4
+  }
+})
