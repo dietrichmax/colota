@@ -217,10 +217,9 @@ export function AboutScreen({}: ScreenProps) {
             Privacy-First Location Tracking
           </Text>
           <Text style={[styles.description, { color: colors.text }]}>
-            A self-hosted location tracking client built for Dawarich and
-            GeoPulse. Modern Android{" "}
-            {getAndroidVersion(buildConfig.TARGET_SDK_VERSION)} standards with
-            battery efficiency and data sovereignty at its core.
+            A GPS location tracking client built for selfhosted backends. Modern
+            Android {getAndroidVersion(buildConfig.TARGET_SDK_VERSION)}{" "}
+            standards with battery efficiency and data sovereignty at its core.
           </Text>
         </Card>
 
