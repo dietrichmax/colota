@@ -154,7 +154,8 @@ class DatabaseHelper private constructor(context: Context) :
             "filterInaccurateLocations" to "false",
             "maxRetries" to "5",
             "retryInterval" to "30",
-            "isOfflineMode" to "false"
+            "isOfflineMode" to "false",
+            "customFields" to "[]"
         )
 
         db.beginTransaction()
