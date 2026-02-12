@@ -246,18 +246,28 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
     <div id="map"></div>
     <script src="openlayers/ol.js"></script>
     <script>
-      const vectorSource = new ol.source.Vector();
+      const geofenceSource = new ol.source.Vector();
+      const accuracySource = new ol.source.Vector();
 
       const map = new ol.Map({
         target: "map",
         layers: [
           new ol.layer.Tile({ source: new ol.source.OSM() }),
-          new ol.layer.Vector({ source: vectorSource }),
+          new ol.layer.Vector({ source: geofenceSource }),
+          new ol.layer.Vector({ source: accuracySource }),
         ],
         view: new ol.View({
           center: ol.proj.fromLonLat([${lon}, ${lat}]),
           zoom: 17,
         }),
+      });
+
+      let accuracyFeature = null;
+
+      const accuracyStyle = new ol.style.Style({
+        fill: new ol.style.Fill({
+          color: "${colors.primary}22"
+        })
       });
 
       const markerEl = document.createElement("div");
@@ -286,7 +296,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
 
       
       function drawGeofences(geofences) {
-        vectorSource.clear();
+        geofenceSource.clear();
         geofences.forEach(zone => {
           const center = ol.proj.fromLonLat([zone.lon, zone.lat]);
           const circle = new ol.geom.Circle(center, zone.radius);
@@ -326,8 +336,8 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
             })
           );
 
-          vectorSource.addFeature(feature);
-          vectorSource.addFeature(label);
+          geofenceSource.addFeature(feature);
+          geofenceSource.addFeature(label);
         });
       }
 
@@ -364,7 +374,15 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           const newPos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
           
           animateMarker(newPos, 500);
-          map.getView().animate({ center: newPos, duration: 500, easing: ol.easing.linear });
+          
+          // Only auto-center if user has not manually moved the map
+          if (isMapCentered()) {
+            map.getView().animate({
+              center: newPos,
+              duration: 500,
+              easing: ol.easing.linear
+            });
+          }
           
           const markerIcon = markerEl.querySelector(".marker");
           const markerPulse = markerEl.querySelector(".marker-pulse");
@@ -378,6 +396,17 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
             markerPulse.style.borderColor = markerColor;
             
             markerPulse.style.display = isActive ? "block" : "none";
+          }
+            
+          if (data.coords.accuracy && data.coords.accuracy > 0) {
+            if (!accuracyFeature) {
+              accuracyFeature = new ol.Feature();
+              accuracyFeature.setStyle(accuracyStyle);
+              accuracySource.addFeature(accuracyFeature);
+            }
+
+            const circle = new ol.geom.Circle(newPos, data.coords.accuracy);
+            accuracyFeature.setGeometry(circle);
           }
         }
         
