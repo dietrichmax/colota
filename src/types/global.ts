@@ -143,6 +143,81 @@ export const DEFAULT_FIELD_MAP: FieldMap = {
   bear: "bear",
 } as const;
 
+export interface CustomField {
+  key: string;
+  value: string;
+}
+
+export type ApiTemplateName = "custom" | "dawarich" | "owntracks" | "reitti";
+
+export interface ApiTemplate {
+  name: ApiTemplateName;
+  label: string;
+  description: string;
+  fieldMap: FieldMap;
+  customFields: CustomField[];
+}
+
+export const API_TEMPLATES: Record<
+  Exclude<ApiTemplateName, "custom">,
+  ApiTemplate
+> = {
+  dawarich: {
+    name: "dawarich",
+    label: "Dawarich",
+    description: "OwnTracks-compatible format for Dawarich",
+    fieldMap: {
+      lat: "lat",
+      lon: "lon",
+      acc: "acc",
+      alt: "alt",
+      vel: "vel",
+      batt: "batt",
+      bs: "bs",
+      tst: "tst",
+      bear: "cog",
+    },
+    customFields: [{ key: "_type", value: "location" }],
+  },
+  owntracks: {
+    name: "owntracks",
+    label: "OwnTracks",
+    description: "Standard OwnTracks HTTP format",
+    fieldMap: {
+      lat: "lat",
+      lon: "lon",
+      acc: "acc",
+      alt: "alt",
+      vel: "vel",
+      batt: "batt",
+      bs: "bs",
+      tst: "tst",
+      bear: "cog",
+    },
+    customFields: [
+      { key: "_type", value: "location" },
+      { key: "tid", value: "AA" },
+    ],
+  },
+  reitti: {
+    name: "reitti",
+    label: "Reitti",
+    description: "OwnTracks-compatible format for Reitti",
+    fieldMap: {
+      lat: "lat",
+      lon: "lon",
+      acc: "acc",
+      alt: "alt",
+      vel: "vel",
+      batt: "batt",
+      bs: "bs",
+      tst: "tst",
+      bear: "bear",
+    },
+    customFields: [{ key: "_type", value: "location" }],
+  },
+};
+
 // ============================================================================
 // PRESETS
 // ============================================================================
@@ -210,6 +285,8 @@ export interface Settings {
   // Endpoint & Mapping
   endpoint: string;
   fieldMap: FieldMap;
+  customFields: CustomField[];
+  apiTemplate: ApiTemplateName;
 
   // Sync & Upload
   syncInterval: number;
@@ -226,6 +303,8 @@ export const DEFAULT_SETTINGS: Settings = {
   distance: TRACKING_PRESETS.instant.distance,
   endpoint: "",
   fieldMap: DEFAULT_FIELD_MAP,
+  customFields: [],
+  apiTemplate: "custom",
   syncInterval: TRACKING_PRESETS.instant.syncInterval,
   retryInterval: TRACKING_PRESETS.instant.retryInterval,
   filterInaccurateLocations: false,

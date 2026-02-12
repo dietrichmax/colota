@@ -61,6 +61,7 @@ class LocationForegroundService : Service() {
     // --- Configuration (use ServiceConfig) ---
     private lateinit var config: ServiceConfig
     private var fieldMap: Map<String, String>? = null
+    private var customFields: Map<String, String>? = null
     private var authHeaders: Map<String, String> = emptyMap()
     private var consecutiveFailures = 0
 
@@ -374,11 +375,12 @@ class LocationForegroundService : Service() {
         // Build payload once
         val currentFieldMap = fieldMap ?: emptyMap()
         val payload = locationUtils.buildPayload(
-            location, 
-            battery, 
-            batteryStatus, 
-            currentFieldMap, 
-            timestampSec
+            location,
+            battery,
+            batteryStatus,
+            currentFieldMap,
+            timestampSec,
+            customFields
         )
         
         // Queue and optionally send (don't launch new coroutine if already in one)
@@ -882,6 +884,11 @@ class LocationForegroundService : Service() {
         // Parse fieldMap separately (remains as Map for payload building)
         config.fieldMap?.let {
             if (it.isNotBlank()) fieldMap = locationUtils.parseFieldMap(it)
+        }
+
+        // Parse customFields (static key-value pairs added to every payload)
+        config.customFields?.let {
+            if (it.isNotBlank()) customFields = locationUtils.parseCustomFields(it)
         }
 
         if (BuildConfig.DEBUG) {
