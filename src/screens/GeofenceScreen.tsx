@@ -24,7 +24,7 @@ import {
 import { WebView } from "react-native-webview";
 import { useTheme } from "../hooks/useTheme";
 import NativeLocationService from "../services/NativeLocationService";
-import { Geofence, ScreenProps, LocationCoords } from "../types/global";
+import { Geofence, ScreenProps } from "../types/global";
 import { useTracking } from "../contexts/TrackingProvider";
 import { Container, SectionTitle, Card } from "../components";
 import { MapCenterButton } from "../components/features/map/MapCenterButton";
@@ -46,15 +46,39 @@ export function GeofenceScreen({}: ScreenProps) {
   );
 
   const webviewRef = useRef<WebView>(null);
-  const initialCoords = useRef<LocationCoords | null>(null);
+  const initialCenter = useRef<{
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  } | null>(null);
 
-  // Set initial coords
+  // Set initial map center: use live coords, fall back to last known from DB, then default
   useEffect(() => {
-    if (!initialCoords.current && coords) {
-      initialCoords.current = coords;
+    if (hasInitialCoords) return;
+
+    if (coords) {
+      initialCenter.current = {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy ?? 0,
+      };
       setHasInitialCoords(true);
+      return;
     }
-  }, [coords]);
+
+    NativeLocationService.getMostRecentLocation().then((latest) => {
+      if (initialCenter.current) return;
+
+      initialCenter.current = latest
+        ? {
+            latitude: latest.latitude,
+            longitude: latest.longitude,
+            accuracy: latest.accuracy ?? 0,
+          }
+        : { latitude: 0, longitude: 0, accuracy: 0 };
+      setHasInitialCoords(true);
+    });
+  }, [coords, hasInitialCoords]);
 
   // Load geofences
   const loadGeofences = useCallback(async () => {
@@ -229,10 +253,12 @@ export function GeofenceScreen({}: ScreenProps) {
   );
 
   const html = useMemo(() => {
-    if (!hasInitialCoords || !initialCoords.current) return "";
+    if (!hasInitialCoords || !initialCenter.current) return "";
 
-    const lon = initialCoords.current.longitude;
-    const lat = initialCoords.current.latitude;
+    const lon = initialCenter.current.longitude;
+    const lat = initialCenter.current.latitude;
+    const hasRealCoords = lat !== 0 || lon !== 0;
+    const initialZoom = hasRealCoords ? 17 : 2;
 
     return `
 <!DOCTYPE html>
@@ -360,7 +386,7 @@ export function GeofenceScreen({}: ScreenProps) {
       ],
       view: new ol.View({
         center: ol.proj.fromLonLat([${lon}, ${lat}]),
-        zoom: 17,
+        zoom: ${initialZoom},
       }),
     });
 
@@ -369,6 +395,7 @@ export function GeofenceScreen({}: ScreenProps) {
       <div class="marker-pulse" style="display:none"></div>
       <div class="marker"></div>
     \`;
+    markerEl.style.display = "none";
 
     const markerOverlay = new ol.Overlay({
       element: markerEl,
@@ -376,7 +403,6 @@ export function GeofenceScreen({}: ScreenProps) {
       stopEvent: false
     });
     map.addOverlay(markerOverlay);
-    markerOverlay.setPosition(ol.proj.fromLonLat([${lon}, ${lat}]));
 
     function isMapCentered() {
       const center = map.getView().getCenter();
@@ -464,13 +490,17 @@ export function GeofenceScreen({}: ScreenProps) {
 
       if (data.action === "update_user_pos") {
         const newPos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
-        
-        animateMarker(newPos, 500);
-        map.getView().animate({ center: newPos, duration: 500 });
-        
+
+        markerEl.style.display = data.tracking ? "block" : "none";
+        if (data.tracking) {
+          markerOverlay.setPosition(newPos);
+          animateMarker(newPos, 500);
+          map.getView().animate({ center: newPos, duration: 500 });
+        }
+
         const markerIcon = markerEl.querySelector(".marker");
         const markerPulse = markerEl.querySelector(".marker-pulse");
-        
+
         if (markerIcon && markerPulse) {
           const isActive = data.tracking && !data.isPaused;
           const markerColor = data.isPaused ? "${colors.textDisabled}" : "${
@@ -601,7 +631,10 @@ export function GeofenceScreen({}: ScreenProps) {
           onMessage={onMessage}
         />
 
-        <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />
+        <MapCenterButton
+          visible={!isCentered && tracking}
+          onPress={handleCenterMe}
+        />
       </View>
 
       <FlatList
@@ -707,7 +740,7 @@ export function GeofenceScreen({}: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  map: { height: 300, overflow: "hidden" },
+  map: { height: 450, overflow: "hidden" },
   webview: { flex: 1 },
   centerBtn: {
     position: "absolute",
