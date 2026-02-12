@@ -2,7 +2,6 @@
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
-
 import React, { useMemo } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -10,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar, Platform } from "react-native";
 import { ThemeProvider, useTheme } from "./src/hooks/useTheme";
 import { TrackingProvider } from "./src/contexts/TrackingProvider";
+import ThemedErrorBoundary from "./src/components/ThemedErrorBoundary";
 import {
   DashboardScreen,
   SettingsScreen,
@@ -68,7 +68,6 @@ const SCREEN_CONFIG = [
 
 function AppNavigator() {
   const { colors, isDark } = useTheme();
-
   const screenOptions = useMemo(
     () => ({
       headerStyle: {
@@ -90,10 +89,8 @@ function AppNavigator() {
     }),
     [colors]
   );
-
   const statusBarConfig = useMemo(
     () => ({
-      // Dark mode: white icons, Light mode: dark icons
       barStyle: isDark ? ("light-content" as const) : ("dark-content" as const),
       backgroundColor: colors.background,
       translucent: false,
@@ -101,7 +98,6 @@ function AppNavigator() {
     }),
     [colors.background, isDark]
   );
-
   return (
     <SafeAreaProvider>
       <StatusBar {...statusBarConfig} />
@@ -127,9 +123,11 @@ function AppNavigator() {
 export default function App() {
   return (
     <ThemeProvider>
-      <TrackingProvider>
-        <AppNavigator />
-      </TrackingProvider>
+      <ThemedErrorBoundary>
+        <TrackingProvider>
+          <AppNavigator />
+        </TrackingProvider>
+      </ThemedErrorBoundary>
     </ThemeProvider>
   );
 }

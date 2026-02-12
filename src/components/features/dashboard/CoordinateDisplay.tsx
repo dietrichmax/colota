@@ -25,8 +25,6 @@ type Props = {
  * - Latitude/Longitude (6 decimal places)
  * - Altitude (rounded meters)
  * - Accuracy (1 decimal place, with ± prefix)
- * - Speed (1 decimal place, m/s)
- * - Bearing (degrees)
  *
  * All values include fallbacks for missing data and adapt to the current theme.
  *
@@ -37,9 +35,7 @@ type Props = {
  *     latitude: 37.7749,
  *     longitude: -122.4194,
  *     altitude: 52,
- *     accuracy: 10.5,
- *     speed: 1.2,
- *     bearing: 180
+ *     accuracy: 10.5
  *   }}
  * />
  * ```
@@ -52,8 +48,6 @@ export function CoordinateDisplay({ coords }: Props) {
   const longitude = coords.longitude?.toFixed(6) ?? "0.000000";
   const altitude = Math.round(coords.altitude ?? 0);
   const accuracy = coords.accuracy?.toFixed(1) ?? "0.0";
-  const speed = coords.speed?.toFixed(1) ?? "0.0";
-  const bearing = coords.bearing?.toFixed(0) ?? "0";
 
   /**
    * Renders a single coordinate metric card
@@ -84,12 +78,6 @@ export function CoordinateDisplay({ coords }: Props) {
         <View style={styles.row}>
           {renderCard("Altitude", altitude.toLocaleString(), "m")}
           {renderCard("Accuracy", `±${accuracy}`, "m")}
-        </View>
-
-        {/* Third Row: Speed and Bearing */}
-        <View style={styles.row}>
-          {renderCard("Speed", speed, "m/s")}
-          {renderCard("Bearing", bearing, "°")}
         </View>
       </View>
     </>
