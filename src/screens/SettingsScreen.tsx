@@ -27,7 +27,6 @@ import { useTracking } from "../contexts/TrackingProvider";
 import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator";
 import {
   Button,
-  Section,
   SectionTitle,
   Card,
   Container,
@@ -59,7 +58,7 @@ function isPrivateHost(url: string) {
 function isEndpointAllowed(url: string) {
   if (!url) return false;
 
-  const match = url.match(/^(https?):\/\/([^\/:]+)(:\d+)?/);
+  const match = url.match(/^(https?):\/\/([^/:]+)(:\d+)?/);
   if (!match) return false;
 
   const protocol = match[1]; // http or https
@@ -344,7 +343,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
         />
 
         {/* Connection - Improved hierarchy */}
-        <Section>
+        <View style={styles.section}>
           <SectionTitle>Connection</SectionTitle>
           <Card>
             {/* Offline Mode - Better visual hierarchy */}
@@ -482,10 +481,10 @@ export function SettingsScreen({ navigation }: ScreenProps) {
               </>
             )}
           </Card>
-        </Section>
+        </View>
 
         {/* Sync Strategy - Better visual grouping */}
-        <Section>
+        <View style={styles.section}>
           <SectionTitle>Sync Strategy</SectionTitle>
           <Card>
             {/* Presets with improved spacing */}
@@ -851,10 +850,10 @@ export function SettingsScreen({ navigation }: ScreenProps) {
               </View>
             )}
           </Card>
-        </Section>
+        </View>
 
         {/* Appearance - Simplified */}
-        <Section>
+        <View style={styles.section}>
           <SectionTitle>Appearance</SectionTitle>
           <Card>
             <View style={styles.settingRow}>
@@ -874,10 +873,10 @@ export function SettingsScreen({ navigation }: ScreenProps) {
               />
             </View>
           </Card>
-        </Section>
+        </View>
 
         {/* Advanced - Better visual separation */}
-        <Section>
+        <View style={styles.section}>
           <SectionTitle>Advanced</SectionTitle>
           <Card>
             <TouchableOpacity
@@ -918,7 +917,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
               </Text>
             </TouchableOpacity>
           </Card>
-        </Section>
+        </View>
 
         {/* Footer */}
         <Footer />
@@ -946,6 +945,9 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700",
     letterSpacing: -0.5,
+  },
+  section: {
+    marginBottom: 24,
   },
   settingRow: {
     flexDirection: "row",
@@ -1081,7 +1083,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   gridOption: {
-    flex: 1,
     minWidth: "22%",
     borderWidth: 2,
     borderRadius: 10,
