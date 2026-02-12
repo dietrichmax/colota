@@ -27,9 +27,10 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     LifecycleEventListener { 
 
     private val locationUtils = LocationUtils(reactContext)
-    private val dbHelper = LocationDatabaseHelper.getInstance(reactContext)
+    private val dbHelper = DatabaseHelper.getInstance(reactContext)
     private val fileOps = FileOperations(reactContext)
     private val deviceInfo = DeviceInfoHelper(reactContext) 
+    private val geofenceHelper = GeofenceHelper(reactContext)
 
     // Coroutine scope for async operations
     private val moduleScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -335,9 +336,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         pause: Boolean, 
         promise: Promise
     ) = executeAsync(promise) { 
-        val result = locationUtils.insertGeofence(name, lat, lon, radius, pause)
+        val result = geofenceHelper.insertGeofence(name, lat, lon, radius, pause)
         if (result > 0) {
-            locationUtils.invalidateGeofenceCache()
+            geofenceHelper.invalidateCache()
             triggerZoneRecheck()
         }
         result
@@ -349,7 +350,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     */
     @ReactMethod
     fun getGeofences(promise: Promise) = executeAsync(promise) { 
-        locationUtils.getGeofencesAsArray() 
+        geofenceHelper.getGeofencesAsArray() 
     }
 
     @ReactMethod
@@ -363,9 +364,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         pause: Boolean?, 
         promise: Promise
     ) = executeAsync(promise) { 
-        val result = locationUtils.updateGeofence(id, name, lat, lon, radius, enabled, pause)
+        val result = geofenceHelper.updateGeofence(id, name, lat, lon, radius, enabled, pause)
         if (result) {
-            locationUtils.invalidateGeofenceCache() 
+            geofenceHelper.invalidateCache() 
             triggerZoneRecheck()
         }
         result
@@ -377,9 +378,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     */
    @ReactMethod
     fun deleteGeofence(id: Int, promise: Promise) = executeAsync(promise) { 
-        val result = locationUtils.deleteGeofence(id)
+        val result = geofenceHelper.deleteGeofence(id)
         if (result) {
-            locationUtils.invalidateGeofenceCache()
+            geofenceHelper.invalidateCache()
             triggerZoneRecheck()
         }
         result
@@ -399,7 +400,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     promise.resolve(null)
                 } else {
                     executeAsync(promise) { 
-                        locationUtils.getSilentZone(loc) 
+                        geofenceHelper.getSilentZone(loc) 
                     }
                 }
             }.addOnFailureListener { e ->

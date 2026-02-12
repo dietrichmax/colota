@@ -22,9 +22,11 @@ class LocationForegroundService : Service() {
     // --- Core Components ---
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var notificationManager: NotificationManager
-    private lateinit var dbHelper: LocationDatabaseHelper
+    private lateinit var dbHelper: DatabaseHelper
     private lateinit var locationUtils: LocationUtils
     private lateinit var deviceInfoHelper: DeviceInfoHelper
+    private lateinit var networkManager: NetworkManager
+    private lateinit var geofenceHelper: GeofenceHelper
     
     // Properly manage scope lifecycle to prevent memory leak
     private var serviceScope: CoroutineScope? = null
@@ -84,16 +86,18 @@ class LocationForegroundService : Service() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        dbHelper = LocationDatabaseHelper.getInstance(this)
+        dbHelper = DatabaseHelper.getInstance(this)
         locationUtils = LocationUtils(this)
         deviceInfoHelper = DeviceInfoHelper(this)
+        networkManager = NetworkManager(this)
+        geofenceHelper = GeofenceHelper(this)
 
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!::dbHelper.isInitialized) {
-            dbHelper = LocationDatabaseHelper.getInstance(this)
+            dbHelper = DatabaseHelper.getInstance(this)
         }
 
         val savedSettings = dbHelper.getAllSettings()
@@ -221,7 +225,7 @@ class LocationForegroundService : Service() {
                     lastKnownLocation = it
                     
                     // Check if starting in a pause zone
-                    locationUtils.getSilentZone(it)?.let { zoneName ->
+                    geofenceHelper.getSilentZone(it)?.let { zoneName ->
                         enterSilentZone(GeofenceInfo(-1, zoneName))
                     } ?: run {
                         // Not in zone - show coordinates immediately
@@ -241,7 +245,7 @@ class LocationForegroundService : Service() {
     }
 
     private fun handleZoneRecheckAction() {
-        locationUtils.invalidateGeofenceCache()
+        geofenceHelper.invalidateCache()
 
         val cachedLoc = lastKnownLocation
         val now = System.currentTimeMillis()
@@ -276,7 +280,7 @@ class LocationForegroundService : Service() {
 
     
     private fun recheckZoneWithLocation(location: android.location.Location) {
-        val zoneName = locationUtils.getSilentZone(location)
+        val zoneName = geofenceHelper.getSilentZone(location)
 
         when {
             // Just entered a pause zone or changed zones
@@ -325,7 +329,7 @@ class LocationForegroundService : Service() {
         lastKnownLocation = location
 
         // Silent Zone Logic - CHECK IF IT'S A PAUSE ZONE
-        val zoneName = locationUtils.getSilentZone(location)
+        val zoneName = geofenceHelper.getSilentZone(location)
         
         when {
             zoneName != null && !insideSilentZone -> {
@@ -463,7 +467,7 @@ class LocationForegroundService : Service() {
                 val baseDelay = calculateNextSyncDelay()
                 delay(baseDelay * 1000L)
 
-                if (config.isOfflineMode || !locationUtils.isNetworkAvailable()) {
+                if (config.isOfflineMode || !networkManager.isNetworkAvailable()) {
                     continue
                 }
 
@@ -565,7 +569,7 @@ class LocationForegroundService : Service() {
                 // Attempt only retriable items
                 val results = retriable.map { item ->
                     async {
-                        val success = locationUtils.sendToEndpoint(
+                        val success = networkManager.sendToEndpoint(
                             JSONObject(item.payload),
                             endpoint
                         )
@@ -639,14 +643,13 @@ class LocationForegroundService : Service() {
         // Immediate send mode (syncInterval = 0)
         if (config.syncIntervalSeconds == 0) {
             Log.d(TAG, "Instant send")
-            val success = locationUtils.sendToEndpoint(payload, endpoint)
+            val success = networkManager.sendToEndpoint(payload, endpoint)
             
             if (success) {
                 dbHelper.removeFromQueueByLocationId(locationId)
                 lastQueueCountCheck = 0
                 lastSuccessfulSyncTime = System.currentTimeMillis()
             } else {
-                // Increment retry count using the queue ID we got from insert
                 dbHelper.incrementRetryCount(queueId, "Send failed")
             }
         }
