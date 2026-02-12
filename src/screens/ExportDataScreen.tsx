@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Text,
   StyleSheet,
@@ -22,9 +22,19 @@ type ExportFormat = "csv" | "geojson" | "gpx" | "kml";
 
 interface ExportStats {
   totalLocations: number;
-  dateRange: { start: string; end: string } | null;
-  estimatedSize: string;
 }
+
+const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024; // 10 MB
+
+const formatBytes = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getByteSize = (content: string): number => {
+  return new Blob([content]).size;
+};
 
 export function ExportDataScreen() {
   const { colors } = useTheme();
@@ -32,97 +42,51 @@ export function ExportDataScreen() {
   const [exportProgress, setExportProgress] = useState<string>("");
   const [stats, setStats] = useState<ExportStats>({
     totalLocations: 0,
-    dateRange: null,
-    estimatedSize: "0 KB",
   });
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat | null>(
     null
   );
-
-  const formatSizes = React.useMemo(
-    () => ({
-      csv: 120,
-      geojson: 250,
-      gpx: 350,
-      kml: 400,
-    }),
-    []
-  );
-
-  const updateSizeEstimate = useCallback(() => {
-    const formatBytes = (bytes: number): string => {
-      if (bytes < 1024) return `${bytes} B`;
-      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-    };
-
-    const getEstimatedSize = () => {
-      if (selectedFormat) {
-        const bytes = stats.totalLocations * formatSizes[selectedFormat];
-        return formatBytes(bytes);
-      }
-      // Show range when no format selected
-      const minBytes = stats.totalLocations * formatSizes.csv;
-      const maxBytes = stats.totalLocations * formatSizes.gpx;
-      return `${formatBytes(minBytes)} - ${formatBytes(maxBytes)}`;
-    };
-
-    setStats((prev) => ({
-      ...prev,
-      estimatedSize: getEstimatedSize(),
-    }));
-  }, [selectedFormat, stats.totalLocations, formatSizes]);
+  const [fileSize, setFileSize] = useState<string | null>(null);
+  const cachedData = useRef<LocationCoords[]>([]);
 
   const loadStats = useCallback(async () => {
     try {
       const data = await NativeLocationService.getExportData();
 
       if (data && data.length > 0) {
-        const timestamps = data.map((d) => d.timestamp).filter(Boolean);
-        const start = new Date(Math.min(...timestamps));
-        const end = new Date(Math.max(...timestamps));
+        cachedData.current = data.map((item) => ({
+          ...item,
+          timestamp: item.timestamp ? item.timestamp * 1000 : Date.now(),
+        }));
 
-        // Initial size estimate (range)
-        const formatBytes = (bytes: number): string => {
-          if (bytes < 1024) return `${bytes} B`;
-          if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-          return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
-        };
-
-        const sizesArray = Object.values(formatSizes);
-        const minSize = Math.min(...sizesArray);
-        const maxSize = Math.max(...sizesArray);
-
-        const minBytes = data.length * minSize; // CSV
-        const maxBytes = data.length * maxSize; // kml
-        const estimatedSize = `${formatBytes(minBytes)} - ${formatBytes(
-          maxBytes
-        )}`;
-
-        setStats({
-          totalLocations: data.length,
-          dateRange: {
-            start: start.toLocaleDateString(),
-            end: end.toLocaleDateString(),
-          },
-          estimatedSize,
-        });
+        setStats({ totalLocations: data.length });
       }
     } catch (error) {
       console.error("[ExportDataScreen] Failed to load stats:", error);
     }
-  }, [formatSizes]);
+  }, []);
 
   useEffect(() => {
     loadStats();
   }, [loadStats]);
 
-  // Update size estimate when format changes
   useEffect(() => {
-    if (stats.totalLocations > 0) {
-      updateSizeEstimate();
+    if (!selectedFormat || cachedData.current.length === 0) {
+      setFileSize(null);
+      return;
     }
-  }, [stats.totalLocations, updateSizeEstimate]);
+
+    const converters: Record<ExportFormat, (data: LocationCoords[]) => string> =
+      {
+        csv: convertToCSV,
+        geojson: convertToGeoJSON,
+        gpx: convertToGPX,
+        kml: convertToKML,
+      };
+
+    const content = converters[selectedFormat](cachedData.current);
+    setFileSize(formatBytes(getByteSize(content)));
+  }, [selectedFormat]);
 
   const handleExport = async (format: ExportFormat) => {
     if (stats.totalLocations === 0) {
@@ -134,18 +98,12 @@ export function ExportDataScreen() {
     }
 
     setExporting(true);
-    setExportProgress("Fetching location data...");
+    setExportProgress("Preparing export...");
 
     try {
-      const data: LocationCoords[] =
-        await NativeLocationService.getExportData();
+      const normalizedData = cachedData.current;
 
-      const normalizedData = data.map((item) => ({
-        ...item,
-        timestamp: item.timestamp ? item.timestamp * 1000 : Date.now(),
-      }));
-
-      setExportProgress(`Converting ${data.length} locations...`);
+      setExportProgress(`Converting ${normalizedData.length} locations...`);
 
       let content = "";
       let fileExtension = "";
@@ -174,17 +132,47 @@ export function ExportDataScreen() {
           break;
       }
 
+      const fileSize = getByteSize(content);
+
+      if (fileSize > LARGE_FILE_THRESHOLD) {
+        setExporting(false);
+        setExportProgress("");
+
+        const confirmed = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            "Large Export",
+            `The export file is ${formatBytes(
+              fileSize
+            )}. This may take a moment to save and share. Continue?`,
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+                onPress: () => resolve(false),
+              },
+              { text: "Continue", onPress: () => resolve(true) },
+            ],
+            { cancelable: false }
+          );
+        });
+
+        if (!confirmed) {
+          setSelectedFormat(null);
+          return;
+        }
+
+        setExporting(true);
+      }
+
       const fileName = `colota_export_${Date.now()}${fileExtension}`;
 
-      setExportProgress("Saving file...");
+      setExportProgress(`Saving file (${formatBytes(fileSize)})...`);
 
       const filePath = await NativeLocationService.writeFile(fileName, content);
 
-      // File is ready, close loading overlay
       setExporting(false);
       setExportProgress("");
 
-      // Wait for overlay to close before showing share dialog
       await new Promise<void>((resolve) => setTimeout(resolve, 300));
 
       try {
@@ -197,7 +185,6 @@ export function ExportDataScreen() {
         console.warn("[ExportDataScreen] Share error:", shareError);
       }
 
-      // Clean up temp file after sharing
       setTimeout(async () => {
         try {
           await NativeLocationService.deleteFile(filePath);
@@ -212,7 +199,6 @@ export function ExportDataScreen() {
         "Unable to export your data. Please try again."
       );
     } finally {
-      // Clean up state
       setExporting(false);
       setExportProgress("");
       setSelectedFormat(null);
@@ -232,7 +218,7 @@ export function ExportDataScreen() {
           </Text>
         </View>
 
-        {/* Stats Card - Matching Stats Card Style */}
+        {/* Stats Card */}
         <View
           style={[
             styles.statsContainer,
@@ -243,7 +229,6 @@ export function ExportDataScreen() {
           ]}
         >
           <View style={styles.statsGrid}>
-            {/* Total Locations */}
             <View style={styles.statItem}>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
                 Total
@@ -254,16 +239,15 @@ export function ExportDataScreen() {
             </View>
 
             <View
-              style={[styles.divider, { backgroundColor: colors.border }]}
+              style={[styles.statsDivider, { backgroundColor: colors.border }]}
             />
 
-            {/* File Size */}
             <View style={styles.statItem}>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                Est. Size
+                File Size
               </Text>
               <Text style={[styles.statValue, { color: colors.success }]}>
-                {stats.estimatedSize}
+                {fileSize ?? "–"}
               </Text>
             </View>
           </View>
@@ -274,7 +258,6 @@ export function ExportDataScreen() {
           <SectionTitle>Select Format</SectionTitle>
 
           <Card>
-            {/* CSV Option */}
             <FormatOption
               icon="📊"
               title="CSV"
@@ -288,7 +271,6 @@ export function ExportDataScreen() {
 
             <Divider />
 
-            {/* GeoJSON Option */}
             <FormatOption
               icon="🗺️"
               title="GeoJSON"
@@ -302,7 +284,6 @@ export function ExportDataScreen() {
 
             <Divider />
 
-            {/* GPX Option */}
             <FormatOption
               icon="📍"
               title="GPX"
@@ -316,7 +297,6 @@ export function ExportDataScreen() {
 
             <Divider />
 
-            {/* KML Option */}
             <FormatOption
               icon="🌍"
               title="KML"
@@ -352,8 +332,8 @@ export function ExportDataScreen() {
                     Export {selectedFormat.toUpperCase()}
                   </Text>
                   <Text style={styles.exportSubtitle}>
-                    {stats.totalLocations.toLocaleString()} locations •{" "}
-                    {stats.estimatedSize}
+                    {stats.totalLocations.toLocaleString()} locations
+                    {fileSize ? ` • ${fileSize}` : ""}
                   </Text>
                 </View>
               </View>
@@ -380,7 +360,7 @@ export function ExportDataScreen() {
   );
 }
 
-// --- Format Option Component (Matching PresetOption style) ---
+// --- Format Option Component ---
 
 const FormatOption = ({
   icon,
@@ -410,7 +390,6 @@ const FormatOption = ({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      {/* Selection indicator bar */}
       {selected && (
         <View
           style={[styles.selectionBar, { backgroundColor: colors.primary }]}
@@ -418,7 +397,6 @@ const FormatOption = ({
       )}
 
       <View style={styles.formatContent}>
-        {/* Left side - Icon and text */}
         <View style={styles.leftContent}>
           <Text style={styles.formatIcon}>{icon}</Text>
           <View style={styles.textContent}>
@@ -457,7 +435,6 @@ const FormatOption = ({
           </View>
         </View>
 
-        {/* Right side - Radio button */}
         <View
           style={[
             styles.radio,
@@ -541,11 +518,11 @@ const convertToGPX = (data: LocationCoords[]): string => {
   let gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Colota" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
-    <n>Colota Location Export</n>
+    <name>Colota Location Export</name>
     <time>${new Date().toISOString()}</time>
   </metadata>
   <trk>
-    <n>Colota Track Export</n>
+    <name>Colota Track Export</name>
     <trkseg>`;
 
   data.forEach((item) => {
@@ -600,7 +577,6 @@ const convertToKML = (data: LocationCoords[]): string => {
       </LineString>
     </Placemark>`;
 
-  // Add individual points as Placemarks
   data.forEach((item) => {
     const timestamp = item.timestamp ?? Date.now();
     const isoTime = new Date(timestamp).toISOString();
@@ -628,7 +604,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-
   header: {
     marginTop: 20,
     marginBottom: 20,
@@ -667,7 +642,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     textAlign: "center",
   },
-  divider: {
+  statsDivider: {
     width: 1,
     marginHorizontal: 12,
     opacity: 0.3,
