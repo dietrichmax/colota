@@ -4,7 +4,7 @@
  */
 
 import { NativeModules } from "react-native";
-import { DatabaseStats, Geofence, Settings } from "../types/global";
+import { AuthConfig, DatabaseStats, Geofence, Settings } from "../types/global";
 
 const { LocationServiceModule, BuildConfigModule } = NativeModules;
 
@@ -76,9 +76,9 @@ class NativeLocationService {
 
     try {
       await LocationServiceModule.startService(config);
-      console.log("[NativeLocationService] ✅ Service started");
+      console.log("[NativeLocationService] Service started");
     } catch (error) {
-      console.error("[NativeLocationService] ❌ Start failed:", error);
+      console.error("[NativeLocationService] Start failed:", error);
       throw error;
     }
   }
@@ -130,10 +130,10 @@ class NativeLocationService {
     console.log("[NativeLocationService] Triggering manual flush");
     try {
       const result = await LocationServiceModule.manualFlush();
-      console.log("[NativeLocationService] ✅ Flush completed");
+      console.log("[NativeLocationService] Flush completed");
       return result;
     } catch (error) {
-      console.error("[NativeLocationService] ❌ Flush failed:", error);
+      console.error("[NativeLocationService] Flush failed:", error);
       throw error;
     }
   }
@@ -568,6 +568,49 @@ class NativeLocationService {
   static async getCacheDirectory(): Promise<string> {
     this.ensureModule();
     return LocationServiceModule.getCacheDirectory();
+  }
+
+  // ============================================================================
+  // SECURE STORAGE (Auth & Headers)
+  // ============================================================================
+
+  /**
+   * Retrieves the full auth configuration from encrypted storage
+   */
+  static async getAuthConfig(): Promise<AuthConfig> {
+    this.ensureModule();
+    const raw = await LocationServiceModule.getAllAuthConfig();
+    return {
+      authType: raw.authType || "none",
+      username: raw.username || "",
+      password: raw.password || "",
+      bearerToken: raw.bearerToken || "",
+      endpoint: raw.endpoint || "",
+      customHeaders: raw.customHeaders ? JSON.parse(raw.customHeaders) : {},
+    };
+  }
+
+  /**
+   * Saves auth configuration to encrypted storage
+   */
+  static async saveAuthConfig(config: AuthConfig): Promise<boolean> {
+    this.ensureModule();
+    return LocationServiceModule.saveAuthConfig({
+      authType: config.authType,
+      username: config.username,
+      password: config.password,
+      bearerToken: config.bearerToken,
+      endpoint: config.endpoint,
+      customHeaders: JSON.stringify(config.customHeaders),
+    });
+  }
+
+  /**
+   * Returns computed auth + custom headers for HTTP requests
+   */
+  static async getAuthHeaders(): Promise<Record<string, string>> {
+    this.ensureModule();
+    return LocationServiceModule.getAuthHeaders();
   }
 }
 

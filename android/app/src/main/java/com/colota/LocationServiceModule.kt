@@ -29,8 +29,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     private val locationUtils = LocationUtils(reactContext)
     private val dbHelper = DatabaseHelper.getInstance(reactContext)
     private val fileOps = FileOperations(reactContext)
-    private val deviceInfo = DeviceInfoHelper(reactContext) 
+    private val deviceInfo = DeviceInfoHelper(reactContext)
     private val geofenceHelper = GeofenceHelper(reactContext)
+    private val secureStorage = SecureStorageHelper.getInstance(reactContext)
 
     // Coroutine scope for async operations
     private val moduleScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -570,8 +571,55 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         executeAsync(promise) { fileOps.deleteFile(filePath) }
 
     @ReactMethod
-    fun getCacheDirectory(promise: Promise) = 
+    fun getCacheDirectory(promise: Promise) =
         executeAsync(promise) { fileOps.getCacheDirectory() }
+
+    // ==============================================================
+    // SECURE STORAGE (Delegated to SecureStorageHelper)
+    // ==============================================================
+
+    @ReactMethod
+    fun getAllAuthConfig(promise: Promise) = executeAsync(promise) {
+        Arguments.createMap().apply {
+            putString("authType", secureStorage.getString(SecureStorageHelper.KEY_AUTH_TYPE, "none"))
+            putString("username", secureStorage.getString(SecureStorageHelper.KEY_USERNAME, ""))
+            putString("password", secureStorage.getString(SecureStorageHelper.KEY_PASSWORD, ""))
+            putString("bearerToken", secureStorage.getString(SecureStorageHelper.KEY_BEARER_TOKEN, ""))
+            putString("endpoint", secureStorage.getString(SecureStorageHelper.KEY_ENDPOINT, ""))
+            putString("customHeaders", secureStorage.getString(SecureStorageHelper.KEY_CUSTOM_HEADERS, "{}"))
+        }
+    }
+
+    @ReactMethod
+    fun saveAuthConfig(config: ReadableMap, promise: Promise) = executeAsync(promise) {
+        config.getString("authType")?.let {
+            secureStorage.putString(SecureStorageHelper.KEY_AUTH_TYPE, it)
+        }
+        config.getString("username")?.let {
+            secureStorage.putString(SecureStorageHelper.KEY_USERNAME, it)
+        }
+        config.getString("password")?.let {
+            secureStorage.putString(SecureStorageHelper.KEY_PASSWORD, it)
+        }
+        config.getString("bearerToken")?.let {
+            secureStorage.putString(SecureStorageHelper.KEY_BEARER_TOKEN, it)
+        }
+        config.getString("endpoint")?.let {
+            secureStorage.putString(SecureStorageHelper.KEY_ENDPOINT, it)
+        }
+        config.getString("customHeaders")?.let {
+            secureStorage.putString(SecureStorageHelper.KEY_CUSTOM_HEADERS, it)
+        }
+        true
+    }
+
+    @ReactMethod
+    fun getAuthHeaders(promise: Promise) = executeAsync(promise) {
+        val headers = secureStorage.getAuthHeaders()
+        Arguments.createMap().apply {
+            headers.forEach { (k, v) -> putString(k, v) }
+        }
+    }
 }
 
 // Extension functions for safer ReadableMap access
