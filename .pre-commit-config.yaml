@@ -1,0 +1,16 @@
+repos:
+  - repo: local
+    hooks:
+      - id: npm-format
+        name: Run npm format
+        description: Runs npm run format before committing
+        entry: npm run format
+        pass_filenames: false
+        language: system
+
+      - id: npm-lint
+        name: Run npm lint
+        description: Runs npm run lin before committing
+        entry: npm run lint
+        pass_filenames: false
+        language: system

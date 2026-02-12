@@ -60,7 +60,7 @@ type TableType = "locations" | "queue";
  */
 const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
   const getBatteryStatus = (status: number): string => {
-    console.log("batterystatus" + status)
+    console.log("batterystatus" + status);
     switch (status) {
       case 0:
         return "Unknown";
