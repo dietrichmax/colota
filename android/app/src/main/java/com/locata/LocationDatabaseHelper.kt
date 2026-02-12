@@ -499,7 +499,7 @@ class LocationDatabaseHelper private constructor(context: Context) :
     }
 
     fun deleteOlderThan(days: Int): Int {
-        val cutoff = System.currentTimeMillis() - days * 24 * 60 * 60 * 1000L
+        val cutoff = (System.currentTimeMillis() - days * 24 * 60 * 60 * 1000L) / 1000
         return writableDatabase.delete(
             TABLE_LOCATIONS, 
             "timestamp < ?", 
