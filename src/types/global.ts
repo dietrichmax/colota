@@ -246,7 +246,6 @@ export interface AuthConfig {
   username: string;
   password: string;
   bearerToken: string;
-  endpoint: string;
   customHeaders: Record<string, string>;
 }
 
@@ -255,7 +254,6 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
   username: "",
   password: "",
   bearerToken: "",
-  endpoint: "",
   customHeaders: {},
 };
 

@@ -15,7 +15,7 @@ import org.json.JSONObject
 
 /**
  * Singleton wrapper around EncryptedSharedPreferences for storing
- * sensitive connection data (credentials, tokens, headers, endpoint).
+ * sensitive connection data (credentials, tokens, custom headers).
  */
 class SecureStorageHelper private constructor(context: Context) {
 
@@ -27,7 +27,6 @@ class SecureStorageHelper private constructor(context: Context) {
         const val KEY_USERNAME = "auth_username"
         const val KEY_PASSWORD = "auth_password"
         const val KEY_BEARER_TOKEN = "auth_bearer_token"
-        const val KEY_ENDPOINT = "endpoint"
         const val KEY_CUSTOM_HEADERS = "custom_headers"
 
         @Volatile
@@ -114,6 +113,4 @@ class SecureStorageHelper private constructor(context: Context) {
 
         return headers
     }
-
-    fun getEndpoint(): String? = getString(KEY_ENDPOINT, null)
 }

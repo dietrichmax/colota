@@ -585,7 +585,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             putString("username", secureStorage.getString(SecureStorageHelper.KEY_USERNAME, ""))
             putString("password", secureStorage.getString(SecureStorageHelper.KEY_PASSWORD, ""))
             putString("bearerToken", secureStorage.getString(SecureStorageHelper.KEY_BEARER_TOKEN, ""))
-            putString("endpoint", secureStorage.getString(SecureStorageHelper.KEY_ENDPOINT, ""))
             putString("customHeaders", secureStorage.getString(SecureStorageHelper.KEY_CUSTOM_HEADERS, "{}"))
         }
     }
@@ -603,9 +602,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
         config.getString("bearerToken")?.let {
             secureStorage.putString(SecureStorageHelper.KEY_BEARER_TOKEN, it)
-        }
-        config.getString("endpoint")?.let {
-            secureStorage.putString(SecureStorageHelper.KEY_ENDPOINT, it)
         }
         config.getString("customHeaders")?.let {
             secureStorage.putString(SecureStorageHelper.KEY_CUSTOM_HEADERS, it)

@@ -585,7 +585,6 @@ class NativeLocationService {
       username: raw.username || "",
       password: raw.password || "",
       bearerToken: raw.bearerToken || "",
-      endpoint: raw.endpoint || "",
       customHeaders: raw.customHeaders ? JSON.parse(raw.customHeaders) : {},
     };
   }
@@ -600,7 +599,6 @@ class NativeLocationService {
       username: config.username,
       password: config.password,
       bearerToken: config.bearerToken,
-      endpoint: config.endpoint,
       customHeaders: JSON.stringify(config.customHeaders),
     });
   }

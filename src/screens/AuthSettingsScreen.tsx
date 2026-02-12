@@ -405,7 +405,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.textLight }]}>
-            Credentials are stored encrypted on device
+            Credentials and headers are stored encrypted on device
           </Text>
         </View>
       </ScrollView>
