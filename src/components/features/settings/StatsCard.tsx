@@ -5,7 +5,7 @@
 import React from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
 import { ThemeColors } from "../../../types/global"
-import { getQueueColor } from "../../../helpers/queueStatus"
+import { getQueueColor } from "../../../services/queueStatus"
 
 interface StatsCardProps {
   queueCount: number

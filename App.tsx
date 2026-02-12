@@ -9,7 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context"
 import { StatusBar, Platform } from "react-native"
 import { ThemeProvider, useTheme } from "./src/hooks/useTheme"
 import { TrackingProvider } from "./src/contexts/TrackingProvider"
-import ThemedErrorBoundary from "./src/components/ThemedErrorBoundary"
+import ThemedErrorBoundary from "./src/components/ui/ThemedErrorBoundary"
 import {
   DashboardScreen,
   SettingsScreen,
