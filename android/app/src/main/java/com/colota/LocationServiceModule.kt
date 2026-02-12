@@ -26,7 +26,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext), 
     LifecycleEventListener { 
 
-    private val locationUtils = LocationUtils(reactContext)
+    private val locationUtils = LocationUtils()
     private val dbHelper = DatabaseHelper.getInstance(reactContext)
     private val fileOps = FileOperations(reactContext)
     private val deviceInfo = DeviceInfoHelper(reactContext)

@@ -90,7 +90,7 @@ class LocationForegroundService : Service() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         dbHelper = DatabaseHelper.getInstance(this)
-        locationUtils = LocationUtils(this)
+        locationUtils = LocationUtils()
         deviceInfoHelper = DeviceInfoHelper(this)
         networkManager = NetworkManager(this)
         geofenceHelper = GeofenceHelper(this)

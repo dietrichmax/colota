@@ -3,20 +3,20 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React from "react";
-import { View, Text, StyleSheet, TextInput } from "react-native";
-import { ThemeColors } from "../../types/global";
+import React from "react"
+import { View, Text, StyleSheet, TextInput } from "react-native"
+import { ThemeColors } from "../../types/global"
 
 interface NumericInputProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  onBlur: () => void;
-  unit: string;
-  placeholder?: string;
-  min?: number;
-  colors: ThemeColors;
-  hint?: string;
+  label: string
+  value: string
+  onChange: (value: string) => void
+  onBlur: () => void
+  unit: string
+  placeholder?: string
+  min?: number
+  colors: ThemeColors
+  hint?: string
 }
 
 /**
@@ -39,7 +39,7 @@ export function NumericInput({
   unit,
   placeholder = "0",
   colors,
-  hint,
+  hint
 }: NumericInputProps) {
   return (
     <View style={styles.container}>
@@ -47,9 +47,7 @@ export function NumericInput({
       <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
 
       {/* Hint (optional) */}
-      {hint && (
-        <Text style={[styles.hint, { color: colors.textLight }]}>{hint}</Text>
-      )}
+      {hint && <Text style={[styles.hint, { color: colors.textLight }]}>{hint}</Text>}
 
       {/* Input Row */}
       <View style={styles.inputRow}>
@@ -59,8 +57,8 @@ export function NumericInput({
             {
               borderColor: colors.border,
               color: colors.text,
-              backgroundColor: colors.backgroundElevated,
-            },
+              backgroundColor: colors.backgroundElevated
+            }
           ]}
           keyboardType="numeric"
           value={value}
@@ -69,32 +67,30 @@ export function NumericInput({
           placeholder={placeholder}
           placeholderTextColor={colors.placeholder}
         />
-        <Text style={[styles.unit, { color: colors.textSecondary }]}>
-          {unit}
-        </Text>
+        <Text style={[styles.unit, { color: colors.textSecondary }]}>{unit}</Text>
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 16
   },
   label: {
     fontSize: 14,
     fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 8
   },
   hint: {
     fontSize: 12,
     fontStyle: "italic",
-    marginBottom: 12,
+    marginBottom: 12
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 12
   },
   input: {
     flex: 1,
@@ -102,10 +98,10 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     fontSize: 15,
-    textAlign: "center",
+    textAlign: "center"
   },
   unit: {
     fontSize: 15,
-    fontWeight: "500",
-  },
-});
+    fontWeight: "500"
+  }
+})

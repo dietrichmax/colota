@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { ThemeColors } from "../types/global";
+import { ThemeColors } from "../types/global"
 
 export const lightColors: ThemeColors = {
   // Brand (Deep Indigo for trust and uniqueness)
@@ -55,8 +55,8 @@ export const lightColors: ThemeColors = {
 
   // Special
   transparent: "transparent",
-  borderRadius: 8,
-};
+  borderRadius: 8
+}
 
 export const darkColors: ThemeColors = {
   // Brand
@@ -108,5 +108,5 @@ export const darkColors: ThemeColors = {
 
   // Special
   transparent: "transparent",
-  borderRadius: 8,
-};
+  borderRadius: 8
+}

@@ -3,13 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-  useCallback,
-} from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import {
   View,
   Text,
@@ -19,99 +13,94 @@ import {
   FlatList,
   Alert,
   Switch,
-  DeviceEventEmitter,
-} from "react-native";
-import { WebView } from "react-native-webview";
-import { useTheme } from "../hooks/useTheme";
-import NativeLocationService from "../services/NativeLocationService";
-import { Geofence, ScreenProps } from "../types/global";
-import { useTracking } from "../contexts/TrackingProvider";
-import { Container, SectionTitle, Card } from "../components";
-import { MapCenterButton } from "../components/features/map/MapCenterButton";
+  DeviceEventEmitter
+} from "react-native"
+import { WebView } from "react-native-webview"
+import { useTheme } from "../hooks/useTheme"
+import NativeLocationService from "../services/NativeLocationService"
+import { Geofence, ScreenProps } from "../types/global"
+import { useTracking } from "../contexts/TrackingProvider"
+import { Container, SectionTitle, Card } from "../components"
+import { MapCenterButton } from "../components/features/map/MapCenterButton"
 
 export function GeofenceScreen({}: ScreenProps) {
-  const { coords, tracking } = useTracking();
-  const { colors, mode } = useTheme();
-  const isDark = mode === "dark";
+  const { coords, tracking } = useTracking()
+  const { colors, mode } = useTheme()
+  const isDark = mode === "dark"
 
-  const [geofences, setGeofences] = useState<Geofence[]>([]);
-  const [newName, setNewName] = useState("");
-  const [newRadius, setNewRadius] = useState("50");
-  const [placingGeofence, setPlacingGeofence] = useState(false);
-  const [isCentered, setIsCentered] = useState(true);
-  const [mapReady, setMapReady] = useState(false);
-  const [hasInitialCoords, setHasInitialCoords] = useState(false);
-  const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(
-    null
-  );
+  const [geofences, setGeofences] = useState<Geofence[]>([])
+  const [newName, setNewName] = useState("")
+  const [newRadius, setNewRadius] = useState("50")
+  const [placingGeofence, setPlacingGeofence] = useState(false)
+  const [isCentered, setIsCentered] = useState(true)
+  const [mapReady, setMapReady] = useState(false)
+  const [hasInitialCoords, setHasInitialCoords] = useState(false)
+  const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(null)
 
-  const webviewRef = useRef<WebView>(null);
+  const webviewRef = useRef<WebView>(null)
   const initialCenter = useRef<{
-    latitude: number;
-    longitude: number;
-    accuracy: number;
-  } | null>(null);
+    latitude: number
+    longitude: number
+    accuracy: number
+  } | null>(null)
 
   // Set initial map center: use live coords, fall back to last known from DB, then default
   useEffect(() => {
-    if (hasInitialCoords) return;
+    if (hasInitialCoords) return
 
     if (coords) {
       initialCenter.current = {
         latitude: coords.latitude,
         longitude: coords.longitude,
-        accuracy: coords.accuracy ?? 0,
-      };
-      setHasInitialCoords(true);
-      return;
+        accuracy: coords.accuracy ?? 0
+      }
+      setHasInitialCoords(true)
+      return
     }
 
     NativeLocationService.getMostRecentLocation().then((latest) => {
-      if (initialCenter.current) return;
+      if (initialCenter.current) return
 
       initialCenter.current = latest
         ? {
             latitude: latest.latitude,
             longitude: latest.longitude,
-            accuracy: latest.accuracy ?? 0,
+            accuracy: latest.accuracy ?? 0
           }
-        : { latitude: 0, longitude: 0, accuracy: 0 };
-      setHasInitialCoords(true);
-    });
-  }, [coords, hasInitialCoords]);
+        : { latitude: 0, longitude: 0, accuracy: 0 }
+      setHasInitialCoords(true)
+    })
+  }, [coords, hasInitialCoords])
 
   // Load geofences
   const loadGeofences = useCallback(async () => {
     try {
-      const data = await NativeLocationService.getGeofences();
-      setGeofences(data);
+      const data = await NativeLocationService.getGeofences()
+      setGeofences(data)
     } catch (err) {
-      console.error("[GeofenceScreen] Failed to load geofences:", err);
+      console.error("[GeofenceScreen] Failed to load geofences:", err)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    loadGeofences();
-  }, [loadGeofences]);
+    loadGeofences()
+  }, [loadGeofences])
 
   // Check for silent zone
   useEffect(() => {
     const checkSilentZone = async () => {
       try {
-        const zoneName = await NativeLocationService.checkCurrentSilentZone();
-        setCurrentSilentZone(zoneName);
+        const zoneName = await NativeLocationService.checkCurrentSilentZone()
+        setCurrentSilentZone(zoneName)
       } catch (err) {
-        console.error("[GeofenceScreen] Failed to check silent zone:", err);
+        console.error("[GeofenceScreen] Failed to check silent zone:", err)
       }
-    };
+    }
 
-    checkSilentZone();
-    const listener = DeviceEventEmitter.addListener(
-      "geofenceUpdated",
-      checkSilentZone
-    );
-    return () => listener.remove();
-  }, []);
+    checkSilentZone()
+    const listener = DeviceEventEmitter.addListener("geofenceUpdated", checkSilentZone)
+    return () => listener.remove()
+  }, [])
 
   // Update user position
   useEffect(() => {
@@ -121,11 +110,11 @@ export function GeofenceScreen({}: ScreenProps) {
           action: "update_user_pos",
           coords,
           tracking,
-          isPaused: !!currentSilentZone,
+          isPaused: !!currentSilentZone
         })
-      );
+      )
     }
-  }, [coords, mapReady, tracking, currentSilentZone]);
+  }, [coords, mapReady, tracking, currentSilentZone])
 
   // Update geofences
   useEffect(() => {
@@ -133,19 +122,19 @@ export function GeofenceScreen({}: ScreenProps) {
       webviewRef.current.postMessage(
         JSON.stringify({
           action: "update_geofences",
-          geofences,
+          geofences
         })
-      );
+      )
     }
-  }, [geofences, mapReady]);
+  }, [geofences, mapReady])
 
   const onMessage = useCallback(
     async (event: any) => {
       try {
-        const data = JSON.parse(event.nativeEvent.data);
+        const data = JSON.parse(event.nativeEvent.data)
 
-        if (data.type === "MAP_READY") setMapReady(true);
-        if (data.type === "CENTERED") setIsCentered(data.value);
+        if (data.type === "MAP_READY") setMapReady(true)
+        if (data.type === "CENTERED") setIsCentered(data.value)
 
         if (data.action === "map_click") {
           try {
@@ -155,80 +144,76 @@ export function GeofenceScreen({}: ScreenProps) {
               lon: data.longitude,
               radius: Number(newRadius),
               enabled: true,
-              pauseTracking: true,
-            });
+              pauseTracking: true
+            })
 
-            setNewName("");
-            setNewRadius("50");
-            setPlacingGeofence(false);
-            await loadGeofences();
-            DeviceEventEmitter.emit("geofenceUpdated");
+            setNewName("")
+            setNewRadius("50")
+            setPlacingGeofence(false)
+            await loadGeofences()
+            DeviceEventEmitter.emit("geofenceUpdated")
           } catch {
-            Alert.alert("Error", "Failed to create geofence.");
+            Alert.alert("Error", "Failed to create geofence.")
           }
         }
       } catch (err) {
-        console.error("[GeofenceScreen] Message error:", err);
+        console.error("[GeofenceScreen] Message error:", err)
       }
     },
     [newName, newRadius, loadGeofences]
-  );
+  )
 
   const startPlacingGeofence = useCallback(() => {
     if (!newName.trim()) {
-      Alert.alert("Missing Name", "Please enter a name.");
-      return;
+      Alert.alert("Missing Name", "Please enter a name.")
+      return
     }
 
-    const radius = Number(newRadius);
+    const radius = Number(newRadius)
     if (!radius || radius <= 0) {
-      Alert.alert("Invalid Radius", "Please enter a valid radius.");
-      return;
+      Alert.alert("Invalid Radius", "Please enter a valid radius.")
+      return
     }
 
-    setPlacingGeofence(true);
-    webviewRef.current?.postMessage(
-      JSON.stringify({ action: "place_geofence", radius })
-    );
-  }, [newName, newRadius]);
+    setPlacingGeofence(true)
+    webviewRef.current?.postMessage(JSON.stringify({ action: "place_geofence", radius }))
+  }, [newName, newRadius])
 
   const handleCenterMe = useCallback(() => {
     if (coords) {
-      webviewRef.current?.postMessage(
-        JSON.stringify({ action: "center_map", coords })
-      );
+      webviewRef.current?.postMessage(JSON.stringify({ action: "center_map", coords }))
     }
-  }, [coords]);
+  }, [coords])
 
   const togglePause = useCallback(
     async (id: number, value: boolean) => {
       try {
         await NativeLocationService.updateGeofence({
           id,
-          pauseTracking: value,
-        });
-        await loadGeofences();
-        DeviceEventEmitter.emit("geofenceUpdated");
-        await NativeLocationService.recheckZoneSettings();
+          pauseTracking: value
+        })
+        await loadGeofences()
+        DeviceEventEmitter.emit("geofenceUpdated")
+        await NativeLocationService.recheckZoneSettings()
       } catch {
-        Alert.alert("Error", "Failed to update geofence.");
+        Alert.alert("Error", "Failed to update geofence.")
       }
     },
     [loadGeofences]
-  );
+  )
 
   const handleZoomToGeofence = useCallback((item: Geofence) => {
-    if (!webviewRef.current) return;
+    if (!webviewRef.current) return
 
     webviewRef.current.postMessage(
       JSON.stringify({
         action: "zoom_to_geofence",
         lat: item.lat,
         lon: item.lon,
-        radius: item.radius,
+        radius: item.radius
       })
-    );
-  }, []);
+    )
+  }, [])
 
   const handleDelete = useCallback(
     (item: Geofence) => {
@@ -239,26 +224,26 @@ export function GeofenceScreen({}: ScreenProps) {
           style: "destructive",
           onPress: async () => {
             try {
-              await NativeLocationService.deleteGeofence(item.id!);
-              await loadGeofences();
-              DeviceEventEmitter.emit("geofenceUpdated");
+              await NativeLocationService.deleteGeofence(item.id!)
+              await loadGeofences()
+              DeviceEventEmitter.emit("geofenceUpdated")
             } catch {
-              Alert.alert("Error", "Failed to delete geofence.");
+              Alert.alert("Error", "Failed to delete geofence.")
             }
-          },
-        },
-      ]);
+          }
+        }
+      ])
     },
     [loadGeofences]
-  );
+  )
 
   const html = useMemo(() => {
-    if (!hasInitialCoords || !initialCenter.current) return "";
+    if (!hasInitialCoords || !initialCenter.current) return ""
 
-    const lon = initialCenter.current.longitude;
-    const lat = initialCenter.current.latitude;
-    const hasRealCoords = lat !== 0 || lon !== 0;
-    const initialZoom = hasRealCoords ? 17 : 2;
+    const lon = initialCenter.current.longitude
+    const lat = initialCenter.current.latitude
+    const hasRealCoords = lat !== 0 || lon !== 0
+    const initialZoom = hasRealCoords ? 17 : 2
 
     return `
 <!DOCTYPE html>
@@ -345,9 +330,7 @@ export function GeofenceScreen({}: ScreenProps) {
     }
 
     .ol-attribution {
-      background: ${
-        isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)"
-      } !important;
+      background: ${isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)"} !important;
       border-radius: ${colors.borderRadius}px !important;
       padding: 4px 8px !important;
       font-size: 11px !important;
@@ -365,11 +348,7 @@ export function GeofenceScreen({}: ScreenProps) {
       text-decoration: none !important;
     }
 
-    ${
-      isDark
-        ? ".ol-layer canvas { filter: brightness(0.6) contrast(1.2) saturate(0.8); }"
-        : ""
-    }
+    ${isDark ? ".ol-layer canvas { filter: brightness(0.6) contrast(1.2) saturate(0.8); }" : ""}
   </style>
 </head>
 <body>
@@ -433,9 +412,7 @@ export function GeofenceScreen({}: ScreenProps) {
         feature.setStyle(
           new ol.style.Style({
             stroke: new ol.style.Stroke({
-              color: zone.pauseTracking ? "${colors.warning}" : "${
-      colors.info
-    }",
+              color: zone.pauseTracking ? "${colors.warning}" : "${colors.info}",
               width: 2,
               lineDash: zone.pauseTracking ? null : [5, 5]
             }),
@@ -452,9 +429,7 @@ export function GeofenceScreen({}: ScreenProps) {
               text: zone.name,
               font: "bold 12px sans-serif",
               fill: new ol.style.Fill({
-                color: zone.pauseTracking ? "${colors.warning}" : "${
-      colors.info
-    }"
+                color: zone.pauseTracking ? "${colors.warning}" : "${colors.info}"
               }),
               stroke: new ol.style.Stroke({ color: "#fff", width: 3 }),
               offsetY: -25
@@ -520,9 +495,7 @@ export function GeofenceScreen({}: ScreenProps) {
 
         if (markerIcon && markerPulse) {
           const isActive = data.tracking && !data.isPaused;
-          const markerColor = data.isPaused ? "${colors.textDisabled}" : "${
-      colors.primary
-    }";
+          const markerColor = data.isPaused ? "${colors.textDisabled}" : "${colors.primary}";
           markerIcon.style.background = markerColor;
           markerPulse.style.borderColor = markerColor;
           markerPulse.style.display = isActive ? "block" : "none";
@@ -586,39 +559,27 @@ export function GeofenceScreen({}: ScreenProps) {
   </script>
 </body>
 </html>
-`;
-  }, [colors, isDark, hasInitialCoords]);
+`
+  }, [colors, isDark, hasInitialCoords])
 
   const renderItem = useCallback(
     ({ item }: { item: Geofence }) => (
       <Card style={styles.card}>
         <View style={styles.row}>
-          <TouchableOpacity
-            style={styles.info}
-            onPress={() => handleZoomToGeofence(item)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.name, { color: colors.text }]}>
-              {item.name}
-            </Text>
-            <Text style={[styles.radius, { color: colors.textSecondary }]}>
-              {item.radius}m • Tap to view
-            </Text>
+          <TouchableOpacity style={styles.info} onPress={() => handleZoomToGeofence(item)} activeOpacity={0.7}>
+            <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
+            <Text style={[styles.radius, { color: colors.textSecondary }]}>{item.radius}m • Tap to view</Text>
           </TouchableOpacity>
 
           <View style={styles.actions}>
             <View style={styles.pauseSwitch}>
-              <Text
-                style={[styles.pauseLabel, { color: colors.textSecondary }]}
-              >
-                Pause
-              </Text>
+              <Text style={[styles.pauseLabel, { color: colors.textSecondary }]}>Pause</Text>
               <Switch
                 value={item.pauseTracking}
                 onValueChange={(val) => togglePause(item.id!, val)}
                 trackColor={{
                   false: colors.border,
-                  true: colors.warning + "80",
+                  true: colors.warning + "80"
                 }}
                 thumbColor={item.pauseTracking ? colors.warning : "#f4f3f4"}
               />
@@ -626,22 +587,17 @@ export function GeofenceScreen({}: ScreenProps) {
 
             <TouchableOpacity
               onPress={() => handleDelete(item)}
-              style={[
-                styles.deleteBtn,
-                { backgroundColor: colors.error + "15" },
-              ]}
+              style={[styles.deleteBtn, { backgroundColor: colors.error + "15" }]}
               activeOpacity={0.7}
             >
-              <Text style={[styles.deleteText, { color: colors.error }]}>
-                ✕
-              </Text>
+              <Text style={[styles.deleteText, { color: colors.error }]}>✕</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Card>
     ),
     [colors, handleDelete, togglePause, handleZoomToGeofence]
-  );
+  )
 
   return (
     <Container>
@@ -651,17 +607,14 @@ export function GeofenceScreen({}: ScreenProps) {
           originWhitelist={["*"]}
           source={{
             html: html,
-            baseUrl: "file:///android_asset/",
+            baseUrl: "file:///android_asset/"
           }}
           style={styles.webview}
           scrollEnabled={false}
           onMessage={onMessage}
         />
 
-        <MapCenterButton
-          visible={!isCentered && tracking}
-          onPress={handleCenterMe}
-        />
+        <MapCenterButton visible={!isCentered && tracking} onPress={handleCenterMe} />
       </View>
 
       <FlatList
@@ -680,19 +633,15 @@ export function GeofenceScreen({}: ScreenProps) {
 
                 <View style={styles.inputRow}>
                   <View style={[styles.inputGroup, styles.inputGroupName]}>
-                    <Text
-                      style={[styles.label, { color: colors.textSecondary }]}
-                    >
-                      Name
-                    </Text>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
                     <TextInput
                       style={[
                         styles.input,
                         {
                           backgroundColor: colors.background,
                           color: colors.text,
-                          borderColor: colors.border,
-                        },
+                          borderColor: colors.border
+                        }
                       ]}
                       placeholder="Home, Office..."
                       placeholderTextColor={colors.placeholder}
@@ -702,11 +651,7 @@ export function GeofenceScreen({}: ScreenProps) {
                   </View>
 
                   <View style={[styles.inputGroup, styles.inputGroupRadius]}>
-                    <Text
-                      style={[styles.label, { color: colors.textSecondary }]}
-                    >
-                      Radius (m)
-                    </Text>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Radius (m)</Text>
                     <TextInput
                       style={[
                         styles.input,
@@ -714,8 +659,8 @@ export function GeofenceScreen({}: ScreenProps) {
                         {
                           backgroundColor: colors.background,
                           color: colors.text,
-                          borderColor: colors.border,
-                        },
+                          borderColor: colors.border
+                        }
                       ]}
                       placeholder="50"
                       placeholderTextColor={colors.placeholder}
@@ -732,18 +677,14 @@ export function GeofenceScreen({}: ScreenProps) {
                   disabled={placingGeofence}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.placeBtnText}>
-                    {placingGeofence ? "Tap Map to Place..." : "Place Geofence"}
-                  </Text>
+                  <Text style={styles.placeBtnText}>{placingGeofence ? "Tap Map to Place..." : "Place Geofence"}</Text>
                 </TouchableOpacity>
               </Card>
             </View>
 
             {geofences.length > 0 && (
               <View style={styles.section}>
-                <SectionTitle>
-                  Active Geofences ({geofences.length})
-                </SectionTitle>
+                <SectionTitle>Active Geofences ({geofences.length})</SectionTitle>
               </View>
             )}
           </>
@@ -751,9 +692,7 @@ export function GeofenceScreen({}: ScreenProps) {
         ListEmptyComponent={
           geofences.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                No geofences yet
-              </Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No geofences yet</Text>
               <Text style={[styles.emptyHint, { color: colors.textLight }]}>
                 Create a geofence to pause tracking in specific areas
               </Text>
@@ -763,55 +702,34 @@ export function GeofenceScreen({}: ScreenProps) {
         renderItem={renderItem}
       />
     </Container>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   map: { height: 450, overflow: "hidden" },
   webview: { flex: 1 },
-  centerBtn: {
-    position: "absolute",
-    right: 12,
-    bottom: 12,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { fontSize: 16, fontWeight: "600" },
   list: { padding: 20, paddingBottom: 40 },
   section: { marginBottom: 16 },
   hint: { fontSize: 13, lineHeight: 18, marginBottom: 16 },
   inputRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
   inputGroup: { flex: 1 },
   inputGroupName: {
-    flex: 2,
+    flex: 2
   },
   inputGroupRadius: {
     flex: 0,
-    minWidth: 90,
+    minWidth: 90
   },
   label: {
     fontSize: 12,
     fontWeight: "600",
     marginBottom: 6,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.5
   },
   input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: 15 },
   inputCentered: {
-    textAlign: "center",
-  },
-  centerIcon: {
-    width: 28,
-    height: 28,
+    textAlign: "center"
   },
   placeBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
   placeBtnText: { color: "#f8f7f7", fontSize: 15, fontWeight: "600" },
@@ -819,7 +737,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "space-between"
   },
   info: { flex: 1, marginRight: 12 },
   name: { fontSize: 15, fontWeight: "600", marginBottom: 2 },
@@ -830,14 +748,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: 0.3,
+    letterSpacing: 0.3
   },
   deleteBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "center"
   },
   deleteText: { fontSize: 18, fontWeight: "600" },
   empty: { alignItems: "center", paddingVertical: 40 },
@@ -846,6 +764,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     maxWidth: 260,
-    lineHeight: 18,
-  },
-});
+    lineHeight: 18
+  }
+})

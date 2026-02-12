@@ -3,25 +3,18 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React from "react";
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  GestureResponderEvent,
-  StyleProp,
-  ViewStyle,
-} from "react-native";
-import { useTheme } from "../../hooks/useTheme";
+import React from "react"
+import { TouchableOpacity, Text, StyleSheet, GestureResponderEvent, StyleProp, ViewStyle } from "react-native"
+import { useTheme } from "../../hooks/useTheme"
 
 type Props = {
-  title: string;
-  onPress: (event: GestureResponderEvent) => void;
-  disabled?: boolean;
-  style?: StyleProp<ViewStyle>;
-  activeOpacity?: number;
-  color?: string;
-};
+  title: string
+  onPress: (event: GestureResponderEvent) => void
+  disabled?: boolean
+  style?: StyleProp<ViewStyle>
+  activeOpacity?: number
+  color?: string
+}
 
 /**
  * Custom button component with theme support and disabled state.
@@ -41,15 +34,8 @@ type Props = {
  * />
  * ```
  */
-export function Button({
-  title,
-  onPress,
-  disabled = false,
-  style,
-  activeOpacity,
-  color,
-}: Props) {
-  const { colors } = useTheme();
+export function Button({ title, onPress, disabled = false, style, activeOpacity, color }: Props) {
+  const { colors } = useTheme()
 
   return (
     <TouchableOpacity
@@ -57,9 +43,9 @@ export function Button({
         styles.button,
         {
           backgroundColor: disabled ? colors.textDisabled : colors.primary,
-          borderRadius: colors.borderRadius,
+          borderRadius: colors.borderRadius
         },
-        style,
+        style
       ]}
       onPress={onPress}
       disabled={disabled}
@@ -67,7 +53,7 @@ export function Button({
     >
       <Text style={[styles.text, { color: color }]}>{title}</Text>
     </TouchableOpacity>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -75,10 +61,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     alignItems: "center",
-    marginVertical: 8,
+    marginVertical: 8
   },
   text: {
     fontSize: 16,
-    fontWeight: "600",
-  },
-});
+    fontWeight: "600"
+  }
+})
