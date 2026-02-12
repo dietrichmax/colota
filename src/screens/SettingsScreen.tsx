@@ -274,11 +274,19 @@ export function SettingsScreen({ navigation }: ScreenProps) {
     setTestError(false);
 
     try {
+      const recentLocation =
+        await NativeLocationService.getMostRecentLocation();
+      if (!recentLocation) {
+        setTestResponse("No location available yet. Start tracking first.");
+        setTestError(true);
+        return;
+      }
+
       const fieldMap = settings.fieldMap;
       const payload: Record<string, number | boolean> = {
-        [fieldMap.lat]: 1,
-        [fieldMap.lon]: 1,
-        [fieldMap.acc]: 1,
+        [fieldMap.lat]: recentLocation.latitude,
+        [fieldMap.lon]: recentLocation.longitude,
+        [fieldMap.acc]: recentLocation.accuracy,
       };
 
       if (fieldMap.alt) payload[fieldMap.alt] = 0;
