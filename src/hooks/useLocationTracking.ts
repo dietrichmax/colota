@@ -3,18 +3,14 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { NativeEventEmitter, NativeModules, Alert } from "react-native";
-import NativeLocationService from "../services/NativeLocationService";
-import {
-  LocationCoords,
-  Settings,
-  LocationTrackingResult,
-} from "../types/global";
-import { ensurePermissions } from "../services/LocationServicePermission";
+import { useState, useEffect, useRef, useCallback } from "react"
+import { NativeEventEmitter, NativeModules, Alert } from "react-native"
+import NativeLocationService from "../services/NativeLocationService"
+import { LocationCoords, Settings, LocationTrackingResult } from "../types/global"
+import { ensurePermissions } from "../services/LocationServicePermission"
 
-const { LocationServiceModule } = NativeModules;
-const locationEventEmitter = new NativeEventEmitter(LocationServiceModule);
+const { LocationServiceModule } = NativeModules
+const locationEventEmitter = new NativeEventEmitter(LocationServiceModule)
 
 /**
  * Hook for managing native location tracking.
@@ -30,29 +26,27 @@ const locationEventEmitter = new NativeEventEmitter(LocationServiceModule);
  * @param settings Initial tracking configuration
  * @returns Control interface for location tracking
  */
-export function useLocationTracking(
-  settings: Settings
-): LocationTrackingResult {
+export function useLocationTracking(settings: Settings): LocationTrackingResult {
   // State
-  const [coords, setCoords] = useState<LocationCoords | null>(null);
-  const [tracking, setTracking] = useState(false);
-  const [isRestarting, setIsRestarting] = useState(false);
+  const [coords, setCoords] = useState<LocationCoords | null>(null)
+  const [tracking, setTracking] = useState(false)
+  const [isRestarting, setIsRestarting] = useState(false)
 
   // Refs for synchronous checks
-  const settingsRef = useRef<Settings>(settings);
-  const isTrackingRef = useRef(false);
-  const restartingRef = useRef(false);
-  const restartQueuedRef = useRef(false);
-  const listenerRef = useRef<any>(null);
+  const settingsRef = useRef<Settings>(settings)
+  const isTrackingRef = useRef(false)
+  const restartingRef = useRef(false)
+  const restartQueuedRef = useRef(false)
+  const listenerRef = useRef<any>(null)
 
   // Sync refs with state
   useEffect(() => {
-    settingsRef.current = settings;
-  }, [settings]);
+    settingsRef.current = settings
+  }, [settings])
 
   useEffect(() => {
-    isTrackingRef.current = tracking;
-  }, [tracking]);
+    isTrackingRef.current = tracking
+  }, [tracking])
 
   /**
    * Fetches last known location from SQLite on mount
@@ -62,7 +56,7 @@ export function useLocationTracking(
     const syncInitialLocation = async () => {
       if (!coords && (tracking || isRestarting)) {
         try {
-          const latest = await NativeLocationService.getMostRecentLocation();
+          const latest = await NativeLocationService.getMostRecentLocation()
           if (latest) {
             setCoords({
               latitude: latest.latitude,
@@ -73,53 +67,47 @@ export function useLocationTracking(
               bearing: latest.bearing ?? 0,
               timestamp: latest.timestamp ?? Date.now(),
               battery: latest.battery,
-              battery_status: latest.batteryStatus,
-            });
+              battery_status: latest.batteryStatus
+            })
           }
         } catch (err) {
-          console.error(
-            "[useLocationTracking] Failed to fetch initial location:",
-            err
-          );
+          console.error("[useLocationTracking] Failed to fetch initial location:", err)
         }
       }
-    };
+    }
 
-    syncInitialLocation();
-  }, [tracking, isRestarting, coords]);
+    syncInitialLocation()
+  }, [tracking, isRestarting, coords])
 
   /**
    * Subscribes to real-time location updates from native service
    */
   useEffect(() => {
     if (tracking && !listenerRef.current) {
-      console.log("[useLocationTracking] 📡 Attaching native listener");
-      listenerRef.current = locationEventEmitter.addListener(
-        "onLocationUpdate",
-        (event: any) => {
-          setCoords({
-            latitude: event.latitude,
-            longitude: event.longitude,
-            accuracy: event.accuracy,
-            altitude: event.altitude,
-            speed: event.speed,
-            bearing: event.bearing,
-            timestamp: event.timestamp,
-            battery: event.battery,
-            battery_status: event.batteryStatus,
-          });
-        }
-      );
+      console.log("[useLocationTracking] 📡 Attaching native listener")
+      listenerRef.current = locationEventEmitter.addListener("onLocationUpdate", (event: any) => {
+        setCoords({
+          latitude: event.latitude,
+          longitude: event.longitude,
+          accuracy: event.accuracy,
+          altitude: event.altitude,
+          speed: event.speed,
+          bearing: event.bearing,
+          timestamp: event.timestamp,
+          battery: event.battery,
+          battery_status: event.batteryStatus
+        })
+      })
     }
 
     return () => {
       if (listenerRef.current) {
-        console.log("[useLocationTracking] 🔌 Detaching native listener");
-        listenerRef.current.remove();
-        listenerRef.current = null;
+        console.log("[useLocationTracking] 🔌 Detaching native listener")
+        listenerRef.current.remove()
+        listenerRef.current = null
       }
-    };
-  }, [tracking]);
+    }
+  }, [tracking])
 
   /**
    * Starts location tracking
@@ -127,58 +115,53 @@ export function useLocationTracking(
    */
   const startTracking = useCallback(async (overrideSettings?: Settings) => {
     if (isTrackingRef.current) {
-      console.log("[useLocationTracking] Already tracking");
-      return;
+      console.log("[useLocationTracking] Already tracking")
+      return
     }
 
     const effectiveSettings: Settings = {
       ...settingsRef.current,
-      ...overrideSettings,
-    };
-
-    const granted = await ensurePermissions();
-    if (!granted) {
-      Alert.alert(
-        "Permission Required",
-        "Background location permission is required for tracking."
-      );
-      return;
+      ...overrideSettings
     }
 
-    setTracking(true);
+    const granted = await ensurePermissions()
+    if (!granted) {
+      Alert.alert("Permission Required", "Background location permission is required for tracking.")
+      return
+    }
+
+    setTracking(true)
 
     try {
-      await NativeLocationService.start(effectiveSettings);
-      console.log(
-        `[useLocationTracking] ✅ Service started (offline: ${effectiveSettings.isOfflineMode})`
-      );
+      await NativeLocationService.start(effectiveSettings)
+      console.log(`[useLocationTracking] ✅ Service started (offline: ${effectiveSettings.isOfflineMode})`)
     } catch (error) {
-      setTracking(false);
-      console.error("[useLocationTracking] ❌ Failed to start:", error);
-      Alert.alert("Error", "Failed to start location tracking.");
+      setTracking(false)
+      console.error("[useLocationTracking] ❌ Failed to start:", error)
+      Alert.alert("Error", "Failed to start location tracking.")
     }
-  }, []);
+  }, [])
 
   /**
    * Stops location tracking and cleans up
    */
   const stopTracking = useCallback(() => {
     if (!isTrackingRef.current) {
-      console.log("[useLocationTracking] Not tracking");
-      return;
+      console.log("[useLocationTracking] Not tracking")
+      return
     }
 
-    console.log("[useLocationTracking] Stopping service");
+    console.log("[useLocationTracking] Stopping service")
 
     if (listenerRef.current) {
-      listenerRef.current.remove();
-      listenerRef.current = null;
+      listenerRef.current.remove()
+      listenerRef.current = null
     }
 
-    NativeLocationService.stop();
-    setTracking(false);
-    setCoords(null);
-  }, []);
+    NativeLocationService.stop()
+    setTracking(false)
+    setCoords(null)
+  }, [])
 
   /**
    * Restarts the service with new settings
@@ -188,38 +171,36 @@ export function useLocationTracking(
   const restartTracking = useCallback(
     async (newSettings?: Settings) => {
       if (restartingRef.current) {
-        console.log(
-          "[useLocationTracking] Restart already in progress, queuing"
-        );
-        restartQueuedRef.current = true;
-        return;
+        console.log("[useLocationTracking] Restart already in progress, queuing")
+        restartQueuedRef.current = true
+        return
       }
 
-      console.log("[useLocationTracking] Restarting service");
-      setIsRestarting(true);
-      restartingRef.current = true;
+      console.log("[useLocationTracking] Restarting service")
+      setIsRestarting(true)
+      restartingRef.current = true
 
       try {
-        stopTracking();
+        stopTracking()
 
         // Android requires delay to fully release foreground service
-        await new Promise<void>((resolve) => setTimeout(resolve, 500));
+        await new Promise<void>((resolve) => setTimeout(resolve, 500))
 
-        await startTracking(newSettings ?? settingsRef.current);
+        await startTracking(newSettings ?? settingsRef.current)
       } finally {
-        restartingRef.current = false;
-        setIsRestarting(false);
+        restartingRef.current = false
+        setIsRestarting(false)
 
         // Process queued restart if any
         if (restartQueuedRef.current) {
-          restartQueuedRef.current = false;
-          console.log("[useLocationTracking] Processing queued restart");
-          setTimeout(() => restartTracking(newSettings), 100);
+          restartQueuedRef.current = false
+          console.log("[useLocationTracking] Processing queued restart")
+          setTimeout(() => restartTracking(newSettings), 100)
         }
       }
     },
     [startTracking, stopTracking]
-  );
+  )
 
   /**
    * Reconnects React state to an already-running native service.
@@ -228,13 +209,13 @@ export function useLocationTracking(
    */
   const reconnect = useCallback(() => {
     if (isTrackingRef.current) {
-      console.log("[useLocationTracking] Already tracking, skip reconnect");
-      return;
+      console.log("[useLocationTracking] Already tracking, skip reconnect")
+      return
     }
 
-    console.log("[useLocationTracking] Reconnecting to active service");
-    setTracking(true);
-  }, []);
+    console.log("[useLocationTracking] Reconnecting to active service")
+    setTracking(true)
+  }, [])
 
   /**
    * Cleanup on unmount
@@ -242,13 +223,11 @@ export function useLocationTracking(
    */
   useEffect(() => {
     return () => {
-      console.log(
-        "[useLocationTracking] 🧹 Component unmounted, service remains active"
-      );
-      restartQueuedRef.current = false;
-      restartingRef.current = false;
-    };
-  }, []);
+      console.log("[useLocationTracking] 🧹 Component unmounted, service remains active")
+      restartQueuedRef.current = false
+      restartingRef.current = false
+    }
+  }, [])
 
   return {
     coords,
@@ -257,6 +236,6 @@ export function useLocationTracking(
     stopTracking,
     restartTracking,
     reconnect,
-    settings,
-  };
+    settings
+  }
 }

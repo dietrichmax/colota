@@ -3,24 +3,24 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { Platform, PermissionsAndroid, Alert } from "react-native";
-import NativeLocationService from "./NativeLocationService";
+import { Platform, PermissionsAndroid, Alert } from "react-native"
+import NativeLocationService from "./NativeLocationService"
 
 /**
  * Permission status for location tracking
  */
 export interface PermissionStatus {
-  location: boolean;
-  background: boolean;
-  notifications: boolean;
-  batteryOptimized: boolean;
+  location: boolean
+  background: boolean
+  notifications: boolean
+  batteryOptimized: boolean
 }
 
 /** Android version for background location (Android 10) */
-const ANDROID_10 = 29;
+const ANDROID_10 = 29
 
 /** Android version for notifications (Android 13) */
-const ANDROID_13 = 33;
+const ANDROID_13 = 33
 
 /**
  * Requests all necessary permissions for location tracking.
@@ -43,34 +43,30 @@ const ANDROID_13 = 33;
  * ```
  */
 export async function ensurePermissions(): Promise<boolean> {
-  if (Platform.OS !== "android") return true;
+  if (Platform.OS !== "android") return true
 
   try {
     // 1. Fine location (required)
-    if (!(await requestFineLocation())) return false;
+    if (!(await requestFineLocation())) return false
 
     // 2. Background location (Android 10+)
     if (Platform.Version >= ANDROID_10) {
-      if (!(await requestBackgroundLocation())) return false;
+      if (!(await requestBackgroundLocation())) return false
     }
 
     // 3. Notifications (Android 13+)
     if (Platform.Version >= ANDROID_13) {
-      if (!(await requestNotificationPermission())) return false;
+      if (!(await requestNotificationPermission())) return false
     }
 
     // 4. Battery optimization exemption (optional but recommended)
-    await requestBatteryOptimizationExemption();
+    await requestBatteryOptimizationExemption()
 
-    return true;
+    return true
   } catch (err) {
-    console.error("[PermissionService] Permission request error:", err);
-    Alert.alert(
-      "Permission Error",
-      "Failed to request permissions. Please try again.",
-      [{ text: "OK" }]
-    );
-    return false;
+    console.error("[PermissionService] Permission request error:", err)
+    Alert.alert("Permission Error", "Failed to request permissions. Please try again.", [{ text: "OK" }])
+    return false
   }
 }
 
@@ -78,80 +74,66 @@ export async function ensurePermissions(): Promise<boolean> {
  * Requests fine location permission
  */
 async function requestFineLocation(): Promise<boolean> {
-  const result = await PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-    {
-      title: "Location Permission",
-      message: "Colota needs access to your location to track your position.",
-      buttonPositive: "Allow",
-      buttonNegative: "Deny",
-    }
-  );
+  const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION, {
+    title: "Location Permission",
+    message: "Colota needs access to your location to track your position.",
+    buttonPositive: "Allow",
+    buttonNegative: "Deny"
+  })
 
   if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-    Alert.alert(
-      "Permission Required",
-      "Location permission is required for this app to function.",
-      [{ text: "OK" }]
-    );
-    return false;
+    Alert.alert("Permission Required", "Location permission is required for this app to function.", [{ text: "OK" }])
+    return false
   }
 
-  return true;
+  return true
 }
 
 /**
  * Requests background location permission (Android 10+)
  */
 async function requestBackgroundLocation(): Promise<boolean> {
-  const result = await PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
-    {
-      title: "Background Location Permission",
-      message:
-        "To track your location continuously, Colota needs permission to access your location in the background, even when you are not actively using it.",
-      buttonPositive: "Allow",
-      buttonNegative: "Deny",
-    }
-  );
+  const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION, {
+    title: "Background Location Permission",
+    message:
+      "To track your location continuously, Colota needs permission to access your location in the background, even when you are not actively using it.",
+    buttonPositive: "Allow",
+    buttonNegative: "Deny"
+  })
 
   if (result !== PermissionsAndroid.RESULTS.GRANTED) {
     Alert.alert(
       "Background Permission Denied",
       "Background location permission is needed for continuous tracking. The app may stop when closed or in the background.",
       [{ text: "OK" }]
-    );
-    return false;
+    )
+    return false
   }
 
-  return true;
+  return true
 }
 
 /**
  * Requests notification permission (Android 13+)
  */
 async function requestNotificationPermission(): Promise<boolean> {
-  const result = await PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-    {
-      title: "Notification Permission",
-      message:
-        "Colota needs permission to show notifications while tracking your location.",
-      buttonPositive: "Allow",
-      buttonNegative: "Deny",
-    }
-  );
+  const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS, {
+    title: "Notification Permission",
+    message: "Colota needs permission to show notifications while tracking your location.",
+    buttonPositive: "Allow",
+    buttonNegative: "Deny"
+  })
 
   if (result !== PermissionsAndroid.RESULTS.GRANTED) {
     Alert.alert(
       "Notification Permission Denied",
       "Without notification permission, you will not see tracking status updates.",
       [{ text: "OK" }]
-    );
-    return false;
+    )
+    return false
   }
 
-  return true;
+  return true
 }
 
 /**
@@ -159,16 +141,12 @@ async function requestNotificationPermission(): Promise<boolean> {
  */
 async function requestBatteryOptimizationExemption(): Promise<void> {
   try {
-    const isOptimized =
-      await NativeLocationService.isIgnoringBatteryOptimizations();
+    const isOptimized = await NativeLocationService.isIgnoringBatteryOptimizations()
     if (!isOptimized) {
-      await NativeLocationService.requestIgnoreBatteryOptimizations();
+      await NativeLocationService.requestIgnoreBatteryOptimizations()
     }
   } catch (err) {
-    console.error(
-      "[PermissionService] Battery optimization request failed:",
-      err
-    );
+    console.error("[PermissionService] Battery optimization request failed:", err)
     // Non-critical, don't block
   }
 }
@@ -190,65 +168,56 @@ export async function checkPermissions(): Promise<PermissionStatus> {
       location: true,
       background: true,
       notifications: true,
-      batteryOptimized: true,
-    };
+      batteryOptimized: true
+    }
   }
 
-  const [location, background, notifications, batteryOptimized] =
-    await Promise.all([
-      checkFineLocation(),
-      checkBackgroundLocation(),
-      checkNotifications(),
-      checkBatteryOptimization(),
-    ]);
+  const [location, background, notifications, batteryOptimized] = await Promise.all([
+    checkFineLocation(),
+    checkBackgroundLocation(),
+    checkNotifications(),
+    checkBatteryOptimization()
+  ])
 
   return {
     location,
     background,
     notifications,
-    batteryOptimized,
-  };
+    batteryOptimized
+  }
 }
 
 /**
  * Check fine location permission
  */
 async function checkFineLocation(): Promise<boolean> {
-  return await PermissionsAndroid.check(
-    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-  );
+  return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION)
 }
 
 /**
  * Gets Android version as a number
  */
 function getAndroidVersion(): number {
-  if (Platform.OS !== "android") return 0;
-  return typeof Platform.Version === "number"
-    ? Platform.Version
-    : parseInt(Platform.Version, 10) || 0;
+  if (Platform.OS !== "android") return 0
+  return typeof Platform.Version === "number" ? Platform.Version : parseInt(Platform.Version, 10) || 0
 }
 
 /**
  * Check background location permission (Android 10+)
  */
 async function checkBackgroundLocation(): Promise<boolean> {
-  if (getAndroidVersion() < ANDROID_10) return true;
+  if (getAndroidVersion() < ANDROID_10) return true
 
-  return await PermissionsAndroid.check(
-    PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION
-  );
+  return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)
 }
 
 /**
  * Check notification permission (Android 13+)
  */
 async function checkNotifications(): Promise<boolean> {
-  if (getAndroidVersion() < ANDROID_13) return true;
+  if (getAndroidVersion() < ANDROID_13) return true
 
-  return await PermissionsAndroid.check(
-    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
-  );
+  return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
 }
 
 /**
@@ -256,48 +225,9 @@ async function checkNotifications(): Promise<boolean> {
  */
 async function checkBatteryOptimization(): Promise<boolean> {
   try {
-    return await NativeLocationService.isIgnoringBatteryOptimizations();
+    return await NativeLocationService.isIgnoringBatteryOptimizations()
   } catch (err) {
-    console.error(
-      "[PermissionService] Battery optimization check failed:",
-      err
-    );
-    return false;
+    console.error("[PermissionService] Battery optimization check failed:", err)
+    return false
   }
-}
-
-/**
- * Checks if all required permissions are granted.
- */
-export async function hasAllPermissions(): Promise<boolean> {
-  const status = await checkPermissions();
-  return (
-    status.location &&
-    status.background &&
-    status.notifications &&
-    status.batteryOptimized
-  );
-}
-
-/**
- * Gets list of missing permission names.
- *
- * @example
- * ```ts
- * const missing = await getMissingPermissions();
- * if (missing.length > 0) {
- *   console.log(`Missing: ${missing.join(', ')}`);
- * }
- * ```
- */
-export async function getMissingPermissions(): Promise<string[]> {
-  const status = await checkPermissions();
-  const missing: string[] = [];
-
-  if (!status.location) missing.push("Location");
-  if (!status.background) missing.push("Background Location");
-  if (!status.notifications) missing.push("Notifications");
-  if (!status.batteryOptimized) missing.push("Battery Optimization");
-
-  return missing;
 }
