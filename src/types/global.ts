@@ -236,6 +236,30 @@ export const DEFAULT_SETTINGS: Settings = {
 } as const;
 
 // ============================================================================
+// AUTHENTICATION
+// ============================================================================
+
+export type AuthType = "none" | "basic" | "bearer";
+
+export interface AuthConfig {
+  authType: AuthType;
+  username: string;
+  password: string;
+  bearerToken: string;
+  endpoint: string;
+  customHeaders: Record<string, string>;
+}
+
+export const DEFAULT_AUTH_CONFIG: AuthConfig = {
+  authType: "none",
+  username: "",
+  password: "",
+  bearerToken: "",
+  endpoint: "",
+  customHeaders: {},
+};
+
+// ============================================================================
 // DATABASE
 // ============================================================================
 

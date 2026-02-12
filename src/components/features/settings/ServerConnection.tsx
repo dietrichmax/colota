@@ -9,6 +9,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../../../hooks/useTheme";
 import { useTracking } from "../../../contexts/TrackingProvider";
 import { ServerStatus, ServerConnectionProps } from "../../../types/global";
+import NativeLocationService from "../../../services/NativeLocationService";
 
 const SERVER_TIMEOUT = 5000;
 const SERVER_CHECK_INTERVAL = 5 * 60 * 1000;
@@ -46,12 +47,20 @@ export function ServerConnection({
     const timeoutId = setTimeout(() => controller.abort(), SERVER_TIMEOUT);
 
     try {
+      let authHeaders: Record<string, string> = {};
+      try {
+        authHeaders = await NativeLocationService.getAuthHeaders();
+      } catch {
+        // proceed without auth headers
+      }
+
       // Strategy 1: Try dedicated health endpoint
       const healthUrl = endpoint.replace(/\/api\/locations$/, "/health");
 
       let response = await fetch(healthUrl, {
         method: "HEAD",
         signal: controller.signal,
+        headers: authHeaders,
       });
 
       // Strategy 2: If health endpoint doesn't exist, try HEAD on main endpoint
@@ -59,6 +68,7 @@ export function ServerConnection({
         response = await fetch(endpoint, {
           method: "HEAD",
           signal: controller.signal,
+          headers: authHeaders,
         });
       }
 
@@ -70,6 +80,7 @@ export function ServerConnection({
           response = await fetch(rootUrl, {
             method: "GET",
             signal: controller.signal,
+            headers: authHeaders,
           });
         }
       }

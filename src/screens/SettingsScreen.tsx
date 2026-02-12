@@ -145,6 +145,17 @@ export function SettingsScreen({ navigation }: ScreenProps) {
       try {
         await setSettings(newSettings);
         await restartTracking(newSettings);
+
+        // Sync endpoint to encrypted storage
+        if (newSettings.endpoint) {
+          NativeLocationService.getAuthConfig().then((authConfig) => {
+            NativeLocationService.saveAuthConfig({
+              ...authConfig,
+              endpoint: newSettings.endpoint,
+            });
+          });
+        }
+
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
       } catch (err) {
@@ -297,9 +308,16 @@ export function SettingsScreen({ navigation }: ScreenProps) {
         payload[fieldMap.tst] = Math.floor(Date.now() / 1000);
       }
 
+      let authHeaders: Record<string, string> = {};
+      try {
+        authHeaders = await NativeLocationService.getAuthHeaders();
+      } catch {
+        // proceed without auth headers
+      }
+
       const response = await fetch(endpointInput, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
       });
 
@@ -486,6 +504,28 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                     </Text>
                   </View>
                 )}
+
+                <Divider />
+
+                <TouchableOpacity
+                  style={styles.linkRow}
+                  onPress={() => navigation.navigate("Auth Settings")}
+                  activeOpacity={0.6}
+                >
+                  <View style={styles.linkContent}>
+                    <Text style={[styles.linkLabel, { color: colors.text }]}>
+                      Authentication & Headers
+                    </Text>
+                    <Text
+                      style={[styles.linkSub, { color: colors.textSecondary }]}
+                    >
+                      Basic auth, bearer tokens, custom headers
+                    </Text>
+                  </View>
+                  <Text style={[styles.linkArrow, { color: colors.textLight }]}>
+                    ›
+                  </Text>
+                </TouchableOpacity>
               </>
             )}
           </Card>

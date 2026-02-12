@@ -99,8 +99,14 @@ class LocationBootReceiver : BroadcastReceiver() {
             }
             
             // Load config using ServiceConfig (eliminates duplication)
-            val config = ServiceConfig.fromDatabase(dbHelper)
-            
+            var config = ServiceConfig.fromDatabase(dbHelper)
+
+            // Override endpoint from encrypted storage if available
+            val secureEndpoint = SecureStorageHelper.getInstance(context).getEndpoint()
+            if (!secureEndpoint.isNullOrBlank()) {
+                config = config.copy(endpoint = secureEndpoint)
+            }
+
             // Create service intent with config
             val serviceIntent = Intent(context, LocationForegroundService::class.java)
             config.toIntent(serviceIntent)
