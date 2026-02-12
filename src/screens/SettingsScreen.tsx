@@ -38,6 +38,39 @@ import { StatsCard, PresetOption, NumericInput } from "../components";
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 
+function isPrivateHost(url: string) {
+  try {
+    // Strip protocol
+    const stripped = url.replace(/^https?:\/\//, "").split(/[/?#]/)[0];
+    // Extract host (before any port)
+    const host = stripped.split(":")[0];
+
+    // Validate host: must be valid IP or hostname
+    const ipRegex =
+      /^(127\.0\.0\.1|10\.(\d{1,3}\.){2}\d{1,3}|192\.168\.(\d{1,3}\.)\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.(\d{1,3}\.)\d{1,3})$/;
+    const hostnameRegex = /^localhost$/;
+
+    return ipRegex.test(host) || hostnameRegex.test(host);
+  } catch {
+    return false;
+  }
+}
+
+function isEndpointAllowed(url: string) {
+  if (!url) return false;
+
+  const match = url.match(/^(https?):\/\/([^\/:]+)(:\d+)?/);
+  if (!match) return false;
+
+  const protocol = match[1]; // http or https
+  const host = match[2];
+
+  if (protocol === "https") return true;
+  if (protocol === "http" && isPrivateHost(host)) return true;
+
+  return false;
+}
+
 /**
  * Settings screen for configuring location tracking.
  * Features auto-save, presets, and advanced customization.
@@ -372,11 +405,12 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                         >
                           {endpointInput.startsWith("https://")
                             ? "HTTPS"
-                            : "⚠️ HTTP"}
+                            : "HTTP"}
                         </Text>
                       </View>
                     )}
                   </View>
+
                   <TextInput
                     style={[
                       styles.input,
@@ -394,6 +428,16 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                     autoCorrect={false}
                     keyboardType="url"
                   />
+
+                  {/* Inline warning for non-private HTTP */}
+                  {endpointInput.startsWith("http://") &&
+                    !isPrivateHost(endpointInput) && (
+                      <Text
+                        style={[styles.httpWarning, { color: colors.warning }]}
+                      >
+                        HTTP only allowed for private IPs / localhost
+                      </Text>
+                    )}
                 </View>
 
                 {/* Test button with improved styling */}
@@ -401,10 +445,14 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                   style={[
                     styles.testButton,
                     { backgroundColor: colors.primary },
-                    !endpointInput && styles.disabledButton,
+                    (!endpointInput || !isEndpointAllowed(endpointInput)) &&
+                      styles.disabledButton,
                   ]}
-                  onPress={handleTestEndpoint}
-                  disabled={!endpointInput || testing}
+                  onPress={() => {
+                    if (!endpointInput || !isEndpointAllowed(endpointInput))
+                      return; // prevent action
+                    handleTestEndpoint();
+                  }}
                   title={testing ? "Testing..." : "Test Connection"}
                   color="#f8f7f7"
                 />
@@ -1089,5 +1137,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "300",
     marginLeft: 12,
+  },
+  httpWarning: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "500",
   },
 });
