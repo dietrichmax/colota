@@ -103,6 +103,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const advancedHeight = useRef(new Animated.Value(0)).current;
 
   // Sync inputs with settings changes
@@ -138,21 +139,29 @@ export function SettingsScreen({ navigation }: ScreenProps) {
     }
   }, []);
 
-  /** Save settings and restart tracking */
-  const saveSettings = useCallback(
+  /** Persist settings to SQLite and schedule a debounced restart */
+  const saveAndRestart = useCallback(
     async (newSettings: Settings) => {
       setSaving(true);
       try {
         await setSettings(newSettings);
-        await restartTracking(newSettings);
-
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2000);
       } catch (err) {
         console.error("[SettingsScreen] Save failed", err);
-      } finally {
-        setSaving(false);
       }
+
+      // Debounce the restart — only fires once after settings stabilize
+      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = setTimeout(async () => {
+        try {
+          await restartTracking(newSettings);
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 2000);
+        } catch (err) {
+          console.error("[SettingsScreen] Restart failed", err);
+        } finally {
+          setSaving(false);
+        }
+      }, AUTOSAVE_DEBOUNCE_MS);
     },
     [setSettings, restartTracking]
   );
@@ -161,19 +170,19 @@ export function SettingsScreen({ navigation }: ScreenProps) {
     (newSettings: Settings) => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(
-        () => saveSettings(newSettings),
+        () => saveAndRestart(newSettings),
         AUTOSAVE_DEBOUNCE_MS
       );
     },
-    [saveSettings]
+    [saveAndRestart]
   );
 
   const immediateSave = useCallback(
     (newSettings: Settings) => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveSettings(newSettings);
+      saveAndRestart(newSettings);
     },
-    [saveSettings]
+    [saveAndRestart]
   );
 
   // Poll stats every 5 seconds
@@ -187,6 +196,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
     };
   }, []);
 
@@ -287,7 +297,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
       const payload: Record<string, number | boolean> = {
         [fieldMap.lat]: recentLocation.latitude,
         [fieldMap.lon]: recentLocation.longitude,
-        [fieldMap.acc]: recentLocation.accuracy,
+        [fieldMap.acc]: Math.round(recentLocation.accuracy),
       };
 
       if (fieldMap.alt) payload[fieldMap.alt] = 0;
@@ -305,6 +315,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
         // proceed without auth headers
       }
 
+      console.log(payload);
       const response = await fetch(endpointInput, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
