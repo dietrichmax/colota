@@ -57,7 +57,7 @@ class LocationBootReceiver : BroadcastReceiver() {
      * Waits for database to be ready with retry logic.
      * Database might not be immediately available after boot.
      */
-    private suspend fun waitForDatabaseReady(dbHelper: LocationDatabaseHelper): Boolean {
+    private suspend fun waitForDatabaseReady(dbHelper: DatabaseHelper): Boolean {
         repeat(MAX_DB_RETRIES) { attempt ->
             try {
                 // Test database access
@@ -77,7 +77,7 @@ class LocationBootReceiver : BroadcastReceiver() {
     
     private suspend fun handleBootCompleted(context: Context, action: String) {
         try {
-            val dbHelper = LocationDatabaseHelper.getInstance(context)
+            val dbHelper = DatabaseHelper.getInstance(context)
             
             // Wait for database to be ready
             if (!waitForDatabaseReady(dbHelper)) {
