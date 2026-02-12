@@ -127,6 +127,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     startTracking: internalStart,
     stopTracking: internalStop,
     restartTracking: internalRestart,
+    reconnect: internalReconnect,
   } = useLocationTracking(settings);
 
   /**
@@ -163,7 +164,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
           console.log(
             "[TrackingContext] 🔄 Re-syncing UI with active background service"
           );
-          internalStart(mergedSettings);
+          internalReconnect();
         }
       } catch (err) {
         console.error("[TrackingContext] Hydration failed:", err);
@@ -180,11 +181,23 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
 
     init();
 
+    // Safety timeout: force isLoading=false if init hangs
+    const timeout = setTimeout(() => {
+      if (isMountedRef.current && !hasInitializedRef.current) {
+        console.error(
+          "[TrackingContext] Initialization timed out after 5s, forcing ready state"
+        );
+        setIsLoading(false);
+        hasInitializedRef.current = true;
+      }
+    }, 5000);
+
     // Cleanup function
     return () => {
       isMountedRef.current = false;
+      clearTimeout(timeout);
     };
-  }, [internalStart, setSettings]);
+  }, [internalReconnect, setSettings]);
 
   /**
    * Wrapped tracking controls with useCallback for stable references
@@ -264,9 +277,6 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
       restartTracking,
     ]
   );
-
-  // Show loading state or error state as needed
-  if (isLoading) return null;
 
   return (
     <TrackingContext.Provider value={value}>
