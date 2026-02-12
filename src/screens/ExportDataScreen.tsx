@@ -140,6 +140,11 @@ export function ExportDataScreen() {
       const data: LocationCoords[] =
         await NativeLocationService.getExportData();
 
+      const normalizedData = data.map((item) => ({
+        ...item,
+        timestamp: item.timestamp ? item.timestamp * 1000 : Date.now(),
+      }));
+
       setExportProgress(`Converting ${data.length} locations...`);
 
       let content = "";
@@ -148,22 +153,22 @@ export function ExportDataScreen() {
 
       switch (format) {
         case "csv":
-          content = convertToCSV(data);
+          content = convertToCSV(normalizedData);
           fileExtension = ".csv";
           mimeType = "text/csv";
           break;
         case "geojson":
-          content = convertToGeoJSON(data);
+          content = convertToGeoJSON(normalizedData);
           fileExtension = ".geojson";
           mimeType = "application/json";
           break;
         case "gpx":
-          content = convertToGPX(data);
+          content = convertToGPX(normalizedData);
           fileExtension = ".gpx";
           mimeType = "application/gpx+xml";
           break;
         case "kml":
-          content = convertToKML(data);
+          content = convertToKML(normalizedData);
           fileExtension = ".kml";
           mimeType = "application/vnd.google-earth.kml+xml";
           break;
