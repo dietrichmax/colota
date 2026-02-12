@@ -9,6 +9,8 @@ import { View, Text, StyleSheet } from "react-native";
 interface Props {
   saving: boolean;
   success: boolean;
+  /** Optional custom message. When provided, controls visibility instead of saving/success. */
+  message?: string | null;
   colors: {
     info: string;
     success: string;
@@ -19,9 +21,19 @@ interface Props {
 export const FloatingSaveIndicator: React.FC<Props> = ({
   saving,
   success,
+  message,
   colors,
 }) => {
-  if (!saving && !success) return null;
+  const hasMessage = message != null;
+  const visible = hasMessage || saving || success;
+
+  if (!visible) return null;
+
+  const displayText = hasMessage
+    ? message
+    : saving
+    ? "⏳ Saving & restarting..."
+    : "✓ Saved";
 
   return (
     <View style={styles.container}>
@@ -34,9 +46,7 @@ export const FloatingSaveIndicator: React.FC<Props> = ({
           },
         ]}
       >
-        <Text style={[styles.text, { color: colors.text }]}>
-          {saving ? "⏳ Saving & restarting..." : "✓ Saved"}
-        </Text>
+        <Text style={[styles.text, { color: colors.text }]}>{displayText}</Text>
       </View>
     </View>
   );
@@ -61,5 +71,5 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  text: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  text: { fontSize: 14, fontWeight: "600" },
 });
