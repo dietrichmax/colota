@@ -23,7 +23,7 @@ import { LocationCoords } from "../../../types/global";
 import { useTheme } from "../../../hooks/useTheme";
 import NativeLocationService from "../../../services/NativeLocationService";
 import { MapCenterButton } from "../map/MapCenterButton";
-import icon from "../../../assets/icons/icon.png"
+import icon from "../../../assets/icons/icon.png";
 
 type Props = {
   coords: LocationCoords | null;
@@ -123,8 +123,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
     }
   }, [coords]);
   const html = useMemo(() => {
-    if (!hasInitialCoords || !initialCoords.current)
-      return "";
+    if (!hasInitialCoords || !initialCoords.current) return "";
 
     const lon = initialCoords.current.longitude;
     const lat = initialCoords.current.latitude;
@@ -429,10 +428,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         ]}
       >
         <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
-            <Image 
-              source={icon} 
-              style={styles.icon}
-            />
+          <Image source={icon} style={styles.icon} />
         </View>
         <Text style={[styles.stateTitle, { color: colors.text }]}>
           Tracking Disabled
@@ -535,10 +531,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         </View>
       )}
 
-  <MapCenterButton 
-      visible={!isCentered} 
-      onPress={handleCenterMe} 
-    />
+      <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />
 
       {activeZoneName && (
         <View
@@ -565,15 +558,40 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, width: "100%", overflow: "hidden" },
   webview: { flex: 1 },
-  stateContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
+  stateContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
   icon: { width: 64, height: 64 },
-  iconCircle: { width: 80, height: 80, borderRadius: 40, justifyContent: "center", alignItems: "center", marginBottom: 16 },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
   stateTitle: { fontSize: 18, fontWeight: "bold", textAlign: "center" },
   stateTitleSpaced: { marginTop: 20 },
-  stateSubtext: { fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 },
+  stateSubtext: {
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 20,
+  },
   topInfoCard: {
-    position: "absolute", top: 20, left: 80, right: 20, padding: 16,
-    borderRadius: 16, elevation: 8, shadowOpacity: 0.2, borderLeftWidth: 5, zIndex: 5,
+    position: "absolute",
+    top: 20,
+    left: 80,
+    right: 20,
+    padding: 16,
+    borderRadius: 16,
+    elevation: 8,
+    shadowOpacity: 0.2,
+    borderLeftWidth: 5,
+    zIndex: 5,
   },
   infoTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 2 },
   infoSub: { fontSize: 13 },

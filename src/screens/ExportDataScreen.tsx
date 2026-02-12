@@ -18,7 +18,6 @@ import { useTheme } from "../hooks/useTheme";
 import { ThemeColors, LocationCoords } from "../types/global";
 import NativeLocationService from "../services/NativeLocationService";
 
-
 type ExportFormat = "csv" | "geojson" | "gpx" | "kml";
 
 interface ExportStats {
@@ -138,7 +137,8 @@ export function ExportDataScreen() {
     setExportProgress("Fetching location data...");
 
     try {
-      const data: LocationCoords[] = await NativeLocationService.getExportData();
+      const data: LocationCoords[] =
+        await NativeLocationService.getExportData();
 
       setExportProgress(`Converting ${data.length} locations...`);
 
@@ -544,8 +544,8 @@ const convertToGPX = (data: LocationCoords[]): string => {
     <trkseg>`;
 
   data.forEach((item) => {
-      const timestamp = item.timestamp ?? Date.now();
-      const isoTime = new Date(timestamp).toISOString();
+    const timestamp = item.timestamp ?? Date.now();
+    const isoTime = new Date(timestamp).toISOString();
     gpx += `
       <trkpt lat="${item.latitude.toFixed(6)}" lon="${item.longitude.toFixed(
       6
@@ -597,9 +597,8 @@ const convertToKML = (data: LocationCoords[]): string => {
 
   // Add individual points as Placemarks
   data.forEach((item) => {
-    
-      const timestamp = item.timestamp ?? Date.now();
-      const isoTime = new Date(timestamp).toISOString();
+    const timestamp = item.timestamp ?? Date.now();
+    const isoTime = new Date(timestamp).toISOString();
     kml += `
     <Placemark>
       <TimeStamp><when>${isoTime}</when></TimeStamp>

@@ -19,9 +19,12 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) => {
+export const MapCenterButton: React.FC<Props> = ({
+  onPress,
+  visible,
+  style,
+}) => {
   const { colors } = useTheme();
-
 
   if (!visible) return null;
 
@@ -41,16 +44,32 @@ export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) =>
         />
         {/* The four notches */}
         <View
-          style={[styles.notch, styles.notchTop, { backgroundColor: colors.text }]}
+          style={[
+            styles.notch,
+            styles.notchTop,
+            { backgroundColor: colors.text },
+          ]}
         />
         <View
-          style={[styles.notch, styles.notchBottom, { backgroundColor: colors.text }]}
+          style={[
+            styles.notch,
+            styles.notchBottom,
+            { backgroundColor: colors.text },
+          ]}
         />
         <View
-          style={[styles.notch, styles.notchLeft, { backgroundColor: colors.text }]}
+          style={[
+            styles.notch,
+            styles.notchLeft,
+            { backgroundColor: colors.text },
+          ]}
         />
         <View
-          style={[styles.notch, styles.notchRight, { backgroundColor: colors.text }]}
+          style={[
+            styles.notch,
+            styles.notchRight,
+            { backgroundColor: colors.text },
+          ]}
         />
       </View>
     </TouchableOpacity>

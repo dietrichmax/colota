@@ -11,14 +11,15 @@ Colota is an open-source GPS tracker designed for users who run their own server
 
 **Colota is currently in closed beta!**
 
-I need 12 beta testers for Google Play requirements (14 days) 
+I need 12 beta testers for Google Play requirements (14 days)
 
 If you have:
+
 - ✅ Android phone
 - ✅ Your own server (or want to test offline mode)
 - ✅ 5 minutes to install and give feedback
 
-You can join the Google Group https://groups.google.com/g/colota-beta-testing/ and then you can download the beta version at https://play.google.com/apps/testing/com.Colota 
+You can join the Google Group https://groups.google.com/g/colota-beta-testing/ and then you can download the beta version at https://play.google.com/apps/testing/com.Colota
 
 [Download on Google Play](#) | [View Screenshots](#screenshots) | [Documentation](#documentation)
 
@@ -87,6 +88,7 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
 ## Screenshots
 
 **Light Mode**
+
 <table>
   <tr>
     <td><img src="https://github.com/dietrichmax/colota/blob/main/screenshots/mobile/original/Dashboard.png" alt="Dashboard" width="200"/></td>
