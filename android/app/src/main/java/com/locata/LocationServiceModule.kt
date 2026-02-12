@@ -113,18 +113,21 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     override fun getName(): String = "LocationServiceModule"
 
     // Lifecycle
-    override fun onHostResume() { 
-        isAppInForeground = true 
+    override fun onHostResume() {
+        isAppInForeground = true
     }
-    
-    override fun onHostPause() { 
-        isAppInForeground = false 
+
+    override fun onHostPause() {
+        isAppInForeground = false
     }
-    
-    override fun onHostDestroy() { 
-    isAppInForeground = false
-        // Cancel all running coroutines safely
+
+    override fun onHostDestroy() {
+        isAppInForeground = false
+    }
+
+    override fun invalidate() {
         moduleScope.cancel()
+        super.invalidate()
     }
 
 

@@ -222,6 +222,21 @@ export function useLocationTracking(
   );
 
   /**
+   * Reconnects React state to an already-running native service.
+   * Used after app restart when tracking_enabled is true in the DB.
+   * Does NOT request permissions or restart the service.
+   */
+  const reconnect = useCallback(() => {
+    if (isTrackingRef.current) {
+      console.log("[useLocationTracking] Already tracking, skip reconnect");
+      return;
+    }
+
+    console.log("[useLocationTracking] Reconnecting to active service");
+    setTracking(true);
+  }, []);
+
+  /**
    * Cleanup on unmount
    * NOTE: Does NOT stop tracking - service continues in background
    */
@@ -241,6 +256,7 @@ export function useLocationTracking(
     startTracking,
     stopTracking,
     restartTracking,
+    reconnect,
     settings,
   };
 }
