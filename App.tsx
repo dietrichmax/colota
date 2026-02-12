@@ -14,6 +14,7 @@ import {
   DashboardScreen,
   SettingsScreen,
   ApiSettingsScreen,
+  AuthSettingsScreen,
   GeofenceScreen,
   DataManagementScreen,
   LocationInspectorScreen,
@@ -38,6 +39,11 @@ const SCREEN_CONFIG = [
     name: "API Config",
     component: ApiSettingsScreen,
     title: "API Config",
+  },
+  {
+    name: "Auth Settings",
+    component: AuthSettingsScreen,
+    title: "Auth Settings",
   },
   {
     name: "Geofences",

@@ -100,7 +100,7 @@ class LocationBootReceiver : BroadcastReceiver() {
             
             // Load config using ServiceConfig (eliminates duplication)
             val config = ServiceConfig.fromDatabase(dbHelper)
-            
+
             // Create service intent with config
             val serviceIntent = Intent(context, LocationForegroundService::class.java)
             config.toIntent(serviceIntent)
