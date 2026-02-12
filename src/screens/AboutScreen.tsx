@@ -181,11 +181,7 @@ export function AboutScreen({}: ScreenProps) {
             onPress={handleVersionTap}
             activeOpacity={0.8}
           >
-            <Image
-              source={icon}
-              style={styles.appIcon}
-              resizeMode="contain"
-            />
+            <Image source={icon} style={styles.appIcon} resizeMode="contain" />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Colota</Text>
           <TouchableOpacity
