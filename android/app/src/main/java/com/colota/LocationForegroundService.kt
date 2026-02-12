@@ -876,12 +876,6 @@ class LocationForegroundService : Service() {
             ServiceConfig.fromDatabase(dbHelper)
         }
 
-        // Override endpoint from encrypted storage if available
-        val secureEndpoint = secureStorage.getEndpoint()
-        if (!secureEndpoint.isNullOrBlank()) {
-            config = config.copy(endpoint = secureEndpoint)
-        }
-
         // Load auth headers from encrypted storage
         authHeaders = secureStorage.getAuthHeaders()
 

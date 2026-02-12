@@ -146,16 +146,6 @@ export function SettingsScreen({ navigation }: ScreenProps) {
         await setSettings(newSettings);
         await restartTracking(newSettings);
 
-        // Sync endpoint to encrypted storage
-        if (newSettings.endpoint) {
-          NativeLocationService.getAuthConfig().then((authConfig) => {
-            NativeLocationService.saveAuthConfig({
-              ...authConfig,
-              endpoint: newSettings.endpoint,
-            });
-          });
-        }
-
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
       } catch (err) {
