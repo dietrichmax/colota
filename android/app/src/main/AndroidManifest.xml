@@ -75,7 +75,7 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="android.intent.ACTION_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <category android:name="android.intent.CATEGORY_DEFAULT" />
             </intent-filter>
         </receiver>
