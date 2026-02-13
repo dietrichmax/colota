@@ -34,6 +34,7 @@ jobs:
 
       - name: Run TypeScript check
         run: npx tsc --noEmit
+        working-directory: apps/mobile
 
       - name: Run tests
         run: npm test -- --coverage
@@ -41,6 +42,6 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
-          files: ./coverage/lcov.info
+          files: ./apps/mobile/coverage/lcov.info
           flags: unittests
           name: codecov-umbrella

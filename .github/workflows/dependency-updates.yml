@@ -29,7 +29,11 @@ jobs:
 
       - name: Check for updates
         run: |
-          ncu > updates.txt
+          echo "=== Mobile App ===" > updates.txt
+          ncu --packageFile apps/mobile/package.json >> updates.txt
+          echo "" >> updates.txt
+          echo "=== Root ===" >> updates.txt
+          ncu --packageFile package.json >> updates.txt
           cat updates.txt
 
       - name: Create issue if updates available

@@ -1,3 +1,3 @@
 package.json
 package-lock.json
-android/app/src/main/assets/openlayers
+apps/mobile/android/app/src/main/assets/openlayers

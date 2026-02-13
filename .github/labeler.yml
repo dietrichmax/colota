@@ -8,39 +8,33 @@ ci:
 # Android / Native Kotlin
 # ============================
 android:
-  - "android/**"
-
-# ============================
-# iOS / Swift / Obj-C
-# ============================
-ios:
-  - 'ios/**'
+  - 'apps/mobile/android/**'
 
 # ============================
 # React Native / JS / TS
 # ============================
 frontend:
-  - 'src/**'
-  - 'js/**'
-  - '*.js'
-  - '*.ts'
-  - '*.tsx'
-  - '*.jsx'
+  - 'apps/mobile/src/**'
+  - 'apps/mobile/**/*.js'
+  - 'apps/mobile/**/*.ts'
+  - 'apps/mobile/**/*.tsx'
+  - 'apps/mobile/**/*.jsx'
 
 # ============================
 # Tests / Unit / Integration
 # ============================
 tests:
-  - 'tests/**'
-  - '__tests__/**'
-  - '*.spec.ts'
-  - '*.test.ts'
-  - '*.test.js'
-  - '*.spec.js'
+  - 'apps/mobile/**/tests/**'
+  - 'apps/mobile/**/__tests__/**'
+  - 'apps/mobile/**/*.spec.ts'
+  - 'apps/mobile/**/*.test.ts'
+  - 'apps/mobile/**/*.test.js'
+  - 'apps/mobile/**/*.spec.js'
 
 # ============================
 # Documentation
 # ============================
 documentation:
   - '*.md'
+  - 'docs/**'
   - 'README.md'

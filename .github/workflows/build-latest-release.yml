@@ -24,6 +24,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit
+        working-directory: apps/mobile
       - run: npm test
 
   build-and-release:
@@ -55,7 +56,7 @@ jobs:
 
       - name: Create gradle.properties
         run: |
-          cat <<EOF >> android/gradle.properties
+          cat <<EOF >> apps/mobile/android/gradle.properties
           org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m
           android.useAndroidX=true
           android.enableJetifier=true
@@ -72,12 +73,12 @@ jobs:
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: echo $KEYSTORE_BASE64 | base64 -d > android/app/release.keystore
+        run: echo $KEYSTORE_BASE64 | base64 -d > apps/mobile/android/app/release.keystore
 
 
       - name: Validate signing inputs
         run: |
-          test -f android/app/release.keystore || (echo "Keystore missing" && exit 1)
+          test -f apps/mobile/android/app/release.keystore || (echo "Keystore missing" && exit 1)
           test -n "${{ secrets.KEYSTORE_PASSWORD }}" || exit 1
           test -n "${{ secrets.KEY_ALIAS }}" || exit 1
           test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
@@ -85,7 +86,7 @@ jobs:
 
       - name: Build Release APK
         run: |
-          cd android
+          cd apps/mobile/android
           chmod +x gradlew
           # Gradle heap explicitly set here to avoid OOM
           ./gradlew assembleRelease --no-daemon \
@@ -112,7 +113,7 @@ jobs:
           draft: false
           prerelease: true
           files: |
-            android/app/build/outputs/apk/release/app-release.apk
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -120,6 +121,6 @@ jobs:
         if: always()
         run: |
           echo "Cleaning up sensitive files..."
-          rm -f android/app/release.keystore
-          rm -f android/gradle.properties
+          rm -f apps/mobile/android/app/release.keystore
+          rm -f apps/mobile/android/gradle.properties
 

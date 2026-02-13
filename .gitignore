@@ -12,8 +12,8 @@ local.properties
 *.iml
 *.hprof
 .cxx/
-android/gradle.properties
-android/local.properties
+apps/mobile/android/gradle.properties
+apps/mobile/android/local.properties
 .kotlin/
 
 # Android Keystores
@@ -22,8 +22,8 @@ android/local.properties
 keystore.properties
 key.properties
 !debug.keystore
-/android/app/release.keystore
-/android/keystores/
+/apps/mobile/android/app/release.keystore
+/apps/mobile/android/keystores/
 
 # Node.js
 node_modules/
@@ -43,7 +43,7 @@ Gemfile
 *.jsbundle
 
 # Testing
-/coverage
+/apps/mobile/coverage
 
 # Yarn
 .yarn/*
