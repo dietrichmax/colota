@@ -29,7 +29,8 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
 - **Optional REST API connection** to your own server
 - **Works completely offline** without any server
 - **HTTPS-encrypted** data transmission (HTTP allowed for localhost development)
-- Compatible with **Dawarich**, **OwnTracks**, **Home Assistant**, **Traccar**, **NodeRED** or custom backend
+- **Built-in API templates** for **Dawarich**, **OwnTracks**, and **Reitti**
+- Works with any backend that accepts JSON over HTTP (e.g., Home Assistant, Traccar, NodeRED)
 - Free choice of backend system
 
 ### 📍 GPS Tracking
@@ -59,6 +60,28 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
 - **Intelligent retry**: Failed uploads retry with backoff (30s → 60s → 5min → 15min)
 - **Network-aware**: Auto-sync when network becomes available
 - **Queue management**: Automatic cleanup of permanently failed items
+
+### 📤 Data Export
+
+- **Export location history** in 4 standard formats
+- **CSV** for spreadsheets and data analysis
+- **GeoJSON** for mapping tools (Mapbox, Leaflet, QGIS)
+- **GPX** for GPS tools (Garmin, Strava, Google Earth)
+- **KML** for Google Earth and Google Maps
+- **Share exported files** directly from the app
+
+### 🔑 Authentication
+
+- **Multiple authentication methods**: None, Basic Auth, Bearer Token
+- **Custom HTTP headers** for proxies and access control
+- **AES-256-GCM encrypted storage** for all credentials on device
+
+### 🔄 Reliability
+
+- **Auto-start on boot** resumes tracking after device restart
+- **Battery critical monitoring** stops tracking below 5% when unplugged
+- **Server health check** with 3-stage fallback (health endpoint → HEAD → root domain)
+- **Persistent foreground service** survives app restarts and system cleanup
 
 ### 🔐 Privacy & Security
 
@@ -90,23 +113,6 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
   </tr>
 </table>
 
-**Dark Mode** tbd
-
-<table>
-  <tr>
-    <td><img src="" alt="Dashboard" width="200"/></td>
-    <td><img src="" alt="Geofences" width="200"/></td>
-    <td><img src="" alt="Settings" width="200"/></td>
-    <td><img src="" alt="Database" width="200"/></td>
-  </tr>
-  <tr>
-    <td align="center">Dashboard</td>
-    <td align="center">Geofences</td>
-    <td align="center">Settings</td>
-    <td align="center">Database</td>
-  </tr>
-</table>
-
 ---
 
 ## Installation
@@ -123,10 +129,13 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
 
 ### Build from Source
 
+> **Requirements:** Node.js >= 20, Android SDK, JDK 17+
+
 ```bash
 git clone https://github.com/dietrichmax/colota.git
 cd colota
 npm install
+cd android
 ./gradlew assembleRelease
 ```
 
@@ -150,6 +159,19 @@ APK will be in `android/app/build/outputs/apk/release/`
 
 ## Server Setup
 
+### API Templates
+
+Colota includes built-in API templates for popular backends. Select a template in **Settings > API Settings** to auto-configure field mappings and custom fields.
+
+| Template      | Bearing Field | Custom Fields                    | Notes                          |
+| ------------- | ------------- | -------------------------------- | ------------------------------ |
+| **Dawarich**  | `cog`         | `_type: "location"`              | OwnTracks-compatible format    |
+| **OwnTracks** | `cog`         | `_type: "location"`, `tid: "AA"` | Standard OwnTracks HTTP format |
+| **Reitti**    | `bear`        | `_type: "location"`              | Standard field names           |
+| **Custom**    | `bear`        | _(none)_                         | Fully user-defined             |
+
+All templates share the same base fields: `lat`, `lon`, `acc`, `alt`, `vel`, `batt`, `bs`, `tst`. The key differences are the bearing field name and auto-included custom fields.
+
 ### Dawarich Integration
 
 1. **Install Dawarich** (see [Dawarich docs](https://github.com/Freika/dawarich))
@@ -157,11 +179,86 @@ APK will be in `android/app/build/outputs/apk/release/`
 2. **Get API Key** from Dawarich settings
 
 3. **Configure Colota**:
+
+   - Go to **Settings > API Settings**
+   - Select the **Dawarich** template
+   - Set your endpoint:
+     ```
+     https://dawarich.yourdomain.com/api/v1/owntracks/points?api_key=YOUR_API_KEY
+     ```
+   - Choose a sync mode (e.g., Batch 5 minutes)
+
+4. **Example payload** (auto-configured by template):
+   ```json
+   {
+     "_type": "location",
+     "lat": 51.495065,
+     "lon": -0.043945,
+     "acc": 12,
+     "alt": 519,
+     "vel": 0,
+     "batt": 85,
+     "bs": 2,
+     "tst": 1704067200,
+     "cog": 180.5
+   }
    ```
-   Endpoint: https://dawarich.yourdomain.com/api/v1/owntracks/points?api_key=YOUR_API_KEY
-   Field Mapping: Default (OwnTracks compatible)
-   Sync Mode: Batch (5 minutes)
+   Note: Dawarich uses `cog` (course over ground) instead of `bear` for bearing.
+
+### OwnTracks Integration
+
+1. **Install OwnTracks Recorder** (see [OwnTracks docs](https://owntracks.org/booklet/))
+
+2. **Configure Colota**:
+
+   - Go to **Settings > API Settings**
+   - Select the **OwnTracks** template
+   - Set your endpoint URL
+
+3. **Example payload** (auto-configured by template):
+   ```json
+   {
+     "_type": "location",
+     "tid": "AA",
+     "lat": 51.495065,
+     "lon": -0.043945,
+     "acc": 12,
+     "alt": 519,
+     "vel": 0,
+     "batt": 85,
+     "bs": 2,
+     "tst": 1704067200,
+     "cog": 180.5
+   }
    ```
+   The template adds `_type: "location"` and `tid: "AA"` (tracker ID) automatically.
+
+### Reitti Integration
+
+1. **Install Reitti** (see [Reitti documentation](https://github.com/Moo-Ack-Productions/reitti))
+
+2. **Configure Colota**:
+
+   - Go to **Settings > API Settings**
+   - Select the **Reitti** template
+   - Set your endpoint URL
+
+3. **Example payload** (auto-configured by template):
+   ```json
+   {
+     "_type": "location",
+     "lat": 51.495065,
+     "lon": -0.043945,
+     "acc": 12,
+     "alt": 519,
+     "vel": 0,
+     "batt": 85,
+     "bs": 2,
+     "tst": 1704067200,
+     "bear": 180.5
+   }
+   ```
+   Reitti uses standard field names (including `bear` for bearing).
 
 ### Custom Backend
 
@@ -171,6 +268,19 @@ APK will be in `android/app/build/outputs/apk/release/`
 - Parses JSON payload
 - Returns 200-299 status code on success
 - Optional: Authentication via headers or query params
+
+#### Authentication
+
+Colota supports multiple authentication methods, configurable in **Settings > Authentication & Headers**:
+
+| Method             | Description                 | Header Sent                     |
+| ------------------ | --------------------------- | ------------------------------- |
+| **None**           | No authentication (default) | -                               |
+| **Basic Auth**     | Username + password         | `Authorization: Basic <base64>` |
+| **Bearer Token**   | API token / JWT             | `Authorization: Bearer <token>` |
+| **Custom Headers** | Any key-value pairs         | As configured                   |
+
+All credentials are stored encrypted on-device using AES-256-GCM via Android's EncryptedSharedPreferences. You can also add custom HTTP headers for proxies, API gateways, or services like Cloudflare Access.
 
 **Example payload:**
 
@@ -208,12 +318,12 @@ APK will be in `android/app/build/outputs/apk/release/`
 
 Choose from optimized presets or create custom settings:
 
-| Preset          | Interval | Distance | Sync Interval | Best For        |
-| --------------- | -------- | -------- | ------------- | --------------- |
-| **Instant**     | 2s       | 5m       | Instant       | City navigation |
-| **Balanced**    | 5s       | 10m      | 5 minutes     | Daily commute   |
-| **Power Saver** | 30s      | 50m      | 15 minutes    | Long trips      |
-| **Custom**      | 1s-∞     | 0m-∞     | 0s-∞          | Advanced users  |
+| Preset          | Interval | Distance | Sync Interval | Retry Interval | Best For        |
+| --------------- | -------- | -------- | ------------- | -------------- | --------------- |
+| **Instant**     | 5s       | 0m       | Instant (0s)  | 30s            | City navigation |
+| **Balanced**    | 30s      | 1m       | 5 minutes     | 5 minutes      | Daily commute   |
+| **Power Saver** | 60s      | 2m       | 15 minutes    | 15 minutes     | Long trips      |
+| **Custom**      | 1s-∞     | 0m-∞     | 0s-∞          | 30s-∞          | Advanced users  |
 
 ### GPS Settings
 
@@ -222,7 +332,7 @@ Choose from optimized presets or create custom settings:
 | Tracking Interval  | Time between GPS fixes               | 5 seconds | 1s - hours |
 | Movement Threshold | Minimum movement to trigger update   | 0 meters  | 0m - 1000m |
 | Accuracy Threshold | Filter out fixes above this accuracy | 50 meters | 0m - 1000m |
-| Filter Inaccurate  | Enable/disable accuracy filtering    | Enabled   | On/Off     |
+| Filter Inaccurate  | Enable/disable accuracy filtering    | Disabled  | On/Off     |
 
 ### Server Settings
 
@@ -236,7 +346,10 @@ Choose from optimized presets or create custom settings:
 
 ### Advanced Settings
 
+- **API backend templates**: Pre-configured field mappings for Dawarich, OwnTracks, Reitti, or fully custom
 - **Custom field mapping** for any JSON structure
+- **Custom static fields**: Add arbitrary key-value pairs included in every API payload (e.g., `_type: "location"`)
+- **Authentication settings**: Configure Basic Auth, Bearer Token, or custom HTTP headers
 - **Retry strategy**: Exponential backoff with configurable intervals
 - **Queue management**: Automatic cleanup of failed items after max retries
 - **Network detection**: Auto-sync when connection becomes available
@@ -292,13 +405,6 @@ Create zones where tracking automatically pauses:
 - Saves battery by stopping GPS in defined areas
 - Zone checks happen every location update (minimal overhead)
 
-### Performance
-
-- **Fast**: Geofence checks cached for 1 minute (optional optimization)
-- **Accurate**: Uses great-circle distance calculation
-- **Battery efficient**: No unnecessary GPS updates in zones
-- **Instant**: Zone entry/exit detected within 1 GPS interval
-
 ---
 
 ## API Documentation
@@ -341,7 +447,7 @@ Body: Any (ignored)
 
 - **4xx errors**: Logged, retried according to settings
 - **5xx errors**: Exponential backoff applied
-- **Network timeout**: Retried with backoff (15s connection, 15s read)
+- **Network timeout**: Retried with backoff (10s connection, 10s read)
 - **Max retries exceeded**: Item removed from queue and logged
 
 **Retry Strategy:**
@@ -364,9 +470,10 @@ Colota is heavily optimized for long-running background tracking:
 
 ### Optimizations Applied
 
-- **Notification throttling**: Max 1 update per 5 seconds
+- **Notification throttling**: Max 1 update per 10 seconds, plus 2-meter movement filter
 - **Batch processing**: 50 items per batch, 10 concurrent network requests
 - **Smart sync**: Only syncs when queue has items and network available
+- **Battery critical shutdown**: Automatically stops tracking when battery drops below 5% (unplugged)
 
 ### Battery Life Estimates
 
@@ -414,11 +521,12 @@ _Based on typical Android device with 4000mAh battery_
 
 ### Network Communication
 
-- **HTTPS required** for non-localhost endpoints
-- **HTTP allowed** for local development (127.0.0.1, 192.168.x.x, 10.x.x.x)
+- **HTTPS required** for all public endpoints
+- **HTTP allowed** only for private/local addresses (localhost, 127.0.0.1, 192.168.x.x, 10.x.x.x, 172.16-31.x.x)
 - No telemetry or analytics endpoints
 - Only communicates with **your configured server**
 - Network can be completely disabled (offline mode)
+- Android network security config enforces cleartext restrictions
 
 ### Permissions Required
 
@@ -566,7 +674,7 @@ Contributions are welcome! Please follow these guidelines:
 
 - Clear app data: Settings → Apps → Colota → Storage → Clear Data
 - Reinstall app
-- Check Android version compatibility (requires Android 8.0+)
+- Check Android version compatibility (requires Android 7.0+ / API 24)
 - Report issue with crash logs: `adb logcat -d > crash.log`
 
 ---
@@ -597,8 +705,7 @@ A: To ensure that any modifications remain open source, especially for server-si
 **Q: How accurate is the tracking?**  
 A: In ideal conditions (open sky, good GPS signal): 3-10 meters. In urban areas or buildings: 10-50 meters. Accuracy filtering helps remove poor GPS fixes.
 
-**Q: Can I export my location history?**  
-A: Yes, through Data Management you can view raw database data. Future versions may include GPX/KML export.
+**Q: Can I export my location history?** A: Yes! Go to the Export Data screen to export your full location history in **CSV**, **GeoJSON**, **GPX**, or **KML** format. Exported files can be shared directly from the app.
 
 **Q: Does this drain battery like other tracking apps?**  
 A: Colota is optimized for efficiency with caching and batching. Expect 10-12 hours of high-accuracy tracking, better with optimized settings.
