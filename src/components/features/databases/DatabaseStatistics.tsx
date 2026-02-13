@@ -6,7 +6,7 @@ import React from "react"
 import { Text, StyleSheet, View } from "react-native"
 import { SectionTitle, Card } from "../.."
 import { useTheme } from "../../../hooks/useTheme"
-import { getQueueColor } from "../../../services/queueStatus"
+import { getQueueColor } from "../../../utils/queueStatus"
 
 type DatabaseStatisticsProps = {
   stats: any
