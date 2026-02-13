@@ -4,7 +4,7 @@
  */
 import React, { Component } from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
-import { ThemeColors } from "../types/global"
+import { ThemeColors } from "../../types/global"
 
 interface ErrorBoundaryProps {
   children: React.ReactNode
