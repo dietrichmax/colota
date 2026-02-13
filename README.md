@@ -18,7 +18,7 @@ If you have:
 
 You can join the Google Group https://groups.google.com/g/colota-beta-testing/ and then you can download the beta version at https://play.google.com/apps/testing/com.Colota
 
-[Download on Google Play](#) | [View Screenshots](#screenshots) | [Documentation](#documentation)
+[Download on Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) | [View Screenshots](#screenshots) | [Documentation](#documentation)
 
 ---
 
@@ -119,7 +119,7 @@ You can join the Google Group https://groups.google.com/g/colota-beta-testing/ a
 
 ### From Google Play
 
-[<img src="https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](#)
+[<img src="https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US)
 
 ### From Releases
 
