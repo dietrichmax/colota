@@ -81,7 +81,7 @@ describe("useTracking", () => {
     const { result } = renderHook(() => useTracking(), { wrapper })
 
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
     })
 
     expect(result.current.settings.interval).toBe(10)

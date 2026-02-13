@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 import React from "react"
-import { useTheme } from "../hooks/useTheme"
+import { useTheme } from "../../hooks/useTheme"
 import ErrorBoundary from "./ErrorBoundary"
 
 interface ThemedErrorBoundaryProps {
