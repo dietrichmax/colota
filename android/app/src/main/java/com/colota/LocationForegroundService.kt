@@ -28,16 +28,13 @@ class LocationForegroundService : Service() {
     private lateinit var networkManager: NetworkManager
     private lateinit var geofenceHelper: GeofenceHelper
     private lateinit var secureStorage: SecureStorageHelper
+    private lateinit var syncManager: SyncManager
     
     // Properly manage scope lifecycle to prevent memory leak
     private var serviceScope: CoroutineScope? = null
     
-    // --- State & Jobs ---
+    // --- State ---
     private var locationCallback: LocationCallback? = null
-    private var syncJob: Job? = null
-    private var lastSyncTime: Long = 0
-    private var lastSuccessfulSyncTime: Long = 0
-    private var syncInitialized = false
     private var insideSilentZone = false
     private var currentZoneName: String? = null
     private var lastNotificationText: String? = null
@@ -46,24 +43,14 @@ class LocationForegroundService : Service() {
     private var lastNotificationTime: Long = 0
     private val NOTIFICATION_THROTTLE_MS = 10000L // Max 1 per 5 seconds
     
-    // DB query caching
-    private var cachedQueuedCount: Int = 0
-    private var lastQueueCountCheck: Long = 0
-    private val QUEUE_COUNT_CACHE_MS = 5000L
-    
     // Location caching
     private var lastKnownLocation: android.location.Location? = null
     private var lastNotificationCoords: Pair<Double, Double>? = null 
-
-    // Batch limit to prevent infinite syncing
-    private val MAX_BATCHES_PER_SYNC = 10 // Max 500 items per sync cycle
 
     // --- Configuration (use ServiceConfig) ---
     private lateinit var config: ServiceConfig
     private var fieldMap: Map<String, String>? = null
     private var customFields: Map<String, String>? = null
-    private var authHeaders: Map<String, String> = emptyMap()
-    private var consecutiveFailures = 0
 
     private val CHANNEL_ID = "location_service_channel"
     private val NOTIFICATION_ID = 1
@@ -95,6 +82,7 @@ class LocationForegroundService : Service() {
         networkManager = NetworkManager(this)
         geofenceHelper = GeofenceHelper(this)
         secureStorage = SecureStorageHelper.getInstance(this)
+        syncManager = SyncManager(dbHelper, networkManager, serviceScope!!)
 
         createNotificationChannel()
     }
@@ -141,10 +129,8 @@ class LocationForegroundService : Service() {
                 return START_STICKY
             }
             ACTION_MANUAL_FLUSH -> {
-                if (config.endpoint.isNotBlank()) {
-                    serviceScope?.launch {
-                        syncQueue(config.endpoint)
-                    }
+                serviceScope?.launch {
+                    syncManager.manualFlush()
                 }
                 return START_STICKY
             }
@@ -152,18 +138,17 @@ class LocationForegroundService : Service() {
                 serviceScope?.launch {
                     withContext(Dispatchers.Main) {
                         stopLocationUpdates()
-                        stopSyncJob()
-                        
-                        syncInitialized = false
+                        syncManager.stopPeriodicSync()
+
                         setupLocationUpdates()
 
                         if (config.syncIntervalSeconds > 0) {
-                            startSyncJob()
+                            syncManager.startPeriodicSync()
                         }
                     }
-                    
+
                     if (config.syncIntervalSeconds == 0 && config.endpoint.isNotBlank()) {
-                        syncQueue(config.endpoint)
+                        syncManager.manualFlush()
                     }
                 }
             }
@@ -174,7 +159,7 @@ class LocationForegroundService : Service() {
 
     override fun onDestroy() {
         stopLocationUpdates()
-        stopSyncJob()
+        syncManager.stopPeriodicSync()
         
         // Properly cancel scope to prevent memory leak
         serviceScope?.cancel()
@@ -383,9 +368,9 @@ class LocationForegroundService : Service() {
             customFields
         )
         
-        // Queue and optionally send (don't launch new coroutine if already in one)
+        // Queue and optionally send
         serviceScope?.launch {
-            queueAndSend(locationId, payload, config.endpoint)
+            syncManager.queueAndSend(locationId, payload)
         }
         
         // Update notification (throttled)
@@ -442,255 +427,6 @@ class LocationForegroundService : Service() {
     }
 
     // ========================================
-    // BATTERY OPTIMIZATIONS
-    // ========================================
-    // Battery-related functionality has been moved to DeviceInfoHelper.kt
-    // Use deviceInfoHelper.getCachedBatteryStatus() for cached battery info
-    // Use deviceInfoHelper.isBatteryCritical() to check critical battery state
-
-    /**
-     * Cached queue count.
-     */
-    private fun getCachedQueuedCount(): Int {
-        val now = System.currentTimeMillis()
-        
-        if (now - lastQueueCountCheck > QUEUE_COUNT_CACHE_MS) {
-            cachedQueuedCount = dbHelper.getQueuedCount()
-            lastQueueCountCheck = now
-        }
-        
-        return cachedQueuedCount
-    }
-
-    // ========================================
-    // SYNCING & NETWORKING
-    // ========================================
-
-    private fun startSyncJob() {
-        syncJob = serviceScope?.launch {
-            while (isActive) {
-                val baseDelay = calculateNextSyncDelay()
-                delay(baseDelay * 1000L)
-
-                if (config.isOfflineMode || !networkManager.isNetworkAvailable()) {
-                    continue
-                }
-
-                // Use cached queue count
-                if (config.endpoint.isNotBlank() && getCachedQueuedCount() > 0) {
-                    try {
-                        val success = performSyncAndCheckSuccess(config.endpoint)
-                        
-                        if (success) {
-                            if (consecutiveFailures > 0 && BuildConfig.DEBUG) {
-                                Log.i(TAG, "Sync restored")
-                            }
-                            consecutiveFailures = 0
-                        } else {
-                            consecutiveFailures++
-                            applyBackoffDelay()
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Sync error", e)
-                        consecutiveFailures++
-                        delay(30000)
-                    }
-                }
-            }
-        }
-    }
-
-    private suspend fun performSyncAndCheckSuccess(endpoint: String): Boolean {
-        val countBefore = dbHelper.getQueuedCount()
-        syncQueue(endpoint)
-        val countAfter = dbHelper.getQueuedCount()
-        
-        // Invalidate cache after sync
-        lastQueueCountCheck = 0
-        
-        // Update last successful sync time if queue was reduced
-        val success = countAfter < countBefore || countAfter == 0
-        if (success && countAfter == 0) {
-            lastSuccessfulSyncTime = System.currentTimeMillis()
-        }
-        
-        return success
-    }
-
-    private suspend fun applyBackoffDelay() {
-        val backoffSeconds = when (consecutiveFailures) {
-            1 -> 30L
-            2 -> 60L
-            3 -> 300L
-            else -> 900L
-        }
-        
-        if (BuildConfig.DEBUG) {
-            Log.w(TAG, "Backoff: ${backoffSeconds}s")
-        }
-        
-        delay(backoffSeconds * 1000L)
-    }
-
-    private fun stopSyncJob() {
-        syncJob?.cancel()
-        syncJob = null
-    }
-
-    /**
-     * Batch limit to prevent infinite syncing.
-     * Processes max 500 items (10 batches × 50 items) per sync cycle.
-     */
-    private suspend fun syncQueue(endpoint: String) = coroutineScope {
-        var totalProcessed = 0
-        var batchNumber = 1
-        
-        while (isActive && batchNumber <= MAX_BATCHES_PER_SYNC) {
-            val queued = dbHelper.getQueuedLocations(50)
-            if (queued.isEmpty()) {
-                if (BuildConfig.DEBUG && totalProcessed > 0) {
-                    Log.d(TAG, "Sync complete: $totalProcessed items in $batchNumber batches")
-                }
-                break
-            }
-
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Processing batch $batchNumber/$MAX_BATCHES_PER_SYNC: ${queued.size} items")
-            }
-
-            for (chunk in queued.chunked(10)) {
-                val successfulIds = mutableListOf<Long>()
-                val permanentlyFailedIds = mutableListOf<Long>()
-
-                // Separate retriable from permanently failed
-                val (retriable, exceeded) = chunk.partition { it.retryCount < config.maxRetries }
-                
-                // Mark exceeded items for removal
-                permanentlyFailedIds.addAll(exceeded.map { it.queueId })
-                if (BuildConfig.DEBUG && exceeded.isNotEmpty()) {
-                    Log.w(TAG, "Removing ${exceeded.size} items that exceeded ${config.maxRetries} retries")
-                }
-
-                // Attempt only retriable items
-                val results = retriable.map { item ->
-                    async {
-                        val success = networkManager.sendToEndpoint(
-                            JSONObject(item.payload),
-                            endpoint,
-                            authHeaders
-                        )
-                        item.queueId to success
-                    }
-                }.awaitAll()
-
-                // Process results
-                results.forEach { (queueId, success) ->
-                    if (success) {
-                        successfulIds.add(queueId)
-                    } else {
-                        val item = retriable.first { it.queueId == queueId }
-                        dbHelper.incrementRetryCount(queueId, "Send failed")
-                        
-                        // Check if this increment pushed it over the limit
-                        if (item.retryCount + 1 >= config.maxRetries) {
-                            permanentlyFailedIds.add(queueId)
-                            if (BuildConfig.DEBUG) {
-                                Log.w(TAG, "Item $queueId reached max retries")
-                            }
-                        }
-                    }
-                }
-
-                // Remove successful and permanently failed items
-                val toRemove = successfulIds + permanentlyFailedIds
-                if (toRemove.isNotEmpty()) {
-                    dbHelper.removeBatchFromQueue(toRemove)
-                    totalProcessed += toRemove.size
-                }
-                
-                yield()
-            }
-            
-            batchNumber++
-        }
-        
-        if (batchNumber > MAX_BATCHES_PER_SYNC && BuildConfig.DEBUG) {
-            Log.w(TAG, "Sync paused: reached batch limit. Remaining items will sync next cycle.")
-        }
-        
-        // Invalidate cache after all syncing is done
-        lastQueueCountCheck = 0
-        
-        // Update last successful sync time if we processed items
-        if (totalProcessed > 0) {
-            lastSuccessfulSyncTime = System.currentTimeMillis()
-        }
-    }
-
-    private suspend fun queueAndSend(
-        locationId: Long,
-        payload: JSONObject,
-        endpoint: String
-    ) {
-        // Add to queue and get the queue ID back
-        val queueId = dbHelper.addToQueue(locationId, payload.toString())
-        
-        // Invalidate cache
-        lastQueueCountCheck = 0
-
-        // Skip sending if offline mode or no endpoint
-        if (config.endpoint.isBlank() || config.isOfflineMode) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Queued location $locationId - ${if (config.isOfflineMode) "offline mode" else "no endpoint"}")
-            }
-            return  // Item stays in queue with retry_count = 0
-        }
-
-        // Immediate send mode (syncInterval = 0)
-        if (config.syncIntervalSeconds == 0) {
-            Log.d(TAG, "Instant send")
-            val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders)
-            
-            if (success) {
-                dbHelper.removeFromQueueByLocationId(locationId)
-                lastQueueCountCheck = 0
-                lastSuccessfulSyncTime = System.currentTimeMillis()
-            } else {
-                dbHelper.incrementRetryCount(queueId, "Send failed")
-            }
-        }
-        Log.d(TAG, "Waiting for sync")
-        // If syncInterval > 0, the periodic sync job will handle it
-    }
-
-    private fun calculateNextSyncDelay(): Long {
-        if (config.syncIntervalSeconds <= 0) {
-            return if (getCachedQueuedCount() > 0) {
-                config.retryIntervalSeconds.toLong()
-            } else {
-                30L
-            }
-        }
-
-        val now = System.currentTimeMillis()
-        if (!syncInitialized) {
-            lastSyncTime = now
-            syncInitialized = true
-            return config.syncIntervalSeconds.toLong()
-        }
-
-        val elapsedSeconds = (now - lastSyncTime) / 1000
-        val remaining = config.syncIntervalSeconds - elapsedSeconds
-        
-        return if (remaining <= 0) {
-            lastSyncTime = now
-            config.syncIntervalSeconds.toLong()
-        } else {
-            remaining
-        }
-    }
-
-    // ========================================
     // UI & NOTIFICATIONS
     // ========================================
 
@@ -731,6 +467,7 @@ class LocationForegroundService : Service() {
      * Format time since last sync in human-readable format.
      */
     private fun getTimeSinceLastSync(): String {
+        val lastSuccessfulSyncTime = syncManager.lastSuccessfulSyncTime
         if (lastSuccessfulSyncTime == 0L) {
             return "Never synced"
         }
@@ -783,8 +520,8 @@ class LocationForegroundService : Service() {
                     distance
                 )
                 
-                // Skip if moved <2m AND queue count cache is still fresh
-                if (distance[0] < 2 && (now - lastQueueCountCheck) < QUEUE_COUNT_CACHE_MS) {
+                // Skip if moved <2m
+                if (distance[0] < 2) {
                     return
                 }
             }
@@ -797,7 +534,7 @@ class LocationForegroundService : Service() {
         }
         
         // Build notification text
-        val queuedCount = getCachedQueuedCount()
+        val queuedCount = syncManager.getCachedQueuedCount()
         val isCurrentlyPaused = pausedInZone || insideSilentZone
         val activeZone = zoneName ?: currentZoneName
 
@@ -878,8 +615,15 @@ class LocationForegroundService : Service() {
             ServiceConfig.fromDatabase(dbHelper)
         }
 
-        // Load auth headers from encrypted storage
-        authHeaders = secureStorage.getAuthHeaders()
+        // Configure sync manager with current settings
+        syncManager.updateConfig(
+            endpoint = config.endpoint,
+            syncIntervalSeconds = config.syncIntervalSeconds,
+            retryIntervalSeconds = config.retryIntervalSeconds,
+            maxRetries = config.maxRetries,
+            isOfflineMode = config.isOfflineMode,
+            authHeaders = secureStorage.getAuthHeaders()
+        )
 
         // Parse fieldMap separately (remains as Map for payload building)
         config.fieldMap?.let {
@@ -912,11 +656,9 @@ class LocationForegroundService : Service() {
                 ║  Sync Mode:              ${if(config.syncIntervalSeconds == 0) "⚡ INSTANT SEND" else "🕐 PERIODIC (${config.syncIntervalSeconds}s)"}
                 ║  Retry Interval:         ${config.retryIntervalSeconds}s
                 ║  Max Retry Attempts:     ${config.maxRetries}
-                ║  Max Batch Limit:        $MAX_BATCHES_PER_SYNC batches × 50 items = ${MAX_BATCHES_PER_SYNC * 50} max/cycle
                 ╟────────────────────────────────────────────────────────────────╢
                 ║ PERFORMANCE OPTIMIZATION                                        ║
                 ╟────────────────────────────────────────────────────────────────╢
-                ║  Queue Count Cache:      ${QUEUE_COUNT_CACHE_MS/1000}s
                 ║  Battery Check Cache:    60s (managed by DeviceInfoHelper)
                 ║  Notification Throttle:  ${NOTIFICATION_THROTTLE_MS/1000}s
                 ╟────────────────────────────────────────────────────────────────╢
@@ -934,7 +676,7 @@ class LocationForegroundService : Service() {
                 ║  Tracking Status:        ✓ ACTIVE
                 ║  Silent Zone:            ${if(insideSilentZone) "⏸️  PAUSED in '$currentZoneName'" else "✓ Not in zone"}
                 ║  Battery Level:          $batteryStatusStr
-                ║  Queued Locations:       $cachedQueuedCount items
+                ║  Queued Locations:       ${syncManager.getCachedQueuedCount()} items
                 ║  Last Sync:              ${getTimeSinceLastSync()}
                 ║  Last Location:          ${if(lastKnownLocation != null) "%.5f, %.5f".format(lastKnownLocation!!.latitude, lastKnownLocation!!.longitude) else "N/A"}
                 ╚════════════════════════════════════════════════════════════════╝
