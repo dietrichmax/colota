@@ -6,16 +6,17 @@ on:
     - cron: '0 9 * * 1'
   workflow_dispatch:
 
+permissions:
+  issues: write
+
 jobs:
   update-dependencies:
     name: Check for Dependency Updates
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: develop
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
