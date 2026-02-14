@@ -4,19 +4,9 @@
 
 **Self-hosted GPS tracking app for Android.**
 
-Colota sends your location to your own server over HTTP(S). It works offline, supports geofencing, and doesn't phone home.
+Colota sends your location to your own server over HTTP(S). It works offline, supports geofencing, and doesn't share any data except with your backends.
 
 [Download on Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) | [View Screenshots](#screenshots) | [Documentation](#documentation)
-
----
-
-## Tech Stack
-
-- **Frontend:** React Native 0.83, TypeScript, React 19
-- **Native modules:** Kotlin (Android)
-- **Map:** OpenLayers (WebView)
-- **Icons:** Lucide React Native
-- **Storage:** SQLite (local), EncryptedSharedPreferences (credentials)
 
 ---
 
@@ -81,8 +71,6 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 - HTTPS-only server communication (except localhost)
 - Data stays on your device or your server
 
----
-
 ## Screenshots
 
 **Light Mode**
@@ -101,8 +89,6 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
     <td align="center">Database</td>
   </tr>
 </table>
-
----
 
 ## Installation
 
