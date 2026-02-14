@@ -145,3 +145,54 @@ export const convertToKML = (data: LocationCoords[]): string => {
 </kml>`
   return kml
 }
+
+export type ExportFormat = "csv" | "geojson" | "gpx" | "kml"
+
+export interface ExportFormatConfig {
+  label: string
+  subtitle: string
+  description: string
+  icon: string
+  extension: string
+  mimeType: string
+  convert: (data: LocationCoords[]) => string
+}
+
+export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
+  csv: {
+    label: "CSV",
+    subtitle: "Spreadsheet Format",
+    description: "Excel, Google Sheets, data analysis",
+    icon: "📊",
+    extension: ".csv",
+    mimeType: "text/csv",
+    convert: convertToCSV
+  },
+  geojson: {
+    label: "GeoJSON",
+    subtitle: "Geographic Data",
+    description: "Mapbox, Leaflet, QGIS, ArcGIS",
+    icon: "🗺️",
+    extension: ".geojson",
+    mimeType: "application/json",
+    convert: convertToGeoJSON
+  },
+  gpx: {
+    label: "GPX",
+    subtitle: "GPS Exchange",
+    description: "Garmin, Strava, Google Earth",
+    icon: "📍",
+    extension: ".gpx",
+    mimeType: "application/gpx+xml",
+    convert: convertToGPX
+  },
+  kml: {
+    label: "KML",
+    subtitle: "Keyhole Markup Language",
+    description: "Google Earth, Google Maps, ArcGIS",
+    icon: "🌍",
+    extension: ".kml",
+    mimeType: "application/vnd.google-earth.kml+xml",
+    convert: convertToKML
+  }
+}
