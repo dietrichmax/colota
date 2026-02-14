@@ -53,19 +53,25 @@ export function ConnectionSettings({
       }
 
       const fieldMap = settings.fieldMap
-      const payload: Record<string, number | boolean> = {
-        [fieldMap.lat]: recentLocation.latitude,
-        [fieldMap.lon]: recentLocation.longitude,
-        [fieldMap.acc]: Math.round(recentLocation.accuracy)
+      const payload: Record<string, string | number | boolean> = {}
+
+      // Add custom fields first (matches native buildPayload order)
+      for (const { key, value } of settings.customFields) {
+        if (key) payload[key] = value
       }
 
-      if (fieldMap.alt) payload[fieldMap.alt] = 0
-      if (fieldMap.vel) payload[fieldMap.vel] = 0
-      if (fieldMap.batt) payload[fieldMap.batt] = 0
-      if (fieldMap.bs) payload[fieldMap.bs] = 0
-      if (fieldMap.tst) {
-        payload[fieldMap.tst] = Math.floor(Date.now() / 1000)
-      }
+      // Core location fields
+      payload[fieldMap.lat] = recentLocation.latitude
+      payload[fieldMap.lon] = recentLocation.longitude
+      payload[fieldMap.acc] = Math.round(recentLocation.accuracy)
+
+      // Optional fields with real values from the location
+      if (fieldMap.alt) payload[fieldMap.alt] = recentLocation.altitude ?? 0
+      if (fieldMap.vel) payload[fieldMap.vel] = recentLocation.velocity ?? 0
+      if (fieldMap.batt) payload[fieldMap.batt] = recentLocation.battery ?? 0
+      if (fieldMap.bs) payload[fieldMap.bs] = recentLocation.batteryStatus ?? 0
+      if (fieldMap.bear) payload[fieldMap.bear] = recentLocation.bearing ?? 0
+      if (fieldMap.tst) payload[fieldMap.tst] = Math.floor(Date.now() / 1000)
 
       let authHeaders: Record<string, string> = {}
       try {
