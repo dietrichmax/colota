@@ -1,6 +1,3 @@
-# iOS (not used - Android only)
-ios/
-
 # OSX
 .DS_Store
 
@@ -12,8 +9,8 @@ local.properties
 *.iml
 *.hprof
 .cxx/
-android/gradle.properties
-android/local.properties
+**/gradle.properties
+**/local.properties
 .kotlin/
 
 # Android Keystores
@@ -22,16 +19,13 @@ android/local.properties
 keystore.properties
 key.properties
 !debug.keystore
-/android/app/release.keystore
-/android/keystores/
 
 # Node.js
 node_modules/
 npm-debug.log
 yarn-error.log
 
-# Ruby / CocoaPods (not used)
-Gemfile
+# Ruby / CocoaPods
 .bundle/
 **/Pods/
 /vendor/bundle/
@@ -43,7 +37,7 @@ Gemfile
 *.jsbundle
 
 # Testing
-/coverage
+coverage/
 
 # Yarn
 .yarn/*
