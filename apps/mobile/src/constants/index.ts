@@ -17,4 +17,4 @@ export const CRITICAL_QUEUE_THRESHOLD = 100
 
 // URLs
 export const REPO_URL = "https://github.com/dietrichmax/colota"
-export const PRIVACY_POLICY_URL = "https://mxd.codes/colota/privacy-policy"
+export const PRIVACY_POLICY_URL = "https://colota.app/privacy-policy"
