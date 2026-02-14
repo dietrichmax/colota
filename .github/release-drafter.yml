@@ -1,5 +1,23 @@
-name-template: 'v$NEXT_PATCH_VERSION 🌍'
-tag-template: 'v$NEXT_PATCH_VERSION'
+name-template: 'v$RESOLVED_VERSION 🌍'
+tag-template: 'v$RESOLVED_VERSION'
+version-resolver:
+  major:
+    labels:
+      - major
+      - breaking
+  minor:
+    labels:
+      - enhancement
+      - feature
+  patch:
+    labels:
+      - bug
+      - fix
+      - refactor
+      - maintenance
+      - tests
+      - documentation
+  default: patch
 categories:
   - title: '🚀 New Features'
     labels:

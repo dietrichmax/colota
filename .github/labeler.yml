@@ -2,45 +2,31 @@
 # CI
 # ============================
 ci:
-  - '.github/workflows/**'
+  - '.github/**'
 
 # ============================
 # Android / Native Kotlin
 # ============================
 android:
-  - "android/**"
+  - 'android/**'
 
 # ============================
-# iOS / Swift / Obj-C
-# ============================
-ios:
-  - 'ios/**'
-
-# ============================
-# React Native / JS / TS
+# React Native / TypeScript
 # ============================
 frontend:
   - 'src/**'
-  - 'js/**'
-  - '*.js'
   - '*.ts'
   - '*.tsx'
-  - '*.jsx'
 
 # ============================
-# Tests / Unit / Integration
+# Tests
 # ============================
 tests:
-  - 'tests/**'
-  - '__tests__/**'
-  - '*.spec.ts'
-  - '*.test.ts'
-  - '*.test.js'
-  - '*.spec.js'
+  - '**/__tests__/**'
+  - '**/*.test.ts'
 
 # ============================
 # Documentation
 # ============================
 documentation:
-  - '*.md'
-  - 'README.md'
+  - '**/*.md'
