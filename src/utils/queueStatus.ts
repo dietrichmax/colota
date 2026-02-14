@@ -4,9 +4,7 @@
  */
 
 import { ThemeColors } from "../types/global"
-
-const HIGH_QUEUE_THRESHOLD = 50
-const CRITICAL_QUEUE_THRESHOLD = 100
+import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../constants"
 
 /**
  * Returns the appropriate color for the queue count based on severity

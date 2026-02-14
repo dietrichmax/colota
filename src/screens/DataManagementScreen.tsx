@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useEffect, useRef } from "react"
+import React, { useState, useCallback } from "react"
 import {
   Text,
   StyleSheet,
@@ -19,6 +19,8 @@ import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
+import { STATS_REFRESH_FAST } from "../constants"
+import { useTimeout } from "../hooks/useTimeout"
 
 export function DataManagementScreen({}: ScreenProps) {
   const { colors } = useTheme()
@@ -34,7 +36,7 @@ export function DataManagementScreen({}: ScreenProps) {
   const [daysInput, setDaysInput] = useState("90")
   const [isProcessing, setIsProcessing] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
-  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const feedbackTimeout = useTimeout()
 
   // Update stats
   const updateStats = useCallback(async () => {
@@ -50,28 +52,19 @@ export function DataManagementScreen({}: ScreenProps) {
   useFocusEffect(
     useCallback(() => {
       updateStats()
-      const interval = setInterval(updateStats, 3000)
+      const interval = setInterval(updateStats, STATS_REFRESH_FAST)
       return () => clearInterval(interval)
     }, [updateStats])
   )
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (feedbackTimeoutRef.current) {
-        clearTimeout(feedbackTimeoutRef.current)
-      }
-    }
-  }, [])
-
   // Show feedback message
-  const showFeedback = useCallback((message: string, duration = 2000) => {
-    if (feedbackTimeoutRef.current) {
-      clearTimeout(feedbackTimeoutRef.current)
-    }
-    setFeedback(message)
-    feedbackTimeoutRef.current = setTimeout(() => setFeedback(null), duration)
-  }, [])
+  const showFeedback = useCallback(
+    (message: string, duration = 2000) => {
+      setFeedback(message)
+      feedbackTimeout.set(() => setFeedback(null), duration)
+    },
+    [feedbackTimeout]
+  )
 
   // Manual flush
   const handleManualFlush = useCallback(async () => {

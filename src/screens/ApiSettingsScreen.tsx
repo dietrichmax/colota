@@ -3,10 +3,11 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useEffect, useRef } from "react"
+import React, { useState, useCallback } from "react"
 import { Text, StyleSheet, TextInput, View, ScrollView, TouchableOpacity } from "react-native"
 import { FieldMap, DEFAULT_FIELD_MAP, ScreenProps, CustomField, ApiTemplateName, API_TEMPLATES } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
+import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { SectionTitle, FloatingSaveIndicator, Container, Divider } from "../components"
 
@@ -55,11 +56,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
   const [localFieldMap, setLocalFieldMap] = useState<FieldMap>(settings.fieldMap || DEFAULT_FIELD_MAP)
   const [localCustomFields, setLocalCustomFields] = useState<CustomField[]>(settings.customFields || [])
   const [localTemplate, setLocalTemplate] = useState<ApiTemplateName>(settings.apiTemplate || "custom")
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const [saving, setSaving] = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState(false)
+  const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
 
   const referenceFieldMap = getReferenceFieldMap(localTemplate)
 
@@ -71,70 +68,63 @@ export function ApiSettingsScreen({}: ScreenProps) {
   }
 
   /**
-   * Saves all API config and restarts tracking if active
+   * Build sanitized settings from current field map, custom fields, and template.
+   * Returns null if validation fails (empty field mappings).
    */
-  const saveAllSettings = useCallback(
-    async (newFieldMap: FieldMap, newCustomFields: CustomField[], newTemplate: ApiTemplateName) => {
-      // Sanitize: trim all field values
+  const buildSanitizedSettings = useCallback(
+    (newFieldMap: FieldMap, newCustomFields: CustomField[], newTemplate: ApiTemplateName) => {
       const sanitizedMap = Object.fromEntries(
         Object.entries(newFieldMap).map(([key, value]) => [key, value.trim()])
       ) as FieldMap
 
-      // Prevent saving if any field mapping is empty
       if (Object.values(sanitizedMap).some((v) => v === "")) {
-        return
+        return null
       }
 
-      // Sanitize custom fields: trim and remove entries with empty keys
       const sanitizedCustomFields = newCustomFields
         .map((f) => ({ key: f.key.trim(), value: f.value.trim() }))
         .filter((f) => f.key.length > 0)
 
-      try {
-        setSaving(true)
-        setSaveSuccess(false)
-
-        const newSettings = {
-          ...settings,
-          fieldMap: sanitizedMap,
-          customFields: sanitizedCustomFields,
-          apiTemplate: newTemplate
-        }
-
-        await setSettings(newSettings)
-
-        // Debounce the restart — only fires once after settings stabilize
-        if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current)
-        restartTimeoutRef.current = setTimeout(async () => {
-          try {
-            await restartTracking(newSettings)
-            setSaveSuccess(true)
-            setTimeout(() => setSaveSuccess(false), 2000)
-          } catch (err) {
-            console.error("[ApiSettingsScreen] Restart failed:", err)
-          } finally {
-            setSaving(false)
-          }
-        }, 1500)
-      } catch (err) {
-        setSaving(false)
-        console.error("[ApiSettingsScreen] Failed to save settings:", err)
+      return {
+        ...settings,
+        fieldMap: sanitizedMap,
+        customFields: sanitizedCustomFields,
+        apiTemplate: newTemplate
       }
     },
-    [settings, setSettings, restartTracking]
+    [settings]
   )
 
   /**
-   * Debounced save (1.5s delay)
+   * Debounced save + restart for continuous changes (typing)
    */
   const debouncedSave = useCallback(
     (newFieldMap: FieldMap, newCustomFields: CustomField[], newTemplate: ApiTemplateName) => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
-      saveTimeoutRef.current = setTimeout(() => saveAllSettings(newFieldMap, newCustomFields, newTemplate), 1500)
+      const newSettings = buildSanitizedSettings(newFieldMap, newCustomFields, newTemplate)
+      if (!newSettings) return
+
+      debouncedSaveAndRestart(
+        () => setSettings(newSettings),
+        () => restartTracking(newSettings)
+      )
     },
-    [saveAllSettings]
+    [buildSanitizedSettings, setSettings, restartTracking, debouncedSaveAndRestart]
+  )
+
+  /**
+   * Immediate save + restart for discrete changes (template switch, reset, remove)
+   */
+  const saveImmediately = useCallback(
+    (newFieldMap: FieldMap, newCustomFields: CustomField[], newTemplate: ApiTemplateName) => {
+      const newSettings = buildSanitizedSettings(newFieldMap, newCustomFields, newTemplate)
+      if (!newSettings) return
+
+      immediateSaveAndRestart(
+        () => setSettings(newSettings),
+        () => restartTracking(newSettings)
+      )
+    },
+    [buildSanitizedSettings, setSettings, restartTracking, immediateSaveAndRestart]
   )
 
   /**
@@ -145,20 +135,15 @@ export function ApiSettingsScreen({}: ScreenProps) {
       setLocalTemplate(template)
 
       if (template === "custom") {
-        // Keep current field map and custom fields, just save the template change
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveAllSettings(localFieldMap, localCustomFields, template)
+        saveImmediately(localFieldMap, localCustomFields, template)
       } else {
         const tmpl = API_TEMPLATES[template]
         setLocalFieldMap(tmpl.fieldMap)
         setLocalCustomFields(tmpl.customFields)
-
-        // Save immediately on template change
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveAllSettings(tmpl.fieldMap, tmpl.customFields, template)
+        saveImmediately(tmpl.fieldMap, tmpl.customFields, template)
       }
     },
-    [localFieldMap, localCustomFields, saveAllSettings]
+    [localFieldMap, localCustomFields, saveImmediately]
   )
 
   /**
@@ -185,24 +170,20 @@ export function ApiSettingsScreen({}: ScreenProps) {
     (key: keyof FieldMap) => {
       const newFieldMap = { ...localFieldMap, [key]: referenceFieldMap[key] }
       setLocalFieldMap(newFieldMap)
-
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      saveAllSettings(newFieldMap, localCustomFields, localTemplate)
+      saveImmediately(newFieldMap, localCustomFields, localTemplate)
     },
-    [localFieldMap, localCustomFields, localTemplate, referenceFieldMap, saveAllSettings]
+    [localFieldMap, localCustomFields, localTemplate, referenceFieldMap, saveImmediately]
   )
 
   /**
    * Resets all fields to current template defaults
    */
   const handleResetAll = useCallback(() => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-
     const refFields = getReferenceCustomFields(localTemplate)
     setLocalFieldMap(referenceFieldMap)
     setLocalCustomFields(refFields)
-    saveAllSettings(referenceFieldMap, refFields, localTemplate)
-  }, [referenceFieldMap, localTemplate, saveAllSettings])
+    saveImmediately(referenceFieldMap, refFields, localTemplate)
+  }, [referenceFieldMap, localTemplate, saveImmediately])
 
   // --- Custom Fields handlers ---
 
@@ -233,19 +214,10 @@ export function ApiSettingsScreen({}: ScreenProps) {
       const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
       if (newTemplate !== localTemplate) setLocalTemplate(newTemplate)
 
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      saveAllSettings(localFieldMap, newFields, newTemplate)
+      saveImmediately(localFieldMap, newFields, newTemplate)
     },
-    [localCustomFields, localFieldMap, localTemplate, saveAllSettings]
+    [localCustomFields, localFieldMap, localTemplate, saveImmediately]
   )
-
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current)
-    }
-  }, [])
 
   // Check if any field mapping is modified from the reference
   const hasModifications = (Object.keys(DEFAULT_FIELD_MAP) as Array<keyof FieldMap>).some((key) => isModified(key))

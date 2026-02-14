@@ -6,6 +6,7 @@ import React from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
 import { ThemeColors } from "../../../types/global"
 import { getQueueColor } from "../../../utils/queueStatus"
+import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../constants"
 
 interface StatsCardProps {
   queueCount: number
@@ -17,9 +18,6 @@ interface StatsCardProps {
 }
 
 type WarningLevel = "normal" | "warning" | "critical"
-
-const HIGH_QUEUE_THRESHOLD = 50
-const CRITICAL_QUEUE_THRESHOLD = 100
 
 /**
  * StatsCard Component - Improved Design

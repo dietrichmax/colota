@@ -10,9 +10,7 @@ import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
 import { ServerStatus, ServerConnectionProps } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
-
-const SERVER_TIMEOUT = 5000
-const SERVER_CHECK_INTERVAL = 5 * 60 * 1000
+import { SERVER_TIMEOUT, SERVER_CHECK_INTERVAL } from "../../../constants"
 
 export function ServerConnection({ endpoint, navigation }: ServerConnectionProps) {
   const { colors } = useTheme()
