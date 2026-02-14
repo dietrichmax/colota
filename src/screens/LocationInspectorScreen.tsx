@@ -9,6 +9,7 @@ import { Container, Card } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { ThemeColors } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
+import { STATS_REFRESH_FAST } from "../constants"
 
 // Types
 interface LocationData {
@@ -135,7 +136,7 @@ export function LocationInspectorScreen() {
   useEffect(() => {
     if (autoRefresh) {
       setPage(0) // Always show newest data in live mode
-      refreshInterval.current = setInterval(fetchData, 3000)
+      refreshInterval.current = setInterval(fetchData, STATS_REFRESH_FAST)
     } else {
       if (refreshInterval.current) {
         clearInterval(refreshInterval.current)

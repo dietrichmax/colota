@@ -19,9 +19,7 @@ import {
   QuickAccess,
   DatabaseStatistics
 } from "../components"
-
-/** Stats refresh intervals */
-const STATS_REFRESH_IDLE = 30 * 1000
+import { STATS_REFRESH_IDLE } from "../constants"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
   const { coords, settings, tracking, startTracking, stopTracking } = useTracking()

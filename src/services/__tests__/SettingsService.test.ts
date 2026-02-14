@@ -64,15 +64,14 @@ describe("SettingsService", () => {
       expect(mockSaveSetting).toHaveBeenCalledWith("endpoint", "https://example.com/api")
     })
 
-    it("returns true on success", async () => {
-      const result = await SettingsService.updateSetting("endpoint", "https://test.com")
-      expect(result).toBe(true)
+    it("does not throw on success", async () => {
+      await SettingsService.updateSetting("endpoint", "https://test.com")
+      expect(mockSaveSetting).toHaveBeenCalledWith("endpoint", "https://test.com")
     })
 
-    it("returns false on error", async () => {
+    it("propagates errors to caller", async () => {
       mockSaveSetting.mockRejectedValueOnce(new Error("Native error"))
-      const result = await SettingsService.updateSetting("endpoint", "test")
-      expect(result).toBe(false)
+      await expect(SettingsService.updateSetting("endpoint", "test")).rejects.toThrow("Native error")
     })
   })
 

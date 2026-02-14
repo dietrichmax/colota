@@ -3,15 +3,14 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useEffect, useRef } from "react"
+import React, { useState, useCallback, useEffect } from "react"
 import { Text, StyleSheet, TextInput, View, ScrollView, TouchableOpacity } from "react-native"
 import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
+import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
-
-const AUTOSAVE_DEBOUNCE_MS = 1500
 
 const AUTH_TYPES: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
@@ -28,10 +27,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
 
   const [config, setConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState(false)
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
 
   // Load config on mount
   useEffect(() => {
@@ -47,47 +43,16 @@ export function AuthSettingsScreen({}: ScreenProps) {
     })()
   }, [])
 
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current)
-    }
-  }, [])
-
-  const saveConfig = useCallback(
-    async (newConfig: AuthConfig) => {
-      setSaving(true)
-      try {
-        await NativeLocationService.saveAuthConfig(newConfig)
-
-        // Debounce the restart — only fires once after settings stabilize
-        if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current)
-        restartTimeoutRef.current = setTimeout(async () => {
-          try {
-            await restartTracking(settings)
-            setSaveSuccess(true)
-            setTimeout(() => setSaveSuccess(false), 2000)
-          } catch (err) {
-            console.error("[AuthSettingsScreen] Restart failed:", err)
-          } finally {
-            setSaving(false)
-          }
-        }, AUTOSAVE_DEBOUNCE_MS)
-      } catch (err) {
-        setSaving(false)
-        console.error("[AuthSettingsScreen] Save failed:", err)
-      }
-    },
-    [restartTracking, settings]
-  )
-
   const debouncedSave = useCallback(
     (newConfig: AuthConfig) => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      saveTimeoutRef.current = setTimeout(() => saveConfig(newConfig), AUTOSAVE_DEBOUNCE_MS)
+      debouncedSaveAndRestart(
+        async () => {
+          await NativeLocationService.saveAuthConfig(newConfig)
+        },
+        () => restartTracking(settings)
+      )
     },
-    [saveConfig]
+    [debouncedSaveAndRestart, restartTracking, settings]
   )
 
   const updateConfig = useCallback(
@@ -103,11 +68,14 @@ export function AuthSettingsScreen({}: ScreenProps) {
     (authType: AuthType) => {
       const next = { ...config, authType }
       setConfig(next)
-      // Immediate save for auth type change
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      saveConfig(next)
+      immediateSaveAndRestart(
+        async () => {
+          await NativeLocationService.saveAuthConfig(next)
+        },
+        () => restartTracking(settings)
+      )
     },
-    [config, saveConfig]
+    [config, immediateSaveAndRestart, restartTracking, settings]
   )
 
   // Custom headers as array for rendering
@@ -145,10 +113,14 @@ export function AuthSettingsScreen({}: ScreenProps) {
       entries.splice(index, 1)
       const next = { ...config, customHeaders: Object.fromEntries(entries) }
       setConfig(next)
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      saveConfig(next)
+      immediateSaveAndRestart(
+        async () => {
+          await NativeLocationService.saveAuthConfig(next)
+        },
+        () => restartTracking(settings)
+      )
     },
-    [config, saveConfig]
+    [config, immediateSaveAndRestart, restartTracking, settings]
   )
 
   if (loading) {
