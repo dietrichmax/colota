@@ -53,7 +53,9 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
 
     customFields: allRaw.customFields ? JSON.parse(allRaw.customFields) : DEFAULT_SETTINGS.customFields,
 
-    apiTemplate: (allRaw.apiTemplate as ApiTemplateName) ?? DEFAULT_SETTINGS.apiTemplate
+    apiTemplate: (allRaw.apiTemplate as ApiTemplateName) ?? DEFAULT_SETTINGS.apiTemplate,
+
+    hasCompletedSetup: allRaw.hasCompletedSetup === "true"
   }
 }
 
