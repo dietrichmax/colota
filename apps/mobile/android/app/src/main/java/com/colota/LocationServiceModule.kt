@@ -32,6 +32,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     private val deviceInfo = DeviceInfoHelper(reactContext)
     private val geofenceHelper = GeofenceHelper(reactContext)
     private val secureStorage = SecureStorageHelper.getInstance(reactContext)
+    private val networkManager = NetworkManager(reactContext)
 
     // Coroutine scope for async operations
     private val moduleScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -453,6 +454,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         Arguments.createMap().apply {
             settingsMap.forEach { (k, v) -> putString(k, v) }
         }
+    }
+
+    // ==============================================================
+    // NETWORK
+    // ==============================================================
+
+    @ReactMethod
+    fun isNetworkAvailable(promise: Promise) {
+        promise.resolve(networkManager.isNetworkAvailable())
     }
 
     // ==============================================================

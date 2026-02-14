@@ -339,6 +339,18 @@ class NativeLocationService {
   }
 
   // ============================================================================
+  // NETWORK
+  // ============================================================================
+
+  /**
+   * Checks if the device has an active internet connection
+   */
+  static async isNetworkAvailable(): Promise<boolean> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.isNetworkAvailable(), false, "isNetworkAvailable failed")
+  }
+
+  // ============================================================================
   // BATTERY OPTIMIZATION
   // ============================================================================
 

@@ -19,13 +19,20 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
   const { settings } = useTracking()
   const isOffline = settings.isOfflineMode
 
-  const [serverStatus, setServerStatus] = useState<ServerStatus | "offline" | null>(null)
+  const [serverStatus, setServerStatus] = useState<ServerStatus | "offline" | "deviceOffline" | null>(null)
 
   const hasChecked = useRef(false)
 
   const checkServer = useCallback(async () => {
     if (isOffline) {
       setServerStatus("offline")
+      hasChecked.current = true
+      return
+    }
+
+    const networkAvailable = await NativeLocationService.isNetworkAvailable()
+    if (!networkAvailable) {
+      setServerStatus("deviceOffline")
       hasChecked.current = true
       return
     }
@@ -99,12 +106,15 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
       connected: { color: colors.success, label: "Connected" },
       error: { color: colors.error, label: "Unreachable" },
       notConfigured: { color: colors.warning, label: "No endpoint" },
+      deviceOffline: { color: colors.textSecondary, label: "Device offline" },
       offline: { color: colors.textSecondary, label: "Offline" },
       loading: { color: colors.textLight, label: "Checking" }
     }
 
     if (serverStatus === null) return statusMap.loading
-    return isOffline ? statusMap.offline : statusMap[serverStatus as ServerStatus] || statusMap.error
+    if (isOffline) return statusMap.offline
+    if (serverStatus === "deviceOffline") return statusMap.deviceOffline
+    return statusMap[serverStatus as ServerStatus] || statusMap.error
   }, [serverStatus, colors, isOffline])
 
   return (
