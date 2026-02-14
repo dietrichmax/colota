@@ -248,7 +248,7 @@ export function DataManagementScreen({}: ScreenProps) {
                   />
                   <Text style={[styles.daysLabel, { color: colors.textSecondary }]}>days</Text>
                   <Button
-                    style={[{ backgroundColor: colors.errorLight }, isProcessing && styles.buttonDisabled]}
+                    style={[isProcessing && styles.buttonDisabled]}
                     onPress={handleDeleteOlderThan}
                     disabled={isProcessing}
                     title="Delete"
