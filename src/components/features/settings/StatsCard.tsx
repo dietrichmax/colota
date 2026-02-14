@@ -4,8 +4,10 @@
  */
 import React from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
+import { AlertTriangle, ChevronRight } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
 import { getQueueColor } from "../../../utils/queueStatus"
+import { fonts } from "../../../styles/typography"
 import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../constants"
 
 interface StatsCardProps {
@@ -128,16 +130,7 @@ export function StatsCard({ queueCount, sentCount, interval, isOfflineMode, onMa
           activeOpacity={0.7}
         >
           <View style={styles.warningContent}>
-            <Text
-              style={[
-                styles.warningIcon,
-                {
-                  color: warningLevel === "critical" ? colors.error : colors.warning
-                }
-              ]}
-            >
-              {warningLevel === "critical" ? "⚠️" : "⚠️"}
-            </Text>
+            <AlertTriangle size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
             <View style={styles.warningText}>
               <Text
                 style={[
@@ -152,16 +145,7 @@ export function StatsCard({ queueCount, sentCount, interval, isOfflineMode, onMa
               <Text style={[styles.warningHint, { color: colors.textSecondary }]}>Tap to manage data</Text>
             </View>
           </View>
-          <Text
-            style={[
-              styles.arrow,
-              {
-                color: warningLevel === "critical" ? colors.error : colors.warning
-              }
-            ]}
-          >
-            ›
-          </Text>
+          <ChevronRight size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
         </TouchableOpacity>
       )}
     </View>
@@ -192,19 +176,19 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    fontWeight: "600",
+    ...fonts.semiBold,
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 8
   },
   statValue: {
-    fontSize: 26,
-    fontWeight: "700",
+    fontSize: 24,
+    ...fonts.bold,
     letterSpacing: -0.5
   },
   unit: {
     fontSize: 16,
-    fontWeight: "500"
+    ...fonts.medium
   },
   disabledHint: {
     fontSize: 11,
@@ -230,7 +214,6 @@ const styles = StyleSheet.create({
     flex: 1
   },
   warningIcon: {
-    fontSize: 20,
     marginRight: 12
   },
   warningText: {
@@ -238,15 +221,11 @@ const styles = StyleSheet.create({
   },
   warningTitle: {
     fontSize: 14,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 2
   },
   warningHint: {
-    fontSize: 12
-  },
-  arrow: {
-    fontSize: 24,
-    fontWeight: "300",
-    marginLeft: 8
+    fontSize: 12,
+    ...fonts.regular
   }
 })

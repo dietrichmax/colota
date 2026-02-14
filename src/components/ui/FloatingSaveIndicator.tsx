@@ -3,8 +3,11 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React from "react"
-import { View, Text, StyleSheet } from "react-native"
+import React, { useEffect, useRef } from "react"
+import { View, Text, StyleSheet, Animated } from "react-native"
+import { Check } from "lucide-react-native"
+import { SpinningLoader } from "./SpinningLoader"
+import { fonts } from "../../styles/typography"
 
 interface Props {
   saving: boolean
@@ -22,12 +25,27 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
   const hasMessage = message != null
   const visible = hasMessage || saving || success
 
-  if (!visible) return null
+  const translateY = useRef(new Animated.Value(60)).current
+  const opacity = useRef(new Animated.Value(0)).current
 
-  const displayText = hasMessage ? message : saving ? "⏳ Saving & restarting..." : "✓ Saved"
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 8 }),
+        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true })
+      ]).start()
+    } else {
+      Animated.parallel([
+        Animated.timing(translateY, { toValue: 60, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true })
+      ]).start()
+    }
+  }, [visible, translateY, opacity])
+
+  const displayText = hasMessage ? message : saving ? "Saving & restarting..." : "Saved"
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity, transform: [{ translateY }] }]} pointerEvents="none">
       <View
         style={[
           styles.badge,
@@ -37,9 +55,14 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
           }
         ]}
       >
+        {saving ? (
+          <SpinningLoader size={16} color={colors.text} />
+        ) : !hasMessage ? (
+          <Check size={16} color={colors.text} />
+        ) : null}
         <Text style={[styles.text, { color: colors.text }]}>{displayText}</Text>
       </View>
-    </View>
+    </Animated.View>
   )
 }
 
@@ -54,6 +77,9 @@ const styles = StyleSheet.create({
     pointerEvents: "none"
   },
   badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 24,
@@ -62,5 +88,5 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8
   },
-  text: { fontSize: 14, fontWeight: "600" }
+  text: { fontSize: 14, ...fonts.semiBold }
 })

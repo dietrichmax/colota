@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Text, StyleSheet, View, Alert, ActivityIndicator, ScrollView, TouchableOpacity } from "react-native"
+import { fonts } from "../styles/typography"
+import { Download, type LucideIcon } from "lucide-react-native"
 import { Container, Card, SectionTitle, Divider } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { ThemeColors, LocationCoords } from "../types/global"
@@ -161,7 +163,9 @@ export function ExportDataScreen() {
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total</Text>
-              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.totalLocations.toLocaleString()}</Text>
+              <Text style={[styles.statValue, { color: colors.primaryDark }]}>
+                {stats.totalLocations.toLocaleString()}
+              </Text>
             </View>
 
             <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
@@ -214,12 +218,12 @@ export function ExportDataScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.exportContent}>
-                <Text style={styles.exportIcon}>📤</Text>
+                <Download size={28} color={colors.textOnPrimary} style={styles.exportIcon} />
                 <View style={styles.exportText}>
-                  <Text style={[styles.exportTitle, styles.exportButtonText]}>
+                  <Text style={[styles.exportTitle, { color: colors.textOnPrimary }]}>
                     Export {EXPORT_FORMATS[selectedFormat].label}
                   </Text>
-                  <Text style={[styles.exportSubtitle, styles.exportButtonText]}>
+                  <Text style={[styles.exportSubtitle, { color: colors.textOnPrimary }]}>
                     {stats.totalLocations.toLocaleString()} locations
                     {fileSize ? ` • ${fileSize}` : ""}
                   </Text>
@@ -247,7 +251,7 @@ export function ExportDataScreen() {
 // --- Format Option Component ---
 
 const FormatOption = ({
-  icon,
+  icon: Icon,
   title,
   subtitle,
   description,
@@ -256,7 +260,7 @@ const FormatOption = ({
   onPress,
   colors
 }: {
-  icon: string
+  icon: LucideIcon
   title: string
   subtitle: string
   description: string
@@ -274,7 +278,7 @@ const FormatOption = ({
 
       <View style={styles.formatContent}>
         <View style={styles.leftContent}>
-          <Text style={styles.formatIcon}>{icon}</Text>
+          <Icon size={28} color={colors.primaryDark} />
           <View style={styles.textContent}>
             <View style={styles.titleRow}>
               <Text style={[styles.formatTitle, { color: colors.text }]}>{title}</Text>
@@ -287,7 +291,7 @@ const FormatOption = ({
                   }
                 ]}
               >
-                <Text style={[styles.extensionText, { color: colors.primary }]}>{extension}</Text>
+                <Text style={[styles.extensionText, { color: colors.primaryDark }]}>{extension}</Text>
               </View>
             </View>
             <Text style={[styles.formatSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
@@ -313,22 +317,22 @@ const FormatOption = ({
 
 const styles = StyleSheet.create({
   scrollContent: {
+    paddingHorizontal: 16,
     paddingBottom: 40
   },
   header: {
     marginTop: 20,
-    marginBottom: 20,
-    paddingHorizontal: 20
+    marginBottom: 20
   },
   title: {
     fontSize: 28,
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: -0.5
   },
   statsContainer: {
     borderRadius: 16,
     borderWidth: 2,
-    marginHorizontal: 20,
+    marginHorizontal: 0,
     marginBottom: 24,
     overflow: "hidden"
   },
@@ -342,14 +346,14 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    fontWeight: "600",
+    ...fonts.semiBold,
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 8
   },
   statValue: {
     fontSize: 20,
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: -0.5,
     textAlign: "center"
   },
@@ -359,17 +363,17 @@ const styles = StyleSheet.create({
     opacity: 0.3
   },
   section: {
-    paddingHorizontal: 20,
     marginBottom: 24
   },
   formatOption: {
     paddingVertical: 8,
-    paddingHorizontal: 0,
+    paddingHorizontal: 16,
+    marginHorizontal: -16,
     position: "relative"
   },
   selectionBar: {
     position: "absolute",
-    left: -20,
+    left: 0,
     top: 0,
     bottom: 0,
     width: 4
@@ -384,9 +388,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14
   },
-  formatIcon: {
-    fontSize: 28
-  },
   textContent: {
     flex: 1
   },
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
   },
   formatTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    ...fonts.semiBold,
     letterSpacing: -0.2
   },
   extensionBadge: {
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
   },
   extensionText: {
     fontSize: 10,
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: 0.3
   },
   formatSubtitle: {
@@ -434,9 +435,7 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6
   },
-  exportSection: {
-    paddingHorizontal: 20
-  },
+  exportSection: {},
   exportButton: {
     borderRadius: 14,
     padding: 18,
@@ -450,18 +449,14 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   exportIcon: {
-    fontSize: 28,
     marginRight: 14
   },
   exportText: {
     flex: 1
   },
-  exportButtonText: {
-    color: "#fff"
-  },
   exportTitle: {
     fontSize: 17,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 2
   },
   exportSubtitle: {
@@ -489,7 +484,7 @@ const styles = StyleSheet.create({
   },
   loaderTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginTop: 16,
     marginBottom: 8
   },

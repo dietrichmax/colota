@@ -9,6 +9,7 @@ import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
+import { fonts, fontSizes } from "../styles/typography"
 import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 
@@ -175,7 +176,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
                       style={[
                         styles.chipText,
                         {
-                          color: isSelected ? colors.primary : colors.text
+                          color: isSelected ? colors.primaryDark : colors.text
                         }
                       ]}
                     >
@@ -324,7 +325,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
               onPress={addHeader}
               activeOpacity={0.7}
             >
-              <Text style={[styles.addButtonText, { color: colors.primary }]}>+ Add Header</Text>
+              <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Header</Text>
             </TouchableOpacity>
 
             <Text style={[styles.hint, { color: colors.textSecondary }]}>
@@ -348,7 +349,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 40
   },
@@ -358,19 +359,21 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   loadingText: {
-    fontSize: 15
+    fontSize: 15,
+    ...fonts.regular
   },
   header: {
     marginBottom: 20
   },
   title: {
     fontSize: 28,
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: -0.5,
     marginBottom: 4
   },
   subtitle: {
     fontSize: 14,
+    ...fonts.regular,
     lineHeight: 20
   },
   section: {
@@ -389,14 +392,14 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
-    fontWeight: "700"
+    ...fonts.bold
   },
   fieldGroup: {
     marginTop: 4
   },
   fieldLabel: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: fontSizes.label,
+    ...fonts.semiBold,
     marginBottom: 8
   },
   fieldLabelSpaced: {
@@ -438,7 +441,7 @@ const styles = StyleSheet.create({
   },
   removeButtonText: {
     fontSize: 14,
-    fontWeight: "700"
+    ...fonts.bold
   },
   addButton: {
     paddingVertical: 14,
@@ -450,7 +453,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 15,
-    fontWeight: "600"
+    ...fonts.semiBold
   },
   hint: {
     fontSize: 12,

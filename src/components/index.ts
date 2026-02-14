@@ -21,14 +21,17 @@ export { Divider } from "./ui/Divider"
 export { NumericInput } from "./ui/NumericInput"
 export { FloatingSaveIndicator } from "./ui/FloatingSaveIndicator"
 export { Footer } from "./ui/Footer"
+export { SpinningLoader } from "./ui/SpinningLoader"
 
 // ============================================================================
 // Feature Components - Dashboard
 // ============================================================================
 export { DashboardMap } from "./features/dashboard/DashboardMap"
 export { CoordinateDisplay } from "./features/dashboard/CoordinateDisplay"
-export { ComingSoonRibbon } from "./features/dashboard/ComingSoonRibbon"
 export { QuickAccess } from "./features/dashboard/QuickAccess"
+export { ServerConnection } from "./features/dashboard/ServerConnection"
+export { WelcomeCard } from "./features/dashboard/WelcomeCard"
+export { DatabaseStatistics } from "./features/dashboard/DatabaseStatistics"
 
 // ============================================================================
 // Feature Components - Map
@@ -36,16 +39,9 @@ export { QuickAccess } from "./features/dashboard/QuickAccess"
 export { MapCenterButton } from "./features/map/MapCenterButton"
 
 // ============================================================================
-// Feature Components - Database
-// ============================================================================
-export { DatabaseStatistics } from "./features/databases/DatabaseStatistics"
-
-// ============================================================================
 // Feature Components - Settings
 // ============================================================================
-export { ServerConnection } from "./features/settings/ServerConnection"
 export { StatsCard } from "./features/settings/StatsCard"
 export { PresetOption } from "./features/settings/PresetOption"
 export { ConnectionSettings } from "./features/settings/ConnectionSettings"
 export { SyncStrategySettings } from "./features/settings/SyncStrategySettings"
-export { WelcomeCard } from "./features/settings/WelcomeCard"

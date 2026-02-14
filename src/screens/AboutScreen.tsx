@@ -7,7 +7,9 @@ import React, { useState, useEffect } from "react"
 import { Text, StyleSheet, View, ScrollView, Linking, TouchableOpacity, Image } from "react-native"
 import { ScreenProps, ThemeColors } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
-import { SectionTitle, Card, Container, Divider, Footer } from "../components"
+import { ChevronRight, Bug, FileText, Code, ScrollText } from "lucide-react-native"
+import { fonts } from "../styles/typography"
+import { Card, Container, Divider, Footer } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
 import { REPO_URL, PRIVACY_POLICY_URL } from "../constants"
@@ -33,35 +35,28 @@ function getAndroidVersion(sdkVersion: number): string {
   return versions[sdkVersion] || "Unknown"
 }
 
-// Moved outside of AboutScreen component
-const LinkButton = ({
-  iconLabel,
+const LinkRow = ({
+  icon: Icon,
   title,
   subtitle,
   url,
   colors,
   onOpenURL
 }: {
-  iconLabel: string
+  icon: React.ComponentType<{ size: number; color: string }>
   title: string
   subtitle: string
   url: string
   colors: ThemeColors
   onOpenURL: (url: string) => void
 }) => (
-  <TouchableOpacity
-    style={[styles.linkButton, { backgroundColor: colors.background }]}
-    onPress={() => onOpenURL(url)}
-    activeOpacity={0.7}
-  >
-    <View style={styles.linkContent}>
-      <Text style={styles.linkIcon}>{iconLabel}</Text>
-      <View style={styles.linkTextContainer}>
-        <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
-        <Text style={[styles.linkSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
-      </View>
-      <Text style={[styles.chevron, { color: colors.textLight }]}>›</Text>
+  <TouchableOpacity style={styles.linkRow} onPress={() => onOpenURL(url)} activeOpacity={0.7}>
+    <Icon size={20} color={colors.primaryDark} />
+    <View style={styles.linkTextContainer}>
+      <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
+      <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>{subtitle}</Text>
     </View>
+    <ChevronRight size={18} color={colors.textLight} />
   </TouchableOpacity>
 )
 
@@ -138,7 +133,6 @@ export function AboutScreen({}: ScreenProps) {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>Colota</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Build configuration unavailable</Text>
           </View>
         </ScrollView>
       </Container>
@@ -148,20 +142,14 @@ export function AboutScreen({}: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* App Icon & Header */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.appIconContainer} onPress={handleVersionTap} activeOpacity={0.8}>
             <Image source={icon} style={styles.appIcon} resizeMode="contain" />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Colota</Text>
-          <TouchableOpacity
-            style={[styles.versionBadge, { backgroundColor: colors.success }]}
-            onPress={handleVersionTap}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.versionText}>
-              v{buildConfig.VERSION_NAME} ({buildConfig.VERSION_CODE})
-            </Text>
+          <TouchableOpacity onPress={handleVersionTap} activeOpacity={0.8}>
+            <Text style={[styles.version, { color: colors.textSecondary }]}>Version {buildConfig.VERSION_NAME}</Text>
           </TouchableOpacity>
 
           {/* Tap counter hint */}
@@ -172,82 +160,51 @@ export function AboutScreen({}: ScreenProps) {
           )}
 
           {showDebugInfo && (
-            <TouchableOpacity onPress={() => setShowDebugInfo(false)} style={styles.debugBadge}>
-              <Text style={styles.debugText}>🐛 Debug Mode (tap to hide)</Text>
+            <TouchableOpacity
+              onPress={() => setShowDebugInfo(false)}
+              style={[styles.debugBadge, { backgroundColor: colors.warning + "20" }]}
+            >
+              <Bug size={14} color={colors.warning} />
+              <Text style={[styles.debugText, { color: colors.warning }]}>Debug Mode (tap to hide)</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Description Card */}
-        <Card style={styles.descriptionCard}>
-          <Text style={[styles.tagline, { color: colors.primary }]}>Privacy-First Location Tracking</Text>
-          <Text style={[styles.description, { color: colors.text }]}>
-            A GPS location tracking client built for selfhosted backends. Modern Android{" "}
-            {getAndroidVersion(buildConfig.TARGET_SDK_VERSION)} standards with battery efficiency and data sovereignty
-            at its core.
-          </Text>
-        </Card>
-
-        {/* Quick Links */}
-        <View style={styles.section}>
-          <SectionTitle>QUICK LINKS</SectionTitle>
-          <LinkButton
-            iconLabel="📄"
+        {/* Links */}
+        <Card>
+          <LinkRow
+            icon={FileText}
             title="Privacy Policy"
-            subtitle="How your data is handled"
+            subtitle={PRIVACY_POLICY_URL}
             url={PRIVACY_POLICY_URL}
             colors={colors}
             onOpenURL={handleOpenURL}
           />
-          <LinkButton
-            iconLabel="💻"
-            title="View Source Code"
-            subtitle="GitHub Repository"
+          <Divider />
+          <LinkRow
+            icon={Code}
+            title="Source Code"
+            subtitle="github.com/dietrichmax/colota"
             url={REPO_URL}
             colors={colors}
             onOpenURL={handleOpenURL}
           />
-        </View>
-
-        {/* License Section */}
-
-        <TouchableOpacity
-          style={[styles.linkButton, { backgroundColor: colors.background }]}
-          onPress={() => handleOpenURL("https://github.com/dietrichmax/colota/blob/main/LICENSE")}
-          activeOpacity={0.7}
-        >
-          <View style={styles.section}>
-            <SectionTitle>LICENSE</SectionTitle>
-            <Card>
-              <View style={styles.licenseHeader}>
-                <Text style={[styles.licenseBadge, { color: colors.primary }]}>📜 GNU AGPLv3</Text>
-              </View>
-              <Text style={[styles.licenseText, { color: colors.textSecondary }]}>
-                Free and open-source software. You're free to inspect, modify, and redistribute the code. Network-based
-                modifications must be shared with the community.
-              </Text>
-            </Card>
-          </View>
-        </TouchableOpacity>
-
-        {/* Tech Info - App Version */}
-        <View style={styles.section}>
-          <SectionTitle>APP VERSION</SectionTitle>
-          <Card>
-            <TechRow label="Version" value={`${buildConfig.VERSION_NAME}`} colors={colors} />
-            <TechRow label="Build" value={`${buildConfig.VERSION_CODE}`} colors={colors} />
-            <View style={styles.techRow}>
-              <Text style={[styles.techLabel, { color: colors.textSecondary }]}>Framework</Text>
-              <Text style={[styles.techValue, { color: colors.text }]}>React Native</Text>
-            </View>
-          </Card>
-        </View>
+          <Divider />
+          <LinkRow
+            icon={ScrollText}
+            title="License"
+            subtitle="GNU AGPLv3"
+            url={`${REPO_URL}/blob/main/LICENSE`}
+            colors={colors}
+            onOpenURL={handleOpenURL}
+          />
+        </Card>
 
         {/* Debug Info - Only shown when enabled */}
         {showDebugInfo && (
           <>
-            <View style={styles.section}>
-              <SectionTitle>🐛 DEBUG: BUILD CONFIGURATION</SectionTitle>
+            <View style={styles.debugSection}>
+              <Text style={[styles.debugSectionTitle, { color: colors.textLight }]}>Build</Text>
               <Card>
                 <TechRow
                   label="Target SDK"
@@ -263,21 +220,21 @@ export function AboutScreen({}: ScreenProps) {
                 />
                 <TechRow label="Compile SDK" value={buildConfig.COMPILE_SDK_VERSION.toString()} colors={colors} />
                 <TechRow label="Build Tools" value={buildConfig.BUILD_TOOLS_VERSION} colors={colors} />
-                <TechRow label="Kotlin Version" value={buildConfig.KOTLIN_VERSION} colors={colors} />
+                <TechRow label="Kotlin" value={buildConfig.KOTLIN_VERSION} colors={colors} />
                 <View style={styles.techRow}>
-                  <Text style={[styles.techLabel, { color: colors.textSecondary }]}>NDK Version</Text>
+                  <Text style={[styles.techLabel, { color: colors.textSecondary }]}>NDK</Text>
                   <Text style={[styles.techValue, { color: colors.text }]}>{buildConfig.NDK_VERSION}</Text>
                 </View>
               </Card>
             </View>
 
-            <View style={styles.section}>
-              <SectionTitle>🐛 DEBUG: DEVICE INFORMATION</SectionTitle>
+            <View style={styles.debugSection}>
+              <Text style={[styles.debugSectionTitle, { color: colors.textLight }]}>Device</Text>
               <Card>
-                <TechRow label="OS Version" value={`Android ${deviceInfo.systemVersion}`} colors={colors} />
+                <TechRow label="OS" value={`Android ${deviceInfo.systemVersion}`} colors={colors} />
                 <TechRow label="API Level" value={deviceInfo.apiLevel} colors={colors} />
-                <TechRow label="Device Model" value={deviceInfo.model} colors={colors} />
-                <TechRow label="Device Brand" value={deviceInfo.brand} colors={colors} />
+                <TechRow label="Model" value={deviceInfo.model} colors={colors} />
+                <TechRow label="Brand" value={deviceInfo.brand} colors={colors} />
                 <View style={styles.techRow}>
                   <Text style={[styles.techLabel, { color: colors.textSecondary }]}>Device ID</Text>
                   <Text style={[styles.techValue, { color: colors.text }]}>{deviceInfo.deviceId}</Text>
@@ -287,7 +244,6 @@ export function AboutScreen({}: ScreenProps) {
           </>
         )}
 
-        {/* Footer */}
         <Footer />
       </ScrollView>
     </Container>
@@ -302,7 +258,7 @@ const styles = StyleSheet.create({
   },
   header: {
     marginTop: 20,
-    marginBottom: 28,
+    marginBottom: 24,
     alignItems: "center"
   },
   appIconContainer: {
@@ -319,79 +275,30 @@ const styles = StyleSheet.create({
     height: 80
   },
   title: {
-    fontSize: 32,
-    fontWeight: "700",
-    marginBottom: 8
+    fontSize: 28,
+    ...fonts.bold,
+    marginBottom: 4
   },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: "500"
+  version: {
+    fontSize: 13,
+    ...fonts.regular
   },
-  versionBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12
-  },
-  versionText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "600"
-  },
-  descriptionCard: {
-    marginBottom: 24
-  },
-  tagline: {
-    fontSize: 17,
-    fontWeight: "700",
-    marginBottom: 8
-  },
-  description: {
-    fontSize: 15,
-    lineHeight: 22
-  },
-  section: {
-    marginBottom: 24
-  },
-  linkButton: {
-    borderRadius: 12,
-    marginBottom: 8,
-    overflow: "hidden"
-  },
-  linkContent: {
+  linkRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16
-  },
-  linkIcon: {
-    fontSize: 28,
-    marginRight: 16
+    paddingVertical: 14,
+    gap: 12
   },
   linkTextContainer: {
     flex: 1
   },
   linkTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 2
+    fontSize: 15,
+    ...fonts.semiBold
   },
   linkSubtitle: {
-    fontSize: 13
-  },
-  chevron: {
-    fontSize: 28,
-    fontWeight: "300",
-    marginLeft: 8
-  },
-  licenseHeader: {
-    marginBottom: 12
-  },
-  licenseBadge: {
-    fontSize: 16,
-    fontWeight: "700"
-  },
-  licenseText: {
-    fontSize: 14,
-    lineHeight: 20
+    fontSize: 12,
+    marginTop: 1
   },
   techRow: {
     flexDirection: "row",
@@ -401,11 +308,21 @@ const styles = StyleSheet.create({
   },
   techLabel: {
     fontSize: 14,
-    fontWeight: "500"
+    ...fonts.medium
   },
   techValue: {
     fontSize: 14,
-    fontWeight: "600"
+    ...fonts.semiBold
+  },
+  debugSection: {
+    marginTop: 24
+  },
+  debugSectionTitle: {
+    fontSize: 12,
+    ...fonts.semiBold,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8
   },
   debugHint: {
     fontSize: 11,
@@ -416,12 +333,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: "rgba(255, 152, 0, 0.2)",
-    borderRadius: 8
+    borderRadius: 8,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6
   },
   debugText: {
     fontSize: 12,
-    color: "#FF9800",
-    fontWeight: "600"
+    ...fonts.semiBold
   }
 })
