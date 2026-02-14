@@ -7,6 +7,7 @@ import React from "react"
 import { View, Text, StyleSheet } from "react-native"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
+import { fonts } from "../../../styles/typography"
 import { SectionTitle } from "../../ui/SectionTitle"
 import { Card } from "../../ui/Card"
 
@@ -53,7 +54,7 @@ export function CoordinateDisplay({ coords }: Props) {
    * Renders a single coordinate metric card
    */
   const renderCard = (label: string, value: string, unit: string) => (
-    <Card style={[{ backgroundColor: colors.backgroundElevated }]}>
+    <Card variant="elevated">
       <Text style={[styles.coordLabel, { color: colors.textSecondary }]}>{label}</Text>
       <Text style={[styles.coordValue, { color: colors.text }]}>
         {value}
@@ -98,19 +99,19 @@ const styles = StyleSheet.create({
   },
   coordLabel: {
     fontSize: 10,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 4,
     letterSpacing: 0.5,
     textTransform: "uppercase"
   },
   coordValue: {
     fontSize: 15,
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: -0.3
   },
   coordUnit: {
     fontSize: 12,
-    fontWeight: "500",
+    ...fonts.medium,
     opacity: 0.6
   }
 })

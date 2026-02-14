@@ -12,7 +12,9 @@ import { STATS_REFRESH_FAST } from "../constants"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
-import { SectionTitle, Card, Container, Divider, Footer } from "../components"
+import { fonts } from "../styles/typography"
+import { SectionTitle, Card, Container, Divider } from "../components"
+import { ChevronRight } from "lucide-react-native"
 import { StatsCard } from "../components"
 import { ConnectionSettings } from "../components/features/settings/ConnectionSettings"
 import { SyncStrategySettings } from "../components/features/settings/SyncStrategySettings"
@@ -112,7 +114,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
           navigation={navigation}
         />
 
-        {/* Sync Strategy */}
+        {/* Tracking Configuration */}
         <SyncStrategySettings
           settings={settings}
           onSettingsChange={setSettings}
@@ -136,7 +138,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                   false: colors.border,
                   true: colors.primary + "80"
                 }}
-                thumbColor={mode === "dark" ? colors.primary : "#f4f3f4"}
+                thumbColor={mode === "dark" ? colors.primary : colors.border}
               />
             </View>
           </Card>
@@ -155,7 +157,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                 <Text style={[styles.linkLabel, { color: colors.text }]}>Data Management</Text>
                 <Text style={[styles.linkSub, { color: colors.textSecondary }]}>View queue and clear data</Text>
               </View>
-              <Text style={[styles.linkArrow, { color: colors.textLight }]}>›</Text>
+              <ChevronRight size={20} color={colors.textLight} />
             </TouchableOpacity>
 
             <Divider />
@@ -169,13 +171,10 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                 <Text style={[styles.linkLabel, { color: colors.text }]}>API Field Mapping</Text>
                 <Text style={[styles.linkSub, { color: colors.textSecondary }]}>Customize JSON payload structure</Text>
               </View>
-              <Text style={[styles.linkArrow, { color: colors.textLight }]}>›</Text>
+              <ChevronRight size={20} color={colors.textLight} />
             </TouchableOpacity>
           </Card>
         </View>
-
-        {/* Footer */}
-        <Footer />
       </ScrollView>
 
       <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
@@ -185,7 +184,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 40
   },
@@ -194,7 +193,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: -0.5
   },
   section: {
@@ -212,7 +211,7 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 16,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 2
   },
   linkRow: {
@@ -226,15 +225,16 @@ const styles = StyleSheet.create({
   },
   linkLabel: {
     fontSize: 16,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 2
   },
   linkSub: {
-    fontSize: 13
+    fontSize: 13,
+    ...fonts.regular
   },
   linkArrow: {
     fontSize: 28,
-    fontWeight: "300",
+    ...fonts.regular,
     marginLeft: 12
   }
 })

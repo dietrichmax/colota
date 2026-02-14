@@ -9,6 +9,7 @@ import { FieldMap, DEFAULT_FIELD_MAP, ScreenProps, CustomField, ApiTemplateName,
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
+import { fonts } from "../styles/typography"
 import { SectionTitle, FloatingSaveIndicator, Container, Divider } from "../components"
 
 /** Field descriptions for UI display */
@@ -308,7 +309,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
             <SectionTitle>FIELD MAPPINGS</SectionTitle>
             {hasModifications && (
               <TouchableOpacity onPress={handleResetAll} style={styles.resetAllButton}>
-                <Text style={[styles.resetAllText, { color: colors.primary }]}>RESET ALL</Text>
+                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>RESET ALL</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -324,7 +325,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
                       <Text style={[styles.fieldLabel, { color: colors.text }]}>{key.toUpperCase()}</Text>
                       {isModified(key) && (
                         <View style={[styles.modifiedBadge, { backgroundColor: colors.primary }]}>
-                          <Text style={styles.modifiedText}>Modified</Text>
+                          <Text style={[styles.modifiedText, { color: colors.textOnPrimary }]}>Modified</Text>
                         </View>
                       )}
                     </View>
@@ -430,7 +431,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
             )}
 
             <TouchableOpacity onPress={handleAddCustomField} style={[styles.addButton, { borderColor: colors.border }]}>
-              <Text style={[styles.addButtonText, { color: colors.primary }]}>+ Add Field</Text>
+              <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Field</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -476,7 +477,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: -0.5,
     marginBottom: 4
   },
@@ -500,7 +501,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12,
-    fontWeight: "700"
+    ...fonts.bold
   },
   templateHint: {
     fontSize: 12,
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
   },
   resetAllText: {
     fontSize: 11,
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: 0.5
   },
   fieldsCard: {
@@ -545,7 +546,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: 0.5
   },
   modifiedBadge: {
@@ -555,8 +556,7 @@ const styles = StyleSheet.create({
   },
   modifiedText: {
     fontSize: 9,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    ...fonts.bold,
     letterSpacing: 0.3
   },
   fieldDescription: {
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
   },
   resetIcon: {
     fontSize: 18,
-    fontWeight: "600"
+    ...fonts.semiBold
   },
   customFieldRow: {
     flexDirection: "row",
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
   },
   removeButtonText: {
     fontSize: 13,
-    fontWeight: "700"
+    ...fonts.bold
   },
   addButton: {
     paddingVertical: 12,
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 14,
-    fontWeight: "600"
+    ...fonts.semiBold
   },
   emptyHint: {
     fontSize: 13,

@@ -8,8 +8,9 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { StatusBar, Platform } from "react-native"
 import { ThemeProvider, useTheme } from "./src/hooks/useTheme"
+import { fonts } from "./src/styles/typography"
 import { TrackingProvider } from "./src/contexts/TrackingProvider"
-import ThemedErrorBoundary from "./src/components/ui/ThemedErrorBoundary"
+import { ErrorBoundary } from "./src/components/ui/ErrorBoundary"
 import {
   DashboardScreen,
   SettingsScreen,
@@ -83,7 +84,7 @@ function AppNavigator() {
       },
       headerTintColor: colors.text,
       headerTitleStyle: {
-        fontWeight: "bold" as const,
+        ...fonts.bold,
         fontSize: 18,
         color: colors.text
       },
@@ -126,11 +127,11 @@ function AppNavigator() {
 export default function App() {
   return (
     <ThemeProvider>
-      <ThemedErrorBoundary>
+      <ErrorBoundary>
         <TrackingProvider>
           <AppNavigator />
         </TrackingProvider>
-      </ThemedErrorBoundary>
+      </ErrorBoundary>
     </ThemeProvider>
   )
 }

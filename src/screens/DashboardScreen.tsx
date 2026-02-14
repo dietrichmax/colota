@@ -21,6 +21,7 @@ import {
   WelcomeCard
 } from "../components"
 import { STATS_REFRESH_IDLE } from "../constants"
+import { Square, Play } from "lucide-react-native"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
   const { coords, settings, tracking, startTracking, stopTracking, setSettings } = useTracking()
@@ -170,17 +171,12 @@ export function DashboardScreen({ navigation }: ScreenProps) {
             pointerEvents="box-none"
           >
             <Button
-              style={[
-                styles.controlButton,
-                {
-                  backgroundColor: tracking ? colors.error : colors.primary,
-                  shadowColor: tracking ? colors.error : colors.primary
-                }
-              ]}
-              color="#f8f7f7"
+              style={styles.controlButton}
+              variant={tracking ? "danger" : "primary"}
+              icon={tracking ? Square : Play}
               onPress={tracking ? handleStop : handleStart}
               activeOpacity={0.9}
-              title={tracking ? "■ Stop Tracking" : "▶ Start Tracking"}
+              title={tracking ? "Stop Tracking" : "Start Tracking"}
             />
           </Animated.View>
         </View>
@@ -244,17 +240,10 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   controlButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 36,
-    paddingVertical: 16,
     borderRadius: 28,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 12,
-    minWidth: 200
+    elevation: 4,
+    minWidth: 200,
+    shadowColor: "#000"
   },
   content: {
     flex: 1,

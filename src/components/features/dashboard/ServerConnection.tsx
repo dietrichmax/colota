@@ -5,10 +5,12 @@
 
 import React, { useState, useCallback, useMemo, useRef } from "react"
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native"
+import { ChevronRight } from "lucide-react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
 import { ServerStatus, ServerConnectionProps } from "../../../types/global"
+import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { SERVER_TIMEOUT, SERVER_CHECK_INTERVAL } from "../../../constants"
 
@@ -19,10 +21,8 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
 
   const [serverStatus, setServerStatus] = useState<ServerStatus | "offline" | null>(null)
 
-  // Track if we've done the initial check
   const hasChecked = useRef(false)
 
-  /** Checks server connection status */
   const checkServer = useCallback(async () => {
     if (isOffline) {
       setServerStatus("offline")
@@ -47,7 +47,6 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
         // proceed without auth headers
       }
 
-      // Strategy 1: Try dedicated health endpoint
       const healthUrl = endpoint.replace(/\/api\/locations$/, "/health")
 
       let response = await fetch(healthUrl, {
@@ -56,7 +55,6 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
         headers: authHeaders
       })
 
-      // Strategy 2: If health endpoint doesn't exist, try HEAD on main endpoint
       if (response.status === 404 || response.status === 405) {
         response = await fetch(endpoint, {
           method: "HEAD",
@@ -65,12 +63,10 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
         })
       }
 
-      // Strategy 3: If endpoint still fails, try root domain
       if (!response.ok) {
         const match = endpoint.match(/^(https?:\/\/[^/]+)/)
         if (match) {
-          const rootUrl = match[1]
-          response = await fetch(rootUrl, {
+          response = await fetch(match[1], {
             method: "GET",
             signal: controller.signal,
             headers: authHeaders
@@ -88,17 +84,9 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
     }
   }, [endpoint, isOffline])
 
-  // Re-run check when focus returns or offline mode toggles
   useFocusEffect(
     useCallback(() => {
-      // Only reset if settings changed
-      if (!hasChecked.current) {
-        checkServer()
-      } else {
-        // Silently recheck in background without resetting state
-        checkServer()
-      }
-
+      checkServer()
       const timer = setInterval(checkServer, SERVER_CHECK_INTERVAL)
       return () => clearInterval(timer)
     }, [checkServer])
@@ -106,97 +94,58 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
 
   const displayUrl = endpoint ? endpoint.replace(/^https?:\/\//, "").split("/")[0] : ""
 
-  /** Dynamic UI configuration based on status */
   const config = useMemo(() => {
     const statusMap = {
-      connected: {
-        color: colors.success,
-        label: "Connected",
-        description: `Location data is being sent to ${displayUrl}.`
-      },
-      error: {
-        color: colors.error,
-        label: "Error",
-        description: "Cannot reach the server. Check your endpoint or network."
-      },
-      notConfigured: {
-        color: colors.warning,
-        label: "Not configured",
-        description: "Configure an endpoint in settings to start syncing data."
-      },
-      offline: {
-        color: colors.textSecondary,
-        label: "Offline Mode",
-        description: "Syncing is paused. Data is only collected locally."
-      },
-      loading: {
-        color: colors.textLight,
-        label: "Checking...",
-        description: "Verifying connection to the server..."
-      }
+      connected: { color: colors.success, label: "Connected" },
+      error: { color: colors.error, label: "Unreachable" },
+      notConfigured: { color: colors.warning, label: "No endpoint" },
+      offline: { color: colors.textSecondary, label: "Offline" },
+      loading: { color: colors.textLight, label: "Checking" }
     }
 
-    // Show loading state until first check completes
-    if (serverStatus === null) {
-      return statusMap.loading
-    }
-
+    if (serverStatus === null) return statusMap.loading
     return isOffline ? statusMap.offline : statusMap[serverStatus as ServerStatus] || statusMap.error
-  }, [serverStatus, colors, isOffline, displayUrl])
+  }, [serverStatus, colors, isOffline])
 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={() => navigation.navigate("Settings")}
-      style={[
-        styles.serverCard,
-        {
-          backgroundColor: colors.card,
-          borderLeftColor: config.color,
-          borderColor: colors.border
-        }
-      ]}
+      style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
     >
-      <View style={styles.serverHeader}>
-        <Text style={[styles.serverLabel, { color: colors.text }]}>SERVER CONNECTION</Text>
-        <View
-          style={[
-            styles.serverIndicator,
-            {
-              backgroundColor: config.color + "20",
-              borderColor: config.color
-            }
-          ]}
-        >
-          <Text style={[styles.serverIndicatorText, { color: config.color }]}>{config.label}</Text>
-        </View>
-      </View>
-      <Text style={[styles.serverDescription, { color: colors.textLight }]}>{config.description}</Text>
+      <View style={[styles.dot, { backgroundColor: config.color }]} />
+      <Text style={[styles.host, { color: colors.text }]} numberOfLines={1}>
+        {displayUrl || "Server"}
+      </Text>
+      <Text style={[styles.status, { color: config.color }]}>{config.label}</Text>
+      <ChevronRight size={16} color={colors.textLight} />
     </TouchableOpacity>
   )
 }
 
 const styles = StyleSheet.create({
-  serverCard: {
-    borderLeftWidth: 3,
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1
-  },
-  serverHeader: {
+  container: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8
-  },
-  serverLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2 },
-  serverIndicator: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    padding: 14,
     borderRadius: 12,
-    borderWidth: 1
+    borderWidth: 1,
+    marginBottom: 16
   },
-  serverIndicatorText: { fontSize: 11, fontWeight: "600", letterSpacing: 0.3 },
-  serverDescription: { fontSize: 13, lineHeight: 18 }
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 12
+  },
+  host: {
+    flex: 1,
+    fontSize: 14,
+    ...fonts.medium
+  },
+  status: {
+    fontSize: 12,
+    ...fonts.medium,
+    marginRight: 8
+  }
 })

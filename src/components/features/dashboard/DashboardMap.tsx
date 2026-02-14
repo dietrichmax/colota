@@ -8,6 +8,7 @@ import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image } 
 import { WebView } from "react-native-webview"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
+import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MapCenterButton } from "../map/MapCenterButton"
 import icon from "../../../assets/icons/icon.png"
@@ -423,9 +424,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           <Image source={icon} style={styles.icon} />
         </View>
         <Text style={[styles.stateTitle, { color: colors.text }]}>Tracking Disabled</Text>
-        <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
-          Start tracking to see your position and zones.
-        </Text>
+        <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Start tracking to see the map.</Text>
       </View>
     )
   }
@@ -435,7 +434,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
       <View style={[styles.stateContainer, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.stateTitle, styles.stateTitleSpaced, { color: colors.text }]}>Searching GPS...</Text>
-        <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Waiting for valid location signal.</Text>
+        <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Waiting for GPS signal.</Text>
       </View>
     )
   }
@@ -536,7 +535,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16
   },
-  stateTitle: { fontSize: 18, fontWeight: "bold", textAlign: "center" },
+  stateTitle: { fontSize: 18, ...fonts.bold, textAlign: "center" },
   stateTitleSpaced: { marginTop: 20 },
   stateSubtext: {
     fontSize: 14,
@@ -556,6 +555,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 5,
     zIndex: 5
   },
-  infoTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 2 },
+  infoTitle: { fontSize: 16, ...fonts.bold, marginBottom: 2 },
   infoSub: { fontSize: 13 }
 })

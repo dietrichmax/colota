@@ -3,6 +3,8 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import { type LucideIcon } from "lucide-react-native"
+import { Table2, Globe, MapPin, Earth } from "lucide-react-native"
 import { LocationCoords } from "../types/global"
 
 export const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024 // 10 MB
@@ -152,7 +154,7 @@ export interface ExportFormatConfig {
   label: string
   subtitle: string
   description: string
-  icon: string
+  icon: LucideIcon
   extension: string
   mimeType: string
   convert: (data: LocationCoords[]) => string
@@ -163,7 +165,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
     label: "CSV",
     subtitle: "Spreadsheet Format",
     description: "Excel, Google Sheets, data analysis",
-    icon: "📊",
+    icon: Table2,
     extension: ".csv",
     mimeType: "text/csv",
     convert: convertToCSV
@@ -172,7 +174,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
     label: "GeoJSON",
     subtitle: "Geographic Data",
     description: "Mapbox, Leaflet, QGIS, ArcGIS",
-    icon: "🗺️",
+    icon: Globe,
     extension: ".geojson",
     mimeType: "application/json",
     convert: convertToGeoJSON
@@ -181,7 +183,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
     label: "GPX",
     subtitle: "GPS Exchange",
     description: "Garmin, Strava, Google Earth",
-    icon: "📍",
+    icon: MapPin,
     extension: ".gpx",
     mimeType: "application/gpx+xml",
     convert: convertToGPX
@@ -190,7 +192,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
     label: "KML",
     subtitle: "Keyhole Markup Language",
     description: "Google Earth, Google Maps, ArcGIS",
-    icon: "🌍",
+    icon: Earth,
     extension: ".kml",
     mimeType: "application/vnd.google-earth.kml+xml",
     convert: convertToKML

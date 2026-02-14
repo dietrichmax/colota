@@ -6,6 +6,7 @@
 import React from "react"
 import { View, StyleSheet, ViewStyle, StyleProp, Text } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
+import { fonts } from "../../styles/typography"
 
 type SectionTitleProps = {
   children: React.ReactNode
@@ -27,7 +28,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     textTransform: "uppercase",
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: 1.2,
     marginBottom: 12,
     paddingHorizontal: 4
