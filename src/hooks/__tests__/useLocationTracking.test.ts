@@ -174,16 +174,52 @@ describe("useLocationTracking", () => {
   })
 
   describe("reconnect", () => {
-    it("sets tracking to true without requesting permissions or starting service", () => {
+    it("sets tracking to true and fetches last known location", async () => {
+      mockGetMostRecentLocation.mockResolvedValueOnce({
+        latitude: 48.1,
+        longitude: 11.5,
+        accuracy: 10,
+        altitude: 500,
+        speed: 0,
+        bearing: 0,
+        timestamp: 1700000000,
+        battery: 90,
+        batteryStatus: 2
+      })
+
       const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
 
-      act(() => {
-        result.current.reconnect()
+      await act(async () => {
+        await result.current.reconnect()
       })
 
       expect(result.current.tracking).toBe(true)
+      expect(result.current.coords).toEqual({
+        latitude: 48.1,
+        longitude: 11.5,
+        accuracy: 10,
+        altitude: 500,
+        speed: 0,
+        bearing: 0,
+        timestamp: 1700000000,
+        battery: 90,
+        battery_status: 2
+      })
       expect(mockEnsurePermissions).not.toHaveBeenCalled()
       expect(mockStart).not.toHaveBeenCalled()
+    })
+
+    it("sets tracking to true even if no stored location", async () => {
+      mockGetMostRecentLocation.mockResolvedValueOnce(null)
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      await act(async () => {
+        await result.current.reconnect()
+      })
+
+      expect(result.current.tracking).toBe(true)
+      expect(result.current.coords).toBeNull()
     })
 
     it("does nothing if already tracking", async () => {
@@ -193,8 +229,8 @@ describe("useLocationTracking", () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
       })
 
-      act(() => {
-        result.current.reconnect()
+      await act(async () => {
+        await result.current.reconnect()
       })
 
       expect(result.current.tracking).toBe(true)
