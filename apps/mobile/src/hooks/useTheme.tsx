@@ -62,7 +62,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
    */
   const toggleTheme = useCallback(() => {
     setHasManualOverride(true)
-    setMode((prev) => (prev === "light" ? "dark" : "light"))
+    setMode((prev: string) => (prev === "light" ? "dark" : "light"))
   }, [])
 
   const colors = useMemo(() => (mode === "dark" ? darkColors : lightColors), [mode])

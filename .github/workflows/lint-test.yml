@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build shared package
+        run: npm run build -w @colota/shared
+
       - name: Run ESLint
         run: npm run lint -w @colota/mobile
 

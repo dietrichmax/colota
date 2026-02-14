@@ -23,6 +23,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - run: npm run build -w @colota/shared
       - run: npm run lint -w @colota/mobile
       - run: npx -w @colota/mobile tsc --noEmit
       - run: npm test -w @colota/mobile
