@@ -15,11 +15,7 @@ interface ThemeContextType {
   colors: ThemeColors
   mode: ThemeMode
   toggleTheme: () => void
-  resetToSystemTheme: () => void
-  setTheme: (mode: ThemeMode) => void
   isDark: boolean
-  isLight: boolean
-  hasManualOverride: boolean
 }
 
 /**
@@ -69,22 +65,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     setMode((prev) => (prev === "light" ? "dark" : "light"))
   }, [])
 
-  /**
-   * Resets theme to follow system preference
-   */
-  const resetToSystemTheme = useCallback(() => {
-    setHasManualOverride(false)
-    setMode(normalizeScheme(Appearance.getColorScheme()))
-  }, [])
-
-  /**
-   * Sets specific theme mode
-   */
-  const setTheme = useCallback((newMode: ThemeMode) => {
-    setHasManualOverride(true)
-    setMode(newMode)
-  }, [])
-
   const colors = useMemo(() => (mode === "dark" ? darkColors : lightColors), [mode])
 
   const contextValue = useMemo(
@@ -92,13 +72,9 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       colors,
       mode,
       toggleTheme,
-      resetToSystemTheme,
-      setTheme,
-      isDark: mode === "dark",
-      isLight: mode === "light",
-      hasManualOverride
+      isDark: mode === "dark"
     }),
-    [colors, mode, hasManualOverride, toggleTheme, resetToSystemTheme, setTheme]
+    [colors, mode, toggleTheme]
   )
 
   return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>
@@ -107,8 +83,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 /**
  * Hook to access theme context.
  *
- * Provides colors, mode, toggleTheme, resetToSystemTheme, setTheme,
- * isDark, isLight, and hasManualOverride.
+ * Provides colors, mode, toggleTheme, and isDark.
  *
  * @throws If used outside ThemeProvider
  *
