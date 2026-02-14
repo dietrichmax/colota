@@ -3,9 +3,23 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React from "react"
-import { TouchableOpacity, Text, StyleSheet, GestureResponderEvent, StyleProp, ViewStyle } from "react-native"
+import React, { useRef, useCallback } from "react"
+import {
+  TouchableOpacity,
+  Text,
+  View,
+  Animated,
+  ActivityIndicator,
+  StyleSheet,
+  GestureResponderEvent,
+  StyleProp,
+  ViewStyle
+} from "react-native"
 import { useTheme } from "../../hooks/useTheme"
+import { fonts } from "../../styles/typography"
+import { type LucideIcon } from "lucide-react-native"
+
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 
 type Props = {
   title: string
@@ -14,45 +28,106 @@ type Props = {
   style?: StyleProp<ViewStyle>
   activeOpacity?: number
   color?: string
+  variant?: ButtonVariant
+  icon?: LucideIcon
+  loading?: boolean
 }
 
-/**
- * Custom button component with theme support and disabled state.
- *
- * Features:
- * - Automatic theme color application
- * - Disabled state with visual feedback
- * - Customizable styling
- * - Touch feedback with opacity
- *
- * @example
- * ```tsx
- * <Button
- *   title="Submit"
- *   onPress={handleSubmit}
- *   disabled={isLoading}
- * />
- * ```
- */
-export function Button({ title, onPress, disabled = false, style, activeOpacity, color }: Props) {
+export function Button({
+  title,
+  onPress,
+  disabled = false,
+  style,
+  activeOpacity,
+  color,
+  variant = "primary",
+  icon: Icon,
+  loading = false
+}: Props) {
   const { colors } = useTheme()
+  const scale = useRef(new Animated.Value(1)).current
+
+  const handlePressIn = useCallback(() => {
+    Animated.spring(scale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4
+    }).start()
+  }, [scale])
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4
+    }).start()
+  }, [scale])
+
+  const getVariantStyles = () => {
+    switch (variant) {
+      case "primary":
+        return {
+          bg: disabled ? colors.textDisabled : colors.primary,
+          text: color ?? colors.textOnPrimary,
+          borderColor: "transparent",
+          borderWidth: 0
+        }
+      case "secondary":
+        return {
+          bg: "transparent",
+          text: color ?? colors.primaryDark,
+          borderColor: colors.primary,
+          borderWidth: 1.5
+        }
+      case "ghost":
+        return {
+          bg: "transparent",
+          text: color ?? colors.primaryDark,
+          borderColor: "transparent",
+          borderWidth: 0
+        }
+      case "danger":
+        return {
+          bg: disabled ? colors.textDisabled : colors.error,
+          text: color ?? colors.textOnPrimary,
+          borderColor: "transparent",
+          borderWidth: 0
+        }
+    }
+  }
+
+  const v = getVariantStyles()
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.button,
-        {
-          backgroundColor: disabled ? colors.textDisabled : colors.primary,
-          borderRadius: colors.borderRadius
-        },
-        style
-      ]}
-      onPress={onPress}
-      disabled={disabled}
-      activeOpacity={activeOpacity ? activeOpacity : 0.7}
-    >
-      <Text style={[styles.text, { color: color }]}>{title}</Text>
-    </TouchableOpacity>
+    <Animated.View style={[{ transform: [{ scale }] }, style]}>
+      <TouchableOpacity
+        style={[
+          styles.button,
+          {
+            backgroundColor: v.bg,
+            borderColor: v.borderColor,
+            borderWidth: v.borderWidth,
+            borderRadius: colors.borderRadius
+          }
+        ]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        activeOpacity={activeOpacity ?? 0.7}
+      >
+        <View style={styles.content}>
+          {loading ? (
+            <ActivityIndicator size="small" color={v.text} style={styles.icon} />
+          ) : Icon ? (
+            <Icon size={18} color={v.text} style={styles.icon} />
+          ) : null}
+          <Text style={[styles.text, { color: v.text }]}>{title}</Text>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   )
 }
 
@@ -63,8 +138,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: 8
   },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
   text: {
     fontSize: 16,
-    fontWeight: "600"
+    ...fonts.semiBold
+  },
+  icon: {
+    marginRight: 0
   }
 })

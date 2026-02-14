@@ -5,7 +5,9 @@
 
 import React, { useState, useCallback, useEffect } from "react"
 import { Text, StyleSheet, Switch, View, TouchableOpacity } from "react-native"
+import { Lightbulb } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SyncPreset, SelectablePreset, ThemeColors } from "../../../types/global"
+import { fonts, fontSizes } from "../../../styles/typography"
 import { SectionTitle, Card, Divider, NumericInput } from "../../index"
 import { PresetOption } from "./PresetOption"
 
@@ -109,7 +111,7 @@ export function SyncStrategySettings({
 
   return (
     <View style={styles.section}>
-      <SectionTitle>Sync Strategy</SectionTitle>
+      <SectionTitle>Tracking Configuration</SectionTitle>
       <Card>
         <View style={styles.presetsContainer}>
           {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map((preset, index) => (
@@ -134,7 +136,7 @@ export function SyncStrategySettings({
           onPress={() => setShowAdvanced(!showAdvanced)}
           activeOpacity={0.7}
         >
-          <Text style={[styles.advancedText, { color: colors.primary }]}>
+          <Text style={[styles.advancedText, { color: colors.primaryDark }]}>
             {showAdvanced ? "− Hide" : "+ Show"} Advanced Settings
           </Text>
         </TouchableOpacity>
@@ -153,7 +155,10 @@ export function SyncStrategySettings({
                   }
                 ]}
               >
-                <Text style={[styles.customBannerText, { color: colors.info }]}>💡 Using custom configuration</Text>
+                <View style={styles.bannerRow}>
+                  <Lightbulb size={14} color={colors.info} />
+                  <Text style={[styles.customBannerText, { color: colors.info }]}>Using custom configuration</Text>
+                </View>
               </View>
             )}
 
@@ -309,7 +314,7 @@ export function SyncStrategySettings({
                 </View>
                 <Text style={[styles.blockHint, styles.retryHint, { color: colors.textSecondary }]}>
                   {settings.maxRetries === 0
-                    ? "⚠️ Unlimited retries may cause queue buildup"
+                    ? "Unlimited retries may cause queue buildup"
                     : `Give up after ${settings.maxRetries} failed attempts`}
                 </Text>
               </View>
@@ -340,12 +345,12 @@ export function SyncStrategySettings({
                     false: colors.border,
                     true: colors.primary + "80"
                   }}
-                  thumbColor={settings.filterInaccurateLocations ? colors.primary : "#f4f3f4"}
+                  thumbColor={settings.filterInaccurateLocations ? colors.primary : colors.border}
                 />
               </View>
 
               {settings.filterInaccurateLocations && (
-                <View style={styles.nestedSetting}>
+                <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
                   <NumericInput
                     label="Accuracy Threshold"
                     value={accuracyTresholdInput}
@@ -392,7 +397,7 @@ const styles = StyleSheet.create({
   },
   advancedText: {
     fontSize: 15,
-    fontWeight: "600"
+    ...fonts.semiBold
   },
   advancedPanel: {
     marginTop: 16
@@ -403,16 +408,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderLeftWidth: 4
   },
+  bannerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
   customBannerText: {
     fontSize: 13,
-    fontWeight: "500"
+    ...fonts.medium
   },
   paramGroup: {
     marginBottom: 4
   },
   paramGroupTitle: {
     fontSize: 13,
-    fontWeight: "700",
+    ...fonts.bold,
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 16,
@@ -422,12 +432,13 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   blockLabel: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: fontSizes.label,
+    ...fonts.semiBold,
     marginBottom: 4
   },
   blockHint: {
     fontSize: 13,
+    ...fonts.regular,
     marginBottom: 12,
     lineHeight: 18
   },
@@ -445,7 +456,7 @@ const styles = StyleSheet.create({
   },
   gridLabel: {
     fontSize: 14,
-    fontWeight: "600"
+    ...fonts.semiBold
   },
   retryGrid: {
     flexDirection: "row",
@@ -460,7 +471,7 @@ const styles = StyleSheet.create({
   },
   retryChipText: {
     fontSize: 16,
-    fontWeight: "700"
+    ...fonts.bold
   },
   retryHint: {
     marginTop: 8
@@ -477,17 +488,17 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 16,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 2
   },
   settingHint: {
     fontSize: 13,
+    ...fonts.regular,
     lineHeight: 18
   },
   nestedSetting: {
     marginTop: 12,
     paddingLeft: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: "rgba(0,0,0,0.1)"
+    borderLeftWidth: 3
   }
 })

@@ -5,7 +5,9 @@
 
 import React from "react"
 import { Text, StyleSheet, View, TouchableOpacity } from "react-native"
+import { Check, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
+import { fonts } from "../../../styles/typography"
 import { Card } from "../../ui/Card"
 
 interface WelcomeCardProps {
@@ -31,13 +33,14 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
       <View
         style={[
           styles.checkCircle,
+          // eslint-disable-next-line react-native/no-inline-styles
           {
             borderColor: completed ? colors.success : colors.border,
             backgroundColor: completed ? colors.success + "20" : "transparent"
           }
         ]}
       >
-        {completed && <Text style={[styles.checkMark, { color: colors.success }]}>✓</Text>}
+        {completed && <Check size={13} color={colors.success} />}
       </View>
       <Text
         style={[
@@ -48,7 +51,7 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
       >
         {label}
       </Text>
-      {onPress && !completed && <Text style={[styles.checklistArrow, { color: colors.textLight }]}>›</Text>}
+      {onPress && !completed && <ChevronRight size={18} color={colors.textLight} />}
     </View>
   )
 
@@ -76,7 +79,7 @@ export function WelcomeCard({
 
   return (
     <View style={styles.container}>
-      <Card style={{ borderColor: colors.primary, borderWidth: 2 }}>
+      <Card variant="outlined" style={{ borderColor: colors.primary }}>
         <Text style={[styles.title, { color: colors.text }]}>Welcome to Colota</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Get started by completing these steps:</Text>
 
@@ -92,10 +95,10 @@ export function WelcomeCard({
 
         <View style={styles.linkRow}>
           <TouchableOpacity onPress={onNavigateToApiConfig} activeOpacity={0.6}>
-            <Text style={[styles.link, { color: colors.primary }]}>API field mapping ›</Text>
+            <Text style={[styles.link, { color: colors.primaryDark }]}>API field mapping</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onNavigateToSettings} activeOpacity={0.6}>
-            <Text style={[styles.link, { color: colors.primary }]}>Tracking presets ›</Text>
+            <Text style={[styles.link, { color: colors.primaryDark }]}>Tracking presets</Text>
           </TouchableOpacity>
         </View>
 
@@ -117,16 +120,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: "700",
+    ...fonts.bold,
     marginBottom: 4
   },
   subtitle: {
     fontSize: 14,
+    ...fonts.regular,
     marginBottom: 16
   },
   checklist: {
     gap: 12,
-    marginBottom: 12
+    marginBottom: 16
   },
   checklistItem: {
     flexDirection: "row",
@@ -141,22 +145,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12
   },
-  checkMark: {
-    fontSize: 13,
-    fontWeight: "700"
-  },
   checklistLabel: {
     fontSize: 15,
-    fontWeight: "500",
+    ...fonts.medium,
     flex: 1
   },
   checklistLabelCompleted: {
     textDecorationLine: "line-through"
-  },
-  checklistArrow: {
-    fontSize: 22,
-    fontWeight: "300",
-    marginLeft: 8
   },
   linkRow: {
     flexDirection: "row",
@@ -165,7 +160,7 @@ const styles = StyleSheet.create({
   },
   link: {
     fontSize: 14,
-    fontWeight: "600"
+    ...fonts.semiBold
   },
   dismissButton: {
     paddingVertical: 10,
@@ -175,6 +170,6 @@ const styles = StyleSheet.create({
   },
   dismissText: {
     fontSize: 14,
-    fontWeight: "600"
+    ...fonts.semiBold
   }
 })

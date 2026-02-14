@@ -4,17 +4,16 @@
  */
 import React from "react"
 import { View, StyleSheet, Text, TouchableOpacity, Linking } from "react-native"
+import { Settings, Fence, Search, Download, Info, Heart, LucideIcon } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
+import { fonts } from "../../../styles/typography"
 import { SectionTitle } from "../../ui/SectionTitle"
-import { ComingSoonRibbon } from "./ComingSoonRibbon"
 
 interface NavItem {
   name: string
-  icon: string
+  icon: LucideIcon
   color: string
   onPress?: () => void
-  comingSoon?: boolean
-  subtitle?: string
 }
 
 interface QuickAccessProps {
@@ -27,44 +26,38 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
   const navItems: NavItem[] = [
     {
       name: "Settings",
-      icon: "⚙️",
+      icon: Settings,
       color: colors.primary,
-      subtitle: "Configure tracking",
       onPress: () => navigation.navigate("Settings")
     },
     {
       name: "Geofences",
-      icon: "🏡",
+      icon: Fence,
       color: colors.success,
-      subtitle: "Manage zones",
       onPress: () => navigation.navigate("Geofences")
     },
     {
       name: "Inspector",
-      icon: "🔍",
+      icon: Search,
       color: colors.info,
-      subtitle: "View locations",
       onPress: () => navigation.navigate("Locations Inspector")
     },
     {
       name: "Export",
-      icon: "📤",
+      icon: Download,
       color: colors.warning,
-      subtitle: "Download data",
       onPress: () => navigation.navigate("Export Data")
     },
     {
       name: "About",
-      icon: "ℹ️",
+      icon: Info,
       color: colors.info,
-      subtitle: "App info",
       onPress: () => navigation.navigate("About Colota")
     },
     {
       name: "Support",
-      icon: "💖",
+      icon: Heart,
       color: colors.error,
-      subtitle: "Help us grow",
       onPress: () => Linking.openURL("https://mxd.codes/colota/support")
     }
   ]
@@ -86,7 +79,6 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
             ]}
             onPress={item.onPress}
           >
-            {/* Icon with gradient background */}
             <View
               style={[
                 styles.navIconBox,
@@ -96,22 +88,12 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
                 }
               ]}
             >
-              <Text style={styles.navIcon}>{item.icon}</Text>
+              <item.icon size={24} color={item.color} />
             </View>
 
-            {/* Title */}
             <Text style={[styles.navLabel, { color: colors.text }]} numberOfLines={1}>
               {item.name}
             </Text>
-
-            {/* Subtitle */}
-            {item.subtitle && (
-              <Text style={[styles.navSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-                {item.subtitle}
-              </Text>
-            )}
-
-            {item.comingSoon && <ComingSoonRibbon />}
           </TouchableOpacity>
         ))}
       </View>
@@ -151,19 +133,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1
   },
-  navIcon: {
-    fontSize: 24
-  },
   navLabel: {
     fontSize: 12,
-    fontWeight: "700",
+    ...fonts.bold,
     textAlign: "center",
-    letterSpacing: 0.3,
-    marginBottom: 2
-  },
-  navSubtitle: {
-    fontSize: 10,
-    textAlign: "center",
-    opacity: 0.7
+    letterSpacing: 0.3
   }
 })

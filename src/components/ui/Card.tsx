@@ -4,35 +4,75 @@
  */
 
 import React from "react"
-import { View, StyleSheet, ViewStyle, StyleProp } from "react-native"
+import { View, TouchableOpacity, StyleSheet, ViewStyle, StyleProp } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
+
+type CardVariant = "default" | "elevated" | "outlined" | "interactive"
 
 type CardProps = {
   children: React.ReactNode
   style?: StyleProp<ViewStyle>
   danger?: boolean
+  variant?: CardVariant
+  onPress?: () => void
 }
 
-export function Card({ children, style, danger = false }: CardProps) {
+export function Card({ children, style, danger = false, variant = "default", onPress }: CardProps) {
   const { colors } = useTheme()
 
-  const borderWidth = danger ? 2 : 1
+  const getVariantStyles = (): ViewStyle => {
+    if (danger) {
+      return {
+        backgroundColor: colors.error + "10",
+        borderColor: colors.error,
+        borderWidth: 2
+      }
+    }
 
-  return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: danger ? colors.error + "10" : colors.card,
-          borderColor: danger ? colors.error : colors.border,
-          borderWidth
-        },
-        style
-      ]}
-    >
-      {children}
-    </View>
-  )
+    switch (variant) {
+      case "default":
+        return {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          borderWidth: 1
+        }
+      case "elevated":
+        return {
+          backgroundColor: colors.cardElevated,
+          borderColor: "transparent",
+          borderWidth: 0,
+          elevation: 4,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 6
+        }
+      case "outlined":
+        return {
+          backgroundColor: "transparent",
+          borderColor: colors.border,
+          borderWidth: 1.5
+        }
+      case "interactive":
+        return {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          borderWidth: 1
+        }
+    }
+  }
+
+  const cardView = <View style={[styles.card, getVariantStyles(), style]}>{children}</View>
+
+  if (variant === "interactive" && onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+        {cardView}
+      </TouchableOpacity>
+    )
+  }
+
+  return cardView
 }
 
 const styles = StyleSheet.create({
