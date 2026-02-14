@@ -66,6 +66,7 @@ export interface ThemeColors {
   shadow: string
   transparent: string
   borderRadius: number
+  textOnPrimary: string
 }
 
 // ============================================================================
@@ -227,7 +228,6 @@ export interface TrackingPresetConfig {
   syncInterval: number
   retryInterval: number
   label: string
-  emoji: string
   description: string
   batteryImpact: BatteryImpact
 }
@@ -239,7 +239,6 @@ export const TRACKING_PRESETS = {
     syncInterval: 0,
     retryInterval: 30,
     label: "Instant",
-    emoji: "⚡",
     description: "Track every 5s • Send instantly",
     batteryImpact: "High"
   },
@@ -249,7 +248,6 @@ export const TRACKING_PRESETS = {
     syncInterval: 300,
     retryInterval: 300,
     label: "Balanced",
-    emoji: "⚖️",
     description: "Track every 30s • Batch 5 min",
     batteryImpact: "Medium"
   },
@@ -259,7 +257,6 @@ export const TRACKING_PRESETS = {
     syncInterval: 900,
     retryInterval: 900,
     label: "Power Saver",
-    emoji: "🔋",
     description: "Track every 60s • Batch 15 min",
     batteryImpact: "Low"
   }

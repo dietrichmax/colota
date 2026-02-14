@@ -14,9 +14,11 @@ import {
   KeyboardAvoidingView,
   Platform
 } from "react-native"
+import { Lightbulb } from "lucide-react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
+import { fonts, fontSizes } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
 import { STATS_REFRESH_FAST } from "../constants"
@@ -72,7 +74,7 @@ export function DataManagementScreen({}: ScreenProps) {
 
     try {
       setIsProcessing(true)
-      showFeedback("⏳ Syncing locations...", 30000) // Long timeout
+      showFeedback("Syncing locations...", 30000) // Long timeout
 
       await NativeLocationService.manualFlush()
 
@@ -80,12 +82,12 @@ export function DataManagementScreen({}: ScreenProps) {
       setTimeout(async () => {
         await updateStats()
         setIsProcessing(false)
-        showFeedback("✅ Sync initiated successfully!")
+        showFeedback("Sync initiated successfully!")
       }, 2000)
     } catch (err) {
       console.error("[DataManagementScreen] Manual flush error:", err)
       setIsProcessing(false)
-      showFeedback("❌ Failed to sync queue")
+      showFeedback("Failed to sync queue")
     }
   }, [stats.queued, isProcessing, updateStats, showFeedback])
 
@@ -101,7 +103,7 @@ export function DataManagementScreen({}: ScreenProps) {
         }
       } catch (err) {
         console.error("[DataManagementScreen] Delete action failed:", err)
-        showFeedback("❌ Action failed")
+        showFeedback("Action failed")
       } finally {
         setIsProcessing(false)
       }
@@ -112,27 +114,27 @@ export function DataManagementScreen({}: ScreenProps) {
   const handleClearSentHistory = useCallback(() => {
     handleDeleteAction(
       () => NativeLocationService.clearSentHistory().then(() => stats.sent),
-      (count) => `✅ Cleared ${count} sent location${count !== 1 ? "s" : ""}`
+      (count) => `Cleared ${count} sent location${count !== 1 ? "s" : ""}`
     )
   }, [handleDeleteAction, stats.sent])
 
   const handleClearQueue = useCallback(() => {
     handleDeleteAction(
       () => NativeLocationService.clearQueue(),
-      (count) => `✅ Cleared ${count} queued location${count !== 1 ? "s" : ""}`
+      (count) => `Cleared ${count} queued location${count !== 1 ? "s" : ""}`
     )
   }, [handleDeleteAction])
 
   const handleDeleteOlderThan = useCallback(() => {
     const days = parseInt(daysInput, 10)
     if (isNaN(days) || days <= 0) {
-      showFeedback("⚠️ Please enter a valid number of days")
+      showFeedback("Please enter a valid number of days")
       return
     }
 
     handleDeleteAction(
       () => NativeLocationService.deleteOlderThan(days),
-      (count) => `✅ Deleted ${count} old location${count !== 1 ? "s" : ""}`
+      (count) => `Deleted ${count} old location${count !== 1 ? "s" : ""}`
     )
   }, [daysInput, handleDeleteAction, showFeedback])
 
@@ -141,10 +143,10 @@ export function DataManagementScreen({}: ScreenProps) {
     try {
       await NativeLocationService.vacuumDatabase()
       await updateStats()
-      showFeedback("✅ Database optimized")
+      showFeedback("Database optimized")
     } catch (err) {
       console.error("[DataManagementScreen] Vacuum failed:", err)
-      showFeedback("❌ Optimization failed")
+      showFeedback("Optimization failed")
     } finally {
       setIsProcessing(false)
     }
@@ -157,7 +159,6 @@ export function DataManagementScreen({}: ScreenProps) {
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>Data Management</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Manage your local location database</Text>
           </View>
 
           {/* Stats */}
@@ -186,12 +187,7 @@ export function DataManagementScreen({}: ScreenProps) {
           <View style={styles.section}>
             <SectionTitle>QUEUE ACTIONS</SectionTitle>
             <Card>
-              <Button
-                onPress={handleManualFlush}
-                disabled={isProcessing || stats.queued === 0}
-                title="Sync Now"
-                color="#f8f7f7"
-              />
+              <Button onPress={handleManualFlush} disabled={isProcessing || stats.queued === 0} title="Sync Now" />
               <Text style={[styles.hint, { color: colors.textLight }]}>
                 {stats.queued === 0
                   ? "Queue is empty"
@@ -272,9 +268,12 @@ export function DataManagementScreen({}: ScreenProps) {
                 <Text style={[styles.actionHint, { color: colors.textLight }]}>
                   Reclaim unused space and improve performance
                 </Text>
-                <Text style={[styles.actionHint, { color: colors.textLight }]}>
-                  💡 Run after large deletions to reclaim space
-                </Text>
+                <View style={styles.hintRow}>
+                  <Lightbulb size={12} color={colors.textLight} />
+                  <Text style={[styles.actionHint, { color: colors.textLight }]}>
+                    Run after large deletions to reclaim space
+                  </Text>
+                </View>
               </TouchableOpacity>
             </Card>
           </View>
@@ -330,12 +329,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "700",
+    ...fonts.bold,
     marginBottom: 4
-  },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 20
   },
   section: {
     marginBottom: 24
@@ -348,14 +343,15 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 14,
-    fontWeight: "500"
+    ...fonts.medium
   },
   statValue: {
     fontSize: 16,
-    fontWeight: "700"
+    ...fonts.bold
   },
   hint: {
     fontSize: 12,
+    ...fonts.regular,
     textAlign: "center",
     fontStyle: "italic",
     lineHeight: 16,
@@ -374,12 +370,13 @@ const styles = StyleSheet.create({
     flex: 1
   },
   actionLabel: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: fontSizes.label,
+    ...fonts.semiBold,
     marginBottom: 4
   },
   actionHint: {
     fontSize: 12,
+    ...fonts.regular,
     lineHeight: 16,
     marginTop: 2
   },
@@ -391,7 +388,7 @@ const styles = StyleSheet.create({
   },
   actionBadgeText: {
     fontSize: 13,
-    fontWeight: "700"
+    ...fonts.bold
   },
   daysInputRow: {
     flexDirection: "row",
@@ -407,9 +404,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: "center"
   },
+  hintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2
+  },
   daysLabel: {
     fontSize: 15,
-    fontWeight: "500"
+    ...fonts.medium
   },
   buttonDisabled: {
     opacity: 0.5

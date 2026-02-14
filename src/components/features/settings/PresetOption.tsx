@@ -4,7 +4,9 @@
  */
 import React from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
+import { Zap, Check } from "lucide-react-native"
 import { ThemeColors, SelectablePreset, TRACKING_PRESETS } from "../../../types/global"
+import { fonts } from "../../../styles/typography"
 
 interface PresetOptionProps {
   preset: SelectablePreset
@@ -46,7 +48,6 @@ export function PresetOption({ preset, isSelected, onSelect, colors }: PresetOpt
       <View style={styles.content}>
         {/* Left side - Icon and text */}
         <View style={styles.leftContent}>
-          <Text style={styles.emoji}>{config.emoji}</Text>
           <View style={styles.textContent}>
             <View style={styles.titleRow}>
               <Text style={[styles.label, { color: colors.text }]}>{config.label}</Text>
@@ -60,7 +61,10 @@ export function PresetOption({ preset, isSelected, onSelect, colors }: PresetOpt
                     }
                   ]}
                 >
-                  <Text style={[styles.badgeText, { color: colors.success }]}>✓ Recommended</Text>
+                  <View style={styles.badgeContent}>
+                    <Check size={10} color={colors.success} />
+                    <Text style={[styles.badgeText, { color: colors.success }]}>Recommended</Text>
+                  </View>
                 </View>
               )}
               {showWarningBadge && (
@@ -73,7 +77,10 @@ export function PresetOption({ preset, isSelected, onSelect, colors }: PresetOpt
                     }
                   ]}
                 >
-                  <Text style={[styles.badgeText, { color: colors.warning }]}>⚡ High Battery</Text>
+                  <View style={styles.badgeContent}>
+                    <Zap size={10} color={colors.warning} />
+                    <Text style={[styles.badgeText, { color: colors.warning }]}>High Battery Usage</Text>
+                  </View>
                 </View>
               )}
             </View>
@@ -124,8 +131,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14
   },
-  emoji: {
-    fontSize: 28
+  iconContainer: {
+    width: 28,
+    height: 28,
+    justifyContent: "center",
+    alignItems: "center"
   },
   textContent: {
     flex: 1
@@ -139,7 +149,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: "600",
+    ...fonts.semiBold,
     letterSpacing: -0.2
   },
   badge: {
@@ -148,13 +158,19 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1
   },
+  badgeContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4
+  },
   badgeText: {
     fontSize: 10,
-    fontWeight: "700",
+    ...fonts.bold,
     letterSpacing: 0.3
   },
   description: {
     fontSize: 13,
+    ...fonts.regular,
     lineHeight: 18
   },
   radio: {

@@ -20,6 +20,8 @@ import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking } from "../contexts/TrackingProvider"
+import { fonts } from "../styles/typography"
+import { X } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 
@@ -417,7 +419,7 @@ export function GeofenceScreen({}: ScreenProps) {
               lineDash: zone.pauseTracking ? null : [5, 5]
             }),
             fill: new ol.style.Fill({
-              color: zone.pauseTracking ? "rgba(255, 165, 0, 0.3)" : "rgba(0, 122, 255, 0.1)"
+              color: zone.pauseTracking ? "${colors.warning}4D" : "${colors.info}1A"
             }),
           })
         );
@@ -568,7 +570,7 @@ export function GeofenceScreen({}: ScreenProps) {
         <View style={styles.row}>
           <TouchableOpacity style={styles.info} onPress={() => handleZoomToGeofence(item)} activeOpacity={0.7}>
             <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
-            <Text style={[styles.radius, { color: colors.textSecondary }]}>{item.radius}m • Tap to view</Text>
+            <Text style={[styles.radius, { color: colors.textSecondary }]}>{item.radius}m radius</Text>
           </TouchableOpacity>
 
           <View style={styles.actions}>
@@ -581,7 +583,7 @@ export function GeofenceScreen({}: ScreenProps) {
                   false: colors.border,
                   true: colors.warning + "80"
                 }}
-                thumbColor={item.pauseTracking ? colors.warning : "#f4f3f4"}
+                thumbColor={item.pauseTracking ? colors.warning : colors.border}
               />
             </View>
 
@@ -590,7 +592,7 @@ export function GeofenceScreen({}: ScreenProps) {
               style={[styles.deleteBtn, { backgroundColor: colors.error + "15" }]}
               activeOpacity={0.7}
             >
-              <Text style={[styles.deleteText, { color: colors.error }]}>✕</Text>
+              <X size={16} color={colors.error} />
             </TouchableOpacity>
           </View>
         </View>
@@ -628,7 +630,7 @@ export function GeofenceScreen({}: ScreenProps) {
               <SectionTitle>Create Geofence</SectionTitle>
               <Card>
                 <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                  Enter details, then tap Place and click the map
+                  Enter a name and radius, then tap the map to place
                 </Text>
 
                 <View style={styles.inputRow}>
@@ -677,16 +679,14 @@ export function GeofenceScreen({}: ScreenProps) {
                   disabled={placingGeofence}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.placeBtnText}>{placingGeofence ? "Tap Map to Place..." : "Place Geofence"}</Text>
+                  <Text style={[styles.placeBtnText, { color: colors.textOnPrimary }]}>
+                    {placingGeofence ? "Tap Map to Place..." : "Place Geofence"}
+                  </Text>
                 </TouchableOpacity>
               </Card>
             </View>
 
-            {geofences.length > 0 && (
-              <View style={styles.section}>
-                <SectionTitle>Active Geofences ({geofences.length})</SectionTitle>
-              </View>
-            )}
+            {geofences.length > 0 && <SectionTitle>Active Geofences ({geofences.length})</SectionTitle>}
           </>
         }
         ListEmptyComponent={
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   webview: { flex: 1 },
   list: { padding: 20, paddingBottom: 40 },
   section: { marginBottom: 16 },
-  hint: { fontSize: 13, lineHeight: 18, marginBottom: 16 },
+  hint: { fontSize: 13, ...fonts.regular, lineHeight: 18, marginBottom: 16 },
   inputRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
   inputGroup: { flex: 1 },
   inputGroupName: {
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 6,
     textTransform: "uppercase",
     letterSpacing: 0.5
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
     textAlign: "center"
   },
   placeBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
-  placeBtnText: { color: "#f8f7f7", fontSize: 15, fontWeight: "600" },
+  placeBtnText: { fontSize: 15, ...fonts.semiBold },
   card: { marginBottom: 12, padding: 14 },
   row: {
     flexDirection: "row",
@@ -740,13 +740,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between"
   },
   info: { flex: 1, marginRight: 12 },
-  name: { fontSize: 15, fontWeight: "600", marginBottom: 2 },
+  name: { fontSize: 15, ...fonts.semiBold, marginBottom: 2 },
   radius: { fontSize: 12 },
   actions: { flexDirection: "row", alignItems: "center", gap: 12 },
   pauseSwitch: { flexDirection: "row", alignItems: "center", gap: 6 },
   pauseLabel: {
     fontSize: 11,
-    fontWeight: "600",
+    ...fonts.semiBold,
     textTransform: "uppercase",
     letterSpacing: 0.3
   },
@@ -757,9 +757,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
-  deleteText: { fontSize: 18, fontWeight: "600" },
   empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: 15, fontWeight: "600", marginBottom: 6 },
+  emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
   emptyHint: {
     fontSize: 13,
     textAlign: "center",

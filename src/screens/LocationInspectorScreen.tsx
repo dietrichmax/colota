@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect, useRef, useCallback, memo } from "react"
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Switch } from "react-native"
+import { fonts } from "../styles/typography"
+import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react-native"
 import { Container, Card } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { ThemeColors } from "../types/global"
@@ -73,7 +75,7 @@ const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
   return (
     <Card style={styles.itemCard}>
       <View style={styles.row}>
-        <Text style={[styles.id, { color: colors.primary }]}>#{item.id || item.location_id}</Text>
+        <Text style={[styles.id, { color: colors.primaryDark }]}>#{item.id || item.location_id}</Text>
         <Text style={[styles.time, { color: colors.textSecondary }]}>
           {new Date(timestamp * 1000).toLocaleTimeString()}
         </Text>
@@ -98,7 +100,10 @@ const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
       </View>
 
       {isQueue && item.last_error && (
-        <Text style={[styles.errorText, { color: colors.error }]}>⚠ {item.last_error}</Text>
+        <View style={styles.errorRow}>
+          <AlertTriangle size={12} color={colors.error} />
+          <Text style={[styles.errorText, { color: colors.error }]}>{item.last_error}</Text>
+        </View>
       )}
     </Card>
   )
@@ -173,7 +178,7 @@ export function LocationInspectorScreen() {
             <Switch
               value={autoRefresh}
               onValueChange={setAutoRefresh}
-              thumbColor={autoRefresh ? colors.primary : "#f4f3f4"}
+              thumbColor={autoRefresh ? colors.primary : colors.border}
             />
           </View>
 
@@ -189,7 +194,7 @@ export function LocationInspectorScreen() {
               autoRefresh && styles.refreshBtnDisabled
             ]}
           >
-            <Text style={[styles.btnText, { color: colors.primary }]}>Refresh</Text>
+            <Text style={[styles.btnText, { color: colors.primaryDark }]}>Refresh</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -209,7 +214,7 @@ export function LocationInspectorScreen() {
                 }
               ]}
             >
-              <Text style={[styles.limitBtnText, limit === v ? styles.limitBtnTextActive : { color: colors.text }]}>
+              <Text style={[styles.limitBtnText, { color: limit === v ? colors.textOnPrimary : colors.text }]}>
                 {v}
               </Text>
             </TouchableOpacity>
@@ -223,16 +228,7 @@ export function LocationInspectorScreen() {
               disabled={page === 0}
               style={styles.pageBtn}
             >
-              <Text
-                style={[
-                  styles.pageBtnText,
-                  {
-                    color: page === 0 ? colors.textDisabled : colors.primary
-                  }
-                ]}
-              >
-                ◀
-              </Text>
+              <ChevronLeft size={20} color={page === 0 ? colors.textDisabled : colors.primary} />
             </TouchableOpacity>
             <Text style={[styles.pageIndicator, { color: colors.text }]}>{page + 1}</Text>
             <TouchableOpacity
@@ -240,16 +236,7 @@ export function LocationInspectorScreen() {
               disabled={data.length < limit}
               style={styles.pageBtn}
             >
-              <Text
-                style={[
-                  styles.pageBtnText,
-                  {
-                    color: data.length < limit ? colors.textDisabled : colors.primary
-                  }
-                ]}
-              >
-                ▶
-              </Text>
+              <ChevronRight size={20} color={data.length < limit ? colors.textDisabled : colors.primary} />
             </TouchableOpacity>
           </View>
         )}
@@ -317,7 +304,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    fontWeight: "600"
+    ...fonts.semiBold
   },
   controls: {
     flexDirection: "row",
@@ -330,7 +317,7 @@ const styles = StyleSheet.create({
   },
   controlLabel: {
     fontSize: 10,
-    fontWeight: "700",
+    ...fonts.bold,
     marginRight: 6
   },
   refreshBtn: {
@@ -344,7 +331,7 @@ const styles = StyleSheet.create({
   },
   btnText: {
     fontSize: 12,
-    fontWeight: "bold"
+    ...fonts.bold
   },
   limitBar: {
     flexDirection: "row",
@@ -366,10 +353,7 @@ const styles = StyleSheet.create({
   },
   limitBtnText: {
     fontSize: 12,
-    fontWeight: "600"
-  },
-  limitBtnTextActive: {
-    color: "#fff"
+    ...fonts.semiBold
   },
   paginationRow: {
     flexDirection: "row",
@@ -378,13 +362,9 @@ const styles = StyleSheet.create({
   pageBtn: {
     padding: 8
   },
-  pageBtnText: {
-    fontWeight: "bold",
-    fontSize: 16
-  },
   pageIndicator: {
     fontSize: 14,
-    fontWeight: "bold",
+    ...fonts.bold,
     marginHorizontal: 8
   },
   tabBar: {
@@ -401,10 +381,10 @@ const styles = StyleSheet.create({
     fontSize: 14
   },
   tabTextActive: {
-    fontWeight: "700"
+    ...fonts.bold
   },
   tabTextInactive: {
-    fontWeight: "400"
+    ...fonts.regular
   },
   listContent: {
     paddingHorizontal: 12,
@@ -420,16 +400,17 @@ const styles = StyleSheet.create({
     marginBottom: 6
   },
   id: {
-    fontWeight: "bold",
+    ...fonts.bold,
     fontSize: 12
   },
   time: {
-    fontSize: 11
+    fontSize: 11,
+    ...fonts.regular
   },
   coords: {
     fontFamily: "monospace",
     fontSize: 15,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 8
   },
   metricsGrid: {
@@ -449,7 +430,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 9,
-    fontWeight: "bold",
+    ...fonts.bold,
     textTransform: "uppercase"
   },
   metricValue: {
@@ -463,11 +444,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 40,
     fontSize: 14,
+    ...fonts.regular,
     fontStyle: "italic"
+  },
+  errorRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    marginTop: 8
   },
   errorText: {
     fontSize: 11,
-    marginTop: 8,
     fontStyle: "italic"
   }
 })

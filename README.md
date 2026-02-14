@@ -1,84 +1,85 @@
 # Colota
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) ![Version](https://img.shields.io/github/v/release/dietrichmax/colota) [![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com) [![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple.svg)](https://kotlinlang.org) [![Shield: Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-yellow?logo=buymeacoffee)](https://ko-fi.com/maxdietrich)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) ![Version](https://img.shields.io/github/v/release/dietrichmax/colota) [![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com) [![React Native](https://img.shields.io/badge/React_Native-0.83-blue.svg)](https://reactnative.dev) [![Shield: Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-yellow?logo=buymeacoffee)](https://ko-fi.com/maxdietrich)
 
-**Self-hosted GPS tracking app for Android**
+**Self-hosted GPS tracking app for Android.**
 
-Colota is an open-source GPS tracker designed for users who run their own server infrastructure. Track your location with complete privacy and control—no cloud dependency, no third-party services, no data sharing.
+Colota sends your location to your own server over HTTP(S). It works offline, supports geofencing, and doesn't phone home.
 
 [Download on Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) | [View Screenshots](#screenshots) | [Documentation](#documentation)
 
 ---
 
+## Tech Stack
+
+- **Frontend:** React Native 0.83, TypeScript, React 19
+- **Native modules:** Kotlin (Android)
+- **Map:** OpenLayers (WebView)
+- **Icons:** Lucide React Native
+- **Storage:** SQLite (local), EncryptedSharedPreferences (credentials)
+
+---
+
 ## Features
 
-### 🏠 Self-Hosted
+### Self-Hosted
 
-- **Optional REST API connection** to your own server
-- **Works completely offline** without any server
-- **HTTPS-encrypted** data transmission (HTTP allowed for localhost development)
-- **Built-in API templates** for **Dawarich**, **OwnTracks**, and **Reitti**
-- Works with any backend that accepts JSON over HTTP (e.g., Home Assistant, Traccar, NodeRED)
-- Free choice of backend system
+- Optional REST API connection to your own server
+- Works completely offline without any server
+- HTTPS-encrypted data transmission (HTTP allowed for localhost)
+- Built-in API templates for Dawarich, OwnTracks, and Reitti
+- Works with any backend that accepts JSON over HTTP (Home Assistant, Traccar, NodeRED, etc.)
 
-### 📍 GPS Tracking
+### GPS Tracking
 
-- **High-precision positioning** (HIGH_ACCURACY mode)
-- **Configurable intervals** (1 second to hours)
+- HIGH_ACCURACY positioning mode
+- Configurable intervals (1 second to hours)
 - Records: coordinates, accuracy, altitude, speed, bearing, battery status
-- **Accuracy filter** for invalid GPS fixes
-- **Movement threshold** - only record if moved X meters
-- **Foreground service** for reliable 24/7 background tracking
-- **Smart retry logic** with exponential backoff
+- Accuracy filter for invalid GPS fixes
+- Movement threshold — only record if moved X meters
+- Foreground service for reliable background tracking
+- Retry logic with exponential backoff
 
-### 🛡️ Geofencing
+### Geofencing
 
-- **Unlimited geofence zones** (silent zones)
-- **Automatic tracking pause** in defined areas
-- Freely adjustable radius
-- **Battery optimization** through GPS pause in zones
-- **Instant zone detection**
+- Unlimited geofence zones (silent zones)
+- Automatic tracking pause in defined areas
+- Adjustable radius per zone
+- GPS pause in zones saves battery
 
-### 📡 Sync Modes
+### Sync Modes
 
-- **Instant Mode**: Send each position immediately (0s)
-- **Batch Mode**: Batch transmission (1/5/15 minutes)
-- **Manual Mode**: Synchronize only on demand
-- **Offline Mode**: Pure local storage without network
-- **Intelligent retry**: Failed uploads retry with backoff (30s → 60s → 5min → 15min)
-- **Network-aware**: Auto-sync when network becomes available
-- **Queue management**: Automatic cleanup of permanently failed items
+- **Instant:** Send each position immediately
+- **Batch:** Batch transmission (1/5/15 minutes)
+- **Offline:** Pure local storage, no network
+- Retry with backoff on failure (30s, 60s, 5min, 15min)
+- Auto-sync when network becomes available
+- Automatic cleanup of permanently failed items
 
-### 📤 Data Export
+### Data Export
 
-- **Export location history** in 4 standard formats
-- **CSV** for spreadsheets and data analysis
-- **GeoJSON** for mapping tools (Mapbox, Leaflet, QGIS)
-- **GPX** for GPS tools (Garmin, Strava, Google Earth)
-- **KML** for Google Earth and Google Maps
-- **Share exported files** directly from the app
+- Export location history in CSV, GeoJSON, GPX, or KML
+- Share exported files directly from the app
 
-### 🔑 Authentication
+### Authentication
 
-- **Multiple authentication methods**: None, Basic Auth, Bearer Token
-- **Custom HTTP headers** for proxies and access control
-- **AES-256-GCM encrypted storage** for all credentials on device
+- Basic Auth, Bearer Token, or no auth
+- Custom HTTP headers for proxies and access control
+- AES-256-GCM encrypted credential storage on device
 
-### 🔄 Reliability
+### Reliability
 
-- **Auto-start on boot** resumes tracking after device restart
-- **Battery critical monitoring** stops tracking below 5% when unplugged
-- **Server health check** with 3-stage fallback (health endpoint → HEAD → root domain)
-- **Persistent foreground service** survives app restarts and system cleanup
+- Auto-start on boot resumes tracking after restart
+- Battery critical monitoring stops tracking below 5% when unplugged
+- Server health check with 3-stage fallback
+- Persistent foreground service survives app restarts
 
-### 🔐 Privacy & Security
+### Privacy
 
-- **100% Open Source** (AGPL-3.0)
-- **No telemetry or analytics**
-- **No third-party tracking SDKs**
-- **HTTPS-only** server communication (except localhost)
-- **Data stays on your device** or your server
-- **No cloud services** - fully self-contained
+- Open source (AGPL-3.0)
+- No telemetry, analytics, or third-party SDKs
+- HTTPS-only server communication (except localhost)
+- Data stays on your device or your server
 
 ---
 
@@ -133,15 +134,13 @@ APK will be in `android/app/build/outputs/apk/release/`
 
 ## Quick Start
 
-### 1. Basic Setup (Offline Mode)
-
 1. Install the app
 2. Grant location permissions (**precise location**)
 3. Disable battery optimization for Colota
-4. Press "▶ Start Tracking"
+4. Press **Start Tracking**
 5. View live coordinates on dashboard
 
-**That's it!** The app works completely offline.
+The app works completely offline. Server setup is optional.
 
 ---
 
@@ -149,7 +148,7 @@ APK will be in `android/app/build/outputs/apk/release/`
 
 ### API Templates
 
-Colota includes built-in API templates for popular backends. Select a template in **Settings > API Settings** to auto-configure field mappings and custom fields.
+Colota includes built-in templates for popular backends. Select a template in **Settings > API Settings** to auto-configure field mappings.
 
 | Template      | Bearing Field | Custom Fields                    | Notes                          |
 | ------------- | ------------- | -------------------------------- | ------------------------------ |
@@ -304,8 +303,6 @@ All credentials are stored encrypted on-device using AES-256-GCM via Android's E
 
 ### Sync Presets
 
-Choose from optimized presets or create custom settings:
-
 | Preset          | Interval | Distance | Sync Interval | Retry Interval | Best For        |
 | --------------- | -------- | -------- | ------------- | -------------- | --------------- |
 | **Instant**     | 5s       | 0m       | Instant (0s)  | 30s            | City navigation |
@@ -367,30 +364,27 @@ Customize JSON field names to match your server's API:
 
 ## Geofencing (Silent Zones)
 
-Create zones where tracking automatically pauses:
+Create zones where tracking automatically pauses.
 
 ### Use Cases
 
-- **Home**: Don't track when at home (privacy)
+- **Home**: Don't track when at home
 - **Work**: Pause tracking during work hours
-- **Friends/Family**: Respect privacy when visiting others
-- **Battery saving**: Stop GPS in areas you visit frequently
+- **Frequent locations**: Save battery in places you visit often
 
 ### Setup
 
 1. Go to "Geofences" tab
-2. Tap "Add Geofence"
-3. Set name, coordinates, radius
+2. Enter a name and radius
+3. Tap the map to place the geofence
 4. Enable "Pause Tracking"
-5. Save
 
 ### How it Works
 
-- **Zone detection** uses Haversine formula (1-2ms per check)
+- Zone detection uses Haversine formula (1-2ms per check)
 - When entering a silent zone, GPS stops updating
 - Notification shows "Paused: [Zone Name]"
-- When exiting, tracking **automatically resumes** with notification update
-- Saves battery by stopping GPS in defined areas
+- When exiting, tracking automatically resumes
 - Zone checks happen every location update (minimal overhead)
 
 ---
@@ -448,79 +442,58 @@ Attempt 4: +300s delay (5 minutes)
 Attempt 5+: +900s delay (15 minutes)
 ```
 
-After **max retries** (default: 5), failed items are automatically removed from the queue to prevent accumulation.
+After max retries (default: 5), failed items are automatically removed from the queue.
 
 ---
 
-## Battery Optimization
+## Battery
 
-Colota is heavily optimized for long-running background tracking:
+### Optimizations
 
-### Optimizations Applied
+- Notification throttling: max 1 update per 10 seconds, plus 2-meter movement filter
+- Batch processing: 50 items per batch, 10 concurrent network requests
+- Smart sync: only syncs when queue has items and network is available
+- Battery critical shutdown: stops tracking below 5% (unplugged)
 
-- **Notification throttling**: Max 1 update per 10 seconds, plus 2-meter movement filter
-- **Batch processing**: 50 items per batch, 10 concurrent network requests
-- **Smart sync**: Only syncs when queue has items and network available
-- **Battery critical shutdown**: Automatically stops tracking when battery drops below 5% (unplugged)
+### Tips
 
-### Battery Life Estimates
-
-| Mode               | Estimated Runtime | GPS Interval | Notes                    |
-| ------------------ | ----------------- | ------------ | ------------------------ |
-| **High Accuracy**  | 10-12 hours       | 2-5 seconds  | Full precision tracking  |
-| **Balanced**       | 18-24 hours       | 30 seconds   | Good balance             |
-| **Eco Mode**       | 36-48 hours       | 5 minutes    | Periodic position checks |
-| **With Geofences** | +20-40%           | Any          | GPS off in zones         |
-
-_Based on typical Android device with 4000mAh battery_
-
-### Tips for Better Battery Life
-
-1. **Increase GPS interval** (5s → 30s or higher)
-2. **Enable accuracy filtering** (reject poor GPS fixes)
-3. **Use batch sync** instead of instant (reduces network usage)
-4. **Create geofences** for home/work (GPS stops in zones)
-5. **Enable movement threshold** (10-50m, only record significant movement)
-6. **Disable battery optimization** for Colota (prevents Android from killing service)
+1. Increase GPS interval (5s → 30s saves significant battery)
+2. Enable accuracy filtering (reject poor GPS fixes)
+3. Use batch sync instead of instant (reduces network usage)
+4. Create geofences for home/work (GPS stops in zones)
+5. Enable movement threshold (10-50m, skip stationary updates)
+6. Disable battery optimization for Colota in Android settings
 
 ---
 
 ## Privacy
 
-### Data Collection
+### What Colota Does Not Do
 
-**Colota collects ZERO data about you.**
-
-- ❌ No analytics
-- ❌ No crash reporting (unless you opt-in via system)
-- ❌ No telemetry
-- ❌ No advertising IDs
-- ❌ No user accounts
-- ❌ No cloud services
-- ✅ 100% local or self-hosted
+- No analytics or telemetry
+- No crash reporting (unless opted in via Android system)
+- No advertising IDs or user accounts
+- No cloud services or third-party network calls
 
 ### Data Storage
 
 - All location data stored locally in SQLite
 - Database location: `/data/data/com.Colota/databases/Colota.db`
-- Only sent to **YOUR** server if configured
-- Can operate **100% offline** forever
-- No automatic uploads to third parties
+- Only sent to your server if you configure an endpoint
+- Can operate fully offline
 
 ### Network Communication
 
-- **HTTPS required** for all public endpoints
-- **HTTP allowed** only for private/local addresses (localhost, 127.0.0.1, 192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-- No telemetry or analytics endpoints
-- Only communicates with **your configured server**
+- HTTPS required for all public endpoints
+- HTTP allowed only for private/local addresses (localhost, 127.0.0.1, 192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+- Only communicates with your configured server
 - Network can be completely disabled (offline mode)
-- Android network security config enforces cleartext restrictions
 
-### Permissions Required
+### Permissions
 
 | Permission           | Required | Purpose                                  |
 | -------------------- | -------- | ---------------------------------------- |
-| Location (Precise)   | Yes      | GPS tracking (app purpose)               |
+| Location (Precise)   | Yes      | GPS tracking                             |
 | Foreground Service   | Yes      | Background tracking with notification    |
 | Boot Completed       | Optional | Auto-start after device reboot           |
 | Internet             | Optional | Server sync (not needed for offline use) |
@@ -530,34 +503,27 @@ _Based on typical Android device with 4000mAh battery_
 
 ## Contributing
 
-Contributions are welcome! Please follow these guidelines:
-
 ### Reporting Issues
 
 1. Check if issue already exists in [Issues](https://github.com/dietrichmax/colota/issues)
 2. Provide device info (model, Android version, Colota version)
 3. Include logs if possible (`adb logcat | grep Colota`)
 4. Describe steps to reproduce
-5. Attach screenshots if relevant
 
 ### Pull Requests
 
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes with clear commit messages
-4. Test thoroughly on real device
-5. Update documentation if needed
-6. Push to branch (`git push origin feature/amazing-feature`)
-7. Open Pull Request with detailed description
+4. Test on a real device
+5. Open Pull Request
 
 ### Code Style
 
-- Follow Kotlin conventions and best practices
-- Use meaningful variable names
-- Comment complex logic and algorithms
-- Add unit tests for new features
-- Ensure no memory leaks (proper coroutine lifecycle)
-- Update README if adding user-facing features
+- TypeScript/React Native for the UI layer
+- Kotlin for native Android modules
+- Follow existing patterns in the codebase
+- Run `npm run lint` and `npx tsc --noEmit` before submitting
 
 ---
 
@@ -565,141 +531,53 @@ Contributions are welcome! Please follow these guidelines:
 
 ### App doesn't track in background
 
-**Solution:**
-
-- Go to Settings → Apps → Colota → Battery
-- Select "Unrestricted" or "Don't optimize"
+- Go to Settings → Apps → Colota → Battery → Select "Unrestricted"
 - Verify location permissions are "Allow all the time"
 - Ensure foreground notification is visible
-- Check if service is running: `adb shell dumpsys activity services | grep Colota`
 
 ### GPS accuracy is poor
 
-**Solution:**
-
-- Wait for GPS lock (can take 30-60 seconds initially)
-- Move to open area (away from buildings, trees)
+- Wait for GPS lock (can take 30-60 seconds)
+- Move to an open area away from buildings
 - Check if "High Accuracy" is enabled in device location settings
-- Verify accuracy threshold in app (try 50-100m)
-- Ensure "Filter Inaccurate Locations" is enabled
-- Check if device has good GPS hardware (some cheap phones struggle)
+- Enable "Filter Inaccurate Locations" in app settings
 
 ### Server sync not working
-
-**Diagnosis:**
 
 1. Check endpoint URL format (must be `https://` or `http://localhost`)
 2. Use "Test Connection" button in settings
 3. Check server logs for incoming requests
 4. Verify network connectivity
-5. Check queue count in database stats
-6. Try manual flush to isolate issue
+5. Check queue count in Data Management
 
-**Common Issues:**
-
-- **HTTPS required**: Non-localhost endpoints must use HTTPS
-- **Wrong endpoint**: Verify URL is correct
-- **Server not reachable**: Check firewall, DNS, SSL certificate
-- **Authentication**: Ensure API key/token is correct
-- **Field mapping**: Server may expect different JSON structure
-
-### Battery draining too fast
-
-**Solutions:**
-
-- Increase GPS interval: 5s → 30s (600% battery improvement)
-- Enable geofences for home/work (20-40% savings when in zones)
-- Use batch sync instead of instant (reduces network overhead)
-- Enable movement threshold: 10-50m (skip stationary updates)
-- Enable accuracy filtering (reject poor GPS fixes that drain battery)
-- Check for other battery-draining apps
-- Review app battery usage in Android settings
-- Ensure latest version of Colota (performance improvements)
+Common causes: wrong URL, HTTPS required for non-localhost, expired SSL certificate, incorrect authentication, mismatched field mapping.
 
 ### Database growing too large
 
-**Solutions:**
-
 - Use "Clear Sent History" to remove synced locations
-- Use "Delete Older Than X Days" for automatic cleanup
+- Use "Delete Older Than X Days" for cleanup
 - Export data first if you want to keep it
-- Use "Vacuum Database" to reclaim space
-- Consider lower tracking frequency if you don't need high precision
+- Use "Vacuum Database" to reclaim space after deletions
 
-**Database size estimates:**
-
-- 1 location ≈ 200 bytes
-- 10,000 locations ≈ 2 MB
-- 100,000 locations ≈ 20 MB
-
-### Queue not syncing
-
-**Diagnosis:**
-
-```
-1. Check Stats:
-   - Queued: Shows items waiting to sync
-   - Sent: Shows successfully synced items
-   - Total: All locations captured
-
-2. If Queued > 0 but not decreasing:
-   - Check offline mode (Settings → Connection)
-   - Verify endpoint is configured
-   - Check network connectivity
-   - Review server logs
-   - Try manual flush
-   - Check max retries setting
-
-3. If Queue growing indefinitely:
-   - Server may be rejecting requests
-   - Check retry count in Data Management
-   - Items exceeding max retries are auto-removed
-```
-
-### App crashes on startup
-
-**Solution:**
-
-- Clear app data: Settings → Apps → Colota → Storage → Clear Data
-- Reinstall app
-- Check Android version compatibility (requires Android 7.0+ / API 24)
-- Report issue with crash logs: `adb logcat -d > crash.log`
+Size reference: ~200 bytes per location, ~2 MB per 10,000 locations.
 
 ---
 
 ## FAQ
 
-**Q: Does this app track me without my knowledge?**  
-A: No. Tracking only happens when you explicitly press "Start Tracking". You have full control. The app shows a persistent notification when tracking is active.
+**Q: Do I need a server?** A: No. The app stores location history locally. Server sync is optional.
 
-**Q: Do I need a server to use this app?**  
-A: No. The app works completely offline and can store unlimited location history locally. Server integration is optional for backup/analysis.
+**Q: What data does the app send?** A: Only GPS data to your configured server. Nothing else. No analytics, no telemetry.
 
-**Q: What data does the app send to the internet?**  
-A: Only GPS data to **YOUR** server, and only if you configure an endpoint. No analytics, no telemetry, no third-party services. You can verify this in the source code.
+**Q: Is this compatible with Google Timeline?** A: No, but you can use Dawarich or a custom backend for similar functionality.
 
-**Q: Is this compatible with Google Timeline?**  
-A: No, but you can use Dawarich or a custom backend to create similar functionality with full control over your data.
+**Q: Does this work without Google Play Services?** A: Not currently — it uses FusedLocationProvider. A future version may support alternatives.
 
-**Q: Can I use this for fleet management?**  
-A: Yes, if you set up your own backend to handle multiple devices. Each device would need Colota installed and configured to your server.
+**Q: Why AGPL-3.0?** A: To ensure modifications stay open source, especially server-side components.
 
-**Q: Does this work without Google Play Services?**  
-A: Currently no, it requires Play Services for FusedLocationProvider. A future version may support alternative location providers.
+**Q: How accurate is the tracking?** A: 3-10 meters in open sky, 10-50 meters in urban areas. Accuracy filtering helps remove poor fixes.
 
-**Q: Why AGPL-3.0 license?**  
-A: To ensure that any modifications remain open source, especially for server-side components. If you modify Colota and run it as a service, you must share your changes.
-
-**Q: How accurate is the tracking?**  
-A: In ideal conditions (open sky, good GPS signal): 3-10 meters. In urban areas or buildings: 10-50 meters. Accuracy filtering helps remove poor GPS fixes.
-
-**Q: Can I export my location history?** A: Yes! Go to the Export Data screen to export your full location history in **CSV**, **GeoJSON**, **GPX**, or **KML** format. Exported files can be shared directly from the app.
-
-**Q: Does this drain battery like other tracking apps?**  
-A: Colota is optimized for efficiency with caching and batching. Expect 10-12 hours of high-accuracy tracking, better with optimized settings.
-
-**Q: What's the difference between "Sent" and "Total" in stats?**  
-A: **Total** = all locations captured. **Sent** = successfully synced to server. **Queued** = waiting to sync. Total = Sent + Queued.
+**Q: Can I export my location history?** A: Yes. Go to Export Data to export in CSV, GeoJSON, GPX, or KML.
 
 ---
 
@@ -723,7 +601,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 ```
 
-See [LICENSE](LICENSE) file for full text.
+See [LICENSE](LICENSE) for the full text.
 
 ---
 
@@ -731,16 +609,5 @@ See [LICENSE](LICENSE) file for full text.
 
 - **Issues**: [GitHub Issues](https://github.com/dietrichmax/colota/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/dietrichmax/colota/discussions)
-
----
-
-## Donate
-
-If you find this app useful, consider supporting development:
-
-- **GitHub Sponsors**: [Sponsor @dietrichmax](https://github.com/sponsors/dietrichmax)
+- **Sponsor**: [GitHub Sponsors](https://github.com/sponsors/dietrichmax)
 - **Ko-fi**: [Buy me a coffee](https://ko-fi.com/maxdietrich)
-
-Your support helps maintain and improve Colota for the entire self-hosting community!
-
----

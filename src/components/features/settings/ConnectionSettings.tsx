@@ -5,9 +5,11 @@
 
 import React, { useState, useCallback } from "react"
 import { Text, StyleSheet, TextInput, Switch, View, TouchableOpacity } from "react-native"
+import { CheckCircle, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isPrivateHost, isEndpointAllowed } from "../../../utils/settingsValidation"
+import { fonts } from "../../../styles/typography"
 import { Button, Card, SectionTitle, Divider } from "../../index"
 
 interface ConnectionSettingsProps {
@@ -87,14 +89,16 @@ export function ConnectionSettings({
       })
 
       if (response.ok) {
-        setTestResponse("✓ Connection successful")
+        setTestResponse("Connection successful")
         onSettingsChange({ ...settings, endpoint: endpointInput })
       } else {
         setTestResponse(`Failed: ${response.status}`)
         setTestError(true)
       }
     } catch (err: any) {
-      setTestResponse(err.message || "Connection failed")
+      const msg = err.message?.toLowerCase() || ""
+      const userMessage = msg.includes("network request failed") ? "No internet connection" : "Connection failed"
+      setTestResponse(userMessage)
       setTestError(true)
     } finally {
       setTesting(false)
@@ -118,7 +122,7 @@ export function ConnectionSettings({
               false: colors.border,
               true: colors.primary + "80"
             }}
-            thumbColor={settings.isOfflineMode ? colors.primary : "#f4f3f4"}
+            thumbColor={settings.isOfflineMode ? colors.primary : colors.border}
           />
         </View>
 
@@ -188,7 +192,6 @@ export function ConnectionSettings({
             <Button
               style={[
                 styles.testButton,
-                { backgroundColor: colors.primary },
                 (!endpointInput || !isEndpointAllowed(endpointInput)) && styles.disabledButton
               ]}
               onPress={() => {
@@ -196,7 +199,6 @@ export function ConnectionSettings({
                 handleTestEndpoint()
               }}
               title={testing ? "Testing..." : "Test Connection"}
-              color="#f8f7f7"
             />
 
             {testResponse && (
@@ -209,6 +211,7 @@ export function ConnectionSettings({
                   }
                 ]}
               >
+                {!testError && <CheckCircle size={16} color={colors.success} />}
                 <Text style={[styles.responseText, { color: testError ? colors.error : colors.success }]}>
                   {testResponse}
                 </Text>
@@ -228,7 +231,7 @@ export function ConnectionSettings({
                   Basic auth, bearer tokens, custom headers
                 </Text>
               </View>
-              <Text style={[styles.linkArrow, { color: colors.textLight }]}>›</Text>
+              <ChevronRight size={20} color={colors.textLight} />
             </TouchableOpacity>
           </>
         )}
@@ -253,11 +256,12 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 16,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 2
   },
   settingHint: {
     fontSize: 13,
+    ...fonts.regular,
     lineHeight: 18
   },
   inputGroup: {
@@ -271,7 +275,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 15,
-    fontWeight: "600"
+    ...fonts.semiBold
   },
   protocolBadge: {
     paddingHorizontal: 10,
@@ -280,18 +284,16 @@ const styles = StyleSheet.create({
   },
   protocolText: {
     fontSize: 11,
-    fontWeight: "700"
+    ...fonts.bold
   },
   input: {
     borderWidth: 1.5,
     padding: 16,
     borderRadius: 12,
-    fontSize: 15
+    fontSize: 15,
+    ...fonts.regular
   },
   testButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
     marginTop: 12
   },
   disabledButton: {
@@ -302,11 +304,14 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1.5,
     borderRadius: 12,
-    alignItems: "center"
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8
   },
   responseText: {
     fontSize: 14,
-    fontWeight: "600"
+    ...fonts.semiBold
   },
   linkRow: {
     flexDirection: "row",
@@ -319,25 +324,21 @@ const styles = StyleSheet.create({
   },
   linkLabel: {
     fontSize: 16,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 2
   },
   linkSub: {
-    fontSize: 13
-  },
-  linkArrow: {
-    fontSize: 28,
-    fontWeight: "300",
-    marginLeft: 12
+    fontSize: 13,
+    ...fonts.regular
   },
   endpointHint: {
     marginTop: 6,
     fontSize: 12,
-    fontWeight: "500"
+    ...fonts.medium
   },
   httpWarning: {
     marginTop: 6,
     fontSize: 12,
-    fontWeight: "500"
+    ...fonts.medium
   }
 })

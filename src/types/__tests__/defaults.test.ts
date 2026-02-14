@@ -103,9 +103,8 @@ describe("TRACKING_PRESETS", () => {
     expect(TRACKING_PRESETS[name].retryInterval).toBeGreaterThan(0)
   })
 
-  it.each(presetNames)("%s has a label and emoji", (name) => {
+  it.each(presetNames)("%s has a label", (name) => {
     expect(TRACKING_PRESETS[name].label).toBeTruthy()
-    expect(TRACKING_PRESETS[name].emoji).toBeTruthy()
   })
 
   it.each(presetNames)("%s has valid batteryImpact", (name) => {

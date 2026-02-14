@@ -5,8 +5,10 @@
 import React, { Component } from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
 import { ThemeColors } from "../../types/global"
+import { useTheme } from "../../hooks/useTheme"
+import { fonts, fontSizes } from "../../styles/typography"
 
-interface ErrorBoundaryProps {
+interface ErrorBoundaryInternalProps {
   children: React.ReactNode
   colors: ThemeColors
 }
@@ -16,8 +18,8 @@ interface ErrorBoundaryState {
   error: Error | null
 }
 
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+class ErrorBoundaryInternal extends Component<ErrorBoundaryInternalProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryInternalProps) {
     super(props)
     this.state = { hasError: false, error: null }
   }
@@ -27,11 +29,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log to error reporting service (e.g., Sentry, Crashlytics)
     console.error("ErrorBoundary caught an error:", error, errorInfo)
-
-    // You can add error tracking here:
-    // Sentry.captureException(error);
   }
 
   handleReset = () => {
@@ -52,7 +50,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             style={[styles.errorButton, { backgroundColor: colors.primary }]}
             onPress={this.handleReset}
           >
-            <Text style={styles.errorButtonText}>Try Again</Text>
+            <Text style={[styles.errorButtonText, { color: colors.textOnPrimary }]}>Try Again</Text>
           </TouchableOpacity>
         </View>
       )
@@ -60,6 +58,15 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
     return children
   }
+}
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode
+}
+
+export function ErrorBoundary({ children }: ErrorBoundaryProps) {
+  const { colors } = useTheme()
+  return <ErrorBoundaryInternal colors={colors}>{children}</ErrorBoundaryInternal>
 }
 
 const styles = StyleSheet.create({
@@ -70,12 +77,12 @@ const styles = StyleSheet.create({
     padding: 20
   },
   errorTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: fontSizes.screenTitle,
+    ...fonts.bold,
     marginBottom: 10
   },
   errorMessage: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     textAlign: "center",
     marginBottom: 20,
     paddingHorizontal: 20
@@ -86,10 +93,7 @@ const styles = StyleSheet.create({
     borderRadius: 8
   },
   errorButtonText: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "600"
+    fontSize: fontSizes.label,
+    ...fonts.semiBold
   }
 })
-
-export default ErrorBoundary

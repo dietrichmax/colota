@@ -6,6 +6,7 @@
 import React from "react"
 import { View, Text, StyleSheet, TextInput } from "react-native"
 import { ThemeColors } from "../../types/global"
+import { fonts } from "../../styles/typography"
 
 interface NumericInputProps {
   label: string
@@ -79,7 +80,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: "600",
+    ...fonts.semiBold,
     marginBottom: 8
   },
   hint: {
@@ -102,6 +103,7 @@ const styles = StyleSheet.create({
   },
   unit: {
     fontSize: 15,
-    fontWeight: "500"
+    ...fonts.medium,
+    minWidth: 64
   }
 })
