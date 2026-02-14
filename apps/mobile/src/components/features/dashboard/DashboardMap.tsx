@@ -9,7 +9,10 @@ import { WebView } from "react-native-webview"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { fonts } from "../../../styles/typography"
+import { WifiOff } from "lucide-react-native"
 import NativeLocationService from "../../../services/NativeLocationService"
+import { useFocusEffect } from "@react-navigation/native"
+import { STATS_REFRESH_IDLE } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import icon from "../../../assets/icons/icon.png"
 
@@ -31,6 +34,18 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
   const [hasInitialCoords, setHasInitialCoords] = useState(false)
 
   const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
+
+  useFocusEffect(
+    useCallback(() => {
+      const check = () => {
+        NativeLocationService.isNetworkAvailable().then((available) => setIsOffline(!available))
+      }
+      check()
+      const interval = setInterval(check, STATS_REFRESH_IDLE)
+      return () => clearInterval(interval)
+    }, [])
+  )
 
   const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
     return c !== null && c.latitude !== 0 && c.longitude !== 0
@@ -499,6 +514,13 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
 
       <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />
 
+      {isOffline && (
+        <View style={[styles.offlineBanner, { backgroundColor: colors.card }]}>
+          <WifiOff size={14} color={colors.textSecondary} />
+          <Text style={[styles.offlineText, { color: colors.textSecondary }]}>Map tiles unavailable — no internet</Text>
+        </View>
+      )}
+
       {activeZoneName && (
         <View
           style={[
@@ -556,5 +578,23 @@ const styles = StyleSheet.create({
     zIndex: 5
   },
   infoTitle: { fontSize: 16, ...fonts.bold, marginBottom: 2 },
-  infoSub: { fontSize: 13 }
+  infoSub: { fontSize: 13 },
+  offlineBanner: {
+    position: "absolute",
+    bottom: 90,
+    left: 14,
+    right: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    elevation: 8,
+    shadowOpacity: 0.2,
+    zIndex: 5
+  },
+  offlineText: {
+    fontSize: 13,
+    ...fonts.medium
+  }
 })

@@ -21,8 +21,10 @@ import NativeLocationService from "../services/NativeLocationService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking } from "../contexts/TrackingProvider"
 import { fonts } from "../styles/typography"
-import { X } from "lucide-react-native"
+import { X, WifiOff } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
+import { useFocusEffect } from "@react-navigation/native"
+import { STATS_REFRESH_IDLE } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 
 export function GeofenceScreen({}: ScreenProps) {
@@ -38,6 +40,7 @@ export function GeofenceScreen({}: ScreenProps) {
   const [mapReady, setMapReady] = useState(false)
   const [hasInitialCoords, setHasInitialCoords] = useState(false)
   const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
 
   const webviewRef = useRef<WebView>(null)
   const initialCenter = useRef<{
@@ -45,6 +48,17 @@ export function GeofenceScreen({}: ScreenProps) {
     longitude: number
     accuracy: number
   } | null>(null)
+
+  useFocusEffect(
+    useCallback(() => {
+      const check = () => {
+        NativeLocationService.isNetworkAvailable().then((available) => setIsOffline(!available))
+      }
+      check()
+      const interval = setInterval(check, STATS_REFRESH_IDLE)
+      return () => clearInterval(interval)
+    }, [])
+  )
 
   // Set initial map center: use live coords, fall back to last known from DB, then default
   useEffect(() => {
@@ -617,6 +631,15 @@ export function GeofenceScreen({}: ScreenProps) {
         />
 
         <MapCenterButton visible={!isCentered && tracking} onPress={handleCenterMe} />
+
+        {isOffline && (
+          <View style={[styles.offlineBanner, { backgroundColor: colors.card }]}>
+            <WifiOff size={14} color={colors.textSecondary} />
+            <Text style={[styles.offlineText, { color: colors.textSecondary }]}>
+              Map tiles unavailable — no internet
+            </Text>
+          </View>
+        )}
       </View>
 
       <FlatList
@@ -764,5 +787,23 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 260,
     lineHeight: 18
+  },
+  offlineBanner: {
+    position: "absolute",
+    top: 14,
+    left: 66,
+    right: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    elevation: 8,
+    shadowOpacity: 0.2,
+    zIndex: 5
+  },
+  offlineText: {
+    fontSize: 13,
+    ...fonts.medium
   }
 })
