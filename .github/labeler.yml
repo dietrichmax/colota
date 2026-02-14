@@ -30,3 +30,10 @@ tests:
 # ============================
 documentation:
   - '**/*.md'
+  - 'apps/docs/**'
+
+# ============================
+# Shared Package
+# ============================
+shared:
+  - 'packages/shared/**'

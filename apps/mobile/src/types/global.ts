@@ -11,63 +11,7 @@ export interface ScreenProps {
   navigation: any
 }
 
-export type ThemeMode = "light" | "dark"
-
-export interface ThemeColors {
-  // Primary colors
-  primary: string
-  primaryDark: string
-  primaryLight: string
-
-  // Secondary colors
-  secondary: string
-  secondaryDark: string
-  secondaryLight: string
-
-  // Semantic colors
-  success: string
-  successDark: string
-  successLight: string
-  warning: string
-  warningDark: string
-  warningLight: string
-  error: string
-  errorDark: string
-  errorLight: string
-  info: string
-  infoDark: string
-  infoLight: string
-
-  // Surfaces & backgrounds
-  background: string
-  backgroundElevated: string
-  card: string
-  cardElevated: string
-  surface: string
-
-  // Text colors
-  text: string
-  textSecondary: string
-  textLight: string
-  textDisabled: string
-
-  // Borders & dividers
-  border: string
-  borderLight: string
-  divider: string
-
-  // Interactive elements
-  placeholder: string
-  link: string
-  linkVisited: string
-
-  // Utility
-  overlay: string
-  shadow: string
-  transparent: string
-  borderRadius: number
-  textOnPrimary: string
-}
+export type { ThemeColors, ThemeMode } from "@colota/shared"
 
 // ============================================================================
 // LOCATION DATA

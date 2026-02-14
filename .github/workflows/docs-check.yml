@@ -1,0 +1,33 @@
+name: Docs Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/docs/**'
+      - 'packages/shared/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w @colota/shared
+
+      - name: Build docs
+        run: npm run build -w @colota/docs
