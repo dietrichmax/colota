@@ -87,21 +87,17 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
     <td align="center">Data Management</td>
   </tr>
   <tr>
-    <td><img src="https://github.com/dietrichmax/colota/blob/main/screenshots/mobile/original/LocationInspector.png" alt="Location Inspector" width="200"/></td>
     <td><img src="https://github.com/dietrichmax/colota/blob/main/screenshots/mobile/original/ExportData.png" alt="Export Data" width="200"/></td>
     <td><img src="https://github.com/dietrichmax/colota/blob/main/screenshots/mobile/original/ApiFieldMapping.png" alt="API Field Mapping" width="200"/></td>
     <td><img src="https://github.com/dietrichmax/colota/blob/main/screenshots/mobile/original/Authentication.png" alt="Authentication" width="200"/></td>
   </tr>
   <tr>
-    <td align="center">Location Inspector</td>
-    <td align="center">Export Data</td>
-    <td align="center">API Field Mapping</td>
-    <td align="center">Authentication</td>
-  </tr>
-  <tr>
     <td><img src="https://github.com/dietrichmax/colota/blob/main/screenshots/mobile/original/DarkMode.png" alt="Dark Mode" width="200"/></td>
   </tr>
   <tr>
+    <td align="center">Export Data</td>
+    <td align="center">API Field Mapping</td>
+    <td align="center">Authentication</td>
     <td align="center">Dark Mode</td>
   </tr>
 </table>
