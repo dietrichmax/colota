@@ -25,20 +25,14 @@ The App collects the following location-related data when tracking is active:
 
 The App also collects:
 
-- Battery level (0--100%)
+- Battery level (0–100%)
 - Battery status (charging, unplugged, full)
 
-### What We Do NOT Collect
-
-- No personal identifiers (name, email, phone number)
-- No advertising IDs
-- No device identifiers (IMEI, serial number)
-- No usage analytics or telemetry
-- No crash reports (unless opted in via Android system)
+All data is stored **locally on your device** and is never sent anywhere unless you configure a server. The App does not collect personal identifiers, advertising IDs, device identifiers (IMEI, serial number), usage analytics, telemetry, or crash reports.
 
 ## Data Storage
 
-All collected data is stored **locally on your device** in a SQLite database. The data is not accessible to other apps.
+Collected data is stored in a local SQLite database on your device. The data is not accessible to other apps.
 
 Authentication credentials (if configured) are encrypted using **AES-256-GCM** via Android's `EncryptedSharedPreferences`.
 
