@@ -91,7 +91,8 @@ describe("NativeLocationService", () => {
         isOfflineMode: false,
         customFields: [],
         apiTemplate: "custom" as const,
-        syncPreset: "instant" as const
+        syncPreset: "instant" as const,
+        hasCompletedSetup: false
       }
 
       await NativeLocationService.start(settings)

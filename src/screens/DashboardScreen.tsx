@@ -17,12 +17,13 @@ import {
   CoordinateDisplay,
   Container,
   QuickAccess,
-  DatabaseStatistics
+  DatabaseStatistics,
+  WelcomeCard
 } from "../components"
 import { STATS_REFRESH_IDLE } from "../constants"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
-  const { coords, settings, tracking, startTracking, stopTracking } = useTracking()
+  const { coords, settings, tracking, startTracking, stopTracking, setSettings } = useTracking()
   const { colors } = useTheme()
 
   const [stats, setStats] = useState<DatabaseStats>({
@@ -186,6 +187,19 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
         {/* Content Section */}
         <View style={[styles.content, { backgroundColor: colors.background }]}>
+          {/* Welcome Card (first run) */}
+          {!settings.hasCompletedSetup && (
+            <WelcomeCard
+              settings={settings}
+              tracking={tracking}
+              colors={colors}
+              onDismiss={() => setSettings({ ...settings, hasCompletedSetup: true })}
+              onStartTracking={handleStart}
+              onNavigateToSettings={() => navigation.navigate("Settings")}
+              onNavigateToApiConfig={() => navigation.navigate("API Config")}
+            />
+          )}
+
           {/* Coordinates */}
           {tracking && coords && (
             <View style={styles.metricsSection}>

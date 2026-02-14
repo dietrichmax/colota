@@ -293,6 +293,7 @@ export interface Settings {
 
   // UI State
   syncPreset: SyncPreset
+  hasCompletedSetup: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -308,7 +309,8 @@ export const DEFAULT_SETTINGS: Settings = {
   accuracyThreshold: 50,
   syncPreset: "instant",
   maxRetries: 5,
-  isOfflineMode: false
+  isOfflineMode: false,
+  hasCompletedSetup: false
 } as const
 
 // ============================================================================
