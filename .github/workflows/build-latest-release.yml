@@ -88,9 +88,6 @@ jobs:
           test -n "${{ secrets.KEY_ALIAS }}" || exit 1
           test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
 
-      - name: Fix Hermes binary permissions
-        run: chmod +x node_modules/react-native/sdks/hermesc/linux64-bin/hermesc
-
       - name: Build Release APK
         run: |
           cd apps/mobile/android
