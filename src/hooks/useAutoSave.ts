@@ -22,37 +22,6 @@ export function useAutoSave() {
   const restartTimeout = useTimeout()
   const successTimeout = useTimeout()
 
-  const executeSave = useCallback(
-    async (saveFn: () => Promise<void>) => {
-      setSaving(true)
-      try {
-        await saveFn()
-        setSaveSuccess(true)
-        successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
-      } catch (err) {
-        console.error("[useAutoSave] Save failed:", err)
-      } finally {
-        setSaving(false)
-      }
-    },
-    [successTimeout]
-  )
-
-  const debouncedSave = useCallback(
-    (saveFn: () => Promise<void>) => {
-      saveTimeout.set(() => executeSave(saveFn), AUTOSAVE_DEBOUNCE_MS)
-    },
-    [saveTimeout, executeSave]
-  )
-
-  const immediateSave = useCallback(
-    (saveFn: () => Promise<void>) => {
-      saveTimeout.clear()
-      executeSave(saveFn)
-    },
-    [saveTimeout, executeSave]
-  )
-
   /**
    * Schedules a debounced restart after settings are persisted.
    * Use when you need to save settings first, then restart tracking after the debounce.
@@ -117,8 +86,6 @@ export function useAutoSave() {
   return {
     saving,
     saveSuccess,
-    debouncedSave,
-    immediateSave,
     debouncedSaveAndRestart,
     immediateSaveAndRestart
   }
