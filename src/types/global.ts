@@ -104,7 +104,7 @@ export interface LocationTrackingResult {
   startTracking: (overrideSettings?: Settings) => Promise<void>
   stopTracking: () => void
   restartTracking: (newSettings?: Settings) => Promise<void>
-  reconnect: () => void
+  reconnect: () => Promise<void>
   settings: Settings
 }
 

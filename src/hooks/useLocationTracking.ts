@@ -207,7 +207,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    * Used after app restart when tracking_enabled is true in the DB.
    * Does NOT request permissions or restart the service.
    */
-  const reconnect = useCallback(() => {
+  const reconnect = useCallback(async () => {
     if (isTrackingRef.current) {
       console.log("[useLocationTracking] Already tracking, skip reconnect")
       return
@@ -215,6 +215,25 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
 
     console.log("[useLocationTracking] Reconnecting to active service")
     setTracking(true)
+
+    try {
+      const latest = await NativeLocationService.getMostRecentLocation()
+      if (latest) {
+        setCoords({
+          latitude: latest.latitude,
+          longitude: latest.longitude,
+          accuracy: latest.accuracy,
+          altitude: latest.altitude ?? 0,
+          speed: latest.speed ?? 0,
+          bearing: latest.bearing ?? 0,
+          timestamp: latest.timestamp ?? Date.now(),
+          battery: latest.battery,
+          battery_status: latest.batteryStatus
+        })
+      }
+    } catch (err) {
+      console.error("[useLocationTracking] Failed to fetch location on reconnect:", err)
+    }
   }, [])
 
   /**
