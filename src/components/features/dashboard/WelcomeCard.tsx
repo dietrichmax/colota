@@ -84,9 +84,9 @@ export function WelcomeCard({
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Get started by completing these steps:</Text>
 
         <View style={styles.checklist}>
-          <ChecklistItem label="Start tracking" completed={tracking} colors={colors} onPress={onStartTracking} />
+          <ChecklistItem label="1. Start tracking" completed={tracking} colors={colors} onPress={onStartTracking} />
           <ChecklistItem
-            label="Configure your server endpoint"
+            label="2. Configure your server endpoint"
             completed={hasEndpoint}
             colors={colors}
             onPress={onNavigateToSettings}
