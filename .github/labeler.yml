@@ -8,15 +8,15 @@ ci:
 # Android / Native Kotlin
 # ============================
 android:
-  - 'android/**'
+  - 'apps/mobile/android/**'
 
 # ============================
 # React Native / TypeScript
 # ============================
 frontend:
-  - 'src/**'
-  - '*.ts'
-  - '*.tsx'
+  - 'apps/mobile/src/**'
+  - 'apps/mobile/*.ts'
+  - 'apps/mobile/*.tsx'
 
 # ============================
 # Tests

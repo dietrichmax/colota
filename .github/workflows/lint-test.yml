@@ -15,7 +15,7 @@ jobs:
   lint-and-test:
     name: Lint & Test
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,17 +30,17 @@ jobs:
         run: npm ci
 
       - name: Run ESLint
-        run: npm run lint
+        run: npm run lint -w @colota/mobile
 
       - name: Run TypeScript check
-        run: npx tsc --noEmit
+        run: npx -w @colota/mobile tsc --noEmit
 
       - name: Run tests
-        run: npm test -- --coverage
+        run: npm test -w @colota/mobile -- --coverage
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
-          files: ./coverage/lcov.info
+          files: ./apps/mobile/coverage/lcov.info
           flags: unittests
           name: codecov-umbrella
