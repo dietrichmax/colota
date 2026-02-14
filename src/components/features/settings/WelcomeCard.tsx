@@ -1,0 +1,180 @@
+/**
+ * Copyright (C) 2026 Max Dietrich
+ * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
+ */
+
+import React from "react"
+import { Text, StyleSheet, View, TouchableOpacity } from "react-native"
+import { Settings, ThemeColors } from "../../../types/global"
+import { Card } from "../../ui/Card"
+
+interface WelcomeCardProps {
+  settings: Settings
+  tracking: boolean
+  colors: ThemeColors
+  onDismiss: () => void
+  onStartTracking: () => void
+  onNavigateToSettings: () => void
+  onNavigateToApiConfig: () => void
+}
+
+interface ChecklistItemProps {
+  label: string
+  completed: boolean
+  colors: ThemeColors
+  onPress?: () => void
+}
+
+function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps) {
+  const content = (
+    <View style={styles.checklistItem}>
+      <View
+        style={[
+          styles.checkCircle,
+          {
+            borderColor: completed ? colors.success : colors.border,
+            backgroundColor: completed ? colors.success + "20" : "transparent"
+          }
+        ]}
+      >
+        {completed && <Text style={[styles.checkMark, { color: colors.success }]}>✓</Text>}
+      </View>
+      <Text
+        style={[
+          styles.checklistLabel,
+          { color: completed ? colors.textSecondary : colors.text },
+          completed && styles.checklistLabelCompleted
+        ]}
+      >
+        {label}
+      </Text>
+      {onPress && !completed && <Text style={[styles.checklistArrow, { color: colors.textLight }]}>›</Text>}
+    </View>
+  )
+
+  if (onPress && !completed) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.6}>
+        {content}
+      </TouchableOpacity>
+    )
+  }
+
+  return content
+}
+
+export function WelcomeCard({
+  settings,
+  tracking,
+  colors,
+  onDismiss,
+  onStartTracking,
+  onNavigateToSettings,
+  onNavigateToApiConfig
+}: WelcomeCardProps) {
+  const hasEndpoint = settings.endpoint.trim().length > 0
+
+  return (
+    <View style={styles.container}>
+      <Card style={{ borderColor: colors.primary, borderWidth: 2 }}>
+        <Text style={[styles.title, { color: colors.text }]}>Welcome to Colota</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Get started by completing these steps:</Text>
+
+        <View style={styles.checklist}>
+          <ChecklistItem label="Start tracking" completed={tracking} colors={colors} onPress={onStartTracking} />
+          <ChecklistItem
+            label="Configure your server endpoint"
+            completed={hasEndpoint}
+            colors={colors}
+            onPress={onNavigateToSettings}
+          />
+        </View>
+
+        <View style={styles.linkRow}>
+          <TouchableOpacity onPress={onNavigateToApiConfig} activeOpacity={0.6}>
+            <Text style={[styles.link, { color: colors.primary }]}>API field mapping ›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onNavigateToSettings} activeOpacity={0.6}>
+            <Text style={[styles.link, { color: colors.primary }]}>Tracking presets ›</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.dismissButton, { borderColor: colors.border }]}
+          onPress={onDismiss}
+          activeOpacity={0.6}
+        >
+          <Text style={[styles.dismissText, { color: colors.textSecondary }]}>Got it</Text>
+        </TouchableOpacity>
+      </Card>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    marginBottom: 16
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 4
+  },
+  subtitle: {
+    fontSize: 14,
+    marginBottom: 16
+  },
+  checklist: {
+    gap: 12,
+    marginBottom: 12
+  },
+  checklistItem: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
+  checkCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12
+  },
+  checkMark: {
+    fontSize: 13,
+    fontWeight: "700"
+  },
+  checklistLabel: {
+    fontSize: 15,
+    fontWeight: "500",
+    flex: 1
+  },
+  checklistLabelCompleted: {
+    textDecorationLine: "line-through"
+  },
+  checklistArrow: {
+    fontSize: 22,
+    fontWeight: "300",
+    marginLeft: 8
+  },
+  linkRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16
+  },
+  link: {
+    fontSize: 14,
+    fontWeight: "600"
+  },
+  dismissButton: {
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 10,
+    borderWidth: 1.5
+  },
+  dismissText: {
+    fontSize: 14,
+    fontWeight: "600"
+  }
+})

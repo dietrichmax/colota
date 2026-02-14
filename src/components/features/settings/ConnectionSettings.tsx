@@ -47,7 +47,7 @@ export function ConnectionSettings({
     try {
       const recentLocation = await NativeLocationService.getMostRecentLocation()
       if (!recentLocation) {
-        setTestResponse("No location available yet. Start tracking first.")
+        setTestResponse("No location data yet — Start tracking to collect a test point, then try again.")
         setTestError(true)
         return
       }
@@ -165,6 +165,12 @@ export function ConnectionSettings({
                 autoCorrect={false}
                 keyboardType="url"
               />
+
+              {!endpointInput && (
+                <Text style={[styles.endpointHint, { color: colors.warning }]}>
+                  No server configured — locations are saved locally
+                </Text>
+              )}
 
               {endpointInput.startsWith("http://") && !isPrivateHost(endpointInput) && (
                 <Text style={[styles.httpWarning, { color: colors.warning }]}>
@@ -317,6 +323,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "300",
     marginLeft: 12
+  },
+  endpointHint: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "500"
   },
   httpWarning: {
     marginTop: 6,
