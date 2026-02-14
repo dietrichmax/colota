@@ -9,17 +9,7 @@ import { Container, Card, SectionTitle, Divider } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { ThemeColors, LocationCoords } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
-import {
-  LARGE_FILE_THRESHOLD,
-  formatBytes,
-  getByteSize,
-  convertToCSV,
-  convertToGeoJSON,
-  convertToGPX,
-  convertToKML
-} from "../utils/exportConverters"
-
-type ExportFormat = "csv" | "geojson" | "gpx" | "kml"
+import { LARGE_FILE_THRESHOLD, formatBytes, getByteSize, EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
 
 interface ExportStats {
   totalLocations: number
@@ -63,14 +53,7 @@ export function ExportDataScreen() {
       return
     }
 
-    const converters: Record<ExportFormat, (data: LocationCoords[]) => string> = {
-      csv: convertToCSV,
-      geojson: convertToGeoJSON,
-      gpx: convertToGPX,
-      kml: convertToKML
-    }
-
-    const content = converters[selectedFormat](cachedData.current)
+    const content = EXPORT_FORMATS[selectedFormat].convert(cachedData.current)
     setFileSize(formatBytes(getByteSize(content)))
   }, [selectedFormat])
 
@@ -88,32 +71,10 @@ export function ExportDataScreen() {
 
       setExportProgress(`Converting ${normalizedData.length} locations...`)
 
-      let content = ""
-      let fileExtension = ""
-      let mimeType = ""
-
-      switch (format) {
-        case "csv":
-          content = convertToCSV(normalizedData)
-          fileExtension = ".csv"
-          mimeType = "text/csv"
-          break
-        case "geojson":
-          content = convertToGeoJSON(normalizedData)
-          fileExtension = ".geojson"
-          mimeType = "application/json"
-          break
-        case "gpx":
-          content = convertToGPX(normalizedData)
-          fileExtension = ".gpx"
-          mimeType = "application/gpx+xml"
-          break
-        case "kml":
-          content = convertToKML(normalizedData)
-          fileExtension = ".kml"
-          mimeType = "application/vnd.google-earth.kml+xml"
-          break
-      }
+      const formatConfig = EXPORT_FORMATS[format]
+      const content = formatConfig.convert(normalizedData)
+      const fileExtension = formatConfig.extension
+      const mimeType = formatConfig.mimeType
 
       const exportSize = getByteSize(content)
 
@@ -217,55 +178,23 @@ export function ExportDataScreen() {
           <SectionTitle>Select Format</SectionTitle>
 
           <Card>
-            <FormatOption
-              icon="📊"
-              title="CSV"
-              subtitle="Spreadsheet Format"
-              description="Excel, Google Sheets, data analysis"
-              extension=".csv"
-              selected={selectedFormat === "csv"}
-              onPress={() => setSelectedFormat("csv")}
-              colors={colors}
-            />
-
-            <Divider />
-
-            <FormatOption
-              icon="🗺️"
-              title="GeoJSON"
-              subtitle="Geographic Data"
-              description="Mapbox, Leaflet, QGIS, ArcGIS"
-              extension=".geojson"
-              selected={selectedFormat === "geojson"}
-              onPress={() => setSelectedFormat("geojson")}
-              colors={colors}
-            />
-
-            <Divider />
-
-            <FormatOption
-              icon="📍"
-              title="GPX"
-              subtitle="GPS Exchange"
-              description="Garmin, Strava, Google Earth"
-              extension=".gpx"
-              selected={selectedFormat === "gpx"}
-              onPress={() => setSelectedFormat("gpx")}
-              colors={colors}
-            />
-
-            <Divider />
-
-            <FormatOption
-              icon="🌍"
-              title="KML"
-              subtitle="Keyhole Markup Language"
-              description="Google Earth, Google Maps, ArcGIS"
-              extension=".kml"
-              selected={selectedFormat === "kml"}
-              onPress={() => setSelectedFormat("kml")}
-              colors={colors}
-            />
+            {(Object.entries(EXPORT_FORMATS) as [ExportFormat, (typeof EXPORT_FORMATS)[ExportFormat]][]).map(
+              ([key, config], index, arr) => (
+                <React.Fragment key={key}>
+                  <FormatOption
+                    icon={config.icon}
+                    title={config.label}
+                    subtitle={config.subtitle}
+                    description={config.description}
+                    extension={config.extension}
+                    selected={selectedFormat === key}
+                    onPress={() => setSelectedFormat(key)}
+                    colors={colors}
+                  />
+                  {index < arr.length - 1 && <Divider />}
+                </React.Fragment>
+              )
+            )}
           </Card>
         </View>
 
@@ -288,7 +217,7 @@ export function ExportDataScreen() {
                 <Text style={styles.exportIcon}>📤</Text>
                 <View style={styles.exportText}>
                   <Text style={[styles.exportTitle, styles.exportButtonText]}>
-                    Export {selectedFormat.toUpperCase()}
+                    Export {EXPORT_FORMATS[selectedFormat].label}
                   </Text>
                   <Text style={[styles.exportSubtitle, styles.exportButtonText]}>
                     {stats.totalLocations.toLocaleString()} locations

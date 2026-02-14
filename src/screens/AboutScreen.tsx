@@ -10,9 +10,7 @@ import { useTheme } from "../hooks/useTheme"
 import { SectionTitle, Card, Container, Divider, Footer } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
-
-const REPO_URL = "https://github.com/dietrichmax/colota"
-const PRIVACY_POLICY_URL = "https://mxd.codes/colota/privacy-policy"
+import { REPO_URL, PRIVACY_POLICY_URL } from "../constants"
 
 // Helper function to map SDK to Android version
 function getAndroidVersion(sdkVersion: number): string {
