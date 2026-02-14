@@ -120,11 +120,11 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 git clone https://github.com/dietrichmax/colota.git
 cd colota
 npm install
-cd android
+cd apps/mobile/android
 ./gradlew assembleRelease
 ```
 
-APK will be in `android/app/build/outputs/apk/release/`
+APK will be in `apps/mobile/android/app/build/outputs/apk/release/`
 
 ---
 
