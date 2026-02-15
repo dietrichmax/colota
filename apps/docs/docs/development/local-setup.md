@@ -139,6 +139,38 @@ colota/
             └── index.ts             # Barrel exports
 ```
 
+## Running Tests
+
+### JavaScript Tests
+
+Run the React Native test suite (Jest):
+
+```bash
+npm test -w @colota/mobile
+```
+
+### Kotlin Unit Tests
+
+Run native Android unit tests for both build flavors:
+
+```bash
+cd apps/mobile/android
+./gradlew testGmsDebugUnitTest testFossDebugUnitTest
+```
+
+Test files are located in `apps/mobile/android/app/src/test/java/com/Colota/`. The tests cover:
+
+- **TimedCache** — TTL cache logic
+- **GeofenceHelper** — Haversine distance calculations and radius checks
+- **PayloadBuilder** — JSON payload construction and field map parsing
+
+### Linting and Type Checking
+
+```bash
+npm run lint -w @colota/mobile        # ESLint
+npx -w @colota/mobile tsc --noEmit    # TypeScript type check
+```
+
 ## Common Tasks
 
 ### Adding a New Screen

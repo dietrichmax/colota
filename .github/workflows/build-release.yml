@@ -86,10 +86,16 @@ jobs:
           test -n "${{ secrets.KEY_ALIAS }}" || exit 1
           test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
 
-      - name: Build GMS Release APK
+      - name: Run Kotlin unit tests
         run: |
           cd apps/mobile/android
           chmod +x gradlew
+          ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+
+      - name: Build GMS Release APK
+        run: |
+          cd apps/mobile/android
           ./gradlew assembleGmsRelease --no-daemon \
             -PhermesEnabled=true \
             -Pandroid.useAndroidX=true \
