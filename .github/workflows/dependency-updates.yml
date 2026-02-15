@@ -3,7 +3,7 @@ name: Dependency Updates
 on:
   schedule:
     # Run every Monday at 9 AM UTC
-    - cron: '0 9 * * 1'
+    - cron: '0 3 * * 1'
   workflow_dispatch:
 
 permissions:
