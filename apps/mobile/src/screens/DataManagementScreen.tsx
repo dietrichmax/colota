@@ -23,6 +23,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
 import { STATS_REFRESH_FAST } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
+import { logger } from "../services/logger"
 
 export function DataManagementScreen({}: ScreenProps) {
   const { colors } = useTheme()
@@ -46,7 +47,7 @@ export function DataManagementScreen({}: ScreenProps) {
       const nativeStats = await NativeLocationService.getStats()
       setStats(nativeStats)
     } catch (err) {
-      console.error("[DataManagementScreen] Failed to update stats:", err)
+      logger.error("[DataManagementScreen] Failed to update stats:", err)
     }
   }, [])
 
@@ -85,7 +86,7 @@ export function DataManagementScreen({}: ScreenProps) {
         showFeedback("Sync initiated successfully!")
       }, 2000)
     } catch (err) {
-      console.error("[DataManagementScreen] Manual flush error:", err)
+      logger.error("[DataManagementScreen] Manual flush error:", err)
       setIsProcessing(false)
       showFeedback("Failed to sync queue")
     }
@@ -102,7 +103,7 @@ export function DataManagementScreen({}: ScreenProps) {
           showFeedback(successMessage(deleted))
         }
       } catch (err) {
-        console.error("[DataManagementScreen] Delete action failed:", err)
+        logger.error("[DataManagementScreen] Delete action failed:", err)
         showFeedback("Action failed")
       } finally {
         setIsProcessing(false)
@@ -145,7 +146,7 @@ export function DataManagementScreen({}: ScreenProps) {
       await updateStats()
       showFeedback("Database optimized")
     } catch (err) {
-      console.error("[DataManagementScreen] Vacuum failed:", err)
+      logger.error("[DataManagementScreen] Vacuum failed:", err)
       showFeedback("Optimization failed")
     } finally {
       setIsProcessing(false)

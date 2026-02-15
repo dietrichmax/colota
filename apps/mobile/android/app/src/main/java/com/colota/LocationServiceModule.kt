@@ -90,10 +90,10 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
 
         /**
-         * Emits silent zone entry/exit events to the React Native 'onSilentZoneChange' listener.
+         * Emits pause zone entry/exit events to the React Native 'onPauseZoneChange' listener.
          */
         @JvmStatic
-        fun sendSilentZoneEvent(entered: Boolean, zoneName: String?): Boolean {
+        fun sendPauseZoneEvent(entered: Boolean, zoneName: String?): Boolean {
             val context = reactContextStatic ?: return false
             if (!context.hasActiveCatalystInstance()) return false
             
@@ -104,10 +104,10 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 }
                 context
                     .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    .emit("onSilentZoneChange", params)
+                    .emit("onPauseZoneChange", params)
                 true
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send silent zone event", e)
+                Log.e(TAG, "Failed to send pause zone event", e)
                 false
             }
         }
@@ -389,11 +389,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     // ==============================================================
-    // SILENT ZONE LOGIC
+    // PAUSE ZONE LOGIC
     // ==============================================================
 
     @ReactMethod
-    fun checkCurrentSilentZone(promise: Promise) {
+    fun checkCurrentPauseZone(promise: Promise) {
         val fusedClient = LocationServices.getFusedLocationProviderClient(reactApplicationContext)
         
         try {
@@ -402,11 +402,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     promise.resolve(null)
                 } else {
                     executeAsync(promise) { 
-                        geofenceHelper.getSilentZone(loc) 
+                        geofenceHelper.getPauseZone(loc) 
                     }
                 }
             }.addOnFailureListener { e ->
-                Log.e(TAG, "Failed to get location for silent zone check", e)
+                Log.e(TAG, "Failed to get location for pause zone check", e)
                 promise.resolve(null)
             }
         } catch (e: SecurityException) {

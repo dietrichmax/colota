@@ -12,6 +12,7 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { fonts, fontSizes } from "../styles/typography"
 import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
+import { logger } from "../services/logger"
 
 const AUTH_TYPES: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
@@ -37,7 +38,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
         const saved = await NativeLocationService.getAuthConfig()
         setConfig(saved)
       } catch (err) {
-        console.error("[AuthSettingsScreen] Failed to load auth config:", err)
+        logger.error("[AuthSettingsScreen] Failed to load auth config:", err)
       } finally {
         setLoading(false)
       }

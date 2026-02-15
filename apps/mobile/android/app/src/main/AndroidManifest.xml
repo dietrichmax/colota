@@ -64,7 +64,7 @@
             android:foregroundServiceType="location"
         >
             <intent-filter>
-                <action android:name="com.Colota.RECHECK_SILENT_ZONE" />
+                <action android:name="com.Colota.RECHECK_PAUSE_ZONE" />
                 <action android:name="com.Colota.ACTION_MANUAL_FLUSH" />
             </intent-filter>
         </service>

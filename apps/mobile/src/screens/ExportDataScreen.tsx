@@ -12,6 +12,7 @@ import { useTheme } from "../hooks/useTheme"
 import { ThemeColors, LocationCoords } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { LARGE_FILE_THRESHOLD, formatBytes, getByteSize, EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
+import { logger } from "../services/logger"
 
 interface ExportStats {
   totalLocations: number
@@ -41,7 +42,7 @@ export function ExportDataScreen() {
         setStats({ totalLocations: data.length })
       }
     } catch (error) {
-      console.error("[ExportDataScreen] Failed to load stats:", error)
+      logger.error("[ExportDataScreen] Failed to load stats:", error)
     }
   }, [])
 
@@ -122,18 +123,18 @@ export function ExportDataScreen() {
       try {
         await NativeLocationService.shareFile(filePath, mimeType, `Colota Export - ${stats.totalLocations} locations`)
       } catch (shareError: any) {
-        console.warn("[ExportDataScreen] Share error:", shareError)
+        logger.warn("[ExportDataScreen] Share error:", shareError)
       }
 
       setTimeout(async () => {
         try {
           await NativeLocationService.deleteFile(filePath)
         } catch (err) {
-          console.warn("[ExportDataScreen] Failed to cleanup temp file:", err)
+          logger.warn("[ExportDataScreen] Failed to cleanup temp file:", err)
         }
       }, 2000)
     } catch (error) {
-      console.error("[ExportDataScreen] Export failed:", error)
+      logger.error("[ExportDataScreen] Export failed:", error)
       Alert.alert("Export Failed", "Unable to export your data. Please try again.")
     } finally {
       setExporting(false)

@@ -15,6 +15,7 @@ import { useFocusEffect } from "@react-navigation/native"
 import { STATS_REFRESH_IDLE } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import icon from "../../../assets/icons/icon.png"
+import { logger } from "../../../services/logger"
 
 type Props = {
   coords: LocationCoords | null
@@ -33,7 +34,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
   const initialCoords = useRef<LocationCoords | null>(null)
   const [hasInitialCoords, setHasInitialCoords] = useState(false)
 
-  const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(null)
+  const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
   const [isOffline, setIsOffline] = useState(false)
 
   useFocusEffect(
@@ -63,7 +64,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
       const data = await NativeLocationService.getGeofences()
       setGeofences(data)
     } catch (err) {
-      console.error("[GeofenceScreen] Failed to load geofences:", err)
+      logger.error("[GeofenceScreen] Failed to load geofences:", err)
     }
   }, [])
 
@@ -71,20 +72,20 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
     loadGeofences()
   }, [loadGeofences])
 
-  // Check for silent zone
+  // Check for pause zone
   useEffect(() => {
-    const checkSilentZone = async () => {
+    const checkPauseZone = async () => {
       try {
-        const zoneName = await NativeLocationService.checkCurrentSilentZone()
-        setCurrentSilentZone(zoneName)
+        const zoneName = await NativeLocationService.checkCurrentPauseZone()
+        setCurrentPauseZone(zoneName)
       } catch (err) {
-        console.error("[GeofenceScreen] Failed to check silent zone:", err)
+        logger.error("[GeofenceScreen] Failed to check pause zone:", err)
       }
     }
 
-    checkSilentZone()
+    checkPauseZone()
     const listener = DeviceEventEmitter.addListener("geofenceUpdated", () => {
-      checkSilentZone()
+      checkPauseZone()
       loadGeofences() // Reload geofences when they're updated
     })
     return () => listener.remove()
@@ -98,11 +99,11 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           action: "update_user_pos",
           coords,
           tracking,
-          isPaused: !!currentSilentZone
+          isPaused: !!currentPauseZone
         })
       )
     }
-  }, [coords, mapReady, tracking, currentSilentZone])
+  }, [coords, mapReady, tracking, currentPauseZone])
 
   // Update geofences
   useEffect(() => {
@@ -491,7 +492,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
                       action: "update_user_pos",
                       coords,
                       tracking,
-                      isPaused: !!currentSilentZone
+                      isPaused: !!currentPauseZone
                     })
                   )
                 }
@@ -501,7 +502,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
                 setIsCentered(data.value)
               }
             } catch (err) {
-              console.error("WebView message error:", err)
+              logger.error("WebView message error:", err)
             }
           }}
         />

@@ -54,10 +54,10 @@ class GeofenceHelper(private val context: Context) {
     // --- Core Logic ---
 
     /**
-     * Checks if location is within any active silent zone.
+     * Checks if location is within any active pause zone.
      * Returns immediately on first match for better performance.
      */
-    fun getSilentZone(location: Location): String? {
+    fun getPauseZone(location: Location): String? {
         val fences = getGeofences()
         return fences.find { 
             isWithinRadius(location.latitude, location.longitude, it.lat, it.lon, it.radius) 

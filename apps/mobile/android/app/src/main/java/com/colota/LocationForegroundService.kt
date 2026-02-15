@@ -35,7 +35,7 @@ class LocationForegroundService : Service() {
     
     // --- State ---
     private var locationCallback: LocationCallback? = null
-    private var insideSilentZone = false
+    private var insidePauseZone = false
     private var currentZoneName: String? = null
     private var lastNotificationText: String? = null
     
@@ -58,7 +58,7 @@ class LocationForegroundService : Service() {
     companion object {
         private const val TAG = "LocationService"
         const val ACTION_MANUAL_FLUSH = "com.Colota.ACTION_MANUAL_FLUSH"
-        const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_SILENT_ZONE"
+        const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
         const val ACTION_FORCE_EXIT_ZONE = "com.Colota.FORCE_EXIT_ZONE"
     }
 
@@ -114,11 +114,11 @@ class LocationForegroundService : Service() {
 
         when (action) {
             ACTION_FORCE_EXIT_ZONE -> {
-                if (insideSilentZone) {
+                if (insidePauseZone) {
                     if (BuildConfig.DEBUG) {
                         Log.d(TAG, "Force exit from zone: $currentZoneName")
                     }
-                    exitSilentZone()
+                    exitPauseZone()
                     // Immediately recheck with current location
                     lastKnownLocation?.let { recheckZoneWithLocation(it) }
                 }
@@ -214,8 +214,8 @@ class LocationForegroundService : Service() {
                     lastKnownLocation = it
                     
                     // Check if starting in a pause zone
-                    geofenceHelper.getSilentZone(it)?.let { zoneName ->
-                        enterSilentZone(GeofenceInfo(-1, zoneName))
+                    geofenceHelper.getPauseZone(it)?.let { zoneName ->
+                        enterPauseZone(GeofenceInfo(-1, zoneName))
                     } ?: run {
                         // Not in zone - show coordinates immediately
                         updateNotification(it.latitude, it.longitude, forceUpdate = true)
@@ -250,18 +250,18 @@ class LocationForegroundService : Service() {
                     recheckZoneWithLocation(it)
                 } ?: run {
                     // No location available - if in zone, exit it
-                    if (insideSilentZone) {
+                    if (insidePauseZone) {
                         if (BuildConfig.DEBUG) {
                             Log.d(TAG, "No location for recheck, forcing exit from zone")
                         }
-                        exitSilentZone()
+                        exitPauseZone()
                     }
                 }
             }.addOnFailureListener { e ->
                 Log.e(TAG, "Recheck error", e)
                 // On error, also exit zone if in one
-                if (insideSilentZone) {
-                    exitSilentZone()
+                if (insidePauseZone) {
+                    exitPauseZone()
                 }
             }
         }
@@ -269,21 +269,21 @@ class LocationForegroundService : Service() {
 
     
     private fun recheckZoneWithLocation(location: android.location.Location) {
-        val zoneName = geofenceHelper.getSilentZone(location)
+        val zoneName = geofenceHelper.getPauseZone(location)
 
         when {
             // Just entered a pause zone or changed zones
-            zoneName != null && (!insideSilentZone || zoneName != currentZoneName) -> {
-                enterSilentZone(GeofenceInfo(-1, zoneName))
+            zoneName != null && (!insidePauseZone || zoneName != currentZoneName) -> {
+                enterPauseZone(GeofenceInfo(-1, zoneName))
             }
             
             // Just exited pause zone
-            zoneName == null && insideSilentZone -> {
-                exitSilentZone()
+            zoneName == null && insidePauseZone -> {
+                exitPauseZone()
             }
 
             // Still in the same pause zone - update coords but keep paused status
-            zoneName != null && insideSilentZone && zoneName == currentZoneName -> {
+            zoneName != null && insidePauseZone && zoneName == currentZoneName -> {
                 updateNotification(
                     lat = location.latitude, 
                     lon = location.longitude,
@@ -317,20 +317,20 @@ class LocationForegroundService : Service() {
         // Cache location
         lastKnownLocation = location
 
-        // Silent Zone Logic - CHECK IF IT'S A PAUSE ZONE
-        val zoneName = geofenceHelper.getSilentZone(location)
+        // Pause Zone Logic - CHECK IF IT'S A PAUSE ZONE
+        val zoneName = geofenceHelper.getPauseZone(location)
         
         when {
-            zoneName != null && !insideSilentZone -> {
+            zoneName != null && !insidePauseZone -> {
                 // Entering a pause zone
-                enterSilentZone(GeofenceInfo(-1, zoneName))
+                enterPauseZone(GeofenceInfo(-1, zoneName))
                 return // Don't record location in pause zone
             }
-            zoneName == null && insideSilentZone -> {
+            zoneName == null && insidePauseZone -> {
                 // Exiting pause zone
-                exitSilentZone()
+                exitPauseZone()
             }
-            zoneName != null && insideSilentZone -> {
+            zoneName != null && insidePauseZone -> {
                 // Still in pause zone, skip recording
                 return
             }
@@ -377,11 +377,11 @@ class LocationForegroundService : Service() {
         updateNotification(location.latitude, location.longitude)
     }
 
-    private fun enterSilentZone(zone: GeofenceInfo) {
-        insideSilentZone = true
+    private fun enterPauseZone(zone: GeofenceInfo) {
+        insidePauseZone = true
         currentZoneName = zone.name
         
-        // Always show paused status when entering a silent zone
+        // Always show paused status when entering a pause zone
         lastKnownLocation?.let { loc ->
             updateNotification(
                 lat = loc.latitude, 
@@ -398,7 +398,7 @@ class LocationForegroundService : Service() {
             )
         }
         
-        LocationServiceModule.sendSilentZoneEvent(true, zone.name)
+        LocationServiceModule.sendPauseZoneEvent(true, zone.name)
         
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "Entered pause zone: ${zone.name}")
@@ -406,8 +406,8 @@ class LocationForegroundService : Service() {
     }
 
 
-    private fun exitSilentZone() {
-        insideSilentZone = false
+    private fun exitPauseZone() {
+        insidePauseZone = false
         val exited = currentZoneName
         currentZoneName = null
         
@@ -422,7 +422,7 @@ class LocationForegroundService : Service() {
             updateNotification(forceUpdate = true)
         }
         
-        LocationServiceModule.sendSilentZoneEvent(false, exited)
+        LocationServiceModule.sendPauseZoneEvent(false, exited)
         if (BuildConfig.DEBUG) Log.d(TAG, "Exited pause zone: $exited")
     }
 
@@ -502,7 +502,7 @@ class LocationForegroundService : Service() {
         val lastCoords = lastNotificationCoords
         
         // Check if this is a zone change (always update immediately)
-        val isZoneChange = pausedInZone != insideSilentZone || zoneName != currentZoneName
+        val isZoneChange = pausedInZone != insidePauseZone || zoneName != currentZoneName
         
         // Apply smart filtering unless forced or zone change
         if (!forceUpdate && !isZoneChange && lat != null && lon != null) {
@@ -535,7 +535,7 @@ class LocationForegroundService : Service() {
         
         // Build notification text
         val queuedCount = syncManager.getCachedQueuedCount()
-        val isCurrentlyPaused = pausedInZone || insideSilentZone
+        val isCurrentlyPaused = pausedInZone || insidePauseZone
         val activeZone = zoneName ?: currentZoneName
 
         val statusText = when {
@@ -560,7 +560,7 @@ class LocationForegroundService : Service() {
     }
 
     private fun startForegroundServiceWithNotification() {
-        val initialStatus = if (insideSilentZone) {
+        val initialStatus = if (insidePauseZone) {
             "Paused: ${currentZoneName ?: "Unknown"}"
         } else {
             "Initializing..."
@@ -674,7 +674,7 @@ class LocationForegroundService : Service() {
                 ║ CURRENT SERVICE STATE                                           ║
                 ╟────────────────────────────────────────────────────────────────╢
                 ║  Tracking Status:        ✓ ACTIVE
-                ║  Silent Zone:            ${if(insideSilentZone) "⏸️  PAUSED in '$currentZoneName'" else "✓ Not in zone"}
+                ║  Pause Zone:            ${if(insidePauseZone) "⏸️  PAUSED in '$currentZoneName'" else "✓ Not in zone"}
                 ║  Battery Level:          $batteryStatusStr
                 ║  Queued Locations:       ${syncManager.getCachedQueuedCount()} items
                 ║  Last Sync:              ${getTimeSinceLastSync()}

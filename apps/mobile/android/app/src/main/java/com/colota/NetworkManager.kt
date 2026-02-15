@@ -82,7 +82,8 @@ class NetworkManager(private val context: Context) {
                 Log.d(TAG, "Method: POST")
                 Log.d(TAG, "Headers:")
                 connection.requestProperties.forEach { (key, values) ->
-                    Log.d(TAG, "$key: ${values.joinToString()}")
+                    val masked = values.map { maskSensitiveHeaderValue(key, it) }
+                    Log.d(TAG, "$key: ${masked.joinToString()}")
                 }
                 Log.d(TAG, "Body: ${payload.toString(2)}") // Pretty print JSON
                 Log.d(TAG, "===================")
@@ -138,6 +139,26 @@ class NetworkManager(private val context: Context) {
             address.isAnyLocalAddress || address.isLoopbackAddress || address.isSiteLocalAddress
         } catch (e: Exception) {
             false
+        }
+    }
+
+    /**
+     * Masks the value of sensitive headers before logging.
+     * Shows the first 4 characters followed by "***", or the full value
+     * if it is shorter than 4 characters (replaced entirely with "***").
+     */
+    private fun maskSensitiveHeaderValue(headerName: String, headerValue: String): String {
+        val sensitivePatterns = listOf(
+            "authorization", "bearer", "token", "secret", "password", "api-key", "apikey"
+        )
+        val nameLower = headerName.lowercase()
+        val isSensitive = sensitivePatterns.any { pattern -> nameLower.contains(pattern) }
+        if (!isSensitive) return headerValue
+
+        return if (headerValue.length > 4) {
+            "${headerValue.substring(0, 4)}***"
+        } else {
+            "***"
         }
     }
 

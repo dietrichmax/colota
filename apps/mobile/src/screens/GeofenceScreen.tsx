@@ -26,6 +26,7 @@ import { Container, SectionTitle, Card } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
 import { STATS_REFRESH_IDLE } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
+import { logger } from "../services/logger"
 
 export function GeofenceScreen({}: ScreenProps) {
   const { coords, tracking } = useTracking()
@@ -39,7 +40,7 @@ export function GeofenceScreen({}: ScreenProps) {
   const [isCentered, setIsCentered] = useState(true)
   const [mapReady, setMapReady] = useState(false)
   const [hasInitialCoords, setHasInitialCoords] = useState(false)
-  const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(null)
+  const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
   const [isOffline, setIsOffline] = useState(false)
 
   const webviewRef = useRef<WebView>(null)
@@ -94,7 +95,7 @@ export function GeofenceScreen({}: ScreenProps) {
       const data = await NativeLocationService.getGeofences()
       setGeofences(data)
     } catch (err) {
-      console.error("[GeofenceScreen] Failed to load geofences:", err)
+      logger.error("[GeofenceScreen] Failed to load geofences:", err)
     }
   }, [])
 
@@ -102,19 +103,19 @@ export function GeofenceScreen({}: ScreenProps) {
     loadGeofences()
   }, [loadGeofences])
 
-  // Check for silent zone
+  // Check for pause zone
   useEffect(() => {
-    const checkSilentZone = async () => {
+    const checkPauseZone = async () => {
       try {
-        const zoneName = await NativeLocationService.checkCurrentSilentZone()
-        setCurrentSilentZone(zoneName)
+        const zoneName = await NativeLocationService.checkCurrentPauseZone()
+        setCurrentPauseZone(zoneName)
       } catch (err) {
-        console.error("[GeofenceScreen] Failed to check silent zone:", err)
+        logger.error("[GeofenceScreen] Failed to check pause zone:", err)
       }
     }
 
-    checkSilentZone()
-    const listener = DeviceEventEmitter.addListener("geofenceUpdated", checkSilentZone)
+    checkPauseZone()
+    const listener = DeviceEventEmitter.addListener("geofenceUpdated", checkPauseZone)
     return () => listener.remove()
   }, [])
 
@@ -126,11 +127,11 @@ export function GeofenceScreen({}: ScreenProps) {
           action: "update_user_pos",
           coords,
           tracking,
-          isPaused: !!currentSilentZone
+          isPaused: !!currentPauseZone
         })
       )
     }
-  }, [coords, mapReady, tracking, currentSilentZone])
+  }, [coords, mapReady, tracking, currentPauseZone])
 
   // Update geofences
   useEffect(() => {
@@ -173,7 +174,7 @@ export function GeofenceScreen({}: ScreenProps) {
           }
         }
       } catch (err) {
-        console.error("[GeofenceScreen] Message error:", err)
+        logger.error("[GeofenceScreen] Message error:", err)
       }
     },
     [newName, newRadius, loadGeofences]

@@ -22,6 +22,7 @@ import {
 } from "../components"
 import { STATS_REFRESH_IDLE } from "../constants"
 import { Square, Play } from "lucide-react-native"
+import { logger } from "../services/logger"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
   const { coords, settings, tracking, startTracking, stopTracking, setSettings } = useTracking()
@@ -36,13 +37,13 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   })
 
   const prevStats = useRef(stats)
-  const [currentSilentZone, setCurrentSilentZone] = useState<string | null>(null)
+  const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
   const [scrollEnabled, setScrollEnabled] = useState(true)
 
   // Animation for button
   const buttonScale = useRef(new Animated.Value(1)).current
 
-  const isInSilentZone = !!currentSilentZone
+  const isInPauseZone = !!currentPauseZone
 
   const handleStart = async () => {
     // Bounce animation
@@ -93,24 +94,24 @@ export function DashboardScreen({ navigation }: ScreenProps) {
         prevStats.current = nativeStats
       }
     } catch (err) {
-      console.error("[Dashboard] Failed to update stats:", err)
+      logger.error("[Dashboard] Failed to update stats:", err)
     }
   }, [])
 
-  const updateSilentZone = useCallback(async () => {
+  const updatePauseZone = useCallback(async () => {
     try {
-      const zoneName = await NativeLocationService.checkCurrentSilentZone()
-      setCurrentSilentZone(zoneName)
+      const zoneName = await NativeLocationService.checkCurrentPauseZone()
+      setCurrentPauseZone(zoneName)
     } catch (err) {
-      console.error("[Dashboard] Failed to update silent zone:", err)
-      setCurrentSilentZone(null)
+      logger.error("[Dashboard] Failed to update pause zone:", err)
+      setCurrentPauseZone(null)
     }
   }, [])
 
   useFocusEffect(
     useCallback(() => {
       updateStats()
-      updateSilentZone()
+      updatePauseZone()
 
       const interval = tracking ? Math.max(settings.interval * 1000, 2000) : STATS_REFRESH_IDLE
 
@@ -119,27 +120,27 @@ export function DashboardScreen({ navigation }: ScreenProps) {
       return () => {
         clearInterval(statsTimer)
       }
-    }, [tracking, updateStats, updateSilentZone, settings.interval])
+    }, [tracking, updateStats, updatePauseZone, settings.interval])
   )
 
   useEffect(() => {
-    const listener = DeviceEventEmitter.addListener("geofenceUpdated", updateSilentZone)
+    const listener = DeviceEventEmitter.addListener("geofenceUpdated", updatePauseZone)
     return () => listener.remove()
-  }, [updateSilentZone])
+  }, [updatePauseZone])
 
   useEffect(() => {
-    const silentZoneListener = DeviceEventEmitter.addListener(
-      "onSilentZoneChange",
+    const pauseZoneListener = DeviceEventEmitter.addListener(
+      "onPauseZoneChange",
       (data: { entered: boolean; zoneName: string | null }) => {
         if (data.entered) {
-          setCurrentSilentZone(data.zoneName)
+          setCurrentPauseZone(data.zoneName)
         } else {
-          setCurrentSilentZone(null)
+          setCurrentPauseZone(null)
         }
       }
     )
 
-    return () => silentZoneListener.remove()
+    return () => pauseZoneListener.remove()
   }, [])
 
   return (
@@ -160,8 +161,8 @@ export function DashboardScreen({ navigation }: ScreenProps) {
             <DashboardMap
               coords={coords}
               tracking={tracking}
-              isPaused={isInSilentZone}
-              activeZoneName={currentSilentZone}
+              isPaused={isInPauseZone}
+              activeZoneName={currentPauseZone}
             />
           </View>
 

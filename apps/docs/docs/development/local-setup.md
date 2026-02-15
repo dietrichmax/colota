@@ -6,12 +6,12 @@ sidebar_position: 2
 
 ## Prerequisites
 
-- **Node.js** ≥ 18
+- **Node.js** ≥ 20
 - **npm** ≥ 9 (ships with Node.js)
 - **Java Development Kit** (JDK) 17
-- **Android SDK** (API level 35)
-  - Build Tools 35.0.0
-  - Android SDK Platform 35
+- **Android SDK** (API level 36)
+  - Build Tools 36.0.0
+  - Android SDK Platform 36
 - **Android Studio** (recommended for emulator and SDK management)
 
 ## Clone and Install
@@ -62,9 +62,9 @@ The app reads build configuration from `apps/mobile/android/app/build.gradle`. K
 | Property            | Default      | Description                |
 | ------------------- | ------------ | -------------------------- |
 | `applicationId`     | `com.Colota` | Android package identifier |
-| `minSdkVersion`     | 26           | Minimum Android 8.0        |
-| `targetSdkVersion`  | 35           | Target Android 15          |
-| `compileSdkVersion` | 35           | Compile against Android 15 |
+| `minSdkVersion`     | 24           | Minimum Android 7.0        |
+| `targetSdkVersion`  | 36           | Target Android 16          |
+| `compileSdkVersion` | 36           | Compile against Android 16 |
 
 ## Run the Docs Site
 
@@ -139,6 +139,16 @@ colota/
 1. Edit `packages/shared/src/colors.ts`
 2. Run `npm run build` in `packages/shared/`
 3. Both the mobile app and docs site will pick up the changes
+
+### Bumping the Version
+
+Use the version bump script to update all packages and the Android build in one command:
+
+```bash
+npm run version:bump 1.2.0
+```
+
+This updates `version` in all `package.json` files, `versionName` in `build.gradle`, and auto-increments `versionCode`.
 
 ### Adding Documentation
 
