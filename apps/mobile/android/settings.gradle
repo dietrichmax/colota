@@ -1,6 +1,18 @@
-pluginManagement { includeBuild("../../../node_modules/@react-native/gradle-plugin") }
-plugins { id("com.facebook.react.settings") }
+pluginManagement { 
+    includeBuild("../../../node_modules/@react-native/gradle-plugin") 
+}
+
+plugins { 
+    id("com.facebook.react.settings") 
+}
+
 extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+
 rootProject.name = 'Colota'
+
 include ':app'
-includeBuild('../../../node_modules/@react-native/gradle-plugin')
+
+react {
+    // Point to hoisted node_modules in monorepo root
+    nodeModulesDir.set(file("../../../node_modules"))
+}
