@@ -31,6 +31,8 @@ const sidebars: SidebarsConfig = {
         "integrations/dawarich",
         "integrations/owntracks",
         "integrations/reitti",
+        "integrations/phonetrack",
+        "integrations/traccar",
         "integrations/custom-backend"
       ]
     },
