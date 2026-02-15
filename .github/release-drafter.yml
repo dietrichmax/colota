@@ -1,4 +1,4 @@
-name-template: 'v$RESOLVED_VERSION 🌍'
+name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 version-resolver:
   major:
@@ -19,29 +19,27 @@ version-resolver:
       - documentation
   default: patch
 categories:
-  - title: '🚀 New Features'
+  - title: 'New Features'
     labels:
       - enhancement
       - feature
-  - title: '🐛 Bug Fixes'
+  - title: 'Bug Fixes'
     labels:
       - bug
       - fix
-  - title: '🛠 Refactoring / Maintenance'
+  - title: 'Maintenance'
     labels:
       - refactor
       - maintenance
-  - title: '📚 Documentation'
+  - title: 'Documentation'
     labels:
       - documentation
-  - title: '🧪 Tests'
+  - title: 'Tests'
     labels:
       - tests
-change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+change-template: '- $TITLE (#$NUMBER)'
 no-changes-template: '- No changes'
 template: |
-  ## What’s new
+  ## What's new
 
   $CHANGES
-
-  ---
