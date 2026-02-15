@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Field Mapping
 
-Customize the JSON field names in the payload to match your server's API.
+Customize field names sent to your server. Field names apply to both POST (JSON body) and GET (query parameters) requests.
 
 ## Default Fields
 

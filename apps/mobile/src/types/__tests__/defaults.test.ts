@@ -55,6 +55,10 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.isOfflineMode).toBe(false)
   })
 
+  it("defaults to POST httpMethod", () => {
+    expect(DEFAULT_SETTINGS.httpMethod).toBe("POST")
+  })
+
   it("has all required Settings keys", () => {
     const requiredKeys: (keyof Settings)[] = [
       "interval",
@@ -69,7 +73,8 @@ describe("DEFAULT_SETTINGS", () => {
       "isOfflineMode",
       "syncPreset",
       "filterInaccurateLocations",
-      "accuracyThreshold"
+      "accuracyThreshold",
+      "httpMethod"
     ]
 
     for (const key of requiredKeys) {
@@ -118,7 +123,7 @@ describe("TRACKING_PRESETS", () => {
 })
 
 describe("API_TEMPLATES", () => {
-  const templateNames = ["dawarich", "owntracks", "phonetrack", "reitti"] as const
+  const templateNames = ["dawarich", "owntracks", "phonetrack", "reitti", "traccar"] as const
 
   it.each(templateNames)("%s has valid fieldMap with required keys", (name) => {
     const template = API_TEMPLATES[name]
@@ -157,5 +162,18 @@ describe("API_TEMPLATES", () => {
     expect(API_TEMPLATES.phonetrack.fieldMap.batt).toBe("bat")
     expect(API_TEMPLATES.phonetrack.fieldMap.tst).toBe("timestamp")
     expect(API_TEMPLATES.phonetrack.fieldMap.bear).toBe("bearing")
+  })
+
+  it("traccar uses GET method", () => {
+    expect(API_TEMPLATES.traccar.httpMethod).toBe("GET")
+  })
+
+  it("traccar maps fields for OsmAnd protocol", () => {
+    expect(API_TEMPLATES.traccar.fieldMap.acc).toBe("accuracy")
+    expect(API_TEMPLATES.traccar.fieldMap.alt).toBe("altitude")
+    expect(API_TEMPLATES.traccar.fieldMap.vel).toBe("speed")
+    expect(API_TEMPLATES.traccar.fieldMap.bs).toBe("charge")
+    expect(API_TEMPLATES.traccar.fieldMap.tst).toBe("timestamp")
+    expect(API_TEMPLATES.traccar.fieldMap.bear).toBe("bearing")
   })
 })

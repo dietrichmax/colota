@@ -32,6 +32,7 @@ class SyncManager(
     private var maxRetries: Int = 5
     private var isOfflineMode: Boolean = false
     private var authHeaders: Map<String, String> = emptyMap()
+    private var httpMethod: String = "POST"
 
     private var syncJob: Job? = null
     @Volatile private var lastSyncTime: Long = 0
@@ -50,7 +51,8 @@ class SyncManager(
         retryIntervalSeconds: Int,
         maxRetries: Int,
         isOfflineMode: Boolean,
-        authHeaders: Map<String, String>
+        authHeaders: Map<String, String>,
+        httpMethod: String = "POST"
     ) {
         this.endpoint = endpoint
         this.syncIntervalSeconds = syncIntervalSeconds
@@ -58,6 +60,7 @@ class SyncManager(
         this.maxRetries = maxRetries
         this.isOfflineMode = isOfflineMode
         this.authHeaders = authHeaders
+        this.httpMethod = httpMethod
     }
 
     fun startPeriodicSync() {
@@ -129,7 +132,7 @@ class SyncManager(
         // Immediate send mode (syncInterval = 0)
         if (syncIntervalSeconds == 0 && networkManager.isNetworkAvailable()) {
             Log.d(TAG, "Instant send")
-            val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders)
+            val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod)
 
             if (success) {
                 dbHelper.removeFromQueueByLocationId(locationId)
@@ -211,7 +214,8 @@ class SyncManager(
                         val success = networkManager.sendToEndpoint(
                             JSONObject(item.payload),
                             endpoint,
-                            authHeaders
+                            authHeaders,
+                            httpMethod
                         )
                         item.queueId to success
                     }

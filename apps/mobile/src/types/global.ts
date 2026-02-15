@@ -93,7 +93,9 @@ export interface CustomField {
   value: string
 }
 
-export type ApiTemplateName = "custom" | "dawarich" | "owntracks" | "phonetrack" | "reitti"
+export type HttpMethod = "POST" | "GET"
+
+export type ApiTemplateName = "custom" | "dawarich" | "owntracks" | "phonetrack" | "reitti" | "traccar"
 
 export interface ApiTemplate {
   name: ApiTemplateName
@@ -101,6 +103,7 @@ export interface ApiTemplate {
   description: string
   fieldMap: FieldMap
   customFields: CustomField[]
+  httpMethod?: HttpMethod
 }
 
 export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTemplate> = {
@@ -174,6 +177,24 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
       bear: "bear"
     },
     customFields: [{ key: "_type", value: "location" }]
+  },
+  traccar: {
+    name: "traccar",
+    label: "Traccar",
+    description: "Traccar OsmAnd protocol (HTTP GET)",
+    httpMethod: "GET",
+    fieldMap: {
+      lat: "lat",
+      lon: "lon",
+      acc: "accuracy",
+      alt: "altitude",
+      vel: "speed",
+      batt: "batt",
+      bs: "charge",
+      tst: "timestamp",
+      bear: "bearing"
+    },
+    customFields: [{ key: "id", value: "colota" }]
   }
 }
 
@@ -242,6 +263,7 @@ export interface Settings {
   fieldMap: FieldMap
   customFields: CustomField[]
   apiTemplate: ApiTemplateName
+  httpMethod: HttpMethod
 
   // Sync & Upload
   syncInterval: number
@@ -268,7 +290,8 @@ export const DEFAULT_SETTINGS: Settings = {
   syncPreset: "instant",
   maxRetries: 5,
   isOfflineMode: false,
-  hasCompletedSetup: false
+  hasCompletedSetup: false,
+  httpMethod: "POST"
 } as const
 
 // ============================================================================

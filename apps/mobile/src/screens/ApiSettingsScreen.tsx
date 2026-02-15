@@ -5,7 +5,15 @@
 
 import React, { useState, useCallback } from "react"
 import { Text, StyleSheet, TextInput, View, ScrollView, TouchableOpacity } from "react-native"
-import { FieldMap, DEFAULT_FIELD_MAP, ScreenProps, CustomField, ApiTemplateName, API_TEMPLATES } from "../types/global"
+import {
+  FieldMap,
+  DEFAULT_FIELD_MAP,
+  ScreenProps,
+  CustomField,
+  ApiTemplateName,
+  API_TEMPLATES,
+  HttpMethod
+} from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
@@ -30,7 +38,13 @@ const TEMPLATE_OPTIONS: { value: ApiTemplateName; label: string }[] = [
   { value: "dawarich", label: "Dawarich" },
   { value: "owntracks", label: "OwnTracks" },
   { value: "phonetrack", label: "PhoneTrack" },
-  { value: "reitti", label: "Reitti" }
+  { value: "reitti", label: "Reitti" },
+  { value: "traccar", label: "Traccar" }
+]
+
+const HTTP_METHOD_OPTIONS: { value: HttpMethod; label: string }[] = [
+  { value: "POST", label: "POST" },
+  { value: "GET", label: "GET" }
 ]
 
 /**
@@ -58,6 +72,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
   const [localFieldMap, setLocalFieldMap] = useState<FieldMap>(settings.fieldMap || DEFAULT_FIELD_MAP)
   const [localCustomFields, setLocalCustomFields] = useState<CustomField[]>(settings.customFields || [])
   const [localTemplate, setLocalTemplate] = useState<ApiTemplateName>(settings.apiTemplate || "custom")
+  const [localHttpMethod, setLocalHttpMethod] = useState<HttpMethod>(settings.httpMethod || "POST")
   const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
 
   const referenceFieldMap = getReferenceFieldMap(localTemplate)
@@ -74,7 +89,12 @@ export function ApiSettingsScreen({}: ScreenProps) {
    * Returns null if validation fails (empty field mappings).
    */
   const buildSanitizedSettings = useCallback(
-    (newFieldMap: FieldMap, newCustomFields: CustomField[], newTemplate: ApiTemplateName) => {
+    (
+      newFieldMap: FieldMap,
+      newCustomFields: CustomField[],
+      newTemplate: ApiTemplateName,
+      newHttpMethod: HttpMethod
+    ) => {
       const sanitizedMap = Object.fromEntries(
         Object.entries(newFieldMap).map(([key, value]) => [key, value.trim()])
       ) as FieldMap
@@ -91,7 +111,8 @@ export function ApiSettingsScreen({}: ScreenProps) {
         ...settings,
         fieldMap: sanitizedMap,
         customFields: sanitizedCustomFields,
-        apiTemplate: newTemplate
+        apiTemplate: newTemplate,
+        httpMethod: newHttpMethod
       }
     },
     [settings]
@@ -101,8 +122,13 @@ export function ApiSettingsScreen({}: ScreenProps) {
    * Debounced save + restart for continuous changes (typing)
    */
   const debouncedSave = useCallback(
-    (newFieldMap: FieldMap, newCustomFields: CustomField[], newTemplate: ApiTemplateName) => {
-      const newSettings = buildSanitizedSettings(newFieldMap, newCustomFields, newTemplate)
+    (
+      newFieldMap: FieldMap,
+      newCustomFields: CustomField[],
+      newTemplate: ApiTemplateName,
+      newHttpMethod: HttpMethod
+    ) => {
+      const newSettings = buildSanitizedSettings(newFieldMap, newCustomFields, newTemplate, newHttpMethod)
       if (!newSettings) return
 
       debouncedSaveAndRestart(
@@ -117,8 +143,13 @@ export function ApiSettingsScreen({}: ScreenProps) {
    * Immediate save + restart for discrete changes (template switch, reset, remove)
    */
   const saveImmediately = useCallback(
-    (newFieldMap: FieldMap, newCustomFields: CustomField[], newTemplate: ApiTemplateName) => {
-      const newSettings = buildSanitizedSettings(newFieldMap, newCustomFields, newTemplate)
+    (
+      newFieldMap: FieldMap,
+      newCustomFields: CustomField[],
+      newTemplate: ApiTemplateName,
+      newHttpMethod: HttpMethod
+    ) => {
+      const newSettings = buildSanitizedSettings(newFieldMap, newCustomFields, newTemplate, newHttpMethod)
       if (!newSettings) return
 
       immediateSaveAndRestart(
@@ -137,15 +168,17 @@ export function ApiSettingsScreen({}: ScreenProps) {
       setLocalTemplate(template)
 
       if (template === "custom") {
-        saveImmediately(localFieldMap, localCustomFields, template)
+        saveImmediately(localFieldMap, localCustomFields, template, localHttpMethod)
       } else {
         const tmpl = API_TEMPLATES[template]
+        const method = tmpl.httpMethod ?? "POST"
         setLocalFieldMap(tmpl.fieldMap)
         setLocalCustomFields(tmpl.customFields)
-        saveImmediately(tmpl.fieldMap, tmpl.customFields, template)
+        setLocalHttpMethod(method)
+        saveImmediately(tmpl.fieldMap, tmpl.customFields, template, method)
       }
     },
-    [localFieldMap, localCustomFields, saveImmediately]
+    [localFieldMap, localCustomFields, localHttpMethod, saveImmediately]
   )
 
   /**
@@ -160,9 +193,9 @@ export function ApiSettingsScreen({}: ScreenProps) {
       const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
       if (newTemplate !== localTemplate) setLocalTemplate(newTemplate)
 
-      debouncedSave(newFieldMap, localCustomFields, newTemplate)
+      debouncedSave(newFieldMap, localCustomFields, newTemplate, localHttpMethod)
     },
-    [localFieldMap, localCustomFields, localTemplate, debouncedSave]
+    [localFieldMap, localCustomFields, localTemplate, localHttpMethod, debouncedSave]
   )
 
   /**
@@ -172,9 +205,9 @@ export function ApiSettingsScreen({}: ScreenProps) {
     (key: keyof FieldMap) => {
       const newFieldMap = { ...localFieldMap, [key]: referenceFieldMap[key] }
       setLocalFieldMap(newFieldMap)
-      saveImmediately(newFieldMap, localCustomFields, localTemplate)
+      saveImmediately(newFieldMap, localCustomFields, localTemplate, localHttpMethod)
     },
-    [localFieldMap, localCustomFields, localTemplate, referenceFieldMap, saveImmediately]
+    [localFieldMap, localCustomFields, localTemplate, localHttpMethod, referenceFieldMap, saveImmediately]
   )
 
   /**
@@ -184,8 +217,8 @@ export function ApiSettingsScreen({}: ScreenProps) {
     const refFields = getReferenceCustomFields(localTemplate)
     setLocalFieldMap(referenceFieldMap)
     setLocalCustomFields(refFields)
-    saveImmediately(referenceFieldMap, refFields, localTemplate)
-  }, [referenceFieldMap, localTemplate, saveImmediately])
+    saveImmediately(referenceFieldMap, refFields, localTemplate, localHttpMethod)
+  }, [referenceFieldMap, localTemplate, localHttpMethod, saveImmediately])
 
   // --- Custom Fields handlers ---
 
@@ -203,9 +236,9 @@ export function ApiSettingsScreen({}: ScreenProps) {
       const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
       if (newTemplate !== localTemplate) setLocalTemplate(newTemplate)
 
-      debouncedSave(localFieldMap, newFields, newTemplate)
+      debouncedSave(localFieldMap, newFields, newTemplate, localHttpMethod)
     },
-    [localCustomFields, localFieldMap, localTemplate, debouncedSave]
+    [localCustomFields, localFieldMap, localTemplate, localHttpMethod, debouncedSave]
   )
 
   const handleRemoveCustomField = useCallback(
@@ -216,9 +249,21 @@ export function ApiSettingsScreen({}: ScreenProps) {
       const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
       if (newTemplate !== localTemplate) setLocalTemplate(newTemplate)
 
-      saveImmediately(localFieldMap, newFields, newTemplate)
+      saveImmediately(localFieldMap, newFields, newTemplate, localHttpMethod)
     },
-    [localCustomFields, localFieldMap, localTemplate, saveImmediately]
+    [localCustomFields, localFieldMap, localTemplate, localHttpMethod, saveImmediately]
+  )
+
+  const handleHttpMethodChange = useCallback(
+    (method: HttpMethod) => {
+      setLocalHttpMethod(method)
+
+      const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
+      if (newTemplate !== localTemplate) setLocalTemplate(newTemplate)
+
+      saveImmediately(localFieldMap, localCustomFields, newTemplate, method)
+    },
+    [localFieldMap, localCustomFields, localTemplate, saveImmediately]
   )
 
   // Check if any field mapping is modified from the reference
@@ -226,26 +271,30 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
   // Build example payload string showing all fields
   const examplePayload = (() => {
-    const entries: string[] = []
+    const params: { key: string; value: string }[] = []
 
     // Custom static fields first
     localCustomFields.forEach((f) => {
-      if (f.key) {
-        entries.push(`  "${f.key}": "${f.value}"`)
-      }
+      if (f.key) params.push({ key: f.key, value: f.value })
     })
 
     // All mapped fields with realistic example values
-    entries.push(`  "${localFieldMap.lat}": 52.12345`)
-    entries.push(`  "${localFieldMap.lon}": -2.12345`)
-    entries.push(`  "${localFieldMap.acc}": 15`)
-    if (localFieldMap.alt) entries.push(`  "${localFieldMap.alt}": 380`)
-    if (localFieldMap.vel) entries.push(`  "${localFieldMap.vel}": 5`)
-    if (localFieldMap.batt) entries.push(`  "${localFieldMap.batt}": 85`)
-    if (localFieldMap.bs) entries.push(`  "${localFieldMap.bs}": 2`)
-    if (localFieldMap.tst) entries.push(`  "${localFieldMap.tst}": 1739362800`)
-    if (localFieldMap.bear) entries.push(`  "${localFieldMap.bear}": 180.0`)
+    params.push({ key: localFieldMap.lat, value: "52.12345" })
+    params.push({ key: localFieldMap.lon, value: "-2.12345" })
+    params.push({ key: localFieldMap.acc, value: "15" })
+    if (localFieldMap.alt) params.push({ key: localFieldMap.alt, value: "380" })
+    if (localFieldMap.vel) params.push({ key: localFieldMap.vel, value: "5" })
+    if (localFieldMap.batt) params.push({ key: localFieldMap.batt, value: "85" })
+    if (localFieldMap.bs) params.push({ key: localFieldMap.bs, value: "2" })
+    if (localFieldMap.tst) params.push({ key: localFieldMap.tst, value: "1739362800" })
+    if (localFieldMap.bear) params.push({ key: localFieldMap.bear, value: "180.0" })
 
+    if (localHttpMethod === "GET") {
+      const query = params.map((p) => `${p.key}=${p.value}`).join("&")
+      return `GET https://...?${query}`
+    }
+
+    const entries = params.map((p) => `  "${p.key}": ${isNaN(Number(p.value)) ? `"${p.value}"` : p.value}`)
     return "{\n" + entries.join(",\n") + "\n}"
   })()
 
@@ -300,6 +349,50 @@ export function ApiSettingsScreen({}: ScreenProps) {
           {localTemplate !== "custom" && (
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
               {API_TEMPLATES[localTemplate].description}
+            </Text>
+          )}
+        </View>
+
+        {/* HTTP Method Selector */}
+        <View style={styles.section}>
+          <SectionTitle>HTTP METHOD</SectionTitle>
+          <View style={styles.chipRow}>
+            {HTTP_METHOD_OPTIONS.map(({ value, label }) => {
+              const isSelected = localHttpMethod === value
+              return (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.chip,
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: colors.background
+                    },
+                    isSelected && {
+                      borderColor: colors.primary,
+                      backgroundColor: colors.primary + "20"
+                    }
+                  ]}
+                  onPress={() => handleHttpMethodChange(value)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      {
+                        color: isSelected ? colors.primary : colors.text
+                      }
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+          {localHttpMethod === "GET" && (
+            <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
+              Fields sent as URL query parameters instead of JSON body
             </Text>
           )}
         </View>
@@ -439,7 +532,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
         {/* Example payload preview */}
         <View style={styles.exampleSection}>
-          <SectionTitle>EXAMPLE PAYLOAD</SectionTitle>
+          <SectionTitle>{localHttpMethod === "GET" ? "EXAMPLE REQUEST" : "EXAMPLE PAYLOAD"}</SectionTitle>
           <View
             style={[
               styles.exampleCard,

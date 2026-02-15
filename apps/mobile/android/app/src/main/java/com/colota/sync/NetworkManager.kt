@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 /**
@@ -41,12 +42,14 @@ class NetworkManager(private val context: Context) {
     }
 
     /**
-     * Executes an asynchronous POST request to the server.
+     * Sends a location payload to the configured endpoint.
+     * POST sends JSON in the body; GET appends fields as query parameters.
      */
     suspend fun sendToEndpoint(
         payload: JSONObject,
         endpoint: String,
-        extraHeaders: Map<String, String> = emptyMap()
+        extraHeaders: Map<String, String> = emptyMap(),
+        httpMethod: String = "POST"
     ): Boolean = withContext(Dispatchers.IO) {
         if (endpoint.isBlank()) {
             if (BuildConfig.DEBUG) Log.d(TAG, "Empty endpoint provided")
@@ -70,17 +73,29 @@ class NetworkManager(private val context: Context) {
             return@withContext false
         }
 
+        val isGet = httpMethod.equals("GET", ignoreCase = true)
+
+        val targetUrl = if (isGet) {
+            val query = buildQueryString(payload)
+            val separator = if (url.query != null) "&" else "?"
+            URL("$endpoint$separator$query")
+        } else {
+            url
+        }
+
         var connection: HttpURLConnection? = null
         try {
-            connection = url.openConnection() as HttpURLConnection
+            connection = targetUrl.openConnection() as HttpURLConnection
             connection.apply {
-                requestMethod = "POST"
-                setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                setRequestProperty("Accept", "application/json")
+                requestMethod = if (isGet) "GET" else "POST"
+                if (!isGet) {
+                    setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                    setRequestProperty("Accept", "application/json")
+                    doOutput = true
+                }
                 extraHeaders.forEach { (key, value) ->
                     setRequestProperty(key, value)
                 }
-                doOutput = true
                 connectTimeout = CONNECTION_TIMEOUT
                 readTimeout = READ_TIMEOUT
                 useCaches = false
@@ -88,20 +103,24 @@ class NetworkManager(private val context: Context) {
 
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "=== HTTP REQUEST ===")
-                Log.d(TAG, "Endpoint: $endpoint")
-                Log.d(TAG, "Method: POST")
+                Log.d(TAG, "Endpoint: ${if (isGet) targetUrl else endpoint}")
+                Log.d(TAG, "Method: ${connection.requestMethod}")
                 Log.d(TAG, "Headers:")
                 connection.requestProperties.forEach { (key, values) ->
                     val masked = values.map { maskSensitiveHeaderValue(key, it) }
                     Log.d(TAG, "$key: ${masked.joinToString()}")
                 }
-                Log.d(TAG, "Body: ${payload.toString(2)}") // Pretty print JSON
+                if (!isGet) {
+                    Log.d(TAG, "Body: ${payload.toString(2)}")
+                }
                 Log.d(TAG, "===================")
             }
 
-            val bodyBytes = payload.toString().toByteArray(StandardCharsets.UTF_8)
-            connection.setFixedLengthStreamingMode(bodyBytes.size)
-            connection.outputStream.use { it.write(bodyBytes) }
+            if (!isGet) {
+                val bodyBytes = payload.toString().toByteArray(StandardCharsets.UTF_8)
+                connection.setFixedLengthStreamingMode(bodyBytes.size)
+                connection.outputStream.use { it.write(bodyBytes) }
+            }
 
             val responseCode = connection.responseCode
             return@withContext if (responseCode in 200..299) {
@@ -111,7 +130,7 @@ class NetworkManager(private val context: Context) {
                 val errorBody = try {
                     connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
                 } catch (_: Exception) { "Could not read error body" }
-                Log.e(TAG, "POST failed: $responseCode - $errorBody")
+                Log.e(TAG, "${connection.requestMethod} failed: $responseCode - $errorBody")
                 false
             }
         } catch (e: Exception) {
@@ -169,6 +188,17 @@ class NetworkManager(private val context: Context) {
         } else {
             "***"
         }
+    }
+
+    private fun buildQueryString(payload: JSONObject): String {
+        val params = mutableListOf<String>()
+        val keys = payload.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val value = payload.opt(key)?.toString() ?: continue
+            params.add("${URLEncoder.encode(key, "UTF-8")}=${URLEncoder.encode(value, "UTF-8")}")
+        }
+        return params.joinToString("&")
     }
 
     /**
