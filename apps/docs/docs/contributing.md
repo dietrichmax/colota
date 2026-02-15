@@ -16,8 +16,9 @@ sidebar_position: 8
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/batch-export`
 3. Make your changes with clear commit messages
-4. Test on a real device
-5. Open a Pull Request
+4. Add or update tests for new/changed functions, hooks, and components
+5. Test on a real device
+6. Open a Pull Request
 
 See the [Development Guide](/docs/development/architecture) for architecture details and [Local Setup](/docs/development/local-setup) for building from source.
 
@@ -26,7 +27,7 @@ See the [Development Guide](/docs/development/architecture) for architecture det
 - **TypeScript / React Native** for the UI layer
 - **Kotlin** for native Android modules
 - Follow existing patterns in the codebase
-- Use `logger` instead of `console.log` — import from `src/services/logger`
+- Use `logger` instead of `console.log` — import from `src/utils/logger`
 - Run before submitting:
   ```bash
   npm run lint -w @colota/mobile

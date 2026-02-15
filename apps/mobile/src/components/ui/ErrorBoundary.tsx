@@ -6,7 +6,7 @@ import React, { Component } from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
 import { ThemeColors } from "../../types/global"
 import { useTheme } from "../../hooks/useTheme"
-import { logger } from "../../services/logger"
+import { logger } from "../../utils/logger"
 import { fonts, fontSizes } from "../../styles/typography"
 
 interface ErrorBoundaryInternalProps {

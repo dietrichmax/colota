@@ -91,12 +91,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10
   },
-  coordCard: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1
-  },
   coordLabel: {
     fontSize: 10,
     ...fonts.semiBold,

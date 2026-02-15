@@ -12,7 +12,7 @@ import { useTheme } from "../hooks/useTheme"
 import { ThemeColors } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { STATS_REFRESH_FAST } from "../constants"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 
 // Types
 interface LocationData {

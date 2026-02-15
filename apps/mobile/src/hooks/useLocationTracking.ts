@@ -8,7 +8,7 @@ import { NativeEventEmitter, NativeModules, Alert } from "react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { LocationCoords, Settings, LocationTrackingResult } from "../types/global"
 import { ensurePermissions } from "../services/LocationServicePermission"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 
 const { LocationServiceModule } = NativeModules
 const locationEventEmitter = new NativeEventEmitter(LocationServiceModule)

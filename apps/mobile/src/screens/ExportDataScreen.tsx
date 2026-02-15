@@ -12,7 +12,7 @@ import { useTheme } from "../hooks/useTheme"
 import { ThemeColors, LocationCoords } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { LARGE_FILE_THRESHOLD, formatBytes, getByteSize, EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 
 interface ExportStats {
   totalLocations: number

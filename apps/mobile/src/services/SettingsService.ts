@@ -5,7 +5,7 @@
 
 import NativeLocationService from "./NativeLocationService"
 import { Settings } from "../types/global"
-import { logger } from "./logger"
+import { logger } from "../utils/logger"
 
 /**
  * Bridge between UI state and native SQLite configuration.

@@ -5,7 +5,7 @@
 
 import { NativeModules } from "react-native"
 import { AuthConfig, DatabaseStats, Geofence, Settings } from "../types/global"
-import { logger } from "./logger"
+import { logger } from "../utils/logger"
 
 const { LocationServiceModule, BuildConfigModule } = NativeModules
 
