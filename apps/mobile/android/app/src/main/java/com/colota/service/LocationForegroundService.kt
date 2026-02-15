@@ -141,10 +141,7 @@ class LocationForegroundService : Service() {
                         syncManager.stopPeriodicSync()
 
                         setupLocationUpdates()
-
-                        if (config.syncIntervalSeconds > 0) {
-                            syncManager.startPeriodicSync()
-                        }
+                        syncManager.startPeriodicSync()
                     }
 
                     if (config.syncIntervalSeconds == 0 && config.endpoint.isNotBlank()) {

@@ -45,7 +45,10 @@ react {
 
     /* Hermes Commands */
     //   The hermes compiler command to run. By default it is 'hermesc'
-    //   Handled automatically by the React Native Gradle Plugin.
+    def osName = System.getProperty('os.name').toLowerCase()
+    def osBin = osName.contains('win') ? 'win64-bin' : osName.contains('mac') ? 'osx-bin' : 'linux64-bin'
+    def hermescExe = osName.contains('win') ? 'hermesc.exe' : 'hermesc'
+    hermesCommand = ["node", "--print", "require.resolve('hermes-compiler/hermesc/${osBin}/${hermescExe}')"].execute(null, rootDir).text.trim()
     // hermesFlags = ["-O", "-output-source-map"]
 
     /* Autolinking */

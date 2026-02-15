@@ -5,6 +5,7 @@
 
 package com.Colota.location
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
 import android.location.LocationListener
@@ -15,14 +16,17 @@ import android.os.Looper
 /**
  * Location provider backed by Android's native LocationManager.
  * Used in the FOSS product flavor (F-Droid distribution, no Google Play Services).
- * Uses GPS_PROVIDER as primary (equivalent to PRIORITY_HIGH_ACCURACY).
+ * Registers both GPS_PROVIDER and NETWORK_PROVIDER for faster fixes — GPS is
+ * primary but network provides a quick initial position (similar to FusedLocationProvider).
  */
+@SuppressLint("MissingPermission")
 class NativeLocationProvider(context: Context) : LocationProvider {
 
     private val locationManager: LocationManager =
         context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-    private val listenerMap = mutableMapOf<LocationUpdateCallback, LocationListener>()
+    /** Maps each callback to its GPS listener and optional network listener. */
+    private val listenerMap = mutableMapOf<LocationUpdateCallback, List<LocationListener>>()
 
     override fun requestLocationUpdates(
         intervalMs: Long,
@@ -34,11 +38,13 @@ class NativeLocationProvider(context: Context) : LocationProvider {
             override fun onLocationChanged(location: Location) {
                 callback.onLocationUpdate(location)
             }
+            @Deprecated("Deprecated in API 29")
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
             override fun onProviderEnabled(provider: String) {}
             override fun onProviderDisabled(provider: String) {}
         }
-        listenerMap[callback] = listener
+
+        val listeners = mutableListOf<LocationListener>(listener)
 
         try {
             locationManager.requestLocationUpdates(
@@ -48,14 +54,39 @@ class NativeLocationProvider(context: Context) : LocationProvider {
                 listener,
                 looper
             )
+
+            // Also register NETWORK_PROVIDER for faster initial fix (WiFi/cell).
+            // GPS remains primary for accuracy; network provides coarse fallback.
+            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                val networkListener = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        callback.onLocationUpdate(location)
+                    }
+                    @Deprecated("Deprecated in API 29")
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+                listeners.add(networkListener)
+                locationManager.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER,
+                    intervalMs,
+                    minDistanceMeters,
+                    networkListener,
+                    looper
+                )
+            }
         } catch (e: SecurityException) {
-            listenerMap.remove(callback)
+            // Clean up any listeners that were registered before the error
+            listeners.forEach { locationManager.removeUpdates(it) }
             throw e
         }
+
+        listenerMap[callback] = listeners
     }
 
     override fun removeLocationUpdates(callback: LocationUpdateCallback) {
-        listenerMap.remove(callback)?.let { locationManager.removeUpdates(it) }
+        listenerMap.remove(callback)?.forEach { locationManager.removeUpdates(it) }
     }
 
     override fun getLastLocation(
