@@ -64,6 +64,14 @@ describe("SettingsService", () => {
       expect(mockSaveSetting).toHaveBeenCalledWith("endpoint", "https://example.com/api")
     })
 
+    it("saves httpMethod as string", async () => {
+      await SettingsService.updateSetting("httpMethod", "GET")
+      expect(mockSaveSetting).toHaveBeenCalledWith("httpMethod", "GET")
+
+      await SettingsService.updateSetting("httpMethod", "POST")
+      expect(mockSaveSetting).toHaveBeenCalledWith("httpMethod", "POST")
+    })
+
     it("does not throw on success", async () => {
       await SettingsService.updateSetting("endpoint", "https://test.com")
       expect(mockSaveSetting).toHaveBeenCalledWith("endpoint", "https://test.com")

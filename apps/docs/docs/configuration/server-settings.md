@@ -7,13 +7,14 @@ sidebar_position: 3
 | Setting              | Description                               | Default         | Range      |
 | -------------------- | ----------------------------------------- | --------------- | ---------- |
 | Endpoint             | HTTPS URL of your server                  | Empty (offline) | --         |
+| HTTP Method          | POST (JSON body) or GET (query params)    | POST            | POST / GET |
 | Sync Interval        | Batch mode interval                       | Instant (0)     | 0s - 15min |
 | Retry Failed Uploads | Keep retrying failed uploads indefinitely | Off             | On/Off     |
 | Offline Mode         | Disable all network activity              | Disabled        | On/Off     |
 
 ## Endpoint URL
 
-Your server endpoint must accept HTTPS POST requests. HTTP is only allowed for private/local addresses:
+Your server endpoint must accept HTTPS requests (POST or GET depending on your HTTP Method setting). HTTP is only allowed for private/local addresses:
 
 - `127.0.0.1` / `localhost`
 - `192.168.x.x`

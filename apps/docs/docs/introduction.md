@@ -9,7 +9,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## Key Features
 
-- **Self-Hosted** — Send location data to your own server via REST API. Works with Dawarich, OwnTracks, Reitti, or any custom backend that accepts JSON over HTTP.
+- **Self-Hosted** — Send location data to your own server via REST API. Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or any custom backend.
 - **Privacy First** — No analytics, no telemetry, no third-party SDKs, no cloud services. Open source under AGPL-3.0.
 - **Works Offline** — Works without a server. Store location history locally and export as CSV, GeoJSON, GPX, or KML.
 - **Background Tracking** — Foreground service, auto-start on boot, retry with exponential backoff, battery-critical shutdown.
@@ -23,17 +23,17 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 Colota has nine screens, each focused on a specific task:
 
-| Screen                 | Purpose                                                                                   |
-| ---------------------- | ----------------------------------------------------------------------------------------- |
-| **Dashboard**          | Live map with current coordinates, tracking controls, database stats, and geofence status |
-| **Settings**           | GPS polling interval, distance filter, sync strategy, offline mode, accuracy threshold    |
-| **API Config**         | Endpoint field mapping with templates for Dawarich, OwnTracks, Reitti, or custom backends |
-| **Auth Settings**      | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers          |
-| **Geofences**          | Create, edit, and delete pause zones on an interactive map                                |
-| **Location Inspector** | Debug view for sent and queued locations with pagination and accuracy indicators          |
-| **Export Data**        | Export tracked locations as CSV, GeoJSON, GPX, or KML                                     |
-| **Data Management**    | Clear sent history, delete old data, vacuum the database                                  |
-| **About**              | App version, device info, links to repository and privacy policy                          |
+| Screen | Purpose |
+| --- | --- |
+| **Dashboard** | Live map with current coordinates, tracking controls, database stats, and geofence status |
+| **Settings** | GPS polling interval, distance filter, sync strategy, offline mode, accuracy threshold |
+| **API Config** | Endpoint field mapping with templates for Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or custom backends |
+| **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
+| **Geofences** | Create, edit, and delete pause zones on an interactive map |
+| **Location Inspector** | Debug view for sent and queued locations with pagination and accuracy indicators |
+| **Export Data** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
+| **Data Management** | Clear sent history, delete old data, vacuum the database |
+| **About** | App version, device info, links to repository and privacy policy |
 
 ## Screenshots
 

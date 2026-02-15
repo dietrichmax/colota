@@ -25,7 +25,8 @@ data class ServiceConfig(
     val retryIntervalSeconds: Int = 30,
     val isOfflineMode: Boolean = false,
     val fieldMap: String? = null,
-    val customFields: String? = null
+    val customFields: String? = null,
+    val httpMethod: String = "POST"
 ) {
     companion object {
         fun fromDatabase(dbHelper: DatabaseHelper): ServiceConfig {
@@ -42,10 +43,11 @@ data class ServiceConfig(
                 retryIntervalSeconds = saved["retryInterval"]?.toIntOrNull() ?: 300,
                 isOfflineMode = saved["isOfflineMode"]?.toBoolean() ?: false,
                 fieldMap = saved["fieldMap"],
-                customFields = saved["customFields"]
+                customFields = saved["customFields"],
+                httpMethod = saved["httpMethod"] ?: "POST"
             )
         }
-        
+
         fun fromReadableMap(config: ReadableMap, dbHelper: DatabaseHelper): ServiceConfig {
             val dbConfig = fromDatabase(dbHelper)
 
@@ -80,7 +82,8 @@ data class ServiceConfig(
                 retryIntervalSeconds = config.getIntOrNull("retryInterval") ?: dbConfig.retryIntervalSeconds,
                 isOfflineMode = config.getBooleanOrNull("isOfflineMode") ?: dbConfig.isOfflineMode,
                 fieldMap = fieldMapJson ?: dbConfig.fieldMap,
-                customFields = customFieldsJson ?: dbConfig.customFields
+                customFields = customFieldsJson ?: dbConfig.customFields,
+                httpMethod = config.getStringOrNull("httpMethod") ?: dbConfig.httpMethod
             )
         }
 
@@ -99,7 +102,8 @@ data class ServiceConfig(
                 retryIntervalSeconds = extras.getIntOrDefault("retryInterval", dbConfig.retryIntervalSeconds),
                 isOfflineMode = extras.getBooleanOrDefault("isOfflineMode", dbConfig.isOfflineMode),
                 fieldMap = extras.getStringOrDefault("fieldMap", dbConfig.fieldMap),
-                customFields = extras.getStringOrDefault("customFields", dbConfig.customFields)
+                customFields = extras.getStringOrDefault("customFields", dbConfig.customFields),
+                httpMethod = extras.getStringOrDefault("httpMethod", dbConfig.httpMethod) ?: "POST"
             )
         }
     }
@@ -117,6 +121,7 @@ data class ServiceConfig(
             putExtra("isOfflineMode", isOfflineMode)
             fieldMap?.let { putExtra("fieldMap", it) }
             customFields?.let { putExtra("customFields", it) }
+            putExtra("httpMethod", httpMethod)
         }
     }
 }

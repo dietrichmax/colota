@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from "react"
-import { Settings, DEFAULT_SETTINGS, LocationCoords, ApiTemplateName } from "../types/global"
+import { Settings, DEFAULT_SETTINGS, LocationCoords, ApiTemplateName, HttpMethod } from "../types/global"
 import { useLocationTracking } from "../hooks/useLocationTracking"
 import NativeLocationService from "../services/NativeLocationService"
 import SettingsService from "../services/SettingsService"
@@ -55,6 +55,7 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
     customFields: allRaw.customFields ? JSON.parse(allRaw.customFields) : DEFAULT_SETTINGS.customFields,
 
     apiTemplate: (allRaw.apiTemplate as ApiTemplateName) ?? DEFAULT_SETTINGS.apiTemplate,
+    httpMethod: (allRaw.httpMethod as HttpMethod) ?? DEFAULT_SETTINGS.httpMethod,
 
     hasCompletedSetup: allRaw.hasCompletedSetup === "true"
   }

@@ -62,7 +62,8 @@ class NativeLocationService {
       maxRetries: settings.maxRetries,
       filterInaccurateLocations: settings.filterInaccurateLocations,
       accuracyThreshold: settings.accuracyThreshold,
-      isOfflineMode: settings.isOfflineMode
+      isOfflineMode: settings.isOfflineMode,
+      httpMethod: settings.httpMethod
     }
 
     logger.debug(

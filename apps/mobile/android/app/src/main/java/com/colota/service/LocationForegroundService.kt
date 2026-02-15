@@ -568,7 +568,8 @@ class LocationForegroundService : Service() {
             retryIntervalSeconds = config.retryIntervalSeconds,
             maxRetries = config.maxRetries,
             isOfflineMode = config.isOfflineMode,
-            authHeaders = secureStorage.getAuthHeaders()
+            authHeaders = secureStorage.getAuthHeaders(),
+            httpMethod = config.httpMethod
         )
 
         config.fieldMap?.let {

@@ -138,7 +138,8 @@ class DatabaseHelper private constructor(context: Context) :
             "hasCompletedSetup" to "false",
             "tracking_enabled" to "false",
             "apiTemplate" to "custom",
-            "syncPreset" to "instant"
+            "syncPreset" to "instant",
+            "httpMethod" to "POST"
         )
 
         db.beginTransaction()

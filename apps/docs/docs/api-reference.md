@@ -8,7 +8,11 @@ Reference for the HTTP requests Colota sends to your server.
 
 ## Request
 
-**Method:** `POST`
+**Method:** `POST` (default) or `GET`
+
+Configure the HTTP method in **Settings > API Settings > HTTP Method**.
+
+### POST (default)
 
 **Headers:**
 
@@ -34,6 +38,16 @@ Additional headers may be included based on your [authentication](/docs/configur
   "bear": 180.5
 }
 ```
+
+### GET
+
+Fields are sent as URL query parameters instead of a JSON body. No `Content-Type` header is set. Authentication headers are still included if configured.
+
+```
+GET https://your-server.com:5055/?id=colota&lat=48.135124&lon=11.581981&accuracy=12&altitude=519&speed=0&batt=85&charge=2&timestamp=1704067200&bearing=180.5
+```
+
+Values are URL-encoded. If the endpoint URL already contains query parameters, additional parameters are appended with `&`.
 
 All field names are [customizable](/docs/configuration/field-mapping).
 
@@ -67,6 +81,8 @@ Your server should handle multiple simultaneous POST requests. If you have rate 
 
 ## Testing with curl
 
+**POST (default):**
+
 ```bash
 curl -X POST https://your-server.com/api/location \
   -H "Content-Type: application/json; charset=UTF-8" \
@@ -74,7 +90,13 @@ curl -X POST https://your-server.com/api/location \
   -d '{"lat":48.135,"lon":11.582,"acc":12,"vel":0,"batt":85,"bs":2,"tst":1704067200}'
 ```
 
-With Basic Auth:
+**GET (e.g., Traccar):**
+
+```bash
+curl "https://your-server.com:5055/?id=colota&lat=48.135&lon=11.582&accuracy=12&speed=0&batt=85&timestamp=1704067200"
+```
+
+**With Basic Auth:**
 
 ```bash
 curl -X POST https://your-server.com/api/location \

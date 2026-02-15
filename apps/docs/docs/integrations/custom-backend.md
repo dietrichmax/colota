@@ -4,14 +4,13 @@ sidebar_position: 5
 
 # Custom Backend
 
-Colota works with any backend that accepts JSON over HTTP.
+Colota works with any backend that accepts HTTP requests (POST with JSON body or GET with query parameters).
 
 ## Minimum Requirements
 
 Your server needs to:
 
-- Accept `POST` requests with `Content-Type: application/json; charset=UTF-8`
-- Parse the JSON body (see [field types](/docs/api-reference#field-types))
+- Accept `POST` requests with JSON body, or `GET` requests with query parameters
 - Return a 2xx status code on success
 - Handle `alt` and `bear` fields being absent (they are conditional)
 - Handle up to 10 concurrent requests during batch sync
@@ -101,12 +100,19 @@ your-domain.com {
 
 ## Compatible Backends
 
-Colota works with any service that accepts JSON POST requests, including:
+Colota works with any service that accepts HTTP POST or GET requests. Built-in templates are available for:
+
+- **[Dawarich](/docs/integrations/dawarich)** - Self-hosted location history
+- **[OwnTracks](/docs/integrations/owntracks)** - Self-hosted presence tracking
+- **[PhoneTrack](/docs/integrations/phonetrack)** - Nextcloud location tracking
+- **[Reitti](/docs/integrations/reitti)** - Self-hosted location tracking
+- **[Traccar](/docs/integrations/traccar)** - GPS tracking platform (HTTP GET)
+
+Also works with:
 
 - **Home Assistant** - via webhook or REST API
-- **Traccar** - GPS tracking platform
 - **Node-RED** - flow-based automation
-- **Custom APIs** - any server you build
+- **Any HTTP server** - that accepts POST (JSON) or GET (query params)
 
 ## Configuration
 
