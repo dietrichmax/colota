@@ -8,6 +8,7 @@ import { Settings, DEFAULT_SETTINGS, LocationCoords, ApiTemplateName } from "../
 import { useLocationTracking } from "../hooks/useLocationTracking"
 import NativeLocationService from "../services/NativeLocationService"
 import SettingsService from "../services/SettingsService"
+import { logger } from "../services/logger"
 
 type TrackingContextType = {
   settings: Settings
@@ -90,7 +91,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
    */
   const setSettings = useCallback(async (newSettings: Settings) => {
     try {
-      console.log("[TrackingContext] 💾 Batch syncing to Native storage...")
+      logger.debug("[TrackingContext] Batch syncing to Native storage...")
       // SettingsService handles unit conversion (seconds -> ms)
       await SettingsService.updateMultiple(newSettings)
 
@@ -99,7 +100,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
         setError(null) // Clear any previous errors
       }
     } catch (err) {
-      console.error("[TrackingContext] Persistence failed:", err)
+      logger.error("[TrackingContext] Persistence failed:", err)
       if (isMountedRef.current) {
         setError(err instanceof Error ? err : new Error(String(err)))
       }
@@ -126,14 +127,14 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
 
     const init = async () => {
       try {
-        console.log("[TrackingContext] 📂 Hydrating settings and state...")
+        logger.debug("[TrackingContext] Hydrating settings and state...")
         const allRaw = await NativeLocationService.getAllSettings()
 
         if (!isMountedRef.current) return
 
         // Initialize DB with defaults if empty
         if (Object.keys(allRaw).length === 0) {
-          console.log("[TrackingContext] 🆕 Initializing DB with defaults")
+          logger.debug("[TrackingContext] Initializing DB with defaults")
           await setSettings(DEFAULT_SETTINGS)
           return
         }
@@ -147,11 +148,11 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
         // Auto-reconnect UI if tracking was active
         const isTrackingActive = allRaw.tracking_enabled === "true"
         if (isTrackingActive) {
-          console.log("[TrackingContext] 🔄 Re-syncing UI with active background service")
+          logger.debug("[TrackingContext] Re-syncing UI with active background service")
           internalReconnect()
         }
       } catch (err) {
-        console.error("[TrackingContext] Hydration failed:", err)
+        logger.error("[TrackingContext] Hydration failed:", err)
         if (isMountedRef.current) {
           setError(err instanceof Error ? err : new Error(String(err)))
         }
@@ -168,7 +169,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     // Safety timeout: force isLoading=false if init hangs
     const timeout = setTimeout(() => {
       if (isMountedRef.current && !hasInitializedRef.current) {
-        console.error("[TrackingContext] Initialization timed out after 5s, forcing ready state")
+        logger.error("[TrackingContext] Initialization timed out after 5s, forcing ready state")
         setIsLoading(false)
         hasInitializedRef.current = true
       }
@@ -191,7 +192,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
         setError(null)
       }
     } catch (err) {
-      console.error("[TrackingContext] Failed to start tracking:", err)
+      logger.error("[TrackingContext] Failed to start tracking:", err)
       if (isMountedRef.current) {
         setError(err instanceof Error ? err : new Error(String(err)))
       }
@@ -206,7 +207,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
         setError(null)
       }
     } catch (err) {
-      console.error("[TrackingContext] Failed to stop tracking:", err)
+      logger.error("[TrackingContext] Failed to stop tracking:", err)
       if (isMountedRef.current) {
         setError(err instanceof Error ? err : new Error(String(err)))
       }
@@ -221,7 +222,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
           setError(null)
         }
       } catch (err) {
-        console.error("[TrackingContext] Failed to restart tracking:", err)
+        logger.error("[TrackingContext] Failed to restart tracking:", err)
         if (isMountedRef.current) {
           setError(err instanceof Error ? err : new Error(String(err)))
         }

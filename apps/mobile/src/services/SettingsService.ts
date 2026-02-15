@@ -5,6 +5,7 @@
 
 import NativeLocationService from "./NativeLocationService"
 import { Settings } from "../types/global"
+import { logger } from "./logger"
 
 /**
  * Bridge between UI state and native SQLite configuration.
@@ -66,7 +67,7 @@ export const SettingsService = {
    */
   updateMultiple: async (settingsUpdate: Partial<Settings>): Promise<void> => {
     const entries = Object.entries(settingsUpdate)
-    console.log(`[SettingsService] Batch updating ${entries.length} settings`)
+    logger.debug(`[SettingsService] Batch updating ${entries.length} settings`)
 
     const results = await Promise.allSettled(
       entries.map(([key, val]) => SettingsService.updateSetting(key as keyof Settings, val))
@@ -74,11 +75,11 @@ export const SettingsService = {
 
     const failures = results.filter((r) => r.status === "rejected")
     if (failures.length > 0) {
-      failures.forEach((f) => console.error("[SettingsService] Setting failed:", (f as PromiseRejectedResult).reason))
+      failures.forEach((f) => logger.error("[SettingsService] Setting failed:", (f as PromiseRejectedResult).reason))
       throw new Error(`Failed to save ${failures.length} of ${entries.length} settings`)
     }
 
-    console.log("[SettingsService] Batch update completed")
+    logger.debug("[SettingsService] Batch update completed")
   }
 }
 

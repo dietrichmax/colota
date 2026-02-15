@@ -13,6 +13,7 @@ import { Card, Container, Divider, Footer } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
 import { REPO_URL, PRIVACY_POLICY_URL } from "../constants"
+import { logger } from "../services/logger"
 
 // Helper function to map SDK to Android version
 function getAndroidVersion(sdkVersion: number): string {
@@ -115,7 +116,7 @@ export function AboutScreen({}: ScreenProps) {
           apiLevel: info.apiLevel.toString()
         })
       } catch (err) {
-        console.error("Failed to load device info:", err)
+        logger.error("Failed to load device info:", err)
       }
     }
 
@@ -123,7 +124,7 @@ export function AboutScreen({}: ScreenProps) {
   }, [])
 
   const handleOpenURL = (url: string) => {
-    Linking.openURL(url).catch((err) => console.error("Failed to open URL:", err))
+    Linking.openURL(url).catch((err) => logger.error("Failed to open URL:", err))
   }
 
   // Fallback if buildConfig is not available

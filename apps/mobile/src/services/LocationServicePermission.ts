@@ -5,6 +5,7 @@
 
 import { Platform, PermissionsAndroid, Alert } from "react-native"
 import NativeLocationService from "./NativeLocationService"
+import { logger } from "./logger"
 
 /**
  * Permission status for location tracking
@@ -64,7 +65,7 @@ export async function ensurePermissions(): Promise<boolean> {
 
     return true
   } catch (err) {
-    console.error("[PermissionService] Permission request error:", err)
+    logger.error("[PermissionService] Permission request error:", err)
     Alert.alert("Permission Error", "Failed to request permissions. Please try again.", [{ text: "OK" }])
     return false
   }
@@ -146,7 +147,7 @@ async function requestBatteryOptimizationExemption(): Promise<void> {
       await NativeLocationService.requestIgnoreBatteryOptimizations()
     }
   } catch (err) {
-    console.error("[PermissionService] Battery optimization request failed:", err)
+    logger.error("[PermissionService] Battery optimization request failed:", err)
     // Non-critical, don't block
   }
 }
@@ -227,7 +228,7 @@ async function checkBatteryOptimization(): Promise<boolean> {
   try {
     return await NativeLocationService.isIgnoringBatteryOptimizations()
   } catch (err) {
-    console.error("[PermissionService] Battery optimization check failed:", err)
+    logger.error("[PermissionService] Battery optimization check failed:", err)
     return false
   }
 }

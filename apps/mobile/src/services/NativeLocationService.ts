@@ -5,6 +5,7 @@
 
 import { NativeModules } from "react-native"
 import { AuthConfig, DatabaseStats, Geofence, Settings } from "../types/global"
+import { logger } from "./logger"
 
 const { LocationServiceModule, BuildConfigModule } = NativeModules
 
@@ -35,7 +36,7 @@ class NativeLocationService {
     try {
       return await operation()
     } catch (error) {
-      console.error(`[NativeLocationService] ${errorPrefix}:`, error)
+      logger.error(`[NativeLocationService] ${errorPrefix}:`, error)
       return fallback
     }
   }
@@ -64,15 +65,15 @@ class NativeLocationService {
       isOfflineMode: settings.isOfflineMode
     }
 
-    console.log(
+    logger.debug(
       `[NativeLocationService] Starting service - interval: ${settings.interval}s, distance: ${settings.distance}m, sync: ${settings.syncInterval}s`
     )
 
     try {
       await LocationServiceModule.startService(config)
-      console.log("[NativeLocationService] Service started")
+      logger.debug("[NativeLocationService] Service started")
     } catch (error) {
-      console.error("[NativeLocationService] Start failed:", error)
+      logger.error("[NativeLocationService] Start failed:", error)
       throw error
     }
   }
@@ -82,11 +83,11 @@ class NativeLocationService {
    */
   static stop(): void {
     if (!LocationServiceModule) {
-      console.warn("[NativeLocationService] Module not available")
+      logger.warn("[NativeLocationService] Module not available")
       return
     }
 
-    console.log("[NativeLocationService] Stopping service")
+    logger.debug("[NativeLocationService] Stopping service")
     LocationServiceModule.stopService()
   }
 
@@ -117,13 +118,13 @@ class NativeLocationService {
    */
   static async manualFlush(): Promise<boolean> {
     this.ensureModule()
-    console.log("[NativeLocationService] Triggering manual flush")
+    logger.debug("[NativeLocationService] Triggering manual flush")
     try {
       const result = await LocationServiceModule.manualFlush()
-      console.log("[NativeLocationService] Flush completed")
+      logger.debug("[NativeLocationService] Flush completed")
       return result
     } catch (error) {
-      console.error("[NativeLocationService] Flush failed:", error)
+      logger.error("[NativeLocationService] Flush failed:", error)
       throw error
     }
   }
@@ -184,7 +185,7 @@ class NativeLocationService {
    */
   static async clearSentHistory(): Promise<void> {
     this.ensureModule()
-    console.log("[NativeLocationService] Clearing sent history")
+    logger.debug("[NativeLocationService] Clearing sent history")
     await LocationServiceModule.clearSentHistory()
   }
 
@@ -194,7 +195,7 @@ class NativeLocationService {
    */
   static async clearQueue(): Promise<number> {
     this.ensureModule()
-    console.log("[NativeLocationService] Clearing queue")
+    logger.debug("[NativeLocationService] Clearing queue")
     return LocationServiceModule.clearQueue()
   }
 
@@ -204,7 +205,7 @@ class NativeLocationService {
    */
   static async clearAllLocations(): Promise<number> {
     this.ensureModule()
-    console.log("[NativeLocationService] Clearing all locations")
+    logger.debug("[NativeLocationService] Clearing all locations")
     return LocationServiceModule.clearAllLocations()
   }
 
@@ -215,7 +216,7 @@ class NativeLocationService {
    */
   static async deleteOlderThan(days: number): Promise<number> {
     this.ensureModule()
-    console.log(`[NativeLocationService] Deleting locations older than ${days} days`)
+    logger.debug(`[NativeLocationService] Deleting locations older than ${days} days`)
     return LocationServiceModule.deleteOlderThan(days)
   }
 
@@ -224,7 +225,7 @@ class NativeLocationService {
    */
   static async vacuumDatabase(): Promise<void> {
     this.ensureModule()
-    console.log("[NativeLocationService] Vacuuming database")
+    logger.debug("[NativeLocationService] Vacuuming database")
     await LocationServiceModule.vacuumDatabase()
   }
 
@@ -246,7 +247,7 @@ class NativeLocationService {
    */
   static async createGeofence(geofence: Omit<Geofence, "id" | "createdAt">): Promise<number> {
     this.ensureModule()
-    console.log("[NativeLocationService] Creating geofence:", geofence.name)
+    logger.debug("[NativeLocationService] Creating geofence:", geofence.name)
     return LocationServiceModule.createGeofence(
       geofence.name,
       geofence.lat,
@@ -266,7 +267,7 @@ class NativeLocationService {
       throw new Error("Geofence ID is required")
     }
 
-    console.log("[NativeLocationService] Updating geofence:", update.id)
+    logger.debug("[NativeLocationService] Updating geofence:", update.id)
     return LocationServiceModule.updateGeofence(
       update.id,
       update.name ?? null,
@@ -283,30 +284,30 @@ class NativeLocationService {
    */
   static async deleteGeofence(id: number): Promise<boolean> {
     this.ensureModule()
-    console.log("[NativeLocationService] Deleting geofence:", id)
+    logger.debug("[NativeLocationService] Deleting geofence:", id)
     return LocationServiceModule.deleteGeofence(id)
   }
 
   /**
-   * Checks if device is currently inside a silent zone
-   * @returns Silent zone name or null
+   * Checks if device is currently inside a pause zone
+   * @returns Pause zone name or null
    */
-  static async checkCurrentSilentZone(): Promise<string | null> {
+  static async checkCurrentPauseZone(): Promise<string | null> {
     this.ensureModule()
-    return this.safeExecute(() => LocationServiceModule.checkCurrentSilentZone(), null, "checkCurrentSilentZone failed")
+    return this.safeExecute(() => LocationServiceModule.checkCurrentPauseZone(), null, "checkCurrentPauseZone failed")
   }
 
   /**
-   * Triggers immediate recheck of silent zone settings
+   * Triggers immediate recheck of pause zone settings
    * Use after modifying geofence pause settings to update notification instantly
    */
   static async recheckZoneSettings(): Promise<void> {
     this.ensureModule()
-    console.log("[NativeLocationService] Triggering zone settings recheck")
+    logger.debug("[NativeLocationService] Triggering zone settings recheck")
     try {
       await LocationServiceModule.recheckZoneSettings()
     } catch (error) {
-      console.error("[NativeLocationService] ❌ Recheck failed:", error)
+      logger.error("[NativeLocationService] Recheck failed:", error)
     }
   }
 
@@ -372,7 +373,7 @@ class NativeLocationService {
    */
   static async requestIgnoreBatteryOptimizations(): Promise<boolean> {
     this.ensureModule()
-    console.log("[NativeLocationService] Requesting battery optimization exemption")
+    logger.debug("[NativeLocationService] Requesting battery optimization exemption")
     return this.safeExecute(
       () => LocationServiceModule.requestIgnoreBatteryOptimizations(),
       false,
@@ -399,7 +400,7 @@ class NativeLocationService {
     VERSION_CODE: number
   } | null {
     if (!BuildConfigModule) {
-      console.warn("[NativeLocationService] BuildConfigModule not available")
+      logger.warn("[NativeLocationService] BuildConfigModule not available")
       return null
     }
     return BuildConfigModule

@@ -8,6 +8,7 @@ import { NativeEventEmitter, NativeModules, Alert } from "react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { LocationCoords, Settings, LocationTrackingResult } from "../types/global"
 import { ensurePermissions } from "../services/LocationServicePermission"
+import { logger } from "../services/logger"
 
 const { LocationServiceModule } = NativeModules
 const locationEventEmitter = new NativeEventEmitter(LocationServiceModule)
@@ -71,7 +72,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
             })
           }
         } catch (err) {
-          console.error("[useLocationTracking] Failed to fetch initial location:", err)
+          logger.error("[useLocationTracking] Failed to fetch initial location:", err)
         }
       }
     }
@@ -84,7 +85,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    */
   useEffect(() => {
     if (tracking && !listenerRef.current) {
-      console.log("[useLocationTracking] 📡 Attaching native listener")
+      logger.debug("[useLocationTracking] Attaching native listener")
       listenerRef.current = locationEventEmitter.addListener("onLocationUpdate", (event: any) => {
         setCoords({
           latitude: event.latitude,
@@ -102,7 +103,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
 
     return () => {
       if (listenerRef.current) {
-        console.log("[useLocationTracking] 🔌 Detaching native listener")
+        logger.debug("[useLocationTracking] Detaching native listener")
         listenerRef.current.remove()
         listenerRef.current = null
       }
@@ -115,7 +116,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    */
   const startTracking = useCallback(async (overrideSettings?: Settings) => {
     if (isTrackingRef.current) {
-      console.log("[useLocationTracking] Already tracking")
+      logger.debug("[useLocationTracking] Already tracking")
       return
     }
 
@@ -134,10 +135,10 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
 
     try {
       await NativeLocationService.start(effectiveSettings)
-      console.log(`[useLocationTracking] ✅ Service started (offline: ${effectiveSettings.isOfflineMode})`)
+      logger.debug(`[useLocationTracking] Service started (offline: ${effectiveSettings.isOfflineMode})`)
     } catch (error) {
       setTracking(false)
-      console.error("[useLocationTracking] ❌ Failed to start:", error)
+      logger.error("[useLocationTracking] Failed to start:", error)
       Alert.alert("Error", "Failed to start location tracking.")
     }
   }, [])
@@ -147,11 +148,11 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    */
   const stopTracking = useCallback(() => {
     if (!isTrackingRef.current) {
-      console.log("[useLocationTracking] Not tracking")
+      logger.debug("[useLocationTracking] Not tracking")
       return
     }
 
-    console.log("[useLocationTracking] Stopping service")
+    logger.debug("[useLocationTracking] Stopping service")
 
     if (listenerRef.current) {
       listenerRef.current.remove()
@@ -171,12 +172,12 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
   const restartTracking = useCallback(
     async (newSettings?: Settings) => {
       if (restartingRef.current) {
-        console.log("[useLocationTracking] Restart already in progress, queuing")
+        logger.debug("[useLocationTracking] Restart already in progress, queuing")
         restartQueuedRef.current = true
         return
       }
 
-      console.log("[useLocationTracking] Restarting service")
+      logger.debug("[useLocationTracking] Restarting service")
       setIsRestarting(true)
       restartingRef.current = true
 
@@ -194,7 +195,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
         // Process queued restart if any
         if (restartQueuedRef.current) {
           restartQueuedRef.current = false
-          console.log("[useLocationTracking] Processing queued restart")
+          logger.debug("[useLocationTracking] Processing queued restart")
           setTimeout(() => restartTracking(newSettings), 100)
         }
       }
@@ -209,11 +210,11 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    */
   const reconnect = useCallback(async () => {
     if (isTrackingRef.current) {
-      console.log("[useLocationTracking] Already tracking, skip reconnect")
+      logger.debug("[useLocationTracking] Already tracking, skip reconnect")
       return
     }
 
-    console.log("[useLocationTracking] Reconnecting to active service")
+    logger.debug("[useLocationTracking] Reconnecting to active service")
     setTracking(true)
 
     try {
@@ -232,7 +233,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
         })
       }
     } catch (err) {
-      console.error("[useLocationTracking] Failed to fetch location on reconnect:", err)
+      logger.error("[useLocationTracking] Failed to fetch location on reconnect:", err)
     }
   }, [])
 
@@ -242,7 +243,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    */
   useEffect(() => {
     return () => {
-      console.log("[useLocationTracking] 🧹 Component unmounted, service remains active")
+      logger.debug("[useLocationTracking] Component unmounted, service remains active")
       restartQueuedRef.current = false
       restartingRef.current = false
     }

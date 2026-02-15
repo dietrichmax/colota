@@ -12,6 +12,7 @@ import { useTheme } from "../hooks/useTheme"
 import { ThemeColors } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { STATS_REFRESH_FAST } from "../constants"
+import { logger } from "../services/logger"
 
 // Types
 interface LocationData {
@@ -127,7 +128,7 @@ export function LocationInspectorScreen() {
       const result = await NativeLocationService.getTableData(activeTable, limit, offset)
       setData(result || [])
     } catch (err) {
-      console.error("[LocationInspector] Fetch error:", err)
+      logger.error("[LocationInspector] Fetch error:", err)
       setData([])
     }
   }, [activeTable, limit, page])

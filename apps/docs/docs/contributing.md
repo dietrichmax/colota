@@ -26,10 +26,12 @@ See the [Development Guide](/docs/development/architecture) for architecture det
 - **TypeScript / React Native** for the UI layer
 - **Kotlin** for native Android modules
 - Follow existing patterns in the codebase
+- Use `logger` instead of `console.log` — import from `src/services/logger`
 - Run before submitting:
   ```bash
-  npm run lint
-  npx tsc --noEmit
+  npm run lint -w @colota/mobile
+  npx -w @colota/mobile tsc --noEmit
+  npm test -w @colota/mobile
   ```
 
 ## Project Structure

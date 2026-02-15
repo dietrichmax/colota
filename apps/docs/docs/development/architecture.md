@@ -61,7 +61,7 @@ The primary React Native bridge module (exposed as `"LocationServiceModule"`). H
 Emits two events back to JavaScript:
 
 - `onLocationUpdate` — new GPS fix received
-- `onSilentZoneChange` — entered or exited a geofence pause zone
+- `onPauseZoneChange` — entered or exited a geofence pause zone
 
 ### LocationForegroundService
 
@@ -127,6 +127,7 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 | `NativeLocationService` | TypeScript bridge to the native `LocationServiceModule` with typed methods for all native operations |
 | `LocationServicePermission` | Sequential Android permission requests (fine location → background location → notifications → battery exemption) |
 | `SettingsService` | Bridges UI state to native SQLite with type conversion (seconds↔ms, objects↔JSON) |
+| `logger` | Environment-aware logging — suppresses debug/info in production via `__DEV__`, always logs warn/error |
 
 ### Hooks
 

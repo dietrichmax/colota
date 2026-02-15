@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Geofencing
 
-Create zones where tracking pauses automatically. These "silent zones" save battery and stop recording at places you visit often.
+Create zones where tracking pauses automatically. These "pause zones" save battery and stop recording at places you visit often.
 
 ## Use Cases
 
@@ -29,7 +29,7 @@ Create zones where tracking pauses automatically. These "silent zones" save batt
 ## How It Works
 
 - Zone detection uses the Haversine formula (1--2ms per check)
-- When entering a silent zone, GPS stops updating
+- When entering a pause zone, GPS stops updating
 - The notification shows "Paused: [Zone Name]"
 - When exiting the zone, tracking automatically resumes
 - Zone checks happen every location update with minimal overhead

@@ -23,7 +23,7 @@ jest.mock("react-native", () => ({
       createGeofence: jest.fn().mockResolvedValue(1),
       updateGeofence: jest.fn().mockResolvedValue(true),
       deleteGeofence: jest.fn().mockResolvedValue(true),
-      checkCurrentSilentZone: jest.fn().mockResolvedValue(null),
+      checkCurrentPauseZone: jest.fn().mockResolvedValue(null),
       recheckZoneSettings: jest.fn().mockResolvedValue(undefined),
       saveSetting: jest.fn().mockResolvedValue(undefined),
       getSetting: jest.fn().mockResolvedValue(null),

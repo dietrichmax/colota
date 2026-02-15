@@ -6,6 +6,7 @@
 import { useState, useCallback } from "react"
 import { useTimeout } from "./useTimeout"
 import { AUTOSAVE_DEBOUNCE_MS, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
+import { logger } from "../services/logger"
 
 /**
  * Hook that encapsulates the debounced auto-save pattern used across settings screens.
@@ -38,14 +39,14 @@ export function useAutoSave() {
               setSaveSuccess(true)
               successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
             } catch (err) {
-              console.error("[useAutoSave] Restart failed:", err)
+              logger.error("[useAutoSave] Restart failed:", err)
             } finally {
               setSaving(false)
             }
           }, AUTOSAVE_DEBOUNCE_MS)
         } catch (err) {
           setSaving(false)
-          console.error("[useAutoSave] Save failed:", err)
+          logger.error("[useAutoSave] Save failed:", err)
         }
       }, AUTOSAVE_DEBOUNCE_MS)
     },
@@ -69,7 +70,7 @@ export function useAutoSave() {
               setSaveSuccess(true)
               successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
             } catch (err) {
-              console.error("[useAutoSave] Restart failed:", err)
+              logger.error("[useAutoSave] Restart failed:", err)
             } finally {
               setSaving(false)
             }
@@ -77,7 +78,7 @@ export function useAutoSave() {
         })
         .catch((err) => {
           setSaving(false)
-          console.error("[useAutoSave] Save failed:", err)
+          logger.error("[useAutoSave] Save failed:", err)
         })
     },
     [saveTimeout, restartTimeout, successTimeout]

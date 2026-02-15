@@ -16,6 +16,7 @@ import { fonts } from "../styles/typography"
 import { SectionTitle, Card, Container, Divider } from "../components"
 import { ChevronRight } from "lucide-react-native"
 import { StatsCard } from "../components"
+import { logger } from "../services/logger"
 import { ConnectionSettings } from "../components/features/settings/ConnectionSettings"
 import { SyncStrategySettings } from "../components/features/settings/SyncStrategySettings"
 
@@ -47,7 +48,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
       setQueueCount(stats.queued)
       setSentCount(stats.sent)
     } catch (err) {
-      console.error("[SettingsScreen] Failed to get stats:", err)
+      logger.error("[SettingsScreen] Failed to get stats:", err)
     }
   }, [])
 
