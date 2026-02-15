@@ -8,8 +8,6 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 
 [Documentation](https://colota.app/docs/introduction) | [Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) | [Privacy Policy](https://colota.app/privacy-policy)
 
----
-
 ## Features
 
 - **Self-Hosted** — Send location data to your own server. Works with Dawarich, OwnTracks, Reitti, or any custom backend.
@@ -51,7 +49,7 @@ For full setup, server configuration, and integration guides, see the [documenta
 
 ## Documentation
 
-Full docs at **[colota.app](https://colota.app)** — covers configuration, server integration (Dawarich, OwnTracks, Reitti, custom backends), geofencing, data export, API reference, battery optimization, troubleshooting, and development setup.
+Full docs at **[colota.app](https://colota.app)** covers configuration, server integration (Dawarich, OwnTracks, Reitti, PhoneTracks and custom backends), geofencing, data export, API reference, battery optimization, troubleshooting, and development setup.
 
 ## Build from Source
 
