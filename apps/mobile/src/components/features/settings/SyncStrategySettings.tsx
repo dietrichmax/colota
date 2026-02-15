@@ -238,85 +238,33 @@ export function SyncStrategySettings({
                 </View>
               </View>
 
-              {/* Retry Interval */}
-              <View style={styles.settingBlock}>
-                <Text style={[styles.blockLabel, { color: colors.text }]}>Retry Interval</Text>
-                <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
-                  Wait time before retrying failed uploads
-                </Text>
-
-                <View style={styles.optionsGrid}>
-                  {([30, 300, 900] as const).map((sec) => {
-                    const labels: Record<number, string> = {
-                      30: "30s",
-                      300: "5m",
-                      900: "15m"
+              {/* Retry Forever Toggle */}
+              <View style={styles.settingRow}>
+                <View style={styles.settingContent}>
+                  <Text style={[styles.settingLabel, { color: colors.text }]}>Retry Failed Uploads</Text>
+                  <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
+                    {settings.maxRetries === 0
+                      ? "Failed uploads stay in the queue until they succeed"
+                      : "Failed uploads are permanently deleted after 5 failed send attempts"}
+                  </Text>
+                </View>
+                <Switch
+                  value={settings.maxRetries === 0}
+                  onValueChange={(retryForever) => {
+                    const next = {
+                      ...settings,
+                      maxRetries: retryForever ? 0 : 5,
+                      syncPreset: "custom" as const
                     }
-                    const isSelected = settings.retryInterval === sec
-
-                    return (
-                      <TouchableOpacity
-                        key={sec}
-                        style={[
-                          styles.gridOption,
-                          {
-                            borderColor: colors.border,
-                            backgroundColor: colors.background
-                          },
-                          isSelected && {
-                            borderColor: colors.primary,
-                            backgroundColor: colors.primary + "20"
-                          }
-                        ]}
-                        onPress={() => handleGridSelect("retryInterval", sec)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.gridLabel, { color: isSelected ? colors.primary : colors.text }]}>
-                          {labels[sec]}
-                        </Text>
-                      </TouchableOpacity>
-                    )
-                  })}
-                </View>
-              </View>
-
-              {/* Max Retries */}
-              <View style={styles.settingBlock}>
-                <Text style={[styles.blockLabel, { color: colors.text }]}>Max Retry Attempts</Text>
-                <View style={styles.retryGrid}>
-                  {[3, 5, 10, 0].map((val) => (
-                    <TouchableOpacity
-                      key={val}
-                      style={[
-                        styles.retryChip,
-                        {
-                          borderColor: colors.border,
-                          backgroundColor: colors.background
-                        },
-                        settings.maxRetries === val && {
-                          borderColor: colors.primary,
-                          backgroundColor: colors.primary + "20"
-                        }
-                      ]}
-                      onPress={() => handleGridSelect("maxRetries", val)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.retryChipText,
-                          { color: settings.maxRetries === val ? colors.primary : colors.text }
-                        ]}
-                      >
-                        {val === 0 ? "∞" : val}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <Text style={[styles.blockHint, styles.retryHint, { color: colors.textSecondary }]}>
-                  {settings.maxRetries === 0
-                    ? "Unlimited retries may cause queue buildup"
-                    : `Give up after ${settings.maxRetries} failed attempts`}
-                </Text>
+                    onSettingsChange(next)
+                    onImmediateSave(next)
+                  }}
+                  trackColor={{
+                    false: colors.border,
+                    true: colors.primary + "80"
+                  }}
+                  thumbColor={settings.maxRetries === 0 ? colors.primary : colors.border}
+                />
               </View>
             </View>
 
@@ -457,24 +405,6 @@ const styles = StyleSheet.create({
   gridLabel: {
     fontSize: 14,
     ...fonts.semiBold
-  },
-  retryGrid: {
-    flexDirection: "row",
-    gap: 10
-  },
-  retryChip: {
-    flex: 1,
-    borderWidth: 2,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center"
-  },
-  retryChipText: {
-    fontSize: 16,
-    ...fonts.bold
-  },
-  retryHint: {
-    marginTop: 8
   },
   settingRow: {
     flexDirection: "row",

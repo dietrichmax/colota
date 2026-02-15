@@ -188,7 +188,7 @@ export const TRACKING_PRESETS = {
   },
   balanced: {
     interval: 30,
-    distance: 1,
+    distance: 2,
     syncInterval: 300,
     retryInterval: 300,
     label: "Balanced",

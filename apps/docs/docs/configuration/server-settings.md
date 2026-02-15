@@ -4,13 +4,12 @@ sidebar_position: 3
 
 # Server Settings
 
-| Setting        | Description                         | Default         | Range        |
-| -------------- | ----------------------------------- | --------------- | ------------ |
-| Endpoint       | HTTPS URL of your server            | Empty (offline) | --           |
-| Sync Interval  | Batch mode interval                 | Instant (0)     | 0s -- 60min  |
-| Retry Interval | Time between retry attempts         | 30 seconds      | 30s -- 15min |
-| Max Retries    | Maximum retry attempts per location | 5               | 3, 5, 10, ∞  |
-| Offline Mode   | Disable all network activity        | Disabled        | On/Off       |
+| Setting              | Description                               | Default         | Range       |
+| -------------------- | ----------------------------------------- | --------------- | ----------- |
+| Endpoint             | HTTPS URL of your server                  | Empty (offline) | --          |
+| Sync Interval        | Batch mode interval                       | Instant (0)     | 0s -- 15min |
+| Retry Failed Uploads | Keep retrying failed uploads indefinitely | Off             | On/Off      |
+| Offline Mode         | Disable all network activity              | Disabled        | On/Off      |
 
 ## Endpoint URL
 
@@ -41,4 +40,6 @@ Attempt 4: +300s (5 minutes)
 Attempt 5+: +900s (15 minutes)
 ```
 
-After max retries (default: 5), failed items are automatically removed from the queue. The app also auto-syncs when network connectivity is restored.
+By default, failed uploads are **permanently deleted after 5 failed send attempts**. Enable **Retry Failed Uploads** in advanced settings to keep retrying indefinitely — failed uploads stay in the queue until they succeed. Note that this may cause queue buildup if your server is unreachable for extended periods.
+
+The app also auto-syncs when network connectivity is restored.
