@@ -46,7 +46,7 @@ The mobile app has a **React Native** UI layer and **native Kotlin** modules for
 
 ## Native Kotlin Modules
 
-All native code lives in `apps/mobile/android/app/src/main/java/com/colota/`.
+All native code lives in `apps/mobile/android/app/src/main/java/com/colota/`, organized into sub-packages: `bridge/`, `service/`, `data/`, `sync/`, and `util/`.
 
 ### LocationServiceModule
 
@@ -58,9 +58,11 @@ The primary React Native bridge module (exposed as `"LocationServiceModule"`). H
 - Settings persistence
 - Device info, file operations, authentication
 
-Emits two events back to JavaScript:
+Emits events back to JavaScript:
 
 - `onLocationUpdate` — new GPS fix received
+- `onTrackingStopped` — service stopped (user action or OOM kill)
+- `onSyncError` — 3+ consecutive sync failures
 - `onPauseZoneChange` — entered or exited a geofence pause zone
 
 ### LocationForegroundService
@@ -114,8 +116,9 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 | `LocationBootReceiver` | Auto-restarts tracking after device reboot                |
 | `DeviceInfoHelper`     | Device metadata and battery status with caching           |
 | `FileOperations`       | File I/O for data export via FileProvider                 |
-| `LocationUtils`        | Builds JSON payloads with dynamic field mapping           |
+| `PayloadBuilder`       | Builds JSON payloads with dynamic field mapping           |
 | `ServiceConfig`        | Centralized configuration data class                      |
+| `TimedCache`           | Generic TTL cache used for queue count and device info    |
 | `BuildConfigModule`    | Exposes build constants (SDK versions, app version) to JS |
 
 ## React Native Layer

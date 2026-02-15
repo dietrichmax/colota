@@ -58,7 +58,7 @@
 
         <!-- Foreground location service -->
         <service
-            android:name=".LocationForegroundService"
+            android:name=".service.LocationForegroundService"
             android:enabled="true"
             android:exported="false" 
             android:foregroundServiceType="location"
@@ -71,7 +71,7 @@
 
         <!-- Boot Receiver -->
         <receiver
-            android:name=".LocationBootReceiver"
+            android:name=".service.LocationBootReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>

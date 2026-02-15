@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-package com.Colota
+package com.Colota.util
 
 import android.content.Context
 import android.content.SharedPreferences

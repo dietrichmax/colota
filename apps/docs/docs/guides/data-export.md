@@ -33,9 +33,9 @@ Export your location history in multiple formats.
 
 In the Data Management screen you can also:
 
-- **Clear Sent History** -- Remove locations that have already been synced
-- **Delete Older Than X Days** -- Clean up old data
-- **Vacuum Database** -- Reclaim disk space after deletions
+- **Clear Sent History** - Remove locations that have already been synced
+- **Delete Older Than X Days** - Clean up old data
+- **Vacuum Database** - Reclaim disk space after deletions
 
 ### Storage Reference
 

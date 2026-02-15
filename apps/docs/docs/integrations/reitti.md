@@ -8,7 +8,7 @@ sidebar_position: 4
 
 ## Setup
 
-1. **Install Reitti** -- follow the [Reitti documentation](https://github.com/Moo-Ack-Productions/reitti)
+1. **Install Reitti** - follow the [Reitti documentation](https://github.com/Moo-Ack-Productions/reitti)
 2. **Configure Colota**:
    - Go to **Settings > API Settings**
    - Select the **Reitti** template

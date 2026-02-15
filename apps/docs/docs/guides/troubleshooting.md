@@ -12,14 +12,14 @@ sidebar_position: 4
 
 ## GPS accuracy is poor
 
-- Wait for GPS lock (can take 30--60 seconds)
+- Wait for GPS lock (can take 30-60 seconds)
 - Move to an open area away from buildings
 - Check if **High Accuracy** is enabled in device location settings
 - Enable **Filter Inaccurate Locations** in app settings
 
 ## Server sync not working
 
-1. Check endpoint URL format -- must be `https://` or `http://localhost`
+1. Check endpoint URL format - must be `https://` or `http://localhost`
 2. Use the **Test Connection** button in settings
 3. Check server logs for incoming requests
 4. Verify network connectivity

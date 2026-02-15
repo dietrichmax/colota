@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-package com.Colota
+package com.Colota.sync
 
 import android.location.Location
 import android.util.Log
@@ -12,20 +12,16 @@ import org.json.JSONObject
 import kotlin.math.*
 
 /**
- * Utility class for building and parsing location payloads.
+ * Builds and parses location payloads with dynamic field mapping.
  */
-class LocationUtils {
+class PayloadBuilder {
 
     companion object {
-        private const val TAG = "LocationUtils"
+        private const val TAG = "PayloadBuilder"
     }
 
-    // ========================================
-    // DATA CONVERSION
-    // ========================================
-
     /**
-     * Maps native location data into JSONObject with dynamic field mapping.
+     * Builds a JSON payload from location data, applying field name mapping and custom fields.
      */
     fun buildPayload(
         location: Location,
@@ -36,7 +32,6 @@ class LocationUtils {
         customFields: Map<String, String>? = null
     ): JSONObject {
         return JSONObject().apply {
-            // Add custom static fields first
             customFields?.forEach { (key, value) ->
                 put(key, value)
             }
@@ -60,9 +55,6 @@ class LocationUtils {
         }
     }
 
-    /**
-     * Parses JSON string to Map with error handling.
-     */
     fun parseFieldMap(jsonString: String?): Map<String, String>? {
         if (jsonString.isNullOrBlank()) return null
 
@@ -75,10 +67,7 @@ class LocationUtils {
         }
     }
 
-    /**
-     * Parses JSON array string of custom fields into a Map.
-     * Expected format: [{"key":"_type","value":"location"},...]
-     */
+    /** Expected format: [{"key":"_type","value":"location"},...] */
     fun parseCustomFields(jsonString: String?): Map<String, String>? {
         if (jsonString.isNullOrBlank() || jsonString == "[]") return null
         return try {
@@ -95,9 +84,6 @@ class LocationUtils {
         }
     }
 
-    /**
-     * Converts ReadableMap to JSON string with null safety.
-     */
     fun convertFieldMapToJson(fieldMap: ReadableMap): String {
         val json = JSONObject()
         val iterator = fieldMap.keySetIterator()

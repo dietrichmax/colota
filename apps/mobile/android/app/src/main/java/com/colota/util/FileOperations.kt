@@ -3,9 +3,10 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
  
-package com.Colota
+package com.Colota.util
 
 import android.content.Intent
+import com.Colota.BuildConfig
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider

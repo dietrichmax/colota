@@ -3,34 +3,31 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-package com.Colota
+package com.Colota.service
 
 import android.content.Intent
+import com.Colota.data.DatabaseHelper
 import android.os.Bundle
+import com.facebook.react.bridge.ReadableMap
+import org.json.JSONObject
 
 /**
- * Centralized service configuration to eliminate duplication across:
- * - LocationBootReceiver
- * - LocationServiceModule  
- * - LocationForegroundService
+ * Centralized service configuration shared across all native components.
  */
 data class ServiceConfig(
     val endpoint: String = "",
-    val interval: Long = 1000L,
+    val interval: Long = 5000L,
     val minUpdateDistance: Float = 0f,
     val syncIntervalSeconds: Int = 0,
     val maxRetries: Int = 5,
     val accuracyThreshold: Float = 50.0f,
-    val filterInaccurateLocations: Boolean = true,
-    val retryIntervalSeconds: Int = 300,
+    val filterInaccurateLocations: Boolean = false,
+    val retryIntervalSeconds: Int = 30,
     val isOfflineMode: Boolean = false,
     val fieldMap: String? = null,
     val customFields: String? = null
 ) {
     companion object {
-        /**
-         * Loads configuration from database settings.
-         */
         fun fromDatabase(dbHelper: DatabaseHelper): ServiceConfig {
             val saved = dbHelper.getAllSettings()
             
@@ -49,13 +46,46 @@ data class ServiceConfig(
             )
         }
         
-        /**
-         * Loads configuration from Intent extras (for service start).
-         */
+        fun fromReadableMap(config: ReadableMap, dbHelper: DatabaseHelper): ServiceConfig {
+            val dbConfig = fromDatabase(dbHelper)
+
+            val fieldMapJson = config.getMap("fieldMap")?.let { map ->
+                val json = JSONObject()
+                val iterator = map.keySetIterator()
+                while (iterator.hasNextKey()) {
+                    val key = iterator.nextKey()
+                    map.getString(key)?.let { json.put(key, it) }
+                }
+                json.toString()
+            }
+
+            val customFieldsJson = config.getMap("customFields")?.let { map ->
+                val json = JSONObject()
+                val iterator = map.keySetIterator()
+                while (iterator.hasNextKey()) {
+                    val key = iterator.nextKey()
+                    map.getString(key)?.let { json.put(key, it) }
+                }
+                json.toString()
+            }
+
+            return ServiceConfig(
+                endpoint = config.getStringOrNull("endpoint") ?: dbConfig.endpoint,
+                interval = config.getDoubleOrNull("interval")?.toLong() ?: dbConfig.interval,
+                minUpdateDistance = config.getDoubleOrNull("minUpdateDistance")?.toFloat() ?: dbConfig.minUpdateDistance,
+                syncIntervalSeconds = config.getIntOrNull("syncInterval") ?: dbConfig.syncIntervalSeconds,
+                maxRetries = config.getIntOrNull("maxRetries") ?: dbConfig.maxRetries,
+                accuracyThreshold = config.getDoubleOrNull("accuracyThreshold")?.toFloat() ?: dbConfig.accuracyThreshold,
+                filterInaccurateLocations = config.getBooleanOrNull("filterInaccurateLocations") ?: dbConfig.filterInaccurateLocations,
+                retryIntervalSeconds = config.getIntOrNull("retryInterval") ?: dbConfig.retryIntervalSeconds,
+                isOfflineMode = config.getBooleanOrNull("isOfflineMode") ?: dbConfig.isOfflineMode,
+                fieldMap = fieldMapJson ?: dbConfig.fieldMap,
+                customFields = customFieldsJson ?: dbConfig.customFields
+            )
+        }
+
         fun fromIntent(intent: Intent, dbHelper: DatabaseHelper): ServiceConfig {
             val extras = intent.extras ?: return fromDatabase(dbHelper)
-            
-            // Load from database first, then override with intent extras
             val dbConfig = fromDatabase(dbHelper)
             
             return ServiceConfig(
@@ -74,9 +104,6 @@ data class ServiceConfig(
         }
     }
     
-    /**
-     * Converts config to Intent extras for service communication.
-     */
     fun toIntent(intent: Intent): Intent {
         return intent.apply {
             putExtra("interval", interval)
@@ -94,7 +121,6 @@ data class ServiceConfig(
     }
 }
 
-// Extension functions for safer Bundle access
 private fun Bundle.getStringOrDefault(key: String, default: String?): String? =
     if (containsKey(key)) getString(key) else default
 
@@ -109,3 +135,15 @@ private fun Bundle.getIntOrDefault(key: String, default: Int): Int =
 
 private fun Bundle.getBooleanOrDefault(key: String, default: Boolean): Boolean =
     if (containsKey(key)) getBoolean(key) else default
+
+internal fun ReadableMap.getDoubleOrNull(key: String): Double? =
+    if (hasKey(key)) getDouble(key) else null
+
+internal fun ReadableMap.getIntOrNull(key: String): Int? =
+    if (hasKey(key)) getInt(key) else null
+
+internal fun ReadableMap.getStringOrNull(key: String): String? =
+    if (hasKey(key)) getString(key) else null
+
+internal fun ReadableMap.getBooleanOrNull(key: String): Boolean? =
+    if (hasKey(key)) getBoolean(key) else null

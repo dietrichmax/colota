@@ -17,7 +17,7 @@ git clone https://github.com/dietrichmax/colota.git
 cd colota
 npm install
 cd apps/mobile/android
-./gradlew assembleRelease
+gradlew assembleRelease    # or ./gradlew on Linux/macOS
 ```
 
 The APK will be at `apps/mobile/android/app/build/outputs/apk/release/`.

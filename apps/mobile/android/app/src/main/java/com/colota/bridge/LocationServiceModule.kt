@@ -3,13 +3,19 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
  
-package com.Colota
+package com.Colota.bridge
 
-import android.content.Context
-import android.os.PowerManager
-import android.provider.Settings
-import android.net.Uri
 import android.content.Intent
+import com.Colota.BuildConfig
+import com.Colota.data.DatabaseHelper
+import com.Colota.data.GeofenceHelper
+import com.Colota.service.LocationForegroundService
+import com.Colota.service.ServiceConfig
+import com.Colota.sync.NetworkManager
+import com.Colota.sync.PayloadBuilder
+import com.Colota.util.DeviceInfoHelper
+import com.Colota.util.FileOperations
+import com.Colota.util.SecureStorageHelper
 import android.os.Build
 import android.util.Log
 import com.facebook.react.bridge.*
@@ -26,7 +32,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext), 
     LifecycleEventListener { 
 
-    private val locationUtils = LocationUtils()
+    private val payloadBuilder = PayloadBuilder()
     private val dbHelper = DatabaseHelper.getInstance(reactContext)
     private val fileOps = FileOperations(reactContext)
     private val deviceInfo = DeviceInfoHelper(reactContext)
@@ -34,7 +40,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     private val secureStorage = SecureStorageHelper.getInstance(reactContext)
     private val networkManager = NetworkManager(reactContext)
 
-    // Coroutine scope for async operations
     private val moduleScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
@@ -49,12 +54,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         @Volatile
         private var isAppInForeground: Boolean = true
         
-        /**
-         * Emits location updates to the React Native 'onLocationUpdate' listener.
-         */
+        /** Skips when app is backgrounded to avoid unnecessary bridge overhead. */
         @JvmStatic
         fun sendLocationEvent(location: android.location.Location, battery: Int, batteryStatus: Int): Boolean {
-            // Check foreground state first (cheapest check)
             if (!isAppInForeground) return false
             
             val context = reactContextStatic ?: return false
@@ -89,9 +91,48 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             }
         }
 
-        /**
-         * Emits pause zone entry/exit events to the React Native 'onPauseZoneChange' listener.
-         */
+        /** Fires when service stops for non-user reasons (OOM kill, system cleanup). */
+        @JvmStatic
+        fun sendTrackingStoppedEvent(reason: String): Boolean {
+            val context = reactContextStatic ?: return false
+            if (!context.hasActiveCatalystInstance()) return false
+
+            return try {
+                val params = Arguments.createMap().apply {
+                    putString("reason", reason)
+                }
+                context
+                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                    .emit("onTrackingStopped", params)
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send tracking stopped event", e)
+                false
+            }
+        }
+
+        /** Only fires after 3+ consecutive sync failures — see SyncManager.startPeriodicSync(). */
+        @JvmStatic
+        fun sendSyncErrorEvent(message: String, queuedCount: Int): Boolean {
+            val context = reactContextStatic ?: return false
+            if (!context.hasActiveCatalystInstance()) return false
+
+            return try {
+                val params = Arguments.createMap().apply {
+                    putString("message", message)
+                    putInt("queuedCount", queuedCount)
+                }
+                context
+                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                    .emit("onSyncError", params)
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send sync error event", e)
+                false
+            }
+        }
+
+        /** Emits pause zone entry/exit events for the JS geofence UI. */
         @JvmStatic
         fun sendPauseZoneEvent(entered: Boolean, zoneName: String?): Boolean {
             val context = reactContextStatic ?: return false
@@ -115,7 +156,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     override fun getName(): String = "LocationServiceModule"
 
-    // Lifecycle
     override fun onHostResume() {
         isAppInForeground = true
     }
@@ -130,19 +170,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     override fun invalidate() {
         moduleScope.cancel()
+        reactContextStatic = null
         super.invalidate()
     }
 
 
-    // ==============================================================
-    // HELPERS
-    // ==============================================================
-
-    /**
-     * Standardized wrapper to resolve or reject a Promise.
-     * Runs operation on database executor to avoid blocking main thread.
-     * Checks if executor is active to prevent RejectedExecutionException.
-     */
+    /** Runs on IO thread and resolves/rejects the JS promise. */
     private fun executeAsync(promise: Promise, operation: suspend () -> Any?) {
         moduleScope.launch {
             try {
@@ -155,38 +188,17 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    // ==============================================================
-    // SERVICE CONTROL
-    // ==============================================================
-
-    /**
-     * Starts the Foreground Tracking Service with the provided configuration.
-     */
     @ReactMethod
     fun startService(config: ReadableMap) {
         Log.d(TAG, "Starting Service with config")
-        
-        // Don't block on DB write - do it async
-        moduleScope.launch(Dispatchers.IO) { 
+
+        moduleScope.launch(Dispatchers.IO) {
             dbHelper.saveSetting("tracking_enabled", "true")
         }
 
-        val serviceIntent = Intent(reactApplicationContext, LocationForegroundService::class.java).apply {
-            config.getDoubleOrNull("interval")?.let { putExtra("interval", it.toLong()) }
-            config.getDoubleOrNull("minUpdateDistance")?.let { putExtra("minUpdateDistance", it.toFloat()) }
-            config.getStringOrNull("endpoint")?.let { putExtra("endpoint", it) }
-            config.getIntOrNull("syncInterval")?.let { putExtra("syncInterval", it) }
-            config.getDoubleOrNull("accuracyThreshold")?.let { putExtra("accuracyThreshold", it.toFloat()) }
-            config.getBooleanOrNull("filterInaccurateLocations")?.let { putExtra("filterInaccurateLocations", it) }
-            config.getIntOrNull("maxRetries")?.let { putExtra("maxRetries", it) }
-            config.getIntOrNull("retryInterval")?.let { putExtra("retryInterval", it) }
-            config.getBooleanOrNull("isOfflineMode")?.let { putExtra("isOfflineMode", it) }
-            
-            config.getMap("fieldMap")?.let { map ->
-                val jsonString = locationUtils.convertFieldMapToJson(map)
-                putExtra("fieldMap", jsonString)
-            }
-        }
+        val serviceConfig = ServiceConfig.fromReadableMap(config, dbHelper)
+        val serviceIntent = Intent(reactApplicationContext, LocationForegroundService::class.java)
+        serviceConfig.toIntent(serviceIntent)
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -199,48 +211,22 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    /**
-     * Stops the background service and persists the disabled state.
-     */
     @ReactMethod
     fun stopService() {
         Log.d(TAG, "Stopping Service via UI")
-        
-        // Stop service first (immediate), then save to DB
+
         val intent = Intent(reactApplicationContext, LocationForegroundService::class.java)
         reactApplicationContext.stopService(intent)
-        
-        // Save disabled state async (don't block)
-        moduleScope.launch(Dispatchers.IO) { 
+
+        moduleScope.launch(Dispatchers.IO) {
             dbHelper.saveSetting("tracking_enabled", "false")
         }
     }
 
-    // ==============================================================
-    // STATS & DATA RETRIEVAL
-    // ==============================================================
-
-    @ReactMethod 
-    fun getQueuedLocationsCount(promise: Promise) = 
-        executeAsync(promise) { dbHelper.getQueuedCount() }
-    
-    @ReactMethod 
-    fun getSentCount(promise: Promise) = 
-        executeAsync(promise) { dbHelper.getSentCount() }
-    
-    @ReactMethod 
-    fun getTotalCount(promise: Promise) = 
-        executeAsync(promise) { dbHelper.getTotalCount() }
-    
-    @ReactMethod 
-    fun getTodayCount(promise: Promise) = 
-        executeAsync(promise) { dbHelper.getTodayCount() }
-    
-    @ReactMethod 
-    fun getDatabaseSize(promise: Promise) = 
+    @ReactMethod
+    fun getDatabaseSize(promise: Promise) =
         executeAsync(promise) { dbHelper.getDatabaseSizeMB() }
 
-    // Combined stats query for better performance
     @ReactMethod
     fun getStats(promise: Promise) = executeAsync(promise) {
         val (queued, total, today) = dbHelper.getStats()
@@ -262,10 +248,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 rawData.forEach { row -> pushMap(Arguments.makeNativeMap(row)) }
             }
         }
-
-    // ==============================================================
-    // DATABASE MANAGEMENT
-    // ==============================================================
 
     @ReactMethod
     fun manualFlush(promise: Promise) {
@@ -312,11 +294,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         true 
     }
 
-    // ==============================================================
-    // GEOFENCE OPERATIONS
-    // ==============================================================
-
-    // Helper function to trigger zone Rechecks
     private fun triggerZoneRecheck() {
         try {
             startServiceWithAction(LocationForegroundService.ACTION_RECHECK_ZONE)
@@ -388,10 +365,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         result
     }
 
-    // ==============================================================
-    // PAUSE ZONE LOGIC
-    // ==============================================================
-
     @ReactMethod
     fun checkCurrentPauseZone(promise: Promise) {
         val fusedClient = LocationServices.getFusedLocationProviderClient(reactApplicationContext)
@@ -431,10 +404,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    // ==============================================================
-    // SETTINGS PERSISTENCE
-    // ==============================================================
-
     @ReactMethod
     fun saveSetting(key: String, value: String, promise: Promise) = 
         executeAsync(promise) { 
@@ -456,18 +425,10 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    // ==============================================================
-    // NETWORK
-    // ==============================================================
-
     @ReactMethod
     fun isNetworkAvailable(promise: Promise) {
         promise.resolve(networkManager.isNetworkAvailable())
     }
-
-    // ==============================================================
-    // UTILITY
-    // ==============================================================
 
     @ReactMethod
     fun getMostRecentLocation(promise: Promise) = executeAsync(promise) {
@@ -475,15 +436,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             Arguments.makeNativeMap(data)
         }
     }
-
-    // Cache power manager
-    private val powerManager by lazy {
-        reactApplicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
-    }
-
-    // ==============================================================
-    // BATTERY OPTIMIZATION (Delegated to DeviceInfoHelper)
-    // ==============================================================
 
     @ReactMethod
     fun isIgnoringBatteryOptimizations(promise: Promise) {
@@ -500,7 +452,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    // helper for all service intents
     private fun startServiceWithAction(action: String) {
         try {
             val intent = Intent(reactApplicationContext, LocationForegroundService::class.java).apply {
@@ -518,13 +469,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    // ==============================================================
-    // DEVICE INFORMATION (Delegated to DeviceInfoHelper)
-    // ==============================================================
-
-    /**
-     * Returns device information as a map
-     */
     @ReactMethod
     fun getDeviceInfo(promise: Promise) {
         try {
@@ -534,9 +478,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    /**
-     * Individual getters for compatibility
-     */
     @ReactMethod
     fun getSystemVersion(promise: Promise) {
         promise.resolve(deviceInfo.getSystemVersion())
@@ -562,10 +503,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         promise.resolve(deviceInfo.getDeviceId())
     }
 
-    // ==============================================================
-    // File Operations (Delegated to FileOperations)
-    // ==============================================================
-
     @ReactMethod
     fun writeFile(fileName: String, content: String, promise: Promise) = 
         executeAsync(promise) { fileOps.writeFile(fileName, content) }
@@ -583,10 +520,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun getCacheDirectory(promise: Promise) =
         executeAsync(promise) { fileOps.getCacheDirectory() }
-
-    // ==============================================================
-    // SECURE STORAGE (Delegated to SecureStorageHelper)
-    // ==============================================================
 
     @ReactMethod
     fun getAllAuthConfig(promise: Promise) = executeAsync(promise) {
@@ -628,15 +561,3 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 }
 
-// Extension functions for safer ReadableMap access
-private fun ReadableMap.getDoubleOrNull(key: String): Double? = 
-    if (hasKey(key)) getDouble(key) else null
-
-private fun ReadableMap.getIntOrNull(key: String): Int? = 
-    if (hasKey(key)) getInt(key) else null
-
-private fun ReadableMap.getStringOrNull(key: String): String? = 
-    if (hasKey(key)) getString(key) else null
-
-private fun ReadableMap.getBooleanOrNull(key: String): Boolean? = 
-    if (hasKey(key)) getBoolean(key) else null

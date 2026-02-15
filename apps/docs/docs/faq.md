@@ -18,7 +18,7 @@ No, but you can use [Dawarich](/docs/integrations/dawarich) or a custom backend 
 
 ### Does this work without Google Play Services?
 
-Not currently -- Colota uses Android's `FusedLocationProvider` which requires Google Play Services.
+Not currently. Colota uses Android's `FusedLocationProvider` which requires Google Play Services.
 
 ### Why AGPL-3.0?
 
@@ -26,7 +26,7 @@ To ensure modifications stay open source, especially server-side components.
 
 ### How accurate is the tracking?
 
-3--10 meters in open sky, 10--50 meters in urban areas. The [accuracy filter](/docs/configuration/gps-settings#accuracy-filter) helps remove poor fixes.
+3-10 meters in open sky, 10-50 meters in urban areas. The [accuracy filter](/docs/configuration/gps-settings#accuracy-filter) helps remove poor fixes.
 
 ### Can I export my location history?
 

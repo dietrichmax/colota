@@ -8,9 +8,9 @@ Create zones where tracking pauses automatically. These "pause zones" save batte
 
 ## Use Cases
 
-- **Home** -- Don't track when at home
-- **Work** -- Pause tracking during work hours
-- **Frequent locations** -- Save battery in places you visit often
+- **Home** - Don't track when at home
+- **Work** - Pause tracking during work hours
+- **Frequent locations** - Save battery in places you visit often
 
 ## Setup
 
@@ -28,7 +28,7 @@ Create zones where tracking pauses automatically. These "pause zones" save batte
 
 ## How It Works
 
-- Zone detection uses the Haversine formula (1--2ms per check)
+- Zone detection uses the Haversine formula (1-2ms per check)
 - When entering a pause zone, GPS stops updating
 - The notification shows "Paused: [Zone Name]"
 - When exiting the zone, tracking automatically resumes

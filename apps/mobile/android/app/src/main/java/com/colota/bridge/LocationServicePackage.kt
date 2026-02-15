@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
  
-package com.Colota
+package com.Colota.bridge
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
