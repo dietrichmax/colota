@@ -31,6 +31,7 @@ class SyncManager(
     private var retryIntervalSeconds: Int = 300
     private var maxRetries: Int = 5
     private var isOfflineMode: Boolean = false
+    private var isWifiOnlySync: Boolean = false
     private var authHeaders: Map<String, String> = emptyMap()
     private var httpMethod: String = "POST"
 
@@ -51,6 +52,7 @@ class SyncManager(
         retryIntervalSeconds: Int,
         maxRetries: Int,
         isOfflineMode: Boolean,
+        isWifiOnlySync: Boolean,
         authHeaders: Map<String, String>,
         httpMethod: String = "POST"
     ) {
@@ -59,6 +61,7 @@ class SyncManager(
         this.retryIntervalSeconds = retryIntervalSeconds
         this.maxRetries = maxRetries
         this.isOfflineMode = isOfflineMode
+        this.isWifiOnlySync = isWifiOnlySync
         this.authHeaders = authHeaders
         this.httpMethod = httpMethod
     }
@@ -69,7 +72,8 @@ class SyncManager(
                 val baseDelay = calculateNextSyncDelay()
                 delay(baseDelay * 1000L)
 
-                if (isOfflineMode || !networkManager.isNetworkAvailable()) {
+                if (isOfflineMode || !networkManager.isNetworkAvailable() ||
+                    (isWifiOnlySync && !networkManager.isUnmeteredConnection())) {
                     continue
                 }
 
@@ -130,7 +134,8 @@ class SyncManager(
         }
 
         // Immediate send mode (syncInterval = 0)
-        if (syncIntervalSeconds == 0 && networkManager.isNetworkAvailable()) {
+        if (syncIntervalSeconds == 0 && networkManager.isNetworkAvailable() &&
+            !(isWifiOnlySync && !networkManager.isUnmeteredConnection())) {
             Log.d(TAG, "Instant send")
             val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod)
 

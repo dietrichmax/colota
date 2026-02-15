@@ -24,6 +24,7 @@ data class ServiceConfig(
     val filterInaccurateLocations: Boolean = false,
     val retryIntervalSeconds: Int = 30,
     val isOfflineMode: Boolean = false,
+    val isWifiOnlySync: Boolean = false,
     val fieldMap: String? = null,
     val customFields: String? = null,
     val httpMethod: String = "POST"
@@ -42,6 +43,7 @@ data class ServiceConfig(
                 filterInaccurateLocations = saved["filterInaccurateLocations"]?.toBoolean() ?: true,
                 retryIntervalSeconds = saved["retryInterval"]?.toIntOrNull() ?: 300,
                 isOfflineMode = saved["isOfflineMode"]?.toBoolean() ?: false,
+                isWifiOnlySync = saved["isWifiOnlySync"]?.toBoolean() ?: false,
                 fieldMap = saved["fieldMap"],
                 customFields = saved["customFields"],
                 httpMethod = saved["httpMethod"] ?: "POST"
@@ -81,6 +83,7 @@ data class ServiceConfig(
                 filterInaccurateLocations = config.getBooleanOrNull("filterInaccurateLocations") ?: dbConfig.filterInaccurateLocations,
                 retryIntervalSeconds = config.getIntOrNull("retryInterval") ?: dbConfig.retryIntervalSeconds,
                 isOfflineMode = config.getBooleanOrNull("isOfflineMode") ?: dbConfig.isOfflineMode,
+                isWifiOnlySync = config.getBooleanOrNull("isWifiOnlySync") ?: dbConfig.isWifiOnlySync,
                 fieldMap = fieldMapJson ?: dbConfig.fieldMap,
                 customFields = customFieldsJson ?: dbConfig.customFields,
                 httpMethod = config.getStringOrNull("httpMethod") ?: dbConfig.httpMethod
@@ -101,6 +104,7 @@ data class ServiceConfig(
                 filterInaccurateLocations = extras.getBooleanOrDefault("filterInaccurateLocations", dbConfig.filterInaccurateLocations),
                 retryIntervalSeconds = extras.getIntOrDefault("retryInterval", dbConfig.retryIntervalSeconds),
                 isOfflineMode = extras.getBooleanOrDefault("isOfflineMode", dbConfig.isOfflineMode),
+                isWifiOnlySync = extras.getBooleanOrDefault("isWifiOnlySync", dbConfig.isWifiOnlySync),
                 fieldMap = extras.getStringOrDefault("fieldMap", dbConfig.fieldMap),
                 customFields = extras.getStringOrDefault("customFields", dbConfig.customFields),
                 httpMethod = extras.getStringOrDefault("httpMethod", dbConfig.httpMethod) ?: "POST"
@@ -119,6 +123,7 @@ data class ServiceConfig(
             putExtra("maxRetries", maxRetries)
             putExtra("retryInterval", retryIntervalSeconds)
             putExtra("isOfflineMode", isOfflineMode)
+            putExtra("isWifiOnlySync", isWifiOnlySync)
             fieldMap?.let { putExtra("fieldMap", it) }
             customFields?.let { putExtra("customFields", it) }
             putExtra("httpMethod", httpMethod)

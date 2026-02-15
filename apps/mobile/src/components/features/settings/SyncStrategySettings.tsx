@@ -266,6 +266,33 @@ export function SyncStrategySettings({
                   thumbColor={settings.maxRetries === 0 ? colors.primary : colors.border}
                 />
               </View>
+
+              {/* Wi-Fi Only Sync Toggle */}
+              <View style={[styles.settingRow, styles.settingRowSpaced]}>
+                <View style={styles.settingContent}>
+                  <Text style={[styles.settingLabel, { color: colors.text }]}>Wi-Fi Only Sync</Text>
+                  <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
+                    Only upload when connected to Wi-Fi
+                  </Text>
+                </View>
+                <Switch
+                  value={settings.isWifiOnlySync}
+                  onValueChange={(value) => {
+                    const next = {
+                      ...settings,
+                      isWifiOnlySync: value,
+                      syncPreset: "custom" as const
+                    }
+                    onSettingsChange(next)
+                    onImmediateSave(next)
+                  }}
+                  trackColor={{
+                    false: colors.border,
+                    true: colors.primary + "80"
+                  }}
+                  thumbColor={settings.isWifiOnlySync ? colors.primary : colors.border}
+                />
+              </View>
             </View>
 
             <Divider />
@@ -425,6 +452,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     ...fonts.regular,
     lineHeight: 18
+  },
+  settingRowSpaced: {
+    marginTop: 16
   },
   nestedSetting: {
     marginTop: 12,

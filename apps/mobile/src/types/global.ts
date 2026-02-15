@@ -270,6 +270,7 @@ export interface Settings {
   retryInterval: number
   maxRetries: number
   isOfflineMode: boolean
+  isWifiOnlySync: boolean
 
   // UI State
   syncPreset: SyncPreset
@@ -290,6 +291,7 @@ export const DEFAULT_SETTINGS: Settings = {
   syncPreset: "instant",
   maxRetries: 5,
   isOfflineMode: false,
+  isWifiOnlySync: false,
   hasCompletedSetup: false,
   httpMethod: "POST"
 } as const

@@ -134,6 +134,7 @@ class DatabaseHelper private constructor(context: Context) :
             "maxRetries" to "5",
             "retryInterval" to "30",
             "isOfflineMode" to "false",
+            "isWifiOnlySync" to "false",
             "customFields" to "[]",
             "hasCompletedSetup" to "false",
             "tracking_enabled" to "false",
