@@ -93,7 +93,7 @@ export interface CustomField {
   value: string
 }
 
-export type ApiTemplateName = "custom" | "dawarich" | "owntracks" | "reitti"
+export type ApiTemplateName = "custom" | "dawarich" | "owntracks" | "phonetrack" | "reitti"
 
 export interface ApiTemplate {
   name: ApiTemplateName
@@ -140,6 +140,23 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
       { key: "_type", value: "location" },
       { key: "tid", value: "AA" }
     ]
+  },
+  phonetrack: {
+    name: "phonetrack",
+    label: "Nextcloud PhoneTrack",
+    description: "Nextcloud PhoneTrack logging format",
+    fieldMap: {
+      lat: "lat",
+      lon: "lon",
+      acc: "acc",
+      alt: "alt",
+      vel: "speed",
+      batt: "bat",
+      bs: "bs",
+      tst: "timestamp",
+      bear: "bearing"
+    },
+    customFields: [{ key: "useragent", value: "Colota" }]
   },
   reitti: {
     name: "reitti",

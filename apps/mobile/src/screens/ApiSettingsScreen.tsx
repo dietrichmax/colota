@@ -29,6 +29,7 @@ const TEMPLATE_OPTIONS: { value: ApiTemplateName; label: string }[] = [
   { value: "custom", label: "Custom" },
   { value: "dawarich", label: "Dawarich" },
   { value: "owntracks", label: "OwnTracks" },
+  { value: "phonetrack", label: "PhoneTrack" },
   { value: "reitti", label: "Reitti" }
 ]
 
@@ -490,13 +491,14 @@ const styles = StyleSheet.create({
   },
   chipRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8
   },
   chip: {
-    flex: 1,
     borderWidth: 2,
     borderRadius: 10,
     paddingVertical: 10,
+    paddingHorizontal: 14,
     alignItems: "center"
   },
   chipText: {

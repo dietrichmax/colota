@@ -118,7 +118,7 @@ describe("TRACKING_PRESETS", () => {
 })
 
 describe("API_TEMPLATES", () => {
-  const templateNames = ["dawarich", "owntracks", "reitti"] as const
+  const templateNames = ["dawarich", "owntracks", "phonetrack", "reitti"] as const
 
   it.each(templateNames)("%s has valid fieldMap with required keys", (name) => {
     const template = API_TEMPLATES[name]
@@ -150,5 +150,12 @@ describe("API_TEMPLATES", () => {
 
   it("reitti uses 'bear' for bearing", () => {
     expect(API_TEMPLATES.reitti.fieldMap.bear).toBe("bear")
+  })
+
+  it("phonetrack remaps fields for Nextcloud PhoneTrack", () => {
+    expect(API_TEMPLATES.phonetrack.fieldMap.vel).toBe("speed")
+    expect(API_TEMPLATES.phonetrack.fieldMap.batt).toBe("bat")
+    expect(API_TEMPLATES.phonetrack.fieldMap.tst).toBe("timestamp")
+    expect(API_TEMPLATES.phonetrack.fieldMap.bear).toBe("bearing")
   })
 })
