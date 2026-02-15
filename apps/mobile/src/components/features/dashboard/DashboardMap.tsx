@@ -15,12 +15,11 @@ import { useFocusEffect } from "@react-navigation/native"
 import { STATS_REFRESH_IDLE } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import icon from "../../../assets/icons/icon.png"
-import { logger } from "../../../services/logger"
+import { logger } from "../../../utils/logger"
 
 type Props = {
   coords: LocationCoords | null
   tracking: boolean
-  isPaused: boolean
   activeZoneName: string | null
 }
 

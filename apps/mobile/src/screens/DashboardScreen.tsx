@@ -22,7 +22,7 @@ import {
 } from "../components"
 import { STATS_REFRESH_IDLE } from "../constants"
 import { Square, Play } from "lucide-react-native"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
   const { coords, settings, tracking, startTracking, stopTracking, setSettings } = useTracking()
@@ -42,8 +42,6 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
   // Animation for button
   const buttonScale = useRef(new Animated.Value(1)).current
-
-  const isInPauseZone = !!currentPauseZone
 
   const handleStart = async () => {
     // Bounce animation
@@ -158,12 +156,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
             onTouchStart={() => setScrollEnabled(false)}
             onTouchEnd={() => setScrollEnabled(true)}
           >
-            <DashboardMap
-              coords={coords}
-              tracking={tracking}
-              isPaused={isInPauseZone}
-              activeZoneName={currentPauseZone}
-            />
+            <DashboardMap coords={coords} tracking={tracking} activeZoneName={currentPauseZone} />
           </View>
 
           {/* Tracking Control Button */}

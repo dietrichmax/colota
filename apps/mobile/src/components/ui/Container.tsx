@@ -10,7 +10,6 @@ import { useTheme } from "../../hooks/useTheme"
 type ContainerProps = {
   children: React.ReactNode
   style?: StyleProp<ViewStyle>
-  useKeyboardAvoid?: boolean
 }
 
 export function Container({ children, style }: ContainerProps) {

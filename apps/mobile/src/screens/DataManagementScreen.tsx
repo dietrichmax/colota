@@ -23,7 +23,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
 import { STATS_REFRESH_FAST } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 
 export function DataManagementScreen({}: ScreenProps) {
   const { colors } = useTheme()

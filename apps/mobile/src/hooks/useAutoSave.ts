@@ -6,7 +6,7 @@
 import { useState, useCallback } from "react"
 import { useTimeout } from "./useTimeout"
 import { AUTOSAVE_DEBOUNCE_MS, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 
 /**
  * Hook that encapsulates the debounced auto-save pattern used across settings screens.

@@ -16,7 +16,7 @@ import { fonts } from "../styles/typography"
 import { SectionTitle, Card, Container, Divider } from "../components"
 import { ChevronRight } from "lucide-react-native"
 import { StatsCard } from "../components"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 import { ConnectionSettings } from "../components/features/settings/ConnectionSettings"
 import { SyncStrategySettings } from "../components/features/settings/SyncStrategySettings"
 
@@ -232,10 +232,5 @@ const styles = StyleSheet.create({
   linkSub: {
     fontSize: 13,
     ...fonts.regular
-  },
-  linkArrow: {
-    fontSize: 28,
-    ...fonts.regular,
-    marginLeft: 12
   }
 })

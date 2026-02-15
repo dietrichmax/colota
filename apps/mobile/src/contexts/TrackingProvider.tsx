@@ -8,7 +8,7 @@ import { Settings, DEFAULT_SETTINGS, LocationCoords, ApiTemplateName } from "../
 import { useLocationTracking } from "../hooks/useLocationTracking"
 import NativeLocationService from "../services/NativeLocationService"
 import SettingsService from "../services/SettingsService"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 
 type TrackingContextType = {
   settings: Settings

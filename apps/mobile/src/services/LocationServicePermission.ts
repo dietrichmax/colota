@@ -5,7 +5,7 @@
 
 import { Platform, PermissionsAndroid, Alert } from "react-native"
 import NativeLocationService from "./NativeLocationService"
-import { logger } from "./logger"
+import { logger } from "../utils/logger"
 
 /**
  * Permission status for location tracking

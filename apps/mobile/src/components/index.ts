@@ -42,6 +42,5 @@ export { MapCenterButton } from "./features/map/MapCenterButton"
 // Feature Components - Settings
 // ============================================================================
 export { StatsCard } from "./features/settings/StatsCard"
-export { PresetOption } from "./features/settings/PresetOption"
 export { ConnectionSettings } from "./features/settings/ConnectionSettings"
 export { SyncStrategySettings } from "./features/settings/SyncStrategySettings"

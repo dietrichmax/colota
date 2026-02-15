@@ -127,7 +127,15 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 | `NativeLocationService` | TypeScript bridge to the native `LocationServiceModule` with typed methods for all native operations |
 | `LocationServicePermission` | Sequential Android permission requests (fine location → background location → notifications → battery exemption) |
 | `SettingsService` | Bridges UI state to native SQLite with type conversion (seconds↔ms, objects↔JSON) |
+
+### Utils
+
+| Utility | Purpose |
+| --- | --- |
 | `logger` | Environment-aware logging — suppresses debug/info in production via `__DEV__`, always logs warn/error |
+| `exportConverters` | Converts location data to CSV, GeoJSON, GPX, and KML export formats |
+| `queueStatus` | Maps sync queue size to color indicators for the dashboard |
+| `settingsValidation` | URL validation and security checks for endpoint configuration |
 
 ### Hooks
 

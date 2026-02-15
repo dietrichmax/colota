@@ -26,7 +26,7 @@ import { Container, SectionTitle, Card } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
 import { STATS_REFRESH_IDLE } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 
 export function GeofenceScreen({}: ScreenProps) {
   const { coords, tracking } = useTracking()

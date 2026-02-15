@@ -6,8 +6,6 @@
  * - warn/error: Always logged
  */
 
-/* eslint-disable no-console */
-
 export const logger = {
   debug: (...args: unknown[]) => {
     if (__DEV__) console.log(...args)

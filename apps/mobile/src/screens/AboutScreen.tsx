@@ -13,7 +13,7 @@ import { Card, Container, Divider, Footer } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
 import { REPO_URL, PRIVACY_POLICY_URL } from "../constants"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 
 // Helper function to map SDK to Android version
 function getAndroidVersion(sdkVersion: number): string {

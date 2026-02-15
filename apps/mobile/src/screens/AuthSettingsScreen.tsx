@@ -12,7 +12,7 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { fonts, fontSizes } from "../styles/typography"
 import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
-import { logger } from "../services/logger"
+import { logger } from "../utils/logger"
 
 const AUTH_TYPES: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
