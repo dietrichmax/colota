@@ -30,24 +30,24 @@ class GeofenceHelper(private val context: Context) {
 
     companion object {
         private const val TAG = "GeofenceHelper"
-        private const val EARTH_RADIUS_METERS = 6371000.0
-    }
+        internal const val EARTH_RADIUS_METERS = 6371000.0
 
-    /** Haversine formula — accurate at any distance on Earth. */
-    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
-        val a = sin(dLat / 2).pow(2) + 
-                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2)
-        return EARTH_RADIUS_METERS * 2 * atan2(sqrt(a), sqrt(1 - a))
-    }
+        /** Haversine formula — accurate at any distance on Earth. */
+        internal fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+            val dLat = Math.toRadians(lat2 - lat1)
+            val dLon = Math.toRadians(lon2 - lon1)
+            val a = sin(dLat / 2).pow(2) +
+                    cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2)
+            return EARTH_RADIUS_METERS * 2 * atan2(sqrt(a), sqrt(1 - a))
+        }
 
-    private fun isWithinRadius(lat1: Double, lon1: Double, lat2: Double, lon2: Double, radius: Double): Boolean {
-        // Fast bounding-box rejection (lon degrees shrink at higher latitudes)
-        val maxLatDeg = radius / 111000.0
-        val maxLonDeg = radius / (111000.0 * cos(Math.toRadians(lat1)))
-        if (Math.abs(lat1 - lat2) > maxLatDeg || Math.abs(lon1 - lon2) > maxLonDeg) return false
-        return calculateDistance(lat1, lon1, lat2, lon2) <= radius
+        internal fun isWithinRadius(lat1: Double, lon1: Double, lat2: Double, lon2: Double, radius: Double): Boolean {
+            // Fast bounding-box rejection (lon degrees shrink at higher latitudes)
+            val maxLatDeg = radius / 111000.0
+            val maxLonDeg = radius / (111000.0 * cos(Math.toRadians(lat1)))
+            if (Math.abs(lat1 - lat2) > maxLatDeg || Math.abs(lon1 - lon2) > maxLonDeg) return false
+            return calculateDistance(lat1, lon1, lat2, lon2) <= radius
+        }
     }
 
     fun getPauseZone(location: Location): String? {

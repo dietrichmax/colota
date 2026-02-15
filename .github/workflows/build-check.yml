@@ -50,10 +50,16 @@ jobs:
           newArchEnabled=true
           EOF
 
-      - name: Build GMS Debug APK
+      - name: Run Kotlin unit tests
         run: |
           cd apps/mobile/android
           chmod +x gradlew
+          ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+
+      - name: Build GMS Debug APK
+        run: |
+          cd apps/mobile/android
           ./gradlew assembleGmsDebug --no-daemon \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
 
