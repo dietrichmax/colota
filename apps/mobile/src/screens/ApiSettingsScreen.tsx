@@ -29,6 +29,7 @@ const TEMPLATE_OPTIONS: { value: ApiTemplateName; label: string }[] = [
   { value: "custom", label: "Custom" },
   { value: "dawarich", label: "Dawarich" },
   { value: "owntracks", label: "OwnTracks" },
+  { value: "phonetrack", label: "PhoneTrack" },
   { value: "reitti", label: "Reitti" }
 ]
 
