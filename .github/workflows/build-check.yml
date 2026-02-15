@@ -41,6 +41,15 @@ jobs:
       - name: Build shared package
         run: npm run build -w @colota/shared
 
+      - name: Create gradle.properties
+        run: |
+          cat <<EOF > apps/mobile/android/gradle.properties
+          org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m
+          android.useAndroidX=true
+          hermesEnabled=true
+          newArchEnabled=true
+          EOF
+
       - name: Build GMS Debug APK
         run: |
           cd apps/mobile/android
