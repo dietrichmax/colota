@@ -147,7 +147,7 @@ class GeofenceHelper(private val context: Context) {
             put("radius", rad)
             put("enabled", 1)
             put("pause_tracking", if (pause) 1 else 0)
-            put("created_at", System.currentTimeMillis())
+            put("created_at", System.currentTimeMillis() / 1000)
         }
         
         return dbHelper.writableDatabase

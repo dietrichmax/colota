@@ -7,7 +7,6 @@ package com.Colota.sync
 
 import android.location.Location
 import android.util.Log
-import com.facebook.react.bridge.ReadableMap
 import org.json.JSONObject
 import kotlin.math.*
 
@@ -82,20 +81,6 @@ class PayloadBuilder {
             Log.e(TAG, "Failed to parse custom fields", e)
             null
         }
-    }
-
-    fun convertFieldMapToJson(fieldMap: ReadableMap): String {
-        val json = JSONObject()
-        val iterator = fieldMap.keySetIterator()
-
-        while (iterator.hasNextKey()) {
-            val key = iterator.nextKey()
-            fieldMap.getString(key)?.let { value ->
-                json.put(key, value)
-            }
-        }
-
-        return json.toString()
     }
 
 }

@@ -491,31 +491,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun getSystemVersion(promise: Promise) {
-        promise.resolve(deviceInfo.getSystemVersion())
-    }
-
-    @ReactMethod
-    fun getApiLevel(promise: Promise) {
-        promise.resolve(deviceInfo.getApiLevel())
-    }
-
-    @ReactMethod
-    fun getModel(promise: Promise) {
-        promise.resolve(deviceInfo.getModel())
-    }
-
-    @ReactMethod
-    fun getBrand(promise: Promise) {
-        promise.resolve(deviceInfo.getBrand())
-    }
-
-    @ReactMethod
-    fun getDeviceId(promise: Promise) {
-        promise.resolve(deviceInfo.getDeviceId())
-    }
-
-    @ReactMethod
     fun writeFile(fileName: String, content: String, promise: Promise) = 
         executeAsync(promise) { fileOps.writeFile(fileName, content) }
 
