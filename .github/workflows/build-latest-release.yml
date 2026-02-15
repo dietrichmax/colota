@@ -13,6 +13,9 @@ on:
       - '.github/workflows/build-release.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: latest-release
   cancel-in-progress: true

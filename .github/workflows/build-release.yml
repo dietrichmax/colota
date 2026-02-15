@@ -8,6 +8,9 @@ on:
       - '**.md'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: tagged-release
   cancel-in-progress: true
@@ -16,6 +19,8 @@ jobs:
   test:
     name: Lint & Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
