@@ -74,7 +74,7 @@ Emits events back to JavaScript:
 Location services are abstracted behind a `LocationProvider` interface (`location/LocationProvider.kt`), with flavor-specific implementations:
 
 - **GMS** (`src/gms/`) — `GmsLocationProvider` wraps Google Play Services `FusedLocationProviderClient`
-- **FOSS** (`src/foss/`) — `NativeLocationProvider` wraps Android's native `LocationManager` with `GPS_PROVIDER`
+- **FOSS** (`src/foss/`) — `NativeLocationProvider` wraps Android's native `LocationManager` with `GPS_PROVIDER` and `NETWORK_PROVIDER` fallback
 
 Each flavor provides a `LocationProviderFactory` that returns the correct implementation. The service and bridge code in `src/main/` uses only the interface.
 
