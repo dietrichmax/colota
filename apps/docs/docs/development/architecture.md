@@ -46,7 +46,11 @@ The mobile app has a **React Native** UI layer and **native Kotlin** modules for
 
 ## Native Kotlin Modules
 
-All native code lives in `apps/mobile/android/app/src/main/java/com/colota/`, organized into sub-packages: `bridge/`, `service/`, `data/`, `sync/`, and `util/`.
+All native code lives in `apps/mobile/android/app/src/`, organized by build flavor:
+
+- `src/main/java/com/colota/` — Shared code: `bridge/`, `service/`, `data/`, `sync/`, `util/`, `location/` (interface)
+- `src/gms/java/com/colota/location/` — Google Play Services location provider
+- `src/foss/java/com/colota/location/` — Native Android location provider
 
 ### LocationServiceModule
 
@@ -65,11 +69,20 @@ Emits events back to JavaScript:
 - `onSyncError` — 3+ consecutive sync failures
 - `onPauseZoneChange` — entered or exited a geofence pause zone
 
+### LocationProvider Abstraction
+
+Location services are abstracted behind a `LocationProvider` interface (`location/LocationProvider.kt`), with flavor-specific implementations:
+
+- **GMS** (`src/gms/`) — `GmsLocationProvider` wraps Google Play Services `FusedLocationProviderClient`
+- **FOSS** (`src/foss/`) — `NativeLocationProvider` wraps Android's native `LocationManager` with `GPS_PROVIDER` and `NETWORK_PROVIDER` fallback
+
+Each flavor provides a `LocationProviderFactory` that returns the correct implementation. The service and bridge code in `src/main/` uses only the interface.
+
 ### LocationForegroundService
 
 An Android foreground service that runs continuously for GPS tracking. Manages:
 
-- GPS location capture via Google Play Services
+- GPS location capture via the `LocationProvider` abstraction
 - Foreground notification (required by Android)
 - Pause zone detection (geofencing)
 - Location accuracy filtering

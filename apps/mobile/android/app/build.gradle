@@ -21,7 +21,7 @@ react {
     //   The list of variants to that are debuggable. For those we're going to
     //   skip the bundling of the JS bundle and the assets. By default is just 'debug'.
     //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
-    // debuggableVariants = ["liteDebug", "prodDebug"]
+    debuggableVariants = ["gmsDebug", "fossDebug"]
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
@@ -45,7 +45,10 @@ react {
 
     /* Hermes Commands */
     //   The hermes compiler command to run. By default it is 'hermesc'
-    //   Handled automatically by the React Native Gradle Plugin.
+    def osName = System.getProperty('os.name').toLowerCase()
+    def osBin = osName.contains('win') ? 'win64-bin' : osName.contains('mac') ? 'osx-bin' : 'linux64-bin'
+    def hermescExe = osName.contains('win') ? 'hermesc.exe' : 'hermesc'
+    hermesCommand = ["node", "--print", "require.resolve('hermes-compiler/hermesc/${osBin}/${hermescExe}')"].execute(null, rootDir).text.trim()
     // hermesFlags = ["-O", "-output-source-map"]
 
     /* Autolinking */
@@ -137,12 +140,25 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
+    flavorDimensions "distribution"
+
+    productFlavors {
+        gms {
+            dimension "distribution"
+            // Google Play Services variant
+        }
+        foss {
+            dimension "distribution"
+            // F-Droid / open-source variant — no Google Play Services
+        }
+    }
 }
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-    implementation 'com.google.android.gms:play-services-location:21.0.1'
+    gmsImplementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'androidx.security:security-crypto:1.1.0'
     

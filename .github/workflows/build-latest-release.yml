@@ -1,6 +1,16 @@
 name: Build Latest Release
 
 on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'apps/docs/**'
+      - 'screenshots/**'
+      - 'LICENSE'
+      - '.github/workflows/docs-*'
+      - '.github/workflows/build-release.yml'
   workflow_dispatch:
 
 concurrency:
@@ -81,11 +91,19 @@ jobs:
           test -n "${{ secrets.KEY_ALIAS }}" || exit 1
           test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
 
-      - name: Build Release APK
+      - name: Build GMS Release APK
         run: |
           cd apps/mobile/android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon \
+          ./gradlew assembleGmsRelease --no-daemon \
+            -PhermesEnabled=true \
+            -Pandroid.useAndroidX=true \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+
+      - name: Build FOSS Release APK
+        run: |
+          cd apps/mobile/android
+          ./gradlew assembleFossRelease --no-daemon \
             -PhermesEnabled=true \
             -Pandroid.useAndroidX=true \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
@@ -103,12 +121,16 @@ jobs:
           tag_name: latest
           name: "Latest Development Build"
           body: |
-            ## 🚀 Automated Build (Tests Passed ✅)
+            ## Automated Build (Tests Passed)
             Built from commit: `${{ github.sha }}`
+
+            **app-gms-release.apk** — Google Play Services variant
+            **app-foss-release.apk** — F-Droid / FOSS variant (no Google Play Services)
           draft: false
           prerelease: true
           files: |
-            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            apps/mobile/android/app/build/outputs/apk/gms/release/app-gms-release.apk
+            apps/mobile/android/app/build/outputs/apk/foss/release/app-foss-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

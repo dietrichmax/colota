@@ -6,7 +6,7 @@ sidebar_position: 2
 
 Minimal setup to start tracking:
 
-1. Install the app ([Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) or [APK](https://github.com/dietrichmax/colota/releases))
+1. Install the app ([Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US), [F-Droid](https://f-droid.org/packages/com.Colota/), or [APK](https://github.com/dietrichmax/colota/releases))
 2. Grant location permissions — select **Precise location** and **Allow all the time**
 3. Disable battery optimization for Colota in Android settings
 4. Press **Start Tracking**

@@ -6,7 +6,7 @@
 
 Colota sends your location to your own server over HTTP(S). It works offline, supports geofencing, and doesn't share any data except with your backends.
 
-[Documentation](https://colota.app/docs/introduction) | [Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) | [Privacy Policy](https://colota.app/privacy-policy)
+[Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) | [F-Droid](https://f-droid.org/packages/com.Colota/) | [Documentation](https://colota.app/docs/introduction) | [Privacy Policy](https://colota.app/privacy-policy)
 
 ## Features
 
@@ -38,7 +38,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 ## Quick Start
 
 ```bash
-# Install from Google Play or download APK from Releases
+# Install from Google Play, F-Droid, or download APK from Releases
 # Then:
 1. Grant location permissions (precise, all the time)
 2. Disable battery optimization for Colota
@@ -60,7 +60,8 @@ git clone https://github.com/dietrichmax/colota.git
 cd colota
 npm install
 cd apps/mobile/android
-gradlew assembleRelease    # or ./gradlew on Linux/macOS
+./gradlew assembleGmsRelease    # Google Play variant
+./gradlew assembleFossRelease   # F-Droid variant (no Google Play Services)
 ```
 
 ## Contributing

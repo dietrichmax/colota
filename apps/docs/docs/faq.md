@@ -18,7 +18,9 @@ No, but you can use [Dawarich](/docs/integrations/dawarich) or a custom backend 
 
 ### Does this work without Google Play Services?
 
-Not currently. Colota uses Android's `FusedLocationProvider` which requires Google Play Services.
+Yes. The **FOSS variant** (available on F-Droid and GitHub Releases) uses Android's native `LocationManager` and has no Google Play Services dependency. It works on LineageOS, GrapheneOS, CalyxOS, and any ROM without Google services.
+
+The Google Play variant uses `FusedLocationProvider` for potentially better location accuracy through Wi-Fi and cell tower fusion.
 
 ### Why AGPL-3.0?
 

@@ -20,7 +20,7 @@ import android.os.Build
 import android.util.Log
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
-import com.google.android.gms.location.LocationServices
+import com.Colota.location.LocationProviderFactory
 import org.json.JSONObject
 import kotlinx.coroutines.*
 
@@ -367,21 +367,24 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun checkCurrentPauseZone(promise: Promise) {
-        val fusedClient = LocationServices.getFusedLocationProviderClient(reactApplicationContext)
-        
+        val provider = LocationProviderFactory.create(reactApplicationContext)
+
         try {
-            fusedClient.lastLocation.addOnSuccessListener { loc ->
-                if (loc == null) {
-                    promise.resolve(null)
-                } else {
-                    executeAsync(promise) { 
-                        geofenceHelper.getPauseZone(loc) 
+            provider.getLastLocation(
+                onSuccess = { loc ->
+                    if (loc == null) {
+                        promise.resolve(null)
+                    } else {
+                        executeAsync(promise) {
+                            geofenceHelper.getPauseZone(loc)
+                        }
                     }
+                },
+                onFailure = { e ->
+                    Log.e(TAG, "Failed to get location for pause zone check", e)
+                    promise.resolve(null)
                 }
-            }.addOnFailureListener { e ->
-                Log.e(TAG, "Failed to get location for pause zone check", e)
-                promise.resolve(null)
-            }
+            )
         } catch (e: SecurityException) {
             Log.e(TAG, "Location permission not granted", e)
             promise.resolve(null)

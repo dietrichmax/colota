@@ -1,0 +1,64 @@
+name: Android Build Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/mobile/android/**'
+      - 'apps/mobile/src/**'
+      - 'packages/shared/**'
+      - 'package-lock.json'
+
+concurrency:
+  group: build-check-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Debug APKs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w @colota/shared
+
+      - name: Create gradle.properties
+        run: |
+          cat <<EOF > apps/mobile/android/gradle.properties
+          org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m
+          android.useAndroidX=true
+          hermesEnabled=true
+          newArchEnabled=true
+          EOF
+
+      - name: Build GMS Debug APK
+        run: |
+          cd apps/mobile/android
+          chmod +x gradlew
+          ./gradlew assembleGmsDebug --no-daemon \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+
+      - name: Build FOSS Debug APK
+        run: |
+          cd apps/mobile/android
+          ./gradlew assembleFossDebug --no-daemon \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
