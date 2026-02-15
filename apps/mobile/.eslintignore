@@ -2,3 +2,4 @@
 *.min.js
 coverage
 **/openlayers/*.js
+android/app/build

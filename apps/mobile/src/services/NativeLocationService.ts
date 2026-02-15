@@ -170,6 +170,21 @@ class NativeLocationService {
   }
 
   /**
+   * Fetches locations within a date range, ordered chronologically.
+   * Used for track polyline rendering on the map view.
+   * @param startTimestamp Start of range (Unix seconds, inclusive)
+   * @param endTimestamp End of range (Unix seconds, inclusive)
+   */
+  static async getLocationsByDateRange(startTimestamp: number, endTimestamp: number): Promise<any[]> {
+    this.ensureModule()
+    return this.safeExecute(
+      () => LocationServiceModule.getLocationsByDateRange(startTimestamp, endTimestamp),
+      [],
+      "getLocationsByDateRange failed"
+    )
+  }
+
+  /**
    * Gets the most recent location from the database
    */
   static async getMostRecentLocation(): Promise<any | null> {
