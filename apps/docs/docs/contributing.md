@@ -28,6 +28,11 @@ See the [Development Guide](/docs/development/architecture) for architecture det
 - **Kotlin** for native Android modules
 - Follow existing patterns in the codebase
 - Use `logger` instead of `console.log` — import from `src/utils/logger`
+- Test both build flavors if your changes touch native code:
+  ```bash
+  cd apps/mobile/android
+  ./gradlew assembleGmsDebug assembleFossDebug
+  ```
 - Run before submitting:
   ```bash
   npm run lint -w @colota/mobile

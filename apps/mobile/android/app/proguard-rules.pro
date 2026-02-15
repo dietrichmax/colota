@@ -13,8 +13,12 @@
 
 -keep class com.Colota.** { *; }
 
-# Keep Google Play Services Location
+# Keep Google Play Services Location (only present in gms flavor)
 -keep class com.google.android.gms.location.** { *; }
+-dontwarn com.google.android.gms.**
+
+# Keep location provider abstraction
+-keep class com.Colota.location.** { *; }
 
 # Standard optimization settings
 -dontwarn com.facebook.react.**

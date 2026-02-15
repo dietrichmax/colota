@@ -1,0 +1,4 @@
+- Added F-Droid support with FOSS variant (no Google Play Services)
+- Location tracking uses native Android LocationManager APIs
+- Added HTTP GET request support for Traccar and similar backends
+- Added Traccar and PhoneTrack API templates

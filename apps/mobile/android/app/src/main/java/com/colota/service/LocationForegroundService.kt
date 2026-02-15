@@ -21,7 +21,9 @@ import android.content.Intent
 import android.os.*
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.google.android.gms.location.*
+import com.Colota.location.LocationProvider
+import com.Colota.location.LocationProviderFactory
+import com.Colota.location.LocationUpdateCallback
 import kotlinx.coroutines.*
 import org.json.JSONObject
 
@@ -30,7 +32,7 @@ import org.json.JSONObject
  */
 class LocationForegroundService : Service() {
 
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationProvider: LocationProvider
     private lateinit var notificationManager: NotificationManager
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var payloadBuilder: PayloadBuilder
@@ -41,7 +43,7 @@ class LocationForegroundService : Service() {
     private lateinit var syncManager: SyncManager
     
     @Volatile private var serviceScope: CoroutineScope? = null
-    @Volatile private var locationCallback: LocationCallback? = null
+    @Volatile private var locationUpdateCallback: LocationUpdateCallback? = null
     private var insidePauseZone = false
     private var currentZoneName: String? = null
     private var lastNotificationText: String? = null
@@ -70,7 +72,7 @@ class LocationForegroundService : Service() {
         
         serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        locationProvider = LocationProviderFactory.create(this)
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         dbHelper = DatabaseHelper.getInstance(this)
         payloadBuilder = PayloadBuilder()
@@ -169,11 +171,12 @@ class LocationForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun setupLocationUpdates() {
-        locationCallback = object : LocationCallback() {
-            override fun onLocationResult(result: LocationResult) {
-                result.locations.forEach { handleLocationUpdate(it) }
+        val callback = object : LocationUpdateCallback {
+            override fun onLocationUpdate(location: android.location.Location) {
+                handleLocationUpdate(location)
             }
         }
+        locationUpdateCallback = callback
 
         if (deviceInfoHelper.isBatteryCritical(threshold = 5)) {
             val (level, _) = deviceInfoHelper.getCachedBatteryStatus()
@@ -184,32 +187,30 @@ class LocationForegroundService : Service() {
             return
         }
 
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, config.interval * 2)
-            .setMinUpdateIntervalMillis(config.interval)
-            .setMinUpdateDistanceMeters(config.minUpdateDistance)
-            .setMaxUpdateDelayMillis(config.interval * 2)
-            .build()
-
         try {
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback!!,
-                Looper.getMainLooper()
+            locationProvider.requestLocationUpdates(
+                intervalMs = config.interval,
+                minDistanceMeters = config.minUpdateDistance,
+                looper = Looper.getMainLooper(),
+                callback = callback
             )
-            
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                location?.let {
-                    lastKnownLocation = it
-                    
-                    // Check if starting in a pause zone
-                    geofenceHelper.getPauseZone(it)?.let { zoneName ->
-                        enterPauseZone(zoneName)
-                    } ?: run {
-                        // Not in zone - show coordinates immediately
-                        updateNotification(it.latitude, it.longitude, forceUpdate = true)
+
+            locationProvider.getLastLocation(
+                onSuccess = { location ->
+                    location?.let {
+                        lastKnownLocation = it
+
+                        // Check if starting in a pause zone
+                        geofenceHelper.getPauseZone(it)?.let { zoneName ->
+                            enterPauseZone(zoneName)
+                        } ?: run {
+                            // Not in zone - show coordinates immediately
+                            updateNotification(it.latitude, it.longitude, forceUpdate = true)
+                        }
                     }
-                }
-            }
+                },
+                onFailure = { /* initial location unavailable, updates will arrive */ }
+            )
         } catch (e: SecurityException) {
             Log.e(TAG, "Location permission missing", e)
             stopSelf()
@@ -217,8 +218,8 @@ class LocationForegroundService : Service() {
     }
 
     private fun stopLocationUpdates() {
-        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
-        locationCallback = null
+        locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
+        locationUpdateCallback = null
     }
 
     private fun handleZoneRecheckAction() {
@@ -232,26 +233,29 @@ class LocationForegroundService : Service() {
             recheckZoneWithLocation(cachedLoc)
         } else {
             // Otherwise, request the last known location from the provider
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                location?.let {
-                    lastKnownLocation = it
-                    recheckZoneWithLocation(it)
-                } ?: run {
-                    // No location available - if in zone, exit it
-                    if (insidePauseZone) {
-                        if (BuildConfig.DEBUG) {
-                            Log.d(TAG, "No location for recheck, forcing exit from zone")
+            locationProvider.getLastLocation(
+                onSuccess = { location ->
+                    if (location != null) {
+                        lastKnownLocation = location
+                        recheckZoneWithLocation(location)
+                    } else {
+                        // No location available - if in zone, exit it
+                        if (insidePauseZone) {
+                            if (BuildConfig.DEBUG) {
+                                Log.d(TAG, "No location for recheck, forcing exit from zone")
+                            }
+                            exitPauseZone()
                         }
+                    }
+                },
+                onFailure = { e ->
+                    Log.e(TAG, "Recheck error", e)
+                    // On error, also exit zone if in one
+                    if (insidePauseZone) {
                         exitPauseZone()
                     }
                 }
-            }.addOnFailureListener { e ->
-                Log.e(TAG, "Recheck error", e)
-                // On error, also exit zone if in one
-                if (insidePauseZone) {
-                    exitPauseZone()
-                }
-            }
+            )
         }
     }
 
@@ -551,7 +555,7 @@ class LocationForegroundService : Service() {
 
         notificationManager.notify(NOTIFICATION_ID, finalNotification)
 
-        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
+        locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
         stopSelf()
     }
 

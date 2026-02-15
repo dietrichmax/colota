@@ -1,0 +1,16 @@
+Colota is an open-source GPS tracking application that sends your location to your own server over HTTP(S). It works offline, supports geofencing, and doesn't share any data except with your configured backends.
+
+<b>Features</b>
+
+<ul>
+<li><b>Self-Hosted</b> — Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or any custom backend that accepts JSON over HTTP</li>
+<li><b>Privacy First</b> — No analytics, no telemetry, no third-party SDKs. Licensed under AGPL-3.0</li>
+<li><b>Works Offline</b> — Locations are queued locally and synced when connectivity returns. Export as CSV, GeoJSON, GPX, or KML</li>
+<li><b>Reliable Tracking</b> — Foreground service with auto-start on boot, exponential backoff for failed syncs</li>
+<li><b>Geofencing</b> — Define pause zones to automatically stop tracking in specific areas</li>
+<li><b>Flexible Sync</b> — Instant send, periodic batch sync, or fully offline mode</li>
+<li><b>Authentication</b> — Basic Auth, Bearer Token, or custom headers with AES-256-GCM encryption</li>
+<li><b>Configurable</b> — Custom field mapping, update intervals, distance filters, and accuracy thresholds</li>
+</ul>
+
+The FOSS variant uses Android's native LocationManager and has no Google Play Services dependency.

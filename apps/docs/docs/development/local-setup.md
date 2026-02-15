@@ -55,6 +55,25 @@ npx react-native run-android
 
 Or open `apps/mobile/android/` in Android Studio and run from there.
 
+### Build Flavors
+
+The app has two product flavors:
+
+| Flavor | Description         | Location Provider                                  |
+| ------ | ------------------- | -------------------------------------------------- |
+| `gms`  | Google Play variant | FusedLocationProviderClient (Google Play Services) |
+| `foss` | F-Droid variant     | Native LocationManager (no Google dependencies)    |
+
+Build commands:
+
+```bash
+npm run android:debug          # GMS debug (default)
+npm run android:debug:foss     # FOSS debug
+npm run android:release        # GMS release
+npm run android:release:foss   # FOSS release
+npm run android:release:all    # Both release APKs
+```
+
 ### Environment Variables
 
 The app reads build configuration from `apps/mobile/android/app/build.gradle`. Key settings:
@@ -62,7 +81,7 @@ The app reads build configuration from `apps/mobile/android/app/build.gradle`. K
 | Property            | Default      | Description                |
 | ------------------- | ------------ | -------------------------- |
 | `applicationId`     | `com.Colota` | Android package identifier |
-| `minSdkVersion`     | 24           | Minimum Android 7.0        |
+| `minSdkVersion`     | 26           | Minimum Android 8.0        |
 | `targetSdkVersion`  | 36           | Target Android 16          |
 | `compileSdkVersion` | 36           | Compile against Android 16 |
 
@@ -89,14 +108,16 @@ colota/
 ├── apps/
 │   ├── mobile/
 │   │   ├── android/                 # Android native project
-│   │   │   └── app/src/main/java/com/colota/
-│   │   │       ├── bridge/          # React Native bridge
-│   │   │       ├── service/         # Foreground service & config
-│   │   │       ├── data/            # SQLite & geofencing
-│   │   │       ├── sync/            # Network sync & payloads
-│   │   │       ├── util/            # Helpers & encryption
-│   │   │       ├── MainActivity.kt
-│   │   │       └── MainApplication.kt
+│   │   │   └── app/src/
+│   │   │       ├── main/java/com/colota/
+│   │   │       │   ├── bridge/      # React Native bridge
+│   │   │       │   ├── service/     # Foreground service & config
+│   │   │       │   ├── data/        # SQLite & geofencing
+│   │   │       │   ├── sync/        # Network sync & payloads
+│   │   │       │   ├── util/        # Helpers & encryption
+│   │   │       │   └── location/    # LocationProvider interface
+│   │   │       ├── gms/java/com/colota/location/   # GMS implementation
+│   │   │       └── foss/java/com/colota/location/  # Native implementation
 │   │   ├── src/
 │   │   │   ├── screens/             # 9 app screens
 │   │   │   ├── components/          # UI and feature components

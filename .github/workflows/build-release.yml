@@ -86,14 +86,31 @@ jobs:
           test -n "${{ secrets.KEY_ALIAS }}" || exit 1
           test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
 
-      - name: Build Release APK
+      - name: Build GMS Release APK
         run: |
           cd apps/mobile/android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon \
+          ./gradlew assembleGmsRelease --no-daemon \
             -PhermesEnabled=true \
             -Pandroid.useAndroidX=true \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+
+      - name: Build FOSS Release APK
+        run: |
+          cd apps/mobile/android
+          ./gradlew assembleFossRelease --no-daemon \
+            -PhermesEnabled=true \
+            -Pandroid.useAndroidX=true \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/mobile/android/app/build/outputs/apk/gms/release/app-gms-release.apk
+            apps/mobile/android/app/build/outputs/apk/foss/release/app-foss-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Secure Cleanup
         if: always()
