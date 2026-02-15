@@ -111,6 +111,32 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
   }, [tracking])
 
   /**
+   * Listens for unexpected tracking stops (e.g. battery critical)
+   */
+  useEffect(() => {
+    const sub = locationEventEmitter.addListener("onTrackingStopped", (event: { reason: string }) => {
+      logger.warn(`[useLocationTracking] Tracking stopped by native: ${event.reason}`)
+      if (listenerRef.current) {
+        listenerRef.current.remove()
+        listenerRef.current = null
+      }
+      setTracking(false)
+      setCoords(null)
+    })
+    return () => sub.remove()
+  }, [])
+
+  /**
+   * Listens for sync errors from native service
+   */
+  useEffect(() => {
+    const sub = locationEventEmitter.addListener("onSyncError", (event: { message: string; queuedCount: number }) => {
+      logger.warn(`[useLocationTracking] Sync error: ${event.message} (${event.queuedCount} queued)`)
+    })
+    return () => sub.remove()
+  }, [])
+
+  /**
    * Starts location tracking
    * @param overrideSettings Optional one-time settings override
    */

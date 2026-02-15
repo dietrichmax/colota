@@ -90,14 +90,13 @@ colota/
 │   ├── mobile/
 │   │   ├── android/                 # Android native project
 │   │   │   └── app/src/main/java/com/colota/
-│   │   │       ├── LocationServiceModule.kt    # RN bridge
-│   │   │       ├── LocationForegroundService.kt # GPS service
-│   │   │       ├── DatabaseHelper.kt            # SQLite
-│   │   │       ├── SyncManager.kt               # HTTP sync
-│   │   │       ├── NetworkManager.kt            # Network layer
-│   │   │       ├── GeofenceHelper.kt            # Pause zones
-│   │   │       ├── SecureStorageHelper.kt       # Encrypted storage
-│   │   │       └── ...
+│   │   │       ├── bridge/          # React Native bridge
+│   │   │       ├── service/         # Foreground service & config
+│   │   │       ├── data/            # SQLite & geofencing
+│   │   │       ├── sync/            # Network sync & payloads
+│   │   │       ├── util/            # Helpers & encryption
+│   │   │       ├── MainActivity.kt
+│   │   │       └── MainApplication.kt
 │   │   ├── src/
 │   │   │   ├── screens/             # 9 app screens
 │   │   │   ├── components/          # UI and feature components
@@ -129,8 +128,8 @@ colota/
 
 ### Modifying Native Modules
 
-1. Edit the Kotlin file in `apps/mobile/android/app/src/main/java/com/colota/`
-2. If adding a new method to `LocationServiceModule`, expose it via `@ReactMethod`
+1. Edit the Kotlin file in `apps/mobile/android/app/src/main/java/com/colota/<subpackage>/`
+2. If adding a new method to `LocationServiceModule` (`bridge/`), expose it via `@ReactMethod`
 3. Add the corresponding TypeScript method in `apps/mobile/src/services/NativeLocationService.ts`
 4. Rebuild the Android app (`npx react-native run-android`)
 

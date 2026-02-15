@@ -3,9 +3,10 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
  
- package com.Colota
+ package com.Colota.bridge
 
 import com.facebook.react.bridge.ReactApplicationContext
+import com.Colota.BuildConfig
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.Promise

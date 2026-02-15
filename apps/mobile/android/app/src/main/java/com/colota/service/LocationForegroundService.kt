@@ -3,9 +3,20 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
  
-package com.Colota
+package com.Colota.service
 
 import android.app.*
+import com.Colota.BuildConfig
+import com.Colota.MainActivity
+import com.Colota.R
+import com.Colota.bridge.LocationServiceModule
+import com.Colota.data.DatabaseHelper
+import com.Colota.data.GeofenceHelper
+import com.Colota.sync.NetworkManager
+import com.Colota.sync.PayloadBuilder
+import com.Colota.sync.SyncManager
+import com.Colota.util.DeviceInfoHelper
+import com.Colota.util.SecureStorageHelper
 import android.content.Intent
 import android.os.*
 import android.util.Log
@@ -19,35 +30,27 @@ import org.json.JSONObject
  */
 class LocationForegroundService : Service() {
 
-    // --- Core Components ---
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var notificationManager: NotificationManager
     private lateinit var dbHelper: DatabaseHelper
-    private lateinit var locationUtils: LocationUtils
+    private lateinit var payloadBuilder: PayloadBuilder
     private lateinit var deviceInfoHelper: DeviceInfoHelper
     private lateinit var networkManager: NetworkManager
     private lateinit var geofenceHelper: GeofenceHelper
     private lateinit var secureStorage: SecureStorageHelper
     private lateinit var syncManager: SyncManager
     
-    // Properly manage scope lifecycle to prevent memory leak
-    private var serviceScope: CoroutineScope? = null
-    
-    // --- State ---
-    private var locationCallback: LocationCallback? = null
+    @Volatile private var serviceScope: CoroutineScope? = null
+    @Volatile private var locationCallback: LocationCallback? = null
     private var insidePauseZone = false
     private var currentZoneName: String? = null
     private var lastNotificationText: String? = null
-    
-    // Notification throttling
-    private var lastNotificationTime: Long = 0
-    private val NOTIFICATION_THROTTLE_MS = 10000L // Max 1 per 5 seconds
-    
-    // Location caching
-    private var lastKnownLocation: android.location.Location? = null
-    private var lastNotificationCoords: Pair<Double, Double>? = null 
 
-    // --- Configuration (use ServiceConfig) ---
+    private var lastNotificationTime: Long = 0
+    private val NOTIFICATION_THROTTLE_MS = 10000L
+    @Volatile private var lastKnownLocation: android.location.Location? = null
+    private var lastNotificationCoords: Pair<Double, Double>? = null
+
     private lateinit var config: ServiceConfig
     private var fieldMap: Map<String, String>? = null
     private var customFields: Map<String, String>? = null
@@ -62,22 +65,15 @@ class LocationForegroundService : Service() {
         const val ACTION_FORCE_EXIT_ZONE = "com.Colota.FORCE_EXIT_ZONE"
     }
 
-    data class GeofenceInfo(val id: Int, val name: String)
-
-    // ========================================
-    // SERVICE LIFECYCLE
-    // ========================================
-
     override fun onCreate() {
         super.onCreate()
         
-        // Create scope once in onCreate
         serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         dbHelper = DatabaseHelper.getInstance(this)
-        locationUtils = LocationUtils()
+        payloadBuilder = PayloadBuilder()
         deviceInfoHelper = DeviceInfoHelper(this)
         networkManager = NetworkManager(this)
         geofenceHelper = GeofenceHelper(this)
@@ -95,6 +91,7 @@ class LocationForegroundService : Service() {
         val savedSettings = dbHelper.getAllSettings()
         val shouldBeTracking = savedSettings["tracking_enabled"]?.toBoolean() ?: false
 
+        // intent == null: Android restarted the service after OOM kill
         if (intent == null && !shouldBeTracking) {
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "System restart prevented")
@@ -136,6 +133,7 @@ class LocationForegroundService : Service() {
             }
             else -> {
                 serviceScope?.launch {
+                    // FusedLocationClient requires Main looper
                     withContext(Dispatchers.Main) {
                         stopLocationUpdates()
                         syncManager.stopPeriodicSync()
@@ -161,7 +159,6 @@ class LocationForegroundService : Service() {
         stopLocationUpdates()
         syncManager.stopPeriodicSync()
         
-        // Properly cancel scope to prevent memory leak
         serviceScope?.cancel()
         serviceScope = null
         
@@ -171,10 +168,6 @@ class LocationForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    // ========================================
-    // LOCATION UPDATES (GPS QUALITY)
-    // ========================================
-
     private fun setupLocationUpdates() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
@@ -182,21 +175,16 @@ class LocationForegroundService : Service() {
             }
         }
 
-        // Check if battery is critically low using DeviceInfoHelper
         if (deviceInfoHelper.isBatteryCritical(threshold = 5)) {
             val (level, _) = deviceInfoHelper.getCachedBatteryStatus()
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "Battery critical ($level%) and unplugged - stopping service")
             }
             stopForegroundServiceWithReason("Battery critical")
-            return // Exit early - don't setup location updates
+            return
         }
 
-        // Battery is OK or charging - use high accuracy
-        val priority = Priority.PRIORITY_HIGH_ACCURACY
-
-        // Request parameters
-        val locationRequest = LocationRequest.Builder(priority, config.interval * 2)
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, config.interval * 2)
             .setMinUpdateIntervalMillis(config.interval)
             .setMinUpdateDistanceMeters(config.minUpdateDistance)
             .setMaxUpdateDelayMillis(config.interval * 2)
@@ -215,7 +203,7 @@ class LocationForegroundService : Service() {
                     
                     // Check if starting in a pause zone
                     geofenceHelper.getPauseZone(it)?.let { zoneName ->
-                        enterPauseZone(GeofenceInfo(-1, zoneName))
+                        enterPauseZone(zoneName)
                     } ?: run {
                         // Not in zone - show coordinates immediately
                         updateNotification(it.latitude, it.longitude, forceUpdate = true)
@@ -274,7 +262,7 @@ class LocationForegroundService : Service() {
         when {
             // Just entered a pause zone or changed zones
             zoneName != null && (!insidePauseZone || zoneName != currentZoneName) -> {
-                enterPauseZone(GeofenceInfo(-1, zoneName))
+                enterPauseZone(zoneName)
             }
             
             // Just exited pause zone
@@ -304,104 +292,85 @@ class LocationForegroundService : Service() {
         }
     }
 
-    // ========================================
-    // DATA PROCESSING (GPS QUALITY)
-    // ========================================
-
     private fun handleLocationUpdate(location: android.location.Location) {
-        // Early returns for filtering
         if (config.filterInaccurateLocations && location.accuracy > config.accuracyThreshold) {
             return
         }
-            
-        // Cache location
+
         lastKnownLocation = location
 
-        // Pause Zone Logic - CHECK IF IT'S A PAUSE ZONE
         val zoneName = geofenceHelper.getPauseZone(location)
-        
         when {
             zoneName != null && !insidePauseZone -> {
-                // Entering a pause zone
-                enterPauseZone(GeofenceInfo(-1, zoneName))
-                return // Don't record location in pause zone
-            }
-            zoneName == null && insidePauseZone -> {
-                // Exiting pause zone
-                exitPauseZone()
-            }
-            zoneName != null && insidePauseZone -> {
-                // Still in pause zone, skip recording
+                enterPauseZone(zoneName)
                 return
             }
+            zoneName == null && insidePauseZone -> exitPauseZone()
+            zoneName != null && insidePauseZone -> return
         }
 
-        // Use cached battery from DeviceInfoHelper
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
         val timestampSec = location.time / 1000
-
-        // Save to database
-        val locationId = dbHelper.saveLocation(
-            latitude = location.latitude,
-            longitude = location.longitude,
-            accuracy = location.accuracy.toDouble(),
-            altitude = if (location.hasAltitude()) location.altitude.toInt() else null,
-            speed = location.speed.toDouble(),
-            bearing = if (location.hasBearing()) location.bearing.toDouble() else 0.0,
-            battery = battery,
-            battery_status = batteryStatus,
-            timestamp = timestampSec,
-            endpoint = config.endpoint
-        )
-
-        // Send to React Native
-        LocationServiceModule.sendLocationEvent(location, battery, batteryStatus)
-
-        // Build payload once
         val currentFieldMap = fieldMap ?: emptyMap()
-        val payload = locationUtils.buildPayload(
-            location,
-            battery,
-            batteryStatus,
-            currentFieldMap,
-            timestampSec,
-            customFields
-        )
-        
-        // Queue and optionally send
+
+        // DB + network on IO thread; notification dispatches back to Main
         serviceScope?.launch {
+            val locationId = dbHelper.saveLocation(
+                latitude = location.latitude,
+                longitude = location.longitude,
+                accuracy = location.accuracy.toDouble(),
+                altitude = if (location.hasAltitude()) location.altitude.toInt() else null,
+                speed = location.speed.toDouble(),
+                bearing = if (location.hasBearing()) location.bearing.toDouble() else 0.0,
+                battery = battery,
+                battery_status = batteryStatus,
+                timestamp = timestampSec,
+                endpoint = config.endpoint
+            )
+
+            LocationServiceModule.sendLocationEvent(location, battery, batteryStatus)
+
+            val payload = payloadBuilder.buildPayload(
+                location,
+                battery,
+                batteryStatus,
+                currentFieldMap,
+                timestampSec,
+                customFields
+            )
+
             syncManager.queueAndSend(locationId, payload)
+
+            withContext(Dispatchers.Main) {
+                updateNotification(location.latitude, location.longitude)
+            }
         }
-        
-        // Update notification (throttled)
-        updateNotification(location.latitude, location.longitude)
     }
 
-    private fun enterPauseZone(zone: GeofenceInfo) {
+    private fun enterPauseZone(zoneName: String) {
         insidePauseZone = true
-        currentZoneName = zone.name
-        
-        // Always show paused status when entering a pause zone
+        currentZoneName = zoneName
+
         lastKnownLocation?.let { loc ->
             updateNotification(
-                lat = loc.latitude, 
-                lon = loc.longitude, 
+                lat = loc.latitude,
+                lon = loc.longitude,
                 pausedInZone = true,
-                zoneName = zone.name,
+                zoneName = zoneName,
                 forceUpdate = true
             )
         } ?: run {
             updateNotification(
-                pausedInZone = true, 
-                zoneName = zone.name,
+                pausedInZone = true,
+                zoneName = zoneName,
                 forceUpdate = true
             )
         }
-        
-        LocationServiceModule.sendPauseZoneEvent(true, zone.name)
-        
+
+        LocationServiceModule.sendPauseZoneEvent(true, zoneName)
+
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Entered pause zone: ${zone.name}")
+            Log.d(TAG, "Entered pause zone: $zoneName")
         }
     }
 
@@ -410,14 +379,9 @@ class LocationForegroundService : Service() {
         insidePauseZone = false
         val exited = currentZoneName
         currentZoneName = null
-        
-        // Show coordinates when exiting pause zone
+
         lastKnownLocation?.let { loc ->
-            updateNotification(
-                loc.latitude, 
-                loc.longitude,
-                forceUpdate = true  // ← Force immediate update on zone exit
-            )
+            updateNotification(loc.latitude, loc.longitude, forceUpdate = true)
         } ?: run {
             updateNotification(forceUpdate = true)
         }
@@ -425,10 +389,6 @@ class LocationForegroundService : Service() {
         LocationServiceModule.sendPauseZoneEvent(false, exited)
         if (BuildConfig.DEBUG) Log.d(TAG, "Exited pause zone: $exited")
     }
-
-    // ========================================
-    // UI & NOTIFICATIONS
-    // ========================================
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -463,13 +423,10 @@ class LocationForegroundService : Service() {
             .build()
     }
 
-    /**
-     * Format time since last sync in human-readable format.
-     */
     private fun getTimeSinceLastSync(): String {
         val lastSuccessfulSyncTime = syncManager.lastSuccessfulSyncTime
         if (lastSuccessfulSyncTime == 0L) {
-            return "Never synced"
+            return "Never"
         }
         
         val elapsedMs = System.currentTimeMillis() - lastSuccessfulSyncTime
@@ -485,12 +442,9 @@ class LocationForegroundService : Service() {
     }
 
     /**
-    * Smart notification updates with throttling and distance checking.
-    * Only updates when:
-    * - Zone status changes (immediate)
-    * - Moved >10 meters
-    * - Time throttle passed (10s)
-    */
+     * Throttled notification updates. Skips unless forceUpdate, zone change,
+     * or both 10s elapsed AND moved >2m. Deduplicates via text comparison.
+     */
     private fun updateNotification(
         lat: Double? = null,
         lon: Double? = null,
@@ -527,13 +481,11 @@ class LocationForegroundService : Service() {
             }
         }
         
-        // Update last notification time and coordinates
         lastNotificationTime = now
         if (lat != null && lon != null) {
             lastNotificationCoords = Pair(lat, lon)
         }
         
-        // Build notification text
         val queuedCount = syncManager.getCachedQueuedCount()
         val isCurrentlyPaused = pausedInZone || insidePauseZone
         val activeZone = zoneName ?: currentZoneName
@@ -542,16 +494,19 @@ class LocationForegroundService : Service() {
             isCurrentlyPaused -> "Paused: ${activeZone ?: "Unknown"}"
             lat != null && lon != null -> {
                 val coords = "%.5f, %.5f".format(lat, lon)
-                if (queuedCount > 0) {
+                if (queuedCount > 0 && syncManager.lastSuccessfulSyncTime > 0) {
                     "$coords (Last sync: ${getTimeSinceLastSync()})"
-                } else {
+                } else if (queuedCount > 0) {
+                    "$coords (Queued: $queuedCount)"
+                } else if (syncManager.lastSuccessfulSyncTime > 0) {
                     "$coords (Synced)"
+                } else {
+                    coords
                 }
             }
             else -> "Searching GPS..."
         }
 
-        // Only update if text changed
         val cacheKey = "$statusText-$queuedCount"
         if (cacheKey != lastNotificationText) {
             lastNotificationText = cacheKey
@@ -559,17 +514,16 @@ class LocationForegroundService : Service() {
         }
     }
 
+    /** Must be called within 5s of startForegroundService() per Android requirement. */
     private fun startForegroundServiceWithNotification() {
         val initialStatus = if (insidePauseZone) {
             "Paused: ${currentZoneName ?: "Unknown"}"
         } else {
-            "Initializing..."
+            "Searching GPS..."
         }
 
         val notification = buildNotification(initialStatus)
         startForeground(NOTIFICATION_ID, notification)
-        
-        updateNotification()
     }
 
     private fun stopForegroundServiceWithReason(reason: String) {
@@ -577,6 +531,7 @@ class LocationForegroundService : Service() {
             Log.i(TAG, "Stopping: $reason")
         }
 
+        LocationServiceModule.sendTrackingStoppedEvent(reason)
         dbHelper.saveSetting("tracking_enabled", "false")
 
         val finalNotification = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -600,22 +555,13 @@ class LocationForegroundService : Service() {
         stopSelf()
     }
 
-    // ========================================
-    // CONFIGURATION HANDLING
-    // ========================================
-
-    /**
-     * Use ServiceConfig for cleaner configuration management.
-     */
     private fun loadConfigFromIntent(intent: Intent?) {
-        // Load config using ServiceConfig utility
         config = if (intent != null) {
             ServiceConfig.fromIntent(intent, dbHelper)
         } else {
             ServiceConfig.fromDatabase(dbHelper)
         }
 
-        // Configure sync manager with current settings
         syncManager.updateConfig(
             endpoint = config.endpoint,
             syncIntervalSeconds = config.syncIntervalSeconds,
@@ -625,14 +571,12 @@ class LocationForegroundService : Service() {
             authHeaders = secureStorage.getAuthHeaders()
         )
 
-        // Parse fieldMap separately (remains as Map for payload building)
         config.fieldMap?.let {
-            if (it.isNotBlank()) fieldMap = locationUtils.parseFieldMap(it)
+            if (it.isNotBlank()) fieldMap = payloadBuilder.parseFieldMap(it)
         }
 
-        // Parse customFields (static key-value pairs added to every payload)
         config.customFields?.let {
-            if (it.isNotBlank()) customFields = locationUtils.parseCustomFields(it)
+            if (it.isNotBlank()) customFields = payloadBuilder.parseCustomFields(it)
         }
 
         if (BuildConfig.DEBUG) {

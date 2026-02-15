@@ -8,7 +8,7 @@ sidebar_position: 3
 
 ## Setup
 
-1. **Install OwnTracks Recorder** -- follow the [OwnTracks documentation](https://owntracks.org/booklet/)
+1. **Install OwnTracks Recorder** - follow the [OwnTracks documentation](https://owntracks.org/booklet/)
 2. **Configure Colota**:
    - Go to **Settings > API Settings**
    - Select the **OwnTracks** template

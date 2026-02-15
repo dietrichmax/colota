@@ -1,6 +1,8 @@
-package com.Colota
+package com.Colota.sync
 
 import android.content.Context
+import com.Colota.BuildConfig
+import com.Colota.util.TimedCache
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
@@ -25,9 +27,18 @@ class NetworkManager(private val context: Context) {
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-    // Cache variables for network availability
-    @Volatile private var lastNetworkCheck: Boolean = true
-    private var lastNetworkCheckTime: Long = 0
+    private val networkCache = TimedCache(NETWORK_CHECK_CACHE_MS) {
+        try {
+            val network = connectivityManager.activeNetwork
+            val capabilities = connectivityManager.getNetworkCapabilities(network)
+            capabilities != null &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        } catch (e: Exception) {
+            Log.e(TAG, "Network check failed", e)
+            false
+        }
+    }
 
     /**
      * Executes an asynchronous POST request to the server.
@@ -75,7 +86,6 @@ class NetworkManager(private val context: Context) {
                 useCaches = false
             }
 
-            // Log request details
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "=== HTTP REQUEST ===")
                 Log.d(TAG, "Endpoint: $endpoint")
@@ -89,7 +99,6 @@ class NetworkManager(private val context: Context) {
                 Log.d(TAG, "===================")
             }
 
-            // Write payload
             val bodyBytes = payload.toString().toByteArray(StandardCharsets.UTF_8)
             connection.setFixedLengthStreamingMode(bodyBytes.size)
             connection.outputStream.use { it.write(bodyBytes) }
@@ -122,7 +131,7 @@ class NetworkManager(private val context: Context) {
 
         if (protocol != "http" && protocol != "https") return false
 
-        // Enforce HTTPS for anything that isn't a local/private IP
+        // HTTP only allowed for local dev (localhost, 192.168.x.x, 10.x.x.x)
         if (protocol == "http" && !isPrivateHost(host)) {
             return false
         }
@@ -165,25 +174,5 @@ class NetworkManager(private val context: Context) {
     /**
      * Checks for an active, validated internet connection with caching.
      */
-    fun isNetworkAvailable(): Boolean {
-        val now = System.currentTimeMillis()
-        if ((now - lastNetworkCheckTime) < NETWORK_CHECK_CACHE_MS) {
-            return lastNetworkCheck
-        }
-
-        lastNetworkCheck = try {
-            val network = connectivityManager.activeNetwork
-            val capabilities = connectivityManager.getNetworkCapabilities(network)
-            
-            capabilities != null &&
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-        } catch (e: Exception) {
-            Log.e(TAG, "Network check failed", e)
-            false
-        }
-
-        lastNetworkCheckTime = now
-        return lastNetworkCheck
-    }
+    fun isNetworkAvailable(): Boolean = networkCache.get()
 }

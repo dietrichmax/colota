@@ -3,9 +3,10 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-package com.Colota
+package com.Colota.data
 
 import android.content.ContentValues
+import com.Colota.BuildConfig
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
@@ -18,15 +19,6 @@ import org.json.JSONObject
 
 /**
  * SQLite database helper for Colota location tracking.
- *
- * Optimized for:
- * - No cursor leaks (proper resource management)
- * - Efficient batch operations
- * - Prepared statements for security & speed
- * - Strategic indexing for query performance
- * - Async VACUUM to prevent UI blocking
- *
- * @param context The Android [Context] used to open or create the database.
  */
 class DatabaseHelper private constructor(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
@@ -65,15 +57,9 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
-    // Cached prepared statements for better performance
     private var incrementRetryStmt: SQLiteStatement? = null
 
-    /**
-     * Called when the database is created for the first time.
-     * Creates schema with optimized indexes.
-     */
     override fun onCreate(db: SQLiteDatabase) {
-        // Create Locations Table
         db.execSQL("""
             CREATE TABLE $TABLE_LOCATIONS (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,7 +77,6 @@ class DatabaseHelper private constructor(context: Context) :
             )
         """)
 
-        // Create Queue Table with Foreign Key
         db.execSQL("""
             CREATE TABLE $TABLE_QUEUE (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,7 +89,6 @@ class DatabaseHelper private constructor(context: Context) :
             )
         """)
 
-        // Create Settings Table
         db.execSQL("""
             CREATE TABLE $TABLE_SETTINGS (
                 key TEXT PRIMARY KEY,
@@ -112,7 +96,6 @@ class DatabaseHelper private constructor(context: Context) :
             )
         """)
 
-        // Create Geofences Table
         db.execSQL("""
             CREATE TABLE $TABLE_GEOFENCES (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -128,7 +111,6 @@ class DatabaseHelper private constructor(context: Context) :
             )
         """)
 
-        // Optimized indexes
         db.execSQL("CREATE INDEX idx_queue_created ON $TABLE_QUEUE(created_at)")
         db.execSQL("CREATE INDEX idx_queue_location ON $TABLE_QUEUE(location_id)")
         db.execSQL("CREATE INDEX idx_locations_timestamp ON $TABLE_LOCATIONS(timestamp DESC)")
@@ -139,9 +121,6 @@ class DatabaseHelper private constructor(context: Context) :
         prepopulateSettings(db)
     }
 
-    /**
-     * Seeds settings with default values.
-     */
     private fun prepopulateSettings(db: SQLiteDatabase) {
         val fieldMapJson = JSONObject(DEFAULT_FIELD_MAP).toString()
         val defaults = mapOf(
@@ -155,7 +134,11 @@ class DatabaseHelper private constructor(context: Context) :
             "maxRetries" to "5",
             "retryInterval" to "30",
             "isOfflineMode" to "false",
-            "customFields" to "[]"
+            "customFields" to "[]",
+            "hasCompletedSetup" to "false",
+            "tracking_enabled" to "false",
+            "apiTemplate" to "custom",
+            "syncPreset" to "instant"
         )
 
         db.beginTransaction()
@@ -175,36 +158,23 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
-    /**
-     * Configures database connection.
-     */
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
-        db.enableWriteAheadLogging()
-        
-        // Close cursor after PRAGMA query
+        db.enableWriteAheadLogging() // allows concurrent reads during writes
         db.rawQuery("PRAGMA busy_timeout = 5000", null).use { it.moveToFirst() }
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_QUEUE")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_LOCATIONS")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_SETTINGS")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_GEOFENCES")
-        onCreate(db)
+        // Future migrations go here
     }
 
-    /**
-     * Finalizes database settings after opening.
-     */
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
         if (!db.isReadOnly) {
-            db.execSQL("PRAGMA synchronous = NORMAL")
+            db.execSQL("PRAGMA synchronous = NORMAL") // faster writes, safe with WAL
             db.execSQL("PRAGMA foreign_keys = ON")
         }
         
-        // Prepare cached statements
         incrementRetryStmt = db.compileStatement(
             "UPDATE $TABLE_QUEUE SET retry_count = retry_count + 1, last_error = ? WHERE id = ?"
         )
@@ -216,11 +186,7 @@ class DatabaseHelper private constructor(context: Context) :
         super.close()
     }
 
-    // ========================== LOCATION OPERATIONS ==========================
 
-    /**
-     * Persists a new location coordinate and metadata.
-     */
     fun saveLocation(
         latitude: Double,
         longitude: Double,
@@ -249,9 +215,7 @@ class DatabaseHelper private constructor(context: Context) :
         return writableDatabase.insert(TABLE_LOCATIONS, null, values)
     }
 
-    /**
-     * Retrieves the most recent location.
-     */
+    /** Checks both sent and unsent locations to find the most recent one. */
     fun getRawMostRecentLocation(): Map<String, Any?>? {
         val query = """
             SELECT latitude, longitude, accuracy, timestamp 
@@ -283,9 +247,6 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
-    /**
-     * Universal table data getter for debugging.
-     */
     fun getTableData(tableName: String, limit: Int, offset: Int): List<Map<String, Any?>> {
         val data = mutableListOf<Map<String, Any?>>()
         
@@ -330,7 +291,6 @@ class DatabaseHelper private constructor(context: Context) :
         return data
     }
 
-    // ========================== QUEUE OPERATIONS ==========================
 
     /**
     * Adds location to transmission queue.
@@ -341,14 +301,11 @@ class DatabaseHelper private constructor(context: Context) :
             put("location_id", locationId)
             put("payload", payload)
             put("retry_count", 0)
-            put("created_at", System.currentTimeMillis())
+            put("created_at", System.currentTimeMillis() / 1000)
         }
         return writableDatabase.insert(TABLE_QUEUE, null, values)
     }
 
-    /**
-     * Retrieves queued locations for batch sync.
-     */
     fun getQueuedLocations(limit: Int = 10): List<QueuedLocation> {
         val locations = mutableListOf<QueuedLocation>()
         
@@ -374,9 +331,6 @@ class DatabaseHelper private constructor(context: Context) :
         return locations
     }
 
-    /**
-     * Removes queue entry by location ID.
-     */
     fun removeFromQueueByLocationId(locationId: Long): Int {
         return writableDatabase.delete(
             TABLE_QUEUE,
@@ -385,9 +339,6 @@ class DatabaseHelper private constructor(context: Context) :
         )
     }
 
-    /**
-     * Batch delete using single query with IN clause.
-     */
     fun removeBatchFromQueue(queueIds: List<Long>) {
         if (queueIds.isEmpty()) return
         
@@ -405,10 +356,6 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
-    /**
-     * Uses prepared statement for better performance.
-     * Thread-safe with synchronized access.
-     */
     @Synchronized
     fun incrementRetryCount(queueId: Long, error: String? = null) {
         val stmt = incrementRetryStmt ?: return // Exit if statement is null
@@ -419,11 +366,7 @@ class DatabaseHelper private constructor(context: Context) :
         stmt.executeUpdateDelete()
     }
 
-    // ========================== STATS OPERATIONS ==========================
 
-    /**
-     * Combined stats query
-     */
     fun getStats(): Triple<Int, Int, Int> {
         val query = """
             SELECT 
@@ -447,7 +390,6 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
-    /** Individual stat methods for backward compatibility */
     fun getQueuedCount(): Int {
         return readableDatabase.rawQuery("SELECT COUNT(*) FROM $TABLE_QUEUE", null).use {
             if (it.moveToFirst()) it.getInt(0) else 0
@@ -477,11 +419,7 @@ class DatabaseHelper private constructor(context: Context) :
         return java.io.File(dbPath).length() / (1024.0 * 1024.0)
     }
 
-    // ========================== CLEANUP OPERATIONS ==========================
 
-    /**
-     * Purges synchronized history records.
-     */
     fun clearSentHistory(): Int {
         return writableDatabase.delete(
             TABLE_LOCATIONS,
@@ -495,7 +433,7 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun clearAllLocations(): Int {
-        writableDatabase.delete(TABLE_QUEUE, null, null)
+        writableDatabase.delete(TABLE_QUEUE, null, null) // FK constraint: queue references locations
         return writableDatabase.delete(TABLE_LOCATIONS, null, null)
     }
 
@@ -508,17 +446,12 @@ class DatabaseHelper private constructor(context: Context) :
         )
     }
 
-    /**
-    * Optimizes database by reclaiming unused space.
-    * WARNING: Can block for several seconds on large databases.
-    * Call from background thread only.
-    */
+    /** Reclaims unused space. Call from background thread only. */
     fun vacuum() {
         writableDatabase.execSQL("VACUUM")
         writableDatabase.execSQL("ANALYZE")
     }
 
-    // ========================== SETTINGS OPERATIONS ==========================
 
     fun saveSetting(key: String, value: String) {
         val values = ContentValues().apply {
@@ -572,7 +505,6 @@ class DatabaseHelper private constructor(context: Context) :
         return settings
     }
 
-    // ========================== HELPER METHODS ==========================
 
     private fun getTodayStartTimestamp(): Long {
         return Calendar.getInstance().apply {

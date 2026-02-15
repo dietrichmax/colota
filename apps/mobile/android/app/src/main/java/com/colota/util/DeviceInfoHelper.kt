@@ -2,7 +2,7 @@
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
-package com.Colota
+package com.Colota.util
 
 import android.content.Context
 import android.content.Intent
@@ -25,19 +25,11 @@ class DeviceInfoHelper(private val context: Context) {
         context.getSystemService(Context.POWER_SERVICE) as PowerManager
     }
 
-    // Battery status caching
-    private var cachedBatteryLevel: Int = 100
-    private var cachedBatteryStatus: Int = 0
-    private var lastBatteryCheck: Long = 0
-    private val BATTERY_CHECK_INTERVAL_MS = 60000L // 1 minute cache
+    private val batteryCache = TimedCache(60000L) { getBatteryStatus() }
 
     companion object {
         private const val TAG = "DeviceInfoHelper"
     }
-
-    // ============================================================================
-    // DEVICE INFORMATION
-    // ============================================================================
 
     fun getDeviceInfo(): WritableMap {
         return Arguments.createMap().apply {
@@ -57,36 +49,11 @@ class DeviceInfoHelper(private val context: Context) {
     fun getBrand(): String = Build.BRAND
     fun getDeviceId(): String = Build.DEVICE
 
-    // ============================================================================
-    // BATTERY STATUS
-    // ============================================================================
-
     /**
-     * Get current battery status with caching to reduce system calls.
-     * Cache is valid for 1 minute.
-     * 
-     * @return Pair of (battery level percentage, battery status code)
-     *         Status codes: 0=Unknown, 1=Unplugged/Discharging, 2=Charging, 3=Full
+     * @return Pair of (battery level %, status code: 0=Unknown, 1=Discharging, 2=Charging, 3=Full)
      */
-    fun getCachedBatteryStatus(): Pair<Int, Int> {
-        val now = System.currentTimeMillis()
-        
-        if (now - lastBatteryCheck > BATTERY_CHECK_INTERVAL_MS) {
-            val (level, status) = getBatteryStatus()
-            cachedBatteryLevel = level
-            cachedBatteryStatus = status
-            lastBatteryCheck = now
-        }
-        
-        return Pair(cachedBatteryLevel, cachedBatteryStatus)
-    }
+    fun getCachedBatteryStatus(): Pair<Int, Int> = batteryCache.get()
 
-    /**
-     * Get real-time battery status from system (uncached).
-     * 
-     * @return Pair of (battery level percentage, battery status code)
-     *         Status codes: 0=Unknown, 1=Unplugged/Discharging, 2=Charging, 3=Full
-     */
     fun getBatteryStatus(): Pair<Int, Int> {
         val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         
@@ -110,9 +77,6 @@ class DeviceInfoHelper(private val context: Context) {
         return Pair(batteryPct, batteryStatus)
     }
 
-    /**
-     * Get battery status as human-readable string.
-     */
     fun getBatteryStatusString(): String {
         val (level, status) = getCachedBatteryStatus()
         val statusText = when (status) {
@@ -125,30 +89,13 @@ class DeviceInfoHelper(private val context: Context) {
         return "$level% ($statusText)"
     }
 
-    /**
-     * Check if battery is critically low AND not charging.
-     * Used to determine if service should stop to preserve battery.
-     */
     fun isBatteryCritical(threshold: Int = 5): Boolean {
         val (level, status) = getCachedBatteryStatus()
         return level < threshold && status == 1 // Discharging
     }
 
-    /**
-     * Invalidate battery cache to force fresh read on next call.
-     */
-    fun invalidateBatteryCache() {
-        lastBatteryCheck = 0
-    }
+    fun invalidateBatteryCache() = batteryCache.invalidate()
 
-    // ============================================================================
-    // BATTERY OPTIMIZATION
-    // ============================================================================
-
-    /**
-     * Checks if the app is exempt from battery optimization.
-     * @return true if exempt, false otherwise (or true on Android < M)
-     */
     fun isIgnoringBatteryOptimizations(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             powerManager.isIgnoringBatteryOptimizations(context.packageName)
@@ -157,11 +104,6 @@ class DeviceInfoHelper(private val context: Context) {
         }
     }
 
-    /**
-     * Requests battery optimization exemption.
-     * Opens system settings dialog.
-     * @return true if dialog opened successfully, false if fallback used
-     */
     fun requestIgnoreBatteryOptimizations(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return true // Not applicable on older versions

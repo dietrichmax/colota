@@ -103,10 +103,10 @@ your-domain.com {
 
 Colota works with any service that accepts JSON POST requests, including:
 
-- **Home Assistant** -- via webhook or REST API
-- **Traccar** -- GPS tracking platform
-- **Node-RED** -- flow-based automation
-- **Custom APIs** -- any server you build
+- **Home Assistant** - via webhook or REST API
+- **Traccar** - GPS tracking platform
+- **Node-RED** - flow-based automation
+- **Custom APIs** - any server you build
 
 ## Configuration
 

@@ -8,7 +8,7 @@ sidebar_position: 2
 
 ## Setup
 
-1. **Install Dawarich** -- follow the [Dawarich documentation](https://github.com/Freika/dawarich)
+1. **Install Dawarich** - follow the [Dawarich documentation](https://github.com/Freika/dawarich)
 2. **Get your API Key** from Dawarich settings
 3. **Configure Colota**:
    - Go to **Settings > API Settings**

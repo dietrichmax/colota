@@ -3,9 +3,11 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-package com.Colota
+package com.Colota.data
 
 import android.content.ContentValues
+import com.Colota.BuildConfig
+import com.Colota.util.TimedCache
 import android.content.Context
 import android.location.Location
 import android.util.Log
@@ -17,10 +19,7 @@ class GeofenceHelper(private val context: Context) {
 
     private val dbHelper by lazy { DatabaseHelper.getInstance(context) }
     
-    @Volatile
-    private var cachedGeofences: List<CachedGeofence>? = null
-    private var lastGeofenceCacheTime: Long = 0
-    private val GEOFENCE_CACHE_MS = 30000L
+    private val geofenceCache = TimedCache(30000L) { loadGeofencesFromDB() }
 
     data class CachedGeofence(
         val name: String,
@@ -34,8 +33,7 @@ class GeofenceHelper(private val context: Context) {
         private const val EARTH_RADIUS_METERS = 6371000.0
     }
 
-    // --- Math Engine ---
-
+    /** Haversine formula — accurate at any distance on Earth. */
     private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
@@ -45,18 +43,13 @@ class GeofenceHelper(private val context: Context) {
     }
 
     private fun isWithinRadius(lat1: Double, lon1: Double, lat2: Double, lon2: Double, radius: Double): Boolean {
-        // Fast bounding-box rejection
-        val maxDeg = radius / 111000.0
-        if (Math.abs(lat1 - lat2) > maxDeg || Math.abs(lon1 - lon2) > maxDeg) return false
+        // Fast bounding-box rejection (lon degrees shrink at higher latitudes)
+        val maxLatDeg = radius / 111000.0
+        val maxLonDeg = radius / (111000.0 * cos(Math.toRadians(lat1)))
+        if (Math.abs(lat1 - lat2) > maxLatDeg || Math.abs(lon1 - lon2) > maxLonDeg) return false
         return calculateDistance(lat1, lon1, lat2, lon2) <= radius
     }
 
-    // --- Core Logic ---
-
-    /**
-     * Checks if location is within any active pause zone.
-     * Returns immediately on first match for better performance.
-     */
     fun getPauseZone(location: Location): String? {
         val fences = getGeofences()
         return fences.find { 
@@ -64,63 +57,45 @@ class GeofenceHelper(private val context: Context) {
         }?.name
     }
     
-    /**
-    * Invalidates cache when geofences change
-    */
     fun invalidateCache() {
-        cachedGeofences = null
-        lastGeofenceCacheTime = 0
-
+        geofenceCache.invalidate()
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "Geofence cache invalidated")
         }
     }
 
-    /**
-    * Gets geofences from cache or refreshes if stale
-    */
-    private fun getGeofences(): List<CachedGeofence> {
-        val now = System.currentTimeMillis()
-        if (cachedGeofences == null || (now - lastGeofenceCacheTime) > GEOFENCE_CACHE_MS) {
-            refreshCache()
-        }
-        return cachedGeofences ?: emptyList()
-    }
+    private fun getGeofences(): List<CachedGeofence> = geofenceCache.get()
 
-    /**
-    * Refreshes geofence cache from database
-    */
-    private fun refreshCache() {
-        val fences = mutableListOf<CachedGeofence>()
-        dbHelper.readableDatabase.query(
-            DatabaseHelper.TABLE_GEOFENCES, 
-            arrayOf("name", "latitude", "longitude", "radius"),
-            "enabled = 1 AND pause_tracking = 1",
-            null, null, null, null
-        ).use { cursor ->
-            val nameIdx = cursor.getColumnIndexOrThrow("name")
-            val latIdx = cursor.getColumnIndexOrThrow("latitude")
-            val lonIdx = cursor.getColumnIndexOrThrow("longitude")
-            val radIdx = cursor.getColumnIndexOrThrow("radius")
-            
-            while (cursor.moveToNext()) {
-                fences.add(CachedGeofence(
-                    cursor.getString(nameIdx),
-                    cursor.getDouble(latIdx),
-                    cursor.getDouble(lonIdx),
-                    cursor.getDouble(radIdx)
-                ))
+    private fun loadGeofencesFromDB(): List<CachedGeofence> {
+        return try {
+            val fences = mutableListOf<CachedGeofence>()
+            dbHelper.readableDatabase.query(
+                DatabaseHelper.TABLE_GEOFENCES,
+                arrayOf("name", "latitude", "longitude", "radius"),
+                "enabled = 1 AND pause_tracking = 1",
+                null, null, null, null
+            ).use { cursor ->
+                val nameIdx = cursor.getColumnIndexOrThrow("name")
+                val latIdx = cursor.getColumnIndexOrThrow("latitude")
+                val lonIdx = cursor.getColumnIndexOrThrow("longitude")
+                val radIdx = cursor.getColumnIndexOrThrow("radius")
+
+                while (cursor.moveToNext()) {
+                    fences.add(CachedGeofence(
+                        cursor.getString(nameIdx),
+                        cursor.getDouble(latIdx),
+                        cursor.getDouble(lonIdx),
+                        cursor.getDouble(radIdx)
+                    ))
+                }
             }
+            fences
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to refresh geofence cache", e)
+            emptyList()
         }
-        cachedGeofences = fences
-        lastGeofenceCacheTime = System.currentTimeMillis()
     }
 
-    // --- Database CRUD (For React Native Module) ---
-
-    /**
-     * Fetches all geofences with optimized column index caching.
-     */
     fun getGeofencesAsArray(): WritableArray {
         val array = Arguments.createArray()
         
@@ -129,7 +104,6 @@ class GeofenceHelper(private val context: Context) {
             null, null, null, null, null, 
             "created_at DESC"
         ).use { cursor ->
-            // Cache column indices (faster than repeated getColumnIndexOrThrow calls)
             val idIdx = cursor.getColumnIndexOrThrow("id")
             val nameIdx = cursor.getColumnIndexOrThrow("name")
             val latIdx = cursor.getColumnIndexOrThrow("latitude")

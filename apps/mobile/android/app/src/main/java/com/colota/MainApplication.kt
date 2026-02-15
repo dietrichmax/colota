@@ -12,6 +12,7 @@ import com.facebook.react.ReactHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import com.Colota.bridge.LocationServicePackage
 
 class MainApplication : Application(), ReactApplication {
 

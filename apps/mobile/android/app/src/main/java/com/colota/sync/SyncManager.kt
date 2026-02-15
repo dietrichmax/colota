@@ -3,15 +3,19 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-package com.Colota
+package com.Colota.sync
 
 import android.util.Log
+import com.Colota.BuildConfig
+import com.Colota.bridge.LocationServiceModule
+import com.Colota.data.DatabaseHelper
+import com.Colota.util.TimedCache
 import kotlinx.coroutines.*
 import org.json.JSONObject
 
 /**
- * Manages location sync queue processing, batch uploads, and retry logic.
- * Extracted from LocationForegroundService for separation of concerns.
+ * Two sync modes: instant (syncInterval=0) sends each location on arrival,
+ * periodic (syncInterval>0) batches uploads at the configured interval.
  */
 class SyncManager(
     private val dbHelper: DatabaseHelper,
@@ -22,7 +26,6 @@ class SyncManager(
         private const val TAG = "SyncManager"
     }
 
-    // --- Config (set via updateConfig) ---
     private var endpoint: String = ""
     private var syncIntervalSeconds: Int = 0
     private var retryIntervalSeconds: Int = 300
@@ -30,21 +33,16 @@ class SyncManager(
     private var isOfflineMode: Boolean = false
     private var authHeaders: Map<String, String> = emptyMap()
 
-    // --- Sync state ---
     private var syncJob: Job? = null
-    private var lastSyncTime: Long = 0
-    var lastSuccessfulSyncTime: Long = 0
+    @Volatile private var lastSyncTime: Long = 0
+    @Volatile var lastSuccessfulSyncTime: Long = 0
         private set
-    private var syncInitialized = false
-    private var consecutiveFailures = 0
+    @Volatile private var syncInitialized = false
+    @Volatile private var consecutiveFailures = 0
 
-    // --- Queue count cache ---
-    private var cachedQueuedCount: Int = 0
-    private var lastQueueCountCheck: Long = 0
-    private val QUEUE_COUNT_CACHE_MS = 5000L
+    private val queueCountCache = TimedCache(5000L) { dbHelper.getQueuedCount() }
 
-    // Batch limit to prevent infinite syncing
-    private val MAX_BATCHES_PER_SYNC = 10 // Max 500 items per sync cycle
+    private val MAX_BATCHES_PER_SYNC = 10
 
     fun updateConfig(
         endpoint: String,
@@ -62,10 +60,6 @@ class SyncManager(
         this.authHeaders = authHeaders
     }
 
-    // ========================================
-    // PUBLIC API
-    // ========================================
-
     fun startPeriodicSync() {
         syncJob = scope.launch {
             while (isActive) {
@@ -77,7 +71,7 @@ class SyncManager(
                 }
 
                 if (endpoint.isNotBlank() && getCachedQueuedCount() > 0) {
-                    try {
+                    val errorMessage: String? = try {
                         val success = performSyncAndCheckSuccess()
 
                         if (success) {
@@ -85,14 +79,24 @@ class SyncManager(
                                 Log.i(TAG, "Sync restored")
                             }
                             consecutiveFailures = 0
+                            null
                         } else {
-                            consecutiveFailures++
-                            applyBackoffDelay()
+                            "Sync failed"
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Sync error", e)
+                        e.message ?: "Sync error"
+                    }
+
+                    if (errorMessage != null) {
                         consecutiveFailures++
-                        delay(30000)
+                        if (consecutiveFailures >= 3) {
+                            LocationServiceModule.sendSyncErrorEvent(
+                                "$errorMessage ($consecutiveFailures consecutive failures)",
+                                getCachedQueuedCount()
+                            )
+                        }
+                        applyBackoffDelay()
                     }
                 }
             }
@@ -138,24 +142,9 @@ class SyncManager(
         // If syncInterval > 0, the periodic sync job will handle it
     }
 
-    fun getCachedQueuedCount(): Int {
-        val now = System.currentTimeMillis()
+    fun getCachedQueuedCount(): Int = queueCountCache.get()
 
-        if (now - lastQueueCountCheck > QUEUE_COUNT_CACHE_MS) {
-            cachedQueuedCount = dbHelper.getQueuedCount()
-            lastQueueCountCheck = now
-        }
-
-        return cachedQueuedCount
-    }
-
-    fun invalidateQueueCache() {
-        lastQueueCountCheck = 0
-    }
-
-    // ========================================
-    // INTERNAL SYNC LOGIC
-    // ========================================
+    fun invalidateQueueCache() = queueCountCache.invalidate()
 
     private suspend fun performSyncAndCheckSuccess(): Boolean {
         val countBefore = dbHelper.getQueuedCount()
@@ -172,6 +161,7 @@ class SyncManager(
         return success
     }
 
+    // Exponential backoff: 30s → 60s → 5min → 15min
     private suspend fun applyBackoffDelay() {
         val backoffSeconds = when (consecutiveFailures) {
             1 -> 30L
@@ -187,10 +177,6 @@ class SyncManager(
         delay(backoffSeconds * 1000L)
     }
 
-    /**
-     * Batch limit to prevent infinite syncing.
-     * Processes max 500 items (10 batches x 50 items) per sync cycle.
-     */
     private suspend fun syncQueue() = coroutineScope {
         var totalProcessed = 0
         var batchNumber = 1
@@ -208,6 +194,7 @@ class SyncManager(
                 Log.d(TAG, "Processing batch $batchNumber/$MAX_BATCHES_PER_SYNC: ${queued.size} items")
             }
 
+            // Chunks of 10 concurrent HTTP requests to avoid flooding the server
             for (chunk in queued.chunked(10)) {
                 val successfulIds = mutableListOf<Long>()
                 val permanentlyFailedIds = mutableListOf<Long>()

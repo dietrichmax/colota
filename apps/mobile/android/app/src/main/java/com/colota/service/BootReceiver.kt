@@ -3,9 +3,11 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
  
-package com.Colota
+package com.Colota.service
 
 import android.content.BroadcastReceiver
+import com.Colota.BuildConfig
+import com.Colota.data.DatabaseHelper
 import android.content.Context
 import android.content.Intent
 import android.os.Build
