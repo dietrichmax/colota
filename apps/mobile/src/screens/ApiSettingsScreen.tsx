@@ -491,13 +491,14 @@ const styles = StyleSheet.create({
   },
   chipRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8
   },
   chip: {
-    flex: 1,
     borderWidth: 2,
     borderRadius: 10,
     paddingVertical: 10,
+    paddingHorizontal: 14,
     alignItems: "center"
   },
   chipText: {
