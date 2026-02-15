@@ -1,4 +1,4 @@
-const originalDev = (global as any).__DEV__
+const originalDev = (globalThis as any).__DEV__
 
 beforeEach(() => {
   jest.spyOn(console, "log").mockImplementation()
@@ -9,7 +9,7 @@ beforeEach(() => {
 afterEach(() => {
   jest.restoreAllMocks()
   jest.resetModules()
-  ;(global as any).__DEV__ = originalDev
+  ;(globalThis as any).__DEV__ = originalDev
 })
 
 function loadLogger() {
@@ -19,7 +19,7 @@ function loadLogger() {
 describe("logger", () => {
   describe("in development (__DEV__ = true)", () => {
     beforeEach(() => {
-      ;(global as any).__DEV__ = true
+      ;(globalThis as any).__DEV__ = true
     })
 
     it("debug logs via console.log", () => {
@@ -53,7 +53,7 @@ describe("logger", () => {
 
   describe("in production (__DEV__ = false)", () => {
     beforeEach(() => {
-      ;(global as any).__DEV__ = false
+      ;(globalThis as any).__DEV__ = false
     })
 
     it("debug is suppressed", () => {

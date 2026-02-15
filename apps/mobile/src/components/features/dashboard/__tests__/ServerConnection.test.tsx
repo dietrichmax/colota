@@ -43,7 +43,7 @@ jest.mock("@react-navigation/native", () => ({
 }))
 
 const mockFetch = jest.fn()
-global.fetch = mockFetch as any
+;(globalThis as any).fetch = mockFetch
 
 import { ServerConnection } from "../ServerConnection"
 
