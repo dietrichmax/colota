@@ -6,13 +6,6 @@ plugins {
     id("com.facebook.react.settings") 
 }
 
-extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
-
 rootProject.name = 'Colota'
 
 include ':app'
-
-react {
-    // Point to hoisted node_modules in monorepo root
-    nodeModulesDir.set(file("../../../node_modules"))
-}
