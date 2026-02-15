@@ -57,7 +57,7 @@ All native code lives in `apps/mobile/android/app/src/`, organized by build flav
 The primary React Native bridge module (exposed as `"LocationServiceModule"`). Handles all JS-to-native communication for:
 
 - Service control (`startService`, `stopService`)
-- Database queries (`getStats`, `getTableData`, `getQueuedLocationsCount`)
+- Database queries (`getStats`, `getTableData`, `getLocationsByDateRange`, `getQueuedLocationsCount`)
 - Geofence CRUD operations
 - Settings persistence
 - Device info, file operations, authentication

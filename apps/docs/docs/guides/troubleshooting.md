@@ -45,7 +45,7 @@ Key log tags:
 | `LocationDB`      | Database operations                |
 | `GeofenceHelper`  | Zone detection                     |
 
-You can also use the **Location Inspector** screen in the app to see sent and queued locations with their accuracy and timestamps.
+You can also use the **Location History** screen in the app to see recorded locations on a track map or as a list with their accuracy and timestamps.
 
 ## Database growing too large
 

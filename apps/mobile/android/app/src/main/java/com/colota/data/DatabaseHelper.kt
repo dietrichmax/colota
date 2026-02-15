@@ -292,6 +292,50 @@ class DatabaseHelper private constructor(context: Context) :
         return data
     }
 
+    /**
+     * Retrieves locations within a date range, ordered chronologically.
+     * Used for rendering track polylines on the map view.
+     *
+     * @param startTimestamp Start of range (Unix seconds, inclusive)
+     * @param endTimestamp End of range (Unix seconds, inclusive)
+     * @return Locations ordered by timestamp ASC for polyline drawing
+     */
+    fun getLocationsByDateRange(startTimestamp: Long, endTimestamp: Long): List<Map<String, Any?>> {
+        val data = mutableListOf<Map<String, Any?>>()
+
+        try {
+            readableDatabase.query(
+                TABLE_LOCATIONS,
+                null,
+                "timestamp >= ? AND timestamp <= ?",
+                arrayOf(startTimestamp.toString(), endTimestamp.toString()),
+                null, null,
+                "timestamp ASC"
+            ).use { cursor ->
+                val columnNames = cursor.columnNames
+
+                while (cursor.moveToNext()) {
+                    val row = mutableMapOf<String, Any?>()
+                    for (column in columnNames) {
+                        val idx = cursor.getColumnIndex(column)
+                        if (idx != -1) {
+                            row[column] = when (cursor.getType(idx)) {
+                                android.database.Cursor.FIELD_TYPE_INTEGER -> cursor.getLong(idx)
+                                android.database.Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(idx)
+                                android.database.Cursor.FIELD_TYPE_STRING -> cursor.getString(idx)
+                                else -> null
+                            }
+                        }
+                    }
+                    data.add(row)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading locations by date range", e)
+        }
+
+        return data
+    }
 
     /**
     * Adds location to transmission queue.

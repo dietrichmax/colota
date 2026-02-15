@@ -37,10 +37,10 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
       onPress: () => navigation.navigate("Geofences")
     },
     {
-      name: "Inspector",
+      name: "History",
       icon: Search,
       color: colors.info,
-      onPress: () => navigation.navigate("Locations Inspector")
+      onPress: () => navigation.navigate("Location History")
     },
     {
       name: "Export",

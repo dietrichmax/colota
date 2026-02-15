@@ -6,18 +6,19 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from "react"
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Switch } from "react-native"
 import { fonts } from "../styles/typography"
-import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react-native"
+import { ChevronLeft, ChevronRight } from "lucide-react-native"
 import { Container, Card } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { ThemeColors } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { STATS_REFRESH_FAST } from "../constants"
 import { logger } from "../utils/logger"
+import { DatePicker } from "../components/features/inspector/DatePicker"
+import { TrackMap } from "../components/features/inspector/TrackMap"
 
 // Types
 interface LocationData {
   id?: number
-  location_id?: number
   timestamp?: number
   created_at?: number
   latitude: number
@@ -28,13 +29,12 @@ interface LocationData {
   bearing?: number
   battery: number
   battery_status: number
-  last_error?: string
 }
 
 interface LocationItemProps {
   item: LocationData
   colors: ThemeColors
-  isQueue: boolean
+  onTap?: (item: LocationData) => void
 }
 
 interface MetricProps {
@@ -50,12 +50,12 @@ interface TabProps {
   colors: ThemeColors
 }
 
-type TableType = "locations" | "queue"
+type TabType = "list" | "map"
 
 /**
  * Memoized row component to prevent re-renders during scrolling
  */
-const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
+const LocationItem = memo(({ item, colors, onTap }: LocationItemProps) => {
   const getBatteryStatus = (status: number): string => {
     switch (status) {
       case 0:
@@ -73,10 +73,10 @@ const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
 
   const timestamp = item.timestamp || item.created_at || Date.now()
 
-  return (
+  const card = (
     <Card style={styles.itemCard}>
       <View style={styles.row}>
-        <Text style={[styles.id, { color: colors.primaryDark }]}>#{item.id || item.location_id}</Text>
+        <Text style={[styles.id, { color: colors.primaryDark }]}>#{item.id}</Text>
         <Text style={[styles.time, { color: colors.textSecondary }]}>
           {new Date(timestamp * 1000).toLocaleTimeString()}
         </Text>
@@ -99,49 +99,86 @@ const LocationItem = memo(({ item, colors, isQueue }: LocationItemProps) => {
         <View style={styles.spacer} />
         <View style={styles.spacer} />
       </View>
-
-      {isQueue && item.last_error && (
-        <View style={styles.errorRow}>
-          <AlertTriangle size={12} color={colors.error} />
-          <Text style={[styles.errorText, { color: colors.error }]}>{item.last_error}</Text>
-        </View>
-      )}
     </Card>
   )
+
+  if (onTap) {
+    return (
+      <TouchableOpacity activeOpacity={0.7} onPress={() => onTap(item)}>
+        {card}
+      </TouchableOpacity>
+    )
+  }
+
+  return card
 })
 
 LocationItem.displayName = "LocationItem"
 
-export function LocationInspectorScreen() {
-  const { colors } = useTheme()
-  const [activeTable, setActiveTable] = useState<TableType>("locations")
+export function LocationHistoryScreen() {
+  const { colors, mode } = useTheme()
+  const isDark = mode === "dark"
+  const [activeTab, setActiveTab] = useState<TabType>("map")
   const [data, setData] = useState<LocationData[]>([])
   const [limit, setLimit] = useState(50)
   const [page, setPage] = useState(0)
   const [autoRefresh, setAutoRefresh] = useState(false)
   const refreshInterval = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  /** Fetches data based on current pagination and table selection */
+  // Map tab state
+  const [mapDate, setMapDate] = useState(new Date())
+  const [trackLocations, setTrackLocations] = useState<LocationData[]>([])
+  const [selectedPoint, setSelectedPoint] = useState<{ latitude: number; longitude: number } | null>(null)
+
+  /** Fetches data based on current pagination */
   const fetchData = useCallback(async () => {
     try {
       const offset = page * limit
-      const result = await NativeLocationService.getTableData(activeTable, limit, offset)
+      const result = await NativeLocationService.getTableData("locations", limit, offset)
       setData(result || [])
     } catch (err) {
-      logger.error("[LocationInspector] Fetch error:", err)
+      logger.error("[LocationHistory] Fetch error:", err)
       setData([])
     }
-  }, [activeTable, limit, page])
+  }, [limit, page])
 
-  /** Fetch data when dependencies change */
+  /** Fetch track data for the selected day */
+  const fetchTrackData = useCallback(async () => {
+    try {
+      const start = new Date(mapDate)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(mapDate)
+      end.setHours(23, 59, 59, 999)
+
+      const startTimestamp = Math.floor(start.getTime() / 1000)
+      const endTimestamp = Math.floor(end.getTime() / 1000)
+
+      const result = await NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp)
+      setTrackLocations(result || [])
+    } catch (err) {
+      logger.error("[LocationHistory] Track fetch error:", err)
+      setTrackLocations([])
+    }
+  }, [mapDate])
+
+  /** Fetch table data when dependencies change */
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    if (activeTab === "list") {
+      fetchData()
+    }
+  }, [fetchData, activeTab])
+
+  /** Fetch track data when map date changes */
+  useEffect(() => {
+    if (activeTab === "map") {
+      fetchTrackData()
+    }
+  }, [fetchTrackData, activeTab])
 
   /** Auto-refresh logic */
   useEffect(() => {
-    if (autoRefresh) {
-      setPage(0) // Always show newest data in live mode
+    if (autoRefresh && activeTab === "list") {
+      setPage(0)
       refreshInterval.current = setInterval(fetchData, STATS_REFRESH_FAST)
     } else {
       if (refreshInterval.current) {
@@ -153,11 +190,14 @@ export function LocationInspectorScreen() {
         clearInterval(refreshInterval.current)
       }
     }
-  }, [autoRefresh, fetchData])
+  }, [autoRefresh, fetchData, activeTab])
 
-  const handleTableChange = (table: TableType) => {
-    setActiveTable(table)
-    setPage(0)
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab)
+    if (tab === "list") {
+      setPage(0)
+      setSelectedPoint(null)
+    }
   }
 
   const handleLimitChange = (newLimit: number) => {
@@ -165,111 +205,122 @@ export function LocationInspectorScreen() {
     setPage(0)
   }
 
+  /** Tap a location row in List → switch to Map and zoom */
+  const handleLocationTap = (item: LocationData) => {
+    if (item.latitude && item.longitude) {
+      if (item.timestamp) {
+        const itemDate = new Date(item.timestamp * 1000)
+        setMapDate(itemDate)
+      }
+      setSelectedPoint({ latitude: item.latitude, longitude: item.longitude })
+      setActiveTab("map")
+    }
+  }
+
   return (
     <Container>
-      {/* Header with Live Mode Toggle */}
-      <View style={styles.headerRow}>
-        <Text style={[styles.statusText, { color: autoRefresh ? colors.primary : colors.textSecondary }]}>
-          {autoRefresh ? "● Live Mode" : "Manual Mode"}
-        </Text>
-
-        <View style={styles.controls}>
-          <View style={styles.toggleContainer}>
-            <Text style={[styles.controlLabel, { color: colors.textSecondary }]}>LIVE</Text>
-            <Switch
-              value={autoRefresh}
-              onValueChange={setAutoRefresh}
-              thumbColor={autoRefresh ? colors.primary : colors.border}
-            />
-          </View>
-
-          <TouchableOpacity
-            onPress={fetchData}
-            disabled={autoRefresh}
-            style={[
-              styles.refreshBtn,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border
-              },
-              autoRefresh && styles.refreshBtnDisabled
-            ]}
-          >
-            <Text style={[styles.btnText, { color: colors.primaryDark }]}>Refresh</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Limit Selection and Pagination */}
-      <View style={styles.limitBar}>
-        <View style={styles.limitOptions}>
-          {[10, 50, 100].map((v) => (
-            <TouchableOpacity
-              key={v}
-              onPress={() => handleLimitChange(v)}
-              style={[
-                styles.limitBtn,
-                {
-                  backgroundColor: limit === v ? colors.primary : colors.card,
-                  borderColor: colors.border
-                }
-              ]}
-            >
-              <Text style={[styles.limitBtnText, { color: limit === v ? colors.textOnPrimary : colors.text }]}>
-                {v}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {!autoRefresh && (
-          <View style={styles.paginationRow}>
-            <TouchableOpacity
-              onPress={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              style={styles.pageBtn}
-            >
-              <ChevronLeft size={20} color={page === 0 ? colors.textDisabled : colors.primary} />
-            </TouchableOpacity>
-            <Text style={[styles.pageIndicator, { color: colors.text }]}>{page + 1}</Text>
-            <TouchableOpacity
-              onPress={() => setPage((p) => p + 1)}
-              disabled={data.length < limit}
-              style={styles.pageBtn}
-            >
-              <ChevronRight size={20} color={data.length < limit ? colors.textDisabled : colors.primary} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
       {/* Tab Bar */}
       <View style={styles.tabBar}>
-        <Tab
-          label="History"
-          active={activeTable === "locations"}
-          onPress={() => handleTableChange("locations")}
-          colors={colors}
-        />
-        <Tab
-          label="Queue"
-          active={activeTable === "queue"}
-          onPress={() => handleTableChange("queue")}
-          colors={colors}
-        />
+        <Tab label="Map" active={activeTab === "map"} onPress={() => handleTabChange("map")} colors={colors} />
+        <Tab label="List" active={activeTab === "list"} onPress={() => handleTabChange("list")} colors={colors} />
       </View>
 
-      {/* Location List */}
-      <FlatList
-        data={data}
-        contentContainerStyle={styles.listContent}
-        keyExtractor={(item, index) => `${activeTable}-${item.id || index}`}
-        ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textLight }]}>No data available</Text>}
-        renderItem={({ item }) => <LocationItem item={item} colors={colors} isQueue={activeTable === "queue"} />}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-      />
+      {activeTab === "map" ? (
+        <View style={styles.mapContainer}>
+          <DatePicker date={mapDate} onDateChange={setMapDate} locationCount={trackLocations.length} colors={colors} />
+          <TrackMap locations={trackLocations} selectedPoint={selectedPoint} colors={colors} isDark={isDark} />
+        </View>
+      ) : (
+        <>
+          {/* Header with Live Mode Toggle */}
+          <View style={styles.headerRow}>
+            <Text style={[styles.statusText, { color: autoRefresh ? colors.primary : colors.textSecondary }]}>
+              {autoRefresh ? "● Live Mode" : "Manual Mode"}
+            </Text>
+
+            <View style={styles.controls}>
+              <View style={styles.toggleContainer}>
+                <Text style={[styles.controlLabel, { color: colors.textSecondary }]}>LIVE</Text>
+                <Switch
+                  value={autoRefresh}
+                  onValueChange={setAutoRefresh}
+                  thumbColor={autoRefresh ? colors.primary : colors.border}
+                />
+              </View>
+
+              <TouchableOpacity
+                onPress={fetchData}
+                disabled={autoRefresh}
+                style={[
+                  styles.refreshBtn,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border
+                  },
+                  autoRefresh && styles.refreshBtnDisabled
+                ]}
+              >
+                <Text style={[styles.btnText, { color: colors.primaryDark }]}>Refresh</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Limit Selection and Pagination */}
+          <View style={styles.limitBar}>
+            <View style={styles.limitOptions}>
+              {[10, 50, 100].map((v) => (
+                <TouchableOpacity
+                  key={v}
+                  onPress={() => handleLimitChange(v)}
+                  style={[
+                    styles.limitBtn,
+                    {
+                      backgroundColor: limit === v ? colors.primary : colors.card,
+                      borderColor: colors.border
+                    }
+                  ]}
+                >
+                  <Text style={[styles.limitBtnText, { color: limit === v ? colors.textOnPrimary : colors.text }]}>
+                    {v}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {!autoRefresh && (
+              <View style={styles.paginationRow}>
+                <TouchableOpacity
+                  onPress={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  style={styles.pageBtn}
+                >
+                  <ChevronLeft size={20} color={page === 0 ? colors.textDisabled : colors.primary} />
+                </TouchableOpacity>
+                <Text style={[styles.pageIndicator, { color: colors.text }]}>{page + 1}</Text>
+                <TouchableOpacity
+                  onPress={() => setPage((p) => p + 1)}
+                  disabled={data.length < limit}
+                  style={styles.pageBtn}
+                >
+                  <ChevronRight size={20} color={data.length < limit ? colors.textDisabled : colors.primary} />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Location List */}
+          <FlatList
+            data={data}
+            contentContainerStyle={styles.listContent}
+            keyExtractor={(item, index) => `loc-${item.id || index}`}
+            ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textLight }]}>No data available</Text>}
+            renderItem={({ item }) => <LocationItem item={item} colors={colors} onTap={handleLocationTap} />}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+          />
+        </>
+      )}
     </Container>
   )
 }
@@ -296,6 +347,9 @@ const Tab = ({ label, active, onPress, colors }: TabProps) => {
 }
 
 const styles = StyleSheet.create({
+  mapContainer: {
+    flex: 1
+  },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -446,16 +500,6 @@ const styles = StyleSheet.create({
     marginTop: 40,
     fontSize: 14,
     ...fonts.regular,
-    fontStyle: "italic"
-  },
-  errorRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
-    marginTop: 8
-  },
-  errorText: {
-    fontSize: 11,
     fontStyle: "italic"
   }
 })

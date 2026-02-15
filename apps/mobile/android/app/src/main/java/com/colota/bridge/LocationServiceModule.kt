@@ -250,6 +250,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
 
     @ReactMethod
+    fun getLocationsByDateRange(startTimestamp: Double, endTimestamp: Double, promise: Promise) =
+        executeAsync(promise) {
+            val rawData = dbHelper.getLocationsByDateRange(startTimestamp.toLong(), endTimestamp.toLong())
+            Arguments.createArray().apply {
+                rawData.forEach { row -> pushMap(Arguments.makeNativeMap(row)) }
+            }
+        }
+
+    @ReactMethod
     fun manualFlush(promise: Promise) {
         try {
             startServiceWithAction(LocationForegroundService.ACTION_MANUAL_FLUSH)
