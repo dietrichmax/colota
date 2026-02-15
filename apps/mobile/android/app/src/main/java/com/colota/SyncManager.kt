@@ -123,7 +123,7 @@ class SyncManager(
         }
 
         // Immediate send mode (syncInterval = 0)
-        if (syncIntervalSeconds == 0) {
+        if (syncIntervalSeconds == 0 && networkManager.isNetworkAvailable()) {
             Log.d(TAG, "Instant send")
             val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders)
 
@@ -135,7 +135,6 @@ class SyncManager(
                 dbHelper.incrementRetryCount(queueId, "Send failed")
             }
         }
-        Log.d(TAG, "Waiting for sync")
         // If syncInterval > 0, the periodic sync job will handle it
     }
 
