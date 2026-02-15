@@ -205,4 +205,22 @@ class NetworkManager(private val context: Context) {
      * Checks for an active, validated internet connection with caching.
      */
     fun isNetworkAvailable(): Boolean = networkCache.get()
+
+    private val unmeteredCache = TimedCache(NETWORK_CHECK_CACHE_MS) {
+        try {
+            val network = connectivityManager.activeNetwork
+            val capabilities = connectivityManager.getNetworkCapabilities(network)
+            capabilities != null &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+        } catch (e: Exception) {
+            Log.e(TAG, "Unmetered check failed", e)
+            false
+        }
+    }
+
+    /**
+     * Returns true when the active network is unmetered (Wi-Fi, Ethernet, etc.).
+     * Cached for [NETWORK_CHECK_CACHE_MS] to avoid repeated IPC calls.
+     */
+    fun isUnmeteredConnection(): Boolean = unmeteredCache.get()
 }

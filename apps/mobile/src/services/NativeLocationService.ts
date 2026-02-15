@@ -63,6 +63,7 @@ class NativeLocationService {
       filterInaccurateLocations: settings.filterInaccurateLocations,
       accuracyThreshold: settings.accuracyThreshold,
       isOfflineMode: settings.isOfflineMode,
+      isWifiOnlySync: settings.isWifiOnlySync,
       httpMethod: settings.httpMethod
     }
 

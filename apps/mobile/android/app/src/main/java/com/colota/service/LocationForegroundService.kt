@@ -569,6 +569,7 @@ class LocationForegroundService : Service() {
             retryIntervalSeconds = config.retryIntervalSeconds,
             maxRetries = config.maxRetries,
             isOfflineMode = config.isOfflineMode,
+            isWifiOnlySync = config.isWifiOnlySync,
             authHeaders = secureStorage.getAuthHeaders(),
             httpMethod = config.httpMethod
         )

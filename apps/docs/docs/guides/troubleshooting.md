@@ -25,7 +25,7 @@ sidebar_position: 4
 4. Verify network connectivity
 5. Check the queue count in **Data Management**
 
-**Common causes**: Wrong URL, HTTPS required for non-localhost, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed certificate (not supported).
+**Common causes**: Wrong URL, HTTPS required for non-localhost, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed certificate (not supported), **Wi-Fi Only Sync** enabled while on cellular data.
 
 ## Debugging with adb logcat
 
@@ -46,6 +46,12 @@ Key log tags:
 | `GeofenceHelper`  | Zone detection                     |
 
 You can also use the **Location History** screen in the app to see recorded locations on a track map or as a list with their accuracy and timestamps.
+
+## Locations not syncing on mobile data
+
+If **Wi-Fi Only Sync** is enabled, uploads are skipped while on cellular data. Locations continue to be recorded and queued locally — they sync automatically when you connect to Wi-Fi.
+
+To disable: **Settings > Advanced Settings > Network Settings > Wi-Fi Only Sync**.
 
 ## Database growing too large
 

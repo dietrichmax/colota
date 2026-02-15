@@ -15,7 +15,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 - **Works Offline** — Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
 - **Reliable Tracking** — Foreground service, auto-start on boot, exponential backoff retry.
 - **Geofencing** — Pause zones that automatically pause tracking.
-- **Flexible Sync** — Instant, batch, or offline modes.
+- **Flexible Sync** — Instant, batch, Wi-Fi only, or offline modes.
 - **Authentication** — Basic Auth, Bearer Token, or custom headers with AES-256-GCM encryption.
 
 ## Screenshots
