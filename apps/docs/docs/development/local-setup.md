@@ -160,9 +160,16 @@ cd apps/mobile/android
 
 Test files are located in `apps/mobile/android/app/src/test/java/com/Colota/`. The tests cover:
 
-- **TimedCache** — TTL cache logic
-- **GeofenceHelper** — Haversine distance calculations and radius checks
+- **SyncManager** — Instant/periodic sync modes, retry logic, Wi-Fi only gating, backoff
+- **NetworkManager** — HTTPS enforcement, private host detection, header masking, query strings
+- **DatabaseHelper** — Data model, cutoff calculations, batch operations
+- **SecureStorageHelper** — Basic Auth, Bearer token, custom headers, JSON parsing
+- **DeviceInfoHelper** — Battery threshold logic, status code mapping, percentage calculation
+- **LocationForegroundService** — Notification throttling, sync formatting, zone state machine, battery shutdown
+- **ServiceConfig** — Database/Intent/ReadableMap parsing, defaults, round-trips
 - **PayloadBuilder** — JSON payload construction and field map parsing
+- **GeofenceHelper** — Haversine distance calculations and radius checks
+- **TimedCache** — TTL cache logic
 
 ### Linting and Type Checking
 
