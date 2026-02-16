@@ -252,29 +252,34 @@ class LocationForegroundService : Service() {
             recheckZoneWithLocation(cachedLoc)
         } else {
             // Otherwise, request the last known location from the provider
-            locationProvider.getLastLocation(
-                onSuccess = { location ->
-                    if (location != null) {
-                        lastKnownLocation = location
-                        recheckZoneWithLocation(location)
-                    } else {
-                        // No location available - if in zone, exit it
-                        if (insidePauseZone) {
-                            if (BuildConfig.DEBUG) {
-                                Log.d(TAG, "No location for recheck, forcing exit from zone")
+            try {
+                locationProvider.getLastLocation(
+                    onSuccess = { location ->
+                        if (location != null) {
+                            lastKnownLocation = location
+                            recheckZoneWithLocation(location)
+                        } else {
+                            // No location available - if in zone, exit it
+                            if (insidePauseZone) {
+                                if (BuildConfig.DEBUG) {
+                                    Log.d(TAG, "No location for recheck, forcing exit from zone")
+                                }
+                                exitPauseZone()
                             }
+                        }
+                    },
+                    onFailure = { e ->
+                        Log.e(TAG, "Recheck error", e)
+                        // On error, also exit zone if in one
+                        if (insidePauseZone) {
                             exitPauseZone()
                         }
                     }
-                },
-                onFailure = { e ->
-                    Log.e(TAG, "Recheck error", e)
-                    // On error, also exit zone if in one
-                    if (insidePauseZone) {
-                        exitPauseZone()
-                    }
-                }
-            )
+                )
+            } catch (e: SecurityException) {
+                Log.e(TAG, "Location permission revoked during zone recheck", e)
+                stopForegroundServiceWithReason("Location permission revoked")
+            }
         }
     }
 
