@@ -154,6 +154,15 @@ android {
         }
     }
 
+    splits {
+        abi {
+            reset()
+            enable true
+            universalApk false
+            include "arm64-v8a", "armeabi-v7a"
+        }
+    }
+
     testOptions {
         unitTests.returnDefaultValues = true
     }
