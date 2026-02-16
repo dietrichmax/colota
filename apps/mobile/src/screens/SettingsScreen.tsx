@@ -149,6 +149,22 @@ export function SettingsScreen({ navigation }: ScreenProps) {
           <Card>
             <TouchableOpacity
               style={styles.linkRow}
+              onPress={() => navigation.navigate("Tracking Profiles")}
+              activeOpacity={0.6}
+            >
+              <View style={styles.linkContent}>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Tracking Profiles</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
+                  Auto-switch GPS settings based on conditions
+                </Text>
+              </View>
+              <ChevronRight size={20} color={colors.textLight} />
+            </TouchableOpacity>
+
+            <Divider />
+
+            <TouchableOpacity
+              style={styles.linkRow}
               onPress={() => navigation.navigate("Data Management")}
               activeOpacity={0.6}
             >

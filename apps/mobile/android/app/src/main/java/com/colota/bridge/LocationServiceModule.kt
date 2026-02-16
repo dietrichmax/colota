@@ -9,8 +9,13 @@ import android.content.Intent
 import com.Colota.BuildConfig
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
+import com.Colota.data.ProfileHelper
 import com.Colota.service.LocationForegroundService
 import com.Colota.service.ServiceConfig
+import com.Colota.service.getDoubleOrNull
+import com.Colota.service.getIntOrNull
+import com.Colota.service.getStringOrNull
+import com.Colota.service.getBooleanOrNull
 import com.Colota.sync.NetworkManager
 import com.Colota.sync.PayloadBuilder
 import com.Colota.util.DeviceInfoHelper
@@ -38,6 +43,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     private val fileOps = FileOperations(reactContext)
     private val deviceInfo = DeviceInfoHelper(reactContext)
     private val geofenceHelper = GeofenceHelper(reactContext)
+    private val profileHelper = ProfileHelper(reactContext)
     private val secureStorage = SecureStorageHelper.getInstance(reactContext)
     private val networkManager = NetworkManager(reactContext)
 
@@ -129,6 +135,30 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send sync error event", e)
+                false
+            }
+        }
+
+        /** Emits profile switch events to JS when a tracking profile activates/deactivates. */
+        @JvmStatic
+        fun sendProfileSwitchEvent(profileName: String?, profileId: Int?): Boolean {
+            val context = reactContextRef.get() ?: return false
+            if (!context.hasActiveCatalystInstance()) return false
+
+            return try {
+                val params = Arguments.createMap().apply {
+                    if (profileName != null) putString("profileName", profileName)
+                    else putNull("profileName")
+                    if (profileId != null) putInt("profileId", profileId)
+                    else putNull("profileId")
+                    putBoolean("isDefault", profileName == null)
+                }
+                context
+                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                    .emit("onProfileSwitch", params)
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send profile switch event", e)
                 false
             }
         }
@@ -414,6 +444,104 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         } catch (e: SecurityException) {
             Log.e(TAG, "Location permission not granted", e)
             promise.resolve(null)
+        }
+    }
+
+    // ========================================================================
+    // TRACKING PROFILES
+    // ========================================================================
+
+    @ReactMethod
+    fun getProfiles(promise: Promise) = executeAsync(promise) {
+        profileHelper.getProfilesAsArray()
+    }
+
+    @ReactMethod
+    fun createProfile(config: ReadableMap, promise: Promise) = executeAsync(promise) {
+        val id = profileHelper.insertProfile(
+            name = config.getString("name") ?: "",
+            intervalMs = config.getDouble("intervalMs").toLong(),
+            minUpdateDistance = config.getDouble("minUpdateDistance").toFloat(),
+            syncIntervalSeconds = config.getInt("syncIntervalSeconds"),
+            priority = config.getInt("priority"),
+            conditionType = config.getString("conditionType") ?: "charging",
+            speedThreshold = if (config.hasKey("speedThreshold") && !config.isNull("speedThreshold"))
+                config.getDouble("speedThreshold").toFloat() else null,
+            deactivationDelaySeconds = config.getInt("deactivationDelaySeconds")
+        )
+        if (id > 0) {
+            profileHelper.invalidateCache()
+            triggerProfileRecheck()
+        }
+        id
+    }
+
+    @ReactMethod
+    fun updateProfile(config: ReadableMap, promise: Promise) = executeAsync(promise) {
+        val id = config.getInt("id")
+        val result = profileHelper.updateProfile(
+            id = id,
+            name = config.getStringOrNull("name"),
+            intervalMs = config.getDoubleOrNull("intervalMs")?.toLong(),
+            minUpdateDistance = config.getDoubleOrNull("minUpdateDistance")?.toFloat(),
+            syncIntervalSeconds = config.getIntOrNull("syncIntervalSeconds"),
+            priority = config.getIntOrNull("priority"),
+            conditionType = config.getStringOrNull("conditionType"),
+            speedThreshold = if (config.hasKey("speedThreshold") && !config.isNull("speedThreshold"))
+                config.getDouble("speedThreshold").toFloat() else null,
+            hasSpeedThreshold = config.hasKey("speedThreshold"),
+            deactivationDelaySeconds = config.getIntOrNull("deactivationDelaySeconds"),
+            enabled = config.getBooleanOrNull("enabled")
+        )
+        if (result) {
+            profileHelper.invalidateCache()
+            triggerProfileRecheck()
+        }
+        result
+    }
+
+    @ReactMethod
+    fun deleteProfile(id: Int, promise: Promise) = executeAsync(promise) {
+        val result = profileHelper.deleteProfile(id)
+        if (result) {
+            profileHelper.invalidateCache()
+            triggerProfileRecheck()
+        }
+        result
+    }
+
+    @ReactMethod
+    fun getActiveProfile(promise: Promise) {
+        // Active profile state is managed by the foreground service's ProfileManager.
+        // Return null if service isn't running — the JS side listens for onProfileSwitch events.
+        promise.resolve(null)
+    }
+
+    @ReactMethod
+    fun getTripEvents(startTimestamp: Double, endTimestamp: Double, promise: Promise) =
+        executeAsync(promise) {
+            profileHelper.getTripEventsAsArray(startTimestamp.toLong(), endTimestamp.toLong())
+        }
+
+    @ReactMethod
+    fun recheckProfiles(promise: Promise) {
+        try {
+            triggerProfileRecheck()
+            promise.resolve(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Profile recheck failed", e)
+            promise.reject("RECHECK_ERROR", e.message, e)
+        }
+    }
+
+    private fun triggerProfileRecheck() {
+        val isTracking = dbHelper.getSetting("tracking_enabled", "false") == "true"
+        if (isTracking) {
+            try {
+                startServiceWithAction(LocationForegroundService.ACTION_RECHECK_PROFILES)
+            } catch (e: Exception) {
+                Log.w(TAG, "Profile recheck skipped: service not running", e)
+            }
         }
     }
 
