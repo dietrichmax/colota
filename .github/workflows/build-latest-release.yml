@@ -74,7 +74,7 @@ jobs:
           android.enableJetifier=true
           hermesEnabled=true
           newArchEnabled=true
-          reactNativeArchitectures=arm64-v8a
+          reactNativeArchitectures=arm64-v8a,armeabi-v7a
 
           MYAPP_UPLOAD_STORE_FILE=release.keystore
           MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}
@@ -101,7 +101,7 @@ jobs:
           ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
 
-      - name: Build GMS Release APK
+      - name: Build GMS Release APKs
         run: |
           cd apps/mobile/android
           ./gradlew assembleGmsRelease --no-daemon \
@@ -109,7 +109,7 @@ jobs:
             -Pandroid.useAndroidX=true \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
 
-      - name: Build FOSS Release APK
+      - name: Build FOSS Release APKs
         run: |
           cd apps/mobile/android
           ./gradlew assembleFossRelease --no-daemon \
@@ -133,13 +133,20 @@ jobs:
             ## Automated Build (Tests Passed)
             Built from commit: `${{ github.sha }}`
 
-            **app-gms-release.apk** — Google Play Services variant
-            **app-foss-release.apk** — F-Droid / FOSS variant (no Google Play Services)
+            ### GMS (Google Play Services)
+            **app-gms-arm64-v8a-release.apk** — Modern 64-bit devices (recommended)
+            **app-gms-armeabi-v7a-release.apk** — Older 32-bit devices
+
+            ### FOSS (F-Droid / no Google Play Services)
+            **app-foss-arm64-v8a-release.apk** — Modern 64-bit devices (recommended)
+            **app-foss-armeabi-v7a-release.apk** — Older 32-bit devices
           draft: false
           prerelease: true
           files: |
-            apps/mobile/android/app/build/outputs/apk/gms/release/app-gms-release.apk
-            apps/mobile/android/app/build/outputs/apk/foss/release/app-foss-release.apk
+            apps/mobile/android/app/build/outputs/apk/gms/release/app-gms-arm64-v8a-release.apk
+            apps/mobile/android/app/build/outputs/apk/gms/release/app-gms-armeabi-v7a-release.apk
+            apps/mobile/android/app/build/outputs/apk/foss/release/app-foss-arm64-v8a-release.apk
+            apps/mobile/android/app/build/outputs/apk/foss/release/app-foss-armeabi-v7a-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

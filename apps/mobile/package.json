@@ -15,8 +15,8 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "test": "jest --passWithNoTests",
     "test:coverage": "jest --coverage",
-    "deploy-release": "adb install android/app/build/outputs/apk/gms/release/app-gms-release.apk",
-    "deploy-release:foss": "adb install android/app/build/outputs/apk/foss/release/app-foss-release.apk"
+    "deploy-release": "adb install android/app/build/outputs/apk/gms/release/app-gms-arm64-v8a-release.apk",
+    "deploy-release:foss": "adb install android/app/build/outputs/apk/foss/release/app-foss-arm64-v8a-release.apk"
   },
   "dependencies": {
     "@colota/shared": "*",
