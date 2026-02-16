@@ -38,6 +38,7 @@ See the [Development Guide](/docs/development/architecture) for architecture det
   npm run lint -w @colota/mobile
   npx -w @colota/mobile tsc --noEmit
   npm test -w @colota/mobile
+  cd apps/mobile/android && ./gradlew testGmsDebugUnitTest testFossDebugUnitTest
   ```
 
 ## Project Structure

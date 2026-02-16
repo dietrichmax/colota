@@ -105,7 +105,7 @@ Uses WAL (Write-Ahead Logging) mode and prepared statements for performance.
 
 Orchestrates batch location uploads with:
 
-- Configurable batch size (up to 500 items, 10 per HTTP request)
+- Configurable batch size (50 items per batch, 10 concurrent HTTP requests)
 - Exponential backoff on failure
 - Periodic sync scheduling
 - Manual flush support
