@@ -94,14 +94,6 @@ class NativeLocationService {
   }
 
   /**
-   * Checks if the foreground service is currently running
-   */
-  static async isServiceRunning(): Promise<boolean> {
-    this.ensureModule()
-    return this.safeExecute(() => LocationServiceModule.isServiceRunning(), false, "isServiceRunning failed")
-  }
-
-  /**
    * Checks if tracking is enabled (from persistent settings)
    */
   static async isTrackingActive(): Promise<boolean> {

@@ -69,7 +69,7 @@ export function ConnectionSettings({
 
       // Optional fields with real values from the location
       if (fieldMap.alt) payload[fieldMap.alt] = recentLocation.altitude ?? 0
-      if (fieldMap.vel) payload[fieldMap.vel] = recentLocation.velocity ?? 0
+      if (fieldMap.vel) payload[fieldMap.vel] = recentLocation.speed ?? 0
       if (fieldMap.batt) payload[fieldMap.batt] = recentLocation.battery ?? 0
       if (fieldMap.bs) payload[fieldMap.bs] = recentLocation.batteryStatus ?? 0
       if (fieldMap.bear) payload[fieldMap.bear] = recentLocation.bearing ?? 0
@@ -82,10 +82,14 @@ export function ConnectionSettings({
         // proceed without auth headers
       }
 
-      const response = await fetch(endpointInput, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify(payload)
+      const method = settings.httpMethod ?? "POST"
+      const params = new URLSearchParams(Object.entries(payload).map(([k, v]) => [k, String(v)]))
+      const url =
+        method === "GET" ? `${endpointInput}${endpointInput.includes("?") ? "&" : "?"}${params}` : endpointInput
+      const response = await fetch(url, {
+        method,
+        headers: method === "GET" ? authHeaders : { "Content-Type": "application/json", ...authHeaders },
+        ...(method === "GET" ? {} : { body: JSON.stringify(payload) })
       })
 
       if (response.ok) {

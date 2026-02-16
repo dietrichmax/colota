@@ -16,7 +16,12 @@ export const formatBytes = (bytes: number): string => {
 }
 
 export const getByteSize = (content: string): number => {
-  return new Blob([content]).size
+  let bytes = 0
+  for (let i = 0; i < content.length; i++) {
+    const code = content.charCodeAt(i)
+    bytes += code <= 0x7f ? 1 : code <= 0x7ff ? 2 : 3
+  }
+  return bytes
 }
 
 export const convertToCSV = (data: LocationCoords[]): string => {

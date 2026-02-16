@@ -28,7 +28,7 @@ export function SyncStrategySettings({
 }: SyncStrategySettingsProps) {
   const [intervalInput, setIntervalInput] = useState(settings.interval.toString())
   const [distanceInput, setDistanceInput] = useState(settings.distance?.toString() || "0")
-  const [accuracyTresholdInput, setAccuracyTresholdInput] = useState(settings.accuracyThreshold.toString())
+  const [accuracyThresholdInput, setAccuracyTresholdInput] = useState(settings.accuracyThreshold.toString())
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Sync inputs with settings changes
@@ -38,10 +38,10 @@ export function SyncStrategySettings({
   }, [settings.interval, settings.distance])
 
   const handleNumericChange = useCallback(
-    (key: "interval" | "distance" | "accuracyTreshold", value: string, min: number = 0) => {
+    (key: "interval" | "distance" | "accuracyThreshold", value: string, min: number = 0) => {
       if (key === "interval") setIntervalInput(value)
       if (key === "distance") setDistanceInput(value)
-      if (key === "accuracyTreshold") setAccuracyTresholdInput(value)
+      if (key === "accuracyThreshold") setAccuracyTresholdInput(value)
 
       const num = Number(value)
       if (!isNaN(num) && num >= min) {
@@ -54,22 +54,23 @@ export function SyncStrategySettings({
   )
 
   const handleNumericBlur = useCallback(
-    (key: "interval" | "distance" | "accuracyTreshold", min: number = 0) => {
-      const currentStr = key === "interval" ? intervalInput : key === "distance" ? distanceInput : accuracyTresholdInput
+    (key: "interval" | "distance" | "accuracyThreshold", min: number = 0) => {
+      const currentStr =
+        key === "interval" ? intervalInput : key === "distance" ? distanceInput : accuracyThresholdInput
       let val = Number(currentStr)
 
       if (isNaN(val) || val < min) {
         val = min
         if (key === "interval") setIntervalInput(min.toString())
         if (key === "distance") setDistanceInput(min.toString())
-        if (key === "accuracyTreshold") setAccuracyTresholdInput(min.toString())
+        if (key === "accuracyThreshold") setAccuracyTresholdInput(min.toString())
 
         const next = { ...settings, [key]: val }
         onSettingsChange(next)
         onImmediateSave(next)
       }
     },
-    [intervalInput, distanceInput, accuracyTresholdInput, settings, onSettingsChange, onImmediateSave]
+    [intervalInput, distanceInput, accuracyThresholdInput, settings, onSettingsChange, onImmediateSave]
   )
 
   const handlePresetSelect = useCallback(
@@ -328,9 +329,9 @@ export function SyncStrategySettings({
                 <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
                   <NumericInput
                     label="Accuracy Threshold"
-                    value={accuracyTresholdInput}
-                    onChange={(val) => handleNumericChange("accuracyTreshold", val, 50)}
-                    onBlur={() => handleNumericBlur("accuracyTreshold", 50)}
+                    value={accuracyThresholdInput}
+                    onChange={(val) => handleNumericChange("accuracyThreshold", val, 50)}
+                    onBlur={() => handleNumericBlur("accuracyThreshold", 50)}
                     unit="meters"
                     placeholder="50"
                     hint="Reject readings with accuracy worse than this"

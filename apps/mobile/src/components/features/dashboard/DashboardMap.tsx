@@ -63,7 +63,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
       const data = await NativeLocationService.getGeofences()
       setGeofences(data)
     } catch (err) {
-      logger.error("[GeofenceScreen] Failed to load geofences:", err)
+      logger.error("[DashboardMap] Failed to load geofences:", err)
     }
   }, [])
 
@@ -78,7 +78,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         const zoneName = await NativeLocationService.checkCurrentPauseZone()
         setCurrentPauseZone(zoneName)
       } catch (err) {
-        logger.error("[GeofenceScreen] Failed to check pause zone:", err)
+        logger.error("[DashboardMap] Failed to check pause zone:", err)
       }
     }
 
