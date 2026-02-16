@@ -97,6 +97,14 @@ describe("SyncStrategySettings", () => {
 
       fireEvent.press(getByTestId("preset-balanced"))
 
+      expect(mockOnSettingsChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          syncPreset: "balanced",
+          interval: TRACKING_PRESETS.balanced.interval,
+          distance: TRACKING_PRESETS.balanced.distance,
+          syncInterval: TRACKING_PRESETS.balanced.syncInterval
+        })
+      )
       expect(mockOnImmediateSave).toHaveBeenCalledWith(
         expect.objectContaining({
           syncPreset: "balanced",
@@ -173,7 +181,12 @@ describe("SyncStrategySettings", () => {
           syncPreset: "custom"
         })
       )
-      expect(mockOnDebouncedSave).toHaveBeenCalled()
+      expect(mockOnDebouncedSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          syncInterval: 300,
+          syncPreset: "custom"
+        })
+      )
     })
   })
 

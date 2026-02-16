@@ -98,35 +98,39 @@ class GeofenceHelper(private val context: Context) {
 
     fun getGeofencesAsArray(): WritableArray {
         val array = Arguments.createArray()
-        
-        dbHelper.readableDatabase.query(
-            DatabaseHelper.TABLE_GEOFENCES, 
-            null, null, null, null, null, 
-            "created_at DESC"
-        ).use { cursor ->
-            val idIdx = cursor.getColumnIndexOrThrow("id")
-            val nameIdx = cursor.getColumnIndexOrThrow("name")
-            val latIdx = cursor.getColumnIndexOrThrow("latitude")
-            val lonIdx = cursor.getColumnIndexOrThrow("longitude")
-            val radiusIdx = cursor.getColumnIndexOrThrow("radius")
-            val enabledIdx = cursor.getColumnIndexOrThrow("enabled")
-            val pauseIdx = cursor.getColumnIndexOrThrow("pause_tracking")
-            val createdIdx = cursor.getColumnIndexOrThrow("created_at")
-            
-            while (cursor.moveToNext()) {
-                array.pushMap(Arguments.createMap().apply {
-                    putInt("id", cursor.getInt(idIdx))
-                    putString("name", cursor.getString(nameIdx))
-                    putDouble("lat", cursor.getDouble(latIdx))
-                    putDouble("lon", cursor.getDouble(lonIdx))
-                    putDouble("radius", cursor.getDouble(radiusIdx))
-                    putBoolean("enabled", cursor.getInt(enabledIdx) == 1)
-                    putBoolean("pauseTracking", cursor.getInt(pauseIdx) == 1)
-                    putDouble("createdAt", cursor.getLong(createdIdx).toDouble())
-                })
+
+        try {
+            dbHelper.readableDatabase.query(
+                DatabaseHelper.TABLE_GEOFENCES,
+                null, null, null, null, null,
+                "created_at DESC"
+            ).use { cursor ->
+                val idIdx = cursor.getColumnIndexOrThrow("id")
+                val nameIdx = cursor.getColumnIndexOrThrow("name")
+                val latIdx = cursor.getColumnIndexOrThrow("latitude")
+                val lonIdx = cursor.getColumnIndexOrThrow("longitude")
+                val radiusIdx = cursor.getColumnIndexOrThrow("radius")
+                val enabledIdx = cursor.getColumnIndexOrThrow("enabled")
+                val pauseIdx = cursor.getColumnIndexOrThrow("pause_tracking")
+                val createdIdx = cursor.getColumnIndexOrThrow("created_at")
+
+                while (cursor.moveToNext()) {
+                    array.pushMap(Arguments.createMap().apply {
+                        putInt("id", cursor.getInt(idIdx))
+                        putString("name", cursor.getString(nameIdx))
+                        putDouble("lat", cursor.getDouble(latIdx))
+                        putDouble("lon", cursor.getDouble(lonIdx))
+                        putDouble("radius", cursor.getDouble(radiusIdx))
+                        putBoolean("enabled", cursor.getInt(enabledIdx) == 1)
+                        putBoolean("pauseTracking", cursor.getInt(pauseIdx) == 1)
+                        putDouble("createdAt", cursor.getLong(createdIdx).toDouble())
+                    })
+                }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load geofences as array", e)
         }
-        
+
         return array
     }
 

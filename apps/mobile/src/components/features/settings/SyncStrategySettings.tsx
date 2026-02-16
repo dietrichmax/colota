@@ -31,11 +31,12 @@ export function SyncStrategySettings({
   const [accuracyThresholdInput, setAccuracyTresholdInput] = useState(settings.accuracyThreshold.toString())
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  // Sync inputs with settings changes
+  // Sync inputs with settings changes (e.g. preset selection)
   useEffect(() => {
     setIntervalInput(settings.interval.toString())
     setDistanceInput(settings.distance?.toString() || "0")
-  }, [settings.interval, settings.distance])
+    setAccuracyTresholdInput(settings.accuracyThreshold.toString())
+  }, [settings.interval, settings.distance, settings.accuracyThreshold])
 
   const handleNumericChange = useCallback(
     (key: "interval" | "distance" | "accuracyThreshold", value: string, min: number = 0) => {
@@ -46,11 +47,10 @@ export function SyncStrategySettings({
       const num = Number(value)
       if (!isNaN(num) && num >= min) {
         const next = { ...settings, [key]: num, syncPreset: "custom" as const }
-        onSettingsChange(next)
         onDebouncedSave(next)
       }
     },
-    [settings, onSettingsChange, onDebouncedSave]
+    [settings, onDebouncedSave]
   )
 
   const handleNumericBlur = useCallback(
@@ -92,6 +92,7 @@ export function SyncStrategySettings({
         retryInterval: config.retryInterval
       }
 
+      onSettingsChange(next)
       onImmediateSave(next)
     },
     [settings, onSettingsChange, onImmediateSave]

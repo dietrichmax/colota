@@ -18,6 +18,7 @@ class TimedCache<T>(
     @Volatile private var value: T? = null
     @Volatile private var lastCheck: Long = 0
 
+    @Synchronized
     fun get(): T {
         val now = System.currentTimeMillis()
         if (value == null || (now - lastCheck) > ttlMs) {
@@ -27,6 +28,7 @@ class TimedCache<T>(
         return value!!
     }
 
+    @Synchronized
     fun invalidate() {
         lastCheck = 0
     }

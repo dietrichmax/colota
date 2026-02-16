@@ -33,17 +33,17 @@ export function useAutoSave() {
         setSaving(true)
         try {
           await saveFn()
-          restartTimeout.set(async () => {
-            try {
-              await restartFn()
-              setSaveSuccess(true)
-              successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
-            } catch (err) {
-              logger.error("[useAutoSave] Restart failed:", err)
-            } finally {
-              setSaving(false)
-            }
-          }, AUTOSAVE_DEBOUNCE_MS)
+          // Restart immediately — input was already debounced by saveTimeout
+          restartTimeout.clear()
+          try {
+            await restartFn()
+            setSaveSuccess(true)
+            successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
+          } catch (err) {
+            logger.error("[useAutoSave] Restart failed:", err)
+          } finally {
+            setSaving(false)
+          }
         } catch (err) {
           setSaving(false)
           logger.error("[useAutoSave] Save failed:", err)

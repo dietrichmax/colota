@@ -58,7 +58,7 @@ export function ExportDataScreen() {
 
     const content = EXPORT_FORMATS[selectedFormat].convert(cachedData.current)
     setFileSize(formatBytes(getByteSize(content)))
-  }, [selectedFormat])
+  }, [selectedFormat, stats.totalLocations])
 
   const handleExport = async (format: ExportFormat) => {
     if (stats.totalLocations === 0) {
@@ -125,14 +125,6 @@ export function ExportDataScreen() {
       } catch (shareError: any) {
         logger.warn("[ExportDataScreen] Share error:", shareError)
       }
-
-      setTimeout(async () => {
-        try {
-          await NativeLocationService.deleteFile(filePath)
-        } catch (err) {
-          logger.warn("[ExportDataScreen] Failed to cleanup temp file:", err)
-        }
-      }, 2000)
     } catch (error) {
       logger.error("[ExportDataScreen] Export failed:", error)
       Alert.alert("Export Failed", "Unable to export your data. Please try again.")

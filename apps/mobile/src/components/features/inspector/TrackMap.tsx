@@ -262,8 +262,13 @@ export function TrackMap({ locations, selectedPoint, colors, isDark }: Props) {
       document.addEventListener("message", handleInternalMessage);
 
       map.on("moveend", () => {
+        var centered = true;
+        if (currentExtent) {
+          var viewExtent = map.getView().calculateExtent(map.getSize());
+          centered = ol.extent.containsExtent(viewExtent, currentExtent);
+        }
         window.ReactNativeWebView.postMessage(
-          JSON.stringify({ type: "CENTERED", value: true })
+          JSON.stringify({ type: "CENTERED", value: centered })
         );
       });
 

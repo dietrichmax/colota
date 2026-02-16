@@ -73,7 +73,7 @@ describe("useAutoSave", () => {
       expect(saveFn2).toHaveBeenCalledTimes(1)
     })
 
-    it("sets saving=true during save, then schedules restart", async () => {
+    it("sets saving=true during save, then restarts immediately", async () => {
       const saveFn = jest.fn().mockResolvedValue(undefined)
       const restartFn = jest.fn().mockResolvedValue(undefined)
       const { result } = renderHook(() => useAutoSave())
@@ -86,14 +86,8 @@ describe("useAutoSave", () => {
         jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
       })
 
-      // After save completes, restart is debounced
+      // After debounced save completes, restart fires immediately (no second debounce)
       expect(saveFn).toHaveBeenCalled()
-      expect(restartFn).not.toHaveBeenCalled()
-
-      await act(async () => {
-        jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
-      })
-
       expect(restartFn).toHaveBeenCalledTimes(1)
     })
 
@@ -106,12 +100,7 @@ describe("useAutoSave", () => {
         result.current.debouncedSaveAndRestart(saveFn, restartFn)
       })
 
-      // Trigger save
-      await act(async () => {
-        jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
-      })
-
-      // Trigger restart
+      // Trigger save + restart (restart fires immediately after debounced save)
       await act(async () => {
         jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
       })
@@ -152,10 +141,7 @@ describe("useAutoSave", () => {
         result.current.debouncedSaveAndRestart(saveFn, restartFn)
       })
 
-      await act(async () => {
-        jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
-      })
-
+      // Save + restart both fire after debounce (restart is immediate after save)
       await act(async () => {
         jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
       })

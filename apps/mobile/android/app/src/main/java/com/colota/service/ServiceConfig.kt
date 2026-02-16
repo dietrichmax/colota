@@ -35,13 +35,13 @@ data class ServiceConfig(
             
             return ServiceConfig(
                 endpoint = saved["endpoint"] ?: "",
-                interval = saved["interval"]?.toLongOrNull() ?: 1000L,
+                interval = saved["interval"]?.toLongOrNull() ?: 5000L,
                 minUpdateDistance = saved["minUpdateDistance"]?.toFloatOrNull() ?: 0f,
                 syncIntervalSeconds = saved["syncInterval"]?.toIntOrNull() ?: 0,
                 maxRetries = saved["maxRetries"]?.toIntOrNull() ?: 5,
                 accuracyThreshold = saved["accuracyThreshold"]?.toFloatOrNull() ?: 50.0f,
-                filterInaccurateLocations = saved["filterInaccurateLocations"]?.toBoolean() ?: true,
-                retryIntervalSeconds = saved["retryInterval"]?.toIntOrNull() ?: 300,
+                filterInaccurateLocations = saved["filterInaccurateLocations"]?.toBoolean() ?: false,
+                retryIntervalSeconds = saved["retryInterval"]?.toIntOrNull() ?: 30,
                 isOfflineMode = saved["isOfflineMode"]?.toBoolean() ?: false,
                 isWifiOnlySync = saved["isWifiOnlySync"]?.toBoolean() ?: false,
                 fieldMap = saved["fieldMap"],

@@ -44,8 +44,8 @@ class LocationForegroundService : Service() {
     
     @Volatile private var serviceScope: CoroutineScope? = null
     @Volatile private var locationUpdateCallback: LocationUpdateCallback? = null
-    private var insidePauseZone = false
-    private var currentZoneName: String? = null
+    @Volatile private var insidePauseZone = false
+    @Volatile private var currentZoneName: String? = null
     private var lastNotificationText: String? = null
 
     private var lastNotificationTime: Long = 0
@@ -311,6 +311,15 @@ class LocationForegroundService : Service() {
         }
 
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
+
+        if (battery in 1..4 && batteryStatus == 1) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "Battery critical ($battery%) during tracking - stopping")
+            }
+            stopForegroundServiceWithReason("Battery critical")
+            return
+        }
+
         val timestampSec = location.time / 1000
         val currentFieldMap = fieldMap ?: emptyMap()
 
@@ -455,12 +464,9 @@ class LocationForegroundService : Service() {
     ) {
         val now = System.currentTimeMillis()
         val lastCoords = lastNotificationCoords
-        
-        // Check if this is a zone change (always update immediately)
-        val isZoneChange = pausedInZone != insidePauseZone || zoneName != currentZoneName
-        
-        // Apply smart filtering unless forced or zone change
-        if (!forceUpdate && !isZoneChange && lat != null && lon != null) {
+
+        // Apply smart filtering unless forced (zone changes always pass forceUpdate=true)
+        if (!forceUpdate && lat != null && lon != null) {
             // Throttle: don't update more than once per 10 seconds
             if ((now - lastNotificationTime) < NOTIFICATION_THROTTLE_MS) {
                 return

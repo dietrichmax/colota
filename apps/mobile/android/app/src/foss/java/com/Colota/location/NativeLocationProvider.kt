@@ -26,7 +26,7 @@ class NativeLocationProvider(context: Context) : LocationProvider {
         context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
     /** Maps each callback to its GPS listener and optional network listener. */
-    private val listenerMap = mutableMapOf<LocationUpdateCallback, List<LocationListener>>()
+    private val listenerMap = java.util.concurrent.ConcurrentHashMap<LocationUpdateCallback, List<LocationListener>>()
 
     override fun requestLocationUpdates(
         intervalMs: Long,

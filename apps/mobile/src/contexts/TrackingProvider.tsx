@@ -14,6 +14,7 @@ import { logger } from "../utils/logger"
 type TrackingContextType = {
   settings: Settings
   setSettings: (s: Settings) => Promise<void>
+  updateSettingsLocal: (s: Settings) => void
   coords: LocationCoords | null
   tracking: boolean
   isLoading: boolean
@@ -243,6 +244,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     () => ({
       settings,
       setSettings,
+      updateSettingsLocal: setSettingsState,
       coords,
       tracking,
       isLoading,
