@@ -10,6 +10,7 @@ import { MapPin } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
 import { MapCenterButton } from "../map/MapCenterButton"
+import { mapStyles } from "../map/mapHtml"
 
 interface TrackLocation {
   latitude: number
@@ -71,66 +72,7 @@ export function TrackMap({ locations, selectedPoint, colors, isDark }: Props) {
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="openlayers/ol.css">
-    <style>
-      html, body, #map {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        width: 100%;
-        background: ${colors.background};
-      }
-
-      .ol-zoom {
-        right: auto !important;
-        left: 10px;
-        top: 10px;
-        background: transparent !important;
-        padding: 0 !important;
-        z-index: 100 !important;
-      }
-
-      .ol-zoom button {
-        width: 44px !important;
-        height: 44px !important;
-        background: ${colors.card} !important;
-        color: ${colors.text} !important;
-        border-radius: ${colors.borderRadius}px !important;
-        margin: 8px 0 !important;
-        font-size: 20px !important;
-        font-weight: bold !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
-        -webkit-tap-highlight-color: transparent !important;
-        touch-action: manipulation !important;
-      }
-
-      .ol-zoom button:active {
-        background: ${colors.primary} !important;
-        color: white !important;
-        transform: scale(0.92) !important;
-      }
-
-      .ol-zoom button:focus {
-        outline: none !important;
-      }
-
-      .ol-attribution {
-        background: ${isDark ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.95)"} !important;
-        padding: 4px 8px !important;
-        font-size: 11px !important;
-      }
-
-      .ol-attribution ul {
-        color: ${colors.textSecondary} !important;
-        text-shadow: none !important;
-      }
-
-      .ol-attribution a {
-        color: ${colors.primary} !important;
-        text-decoration: none !important;
-      }
-
-      ${isDark ? ".ol-layer canvas { filter: brightness(0.6) contrast(1.2) saturate(0.8); }" : ""}
-    </style>
+    <style>${mapStyles(colors, isDark)}</style>
   </head>
   <body>
     <div id="map"></div>
