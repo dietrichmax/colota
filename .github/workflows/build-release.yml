@@ -33,12 +33,12 @@ jobs:
       - run: npx -w @colota/mobile tsc --noEmit
       - run: npm test -w @colota/mobile
 
-  build-and-release:
-    name: Build & Publish Release
+  build:
+    name: Build Release APKs
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -114,16 +114,13 @@ jobs:
             -Pandroid.useAndroidX=true \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
 
-      - name: Publish to GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
         with:
-          files: |
-            apps/mobile/android/app/build/outputs/apk/gms/release/app-gms-arm64-v8a-release.apk
-            apps/mobile/android/app/build/outputs/apk/gms/release/app-gms-armeabi-v7a-release.apk
-            apps/mobile/android/app/build/outputs/apk/foss/release/app-foss-arm64-v8a-release.apk
-            apps/mobile/android/app/build/outputs/apk/foss/release/app-foss-armeabi-v7a-release.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: release-apks
+          path: |
+            apps/mobile/android/app/build/outputs/apk/gms/release/*.apk
+            apps/mobile/android/app/build/outputs/apk/foss/release/*.apk
 
       - name: Secure Cleanup
         if: always()

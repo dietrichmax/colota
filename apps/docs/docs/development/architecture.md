@@ -83,10 +83,19 @@ Each flavor provides a `LocationProviderFactory` that returns the correct implem
 An Android foreground service that runs continuously for GPS tracking. Manages:
 
 - GPS location capture via the `LocationProvider` abstraction
-- Foreground notification (required by Android)
 - Pause zone detection (geofencing)
+- Battery critical shutdown (1-4% while discharging)
 - Location accuracy filtering
 - Queuing data for server sync
+
+### NotificationHelper
+
+Handles all notification logic for the tracking service:
+
+- Channel creation and notification building
+- Status text generation (coordinates, sync status, pause zones)
+- Throttled updates (10s minimum interval, 2m minimum movement)
+- Deduplication to avoid unnecessary notification redraws
 
 ### DatabaseHelper
 
