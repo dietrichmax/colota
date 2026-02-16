@@ -26,14 +26,14 @@ class SyncManager(
         private const val TAG = "SyncManager"
     }
 
-    private var endpoint: String = ""
-    private var syncIntervalSeconds: Int = 0
-    private var retryIntervalSeconds: Int = 300
-    private var maxRetries: Int = 5
-    private var isOfflineMode: Boolean = false
-    private var isWifiOnlySync: Boolean = false
-    private var authHeaders: Map<String, String> = emptyMap()
-    private var httpMethod: String = "POST"
+    @Volatile private var endpoint: String = ""
+    @Volatile private var syncIntervalSeconds: Int = 0
+    @Volatile private var retryIntervalSeconds: Int = 300
+    @Volatile private var maxRetries: Int = 5
+    @Volatile private var isOfflineMode: Boolean = false
+    @Volatile private var isWifiOnlySync: Boolean = false
+    @Volatile private var authHeaders: Map<String, String> = emptyMap()
+    @Volatile private var httpMethod: String = "POST"
 
     private var syncJob: Job? = null
     @Volatile private var lastSyncTime: Long = 0
@@ -136,7 +136,7 @@ class SyncManager(
         // Immediate send mode (syncInterval = 0)
         if (syncIntervalSeconds == 0 && networkManager.isNetworkAvailable() &&
             !(isWifiOnlySync && !networkManager.isUnmeteredConnection())) {
-            Log.d(TAG, "Instant send")
+            if (BuildConfig.DEBUG) Log.d(TAG, "Instant send")
             val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod)
 
             if (success) {
@@ -187,6 +187,7 @@ class SyncManager(
 
     private suspend fun syncQueue() = coroutineScope {
         var totalProcessed = 0
+        var totalSucceeded = 0
         var batchNumber = 1
 
         while (isActive && batchNumber <= MAX_BATCHES_PER_SYNC) {
@@ -246,6 +247,7 @@ class SyncManager(
                 if (toRemove.isNotEmpty()) {
                     dbHelper.removeBatchFromQueue(toRemove)
                     totalProcessed += toRemove.size
+                    totalSucceeded += successfulIds.size
                 }
 
                 yield()
@@ -260,7 +262,7 @@ class SyncManager(
 
         invalidateQueueCache()
 
-        if (totalProcessed > 0) {
+        if (totalSucceeded > 0) {
             lastSuccessfulSyncTime = System.currentTimeMillis()
         }
     }

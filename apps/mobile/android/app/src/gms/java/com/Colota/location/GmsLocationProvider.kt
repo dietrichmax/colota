@@ -19,7 +19,7 @@ class GmsLocationProvider(context: Context) : LocationProvider {
     private val fusedClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
 
-    private val callbackMap = mutableMapOf<LocationUpdateCallback, LocationCallback>()
+    private val callbackMap = java.util.concurrent.ConcurrentHashMap<LocationUpdateCallback, LocationCallback>()
 
     override fun requestLocationUpdates(
         intervalMs: Long,

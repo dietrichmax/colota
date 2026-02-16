@@ -64,7 +64,8 @@ class NativeLocationService {
       accuracyThreshold: settings.accuracyThreshold,
       isOfflineMode: settings.isOfflineMode,
       isWifiOnlySync: settings.isWifiOnlySync,
-      httpMethod: settings.httpMethod
+      httpMethod: settings.httpMethod,
+      customFields: Object.fromEntries(settings.customFields.filter((f) => f.key).map((f) => [f.key, f.value]))
     }
 
     logger.debug(

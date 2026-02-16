@@ -8,7 +8,7 @@ import { Text, StyleSheet, Switch, View, ScrollView, TouchableOpacity } from "re
 import { ScreenProps, Settings } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
-import { STATS_REFRESH_FAST } from "../constants"
+import { STATS_REFRESH_FAST, STATS_REFRESH_IDLE } from "../constants"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
@@ -25,7 +25,7 @@ import { SyncStrategySettings } from "../components/features/settings/SyncStrate
  * Features auto-save, presets, and advanced customization.
  */
 export function SettingsScreen({ navigation }: ScreenProps) {
-  const { settings, setSettings, restartTracking } = useTracking()
+  const { settings, setSettings, updateSettingsLocal, tracking, restartTracking } = useTracking()
   const { mode, toggleTheme, colors } = useTheme()
   const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
 
@@ -52,17 +52,16 @@ export function SettingsScreen({ navigation }: ScreenProps) {
     }
   }, [])
 
-  // Poll stats every 5 seconds
+  // Poll stats: 3s when tracking, 30s when idle
   useEffect(() => {
     updateStats()
-    const interval = setInterval(updateStats, STATS_REFRESH_FAST)
+    const interval = setInterval(updateStats, tracking ? STATS_REFRESH_FAST : STATS_REFRESH_IDLE)
     return () => clearInterval(interval)
-  }, [updateStats])
+  }, [updateStats, tracking])
 
   /** Debounced save + restart for continuous changes (text input, sliders) */
   const handleDebouncedSave = useCallback(
     (newSettings: Settings) => {
-      setSettings(newSettings)
       debouncedSaveAndRestart(
         () => setSettings(newSettings),
         () => restartTracking(newSettings)
@@ -74,7 +73,6 @@ export function SettingsScreen({ navigation }: ScreenProps) {
   /** Immediate save + restart for discrete changes (toggles, presets) */
   const handleImmediateSave = useCallback(
     (newSettings: Settings) => {
-      setSettings(newSettings)
       immediateSaveAndRestart(
         () => setSettings(newSettings),
         () => restartTracking(newSettings)
@@ -118,7 +116,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
         {/* Tracking Configuration */}
         <SyncStrategySettings
           settings={settings}
-          onSettingsChange={setSettings}
+          onSettingsChange={updateSettingsLocal}
           onDebouncedSave={handleDebouncedSave}
           onImmediateSave={handleImmediateSave}
           colors={colors}

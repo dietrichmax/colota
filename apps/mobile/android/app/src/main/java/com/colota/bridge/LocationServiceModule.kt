@@ -23,6 +23,7 @@ import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.Colota.location.LocationProviderFactory
 import org.json.JSONObject
 import kotlinx.coroutines.*
+import java.lang.ref.WeakReference
 
 /**
  * React Native bridge module for managing the Location Service.
@@ -43,13 +44,13 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     private val moduleScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
-        reactContextStatic = reactContext
+        reactContextRef = WeakReference(reactContext)
         reactContext.addLifecycleEventListener(this)
     }
 
     companion object {
         private const val TAG = "LocationServiceModule"
-        private var reactContextStatic: ReactApplicationContext? = null
+        private var reactContextRef: WeakReference<ReactApplicationContext> = WeakReference(null)
         
         @Volatile
         private var isAppInForeground: Boolean = true
@@ -59,7 +60,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         fun sendLocationEvent(location: android.location.Location, battery: Int, batteryStatus: Int): Boolean {
             if (!isAppInForeground) return false
             
-            val context = reactContextStatic ?: return false
+            val context = reactContextRef.get() ?: return false
             if (!context.hasActiveCatalystInstance()) return false
 
             return try {
@@ -94,7 +95,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         /** Fires when service stops for non-user reasons (OOM kill, system cleanup). */
         @JvmStatic
         fun sendTrackingStoppedEvent(reason: String): Boolean {
-            val context = reactContextStatic ?: return false
+            val context = reactContextRef.get() ?: return false
             if (!context.hasActiveCatalystInstance()) return false
 
             return try {
@@ -114,7 +115,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         /** Only fires after 3+ consecutive sync failures — see SyncManager.startPeriodicSync(). */
         @JvmStatic
         fun sendSyncErrorEvent(message: String, queuedCount: Int): Boolean {
-            val context = reactContextStatic ?: return false
+            val context = reactContextRef.get() ?: return false
             if (!context.hasActiveCatalystInstance()) return false
 
             return try {
@@ -135,7 +136,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         /** Emits pause zone entry/exit events for the JS geofence UI. */
         @JvmStatic
         fun sendPauseZoneEvent(entered: Boolean, zoneName: String?): Boolean {
-            val context = reactContextStatic ?: return false
+            val context = reactContextRef.get() ?: return false
             if (!context.hasActiveCatalystInstance()) return false
             
             return try {
@@ -170,7 +171,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     override fun invalidate() {
         moduleScope.cancel()
-        reactContextStatic = null
+        reactContextRef.clear()
         super.invalidate()
     }
 
@@ -189,7 +190,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun startService(config: ReadableMap) {
+    fun startService(config: ReadableMap, promise: Promise) {
         Log.d(TAG, "Starting Service with config")
 
         moduleScope.launch(Dispatchers.IO) {
@@ -206,8 +207,10 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             } else {
                 reactApplicationContext.startService(serviceIntent)
             }
+            promise.resolve(null)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start service", e)
+            promise.reject("START_FAILED", e.message, e)
         }
     }
 

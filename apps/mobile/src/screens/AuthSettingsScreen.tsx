@@ -84,8 +84,14 @@ export function AuthSettingsScreen({}: ScreenProps) {
   const headerEntries = Object.entries(config.customHeaders)
 
   const addHeader = useCallback(() => {
+    // Use a unique placeholder key to avoid overwriting existing empty entries
+    let key = ""
+    let i = 1
+    while (key in config.customHeaders) {
+      key = `Header-${i++}`
+    }
     updateConfig({
-      customHeaders: { ...config.customHeaders, "": "" }
+      customHeaders: { ...config.customHeaders, [key]: "" }
     })
   }, [config, updateConfig])
 

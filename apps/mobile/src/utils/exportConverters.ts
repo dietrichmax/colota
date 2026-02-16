@@ -19,7 +19,17 @@ export const getByteSize = (content: string): number => {
   let bytes = 0
   for (let i = 0; i < content.length; i++) {
     const code = content.charCodeAt(i)
-    bytes += code <= 0x7f ? 1 : code <= 0x7ff ? 2 : 3
+    if (code <= 0x7f) {
+      bytes += 1
+    } else if (code <= 0x7ff) {
+      bytes += 2
+    } else if (code >= 0xd800 && code <= 0xdbff) {
+      // High surrogate — pair encodes a 4-byte UTF-8 character
+      bytes += 4
+      i++ // skip the low surrogate
+    } else {
+      bytes += 3
+    }
   }
   return bytes
 }

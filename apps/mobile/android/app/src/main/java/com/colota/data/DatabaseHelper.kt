@@ -249,9 +249,13 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
+    private val ALLOWED_TABLES = setOf(TABLE_LOCATIONS, TABLE_QUEUE, TABLE_SETTINGS, TABLE_GEOFENCES)
+
     fun getTableData(tableName: String, limit: Int, offset: Int): List<Map<String, Any?>> {
+        require(tableName in ALLOWED_TABLES) { "Invalid table name: $tableName" }
+
         val data = mutableListOf<Map<String, Any?>>()
-        
+
         val orderBy = when(tableName) {
             TABLE_LOCATIONS -> "timestamp DESC"
             TABLE_QUEUE -> "created_at DESC"
@@ -494,8 +498,12 @@ class DatabaseHelper private constructor(context: Context) :
 
     /** Reclaims unused space. Call from background thread only. */
     fun vacuum() {
-        writableDatabase.execSQL("VACUUM")
-        writableDatabase.execSQL("ANALYZE")
+        try {
+            writableDatabase.execSQL("VACUUM")
+            writableDatabase.execSQL("ANALYZE")
+        } catch (e: Exception) {
+            Log.e(TAG, "Vacuum failed (likely concurrent access)", e)
+        }
     }
 
 
