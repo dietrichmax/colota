@@ -279,25 +279,28 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         deleted
     }
     
-    @ReactMethod 
-    fun clearQueue(promise: Promise) = executeAsync(promise) { 
+    @ReactMethod
+    fun clearQueue(promise: Promise) = executeAsync(promise) {
         val deleted = dbHelper.clearQueue()
-        moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
-        deleted 
-    }
-    
-    @ReactMethod 
-    fun clearAllLocations(promise: Promise) = executeAsync(promise) { 
-        val deleted = dbHelper.clearAllLocations()
+        refreshNotificationIfTracking()
         moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
         deleted
     }
     
     @ReactMethod
-    fun deleteOlderThan(days: Int, promise: Promise) = executeAsync(promise) { 
-        val deleted = dbHelper.deleteOlderThan(days)
+    fun clearAllLocations(promise: Promise) = executeAsync(promise) {
+        val deleted = dbHelper.clearAllLocations()
+        refreshNotificationIfTracking()
         moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
-        deleted 
+        deleted
+    }
+    
+    @ReactMethod
+    fun deleteOlderThan(days: Int, promise: Promise) = executeAsync(promise) {
+        val deleted = dbHelper.deleteOlderThan(days)
+        refreshNotificationIfTracking()
+        moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
+        deleted
     }
     
     @ReactMethod
@@ -311,6 +314,17 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             startServiceWithAction(LocationForegroundService.ACTION_RECHECK_ZONE)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to trigger zone recheck", e)
+        }
+    }
+
+    private fun refreshNotificationIfTracking() {
+        val isTracking = dbHelper.getSetting("tracking_enabled", "false") == "true"
+        if (isTracking) {
+            try {
+                startServiceWithAction(LocationForegroundService.ACTION_REFRESH_NOTIFICATION)
+            } catch (e: Exception) {
+                Log.w(TAG, "Notification refresh skipped: service not running", e)
+            }
         }
     }
 

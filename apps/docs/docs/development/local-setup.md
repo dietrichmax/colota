@@ -111,7 +111,7 @@ colota/
 │   │   │   └── app/src/
 │   │   │       ├── main/java/com/colota/
 │   │   │       │   ├── bridge/      # React Native bridge
-│   │   │       │   ├── service/     # Foreground service & config
+│   │   │       │   ├── service/     # Foreground service, config & notifications
 │   │   │       │   ├── data/        # SQLite & geofencing
 │   │   │       │   ├── sync/        # Network sync & payloads
 │   │   │       │   ├── util/        # Helpers & encryption
@@ -165,7 +165,8 @@ Test files are located in `apps/mobile/android/app/src/test/java/com/Colota/`. T
 - **DatabaseHelper** — Data model, cutoff calculations, batch operations
 - **SecureStorageHelper** — Basic Auth, Bearer token, custom headers, JSON parsing
 - **DeviceInfoHelper** — Battery threshold logic, status code mapping, percentage calculation
-- **LocationForegroundService** — Notification throttling, sync formatting, zone state machine, battery shutdown
+- **NotificationHelper** — Status text generation, throttling, movement filter, deduplication
+- **LocationForegroundService** — Battery shutdown, accuracy filtering, zone state machine
 - **ServiceConfig** — Database/Intent/ReadableMap parsing, defaults, round-trips
 - **PayloadBuilder** — JSON payload construction and field map parsing
 - **GeofenceHelper** — Haversine distance calculations and radius checks
