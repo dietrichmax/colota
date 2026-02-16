@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { NativeEventEmitter, NativeModules } from "react-native"
+import { AppState, NativeEventEmitter, NativeModules } from "react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { LocationCoords, Settings, LocationTrackingResult } from "../types/global"
@@ -80,6 +80,38 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
 
     syncInitialLocation()
   }, [tracking, isRestarting, coords])
+
+  /**
+   * Fetches latest location from DB when app returns to foreground.
+   * Native events are suppressed while backgrounded, so coords go stale.
+   */
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active" && isTrackingRef.current) {
+        NativeLocationService.getMostRecentLocation()
+          .then((latest) => {
+            if (latest) {
+              setCoords({
+                latitude: latest.latitude,
+                longitude: latest.longitude,
+                accuracy: latest.accuracy,
+                altitude: latest.altitude ?? 0,
+                speed: latest.speed ?? 0,
+                bearing: latest.bearing ?? 0,
+                timestamp: latest.timestamp ?? Date.now(),
+                battery: latest.battery,
+                battery_status: latest.batteryStatus
+              })
+            }
+          })
+          .catch((err) => {
+            logger.error("[useLocationTracking] Failed to fetch location on resume:", err)
+          })
+      }
+    })
+
+    return () => subscription.remove()
+  }, [])
 
   /**
    * Subscribes to real-time location updates from native service
