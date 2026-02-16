@@ -231,8 +231,8 @@ class LocationForegroundService : Service() {
                 onFailure = { /* initial location unavailable, updates will arrive */ }
             )
         } catch (e: SecurityException) {
-            Log.e(TAG, "Location permission missing", e)
-            stopSelf()
+            Log.e(TAG, "Location permission revoked at runtime", e)
+            stopForegroundServiceWithReason("Location permission revoked")
         }
     }
 

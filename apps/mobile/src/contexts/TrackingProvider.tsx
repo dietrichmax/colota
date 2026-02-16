@@ -8,6 +8,7 @@ import { Settings, DEFAULT_SETTINGS, LocationCoords, ApiTemplateName, HttpMethod
 import { useLocationTracking } from "../hooks/useLocationTracking"
 import NativeLocationService from "../services/NativeLocationService"
 import SettingsService from "../services/SettingsService"
+import { checkPermissions } from "../services/LocationServicePermission"
 import { LocationDisclosureModal } from "../components/ui/LocationDisclosureModal"
 import { AppModal } from "../components/ui/AppModal"
 import { logger } from "../utils/logger"
@@ -153,6 +154,14 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
         // Auto-reconnect UI if tracking was active
         const isTrackingActive = allRaw.tracking_enabled === "true"
         if (isTrackingActive) {
+          // Verify location permission still granted (may have been revoked while process was dead)
+          const perms = await checkPermissions()
+          if (!perms.location) {
+            logger.warn("[TrackingContext] Permission revoked while inactive — clearing tracking state")
+            NativeLocationService.stop()
+            return
+          }
+
           logger.debug("[TrackingContext] Re-syncing UI with active background service")
           internalReconnect()
         }

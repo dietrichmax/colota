@@ -8,7 +8,7 @@ import { AppState, NativeEventEmitter, NativeModules } from "react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { LocationCoords, Settings, LocationTrackingResult } from "../types/global"
-import { ensurePermissions } from "../services/LocationServicePermission"
+import { ensurePermissions, checkPermissions } from "../services/LocationServicePermission"
 import { logger } from "../utils/logger"
 
 const { LocationServiceModule } = NativeModules
@@ -86,27 +86,41 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    * Native events are suppressed while backgrounded, so coords go stale.
    */
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active" && isTrackingRef.current) {
-        NativeLocationService.getMostRecentLocation()
-          .then((latest) => {
-            if (latest) {
-              setCoords({
-                latitude: latest.latitude,
-                longitude: latest.longitude,
-                accuracy: latest.accuracy,
-                altitude: latest.altitude ?? 0,
-                speed: latest.speed ?? 0,
-                bearing: latest.bearing ?? 0,
-                timestamp: latest.timestamp ?? Date.now(),
-                battery: latest.battery,
-                battery_status: latest.batteryStatus
-              })
-            }
+    const subscription = AppState.addEventListener("change", async (nextState) => {
+      if (nextState !== "active" || !isTrackingRef.current) return
+
+      try {
+        // Verify permission still granted (user may have revoked it in Settings)
+        const perms = await checkPermissions()
+        if (!perms.location) {
+          logger.warn("[useLocationTracking] Permission revoked — stopping tracking")
+          if (listenerRef.current) {
+            listenerRef.current.remove()
+            listenerRef.current = null
+          }
+          NativeLocationService.stop()
+          setTracking(false)
+          setCoords(null)
+          showAlert("Tracking Stopped", "Location permission was revoked.", "warning")
+          return
+        }
+
+        const latest = await NativeLocationService.getMostRecentLocation()
+        if (latest) {
+          setCoords({
+            latitude: latest.latitude,
+            longitude: latest.longitude,
+            accuracy: latest.accuracy,
+            altitude: latest.altitude ?? 0,
+            speed: latest.speed ?? 0,
+            bearing: latest.bearing ?? 0,
+            timestamp: latest.timestamp ?? Date.now(),
+            battery: latest.battery,
+            battery_status: latest.batteryStatus
           })
-          .catch((err) => {
-            logger.error("[useLocationTracking] Failed to fetch location on resume:", err)
-          })
+        }
+      } catch (err) {
+        logger.error("[useLocationTracking] Failed to fetch location on resume:", err)
       }
     })
 
