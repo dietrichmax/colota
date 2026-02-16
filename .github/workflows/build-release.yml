@@ -38,7 +38,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout code
@@ -119,6 +119,13 @@ jobs:
         with:
           name: release-apks
           path: |
+            apps/mobile/android/app/build/outputs/apk/gms/release/*.apk
+            apps/mobile/android/app/build/outputs/apk/foss/release/*.apk
+
+      - name: Upload APKs to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
             apps/mobile/android/app/build/outputs/apk/gms/release/*.apk
             apps/mobile/android/app/build/outputs/apk/foss/release/*.apk
 
