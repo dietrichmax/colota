@@ -22,6 +22,7 @@ export { NumericInput } from "./ui/NumericInput"
 export { FloatingSaveIndicator } from "./ui/FloatingSaveIndicator"
 export { Footer } from "./ui/Footer"
 export { SpinningLoader } from "./ui/SpinningLoader"
+export { LocationDisclosureModal } from "./ui/LocationDisclosureModal"
 
 // ============================================================================
 // Feature Components - Dashboard

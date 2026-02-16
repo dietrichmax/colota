@@ -24,43 +24,61 @@ const ANDROID_10 = 29
 const ANDROID_13 = 33
 
 /**
+ * Callback registered by LocationDisclosureModal to show the themed disclosure.
+ * Falls back to Alert.alert if no modal is registered (e.g. in tests).
+ */
+type DisclosureCallback = () => Promise<boolean>
+let _disclosureCallback: DisclosureCallback | null = null
+
+/**
+ * Registers the disclosure modal callback.
+ * Called by LocationDisclosureModal on mount.
+ */
+export function registerDisclosureCallback(cb: DisclosureCallback) {
+  _disclosureCallback = cb
+}
+
+/**
  * Requests all necessary permissions for location tracking.
  *
- * Requests in sequence:
- * 1. Fine location (always required)
- * 2. Background location (Android 10+)
- * 3. Notifications (Android 13+)
- * 4. Battery optimization exemption
- *
- * Shows alerts explaining each permission and returns false if any critical permission is denied.
+ * Shows a prominent disclosure first (required by Google Play),
+ * then requests permissions. Skips if all permissions are already granted.
  *
  * @returns True if all required permissions granted
- *
- * @example
- * ```ts
- * if (await ensurePermissions()) {
- *   startLocationTracking();
- * }
- * ```
  */
 export async function ensurePermissions(): Promise<boolean> {
   if (Platform.OS !== "android") return true
 
   try {
-    // 1. Fine location (required)
-    if (!(await requestFineLocation())) return false
-
-    // 2. Background location (Android 10+)
-    if (Platform.Version >= ANDROID_10) {
-      if (!(await requestBackgroundLocation())) return false
+    // Skip disclosure + requests if everything is already granted
+    const status = await checkPermissions()
+    if (status.location && status.background && status.notifications) {
+      await requestBatteryOptimizationExemption()
+      return true
     }
 
-    // 3. Notifications (Android 13+)
-    if (Platform.Version >= ANDROID_13) {
-      if (!(await requestNotificationPermission())) return false
+    // Prominent disclosure (required by Google Play User Data policy)
+    const consented = _disclosureCallback ? await _disclosureCallback() : await fallbackDisclosure()
+    if (!consented) return false
+
+    // Fine location
+    if (!status.location) {
+      const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION)
+      if (result !== PermissionsAndroid.RESULTS.GRANTED) return false
     }
 
-    // 4. Battery optimization exemption (optional but recommended)
+    // Background location (Android 10+)
+    if (Platform.Version >= ANDROID_10 && !status.background) {
+      const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)
+      if (result !== PermissionsAndroid.RESULTS.GRANTED) return false
+    }
+
+    // Notifications (Android 13+, non-blocking)
+    if (Platform.Version >= ANDROID_13 && !status.notifications) {
+      await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
+    }
+
+    // Battery optimization exemption (optional)
     await requestBatteryOptimizationExemption()
 
     return true
@@ -72,69 +90,20 @@ export async function ensurePermissions(): Promise<boolean> {
 }
 
 /**
- * Requests fine location permission
+ * Fallback disclosure using Alert (for tests or if modal not mounted).
  */
-async function requestFineLocation(): Promise<boolean> {
-  const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION, {
-    title: "Location Permission",
-    message: "Colota needs access to your location to track your position.",
-    buttonPositive: "Allow",
-    buttonNegative: "Deny"
-  })
-
-  if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-    Alert.alert("Permission Required", "Location permission is required for this app to function.", [{ text: "OK" }])
-    return false
-  }
-
-  return true
-}
-
-/**
- * Requests background location permission (Android 10+)
- */
-async function requestBackgroundLocation(): Promise<boolean> {
-  const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION, {
-    title: "Background Location Permission",
-    message:
-      "To track your location continuously, Colota needs permission to access your location in the background, even when you are not actively using it.",
-    buttonPositive: "Allow",
-    buttonNegative: "Deny"
-  })
-
-  if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+function fallbackDisclosure(): Promise<boolean> {
+  return new Promise((resolve) => {
     Alert.alert(
-      "Background Permission Denied",
-      "Background location permission is needed for continuous tracking. The app may stop when closed or in the background.",
-      [{ text: "OK" }]
+      "Location Data Collection",
+      "Colota collects location data to enable GPS tracking and sending your position to your configured server, even when the app is closed or not in use.\n\nNo data is shared with third parties.",
+      [
+        { text: "Not Now", style: "cancel", onPress: () => resolve(false) },
+        { text: "Agree", onPress: () => resolve(true) }
+      ],
+      { cancelable: false }
     )
-    return false
-  }
-
-  return true
-}
-
-/**
- * Requests notification permission (Android 13+)
- */
-async function requestNotificationPermission(): Promise<boolean> {
-  const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS, {
-    title: "Notification Permission",
-    message: "Colota needs permission to show notifications while tracking your location.",
-    buttonPositive: "Allow",
-    buttonNegative: "Deny"
   })
-
-  if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-    Alert.alert(
-      "Notification Permission Denied",
-      "Without notification permission, you will not see tracking status updates.",
-      [{ text: "OK" }]
-    )
-    return false
-  }
-
-  return true
 }
 
 /**
@@ -148,20 +117,11 @@ async function requestBatteryOptimizationExemption(): Promise<void> {
     }
   } catch (err) {
     logger.error("[PermissionService] Battery optimization request failed:", err)
-    // Non-critical, don't block
   }
 }
 
 /**
  * Checks current permission status without requesting.
- *
- * Useful for checking before starting tracking or displaying status in settings.
- *
- * @example
- * ```ts
- * const status = await checkPermissions();
- * if (!status.location) console.log('Location not granted');
- * ```
  */
 export async function checkPermissions(): Promise<PermissionStatus> {
   if (Platform.OS !== "android") {
@@ -188,42 +148,25 @@ export async function checkPermissions(): Promise<PermissionStatus> {
   }
 }
 
-/**
- * Check fine location permission
- */
 async function checkFineLocation(): Promise<boolean> {
   return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION)
 }
 
-/**
- * Gets Android version as a number
- */
 function getAndroidVersion(): number {
   if (Platform.OS !== "android") return 0
   return typeof Platform.Version === "number" ? Platform.Version : parseInt(Platform.Version, 10) || 0
 }
 
-/**
- * Check background location permission (Android 10+)
- */
 async function checkBackgroundLocation(): Promise<boolean> {
   if (getAndroidVersion() < ANDROID_10) return true
-
   return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)
 }
 
-/**
- * Check notification permission (Android 13+)
- */
 async function checkNotifications(): Promise<boolean> {
   if (getAndroidVersion() < ANDROID_13) return true
-
   return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
 }
 
-/**
- * Check battery optimization status
- */
 async function checkBatteryOptimization(): Promise<boolean> {
   try {
     return await NativeLocationService.isIgnoringBatteryOptimizations()

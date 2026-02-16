@@ -1,5 +1,5 @@
 import { Platform, PermissionsAndroid, Alert } from "react-native"
-import { ensurePermissions, checkPermissions } from "../LocationServicePermission"
+import { ensurePermissions, checkPermissions, registerDisclosureCallback } from "../LocationServicePermission"
 
 // Mock NativeLocationService
 jest.mock("../NativeLocationService", () => ({
@@ -28,13 +28,18 @@ beforeEach(() => {
   jest.clearAllMocks()
   jest.spyOn(console, "error").mockImplementation()
   requestSpy = jest.spyOn(PermissionsAndroid, "request").mockResolvedValue(PermissionsAndroid.RESULTS.GRANTED)
-  checkSpy = jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(true)
+  // Default: permissions not granted (so disclosure + request flow runs)
+  checkSpy = jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(false)
   alertSpy = jest.spyOn(Alert, "alert").mockImplementation()
+  // Register auto-agree disclosure for tests
+  registerDisclosureCallback(() => Promise.resolve(true))
 })
 
 afterEach(() => {
   jest.restoreAllMocks()
   setPlatform(originalOS, originalVersion as number)
+  // Reset disclosure callback
+  registerDisclosureCallback(() => Promise.resolve(true))
 })
 
 describe("ensurePermissions", () => {
@@ -47,12 +52,47 @@ describe("ensurePermissions", () => {
     expect(requestSpy).not.toHaveBeenCalled()
   })
 
+  it("skips disclosure and requests if all permissions already granted", async () => {
+    setPlatform("android", 33)
+    checkSpy.mockResolvedValue(true)
+
+    const disclosureSpy = jest.fn().mockResolvedValue(true)
+    registerDisclosureCallback(disclosureSpy)
+
+    const result = await ensurePermissions()
+
+    expect(result).toBe(true)
+    expect(disclosureSpy).not.toHaveBeenCalled()
+    expect(requestSpy).not.toHaveBeenCalled()
+  })
+
+  it("shows disclosure before requesting permissions", async () => {
+    setPlatform("android", 28)
+    const disclosureSpy = jest.fn().mockResolvedValue(true)
+    registerDisclosureCallback(disclosureSpy)
+
+    await ensurePermissions()
+
+    expect(disclosureSpy).toHaveBeenCalledTimes(1)
+    expect(requestSpy).toHaveBeenCalled()
+  })
+
+  it("returns false if user denies disclosure", async () => {
+    setPlatform("android", 28)
+    registerDisclosureCallback(() => Promise.resolve(false))
+
+    const result = await ensurePermissions()
+
+    expect(result).toBe(false)
+    expect(requestSpy).not.toHaveBeenCalled()
+  })
+
   it("requests fine location permission", async () => {
     setPlatform("android", 28)
 
     await ensurePermissions()
 
-    expect(requestSpy).toHaveBeenCalledWith(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION, expect.any(Object))
+    expect(requestSpy).toHaveBeenCalledWith(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION)
   })
 
   it("returns false if fine location denied", async () => {
@@ -62,7 +102,6 @@ describe("ensurePermissions", () => {
     const result = await ensurePermissions()
 
     expect(result).toBe(false)
-    expect(alertSpy).toHaveBeenCalledWith("Permission Required", expect.any(String), expect.any(Array))
   })
 
   it("requests background location on Android 10+", async () => {
@@ -70,10 +109,7 @@ describe("ensurePermissions", () => {
 
     await ensurePermissions()
 
-    expect(requestSpy).toHaveBeenCalledWith(
-      PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
-      expect.any(Object)
-    )
+    expect(requestSpy).toHaveBeenCalledWith(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)
   })
 
   it("skips background location on Android < 10", async () => {
@@ -90,7 +126,7 @@ describe("ensurePermissions", () => {
 
     await ensurePermissions()
 
-    expect(requestSpy).toHaveBeenCalledWith(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS, expect.any(Object))
+    expect(requestSpy).toHaveBeenCalledWith(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
   })
 
   it("skips notification permission on Android < 13", async () => {
@@ -113,7 +149,7 @@ describe("ensurePermissions", () => {
     expect(result).toBe(false)
   })
 
-  it("returns false if notification permission denied", async () => {
+  it("still returns true if notification permission denied (non-blocking)", async () => {
     setPlatform("android", 33)
     requestSpy
       .mockResolvedValueOnce(PermissionsAndroid.RESULTS.GRANTED) // fine location
@@ -122,12 +158,13 @@ describe("ensurePermissions", () => {
 
     const result = await ensurePermissions()
 
-    expect(result).toBe(false)
+    expect(result).toBe(true)
   })
 
   it("requests battery optimization exemption", async () => {
     setPlatform("android", 33)
-    mockIsIgnoring.mockResolvedValueOnce(false)
+    // First call from checkPermissions (checkBatteryOptimization), second from requestBatteryOptimizationExemption
+    mockIsIgnoring.mockResolvedValueOnce(false).mockResolvedValueOnce(false)
 
     await ensurePermissions()
 
@@ -154,12 +191,53 @@ describe("ensurePermissions", () => {
 
   it("returns false and shows alert on unexpected error", async () => {
     setPlatform("android", 28)
-    requestSpy.mockRejectedValueOnce(new Error("unexpected"))
+    checkSpy.mockRejectedValueOnce(new Error("unexpected"))
 
     const result = await ensurePermissions()
 
     expect(result).toBe(false)
     expect(alertSpy).toHaveBeenCalledWith("Permission Error", expect.any(String), expect.any(Array))
+  })
+
+  it("uses fallback Alert disclosure if no callback registered", async () => {
+    setPlatform("android", 28)
+    // Unregister callback to trigger fallback
+    registerDisclosureCallback(undefined as any)
+
+    // ensurePermissions will call fallbackDisclosure() which uses Alert.alert
+    // Alert.alert is mocked so it won't block - we need to simulate the tap
+    alertSpy.mockImplementation((_title: string, _msg: string, buttons: any[]) => {
+      // Auto-tap "Agree"
+      const agreeButton = buttons.find((b: any) => b.text === "Agree")
+      if (agreeButton?.onPress) agreeButton.onPress()
+    })
+
+    const result = await ensurePermissions()
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Location Data Collection",
+      expect.stringContaining("location data"),
+      expect.any(Array),
+      expect.any(Object)
+    )
+    expect(result).toBe(true)
+  })
+
+  it("skips already-granted permissions", async () => {
+    setPlatform("android", 33)
+    // Fine location already granted, background and notifications not
+    checkSpy.mockImplementation((permission: string) => {
+      if (permission === PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION) {
+        return Promise.resolve(true)
+      }
+      return Promise.resolve(false)
+    })
+
+    await ensurePermissions()
+
+    const permissions = requestSpy.mock.calls.map((c: any[]) => c[0])
+    expect(permissions).not.toContain(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION)
+    expect(permissions).toContain(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)
   })
 })
 
