@@ -1,5 +1,11 @@
 import { Platform, PermissionsAndroid, Alert } from "react-native"
 import { ensurePermissions, checkPermissions, registerDisclosureCallback } from "../LocationServicePermission"
+import { showAlert } from "../modalService"
+
+jest.mock("../modalService", () => ({
+  showAlert: jest.fn(),
+  showConfirm: jest.fn()
+}))
 
 // Mock NativeLocationService
 jest.mock("../NativeLocationService", () => ({
@@ -196,7 +202,7 @@ describe("ensurePermissions", () => {
     const result = await ensurePermissions()
 
     expect(result).toBe(false)
-    expect(alertSpy).toHaveBeenCalledWith("Permission Error", expect.any(String), expect.any(Array))
+    expect(showAlert).toHaveBeenCalledWith("Permission Error", expect.any(String), "error")
   })
 
   it("uses fallback Alert disclosure if no callback registered", async () => {

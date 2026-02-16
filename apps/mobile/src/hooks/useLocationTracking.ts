@@ -4,8 +4,9 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { NativeEventEmitter, NativeModules, Alert } from "react-native"
+import { NativeEventEmitter, NativeModules } from "react-native"
 import NativeLocationService from "../services/NativeLocationService"
+import { showAlert } from "../services/modalService"
 import { LocationCoords, Settings, LocationTrackingResult } from "../types/global"
 import { ensurePermissions } from "../services/LocationServicePermission"
 import { logger } from "../utils/logger"
@@ -153,7 +154,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
 
     const granted = await ensurePermissions()
     if (!granted) {
-      Alert.alert("Permission Required", "Background location permission is required for tracking.")
+      showAlert("Permission Required", "Background location permission is required for tracking.", "warning")
       return
     }
 
@@ -165,7 +166,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
     } catch (error) {
       setTracking(false)
       logger.error("[useLocationTracking] Failed to start:", error)
-      Alert.alert("Error", "Failed to start location tracking.")
+      showAlert("Error", "Failed to start location tracking.", "error")
     }
   }, [])
 

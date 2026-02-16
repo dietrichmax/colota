@@ -9,6 +9,7 @@ import { useLocationTracking } from "../hooks/useLocationTracking"
 import NativeLocationService from "../services/NativeLocationService"
 import SettingsService from "../services/SettingsService"
 import { LocationDisclosureModal } from "../components/ui/LocationDisclosureModal"
+import { AppModal } from "../components/ui/AppModal"
 import { logger } from "../utils/logger"
 
 type TrackingContextType = {
@@ -259,6 +260,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
   return (
     <TrackingContext.Provider value={value}>
       <LocationDisclosureModal />
+      <AppModal />
       {children}
     </TrackingContext.Provider>
   )

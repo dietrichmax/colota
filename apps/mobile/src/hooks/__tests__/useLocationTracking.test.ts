@@ -1,6 +1,11 @@
 import { renderHook, act } from "@testing-library/react-native"
-import { Alert } from "react-native"
 import { DEFAULT_SETTINGS } from "../../types/global"
+import { showAlert } from "../../services/modalService"
+
+jest.mock("../../services/modalService", () => ({
+  showAlert: jest.fn(),
+  showConfirm: jest.fn()
+}))
 
 // Mock NativeLocationService
 const mockStart = jest.fn().mockResolvedValue(undefined)
@@ -36,7 +41,6 @@ import { useLocationTracking } from "../useLocationTracking"
 
 beforeEach(() => {
   jest.clearAllMocks()
-  jest.spyOn(Alert, "alert").mockImplementation()
   jest.spyOn(console, "log").mockImplementation()
   jest.spyOn(console, "error").mockImplementation()
 })
@@ -91,7 +95,7 @@ describe("useLocationTracking", () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
       })
 
-      expect(Alert.alert).toHaveBeenCalledWith("Permission Required", expect.any(String))
+      expect(showAlert).toHaveBeenCalledWith("Permission Required", expect.any(String), "warning")
       expect(mockStart).not.toHaveBeenCalled()
       expect(result.current.tracking).toBe(false)
     })
@@ -105,7 +109,7 @@ describe("useLocationTracking", () => {
       })
 
       expect(result.current.tracking).toBe(false)
-      expect(Alert.alert).toHaveBeenCalledWith("Error", expect.any(String))
+      expect(showAlert).toHaveBeenCalledWith("Error", expect.any(String), "error")
     })
   })
 

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
-import { Text, StyleSheet, View, Alert, ActivityIndicator, ScrollView, TouchableOpacity } from "react-native"
+import { Text, StyleSheet, View, ActivityIndicator, ScrollView, TouchableOpacity } from "react-native"
 import { fonts } from "../styles/typography"
 import { Download, type LucideIcon } from "lucide-react-native"
 import { Container, Card, SectionTitle, Divider } from "../components"
@@ -13,6 +13,7 @@ import { ThemeColors, LocationCoords } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { LARGE_FILE_THRESHOLD, formatBytes, getByteSize, EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
 import { logger } from "../utils/logger"
+import { showAlert, showConfirm } from "../services/modalService"
 
 interface ExportStats {
   totalLocations: number
@@ -62,7 +63,7 @@ export function ExportDataScreen() {
 
   const handleExport = async (format: ExportFormat) => {
     if (stats.totalLocations === 0) {
-      Alert.alert("No Data", "There are no locations in the database to export.")
+      showAlert("No Data", "There are no locations in the database to export.", "info")
       return
     }
 
@@ -85,20 +86,10 @@ export function ExportDataScreen() {
         setExporting(false)
         setExportProgress("")
 
-        const confirmed = await new Promise<boolean>((resolve) => {
-          Alert.alert(
-            "Large Export",
-            `The export file is ${formatBytes(exportSize)}. This may take a moment to save and share. Continue?`,
-            [
-              {
-                text: "Cancel",
-                style: "cancel",
-                onPress: () => resolve(false)
-              },
-              { text: "Continue", onPress: () => resolve(true) }
-            ],
-            { cancelable: false }
-          )
+        const confirmed = await showConfirm({
+          title: "Large Export",
+          message: `The export file is ${formatBytes(exportSize)}. This may take a moment to save and share. Continue?`,
+          confirmText: "Continue"
         })
 
         if (!confirmed) {
@@ -127,7 +118,7 @@ export function ExportDataScreen() {
       }
     } catch (error) {
       logger.error("[ExportDataScreen] Export failed:", error)
-      Alert.alert("Export Failed", "Unable to export your data. Please try again.")
+      showAlert("Export Failed", "Unable to export your data. Please try again.", "error")
     } finally {
       setExporting(false)
       setExportProgress("")
