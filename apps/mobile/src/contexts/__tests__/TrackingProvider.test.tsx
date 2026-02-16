@@ -20,6 +20,10 @@ jest.mock("../../components/ui/LocationDisclosureModal", () => ({
   LocationDisclosureModal: () => null
 }))
 
+jest.mock("../../components/ui/AppModal", () => ({
+  AppModal: () => null
+}))
+
 const mockStartTracking = jest.fn().mockResolvedValue(undefined)
 const mockStopTracking = jest.fn()
 const mockRestartTracking = jest.fn().mockResolvedValue(undefined)

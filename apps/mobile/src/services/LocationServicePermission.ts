@@ -5,6 +5,7 @@
 
 import { Platform, PermissionsAndroid, Alert } from "react-native"
 import NativeLocationService from "./NativeLocationService"
+import { showAlert } from "./modalService"
 import { logger } from "../utils/logger"
 
 /**
@@ -84,7 +85,7 @@ export async function ensurePermissions(): Promise<boolean> {
     return true
   } catch (err) {
     logger.error("[PermissionService] Permission request error:", err)
-    Alert.alert("Permission Error", "Failed to request permissions. Please try again.", [{ text: "OK" }])
+    showAlert("Permission Error", "Failed to request permissions. Please try again.", "error")
     return false
   }
 }

@@ -4,20 +4,11 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  Alert,
-  Switch,
-  DeviceEventEmitter
-} from "react-native"
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Switch, DeviceEventEmitter } from "react-native"
 import { WebView } from "react-native-webview"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
+import { showAlert, showConfirm } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking } from "../contexts/TrackingProvider"
 import { fonts } from "../styles/typography"
@@ -170,7 +161,7 @@ export function GeofenceScreen({}: ScreenProps) {
             await loadGeofences()
             DeviceEventEmitter.emit("geofenceUpdated")
           } catch {
-            Alert.alert("Error", "Failed to create geofence.")
+            showAlert("Error", "Failed to create geofence.", "error")
           }
         }
       } catch (err) {
@@ -182,13 +173,13 @@ export function GeofenceScreen({}: ScreenProps) {
 
   const startPlacingGeofence = useCallback(() => {
     if (!newName.trim()) {
-      Alert.alert("Missing Name", "Please enter a name.")
+      showAlert("Missing Name", "Please enter a name.", "warning")
       return
     }
 
     const radius = Number(newRadius)
     if (!radius || radius <= 0) {
-      Alert.alert("Invalid Radius", "Please enter a valid radius.")
+      showAlert("Invalid Radius", "Please enter a valid radius.", "warning")
       return
     }
 
@@ -213,7 +204,7 @@ export function GeofenceScreen({}: ScreenProps) {
         DeviceEventEmitter.emit("geofenceUpdated")
         await NativeLocationService.recheckZoneSettings()
       } catch {
-        Alert.alert("Error", "Failed to update geofence.")
+        showAlert("Error", "Failed to update geofence.", "error")
       }
     },
     [loadGeofences]
@@ -233,23 +224,23 @@ export function GeofenceScreen({}: ScreenProps) {
   }, [])
 
   const handleDelete = useCallback(
-    (item: Geofence) => {
-      Alert.alert("Delete Geofence", `Delete "${item.name}"?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await NativeLocationService.deleteGeofence(item.id!)
-              await loadGeofences()
-              DeviceEventEmitter.emit("geofenceUpdated")
-            } catch {
-              Alert.alert("Error", "Failed to delete geofence.")
-            }
-          }
-        }
-      ])
+    async (item: Geofence) => {
+      const confirmed = await showConfirm({
+        title: "Delete Geofence",
+        message: `Delete "${item.name}"?`,
+        confirmText: "Delete",
+        destructive: true
+      })
+
+      if (!confirmed) return
+
+      try {
+        await NativeLocationService.deleteGeofence(item.id!)
+        await loadGeofences()
+        DeviceEventEmitter.emit("geofenceUpdated")
+      } catch {
+        showAlert("Error", "Failed to delete geofence.", "error")
+      }
     },
     [loadGeofences]
   )
