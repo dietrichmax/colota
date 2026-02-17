@@ -164,6 +164,15 @@ export function ApiSettingsScreen({}: ScreenProps) {
         return null
       }
 
+      // Block saving when duplicate field names exist
+      const allNames: string[] = [
+        ...Object.values(sanitizedMap).filter((v) => v),
+        ...newCustomFields.map((f) => f.key.trim()).filter((k) => k)
+      ]
+      if (new Set(allNames).size !== allNames.length) {
+        return null
+      }
+
       const sanitizedCustomFields = newCustomFields
         .map((f) => ({ key: f.key.trim(), value: f.value.trim() }))
         .filter((f) => f.key.length > 0)
@@ -533,8 +542,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
             style={[styles.warningBanner, { backgroundColor: colors.error + "15", borderColor: colors.error + "40" }]}
           >
             <Text style={[styles.warningText, { color: colors.error }]}>
-              Duplicate field names detected: {[...duplicateFieldNames].join(", ")}. Later values will overwrite earlier
-              ones in the payload.
+              Duplicate field names: {[...duplicateFieldNames].join(", ")}. Resolve duplicates to save changes.
             </Text>
           </View>
         )}
