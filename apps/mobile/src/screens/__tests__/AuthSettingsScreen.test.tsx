@@ -11,7 +11,7 @@ const mockGetAuthConfig = jest.fn(() => Promise.resolve(mockAuthConfig))
 jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
   default: {
-    getAuthConfig: (...args: any[]) => mockGetAuthConfig(...args),
+    getAuthConfig: () => mockGetAuthConfig(),
     saveAuthConfig: (...args: any[]) => mockSaveAuthConfig(...args)
   }
 }))
@@ -82,7 +82,7 @@ describe("AuthSettingsScreen", () => {
   })
 
   function renderScreen() {
-    return render(<AuthSettingsScreen navigation={{} as any} route={{} as any} />)
+    return render(<AuthSettingsScreen navigation={{} as any} />)
   }
 
   describe("loading state", () => {

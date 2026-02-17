@@ -73,7 +73,7 @@ describe("ApiSettingsScreen", () => {
     if (settingsOverride) {
       mockSettings = { ...DEFAULT_SETTINGS, ...settingsOverride }
     }
-    return render(<ApiSettingsScreen navigation={{} as any} route={{} as any} />)
+    return render(<ApiSettingsScreen navigation={{} as any} />)
   }
 
   describe("template switching", () => {
