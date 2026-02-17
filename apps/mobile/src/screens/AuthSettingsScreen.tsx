@@ -13,6 +13,7 @@ import { fonts, fontSizes } from "../styles/typography"
 import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
+import { findDuplicates } from "../utils/settingsValidation"
 
 const AUTH_TYPES: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
@@ -55,15 +56,8 @@ export function AuthSettingsScreen({}: ScreenProps) {
 
   /** Detect duplicate header keys */
   const duplicateKeys = useMemo(() => {
-    const seen = new Set<string>()
-    const dupes = new Set<string>()
-    for (const h of localHeaders) {
-      const k = h.key.trim()
-      if (!k) continue
-      if (seen.has(k)) dupes.add(k)
-      seen.add(k)
-    }
-    return dupes
+    const keys = localHeaders.map((h) => h.key.trim()).filter(Boolean)
+    return findDuplicates(keys)
   }, [localHeaders])
 
   /** Convert local headers array to Record for saving */

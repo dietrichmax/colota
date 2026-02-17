@@ -491,12 +491,22 @@ class NativeLocationService {
   static async getAuthConfig(): Promise<AuthConfig> {
     this.ensureModule()
     const raw = await LocationServiceModule.getAllAuthConfig()
+
+    let customHeaders: Record<string, string> = {}
+    if (raw.customHeaders) {
+      try {
+        customHeaders = JSON.parse(raw.customHeaders)
+      } catch {
+        // Corrupted JSON — reset to empty
+      }
+    }
+
     return {
       authType: raw.authType || "none",
       username: raw.username || "",
       password: raw.password || "",
       bearerToken: raw.bearerToken || "",
-      customHeaders: raw.customHeaders ? JSON.parse(raw.customHeaders) : {}
+      customHeaders
     }
   }
 
