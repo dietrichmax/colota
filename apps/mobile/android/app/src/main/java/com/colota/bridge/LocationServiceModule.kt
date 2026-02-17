@@ -133,6 +133,28 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             }
         }
 
+        /** Emits sync progress during manual flush so JS can show "5/127 synced". */
+        @JvmStatic
+        fun sendSyncProgressEvent(sent: Int, failed: Int, total: Int): Boolean {
+            val context = reactContextRef.get() ?: return false
+            if (!context.hasActiveCatalystInstance()) return false
+
+            return try {
+                val params = Arguments.createMap().apply {
+                    putInt("sent", sent)
+                    putInt("failed", failed)
+                    putInt("total", total)
+                }
+                context
+                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                    .emit("onSyncProgress", params)
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send sync progress event", e)
+                false
+            }
+        }
+
         /** Emits pause zone entry/exit events for the JS geofence UI. */
         @JvmStatic
         fun sendPauseZoneEvent(entered: Boolean, zoneName: String?): Boolean {

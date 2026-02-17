@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useRef } from "react"
 import {
   Text,
   StyleSheet,
@@ -12,7 +12,9 @@ import {
   TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  NativeEventEmitter,
+  NativeModules
 } from "react-native"
 import { Lightbulb } from "lucide-react-native"
 import { useFocusEffect } from "@react-navigation/native"
@@ -21,8 +23,9 @@ import { useTheme } from "../hooks/useTheme"
 import { fonts, fontSizes } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
-import { STATS_REFRESH_FAST } from "../constants"
+import { STATS_REFRESH_FAST, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
+import { showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 
 export function DataManagementScreen({}: ScreenProps) {
@@ -62,35 +65,70 @@ export function DataManagementScreen({}: ScreenProps) {
 
   // Show feedback message
   const showFeedback = useCallback(
-    (message: string, duration = 2000) => {
+    (message: string, duration = SAVE_SUCCESS_DISPLAY_MS) => {
       setFeedback(message)
       feedbackTimeout.set(() => setFeedback(null), duration)
     },
     [feedbackTimeout]
   )
 
-  // Manual flush
+  // Manual flush with progress
+  const progressListenerRef = useRef<any>(null)
+  const syncEmitter = useRef(new NativeEventEmitter(NativeModules.LocationServiceModule)).current
+  const flushTimeout = useTimeout()
+
+  const cleanupFlush = useCallback(async () => {
+    progressListenerRef.current?.remove()
+    progressListenerRef.current = null
+    flushTimeout.clear()
+    await updateStats()
+    setIsProcessing(false)
+  }, [updateStats, flushTimeout])
+
   const handleManualFlush = useCallback(async () => {
     if (isProcessing || stats.queued === 0) return
+    const total = stats.queued
 
     try {
       setIsProcessing(true)
-      showFeedback("Syncing locations...", 30000) // Long timeout
+      setFeedback(`Syncing 0/${total}...`)
+      feedbackTimeout.clear()
 
+      // Listen for native progress events during flush
+      progressListenerRef.current = syncEmitter.addListener(
+        "onSyncProgress",
+        (event: { sent: number; failed: number; total: number }) => {
+          const processed = event.sent + event.failed
+          if (processed >= event.total) {
+            // Sync finished — show final result, then clean up
+            const msg =
+              event.failed > 0
+                ? `Synced ${event.sent}/${event.total} (${event.failed} failed)`
+                : `Synced ${event.sent}/${event.total}`
+            setFeedback(msg)
+            flushTimeout.set(async () => {
+              await cleanupFlush()
+              showFeedback("Sync complete")
+            }, 1500)
+          } else {
+            setFeedback(`Syncing ${processed}/${event.total}...`)
+          }
+        }
+      )
+
+      // manualFlush resolves immediately (fire-and-forget Intent),
+      // so use a long fallback in case no progress events arrive
       await NativeLocationService.manualFlush()
-
-      // Wait a bit for the sync to start, then update stats
-      setTimeout(async () => {
-        await updateStats()
-        setIsProcessing(false)
-        showFeedback("Sync initiated successfully!")
-      }, 2000)
+      flushTimeout.set(async () => {
+        await cleanupFlush()
+        showFeedback("Sync complete")
+      }, 30000)
     } catch (err) {
       logger.error("[DataManagementScreen] Manual flush error:", err)
-      setIsProcessing(false)
-      showFeedback("Failed to sync queue")
+      await cleanupFlush()
+      showFeedback("Sync failed. Check your connection and endpoint.")
     }
-  }, [stats.queued, isProcessing, updateStats, showFeedback])
+  }, [stats.queued, isProcessing, showFeedback, feedbackTimeout, flushTimeout, syncEmitter, cleanupFlush])
 
   // Generic delete handler
   const handleDeleteAction = useCallback(
@@ -112,46 +150,77 @@ export function DataManagementScreen({}: ScreenProps) {
     [updateStats, showFeedback]
   )
 
-  const handleClearSentHistory = useCallback(() => {
+  const handleClearSentHistory = useCallback(async () => {
+    const confirmed = await showConfirm({
+      title: "Clear Sent History",
+      message: `Delete ${stats.sent} sent location${stats.sent !== 1 ? "s" : ""}? This cannot be undone.`,
+      confirmText: "Clear",
+      destructive: true
+    })
+    if (!confirmed) return
+
     handleDeleteAction(
       () => NativeLocationService.clearSentHistory().then(() => stats.sent),
       (count) => `Cleared ${count} sent location${count !== 1 ? "s" : ""}`
     )
   }, [handleDeleteAction, stats.sent])
 
-  const handleClearQueue = useCallback(() => {
+  const handleClearQueue = useCallback(async () => {
+    const confirmed = await showConfirm({
+      title: "Clear Queue",
+      message: `Delete ${stats.queued} pending location${stats.queued !== 1 ? "s" : ""}? These will not be synced.`,
+      confirmText: "Clear",
+      destructive: true
+    })
+    if (!confirmed) return
+
     handleDeleteAction(
       () => NativeLocationService.clearQueue(),
       (count) => `Cleared ${count} queued location${count !== 1 ? "s" : ""}`
     )
-  }, [handleDeleteAction])
+  }, [handleDeleteAction, stats.queued])
 
-  const handleDeleteOlderThan = useCallback(() => {
+  const handleDeleteOlderThan = useCallback(async () => {
     const days = parseInt(daysInput, 10)
     if (isNaN(days) || days <= 0) {
       showFeedback("Please enter a valid number of days")
       return
     }
 
+    const confirmed = await showConfirm({
+      title: "Delete Old Locations",
+      message: `Delete all locations older than ${days} day${days !== 1 ? "s" : ""}? This cannot be undone.`,
+      confirmText: "Delete",
+      destructive: true
+    })
+    if (!confirmed) return
+
     handleDeleteAction(
       () => NativeLocationService.deleteOlderThan(days),
-      (count) => `Deleted ${count} old location${count !== 1 ? "s" : ""}`
+      (count) => `Deleted ${count} location${count !== 1 ? "s" : ""} older than ${days} day${days !== 1 ? "s" : ""}`
     )
   }, [daysInput, handleDeleteAction, showFeedback])
 
   const handleVacuum = useCallback(async () => {
     setIsProcessing(true)
     try {
+      const sizeBefore = stats.databaseSizeMB
       await NativeLocationService.vacuumDatabase()
-      await updateStats()
-      showFeedback("Database optimized")
+      const freshStats = await NativeLocationService.getStats()
+      setStats(freshStats)
+      const freed = sizeBefore - freshStats.databaseSizeMB
+      if (freed > 0.01) {
+        showFeedback(`Freed ${freed.toFixed(2)} MB`)
+      } else {
+        showFeedback("Database already optimized")
+      }
     } catch (err) {
       logger.error("[DataManagementScreen] Vacuum failed:", err)
       showFeedback("Optimization failed")
     } finally {
       setIsProcessing(false)
     }
-  }, [updateStats, showFeedback])
+  }, [stats.databaseSizeMB, showFeedback])
 
   return (
     <Container>
@@ -259,12 +328,7 @@ export function DataManagementScreen({}: ScreenProps) {
               <Divider />
 
               {/* Vacuum */}
-              <TouchableOpacity
-                style={styles.actionColumn}
-                onPress={handleVacuum}
-                disabled={isProcessing}
-                activeOpacity={0.7}
-              >
+              <View style={styles.actionColumn}>
                 <Text style={[styles.actionLabel, { color: colors.text }]}>Optimize Database</Text>
                 <Text style={[styles.actionHint, { color: colors.textLight }]}>
                   Reclaim unused space and improve performance
@@ -275,7 +339,8 @@ export function DataManagementScreen({}: ScreenProps) {
                     Run after large deletions to reclaim space
                   </Text>
                 </View>
-              </TouchableOpacity>
+                <Button onPress={handleVacuum} disabled={isProcessing} title="Optimize" variant="secondary" />
+              </View>
             </Card>
           </View>
         </ScrollView>
