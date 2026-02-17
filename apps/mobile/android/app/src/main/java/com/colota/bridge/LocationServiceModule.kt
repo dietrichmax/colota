@@ -518,7 +518,19 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     
     @ReactMethod
-    fun deleteFile(filePath: String, promise: Promise) = 
+    fun copyToClipboard(text: String, label: String, promise: Promise) {
+        moduleScope.launch {
+            try {
+                withContext(Dispatchers.Main) { fileOps.copyToClipboard(text, label) }
+                promise.resolve(null)
+            } catch (e: Exception) {
+                promise.reject("CLIPBOARD_ERROR", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun deleteFile(filePath: String, promise: Promise) =
         executeAsync(promise) { fileOps.deleteFile(filePath) }
 
     @ReactMethod

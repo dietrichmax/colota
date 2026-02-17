@@ -24,6 +24,7 @@ export { Footer } from "./ui/Footer"
 export { SpinningLoader } from "./ui/SpinningLoader"
 export { LocationDisclosureModal } from "./ui/LocationDisclosureModal"
 export { AppModal } from "./ui/AppModal"
+export { ChipGroup } from "./ui/ChipGroup"
 
 // ============================================================================
 // Feature Components - Dashboard

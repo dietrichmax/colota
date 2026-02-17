@@ -5,6 +5,9 @@
  
 package com.Colota.util
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import com.Colota.BuildConfig
 import android.net.Uri
@@ -89,6 +92,17 @@ class FileOperations(private val context: ReactApplicationContext) {
         }
     }
     
+    /**
+     * Copies text to the system clipboard
+     * @param text Content to copy
+     * @param label Clipboard label (shown in some Android versions)
+     */
+    fun copyToClipboard(text: String, label: String) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText(label, text)
+        clipboard.setPrimaryClip(clip)
+    }
+
     /**
      * Gets the cache directory path
      */
