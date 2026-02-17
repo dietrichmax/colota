@@ -41,6 +41,7 @@ jest.mock("react-native", () => ({
       }),
       writeFile: jest.fn().mockResolvedValue("/cache/test.csv"),
       shareFile: jest.fn().mockResolvedValue(true),
+      copyToClipboard: jest.fn().mockResolvedValue(undefined),
       deleteFile: jest.fn().mockResolvedValue(true),
       getCacheDirectory: jest.fn().mockResolvedValue("/cache"),
       getAllAuthConfig: jest.fn().mockResolvedValue({
