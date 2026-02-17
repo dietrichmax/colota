@@ -284,7 +284,6 @@ class NativeLocationService {
       update.lat ?? null,
       update.lon ?? null,
       update.radius ?? null,
-      update.enabled ?? null,
       update.pauseTracking ?? null
     )
   }

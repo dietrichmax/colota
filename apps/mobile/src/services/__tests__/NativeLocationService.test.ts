@@ -237,7 +237,6 @@ describe("NativeLocationService", () => {
         lat: 48.1,
         lon: 11.5,
         radius: 100,
-        enabled: true,
         pauseTracking: true
       })
 

@@ -35,7 +35,6 @@ export interface Geofence {
   lat: number
   lon: number
   radius: number
-  enabled: boolean
   pauseTracking: boolean
   createdAt?: number
 }

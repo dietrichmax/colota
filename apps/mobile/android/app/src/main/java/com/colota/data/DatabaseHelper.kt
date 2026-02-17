@@ -96,6 +96,8 @@ class DatabaseHelper private constructor(context: Context) :
             )
         """)
 
+        // TODO: Remove unused columns (enabled, notify_enter, notify_exit) in a future
+        // DB version migration. They are no longer read or written by application code.
         db.execSQL("""
             CREATE TABLE $TABLE_GEOFENCES (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

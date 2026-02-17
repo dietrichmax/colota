@@ -360,16 +360,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun updateGeofence(
-        id: Int, 
-        name: String?, 
-        lat: Double?, 
-        lon: Double?, 
-        radius: Double?, 
-        enabled: Boolean?, 
-        pause: Boolean?, 
+        id: Int,
+        name: String?,
+        lat: Double?,
+        lon: Double?,
+        radius: Double?,
+        pause: Boolean?,
         promise: Promise
-    ) = executeAsync(promise) { 
-        val result = geofenceHelper.updateGeofence(id, name, lat, lon, radius, enabled, pause)
+    ) = executeAsync(promise) {
+        val result = geofenceHelper.updateGeofence(id, name, lat, lon, radius, pause)
         if (result) {
             geofenceHelper.invalidateCache() 
             triggerZoneRecheck()

@@ -15,6 +15,9 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableArray
 import kotlin.math.*
 
+// NOTE: The geofences table still contains unused columns (enabled, notify_enter,
+// notify_exit) from the original schema. These are no longer read or written by code.
+// Remove them in a future DB version migration.
 class GeofenceHelper(private val context: Context) {
 
     private val dbHelper by lazy { DatabaseHelper.getInstance(context) }
@@ -72,7 +75,7 @@ class GeofenceHelper(private val context: Context) {
             dbHelper.readableDatabase.query(
                 DatabaseHelper.TABLE_GEOFENCES,
                 arrayOf("name", "latitude", "longitude", "radius"),
-                "enabled = 1 AND pause_tracking = 1",
+                "pause_tracking = 1",
                 null, null, null, null
             ).use { cursor ->
                 val nameIdx = cursor.getColumnIndexOrThrow("name")
@@ -110,7 +113,6 @@ class GeofenceHelper(private val context: Context) {
                 val latIdx = cursor.getColumnIndexOrThrow("latitude")
                 val lonIdx = cursor.getColumnIndexOrThrow("longitude")
                 val radiusIdx = cursor.getColumnIndexOrThrow("radius")
-                val enabledIdx = cursor.getColumnIndexOrThrow("enabled")
                 val pauseIdx = cursor.getColumnIndexOrThrow("pause_tracking")
                 val createdIdx = cursor.getColumnIndexOrThrow("created_at")
 
@@ -121,7 +123,6 @@ class GeofenceHelper(private val context: Context) {
                         putDouble("lat", cursor.getDouble(latIdx))
                         putDouble("lon", cursor.getDouble(lonIdx))
                         putDouble("radius", cursor.getDouble(radiusIdx))
-                        putBoolean("enabled", cursor.getInt(enabledIdx) == 1)
                         putBoolean("pauseTracking", cursor.getInt(pauseIdx) == 1)
                         putDouble("createdAt", cursor.getLong(createdIdx).toDouble())
                     })
@@ -149,7 +150,6 @@ class GeofenceHelper(private val context: Context) {
             put("latitude", lat)
             put("longitude", lon)
             put("radius", rad)
-            put("enabled", 1)
             put("pause_tracking", if (pause) 1 else 0)
             put("created_at", System.currentTimeMillis() / 1000)
         }
@@ -163,12 +163,11 @@ class GeofenceHelper(private val context: Context) {
      * Updates geofence with only provided fields.
      */
     fun updateGeofence(
-        id: Int, 
-        name: String?, 
-        lat: Double?, 
-        lon: Double?, 
-        rad: Double?, 
-        en: Boolean?, 
+        id: Int,
+        name: String?,
+        lat: Double?,
+        lon: Double?,
+        rad: Double?,
         pause: Boolean?
     ): Boolean {
         val values = ContentValues().apply {
@@ -176,7 +175,6 @@ class GeofenceHelper(private val context: Context) {
             lat?.let { put("latitude", it) }
             lon?.let { put("longitude", it) }
             rad?.let { put("radius", it) }
-            en?.let { put("enabled", if (it) 1 else 0) }
             pause?.let { put("pause_tracking", if (it) 1 else 0) }
         }
         

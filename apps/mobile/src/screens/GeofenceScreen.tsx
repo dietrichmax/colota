@@ -13,10 +13,12 @@ import { Geofence, ScreenProps } from "../types/global"
 import { useTracking } from "../contexts/TrackingProvider"
 import { fonts } from "../styles/typography"
 import { X, WifiOff } from "lucide-react-native"
-import { Container, SectionTitle, Card } from "../components"
+import { Container, SectionTitle, Card, FloatingSaveIndicator } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
+import { useTimeout } from "../hooks/useTimeout"
 import {
   STATS_REFRESH_IDLE,
+  SAVE_SUCCESS_DISPLAY_MS,
   DEFAULT_MAP_ZOOM,
   WORLD_MAP_ZOOM,
   MAX_MAP_ZOOM,
@@ -42,6 +44,16 @@ export function GeofenceScreen({}: ScreenProps) {
   const [hasInitialCoords, setHasInitialCoords] = useState(false)
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
   const [isOffline, setIsOffline] = useState(false)
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const feedbackTimeout = useTimeout()
+
+  const showFeedback = useCallback(
+    (message: string) => {
+      setFeedback(message)
+      feedbackTimeout.set(() => setFeedback(null), SAVE_SUCCESS_DISPLAY_MS)
+    },
+    [feedbackTimeout]
+  )
 
   const webviewRef = useRef<WebView>(null)
   const initialCenter = useRef<{
@@ -160,7 +172,6 @@ export function GeofenceScreen({}: ScreenProps) {
               lat: data.latitude,
               lon: data.longitude,
               radius: Number(newRadius),
-              enabled: true,
               pauseTracking: true
             })
 
@@ -169,6 +180,7 @@ export function GeofenceScreen({}: ScreenProps) {
             setPlacingGeofence(false)
             await loadGeofences()
             DeviceEventEmitter.emit("geofenceUpdated")
+            showFeedback("Geofence created")
           } catch {
             showAlert("Error", "Failed to create geofence.", "error")
           }
@@ -177,7 +189,7 @@ export function GeofenceScreen({}: ScreenProps) {
         logger.error("[GeofenceScreen] Message error:", err)
       }
     },
-    [newName, newRadius, loadGeofences]
+    [newName, newRadius, loadGeofences, showFeedback]
   )
 
   const startPlacingGeofence = useCallback(() => {
@@ -247,11 +259,12 @@ export function GeofenceScreen({}: ScreenProps) {
         await NativeLocationService.deleteGeofence(item.id!)
         await loadGeofences()
         DeviceEventEmitter.emit("geofenceUpdated")
+        showFeedback("Geofence deleted")
       } catch {
         showAlert("Error", "Failed to delete geofence.", "error")
       }
     },
-    [loadGeofences]
+    [loadGeofences, showFeedback]
   )
 
   const html = useMemo(() => {
@@ -599,6 +612,8 @@ export function GeofenceScreen({}: ScreenProps) {
         }
         renderItem={renderItem}
       />
+
+      <FloatingSaveIndicator saving={false} success={false} message={feedback} colors={colors} />
     </Container>
   )
 }
