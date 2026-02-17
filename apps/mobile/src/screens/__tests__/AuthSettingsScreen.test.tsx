@@ -59,13 +59,25 @@ jest.mock("../../hooks/useAutoSave", () => ({
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text } = require("react-native")
+  const { View, Text, TouchableOpacity } = require("react-native")
   return {
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     FloatingSaveIndicator: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
-    Divider: () => R.createElement(View, null)
+    Divider: () => R.createElement(View, null),
+    ChipGroup: ({ options, onSelect }: any) =>
+      R.createElement(
+        View,
+        null,
+        options.map((opt: any) =>
+          R.createElement(
+            TouchableOpacity,
+            { key: opt.value, onPress: () => onSelect(opt.value) },
+            R.createElement(Text, null, opt.label)
+          )
+        )
+      )
   }
 })
 
@@ -296,6 +308,29 @@ describe("AuthSettingsScreen", () => {
 
       expect(queryByDisplayValue("X-Custom")).toBeNull()
       expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
+    })
+
+    it("shows duplicate key warning when header names collide", async () => {
+      mockAuthConfig = {
+        ...DEFAULT_AUTH_CONFIG,
+        customHeaders: { "X-One": "a" }
+      }
+
+      const { getByText, getAllByPlaceholderText, queryByText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByText("+ Add Header")).toBeTruthy()
+      })
+
+      // No warning initially
+      expect(queryByText(/Duplicate header names/)).toBeNull()
+
+      // Add second header and type same key
+      fireEvent.press(getByText("+ Add Header"))
+      const nameInputs = getAllByPlaceholderText("Header name")
+      fireEvent.changeText(nameInputs[1], "X-One")
+
+      expect(getByText(/Duplicate header names/)).toBeTruthy()
     })
   })
 })
