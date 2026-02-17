@@ -12,6 +12,7 @@ import { fonts } from "../../../styles/typography"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { mapStyles, mapSpeedColorHelpers } from "../map/mapHtml"
 import { getSpeedUnit } from "../../../utils/geo"
+import { MAX_MAP_ZOOM, MAP_ANIMATION_DURATION_MS } from "../../../constants"
 
 interface TrackLocation {
   latitude: number
@@ -34,7 +35,6 @@ export function TrackMap({ locations, selectedPoint, colors, isDark }: Props) {
   const isMounted = useRef(true)
   const [mapReady, setMapReady] = useState(false)
   const [isCentered, setIsCentered] = useState(true)
-
   useEffect(() => {
     return () => {
       isMounted.current = false
@@ -235,9 +235,9 @@ export function TrackMap({ locations, selectedPoint, colors, isDark }: Props) {
       function fitTrack() {
         if (currentExtent) {
           map.getView().fit(currentExtent, {
-            duration: 400,
+            duration: ${MAP_ANIMATION_DURATION_MS},
             padding: [60, 60, 60, 60],
-            maxZoom: 18
+            maxZoom: ${MAX_MAP_ZOOM}
           });
         }
       }
