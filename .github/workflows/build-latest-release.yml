@@ -11,6 +11,10 @@ on:
       - 'LICENSE'
       - '.github/workflows/docs-*'
       - '.github/workflows/build-release.yml'
+      - '**/__tests__/**'
+      - '.github/workflows/lint-test.yml'
+      - '.github/workflows/pr-labeler.yml'
+      - '.github/workflows/dependency-updates.yml'
   workflow_dispatch:
 
 permissions:
