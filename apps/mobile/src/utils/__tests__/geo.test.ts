@@ -1,4 +1,4 @@
-import { computeTotalDistance, formatDistance } from "../geo"
+import { computeTotalDistance, formatDistance, formatSpeed } from "../geo"
 
 describe("computeTotalDistance", () => {
   it("returns 0 for empty array", () => {
@@ -91,5 +91,52 @@ describe("formatDistance", () => {
       throw new Error("unsupported")
     })
     expect(formatDistance(5000)).toBe("5.0 km")
+  })
+})
+
+describe("formatSpeed", () => {
+  let originalNumberFormat: typeof Intl.NumberFormat
+
+  beforeEach(() => {
+    originalNumberFormat = Intl.NumberFormat
+  })
+
+  afterEach(() => {
+    // @ts-ignore – restore original
+    Intl.NumberFormat = originalNumberFormat
+  })
+
+  it("formats as km/h for non-US locales", () => {
+    // @ts-ignore – mock Intl
+    Intl.NumberFormat = jest.fn(() => ({
+      resolvedOptions: () => ({ locale: "de-DE" })
+    }))
+    // 2 m/s = 7.2 km/h
+    expect(formatSpeed(2)).toBe("7.2 km/h")
+  })
+
+  it("formats as mph for en-US locale", () => {
+    // @ts-ignore – mock Intl
+    Intl.NumberFormat = jest.fn(() => ({
+      resolvedOptions: () => ({ locale: "en-US" })
+    }))
+    // 2 m/s ≈ 4.5 mph
+    expect(formatSpeed(2)).toBe("4.5 mph")
+  })
+
+  it("formats 0 m/s correctly", () => {
+    // @ts-ignore – mock Intl
+    Intl.NumberFormat = jest.fn(() => ({
+      resolvedOptions: () => ({ locale: "de-DE" })
+    }))
+    expect(formatSpeed(0)).toBe("0.0 km/h")
+  })
+
+  it("falls back to km/h if Intl throws", () => {
+    // @ts-ignore – mock Intl to throw
+    Intl.NumberFormat = jest.fn(() => {
+      throw new Error("unsupported")
+    })
+    expect(formatSpeed(8)).toBe("28.8 km/h")
   })
 })

@@ -40,6 +40,21 @@ function usesMiles(): boolean {
   }
 }
 
+/** Format m/s into a human-readable speed string using the device locale's unit. */
+export function formatSpeed(metersPerSecond: number): string {
+  if (usesMiles()) {
+    const mph = metersPerSecond * 2.23694
+    return `${mph.toFixed(1)} mph`
+  }
+  const kmh = metersPerSecond * 3.6
+  return `${kmh.toFixed(1)} km/h`
+}
+
+/** Return the speed unit info for the current locale (used by map WebView). */
+export function getSpeedUnit(): { factor: number; unit: string } {
+  return usesMiles() ? { factor: 2.23694, unit: "mph" } : { factor: 3.6, unit: "km/h" }
+}
+
 /** Format meters into a human-readable string using the device locale's unit. */
 export function formatDistance(meters: number): string {
   if (usesMiles()) {
