@@ -252,13 +252,13 @@ describe("ApiSettingsScreen", () => {
       const latInput = getByDisplayValue("lat")
       fireEvent.changeText(latInput, "lon")
 
-      expect(getByText(/Duplicate field names detected/)).toBeTruthy()
+      expect(getByText(/Duplicate field names:/)).toBeTruthy()
     })
 
     it("does not show warning when all field names are unique", () => {
       const { queryByText } = renderScreen()
 
-      expect(queryByText(/Duplicate field names detected/)).toBeNull()
+      expect(queryByText(/Duplicate field names:/)).toBeNull()
     })
   })
 
