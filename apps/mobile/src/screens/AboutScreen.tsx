@@ -10,6 +10,7 @@ import { useTheme } from "../hooks/useTheme"
 import { ChevronRight, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check } from "lucide-react-native"
 import { fonts } from "../styles/typography"
 import { Card, Container, Divider, SectionTitle, Footer } from "../components"
+import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
 import { REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL } from "../constants"
@@ -79,6 +80,7 @@ export function AboutScreen({}: ScreenProps) {
   const [showDebugInfo, setShowDebugInfo] = useState(false)
   const [tapCount, setTapCount] = useState(0)
   const [copied, setCopied] = useState(false)
+  const copiedTimeout = useTimeout()
   const [deviceInfo, setDeviceInfo] = useState<{
     model: string
     brand: string
@@ -167,11 +169,11 @@ export function AboutScreen({}: ScreenProps) {
     try {
       await NativeLocationService.copyToClipboard(lines.join("\n"), "Debug Info")
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      copiedTimeout.set(() => setCopied(false), 2000)
     } catch (err) {
       logger.error("Failed to copy debug info:", err)
     }
-  }, [buildConfig, deviceInfo])
+  }, [buildConfig, deviceInfo, copiedTimeout])
 
   // Fallback if buildConfig is not available
   if (!buildConfig) {

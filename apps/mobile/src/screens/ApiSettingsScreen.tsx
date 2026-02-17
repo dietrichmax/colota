@@ -16,10 +16,12 @@ import {
 } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
+import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
 import { fonts } from "../styles/typography"
 import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup } from "../components"
+import { findDuplicates } from "../utils/settingsValidation"
 
 type LocalCustomField = CustomField & { id: number }
 
@@ -82,7 +84,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
   const [localTemplate, setLocalTemplate] = useState<ApiTemplateName>(settings.apiTemplate || "custom")
   const [localHttpMethod, setLocalHttpMethod] = useState<HttpMethod>(settings.httpMethod || "POST")
   const [copied, setCopied] = useState(false)
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const copiedTimeout = useTimeout()
   const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
 
   const referenceFieldMap = getReferenceFieldMap(localTemplate)
@@ -107,13 +109,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
     for (const f of localCustomFields) {
       if (f.key.trim()) allNames.push(f.key.trim())
     }
-    const seen = new Set<string>()
-    const dupes = new Set<string>()
-    for (const name of allNames) {
-      if (seen.has(name)) dupes.add(name)
-      seen.add(name)
-    }
-    return dupes
+    return findDuplicates(allNames)
   }, [localFieldMap, localCustomFields])
 
   /** Example payload string showing all fields */
@@ -340,13 +336,12 @@ export function ApiSettingsScreen({}: ScreenProps) {
   const handleCopyPayload = useCallback(async () => {
     try {
       await NativeLocationService.copyToClipboard(examplePayload, "API Payload")
-      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current)
       setCopied(true)
-      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
+      copiedTimeout.set(() => setCopied(false), 2000)
     } catch {
       // Copy failed — no action needed
     }
-  }, [examplePayload])
+  }, [examplePayload, copiedTimeout])
 
   return (
     <Container>

@@ -262,7 +262,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
         if (restartQueuedRef.current) {
           restartQueuedRef.current = false
           logger.debug("[useLocationTracking] Processing queued restart")
-          setTimeout(() => restartTracking(newSettings), 100)
+          setTimeout(() => restartTracking(settingsRef.current), 100)
         }
       }
     },

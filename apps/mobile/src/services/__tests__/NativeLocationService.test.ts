@@ -12,6 +12,7 @@ jest.mock("react-native", () => ({
         databaseSizeMB: 1.5
       }),
       getTableData: jest.fn().mockResolvedValue([]),
+      getLocationsByDateRange: jest.fn().mockResolvedValue([]),
       getMostRecentLocation: jest.fn().mockResolvedValue(null),
       manualFlush: jest.fn().mockResolvedValue(true),
       clearSentHistory: jest.fn().mockResolvedValue(undefined),
@@ -52,7 +53,8 @@ jest.mock("react-native", () => ({
         customHeaders: "{}"
       }),
       saveAuthConfig: jest.fn().mockResolvedValue(true),
-      getAuthHeaders: jest.fn().mockResolvedValue({})
+      getAuthHeaders: jest.fn().mockResolvedValue({}),
+      isNetworkAvailable: jest.fn().mockResolvedValue(true)
     },
     BuildConfigModule: {
       MIN_SDK_VERSION: 26,
