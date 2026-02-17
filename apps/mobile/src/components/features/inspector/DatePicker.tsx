@@ -13,6 +13,7 @@ interface DatePickerProps {
   date: Date
   onDateChange: (date: Date) => void
   locationCount: number
+  distance?: string
   colors: ThemeColors
 }
 
@@ -20,7 +21,7 @@ function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
 
-export function DatePicker({ date, onDateChange, locationCount, colors }: DatePickerProps) {
+export function DatePicker({ date, onDateChange, locationCount, distance, colors }: DatePickerProps) {
   const isToday = isSameDay(date, new Date())
 
   const goBack = () => {
@@ -58,6 +59,7 @@ export function DatePicker({ date, onDateChange, locationCount, colors }: DatePi
           <Text style={[styles.dateText, { color: colors.text }]}>{formatted}</Text>
           <Text style={[styles.countText, { color: colors.textSecondary }]}>
             {locationCount} {locationCount === 1 ? "location" : "locations"}
+            {distance ? ` · ${distance}` : ""}
           </Text>
         </TouchableOpacity>
 
