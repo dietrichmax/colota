@@ -6,6 +6,13 @@ sidebar_position: 3
 
 Manage your location database from the Data Management screen.
 
+<div className="screenshot-gallery">
+  <figure>
+    <img src="/img/screenshots/DataManagement.png" alt="Data Management" />
+    <figcaption>Data Management</figcaption>
+  </figure>
+</div>
+
 ## Actions
 
 | Action                       | Description                                                 |
