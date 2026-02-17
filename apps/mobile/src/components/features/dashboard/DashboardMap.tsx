@@ -12,7 +12,14 @@ import { fonts } from "../../../styles/typography"
 import { WifiOff } from "lucide-react-native"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { useFocusEffect } from "@react-navigation/native"
-import { STATS_REFRESH_IDLE } from "../../../constants"
+import {
+  STATS_REFRESH_IDLE,
+  DEFAULT_MAP_ZOOM,
+  MAX_MAP_ZOOM,
+  GEOFENCE_ZOOM_PADDING,
+  MARKER_ANIMATION_DURATION_MS,
+  MAP_ANIMATION_DURATION_MS
+} from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { mapStyles, mapMarkerHelpers } from "../map/mapHtml"
 import icon from "../../../assets/icons/icon.png"
@@ -155,7 +162,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         ],
         view: new ol.View({
           center: ol.proj.fromLonLat([${lon}, ${lat}]),
-          zoom: 17,
+          zoom: ${DEFAULT_MAP_ZOOM},
         }),
       });
 
@@ -233,13 +240,13 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         if (data.action === "update_user_pos") {
           const newPos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
           
-          animateMarker(newPos, 500);
-          
+          animateMarker(newPos, ${MARKER_ANIMATION_DURATION_MS});
+
           // Only auto-center if user has not manually moved the map
           if (isMapCentered()) {
             map.getView().animate({
               center: newPos,
-              duration: 500,
+              duration: ${MARKER_ANIMATION_DURATION_MS},
               easing: ol.easing.linear
             });
           }
@@ -270,7 +277,7 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
         
         if (data.action === "center_map") {
           const pos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
-          map.getView().animate({ center: pos, zoom: 17, duration: 400 });
+          map.getView().animate({ center: pos, zoom: ${DEFAULT_MAP_ZOOM}, duration: ${MAP_ANIMATION_DURATION_MS} });
         }
 
         if (data.action === "zoom_to_geofence") {
@@ -279,8 +286,8 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           const extent = circle.getExtent();
           map.getView().fit(extent, {
             duration: 600,
-            padding: [80, 80, 80, 80],
-            maxZoom: 18
+            padding: [${GEOFENCE_ZOOM_PADDING}],
+            maxZoom: ${MAX_MAP_ZOOM}
           });
         }
         

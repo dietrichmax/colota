@@ -17,7 +17,7 @@ interface NavItem {
 }
 
 interface QuickAccessProps {
-  navigation: any
+  navigation: { navigate: (screen: string) => void }
 }
 
 export function QuickAccess({ navigation }: QuickAccessProps) {
