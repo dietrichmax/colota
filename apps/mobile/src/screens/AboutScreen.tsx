@@ -3,16 +3,16 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { Text, StyleSheet, View, ScrollView, Linking, TouchableOpacity, Image } from "react-native"
 import { ScreenProps, ThemeColors } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
-import { ChevronRight, Bug, FileText, Code, ScrollText } from "lucide-react-native"
+import { ChevronRight, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check } from "lucide-react-native"
 import { fonts } from "../styles/typography"
-import { Card, Container, Divider, Footer } from "../components"
+import { Card, Container, Divider, SectionTitle, Footer } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
-import { REPO_URL, PRIVACY_POLICY_URL } from "../constants"
+import { REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL } from "../constants"
 import { logger } from "../utils/logger"
 
 // Helper function to map SDK to Android version
@@ -34,6 +34,17 @@ function getAndroidVersion(sdkVersion: number): string {
     37: "17"
   }
   return versions[sdkVersion] || "Unknown"
+}
+
+function getVariantLabel(flavor: string): string {
+  switch (flavor) {
+    case "foss":
+      return "FOSS"
+    case "gms":
+      return "Google Play"
+    default:
+      return flavor || "Unknown"
+  }
 }
 
 const LinkRow = ({
@@ -61,29 +72,52 @@ const LinkRow = ({
   </TouchableOpacity>
 )
 
-const TechRow = ({ label, value, colors }: { label: string; value: string; colors: ThemeColors }) => (
-  <>
-    <View style={styles.techRow}>
-      <Text style={[styles.techLabel, { color: colors.textSecondary }]}>{label}</Text>
-      <Text style={[styles.techValue, { color: colors.text }]}>{value}</Text>
-    </View>
-    <Divider />
-  </>
-)
+const DEBUG_MODE_SETTING_KEY = "debug_mode_enabled"
 
 export function AboutScreen({}: ScreenProps) {
   const { colors } = useTheme()
   const [showDebugInfo, setShowDebugInfo] = useState(false)
   const [tapCount, setTapCount] = useState(0)
-  const [deviceInfo, setDeviceInfo] = useState({
-    model: "...",
-    brand: "...",
-    deviceId: "...",
-    systemVersion: "...",
-    apiLevel: "..."
-  })
+  const [copied, setCopied] = useState(false)
+  const [deviceInfo, setDeviceInfo] = useState<{
+    model: string
+    brand: string
+    deviceId: string
+    systemVersion: string
+    apiLevel: string
+  } | null>(null)
 
   const buildConfig = NativeLocationService.getBuildConfig()
+
+  // Load persisted debug mode
+  useEffect(() => {
+    NativeLocationService.getSetting(DEBUG_MODE_SETTING_KEY, "false").then((value) => {
+      if (value === "true") setShowDebugInfo(true)
+    })
+  }, [])
+
+  // Persist debug mode changes
+  const toggleDebugMode = useCallback((enabled: boolean) => {
+    setShowDebugInfo(enabled)
+    NativeLocationService.saveSetting(DEBUG_MODE_SETTING_KEY, String(enabled))
+  }, [])
+
+  // Load device info lazily when debug mode is enabled
+  useEffect(() => {
+    if (!showDebugInfo || deviceInfo) return
+
+    NativeLocationService.getDeviceInfo()
+      .then((info) => {
+        setDeviceInfo({
+          model: info.model,
+          brand: info.brand,
+          deviceId: info.deviceId,
+          systemVersion: info.systemVersion,
+          apiLevel: info.apiLevel.toString()
+        })
+      })
+      .catch((err) => logger.error("Failed to load device info:", err))
+  }, [showDebugInfo, deviceInfo])
 
   // Reset tap count after 2 seconds
   useEffect(() => {
@@ -97,35 +131,47 @@ export function AboutScreen({}: ScreenProps) {
     const newCount = tapCount + 1
     setTapCount(newCount)
 
-    // Enable debug mode after 7 taps
     if (newCount >= 7) {
-      setShowDebugInfo(true)
+      toggleDebugMode(true)
       setTapCount(0)
     }
   }
 
-  useEffect(() => {
-    const loadDeviceInfo = async () => {
-      try {
-        const info = await NativeLocationService.getDeviceInfo()
-        setDeviceInfo({
-          model: info.model,
-          brand: info.brand,
-          deviceId: info.deviceId,
-          systemVersion: info.systemVersion,
-          apiLevel: info.apiLevel.toString()
-        })
-      } catch (err) {
-        logger.error("Failed to load device info:", err)
-      }
-    }
-
-    loadDeviceInfo()
-  }, [])
-
   const handleOpenURL = (url: string) => {
     Linking.openURL(url).catch((err) => logger.error("Failed to open URL:", err))
   }
+
+  const handleCopyDebugInfo = useCallback(async () => {
+    if (!buildConfig) return
+
+    const lines = [
+      `Colota v${buildConfig.VERSION_NAME} (${buildConfig.VERSION_CODE})`,
+      `Variant: ${getVariantLabel(buildConfig.FLAVOR)}`,
+      `Target SDK: ${buildConfig.TARGET_SDK_VERSION} (Android ${getAndroidVersion(buildConfig.TARGET_SDK_VERSION)})`,
+      `Min SDK: ${buildConfig.MIN_SDK_VERSION} (Android ${getAndroidVersion(buildConfig.MIN_SDK_VERSION)})`,
+      `Compile SDK: ${buildConfig.COMPILE_SDK_VERSION}`,
+      `Build Tools: ${buildConfig.BUILD_TOOLS_VERSION}`,
+      `Kotlin: ${buildConfig.KOTLIN_VERSION}`,
+      `NDK: ${buildConfig.NDK_VERSION}`
+    ]
+
+    if (deviceInfo) {
+      lines.push(
+        "",
+        `OS: Android ${deviceInfo.systemVersion} (API ${deviceInfo.apiLevel})`,
+        `Device: ${deviceInfo.brand} ${deviceInfo.model}`,
+        `Device ID: ${deviceInfo.deviceId}`
+      )
+    }
+
+    try {
+      await NativeLocationService.copyToClipboard(lines.join("\n"), "Debug Info")
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      logger.error("Failed to copy debug info:", err)
+    }
+  }, [buildConfig, deviceInfo])
 
   // Fallback if buildConfig is not available
   if (!buildConfig) {
@@ -139,6 +185,32 @@ export function AboutScreen({}: ScreenProps) {
       </Container>
     )
   }
+
+  const debugRows = [
+    { label: "Variant", value: getVariantLabel(buildConfig.FLAVOR) },
+    {
+      label: "Target SDK",
+      value: `${buildConfig.TARGET_SDK_VERSION} (Android ${getAndroidVersion(buildConfig.TARGET_SDK_VERSION)})`
+    },
+    {
+      label: "Min SDK",
+      value: `${buildConfig.MIN_SDK_VERSION} (Android ${getAndroidVersion(buildConfig.MIN_SDK_VERSION)})`
+    },
+    { label: "Compile SDK", value: buildConfig.COMPILE_SDK_VERSION.toString() },
+    { label: "Build Tools", value: buildConfig.BUILD_TOOLS_VERSION },
+    { label: "Kotlin", value: buildConfig.KOTLIN_VERSION },
+    { label: "NDK", value: buildConfig.NDK_VERSION }
+  ]
+
+  const deviceRows = deviceInfo
+    ? [
+        { label: "OS", value: `Android ${deviceInfo.systemVersion}` },
+        { label: "API Level", value: deviceInfo.apiLevel },
+        { label: "Model", value: deviceInfo.model },
+        { label: "Brand", value: deviceInfo.brand },
+        { label: "Device ID", value: deviceInfo.deviceId }
+      ]
+    : []
 
   return (
     <Container>
@@ -162,7 +234,7 @@ export function AboutScreen({}: ScreenProps) {
 
           {showDebugInfo && (
             <TouchableOpacity
-              onPress={() => setShowDebugInfo(false)}
+              onPress={() => toggleDebugMode(false)}
               style={[styles.debugBadge, { backgroundColor: colors.warning + "20" }]}
             >
               <Bug size={14} color={colors.warning} />
@@ -199,49 +271,62 @@ export function AboutScreen({}: ScreenProps) {
             colors={colors}
             onOpenURL={handleOpenURL}
           />
+          <Divider />
+          <LinkRow
+            icon={MessageCircle}
+            title="Report a Bug"
+            subtitle="github.com/dietrichmax/colota/issues"
+            url={ISSUES_URL}
+            colors={colors}
+            onOpenURL={handleOpenURL}
+          />
         </Card>
 
         {/* Debug Info - Only shown when enabled */}
         {showDebugInfo && (
           <>
             <View style={styles.debugSection}>
-              <Text style={[styles.debugSectionTitle, { color: colors.textLight }]}>Build</Text>
+              <SectionTitle>BUILD</SectionTitle>
               <Card>
-                <TechRow
-                  label="Target SDK"
-                  value={`${buildConfig.TARGET_SDK_VERSION} (Android ${getAndroidVersion(
-                    buildConfig.TARGET_SDK_VERSION
-                  )})`}
-                  colors={colors}
-                />
-                <TechRow
-                  label="Min SDK"
-                  value={`${buildConfig.MIN_SDK_VERSION} (Android ${getAndroidVersion(buildConfig.MIN_SDK_VERSION)})`}
-                  colors={colors}
-                />
-                <TechRow label="Compile SDK" value={buildConfig.COMPILE_SDK_VERSION.toString()} colors={colors} />
-                <TechRow label="Build Tools" value={buildConfig.BUILD_TOOLS_VERSION} colors={colors} />
-                <TechRow label="Kotlin" value={buildConfig.KOTLIN_VERSION} colors={colors} />
-                <View style={styles.techRow}>
-                  <Text style={[styles.techLabel, { color: colors.textSecondary }]}>NDK</Text>
-                  <Text style={[styles.techValue, { color: colors.text }]}>{buildConfig.NDK_VERSION}</Text>
-                </View>
+                {debugRows.map((row, i) => (
+                  <React.Fragment key={row.label}>
+                    <View style={styles.techRow}>
+                      <Text style={[styles.techLabel, { color: colors.textSecondary }]}>{row.label}</Text>
+                      <Text style={[styles.techValue, { color: colors.text }]}>{row.value}</Text>
+                    </View>
+                    {i < debugRows.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
               </Card>
             </View>
 
-            <View style={styles.debugSection}>
-              <Text style={[styles.debugSectionTitle, { color: colors.textLight }]}>Device</Text>
-              <Card>
-                <TechRow label="OS" value={`Android ${deviceInfo.systemVersion}`} colors={colors} />
-                <TechRow label="API Level" value={deviceInfo.apiLevel} colors={colors} />
-                <TechRow label="Model" value={deviceInfo.model} colors={colors} />
-                <TechRow label="Brand" value={deviceInfo.brand} colors={colors} />
-                <View style={styles.techRow}>
-                  <Text style={[styles.techLabel, { color: colors.textSecondary }]}>Device ID</Text>
-                  <Text style={[styles.techValue, { color: colors.text }]}>{deviceInfo.deviceId}</Text>
-                </View>
-              </Card>
-            </View>
+            {deviceRows.length > 0 && (
+              <View style={styles.debugSection}>
+                <SectionTitle>DEVICE</SectionTitle>
+                <Card>
+                  {deviceRows.map((row, i) => (
+                    <React.Fragment key={row.label}>
+                      <View style={styles.techRow}>
+                        <Text style={[styles.techLabel, { color: colors.textSecondary }]}>{row.label}</Text>
+                        <Text style={[styles.techValue, { color: colors.text }]}>{row.value}</Text>
+                      </View>
+                      {i < deviceRows.length - 1 && <Divider />}
+                    </React.Fragment>
+                  ))}
+                </Card>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.copyButton, { borderColor: colors.border }]}
+              onPress={handleCopyDebugInfo}
+              activeOpacity={0.7}
+            >
+              {copied ? <Check size={16} color={colors.success} /> : <Copy size={16} color={colors.primaryDark} />}
+              <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
+                {copied ? "Copied!" : "Copy Debug Info"}
+              </Text>
+            </TouchableOpacity>
           </>
         )}
 
@@ -318,13 +403,6 @@ const styles = StyleSheet.create({
   debugSection: {
     marginTop: 24
   },
-  debugSectionTitle: {
-    fontSize: 12,
-    ...fonts.semiBold,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 8
-  },
   debugHint: {
     fontSize: 11,
     marginTop: 8,
@@ -335,12 +413,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6
   },
   debugText: {
     fontSize: 12,
+    ...fonts.semiBold
+  },
+  copyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1
+  },
+  copyButtonText: {
+    fontSize: 14,
     ...fonts.semiBold
   }
 })

@@ -62,7 +62,8 @@ jest.mock("react-native", () => ({
       KOTLIN_VERSION: "1.9.0",
       NDK_VERSION: "25.1.8937393",
       VERSION_NAME: "1.0.0",
-      VERSION_CODE: 1
+      VERSION_CODE: 1,
+      FLAVOR: "gms"
     }
   }
 }))
