@@ -408,6 +408,7 @@ class NativeLocationService {
     NDK_VERSION: string
     VERSION_NAME: string
     VERSION_CODE: number
+    FLAVOR: string
   } | null {
     if (!BuildConfigModule) {
       logger.warn("[NativeLocationService] BuildConfigModule not available")
