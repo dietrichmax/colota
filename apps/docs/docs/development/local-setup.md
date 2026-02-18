@@ -222,12 +222,6 @@ App screenshots live in `screenshots/mobile/original/` (single source of truth) 
 
 **Capture**: Trigger the "Generate Screenshots" workflow manually from GitHub Actions. It starts an Android emulator, runs [Maestro](https://maestro.mobile.dev) flows from `.maestro/screenshots/`, and commits the updated screenshots.
 
-**Sync only** (copies existing screenshots to docs + store without recapturing):
-
-```bash
-npm run screenshots:sync
-```
-
 ### Adding Documentation
 
 1. Create a Markdown file in `apps/docs/docs/`
