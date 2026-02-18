@@ -87,8 +87,8 @@ class LocationForegroundService : Service() {
         secureStorage = SecureStorageHelper.getInstance(this)
         syncManager = SyncManager(dbHelper, networkManager, serviceScope!!)
         profileHelper = ProfileHelper(this)
-        profileManager = ProfileManager(profileHelper, serviceScope!!) { interval, distance, syncInterval, profileName, _ ->
-            applyProfileConfig(interval, distance, syncInterval, profileName)
+        profileManager = ProfileManager(profileHelper, serviceScope!!) { interval, distance, syncInterval, _, _ ->
+            applyProfileConfig(interval, distance, syncInterval)
         }
         conditionMonitor = ConditionMonitor(this, profileManager)
 
@@ -125,9 +125,12 @@ class LocationForegroundService : Service() {
         val initialStatus = notificationHelper.getInitialStatus(
             insidePauseZone, currentZoneName, lastKnownLocation
         )
+        val initialTitle = notificationHelper.buildTitle(
+            if (::profileManager.isInitialized) profileManager.getActiveProfileName() else null
+        )
         startForeground(
             NotificationHelper.NOTIFICATION_ID,
-            notificationHelper.buildTrackingNotification(initialStatus)
+            notificationHelper.buildTrackingNotification(initialTitle, initialStatus)
         )
 
         if (!isLightweight) {
@@ -162,6 +165,7 @@ class LocationForegroundService : Service() {
             }
             ACTION_RECHECK_PROFILES -> {
                 profileManager.invalidateProfiles()
+                profileManager.evaluate()
                 return START_STICKY
             }
             ACTION_MANUAL_FLUSH -> {
@@ -335,13 +339,13 @@ class LocationForegroundService : Service() {
     }
 
     private fun handleLocationUpdate(location: android.location.Location) {
-        // Feed location to profile manager for speed-based condition evaluation
-        // (must run before accuracy filter so speed data is always captured)
-        profileManager.onLocationUpdate(location)
-
         if (config.filterInaccurateLocations && location.accuracy > config.accuracyThreshold) {
             return
         }
+
+        // Feed location to profile manager for speed-based condition evaluation
+        // (after accuracy filter so bad GPS data doesn't pollute speed average)
+        profileManager.onLocationUpdate(location)
 
         lastKnownLocation = location
 
@@ -465,6 +469,7 @@ class LocationForegroundService : Service() {
             zoneName = activeZone,
             queuedCount = syncManager.getCachedQueuedCount(),
             lastSyncTime = syncManager.lastSuccessfulSyncTime,
+            activeProfileName = profileManager.getActiveProfileName(),
             forceUpdate = forceUpdate
         )
     }
@@ -472,6 +477,11 @@ class LocationForegroundService : Service() {
     private fun stopForegroundServiceWithReason(reason: String) {
         if (BuildConfig.DEBUG) {
             Log.i(TAG, "Stopping: $reason")
+        }
+
+        // Clear active profile so JS UI resets the profile indicator
+        if (profileManager.getActiveProfileName() != null) {
+            LocationServiceModule.sendProfileSwitchEvent(null, null)
         }
 
         LocationServiceModule.sendTrackingStoppedEvent(reason)
@@ -497,7 +507,7 @@ class LocationForegroundService : Service() {
      * Dynamically switches GPS interval and sync config when a profile activates/deactivates.
      * No full service restart — just re-requests location updates with new parameters.
      */
-    private fun applyProfileConfig(interval: Long, distance: Float, syncInterval: Int, profileName: String?) {
+    private fun applyProfileConfig(interval: Long, distance: Float, syncInterval: Int) {
         config = config.copy(
             interval = interval,
             minUpdateDistance = distance,
@@ -522,8 +532,13 @@ class LocationForegroundService : Service() {
             }
         }
 
+        // Update notification to show/hide profile name in title
+        lastKnownLocation?.let {
+            updateNotification(lat = it.latitude, lon = it.longitude, forceUpdate = true)
+        } ?: updateNotification(forceUpdate = true)
+
         if (BuildConfig.DEBUG) {
-            Log.i(TAG, "Profile config applied: ${profileName ?: "default"} — interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
+            Log.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} — interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
         }
     }
 

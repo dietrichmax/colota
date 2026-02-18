@@ -4,7 +4,7 @@
  */
 
 import { NativeModules } from "react-native"
-import { AuthConfig, DatabaseStats, Geofence, Settings, TrackingProfile, TripEvent } from "../types/global"
+import { AuthConfig, DatabaseStats, Geofence, Settings, TrackingProfile, SavedTrackingProfile } from "../types/global"
 import { logger } from "../utils/logger"
 
 const { LocationServiceModule, BuildConfigModule } = NativeModules
@@ -328,7 +328,7 @@ class NativeLocationService {
   /**
    * Fetches all tracking profiles
    */
-  static async getProfiles(): Promise<TrackingProfile[]> {
+  static async getProfiles(): Promise<SavedTrackingProfile[]> {
     this.ensureModule()
     const raw = await this.safeExecute(() => LocationServiceModule.getProfiles(), [], "getProfiles failed")
     return raw.map((p: any) => ({
@@ -412,15 +412,11 @@ class NativeLocationService {
   }
 
   /**
-   * Fetches trip events within a date range
+   * Returns the name of the currently active tracking profile, or null if using defaults
    */
-  static async getTripEvents(startTimestamp: number, endTimestamp: number): Promise<TripEvent[]> {
+  static async getActiveProfileName(): Promise<string | null> {
     this.ensureModule()
-    return this.safeExecute(
-      () => LocationServiceModule.getTripEvents(startTimestamp, endTimestamp),
-      [],
-      "getTripEvents failed"
-    )
+    return this.safeExecute(() => LocationServiceModule.getActiveProfile(), null, "getActiveProfile failed")
   }
 
   // ============================================================================

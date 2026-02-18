@@ -68,6 +68,7 @@ Emits events back to JavaScript:
 - `onTrackingStopped` — service stopped (user action or OOM kill)
 - `onSyncError` — 3+ consecutive sync failures
 - `onPauseZoneChange` — entered or exited a geofence pause zone
+- `onProfileSwitch` — a tracking profile was activated or deactivated
 
 ### LocationProvider Abstraction
 
@@ -93,20 +94,22 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 Handles all notification logic for the tracking service:
 
 - Channel creation and notification building
+- Dynamic title: "Colota Tracking" by default, "Colota · ProfileName" when a tracking profile is active
 - Status text generation (coordinates, sync status, pause zones)
 - Throttled updates (10s minimum interval, 2m minimum movement)
 - Deduplication to avoid unnecessary notification redraws
 
 ### DatabaseHelper
 
-SQLite database singleton with four tables:
+SQLite database singleton with six tables:
 
-| Table       | Purpose                           |
-| ----------- | --------------------------------- |
-| `locations` | All recorded GPS locations        |
-| `queue`     | Locations pending upload          |
-| `settings`  | App configuration key-value pairs |
-| `geofences` | Pause zone definitions            |
+| Table               | Purpose                                      |
+| ------------------- | -------------------------------------------- |
+| `locations`         | All recorded GPS locations                   |
+| `queue`             | Locations pending upload                     |
+| `settings`          | App configuration key-value pairs            |
+| `geofences`         | Pause zone definitions                       |
+| `tracking_profiles` | Condition-based tracking profile definitions |
 
 Uses WAL (Write-Ahead Logging) mode and prepared statements for performance.
 
@@ -126,6 +129,22 @@ HTTP client. Validates endpoints, enforces HTTPS for public hosts, injects auth 
 ### GeofenceHelper
 
 Manages pause zones using the **haversine formula** for distance calculations. Maintains an in-memory cache of geofences that invalidates on CRUD changes.
+
+### ProfileManager
+
+Evaluates tracking profile conditions and switches GPS settings automatically. Supports four condition types: charging, Android Auto / car mode, speed above threshold, and speed below threshold. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match.
+
+### ProfileHelper
+
+Database access layer for tracking profiles and trip events. Maintains a `TimedCache` of enabled profiles (30s TTL) and provides CRUD operations plus trip event logging.
+
+### ConditionMonitor
+
+Registers and manages `BroadcastReceiver` instances for charging state and Android Auto / car mode detection. Forwards state changes to `ProfileManager` for condition evaluation.
+
+### ProfileConstants
+
+Centralized constants for condition type strings (`charging`, `android_auto`, `speed_above`, `speed_below`), event types (`activated`, `deactivated`), cache TTL, speed buffer size, and minimum interval.
 
 ### SecureStorageHelper
 
@@ -151,6 +170,7 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 | --- | --- |
 | `NativeLocationService` | TypeScript bridge to the native `LocationServiceModule` with typed methods for all native operations |
 | `LocationServicePermission` | Sequential Android permission requests (fine location → background location → notifications → battery exemption) |
+| `ProfileService` | Thin wrapper over `NativeLocationService` for tracking profile CRUD and trip event queries |
 | `SettingsService` | Bridges UI state to native SQLite with type conversion (seconds↔ms, objects↔JSON) |
 
 ### Utils
@@ -176,7 +196,7 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 The app uses React Context for global state:
 
 - **ThemeProvider** — Light/dark theme with system preference sync
-- **TrackingProvider** — Single source of truth for tracking state, coordinates, and settings. Hydrates from SQLite on mount and persists changes back through `SettingsService`.
+- **TrackingProvider** — Single source of truth for tracking state, coordinates, settings, and active profile name. Hydrates from SQLite on mount, restores the active profile from the running service on reconnect, and persists changes back through `SettingsService`.
 
 ### Data Flow
 

@@ -7,6 +7,7 @@ package com.Colota.data
 
 import android.content.ContentValues
 import com.Colota.BuildConfig
+import com.Colota.service.ProfileConstants
 import com.Colota.util.TimedCache
 import android.content.Context
 import android.util.Log
@@ -17,7 +18,7 @@ class ProfileHelper(private val context: Context) {
 
     private val dbHelper by lazy { DatabaseHelper.getInstance(context) }
 
-    private val profileCache = TimedCache(30000L) { loadEnabledProfilesFromDB() }
+    private val profileCache = TimedCache(ProfileConstants.CACHE_TTL_MS) { loadEnabledProfilesFromDB() }
 
     data class CachedProfile(
         val id: Int,
@@ -44,6 +45,21 @@ class ProfileHelper(private val context: Context) {
 
     fun getEnabledProfiles(): List<CachedProfile> = profileCache.get()
 
+    private fun cursorToProfile(cursor: android.database.Cursor): CachedProfile {
+        val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
+        return CachedProfile(
+            id = cursor.getInt(cursor.getColumnIndexOrThrow("id")),
+            name = cursor.getString(cursor.getColumnIndexOrThrow("name")),
+            intervalMs = cursor.getLong(cursor.getColumnIndexOrThrow("interval_ms")),
+            minUpdateDistance = cursor.getFloat(cursor.getColumnIndexOrThrow("min_update_distance")),
+            syncIntervalSeconds = cursor.getInt(cursor.getColumnIndexOrThrow("sync_interval_seconds")),
+            priority = cursor.getInt(cursor.getColumnIndexOrThrow("priority")),
+            conditionType = cursor.getString(cursor.getColumnIndexOrThrow("condition_type")),
+            speedThreshold = if (cursor.isNull(speedIdx)) null else cursor.getFloat(speedIdx),
+            deactivationDelaySeconds = cursor.getInt(cursor.getColumnIndexOrThrow("deactivation_delay_seconds"))
+        )
+    }
+
     private fun loadEnabledProfilesFromDB(): List<CachedProfile> {
         return try {
             val profiles = mutableListOf<CachedProfile>()
@@ -58,28 +74,8 @@ class ProfileHelper(private val context: Context) {
                 null, null, null,
                 "priority DESC"
             ).use { cursor ->
-                val idIdx = cursor.getColumnIndexOrThrow("id")
-                val nameIdx = cursor.getColumnIndexOrThrow("name")
-                val intervalIdx = cursor.getColumnIndexOrThrow("interval_ms")
-                val distIdx = cursor.getColumnIndexOrThrow("min_update_distance")
-                val syncIdx = cursor.getColumnIndexOrThrow("sync_interval_seconds")
-                val prioIdx = cursor.getColumnIndexOrThrow("priority")
-                val condIdx = cursor.getColumnIndexOrThrow("condition_type")
-                val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
-                val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
-
                 while (cursor.moveToNext()) {
-                    profiles.add(CachedProfile(
-                        id = cursor.getInt(idIdx),
-                        name = cursor.getString(nameIdx),
-                        intervalMs = cursor.getLong(intervalIdx),
-                        minUpdateDistance = cursor.getFloat(distIdx),
-                        syncIntervalSeconds = cursor.getInt(syncIdx),
-                        priority = cursor.getInt(prioIdx),
-                        conditionType = cursor.getString(condIdx),
-                        speedThreshold = if (cursor.isNull(speedIdx)) null else cursor.getFloat(speedIdx),
-                        deactivationDelaySeconds = cursor.getInt(delayIdx)
-                    ))
+                    profiles.add(cursorToProfile(cursor))
                 }
             }
             profiles
@@ -218,73 +214,4 @@ class ProfileHelper(private val context: Context) {
         ) > 0
     }
 
-    fun logTripEvent(
-        profileId: Int?,
-        profileName: String,
-        eventType: String,
-        latitude: Double?,
-        longitude: Double?,
-        timestamp: Long
-    ) {
-        try {
-            val values = ContentValues().apply {
-                if (profileId != null) {
-                    put("profile_id", profileId)
-                } else {
-                    putNull("profile_id")
-                }
-                put("profile_name", profileName)
-                put("event_type", eventType)
-                if (latitude != null) put("latitude", latitude) else putNull("latitude")
-                if (longitude != null) put("longitude", longitude) else putNull("longitude")
-                put("timestamp", timestamp)
-            }
-
-            dbHelper.writableDatabase.insert(DatabaseHelper.TABLE_TRIP_EVENTS, null, values)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to log trip event", e)
-        }
-    }
-
-    fun getTripEventsAsArray(startTimestamp: Long, endTimestamp: Long): WritableArray {
-        val array = Arguments.createArray()
-
-        try {
-            dbHelper.readableDatabase.query(
-                DatabaseHelper.TABLE_TRIP_EVENTS,
-                null,
-                "timestamp >= ? AND timestamp <= ?",
-                arrayOf(startTimestamp.toString(), endTimestamp.toString()),
-                null, null,
-                "timestamp DESC"
-            ).use { cursor ->
-                val idIdx = cursor.getColumnIndexOrThrow("id")
-                val profIdIdx = cursor.getColumnIndexOrThrow("profile_id")
-                val profNameIdx = cursor.getColumnIndexOrThrow("profile_name")
-                val typeIdx = cursor.getColumnIndexOrThrow("event_type")
-                val latIdx = cursor.getColumnIndexOrThrow("latitude")
-                val lonIdx = cursor.getColumnIndexOrThrow("longitude")
-                val tsIdx = cursor.getColumnIndexOrThrow("timestamp")
-
-                while (cursor.moveToNext()) {
-                    array.pushMap(Arguments.createMap().apply {
-                        putInt("id", cursor.getInt(idIdx))
-                        if (cursor.isNull(profIdIdx)) putNull("profileId")
-                        else putInt("profileId", cursor.getInt(profIdIdx))
-                        putString("profileName", cursor.getString(profNameIdx))
-                        putString("eventType", cursor.getString(typeIdx))
-                        if (cursor.isNull(latIdx)) putNull("latitude")
-                        else putDouble("latitude", cursor.getDouble(latIdx))
-                        if (cursor.isNull(lonIdx)) putNull("longitude")
-                        else putDouble("longitude", cursor.getDouble(lonIdx))
-                        putDouble("timestamp", cursor.getLong(tsIdx).toDouble())
-                    })
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load trip events", e)
-        }
-
-        return array
-    }
 }

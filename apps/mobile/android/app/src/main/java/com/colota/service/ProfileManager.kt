@@ -5,7 +5,6 @@
 
 package com.Colota.service
 
-import android.location.Location
 import android.util.Log
 import com.Colota.BuildConfig
 import com.Colota.bridge.LocationServiceModule
@@ -30,7 +29,6 @@ class ProfileManager(
 ) {
     companion object {
         private const val TAG = "ProfileManager"
-        private const val SPEED_BUFFER_SIZE = 5
     }
 
     // Default config values (set by the service after loading config)
@@ -50,8 +48,6 @@ class ProfileManager(
     private val speedBuffer = ArrayDeque<Float>()
     private val speedLock = Any()
 
-    // Last known location for trip event logging
-    @Volatile private var lastLocation: Location? = null
 
     fun onChargingStateChanged(charging: Boolean) {
         isCharging = charging
@@ -63,12 +59,10 @@ class ProfileManager(
         evaluate()
     }
 
-    fun onLocationUpdate(location: Location) {
-        lastLocation = location
-
+    fun onLocationUpdate(location: android.location.Location) {
         if (location.hasSpeed()) {
             synchronized(speedLock) {
-                if (speedBuffer.size >= SPEED_BUFFER_SIZE) {
+                if (speedBuffer.size >= ProfileConstants.SPEED_BUFFER_SIZE) {
                     speedBuffer.removeFirst()
                 }
                 speedBuffer.addLast(location.speed)
@@ -88,12 +82,16 @@ class ProfileManager(
      * Must handle concurrent calls from location updates, broadcasts, and service actions.
      */
     @Synchronized
-    private fun evaluate() {
+    fun evaluate() {
         val profiles = profileHelper.getEnabledProfiles()
+
+        // If the active profile was disabled or deleted, deactivate immediately (no delay)
+        if (activeProfile != null && profiles.none { it.id == activeProfile!!.id }) {
+            cancelDeactivation()
+            deactivateToDefault()
+        }
+
         if (profiles.isEmpty()) {
-            if (activeProfile != null) {
-                scheduleDeactivation(activeProfile!!)
-            }
             return
         }
 
@@ -103,14 +101,20 @@ class ProfileManager(
         when {
             // A profile matches — activate it (or keep if already active)
             matchingProfile != null -> {
+                cancelDeactivation()
+
                 if (activeProfile?.id == matchingProfile.id) {
-                    // Same profile still matches — cancel any pending deactivation
-                    cancelDeactivation()
+                    // Same profile still matches — re-apply only if config changed
+                    val active = activeProfile!!
+                    if (active.intervalMs != matchingProfile.intervalMs ||
+                        active.minUpdateDistance != matchingProfile.minUpdateDistance ||
+                        active.syncIntervalSeconds != matchingProfile.syncIntervalSeconds) {
+                        activateProfile(matchingProfile)
+                    }
                     return
                 }
 
                 // Different profile or new activation
-                cancelDeactivation()
                 activateProfile(matchingProfile)
             }
 
@@ -123,14 +127,14 @@ class ProfileManager(
 
     private fun matchesCondition(profile: ProfileHelper.CachedProfile): Boolean {
         return when (profile.conditionType) {
-            "charging" -> isCharging
-            "android_auto" -> isCarMode
-            "speed_above" -> {
+            ProfileConstants.CONDITION_CHARGING -> isCharging
+            ProfileConstants.CONDITION_ANDROID_AUTO -> isCarMode
+            ProfileConstants.CONDITION_SPEED_ABOVE -> {
                 val avgSpeed = getAverageSpeed()
                 val threshold = profile.speedThreshold
                 avgSpeed != null && threshold != null && avgSpeed > threshold
             }
-            "speed_below" -> {
+            ProfileConstants.CONDITION_SPEED_BELOW -> {
                 val avgSpeed = getAverageSpeed()
                 val threshold = profile.speedThreshold
                 avgSpeed != null && threshold != null && avgSpeed < threshold
@@ -148,17 +152,6 @@ class ProfileManager(
 
     private fun activateProfile(profile: ProfileHelper.CachedProfile) {
         activeProfile = profile
-
-        // Log trip event
-        val loc = lastLocation
-        profileHelper.logTripEvent(
-            profileId = profile.id,
-            profileName = profile.name,
-            eventType = "activated",
-            latitude = loc?.latitude,
-            longitude = loc?.longitude,
-            timestamp = System.currentTimeMillis() / 1000
-        )
 
         if (BuildConfig.DEBUG) {
             Log.i(TAG, "Activated profile: ${profile.name} (interval=${profile.intervalMs}ms, sync=${profile.syncIntervalSeconds}s)")
@@ -180,9 +173,11 @@ class ProfileManager(
     private fun scheduleDeactivation(profile: ProfileHelper.CachedProfile) {
         if (deactivationJob?.isActive == true) return // already scheduled
 
+        val scheduledProfileId = profile.id
         deactivationJob = scope.launch {
             delay(profile.deactivationDelaySeconds * 1000L)
-            deactivateToDefault()
+            ensureActive()
+            deactivateIfStillActive(scheduledProfileId)
         }
 
         if (BuildConfig.DEBUG) {
@@ -190,27 +185,27 @@ class ProfileManager(
         }
     }
 
+    /**
+     * Called from the deactivation coroutine. Re-checks under lock that the
+     * profile being deactivated is still the active one — prevents a race
+     * where evaluate() activated a new profile between ensureActive() and
+     * acquiring the synchronized lock.
+     */
+    @Synchronized
+    private fun deactivateIfStillActive(scheduledProfileId: Int) {
+        if (activeProfile?.id != scheduledProfileId) return
+        deactivateToDefault()
+    }
+
     private fun cancelDeactivation() {
         deactivationJob?.cancel()
         deactivationJob = null
     }
 
-    @Synchronized
     private fun deactivateToDefault() {
         val previousProfile = activeProfile ?: return
         activeProfile = null
         deactivationJob = null
-
-        // Log trip event
-        val loc = lastLocation
-        profileHelper.logTripEvent(
-            profileId = previousProfile.id,
-            profileName = previousProfile.name,
-            eventType = "deactivated",
-            latitude = loc?.latitude,
-            longitude = loc?.longitude,
-            timestamp = System.currentTimeMillis() / 1000
-        )
 
         if (BuildConfig.DEBUG) {
             Log.i(TAG, "Deactivated profile: ${previousProfile.name} — reverting to defaults")

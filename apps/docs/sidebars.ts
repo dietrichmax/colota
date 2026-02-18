@@ -41,6 +41,7 @@ const sidebars: SidebarsConfig = {
       label: "Guides",
       items: [
         "guides/geofencing",
+        "guides/tracking-profiles",
         "guides/data-export",
         "guides/data-management",
         "guides/battery-optimization",

@@ -4,14 +4,14 @@
  */
 
 import NativeLocationService from "./NativeLocationService"
-import { TrackingProfile, TripEvent } from "../types/global"
+import { TrackingProfile, SavedTrackingProfile } from "../types/global"
 
 /**
  * Service for managing tracking profiles.
  * Thin wrapper over NativeLocationService profile methods.
  */
 export const ProfileService = {
-  getProfiles: (): Promise<TrackingProfile[]> => NativeLocationService.getProfiles(),
+  getProfiles: (): Promise<SavedTrackingProfile[]> => NativeLocationService.getProfiles(),
 
   createProfile: (profile: Omit<TrackingProfile, "id" | "createdAt">): Promise<number> =>
     NativeLocationService.createProfile(profile),
@@ -21,10 +21,7 @@ export const ProfileService = {
 
   deleteProfile: (id: number): Promise<boolean> => NativeLocationService.deleteProfile(id),
 
-  recheckProfiles: (): Promise<void> => NativeLocationService.recheckProfiles(),
-
-  getTripEvents: (startTimestamp: number, endTimestamp: number): Promise<TripEvent[]> =>
-    NativeLocationService.getTripEvents(startTimestamp, endTimestamp)
+  recheckProfiles: (): Promise<void> => NativeLocationService.recheckProfiles()
 }
 
 export default ProfileService

@@ -29,9 +29,10 @@ type Props = {
   coords: LocationCoords | null
   tracking: boolean
   activeZoneName: string | null
+  activeProfileName: string | null
 }
 
-export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
+export function DashboardMap({ coords, tracking, activeZoneName, activeProfileName }: Props) {
   const webviewRef = useRef<WebView>(null)
   const { colors, mode } = useTheme()
   const isDark = mode === "dark"
@@ -413,7 +414,24 @@ export function DashboardMap({ coords, tracking, activeZoneName }: Props) {
           ]}
         >
           <Text style={[styles.infoTitle, { color: colors.text }]}>Paused in {activeZoneName}</Text>
-          <Text style={[styles.infoSub, { color: colors.textSecondary }]}>Location not being recorded</Text>
+          <Text style={[styles.infoSub, { color: colors.textSecondary }]}>
+            {activeProfileName ? `Profile "${activeProfileName}" resumes on exit` : "Location not being recorded"}
+          </Text>
+        </View>
+      )}
+
+      {!activeZoneName && activeProfileName && (
+        <View
+          style={[
+            styles.topInfoCard,
+            {
+              backgroundColor: colors.card,
+              borderLeftColor: colors.primary
+            }
+          ]}
+        >
+          <Text style={[styles.infoTitle, { color: colors.text }]}>Profile: {activeProfileName}</Text>
+          <Text style={[styles.infoSub, { color: colors.textSecondary }]}>Tracking settings adjusted</Text>
         </View>
       )}
     </View>

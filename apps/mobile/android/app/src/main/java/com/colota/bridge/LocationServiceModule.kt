@@ -11,6 +11,7 @@ import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
 import com.Colota.data.ProfileHelper
 import com.Colota.service.LocationForegroundService
+import com.Colota.service.ProfileConstants
 import com.Colota.service.ServiceConfig
 import com.Colota.service.getDoubleOrNull
 import com.Colota.service.getIntOrNull
@@ -60,6 +61,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         
         @Volatile
         private var isAppInForeground: Boolean = true
+
+        @Volatile
+        private var activeProfileName: String? = null
         
         /** Skips when app is backgrounded to avoid unnecessary bridge overhead. */
         @JvmStatic
@@ -142,6 +146,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         /** Emits profile switch events to JS when a tracking profile activates/deactivates. */
         @JvmStatic
         fun sendProfileSwitchEvent(profileName: String?, profileId: Int?): Boolean {
+            activeProfileName = profileName
             val context = reactContextRef.get() ?: return false
             if (!context.hasActiveCatalystInstance()) return false
 
@@ -481,12 +486,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun createProfile(config: ReadableMap, promise: Promise) = executeAsync(promise) {
         val id = profileHelper.insertProfile(
-            name = config.getString("name") ?: "",
+            name = (config.getString("name") ?: "").trim(),
             intervalMs = config.getDouble("intervalMs").toLong(),
             minUpdateDistance = config.getDouble("minUpdateDistance").toFloat(),
             syncIntervalSeconds = config.getInt("syncIntervalSeconds"),
             priority = config.getInt("priority"),
-            conditionType = config.getString("conditionType") ?: "charging",
+            conditionType = config.getString("conditionType") ?: ProfileConstants.CONDITION_CHARGING,
             speedThreshold = if (config.hasKey("speedThreshold") && !config.isNull("speedThreshold"))
                 config.getDouble("speedThreshold").toFloat() else null,
             deactivationDelaySeconds = config.getInt("deactivationDelaySeconds")
@@ -500,10 +505,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun updateProfile(config: ReadableMap, promise: Promise) = executeAsync(promise) {
-        val id = config.getInt("id")
         val result = profileHelper.updateProfile(
-            id = id,
-            name = config.getStringOrNull("name"),
+            id = config.getInt("id"),
+            name = config.getStringOrNull("name")?.trim(),
             intervalMs = config.getDoubleOrNull("intervalMs")?.toLong(),
             minUpdateDistance = config.getDoubleOrNull("minUpdateDistance")?.toFloat(),
             syncIntervalSeconds = config.getIntOrNull("syncIntervalSeconds"),
@@ -534,16 +538,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getActiveProfile(promise: Promise) {
-        // Active profile state is managed by the foreground service's ProfileManager.
-        // Return null if service isn't running — the JS side listens for onProfileSwitch events.
-        promise.resolve(null)
+        promise.resolve(activeProfileName)
     }
-
-    @ReactMethod
-    fun getTripEvents(startTimestamp: Double, endTimestamp: Double, promise: Promise) =
-        executeAsync(promise) {
-            profileHelper.getTripEventsAsArray(startTimestamp.toLong(), endTimestamp.toLong())
-        }
 
     @ReactMethod
     fun recheckProfiles(promise: Promise) {

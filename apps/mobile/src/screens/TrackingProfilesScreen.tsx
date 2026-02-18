@@ -4,40 +4,29 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react"
-import { View, Text, StyleSheet, FlatList, Switch, TouchableOpacity, DeviceEventEmitter } from "react-native"
+import { View, Text, StyleSheet, FlatList, Switch, TouchableOpacity } from "react-native"
 import { useTheme } from "../hooks/useTheme"
+import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
-import { TrackingProfile, ScreenProps } from "../types/global"
+import { SavedTrackingProfile, ScreenProps } from "../types/global"
 import { fonts } from "../styles/typography"
 import { Container, SectionTitle, Card } from "../components"
-import { Plus, X, Zap, Car, ArrowUp, ArrowDown } from "lucide-react-native"
+import { Plus, X, Zap } from "lucide-react-native"
 import { logger } from "../utils/logger"
+import { PROFILE_CONDITIONS, MS_TO_KMH } from "../constants"
 
-const CONDITION_LABELS: Record<string, string> = {
-  charging: "When charging",
-  android_auto: "Android Auto / Car mode",
-  speed_above: "Speed above",
-  speed_below: "Speed below"
-}
-
-const CONDITION_ICONS: Record<string, any> = {
-  charging: Zap,
-  android_auto: Car,
-  speed_above: ArrowUp,
-  speed_below: ArrowDown
-}
-
-function formatCondition(profile: TrackingProfile): string {
-  const label = CONDITION_LABELS[profile.condition.type] || profile.condition.type
+function formatCondition(profile: SavedTrackingProfile): string {
+  const condition = PROFILE_CONDITIONS.find((c) => c.type === profile.condition.type)
+  const label = condition?.listLabel || profile.condition.type
   if (profile.condition.type === "speed_above" || profile.condition.type === "speed_below") {
-    const kmh = ((profile.condition.speedThreshold ?? 0) * 3.6).toFixed(0)
+    const kmh = ((profile.condition.speedThreshold ?? 0) * MS_TO_KMH).toFixed(0)
     return `${label} ${kmh} km/h`
   }
   return label
 }
 
-function formatSettings(profile: TrackingProfile): string {
+function formatSettings(profile: SavedTrackingProfile): string {
   const parts = [`${profile.interval}s interval`]
   if (profile.distance > 0) parts.push(`${profile.distance}m threshold`)
   parts.push(profile.syncInterval === 0 ? "instant sync" : `${profile.syncInterval}s sync`)
@@ -46,8 +35,8 @@ function formatSettings(profile: TrackingProfile): string {
 
 export function TrackingProfilesScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
-  const [profiles, setProfiles] = useState<TrackingProfile[]>([])
-  const [activeProfileName, setActiveProfileName] = useState<string | null>(null)
+  const { activeProfileName } = useTracking()
+  const [profiles, setProfiles] = useState<SavedTrackingProfile[]>([])
 
   const loadProfiles = useCallback(async () => {
     try {
@@ -61,14 +50,6 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
   useEffect(() => {
     loadProfiles()
   }, [loadProfiles])
-
-  // Listen for profile switch events from the native service
-  useEffect(() => {
-    const listener = DeviceEventEmitter.addListener("onProfileSwitch", (event) => {
-      setActiveProfileName(event.profileName ?? null)
-    })
-    return () => listener.remove()
-  }, [])
 
   // Reload when returning from editor
   useEffect(() => {
@@ -91,7 +72,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
   )
 
   const handleDelete = useCallback(
-    async (item: TrackingProfile) => {
+    async (item: SavedTrackingProfile) => {
       const confirmed = await showConfirm({
         title: "Delete Profile",
         message: `Delete "${item.name}"?`,
@@ -102,7 +83,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
       if (!confirmed) return
 
       try {
-        await ProfileService.deleteProfile(item.id!)
+        await ProfileService.deleteProfile(item.id)
         await loadProfiles()
       } catch {
         showAlert("Error", "Failed to delete profile.", "error")
@@ -112,12 +93,13 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
   )
 
   const renderItem = useCallback(
-    ({ item }: { item: TrackingProfile }) => {
-      const ConditionIcon = CONDITION_ICONS[item.condition.type] || Zap
+    ({ item }: { item: SavedTrackingProfile }) => {
+      const condition = PROFILE_CONDITIONS.find((c) => c.type === item.condition.type)
+      const ConditionIcon = condition?.icon || Zap
       const isActive = activeProfileName === item.name
 
       return (
-        <Card style={[styles.card, isActive && { borderColor: colors.primary, borderWidth: 2 }]}>
+        <Card style={[styles.card, isActive && styles.activeCard, isActive && { borderColor: colors.primary }]}>
           <TouchableOpacity
             style={styles.row}
             onPress={() => navigation.navigate("Profile Editor", { profileId: item.id })}
@@ -146,7 +128,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
             <View style={styles.actions}>
               <Switch
                 value={item.enabled}
-                onValueChange={(val) => toggleEnabled(item.id!, val)}
+                onValueChange={(val) => toggleEnabled(item.id, val)}
                 trackColor={{ false: colors.border, true: colors.primary + "80" }}
                 thumbColor={item.enabled ? colors.primary : colors.border}
               />
@@ -170,7 +152,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
     <Container>
       <FlatList
         data={profiles}
-        keyExtractor={(item) => item.id!.toString()}
+        keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
@@ -225,6 +207,7 @@ const styles = StyleSheet.create({
   },
   createBtnText: { fontSize: 15, ...fonts.semiBold },
   card: { marginBottom: 12, padding: 14 },
+  activeCard: { borderWidth: 2 },
   row: { flexDirection: "row", alignItems: "center" },
   iconWrap: {
     width: 36,

@@ -147,7 +147,7 @@ export function ExportDataScreen() {
         ) : (
           <>
             {/* Stats Card */}
-            <Card>
+            <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total</Text>
@@ -163,7 +163,7 @@ export function ExportDataScreen() {
                   <Text style={[styles.statValue, { color: colors.success }]}>{fileSize ?? "–"}</Text>
                 </View>
               </View>
-            </Card>
+            </View>
 
             {/* Format Selection */}
             <View style={styles.section}>
@@ -312,6 +312,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     lineHeight: 18
+  },
+  statsContainer: {
+    borderRadius: 16,
+    borderWidth: 2,
+    marginBottom: 24,
+    overflow: "hidden"
   },
   statsGrid: {
     flexDirection: "row",

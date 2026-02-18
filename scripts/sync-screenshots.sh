@@ -33,6 +33,7 @@ STORE_ORDER=(
   "Authentication.png"
   "DataManagement.png"
   "ApiFieldMapping.png"
+  "ProfileEditor.png"
   "Geofences.png"
   "LocationInspector.png"
   "ExportData.png"

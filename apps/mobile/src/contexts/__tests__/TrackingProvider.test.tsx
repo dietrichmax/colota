@@ -8,7 +8,8 @@ jest.mock("../../services/NativeLocationService", () => ({
   stop: jest.fn(),
   saveSetting: jest.fn().mockResolvedValue(undefined),
   isServiceRunning: jest.fn().mockResolvedValue(false),
-  isTrackingActive: jest.fn().mockResolvedValue(false)
+  isTrackingActive: jest.fn().mockResolvedValue(false),
+  getActiveProfileName: jest.fn().mockResolvedValue(null)
 }))
 
 jest.mock("../../services/SettingsService", () => ({
@@ -249,5 +250,88 @@ describe("useTracking", () => {
     })
 
     expect(result.current.error).toBeNull()
+  })
+
+  it("updates activeProfileName when onProfileSwitch event fires", async () => {
+    mockGetAllSettings.mockResolvedValueOnce({ interval: "5000" })
+
+    const { DeviceEventEmitter } = require("react-native")
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    })
+
+    expect(result.current.activeProfileName).toBeNull()
+
+    await act(async () => {
+      DeviceEventEmitter.emit("onProfileSwitch", { profileName: "Charging" })
+    })
+
+    expect(result.current.activeProfileName).toBe("Charging")
+  })
+
+  it("clears activeProfileName when onProfileSwitch fires with null", async () => {
+    mockGetAllSettings.mockResolvedValueOnce({ interval: "5000" })
+
+    const { DeviceEventEmitter } = require("react-native")
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    })
+
+    await act(async () => {
+      DeviceEventEmitter.emit("onProfileSwitch", { profileName: "Charging" })
+    })
+
+    expect(result.current.activeProfileName).toBe("Charging")
+
+    await act(async () => {
+      DeviceEventEmitter.emit("onProfileSwitch", { profileName: null })
+    })
+
+    expect(result.current.activeProfileName).toBeNull()
+  })
+
+  it("clears activeProfileName when stopTracking is called", async () => {
+    mockGetAllSettings.mockResolvedValueOnce({ interval: "5000" })
+
+    const { DeviceEventEmitter } = require("react-native")
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    })
+
+    await act(async () => {
+      DeviceEventEmitter.emit("onProfileSwitch", { profileName: "Fast Driving" })
+    })
+
+    expect(result.current.activeProfileName).toBe("Fast Driving")
+
+    await act(async () => {
+      result.current.stopTracking()
+    })
+
+    expect(result.current.activeProfileName).toBeNull()
+  })
+
+  it("restores activeProfileName on reconnect when tracking was active", async () => {
+    const mockGetActiveProfileName = NativeLocationService.getActiveProfileName as jest.Mock
+    mockGetActiveProfileName.mockResolvedValueOnce("Charging")
+    mockGetAllSettings.mockResolvedValueOnce({
+      interval: "5000",
+      tracking_enabled: "true"
+    })
+
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    })
+
+    expect(mockGetActiveProfileName).toHaveBeenCalled()
+    expect(result.current.activeProfileName).toBe("Charging")
   })
 })

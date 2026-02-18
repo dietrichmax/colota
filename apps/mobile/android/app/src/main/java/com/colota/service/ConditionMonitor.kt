@@ -34,32 +34,37 @@ class ConditionMonitor(
     private var carModeReceiver: BroadcastReceiver? = null
 
     fun start() {
+        // Unregister first to prevent duplicate receivers on repeated start() calls
+        stop()
+
         registerChargingMonitor()
         registerCarModeMonitor()
 
         // Read initial states
-        profileManager.onChargingStateChanged(readCurrentChargingState())
-        profileManager.onCarModeStateChanged(readCurrentCarModeState())
+        val charging = readCurrentChargingState()
+        val carMode = readCurrentCarModeState()
+        profileManager.onChargingStateChanged(charging)
+        profileManager.onCarModeStateChanged(carMode)
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Condition monitors started — charging: ${readCurrentChargingState()}, carMode: ${readCurrentCarModeState()}")
+            Log.d(TAG, "Condition monitors started — charging: $charging, carMode: $carMode")
         }
     }
 
     fun stop() {
-        chargingReceiver?.let {
-            try { context.unregisterReceiver(it) } catch (_: Exception) {}
-        }
-        chargingReceiver = null
-
-        carModeReceiver?.let {
-            try { context.unregisterReceiver(it) } catch (_: Exception) {}
-        }
-        carModeReceiver = null
+        chargingReceiver = unregisterSafely(chargingReceiver)
+        carModeReceiver = unregisterSafely(carModeReceiver)
 
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "Condition monitors stopped")
         }
+    }
+
+    private fun unregisterSafely(receiver: BroadcastReceiver?): Nothing? {
+        receiver?.let {
+            try { context.unregisterReceiver(it) } catch (_: Exception) {}
+        }
+        return null
     }
 
     private fun registerChargingMonitor() {
@@ -82,7 +87,7 @@ class ConditionMonitor(
             addAction(Intent.ACTION_POWER_CONNECTED)
             addAction(Intent.ACTION_POWER_DISCONNECTED)
         }
-        context.registerReceiver(chargingReceiver, filter)
+        context.registerReceiver(chargingReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
     }
 
     private fun registerCarModeMonitor() {
@@ -96,7 +101,7 @@ class ConditionMonitor(
             }
         }
 
-        context.registerReceiver(carModeReceiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED))
+        context.registerReceiver(carModeReceiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED), Context.RECEIVER_NOT_EXPORTED)
     }
 
     private fun readCurrentChargingState(): Boolean {

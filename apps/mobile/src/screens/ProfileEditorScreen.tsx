@@ -11,20 +11,9 @@ import { showAlert } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
 import { fonts } from "../styles/typography"
 import { Container, SectionTitle, Card, Divider } from "../components"
-import { Zap, Car, ArrowUp, ArrowDown, Check } from "lucide-react-native"
+import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
-
-const CONDITION_OPTIONS: {
-  type: ProfileConditionType
-  label: string
-  icon: any
-  description: string
-}[] = [
-  { type: "charging", label: "Charging", icon: Zap, description: "Phone is plugged in" },
-  { type: "android_auto", label: "Car Mode", icon: Car, description: "Android Auto connected" },
-  { type: "speed_above", label: "Speed Above", icon: ArrowUp, description: "Moving faster than threshold" },
-  { type: "speed_below", label: "Speed Below", icon: ArrowDown, description: "Moving slower than threshold" }
-]
+import { MS_TO_KMH, PROFILE_CONDITIONS } from "../constants"
 
 const SYNC_OPTIONS = [
   { label: "Instant", value: 0 },
@@ -62,29 +51,35 @@ export function ProfileEditorScreen({ navigation, route }: any) {
   useEffect(() => {
     if (!profileId) return
 
-    ProfileService.getProfiles().then((profiles) => {
-      const existing = profiles.find((p) => p.id === profileId)
-      if (existing) {
-        setProfile({
-          name: existing.name,
-          interval: existing.interval,
-          distance: existing.distance,
-          syncInterval: existing.syncInterval,
-          priority: existing.priority,
-          condition: existing.condition,
-          deactivationDelay: existing.deactivationDelay,
-          enabled: existing.enabled
-        })
-        setIntervalStr(String(existing.interval))
-        setDistanceStr(String(existing.distance))
-        setPriorityStr(String(existing.priority))
-        setDelayStr(String(existing.deactivationDelay))
-        if (existing.condition.speedThreshold) {
-          setSpeedKmh((existing.condition.speedThreshold * 3.6).toFixed(0))
+    ProfileService.getProfiles()
+      .then((profiles) => {
+        const existing = profiles.find((p) => p.id === profileId)
+        if (existing) {
+          setProfile({
+            name: existing.name,
+            interval: existing.interval,
+            distance: existing.distance,
+            syncInterval: existing.syncInterval,
+            priority: existing.priority,
+            condition: existing.condition,
+            deactivationDelay: existing.deactivationDelay,
+            enabled: existing.enabled
+          })
+          setIntervalStr(String(existing.interval))
+          setDistanceStr(String(existing.distance))
+          setPriorityStr(String(existing.priority))
+          setDelayStr(String(existing.deactivationDelay))
+          if (existing.condition.speedThreshold) {
+            setSpeedKmh((existing.condition.speedThreshold * MS_TO_KMH).toFixed(0))
+          }
         }
-      }
-    })
-  }, [profileId])
+      })
+      .catch((err) => {
+        logger.error("[ProfileEditor] Failed to load profile:", err)
+        showAlert("Error", "Failed to load profile data.", "error")
+        navigation.goBack()
+      })
+  }, [profileId, navigation])
 
   const handleNumericChange = useCallback(
     (setter: (v: string) => void, field: keyof typeof profile, value: string, min = 0) => {
@@ -104,7 +99,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
         ...prev,
         condition: {
           type,
-          ...(isSpeed ? { speedThreshold: Number(speedKmh) / 3.6 } : {})
+          ...(isSpeed ? { speedThreshold: Number(speedKmh) / MS_TO_KMH } : {})
         }
       }))
     },
@@ -117,7 +112,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
     if (!isNaN(num) && num > 0) {
       setProfile((prev) => ({
         ...prev,
-        condition: { ...prev.condition, speedThreshold: num / 3.6 }
+        condition: { ...prev.condition, speedThreshold: num / MS_TO_KMH }
       }))
     }
   }, [])
@@ -125,6 +120,15 @@ export function ProfileEditorScreen({ navigation, route }: any) {
   const handleSave = useCallback(async () => {
     if (!profile.name.trim()) {
       showAlert("Missing Name", "Please enter a profile name.", "warning")
+      return
+    }
+    if (profile.interval < 1) {
+      showAlert("Invalid Interval", "Tracking interval must be at least 1 second.", "warning")
+      return
+    }
+    const isSpeed = profile.condition.type === "speed_above" || profile.condition.type === "speed_below"
+    if (isSpeed && (!profile.condition.speedThreshold || profile.condition.speedThreshold <= 0)) {
+      showAlert("Missing Speed", "Speed conditions require a positive speed threshold.", "warning")
       return
     }
 
@@ -203,7 +207,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
         <SectionTitle style={styles.sectionGap}>Activation Condition</SectionTitle>
         <Card>
           <View style={styles.conditionGrid}>
-            {CONDITION_OPTIONS.map((opt) => {
+            {PROFILE_CONDITIONS.map((opt) => {
               const Icon = opt.icon
               const selected = profile.condition.type === opt.type
               return (
@@ -291,7 +295,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
 
           <Divider />
 
-          <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 8 }]}>Sync Interval</Text>
+          <Text style={[styles.label, styles.syncSectionLabel, { color: colors.textSecondary }]}>Sync Interval</Text>
           <View style={styles.syncGrid}>
             {SYNC_OPTIONS.map((opt) => {
               const selected = profile.syncInterval === opt.value
@@ -343,7 +347,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
 
         {/* Save Button */}
         <TouchableOpacity
-          style={[styles.saveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.6 : 1 }]}
+          style={[styles.saveBtn, { backgroundColor: colors.primary }, saving && styles.saveBtnDisabled]}
           onPress={handleSave}
           disabled={saving}
           activeOpacity={0.7}
@@ -425,5 +429,7 @@ const styles = StyleSheet.create({
     marginTop: 16
   },
   saveBtnText: { fontSize: 16, ...fonts.semiBold },
+  saveBtnDisabled: { opacity: 0.6 },
+  syncSectionLabel: { marginBottom: 8 },
   sectionGap: { marginTop: 24 }
 })

@@ -350,21 +350,8 @@ export interface TrackingProfile {
   createdAt?: number
 }
 
-export interface ActiveProfileInfo {
-  profileId: number
-  profileName: string
-  activatedAt: number
-}
-
-export interface TripEvent {
-  id: number
-  profileId: number | null
-  profileName: string
-  eventType: "activated" | "deactivated"
-  latitude: number | null
-  longitude: number | null
-  timestamp: number
-}
+/** A profile that has been persisted to the database (always has an id). */
+export type SavedTrackingProfile = TrackingProfile & { id: number }
 
 // ============================================================================
 // DATABASE

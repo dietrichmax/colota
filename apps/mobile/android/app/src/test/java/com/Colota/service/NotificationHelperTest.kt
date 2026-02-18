@@ -157,6 +157,23 @@ class NotificationHelperTest {
         assertFalse(shouldFilterByMovement(5.0f))
     }
 
+    // --- buildTitle ---
+
+    @Test
+    fun `title shows Colota Tracking when no profile active`() {
+        assertEquals("Colota Tracking", buildTitle(null))
+    }
+
+    @Test
+    fun `title includes profile name when active`() {
+        assertEquals("Colota \u00b7 Charging", buildTitle("Charging"))
+    }
+
+    @Test
+    fun `title includes custom profile name`() {
+        assertEquals("Colota \u00b7 Fast Driving", buildTitle("Fast Driving"))
+    }
+
     // --- Deduplication ---
 
     @Test
@@ -177,6 +194,11 @@ class NotificationHelperTest {
     @Test
     fun `queue count change triggers update even if text same`() {
         assertTrue(shouldUpdate("52.00000, 13.00000 (Synced)-0", "52.00000, 13.00000 (Synced)-5"))
+    }
+
+    @Test
+    fun `profile name change triggers update`() {
+        assertTrue(shouldUpdate("52.00000, 13.00000-0-null", "52.00000, 13.00000-0-Charging"))
     }
 
     // --- Helper methods that mirror NotificationHelper logic ---
@@ -223,4 +245,7 @@ class NotificationHelperTest {
 
     private fun shouldUpdate(lastText: String?, newText: String): Boolean =
         newText != lastText
+
+    private fun buildTitle(activeProfileName: String?): String =
+        if (activeProfileName != null) "Colota \u00b7 $activeProfileName" else "Colota Tracking"
 }
