@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-**Last updated: February 14, 2026**
+**Last updated: February 18, 2026**
 
 Colota ("the App") is a self-hosted GPS tracking application for Android, developed by Max Dietrich. This privacy policy explains what data the App collects, how it is used, and your rights regarding that data.
 
@@ -25,8 +25,16 @@ The App collects the following location-related data when tracking is active:
 
 The App also collects:
 
-- Battery level (0–100%)
+- Battery level (0-100%)
 - Battery status (charging, unplugged, full)
+
+### Geofence Data
+
+If you create pause zones (geofences), the App stores zone names, coordinates, and radii in the local database. This data is used only on-device to determine when to pause tracking and is never transmitted to any server.
+
+### Condition Monitoring
+
+When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto), and GPS speed to automatically switch tracking configurations. These condition states are transient and are not stored in the database.
 
 All data is stored **locally on your device** and is never sent anywhere unless you configure a server. The App does not collect personal identifiers, advertising IDs, device identifiers (IMEI, serial number), usage analytics, telemetry, or crash reports.
 
@@ -35,6 +43,8 @@ All data is stored **locally on your device** and is never sent anywhere unless 
 Collected data is stored in a local SQLite database on your device. The data is not accessible to other apps.
 
 Authentication credentials (if configured) are encrypted using **AES-256-GCM** via Android's `EncryptedSharedPreferences`.
+
+The App supports configuration via `colota://setup` deep links. These links can include server endpoints and authentication credentials. You must explicitly confirm before any configuration is applied. Only open setup links from sources you trust.
 
 ## Data Transmission
 
@@ -79,12 +89,16 @@ Since all data is stored locally on your device, you have full control:
 
 ## Permissions
 
-| Permission         | Purpose                                  |
-| ------------------ | ---------------------------------------- |
-| Location (Precise) | GPS tracking                             |
-| Foreground Service | Background tracking with notification    |
-| Boot Completed     | Auto-start tracking after device reboot  |
-| Internet           | Server sync (not needed for offline use) |
+| Permission                        | Purpose                                            |
+| --------------------------------- | -------------------------------------------------- |
+| Location (Precise)                | GPS tracking                                       |
+| Background Location (Android 10+) | Tracking while the app is not in the foreground    |
+| Foreground Service                | Background tracking with notification              |
+| Notification (Android 13+)        | Foreground service notification                    |
+| Boot Completed                    | Auto-start tracking after device reboot            |
+| Internet                          | Server sync (not needed for offline use)           |
+| Network State                     | Wi-Fi only sync detection                          |
+| Battery Optimization Exemption    | Optional, prevents system from restricting the app |
 
 ## Children's Privacy
 

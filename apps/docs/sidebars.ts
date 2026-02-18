@@ -29,6 +29,7 @@ const sidebars: SidebarsConfig = {
       items: [
         "integrations/api-templates",
         "integrations/dawarich",
+        "integrations/home-assistant",
         "integrations/owntracks",
         "integrations/reitti",
         "integrations/phonetrack",
