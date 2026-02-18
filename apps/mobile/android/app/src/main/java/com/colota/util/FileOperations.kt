@@ -25,8 +25,8 @@ class FileOperations(private val context: ReactApplicationContext) {
      * @return Full file path
      */
     fun writeFile(fileName: String, content: String): String {
-        val cacheDir = context.cacheDir
-        val file = File(cacheDir, fileName)
+        val sanitized = File(fileName).name
+        val file = File(context.cacheDir, sanitized)
         file.writeText(content)
         return file.absolutePath
     }

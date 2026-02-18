@@ -137,24 +137,25 @@ export function LocationHistoryScreen() {
     return formatDistance(meters)
   }, [trackLocations])
 
-  const fetchIdRef = useRef(0)
+  const fetchListIdRef = useRef(0)
+  const fetchTrackIdRef = useRef(0)
 
   /** Fetches data based on current pagination */
   const fetchData = useCallback(async () => {
-    const id = ++fetchIdRef.current
+    const id = ++fetchListIdRef.current
     try {
       const offset = page * limit
       const result = await NativeLocationService.getTableData("locations", limit, offset)
-      if (id === fetchIdRef.current) setData(result || [])
+      if (id === fetchListIdRef.current) setData(result || [])
     } catch (err) {
       logger.error("[LocationHistory] Fetch error:", err)
-      if (id === fetchIdRef.current) setData([])
+      if (id === fetchListIdRef.current) setData([])
     }
   }, [limit, page])
 
   /** Fetch track data for the selected day */
   const fetchTrackData = useCallback(async () => {
-    const id = ++fetchIdRef.current
+    const id = ++fetchTrackIdRef.current
     try {
       const start = new Date(mapDate)
       start.setHours(0, 0, 0, 0)
@@ -165,10 +166,10 @@ export function LocationHistoryScreen() {
       const endTimestamp = Math.floor(end.getTime() / 1000)
 
       const result = await NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp)
-      if (id === fetchIdRef.current) setTrackLocations(result || [])
+      if (id === fetchTrackIdRef.current) setTrackLocations(result || [])
     } catch (err) {
       logger.error("[LocationHistory] Track fetch error:", err)
-      if (id === fetchIdRef.current) setTrackLocations([])
+      if (id === fetchTrackIdRef.current) setTrackLocations([])
     }
   }, [mapDate])
 

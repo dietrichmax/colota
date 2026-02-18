@@ -10,6 +10,8 @@ import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isPrivateHost, isEndpointAllowed } from "../../../utils/settingsValidation"
 import { fonts } from "../../../styles/typography"
+import { useTimeout } from "../../../hooks/useTimeout"
+import { CONNECTION_TEST_TIMEOUT, TEST_RESULT_DISPLAY_MS } from "../../../constants"
 import { Button, Card, SectionTitle, Divider } from "../../index"
 
 interface ConnectionSettingsProps {
@@ -32,6 +34,7 @@ export function ConnectionSettings({
   const [testing, setTesting] = useState(false)
   const [testResponse, setTestResponse] = useState<string | null>(null)
   const [testError, setTestError] = useState(false)
+  const timeout = useTimeout()
 
   const handleOfflineModeChange = useCallback(
     (enabled: boolean) => {
@@ -86,11 +89,15 @@ export function ConnectionSettings({
       const params = new URLSearchParams(Object.entries(payload).map(([k, v]) => [k, String(v)]))
       const url =
         method === "GET" ? `${endpointInput}${endpointInput.includes("?") ? "&" : "?"}${params}` : endpointInput
+      const controller = new AbortController()
+      timeout.set(() => controller.abort(), CONNECTION_TEST_TIMEOUT)
       const response = await fetch(url, {
         method,
         headers: method === "GET" ? authHeaders : { "Content-Type": "application/json", ...authHeaders },
-        ...(method === "GET" ? {} : { body: JSON.stringify(payload) })
+        ...(method === "GET" ? {} : { body: JSON.stringify(payload) }),
+        signal: controller.signal
       })
+      timeout.clear()
 
       if (response.ok) {
         setTestResponse("Connection successful")
@@ -101,14 +108,19 @@ export function ConnectionSettings({
       }
     } catch (err: any) {
       const msg = err.message?.toLowerCase() || ""
-      const userMessage = msg.includes("network request failed") ? "No internet connection" : "Connection failed"
+      const userMessage =
+        err.name === "AbortError"
+          ? "Connection timed out"
+          : msg.includes("network request failed")
+          ? "No internet connection"
+          : "Connection failed"
       setTestResponse(userMessage)
       setTestError(true)
     } finally {
       setTesting(false)
-      setTimeout(() => setTestResponse(null), 3000)
+      timeout.set(() => setTestResponse(null), TEST_RESULT_DISPLAY_MS)
     }
-  }, [endpointInput, settings, onSettingsChange])
+  }, [endpointInput, settings, onSettingsChange, timeout])
 
   return (
     <View style={styles.section}>

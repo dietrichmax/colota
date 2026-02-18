@@ -27,18 +27,21 @@ export function ExportDataScreen() {
 
   const loadStats = useCallback(async () => {
     try {
-      const data = await NativeLocationService.getExportData()
-
-      if (data && data.length > 0) {
-        cachedData.current = data.map((item) => ({
-          ...item,
-          timestamp: item.timestamp ? item.timestamp * 1000 : Date.now()
-        }))
-
-        setTotalLocations(data.length)
-      }
+      const stats = await NativeLocationService.getStats()
+      setTotalLocations(stats.total ?? 0)
     } catch (error) {
       logger.error("[ExportDataScreen] Failed to load stats:", error)
+    }
+  }, [])
+
+  const loadExportData = useCallback(async () => {
+    if (cachedData.current.length > 0) return
+    const data = await NativeLocationService.getExportData()
+    if (data && data.length > 0) {
+      cachedData.current = data.map((item) => ({
+        ...item,
+        timestamp: item.timestamp ? item.timestamp * 1000 : Date.now()
+      }))
     }
   }, [])
 
@@ -48,16 +51,24 @@ export function ExportDataScreen() {
 
   // Convert once on format selection, cache the result for both size preview and export
   useEffect(() => {
-    if (!selectedFormat || cachedData.current.length === 0) {
+    if (!selectedFormat || totalLocations === 0) {
       setFileSize(null)
       cachedContent.current = null
       return
     }
 
-    const content = EXPORT_FORMATS[selectedFormat].convert(cachedData.current)
-    cachedContent.current = { format: selectedFormat, content }
-    setFileSize(formatBytes(getByteSize(content)))
-  }, [selectedFormat, totalLocations])
+    let cancelled = false
+    ;(async () => {
+      await loadExportData()
+      if (cancelled || cachedData.current.length === 0) return
+      const content = EXPORT_FORMATS[selectedFormat].convert(cachedData.current)
+      cachedContent.current = { format: selectedFormat, content }
+      setFileSize(formatBytes(getByteSize(content)))
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedFormat, totalLocations, loadExportData])
 
   const handleExport = async (format: ExportFormat) => {
     if (totalLocations === 0) {
@@ -69,6 +80,7 @@ export function ExportDataScreen() {
     setExportProgress("Preparing export...")
 
     try {
+      await loadExportData()
       setExportProgress(`Converting ${cachedData.current.length} locations...`)
 
       // Reuse cached conversion if format matches, otherwise convert fresh

@@ -251,17 +251,11 @@ class DatabaseHelper private constructor(context: Context) :
         return writableDatabase.insert(TABLE_LOCATIONS, null, values)
     }
 
-    /** Checks both sent and unsent locations to find the most recent one. */
+    /** Returns the most recent location (all locations live in the locations table). */
     fun getRawMostRecentLocation(): Map<String, Any?>? {
         val query = """
-            SELECT latitude, longitude, accuracy, timestamp 
-            FROM (
-                SELECT latitude, longitude, accuracy, timestamp FROM $TABLE_LOCATIONS
-                UNION ALL
-                SELECT l.latitude, l.longitude, l.accuracy, l.timestamp 
-                FROM $TABLE_QUEUE q
-                JOIN $TABLE_LOCATIONS l ON q.location_id = l.id
-            ) ORDER BY timestamp DESC LIMIT 1
+            SELECT latitude, longitude, accuracy, timestamp
+            FROM $TABLE_LOCATIONS ORDER BY timestamp DESC LIMIT 1
         """.trimIndent()
 
         return try {
@@ -523,11 +517,7 @@ class DatabaseHelper private constructor(context: Context) :
 
     fun deleteOlderThan(days: Int): Int {
         val cutoff = (System.currentTimeMillis() - days * 24 * 60 * 60 * 1000L) / 1000
-        return writableDatabase.delete(
-            TABLE_LOCATIONS, 
-            "timestamp < ?", 
-            arrayOf(cutoff.toString())
-        )
+        return writableDatabase.delete(TABLE_LOCATIONS, "timestamp < ?", arrayOf(cutoff.toString()))
     }
 
     /** Reclaims unused space. Call from background thread only. */

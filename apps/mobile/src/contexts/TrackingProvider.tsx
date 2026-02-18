@@ -56,9 +56,21 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
     syncPreset: (allRaw.syncPreset as any) ?? DEFAULT_SETTINGS.syncPreset,
     filterInaccurateLocations: allRaw.filterInaccurateLocations === "true",
 
-    fieldMap: allRaw.fieldMap ? JSON.parse(allRaw.fieldMap) : DEFAULT_SETTINGS.fieldMap,
+    fieldMap: (() => {
+      try {
+        return allRaw.fieldMap ? JSON.parse(allRaw.fieldMap) : DEFAULT_SETTINGS.fieldMap
+      } catch {
+        return DEFAULT_SETTINGS.fieldMap
+      }
+    })(),
 
-    customFields: allRaw.customFields ? JSON.parse(allRaw.customFields) : DEFAULT_SETTINGS.customFields,
+    customFields: (() => {
+      try {
+        return allRaw.customFields ? JSON.parse(allRaw.customFields) : DEFAULT_SETTINGS.customFields
+      } catch {
+        return DEFAULT_SETTINGS.customFields
+      }
+    })(),
 
     apiTemplate: (allRaw.apiTemplate as ApiTemplateName) ?? DEFAULT_SETTINGS.apiTemplate,
     httpMethod: (allRaw.httpMethod as HttpMethod) ?? DEFAULT_SETTINGS.httpMethod,

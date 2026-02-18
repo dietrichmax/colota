@@ -157,16 +157,21 @@ class NetworkManager(private val context: Context) {
         return true
     }
 
+    private val privateHostCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
     /**
      * Checks if the given host is private or local.
+     * Results are cached to avoid repeated DNS lookups on every request.
      */
     private fun isPrivateHost(host: String): Boolean {
         if (host == "localhost") return true
-        return try {
-            val address = java.net.InetAddress.getByName(host)
-            address.isAnyLocalAddress || address.isLoopbackAddress || address.isSiteLocalAddress
-        } catch (e: Exception) {
-            false
+        return privateHostCache.getOrPut(host) {
+            try {
+                val address = java.net.InetAddress.getByName(host)
+                address.isAnyLocalAddress || address.isLoopbackAddress || address.isSiteLocalAddress
+            } catch (e: Exception) {
+                false
+            }
         }
     }
 

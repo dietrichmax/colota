@@ -22,11 +22,19 @@ import android.os.Looper
 @SuppressLint("MissingPermission")
 class NativeLocationProvider(context: Context) : LocationProvider {
 
+    companion object {
+        /** Suppress network updates for this duration after the last GPS fix. */
+        private const val GPS_SUPPRESSION_MS = 10_000L
+    }
+
     private val locationManager: LocationManager =
         context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
     /** Maps each callback to its GPS listener and optional network listener. */
     private val listenerMap = java.util.concurrent.ConcurrentHashMap<LocationUpdateCallback, List<LocationListener>>()
+
+    /** Timestamp of last GPS fix, used to suppress redundant network updates. */
+    @Volatile private var lastGpsTime: Long = 0
 
     override fun requestLocationUpdates(
         intervalMs: Long,
@@ -36,6 +44,7 @@ class NativeLocationProvider(context: Context) : LocationProvider {
     ) {
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
+                lastGpsTime = System.currentTimeMillis()
                 callback.onLocationUpdate(location)
             }
             @Deprecated("Deprecated in API 29")
@@ -60,7 +69,9 @@ class NativeLocationProvider(context: Context) : LocationProvider {
             if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 val networkListener = object : LocationListener {
                     override fun onLocationChanged(location: Location) {
-                        callback.onLocationUpdate(location)
+                        if (System.currentTimeMillis() - lastGpsTime > GPS_SUPPRESSION_MS) {
+                            callback.onLocationUpdate(location)
+                        }
                     }
                     @Deprecated("Deprecated in API 29")
                     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}

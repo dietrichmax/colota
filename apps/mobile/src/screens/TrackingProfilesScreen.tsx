@@ -127,6 +127,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
 
             <View style={styles.actions}>
               <Switch
+                testID={`toggle-profile-${item.id}`}
                 value={item.enabled}
                 onValueChange={(val) => toggleEnabled(item.id, val)}
                 trackColor={{ false: colors.border, true: colors.primary + "80" }}
@@ -134,6 +135,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
               />
 
               <TouchableOpacity
+                testID={`delete-profile-${item.id}`}
                 onPress={() => handleDelete(item)}
                 style={[styles.deleteBtn, { backgroundColor: colors.error + "15" }]}
                 activeOpacity={0.7}
