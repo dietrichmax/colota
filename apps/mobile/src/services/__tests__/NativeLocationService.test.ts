@@ -54,7 +54,8 @@ jest.mock("react-native", () => ({
       }),
       saveAuthConfig: jest.fn().mockResolvedValue(true),
       getAuthHeaders: jest.fn().mockResolvedValue({}),
-      isNetworkAvailable: jest.fn().mockResolvedValue(true)
+      isNetworkAvailable: jest.fn().mockResolvedValue(true),
+      getActiveProfile: jest.fn().mockResolvedValue(null)
     },
     BuildConfigModule: {
       MIN_SDK_VERSION: 26,
@@ -251,6 +252,27 @@ describe("NativeLocationService", () => {
     it("deleteGeofence passes id", async () => {
       await NativeLocationService.deleteGeofence(42)
       expect(nativeMock.deleteGeofence).toHaveBeenCalledWith(42)
+    })
+  })
+
+  describe("getActiveProfileName", () => {
+    it("returns profile name when a profile is active", async () => {
+      nativeMock.getActiveProfile.mockResolvedValueOnce("Charging")
+      const name = await NativeLocationService.getActiveProfileName()
+      expect(name).toBe("Charging")
+      expect(nativeMock.getActiveProfile).toHaveBeenCalled()
+    })
+
+    it("returns null when no profile is active", async () => {
+      nativeMock.getActiveProfile.mockResolvedValueOnce(null)
+      const name = await NativeLocationService.getActiveProfileName()
+      expect(name).toBeNull()
+    })
+
+    it("returns null on error", async () => {
+      nativeMock.getActiveProfile.mockRejectedValueOnce(new Error("Native error"))
+      const name = await NativeLocationService.getActiveProfileName()
+      expect(name).toBeNull()
     })
   })
 

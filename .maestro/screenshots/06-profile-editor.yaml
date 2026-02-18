@@ -1,0 +1,14 @@
+appId: com.colota
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Settings"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: "Tracking Profiles"
+    direction: DOWN
+- tapOn: "Tracking Profiles"
+- waitForAnimationToEnd
+- tapOn: "Create Profile"
+- waitForAnimationToEnd
+- takeScreenshot: ProfileEditor

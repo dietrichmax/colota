@@ -50,5 +50,9 @@ coverage/
 !.yarn/sdks
 !.yarn/versions
 
+# Test output
+*-test-output.txt
+test-output.txt
+
 # Misc
 testers

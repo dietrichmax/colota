@@ -4,6 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { DeviceEventEmitter } from "react-native"
 import { Settings, DEFAULT_SETTINGS, LocationCoords, ApiTemplateName, HttpMethod } from "../types/global"
 import { useLocationTracking } from "../hooks/useLocationTracking"
 import NativeLocationService from "../services/NativeLocationService"
@@ -20,6 +21,7 @@ type TrackingContextType = {
   tracking: boolean
   isLoading: boolean
   error: Error | null
+  activeProfileName: string | null
   startTracking: () => Promise<void>
   stopTracking: () => void
   restartTracking: (newSettings?: Settings) => Promise<void>
@@ -83,6 +85,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const [activeProfileName, setActiveProfileName] = useState<string | null>(null)
 
   // Ref to track if component is mounted (prevents state updates after unmount)
   const isMountedRef = useRef(true)
@@ -155,6 +158,12 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
         if (isTrackingActive) {
           logger.debug("[TrackingContext] Re-syncing UI with active background service")
           internalReconnect()
+
+          // Restore active profile name from the running service
+          const profileName = await NativeLocationService.getActiveProfileName()
+          if (isMountedRef.current) {
+            setActiveProfileName(profileName)
+          }
         }
       } catch (err) {
         logger.error("[TrackingContext] Hydration failed:", err)
@@ -187,6 +196,16 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     }
   }, [internalReconnect, setSettings])
 
+  // Listen for profile switch events from the native service
+  useEffect(() => {
+    const listener = DeviceEventEmitter.addListener("onProfileSwitch", (event) => {
+      if (isMountedRef.current) {
+        setActiveProfileName(event.profileName ?? null)
+      }
+    })
+    return () => listener.remove()
+  }, [])
+
   /**
    * Wrapped tracking controls with useCallback for stable references
    */
@@ -209,6 +228,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     try {
       internalStop()
       if (isMountedRef.current) {
+        setActiveProfileName(null)
         setError(null)
       }
     } catch (err) {
@@ -250,11 +270,23 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
       tracking,
       isLoading,
       error,
+      activeProfileName,
       startTracking,
       stopTracking,
       restartTracking
     }),
-    [settings, coords, tracking, isLoading, error, setSettings, startTracking, stopTracking, restartTracking]
+    [
+      settings,
+      coords,
+      tracking,
+      isLoading,
+      error,
+      activeProfileName,
+      setSettings,
+      startTracking,
+      stopTracking,
+      restartTracking
+    ]
   )
 
   return (

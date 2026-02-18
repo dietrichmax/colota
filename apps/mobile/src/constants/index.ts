@@ -3,6 +3,9 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import type { ProfileConditionType } from "../types/global"
+import { Zap, Car, ArrowUp, ArrowDown } from "lucide-react-native"
+
 // Timing
 export const AUTOSAVE_DEBOUNCE_MS = 1500
 export const STATS_REFRESH_IDLE = 30_000
@@ -19,6 +22,40 @@ export const GEOFENCE_ZOOM_PADDING = [80, 80, 80, 80] as const
 export const MARKER_ANIMATION_DURATION_MS = 500
 export const MAP_ANIMATION_DURATION_MS = 400
 export const MIN_STATS_INTERVAL_MS = 2000
+
+// Profiles
+export const MS_TO_KMH = 3.6
+
+export const PROFILE_CONDITIONS: {
+  type: ProfileConditionType
+  label: string
+  listLabel: string
+  icon: typeof Zap
+  description: string
+}[] = [
+  { type: "charging", label: "Charging", listLabel: "When charging", icon: Zap, description: "Phone is plugged in" },
+  {
+    type: "android_auto",
+    label: "Car Mode",
+    listLabel: "Android Auto / Car mode",
+    icon: Car,
+    description: "Android Auto connected"
+  },
+  {
+    type: "speed_above",
+    label: "Speed Above",
+    listLabel: "Speed above",
+    icon: ArrowUp,
+    description: "Moving faster than threshold"
+  },
+  {
+    type: "speed_below",
+    label: "Speed Below",
+    listLabel: "Speed below",
+    icon: ArrowDown,
+    description: "Moving slower than threshold"
+  }
+]
 
 // Thresholds
 export const HIGH_QUEUE_THRESHOLD = 50

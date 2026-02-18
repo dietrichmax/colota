@@ -20,7 +20,9 @@ import {
   DataManagementScreen,
   LocationHistoryScreen,
   ExportDataScreen,
-  AboutScreen
+  AboutScreen,
+  TrackingProfilesScreen,
+  ProfileEditorScreen
 } from "./src/screens/"
 
 const Stack = createNativeStackNavigator()
@@ -65,6 +67,16 @@ const SCREEN_CONFIG = [
     name: "Data Management",
     component: DataManagementScreen,
     title: "Data Management"
+  },
+  {
+    name: "Tracking Profiles",
+    component: TrackingProfilesScreen,
+    title: "Tracking Profiles"
+  },
+  {
+    name: "Profile Editor",
+    component: ProfileEditorScreen,
+    title: "Profile Editor"
   },
   {
     name: "About Colota",

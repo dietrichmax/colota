@@ -25,7 +25,7 @@ import { Square, Play } from "lucide-react-native"
 import { logger } from "../utils/logger"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
-  const { coords, settings, tracking, startTracking, stopTracking, setSettings } = useTracking()
+  const { coords, settings, tracking, startTracking, stopTracking, setSettings, activeProfileName } = useTracking()
   const { colors } = useTheme()
 
   const [stats, setStats] = useState<DatabaseStats>({
@@ -156,7 +156,12 @@ export function DashboardScreen({ navigation }: ScreenProps) {
             onTouchStart={() => setScrollEnabled(false)}
             onTouchEnd={() => setScrollEnabled(true)}
           >
-            <DashboardMap coords={coords} tracking={tracking} activeZoneName={currentPauseZone} />
+            <DashboardMap
+              coords={coords}
+              tracking={tracking}
+              activeZoneName={currentPauseZone}
+              activeProfileName={activeProfileName}
+            />
           </View>
 
           {/* Tracking Control Button */}

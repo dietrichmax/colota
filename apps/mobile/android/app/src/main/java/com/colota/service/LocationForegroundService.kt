@@ -10,6 +10,7 @@ import com.Colota.BuildConfig
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
+import com.Colota.data.ProfileHelper
 import com.Colota.sync.NetworkManager
 import com.Colota.sync.PayloadBuilder
 import com.Colota.sync.SyncManager
@@ -39,6 +40,9 @@ class LocationForegroundService : Service() {
     private lateinit var geofenceHelper: GeofenceHelper
     private lateinit var secureStorage: SecureStorageHelper
     private lateinit var syncManager: SyncManager
+    private lateinit var profileHelper: ProfileHelper
+    private lateinit var profileManager: ProfileManager
+    private lateinit var conditionMonitor: ConditionMonitor
 
     @Volatile private var serviceScope: CoroutineScope? = null
     @Volatile private var locationUpdateCallback: LocationUpdateCallback? = null
@@ -56,13 +60,15 @@ class LocationForegroundService : Service() {
         const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
         const val ACTION_FORCE_EXIT_ZONE = "com.Colota.FORCE_EXIT_ZONE"
         const val ACTION_REFRESH_NOTIFICATION = "com.Colota.REFRESH_NOTIFICATION"
+        const val ACTION_RECHECK_PROFILES = "com.Colota.RECHECK_PROFILES"
 
         /** Actions that skip config reload and preserve current notification state. */
         private val LIGHTWEIGHT_ACTIONS = setOf(
             ACTION_MANUAL_FLUSH,
             ACTION_RECHECK_ZONE,
             ACTION_FORCE_EXIT_ZONE,
-            ACTION_REFRESH_NOTIFICATION
+            ACTION_REFRESH_NOTIFICATION,
+            ACTION_RECHECK_PROFILES
         )
     }
 
@@ -80,6 +86,11 @@ class LocationForegroundService : Service() {
         geofenceHelper = GeofenceHelper(this)
         secureStorage = SecureStorageHelper.getInstance(this)
         syncManager = SyncManager(dbHelper, networkManager, serviceScope!!)
+        profileHelper = ProfileHelper(this)
+        profileManager = ProfileManager(profileHelper, serviceScope!!) { interval, distance, syncInterval, _, _ ->
+            applyProfileConfig(interval, distance, syncInterval)
+        }
+        conditionMonitor = ConditionMonitor(this, profileManager)
 
         notificationHelper = NotificationHelper(this, notificationManager)
         notificationHelper.createChannel()
@@ -114,9 +125,12 @@ class LocationForegroundService : Service() {
         val initialStatus = notificationHelper.getInitialStatus(
             insidePauseZone, currentZoneName, lastKnownLocation
         )
+        val initialTitle = notificationHelper.buildTitle(
+            if (::profileManager.isInitialized) profileManager.getActiveProfileName() else null
+        )
         startForeground(
             NotificationHelper.NOTIFICATION_ID,
-            notificationHelper.buildTrackingNotification(initialStatus)
+            notificationHelper.buildTrackingNotification(initialTitle, initialStatus)
         )
 
         if (!isLightweight) {
@@ -149,6 +163,11 @@ class LocationForegroundService : Service() {
                 handleZoneRecheckAction()
                 return START_STICKY
             }
+            ACTION_RECHECK_PROFILES -> {
+                profileManager.invalidateProfiles()
+                profileManager.evaluate()
+                return START_STICKY
+            }
             ACTION_MANUAL_FLUSH -> {
                 serviceScope?.launch {
                     syncManager.manualFlush()
@@ -170,6 +189,9 @@ class LocationForegroundService : Service() {
                         syncManager.manualFlush()
                     }
                 }
+
+                // Start condition monitors for profile-based config switching
+                conditionMonitor.start()
             }
         }
 
@@ -177,6 +199,7 @@ class LocationForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        conditionMonitor.stop()
         stopLocationUpdates()
         syncManager.stopPeriodicSync()
 
@@ -320,6 +343,10 @@ class LocationForegroundService : Service() {
             return
         }
 
+        // Feed location to profile manager for speed-based condition evaluation
+        // (after accuracy filter so bad GPS data doesn't pollute speed average)
+        profileManager.onLocationUpdate(location)
+
         lastKnownLocation = location
 
         val zoneName = geofenceHelper.getPauseZone(location)
@@ -442,6 +469,7 @@ class LocationForegroundService : Service() {
             zoneName = activeZone,
             queuedCount = syncManager.getCachedQueuedCount(),
             lastSyncTime = syncManager.lastSuccessfulSyncTime,
+            activeProfileName = profileManager.getActiveProfileName(),
             forceUpdate = forceUpdate
         )
     }
@@ -449,6 +477,11 @@ class LocationForegroundService : Service() {
     private fun stopForegroundServiceWithReason(reason: String) {
         if (BuildConfig.DEBUG) {
             Log.i(TAG, "Stopping: $reason")
+        }
+
+        // Clear active profile so JS UI resets the profile indicator
+        if (profileManager.getActiveProfileName() != null) {
+            LocationServiceModule.sendProfileSwitchEvent(null, null)
         }
 
         LocationServiceModule.sendTrackingStoppedEvent(reason)
@@ -470,6 +503,45 @@ class LocationForegroundService : Service() {
         stopSelf()
     }
 
+    /**
+     * Dynamically switches GPS interval and sync config when a profile activates/deactivates.
+     * No full service restart — just re-requests location updates with new parameters.
+     */
+    private fun applyProfileConfig(interval: Long, distance: Float, syncInterval: Int) {
+        config = config.copy(
+            interval = interval,
+            minUpdateDistance = distance,
+            syncIntervalSeconds = syncInterval
+        )
+
+        syncManager.updateConfig(
+            endpoint = config.endpoint,
+            syncIntervalSeconds = syncInterval,
+            retryIntervalSeconds = config.retryIntervalSeconds,
+            maxRetries = config.maxRetries,
+            isOfflineMode = config.isOfflineMode,
+            isWifiOnlySync = config.isWifiOnlySync,
+            authHeaders = secureStorage.getAuthHeaders(),
+            httpMethod = config.httpMethod
+        )
+
+        serviceScope?.launch {
+            withContext(Dispatchers.Main) {
+                stopLocationUpdates()
+                setupLocationUpdates()
+            }
+        }
+
+        // Update notification to show/hide profile name in title
+        lastKnownLocation?.let {
+            updateNotification(lat = it.latitude, lon = it.longitude, forceUpdate = true)
+        } ?: updateNotification(forceUpdate = true)
+
+        if (BuildConfig.DEBUG) {
+            Log.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} — interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
+        }
+    }
+
     private fun loadConfigFromIntent(intent: Intent?) {
         config = if (intent != null) {
             ServiceConfig.fromIntent(intent, dbHelper)
@@ -487,6 +559,11 @@ class LocationForegroundService : Service() {
             authHeaders = secureStorage.getAuthHeaders(),
             httpMethod = config.httpMethod
         )
+
+        // Store default values so ProfileManager can revert when no profile matches
+        profileManager.defaultInterval = config.interval
+        profileManager.defaultDistance = config.minUpdateDistance
+        profileManager.defaultSyncInterval = config.syncIntervalSeconds
 
         config.fieldMap?.let {
             if (it.isNotBlank()) fieldMap = payloadBuilder.parseFieldMap(it)

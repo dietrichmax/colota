@@ -25,13 +25,13 @@ class DatabaseHelper private constructor(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "Colota.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
 
         const val TABLE_LOCATIONS = "locations"
         const val TABLE_QUEUE = "queue"
         const val TABLE_SETTINGS = "settings"
         const val TABLE_GEOFENCES = "geofences"
-
+        const val TABLE_PROFILES = "tracking_profiles"
         private val DEFAULT_FIELD_MAP = mapOf(
             "lat" to "lat", "lon" to "lon", "acc" to "acc",
             "alt" to "alt", "vel" to "vel", "batt" to "batt",
@@ -111,11 +111,28 @@ class DatabaseHelper private constructor(context: Context) :
             )
         """)
 
+        db.execSQL("""
+            CREATE TABLE $TABLE_PROFILES (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                interval_ms INTEGER NOT NULL,
+                min_update_distance REAL NOT NULL,
+                sync_interval_seconds INTEGER NOT NULL,
+                priority INTEGER NOT NULL DEFAULT 0,
+                condition_type TEXT NOT NULL,
+                speed_threshold REAL,
+                deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                created_at INTEGER NOT NULL
+            )
+        """)
+
         db.execSQL("CREATE INDEX idx_queue_created ON $TABLE_QUEUE(created_at)")
         db.execSQL("CREATE INDEX idx_queue_location ON $TABLE_QUEUE(location_id)")
         db.execSQL("CREATE INDEX idx_locations_timestamp ON $TABLE_LOCATIONS(timestamp DESC)")
         db.execSQL("CREATE INDEX idx_locations_created ON $TABLE_LOCATIONS(created_at DESC)")
         db.execSQL("CREATE INDEX idx_geofences_enabled ON $TABLE_GEOFENCES(enabled, pause_tracking)")
+        db.execSQL("CREATE INDEX idx_profiles_enabled ON $TABLE_PROFILES(enabled, priority DESC)")
         db.execSQL("CREATE INDEX idx_queue_retry ON $TABLE_QUEUE(retry_count)")
 
         prepopulateSettings(db)
@@ -167,7 +184,24 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // Future migrations go here
+        if (oldVersion < 2) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS $TABLE_PROFILES (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    interval_ms INTEGER NOT NULL,
+                    min_update_distance REAL NOT NULL,
+                    sync_interval_seconds INTEGER NOT NULL,
+                    priority INTEGER NOT NULL DEFAULT 0,
+                    condition_type TEXT NOT NULL,
+                    speed_threshold REAL,
+                    deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    created_at INTEGER NOT NULL
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_profiles_enabled ON $TABLE_PROFILES(enabled, priority DESC)")
+        }
     }
 
     override fun onOpen(db: SQLiteDatabase) {
@@ -249,7 +283,7 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
-    private val ALLOWED_TABLES = setOf(TABLE_LOCATIONS, TABLE_QUEUE, TABLE_SETTINGS, TABLE_GEOFENCES)
+    private val ALLOWED_TABLES = setOf(TABLE_LOCATIONS, TABLE_QUEUE, TABLE_SETTINGS, TABLE_GEOFENCES, TABLE_PROFILES)
 
     fun getTableData(tableName: String, limit: Int, offset: Int): List<Map<String, Any?>> {
         require(tableName in ALLOWED_TABLES) { "Invalid table name: $tableName" }

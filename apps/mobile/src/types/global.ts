@@ -319,6 +319,41 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
 }
 
 // ============================================================================
+// TRACKING PROFILES
+// ============================================================================
+
+export type ProfileConditionType = "charging" | "android_auto" | "speed_above" | "speed_below"
+
+export interface ProfileCondition {
+  type: ProfileConditionType
+  /** Speed threshold in m/s (only for speed_above / speed_below conditions) */
+  speedThreshold?: number
+}
+
+export interface TrackingProfile {
+  id?: number
+  name: string
+  /** GPS interval in seconds */
+  interval: number
+  /** Movement threshold in meters */
+  distance: number
+  /** Sync interval in seconds */
+  syncInterval: number
+  /** Higher priority wins when multiple profiles match */
+  priority: number
+  /** The condition that activates this profile */
+  condition: ProfileCondition
+  /** Seconds to wait before deactivating after condition stops matching */
+  deactivationDelay: number
+  /** Whether this profile is enabled */
+  enabled: boolean
+  createdAt?: number
+}
+
+/** A profile that has been persisted to the database (always has an id). */
+export type SavedTrackingProfile = TrackingProfile & { id: number }
+
+// ============================================================================
 // DATABASE
 // ============================================================================
 

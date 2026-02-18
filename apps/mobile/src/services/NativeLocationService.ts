@@ -4,7 +4,7 @@
  */
 
 import { NativeModules } from "react-native"
-import { AuthConfig, DatabaseStats, Geofence, Settings } from "../types/global"
+import { AuthConfig, DatabaseStats, Geofence, Settings, TrackingProfile, SavedTrackingProfile } from "../types/global"
 import { logger } from "../utils/logger"
 
 const { LocationServiceModule, BuildConfigModule } = NativeModules
@@ -319,6 +319,104 @@ class NativeLocationService {
     } catch (error) {
       logger.error("[NativeLocationService] Recheck failed:", error)
     }
+  }
+
+  // ============================================================================
+  // TRACKING PROFILES
+  // ============================================================================
+
+  /**
+   * Fetches all tracking profiles
+   */
+  static async getProfiles(): Promise<SavedTrackingProfile[]> {
+    this.ensureModule()
+    const raw = await this.safeExecute(() => LocationServiceModule.getProfiles(), [], "getProfiles failed")
+    return raw.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      interval: p.intervalMs / 1000, // ms → seconds for UI
+      distance: p.minUpdateDistance,
+      syncInterval: p.syncIntervalSeconds,
+      priority: p.priority,
+      condition: {
+        type: p.conditionType,
+        ...(p.speedThreshold != null ? { speedThreshold: p.speedThreshold } : {})
+      },
+      deactivationDelay: p.deactivationDelaySeconds,
+      enabled: p.enabled,
+      createdAt: p.createdAt
+    }))
+  }
+
+  /**
+   * Creates a new tracking profile
+   * @returns Profile ID
+   */
+  static async createProfile(profile: Omit<TrackingProfile, "id" | "createdAt">): Promise<number> {
+    this.ensureModule()
+    logger.debug("[NativeLocationService] Creating profile:", profile.name)
+    return LocationServiceModule.createProfile({
+      name: profile.name,
+      intervalMs: profile.interval * 1000, // seconds → ms
+      minUpdateDistance: profile.distance,
+      syncIntervalSeconds: profile.syncInterval,
+      priority: profile.priority,
+      conditionType: profile.condition.type,
+      speedThreshold: profile.condition.speedThreshold ?? null,
+      deactivationDelaySeconds: profile.deactivationDelay
+    })
+  }
+
+  /**
+   * Updates an existing tracking profile (partial updates supported)
+   */
+  static async updateProfile(update: Partial<TrackingProfile> & { id: number }): Promise<boolean> {
+    this.ensureModule()
+    logger.debug("[NativeLocationService] Updating profile:", update.id)
+
+    const config: any = { id: update.id }
+    if (update.name !== undefined) config.name = update.name
+    if (update.interval !== undefined) config.intervalMs = update.interval * 1000
+    if (update.distance !== undefined) config.minUpdateDistance = update.distance
+    if (update.syncInterval !== undefined) config.syncIntervalSeconds = update.syncInterval
+    if (update.priority !== undefined) config.priority = update.priority
+    if (update.condition !== undefined) {
+      config.conditionType = update.condition.type
+      config.speedThreshold = update.condition.speedThreshold ?? null
+    }
+    if (update.deactivationDelay !== undefined) config.deactivationDelaySeconds = update.deactivationDelay
+    if (update.enabled !== undefined) config.enabled = update.enabled
+
+    return LocationServiceModule.updateProfile(config)
+  }
+
+  /**
+   * Deletes a tracking profile
+   */
+  static async deleteProfile(id: number): Promise<boolean> {
+    this.ensureModule()
+    logger.debug("[NativeLocationService] Deleting profile:", id)
+    return LocationServiceModule.deleteProfile(id)
+  }
+
+  /**
+   * Triggers profile re-evaluation in the foreground service
+   */
+  static async recheckProfiles(): Promise<void> {
+    this.ensureModule()
+    try {
+      await LocationServiceModule.recheckProfiles()
+    } catch (error) {
+      logger.error("[NativeLocationService] Profile recheck failed:", error)
+    }
+  }
+
+  /**
+   * Returns the name of the currently active tracking profile, or null if using defaults
+   */
+  static async getActiveProfileName(): Promise<string | null> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.getActiveProfile(), null, "getActiveProfile failed")
   }
 
   // ============================================================================

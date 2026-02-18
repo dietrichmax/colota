@@ -6,7 +6,7 @@
 import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
 import { View, StyleSheet, Text } from "react-native"
 import { WebView } from "react-native-webview"
-import { MapPin } from "lucide-react-native"
+import { MapPinOff } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
 import { MapCenterButton } from "../map/MapCenterButton"
@@ -342,7 +342,7 @@ export function TrackMap({ locations, selectedPoint, colors, isDark }: Props) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
         <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
-          <MapPin size={32} color={colors.textSecondary} />
+          <MapPinOff size={32} color={colors.textSecondary} />
         </View>
         <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
         <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>No tracked locations for this day.</Text>

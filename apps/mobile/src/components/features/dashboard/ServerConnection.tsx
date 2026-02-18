@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 16
+    marginBottom: 22
   },
   dot: {
     width: 8,

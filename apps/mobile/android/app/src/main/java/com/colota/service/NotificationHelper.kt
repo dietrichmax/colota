@@ -49,7 +49,7 @@ class NotificationHelper(
         }
     }
 
-    fun buildTrackingNotification(statusText: String): Notification {
+    fun buildTrackingNotification(title: String, statusText: String): Notification {
         val pendingIntent = PendingIntent.getActivity(
             context,
             0,
@@ -58,7 +58,7 @@ class NotificationHelper(
         )
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle("Colota Tracking")
+            .setContentTitle(title)
             .setContentText(statusText)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
@@ -67,6 +67,10 @@ class NotificationHelper(
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
     }
+
+    /** Returns the notification title, including the active profile name if one is set. */
+    fun buildTitle(activeProfileName: String?): String =
+        if (activeProfileName != null) "Colota \u00b7 $activeProfileName" else "Colota Tracking"
 
     fun buildStoppedNotification(reason: String): Notification {
         return NotificationCompat.Builder(context, CHANNEL_ID)
@@ -156,6 +160,7 @@ class NotificationHelper(
         zoneName: String? = null,
         queuedCount: Int = 0,
         lastSyncTime: Long = 0L,
+        activeProfileName: String? = null,
         forceUpdate: Boolean = false
     ): Boolean {
         val now = System.currentTimeMillis()
@@ -185,12 +190,13 @@ class NotificationHelper(
         val statusText = buildStatusText(isPaused, zoneName, lat, lon, queuedCount, lastSyncTime)
 
         // Dedup: skip if notification text hasn't changed
-        val cacheKey = "$statusText-$queuedCount"
+        val cacheKey = "$statusText-$queuedCount-$activeProfileName"
         if (cacheKey == lastText) return false
 
         lastText = cacheKey
         lastQueuedCount = queuedCount
-        notificationManager.notify(NOTIFICATION_ID, buildTrackingNotification(statusText))
+        val title = buildTitle(activeProfileName)
+        notificationManager.notify(NOTIFICATION_ID, buildTrackingNotification(title, statusText))
         return true
     }
 }
