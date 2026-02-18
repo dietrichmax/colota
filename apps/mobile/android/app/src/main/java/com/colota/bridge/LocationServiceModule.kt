@@ -163,6 +163,28 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             }
         }
 
+        /** Emits sync progress during manual flush so JS can show "5/127 synced". */
+        @JvmStatic
+        fun sendSyncProgressEvent(sent: Int, failed: Int, total: Int): Boolean {
+            val context = reactContextRef.get() ?: return false
+            if (!context.hasActiveCatalystInstance()) return false
+
+            return try {
+                val params = Arguments.createMap().apply {
+                    putInt("sent", sent)
+                    putInt("failed", failed)
+                    putInt("total", total)
+                }
+                context
+                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                    .emit("onSyncProgress", params)
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send sync progress event", e)
+                false
+            }
+        }
+
         /** Emits pause zone entry/exit events for the JS geofence UI. */
         @JvmStatic
         fun sendPauseZoneEvent(entered: Boolean, zoneName: String?): Boolean {
@@ -646,7 +668,19 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     
     @ReactMethod
-    fun deleteFile(filePath: String, promise: Promise) = 
+    fun copyToClipboard(text: String, label: String, promise: Promise) {
+        moduleScope.launch {
+            try {
+                withContext(Dispatchers.Main) { fileOps.copyToClipboard(text, label) }
+                promise.resolve(null)
+            } catch (e: Exception) {
+                promise.reject("CLIPBOARD_ERROR", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun deleteFile(filePath: String, promise: Promise) =
         executeAsync(promise) { fileOps.deleteFile(filePath) }
 
     @ReactMethod

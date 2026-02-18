@@ -230,6 +230,13 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    */
   const restartTracking = useCallback(
     async (newSettings?: Settings) => {
+      // Only restart if tracking is active — settings are persisted separately,
+      // so they'll be picked up when the user starts tracking later.
+      if (!isTrackingRef.current) {
+        logger.debug("[useLocationTracking] Not tracking, skip restart (settings saved separately)")
+        return
+      }
+
       if (restartingRef.current) {
         logger.debug("[useLocationTracking] Restart already in progress, queuing")
         restartQueuedRef.current = true
@@ -255,7 +262,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
         if (restartQueuedRef.current) {
           restartQueuedRef.current = false
           logger.debug("[useLocationTracking] Processing queued restart")
-          setTimeout(() => restartTracking(newSettings), 100)
+          setTimeout(() => restartTracking(settingsRef.current), 100)
         }
       }
     },

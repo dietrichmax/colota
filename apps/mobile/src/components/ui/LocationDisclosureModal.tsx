@@ -69,11 +69,11 @@ export function LocationDisclosureModal() {
             even when the app is closed or not in use.
           </Text>
 
-          <Text style={[styles.body, { color: colors.textSecondary, marginTop: 8 }]}>
+          <Text style={[styles.body, styles.bodySpaced, { color: colors.textSecondary }]}>
             This data is sent only to the server you set up. No data is shared with third parties.
           </Text>
 
-          <Text style={[styles.body, { color: colors.textSecondary, marginTop: 8 }]}>
+          <Text style={[styles.body, styles.bodySpaced, { color: colors.textSecondary }]}>
             The app also needs notification and battery permissions to keep tracking running reliably.
           </Text>
 
@@ -136,6 +136,9 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.body,
     ...fonts.regular,
     lineHeight: 20
+  },
+  bodySpaced: {
+    marginTop: 8
   },
   buttons: {
     flexDirection: "row",

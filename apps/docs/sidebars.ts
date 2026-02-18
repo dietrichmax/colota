@@ -39,7 +39,13 @@ const sidebars: SidebarsConfig = {
     {
       type: "category",
       label: "Guides",
-      items: ["guides/geofencing", "guides/data-export", "guides/battery-optimization", "guides/troubleshooting"]
+      items: [
+        "guides/geofencing",
+        "guides/data-export",
+        "guides/data-management",
+        "guides/battery-optimization",
+        "guides/troubleshooting"
+      ]
     },
     {
       type: "category",

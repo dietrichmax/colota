@@ -3,22 +3,25 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useEffect } from "react"
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import { Text, StyleSheet, TextInput, View, ScrollView, TouchableOpacity } from "react-native"
 import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { fonts, fontSizes } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider } from "../components"
+import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
+import { findDuplicates } from "../utils/settingsValidation"
 
 const AUTH_TYPES: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
   { value: "basic", label: "Basic Auth" },
   { value: "bearer", label: "Bearer Token" }
 ]
+
+type LocalHeader = { key: string; value: string; id: number }
 
 /**
  * Screen for configuring endpoint authentication and custom headers.
@@ -31,18 +34,40 @@ export function AuthSettingsScreen({}: ScreenProps) {
   const [loading, setLoading] = useState(true)
   const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
 
+  const nextIdRef = useRef(0)
+  const assignId = () => nextIdRef.current++
+
+  const [localHeaders, setLocalHeaders] = useState<LocalHeader[]>([])
+
   // Load config on mount
   useEffect(() => {
     ;(async () => {
       try {
         const saved = await NativeLocationService.getAuthConfig()
         setConfig(saved)
+        setLocalHeaders(Object.entries(saved.customHeaders).map(([key, value]) => ({ key, value, id: assignId() })))
       } catch (err) {
         logger.error("[AuthSettingsScreen] Failed to load auth config:", err)
       } finally {
         setLoading(false)
       }
     })()
+  }, [])
+
+  /** Detect duplicate header keys */
+  const duplicateKeys = useMemo(() => {
+    const keys = localHeaders.map((h) => h.key.trim()).filter(Boolean)
+    return findDuplicates(keys)
+  }, [localHeaders])
+
+  /** Convert local headers array to Record for saving */
+  const headersToRecord = useCallback((headers: LocalHeader[]): Record<string, string> => {
+    const record: Record<string, string> = {}
+    for (const h of headers) {
+      const k = h.key.trim()
+      if (k) record[k] = h.value.trim()
+    }
+    return record
   }, [])
 
   const debouncedSave = useCallback(
@@ -80,55 +105,33 @@ export function AuthSettingsScreen({}: ScreenProps) {
     [config, immediateSaveAndRestart, restartTracking, settings]
   )
 
-  // Custom headers as array for rendering
-  const headerEntries = Object.entries(config.customHeaders)
-
   const addHeader = useCallback(() => {
-    // Use a unique placeholder key to avoid overwriting existing empty entries
-    let key = ""
-    let i = 1
-    while (key in config.customHeaders) {
-      key = `Header-${i++}`
-    }
-    updateConfig({
-      customHeaders: { ...config.customHeaders, [key]: "" }
-    })
-  }, [config, updateConfig])
+    setLocalHeaders((prev) => [...prev, { key: "", value: "", id: assignId() }])
+  }, [])
 
-  const updateHeaderKey = useCallback(
-    (oldKey: string, newKey: string, index: number) => {
-      const entries = Object.entries(config.customHeaders)
-      entries[index] = [newKey, entries[index][1]]
-      const newHeaders = Object.fromEntries(entries)
-      updateConfig({ customHeaders: newHeaders })
+  const updateHeaderField = useCallback(
+    (id: number, field: "key" | "value", text: string) => {
+      const next = localHeaders.map((h) => (h.id === id ? { ...h, [field]: text } : h))
+      setLocalHeaders(next)
+      updateConfig({ customHeaders: headersToRecord(next) })
     },
-    [config, updateConfig]
-  )
-
-  const updateHeaderValue = useCallback(
-    (key: string, value: string, index: number) => {
-      const entries = Object.entries(config.customHeaders)
-      entries[index] = [entries[index][0], value]
-      const newHeaders = Object.fromEntries(entries)
-      updateConfig({ customHeaders: newHeaders })
-    },
-    [config, updateConfig]
+    [localHeaders, updateConfig, headersToRecord]
   )
 
   const removeHeader = useCallback(
-    (index: number) => {
-      const entries = Object.entries(config.customHeaders)
-      entries.splice(index, 1)
-      const next = { ...config, customHeaders: Object.fromEntries(entries) }
-      setConfig(next)
+    (id: number) => {
+      const next = localHeaders.filter((h) => h.id !== id)
+      setLocalHeaders(next)
+      const nextConfig = { ...config, customHeaders: headersToRecord(next) }
+      setConfig(nextConfig)
       immediateSaveAndRestart(
         async () => {
-          await NativeLocationService.saveAuthConfig(next)
+          await NativeLocationService.saveAuthConfig(nextConfig)
         },
         () => restartTracking(settings)
       )
     },
-    [config, immediateSaveAndRestart, restartTracking, settings]
+    [localHeaders, config, headersToRecord, immediateSaveAndRestart, restartTracking, settings]
   )
 
   if (loading) {
@@ -158,41 +161,12 @@ export function AuthSettingsScreen({}: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>Authentication</SectionTitle>
           <Card>
-            {/* Auth type picker */}
-            <View style={styles.chipRow}>
-              {AUTH_TYPES.map(({ value, label }) => {
-                const isSelected = config.authType === value
-                return (
-                  <TouchableOpacity
-                    key={value}
-                    style={[
-                      styles.chip,
-                      {
-                        borderColor: colors.border,
-                        backgroundColor: colors.background
-                      },
-                      isSelected && {
-                        borderColor: colors.primary,
-                        backgroundColor: colors.primary + "20"
-                      }
-                    ]}
-                    onPress={() => handleAuthTypeChange(value)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        {
-                          color: isSelected ? colors.primaryDark : colors.text
-                        }
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
+            <ChipGroup
+              options={AUTH_TYPES}
+              selected={config.authType}
+              onSelect={handleAuthTypeChange}
+              colors={colors}
+            />
 
             {/* Basic Auth fields */}
             {config.authType === "basic" && (
@@ -248,6 +222,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
                   <TextInput
                     style={[
                       styles.input,
+                      styles.tokenInput,
                       {
                         borderColor: colors.border,
                         color: colors.text,
@@ -260,7 +235,8 @@ export function AuthSettingsScreen({}: ScreenProps) {
                     placeholderTextColor={colors.placeholder}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    secureTextEntry
+                    multiline
+                    textAlignVertical="top"
                   />
                 </View>
               </>
@@ -272,60 +248,63 @@ export function AuthSettingsScreen({}: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>Custom Headers</SectionTitle>
           <Card>
-            {headerEntries.length === 0 ? (
+            {localHeaders.length === 0 ? (
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>No custom headers configured</Text>
             ) : (
-              headerEntries.map(([key, value], index) => (
-                <View key={index}>
-                  {index > 0 && <Divider />}
-                  <View style={styles.headerRow}>
-                    <View style={styles.headerInputs}>
-                      <TextInput
-                        style={[
-                          styles.headerInput,
-                          {
-                            borderColor: colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
-                        value={key}
-                        onChangeText={(v) => updateHeaderKey(key, v, index)}
-                        placeholder="Header name"
-                        placeholderTextColor={colors.placeholder}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
-                      <TextInput
-                        style={[
-                          styles.headerInput,
-                          {
-                            borderColor: colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
-                        value={value}
-                        onChangeText={(v) => updateHeaderValue(key, v, index)}
-                        placeholder="Value"
-                        placeholderTextColor={colors.placeholder}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
+              localHeaders.map((header, index) => {
+                const isDuplicate = header.key.trim() !== "" && duplicateKeys.has(header.key.trim())
+                return (
+                  <View key={header.id}>
+                    {index > 0 && <Divider />}
+                    <View style={styles.headerRow}>
+                      <View style={styles.headerInputs}>
+                        <TextInput
+                          style={[
+                            styles.headerInput,
+                            {
+                              borderColor: isDuplicate ? colors.error : colors.border,
+                              color: colors.text,
+                              backgroundColor: colors.background
+                            }
+                          ]}
+                          value={header.key}
+                          onChangeText={(v) => updateHeaderField(header.id, "key", v)}
+                          placeholder="Header name"
+                          placeholderTextColor={colors.placeholder}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                        <TextInput
+                          style={[
+                            styles.headerInput,
+                            {
+                              borderColor: colors.border,
+                              color: colors.text,
+                              backgroundColor: colors.background
+                            }
+                          ]}
+                          value={header.value}
+                          onChangeText={(v) => updateHeaderField(header.id, "value", v)}
+                          placeholder="Value"
+                          placeholderTextColor={colors.placeholder}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => removeHeader(header.id)}
+                        style={[styles.removeButton, { backgroundColor: colors.error + "15" }]}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => removeHeader(index)}
-                      style={[styles.removeButton, { backgroundColor: colors.error + "15" }]}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                    </TouchableOpacity>
                   </View>
-                </View>
-              ))
+                )
+              })
             )}
 
-            {headerEntries.length > 0 && <Divider />}
+            {localHeaders.length > 0 && <Divider />}
 
             <TouchableOpacity
               style={[styles.addButton, { borderColor: colors.primary }]}
@@ -340,6 +319,17 @@ export function AuthSettingsScreen({}: ScreenProps) {
             </Text>
           </Card>
         </View>
+
+        {/* Duplicate key warning */}
+        {duplicateKeys.size > 0 && (
+          <View
+            style={[styles.warningBanner, { backgroundColor: colors.error + "15", borderColor: colors.error + "40" }]}
+          >
+            <Text style={[styles.warningText, { color: colors.error }]}>
+              Duplicate header names: {[...duplicateKeys].join(", ")}. Only the last value will be sent.
+            </Text>
+          </View>
+        )}
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -386,21 +376,6 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24
   },
-  chipRow: {
-    flexDirection: "row",
-    gap: 10
-  },
-  chip: {
-    flex: 1,
-    borderWidth: 2,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center"
-  },
-  chipText: {
-    fontSize: 13,
-    ...fonts.bold
-  },
   fieldGroup: {
     marginTop: 4
   },
@@ -417,6 +392,11 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     fontSize: 15
+  },
+  tokenInput: {
+    minHeight: 80,
+    fontFamily: "monospace",
+    fontSize: 13
   },
   emptyHint: {
     fontSize: 14,
@@ -466,6 +446,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 10,
     textAlign: "center"
+  },
+  warningBanner: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 20
+  },
+  warningText: {
+    fontSize: 12,
+    lineHeight: 18
   },
   footer: {
     paddingVertical: 16,

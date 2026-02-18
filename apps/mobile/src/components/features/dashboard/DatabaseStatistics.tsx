@@ -7,10 +7,11 @@ import { Text, StyleSheet, View } from "react-native"
 import { SectionTitle, Card } from "../.."
 import { useTheme } from "../../../hooks/useTheme"
 import { fonts } from "../../../styles/typography"
+import { DatabaseStats } from "../../../types/global"
 import { getQueueColor } from "../../../utils/queueStatus"
 
 type DatabaseStatisticsProps = {
-  stats: any
+  stats: DatabaseStats
 }
 
 export function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {

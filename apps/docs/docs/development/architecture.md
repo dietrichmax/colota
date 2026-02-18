@@ -137,7 +137,7 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 | ---------------------- | --------------------------------------------------------- |
 | `LocationBootReceiver` | Auto-restarts tracking after device reboot                |
 | `DeviceInfoHelper`     | Device metadata and battery status with caching           |
-| `FileOperations`       | File I/O for data export via FileProvider                 |
+| `FileOperations`       | File I/O, sharing via FileProvider, and clipboard access  |
 | `PayloadBuilder`       | Builds JSON payloads with dynamic field mapping           |
 | `ServiceConfig`        | Centralized configuration data class                      |
 | `TimedCache`           | Generic TTL cache used for queue count and device info    |

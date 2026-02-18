@@ -12,6 +12,7 @@ jest.mock("react-native", () => ({
         databaseSizeMB: 1.5
       }),
       getTableData: jest.fn().mockResolvedValue([]),
+      getLocationsByDateRange: jest.fn().mockResolvedValue([]),
       getMostRecentLocation: jest.fn().mockResolvedValue(null),
       manualFlush: jest.fn().mockResolvedValue(true),
       clearSentHistory: jest.fn().mockResolvedValue(undefined),
@@ -41,6 +42,7 @@ jest.mock("react-native", () => ({
       }),
       writeFile: jest.fn().mockResolvedValue("/cache/test.csv"),
       shareFile: jest.fn().mockResolvedValue(true),
+      copyToClipboard: jest.fn().mockResolvedValue(undefined),
       deleteFile: jest.fn().mockResolvedValue(true),
       getCacheDirectory: jest.fn().mockResolvedValue("/cache"),
       getAllAuthConfig: jest.fn().mockResolvedValue({
@@ -51,7 +53,8 @@ jest.mock("react-native", () => ({
         customHeaders: "{}"
       }),
       saveAuthConfig: jest.fn().mockResolvedValue(true),
-      getAuthHeaders: jest.fn().mockResolvedValue({})
+      getAuthHeaders: jest.fn().mockResolvedValue({}),
+      isNetworkAvailable: jest.fn().mockResolvedValue(true)
     },
     BuildConfigModule: {
       MIN_SDK_VERSION: 26,
@@ -61,7 +64,8 @@ jest.mock("react-native", () => ({
       KOTLIN_VERSION: "1.9.0",
       NDK_VERSION: "25.1.8937393",
       VERSION_NAME: "1.0.0",
-      VERSION_CODE: 1
+      VERSION_CODE: 1,
+      FLAVOR: "gms"
     }
   }
 }))

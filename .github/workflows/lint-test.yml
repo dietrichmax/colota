@@ -3,12 +3,16 @@ name: Lint & Test
 on:
   push:
     branches: [ main, develop ]
-    paths-ignore:
-      - '**.md'
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/shared/**'
+      - 'package-lock.json'
   pull_request:
     branches: [ main, develop ]
-    paths-ignore:
-      - '**.md'
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/shared/**'
+      - 'package-lock.json'
   workflow_dispatch:
 
 permissions:

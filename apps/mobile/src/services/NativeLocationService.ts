@@ -510,6 +510,7 @@ class NativeLocationService {
     NDK_VERSION: string
     VERSION_NAME: string
     VERSION_CODE: number
+    FLAVOR: string
   } | null {
     if (!BuildConfigModule) {
       logger.warn("[NativeLocationService] BuildConfigModule not available")
@@ -559,6 +560,14 @@ class NativeLocationService {
   }
 
   /**
+   * Copies text to the system clipboard
+   */
+  static async copyToClipboard(text: string, label: string = "Colota"): Promise<void> {
+    this.ensureModule()
+    await LocationServiceModule.copyToClipboard(text, label)
+  }
+
+  /**
    * Deletes a file
    */
   static async deleteFile(filePath: string): Promise<boolean> {
@@ -584,12 +593,22 @@ class NativeLocationService {
   static async getAuthConfig(): Promise<AuthConfig> {
     this.ensureModule()
     const raw = await LocationServiceModule.getAllAuthConfig()
+
+    let customHeaders: Record<string, string> = {}
+    if (raw.customHeaders) {
+      try {
+        customHeaders = JSON.parse(raw.customHeaders)
+      } catch {
+        // Corrupted JSON — reset to empty
+      }
+    }
+
     return {
       authType: raw.authType || "none",
       username: raw.username || "",
       password: raw.password || "",
       bearerToken: raw.bearerToken || "",
-      customHeaders: raw.customHeaders ? JSON.parse(raw.customHeaders) : {}
+      customHeaders
     }
   }
 

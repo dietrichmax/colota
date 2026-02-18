@@ -1,0 +1,92 @@
+name: Generate Screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  screenshots:
+    name: Capture App Screenshots
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w @colota/shared
+
+      - name: Create gradle.properties
+        run: |
+          cat <<EOF > apps/mobile/android/gradle.properties
+          org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m
+          android.useAndroidX=true
+          hermesEnabled=true
+          newArchEnabled=true
+          EOF
+
+      - name: Build GMS Debug APK
+        run: |
+          cd apps/mobile/android
+          chmod +x gradlew
+          ./gradlew assembleGmsDebug --no-daemon \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Setup Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb install apps/mobile/android/app/build/outputs/apk/gms/debug/app-gms-arm64-v8a-debug.apk || \
+            adb install apps/mobile/android/app/build/outputs/apk/gms/debug/app-gms-x86_64-debug.apk || \
+            adb install $(find apps/mobile/android/app/build/outputs/apk/gms/debug -name "*.apk" | head -1)
+
+            maestro test --output screenshots/mobile/original/ .maestro/screenshots/
+
+            bash scripts/sync-screenshots.sh
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/mobile/original/
+
+      - name: Commit updated screenshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add screenshots/ apps/docs/static/img/screenshots/ apps/mobile/android/app/fastlane/metadata/android/en-US/images/phoneScreenshots/
+          if git diff --cached --quiet; then
+            echo "No screenshot changes to commit"
+          else
+            git commit -m "Update screenshots via CI"
+            git push
+          fi

@@ -260,4 +260,141 @@ describe("SyncStrategySettings", () => {
       expect(queryByText("Accuracy Threshold")).toBeNull()
     })
   })
+
+  describe("numeric input blur behavior", () => {
+    it("clamps interval to min 1 on blur when value is 0", () => {
+      const { getByText, getByDisplayValue } = renderComponent({
+        interval: 5,
+        syncPreset: "custom"
+      })
+
+      fireEvent.press(getByText("+ Show Advanced Settings"))
+
+      const intervalInput = getByDisplayValue("5")
+      fireEvent.changeText(intervalInput, "0")
+      fireEvent(intervalInput, "blur")
+
+      // Should clamp to 1 and call onSettingsChange + onImmediateSave
+      expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ interval: 1 }))
+      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ interval: 1 }))
+    })
+
+    it("clamps interval to min 1 on blur when value is negative", () => {
+      const { getByText, getByDisplayValue } = renderComponent({
+        interval: 5,
+        syncPreset: "custom"
+      })
+
+      fireEvent.press(getByText("+ Show Advanced Settings"))
+
+      const intervalInput = getByDisplayValue("5")
+      fireEvent.changeText(intervalInput, "-3")
+      fireEvent(intervalInput, "blur")
+
+      expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ interval: 1 }))
+      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ interval: 1 }))
+    })
+
+    it("clamps interval to min 1 on blur when value is NaN", () => {
+      const { getByText, getByDisplayValue } = renderComponent({
+        interval: 5,
+        syncPreset: "custom"
+      })
+
+      fireEvent.press(getByText("+ Show Advanced Settings"))
+
+      const intervalInput = getByDisplayValue("5")
+      fireEvent.changeText(intervalInput, "abc")
+      fireEvent(intervalInput, "blur")
+
+      expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ interval: 1 }))
+      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ interval: 1 }))
+    })
+
+    it("does not clamp interval on blur when value is valid", () => {
+      const { getByText, getByDisplayValue } = renderComponent({
+        interval: 5,
+        syncPreset: "custom"
+      })
+
+      fireEvent.press(getByText("+ Show Advanced Settings"))
+
+      const intervalInput = getByDisplayValue("5")
+      fireEvent.changeText(intervalInput, "10")
+      fireEvent(intervalInput, "blur")
+
+      // Valid value — onSettingsChange should only have been called from changeText (debounced save),
+      // not from blur (no clamping needed)
+      expect(mockOnImmediateSave).not.toHaveBeenCalled()
+    })
+
+    it("clamps distance to min 0 on blur when value is negative", () => {
+      const { getByText, getByDisplayValue } = renderComponent({
+        interval: 5,
+        distance: 10,
+        syncPreset: "custom"
+      })
+
+      fireEvent.press(getByText("+ Show Advanced Settings"))
+
+      const distanceInput = getByDisplayValue("10")
+      fireEvent.changeText(distanceInput, "-5")
+      fireEvent(distanceInput, "blur")
+
+      expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ distance: 0 }))
+      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ distance: 0 }))
+    })
+
+    it("clamps distance to min 0 on blur when value is NaN", () => {
+      const { getByText, getByDisplayValue } = renderComponent({
+        interval: 5,
+        distance: 10,
+        syncPreset: "custom"
+      })
+
+      fireEvent.press(getByText("+ Show Advanced Settings"))
+
+      const distanceInput = getByDisplayValue("10")
+      fireEvent.changeText(distanceInput, "abc")
+      fireEvent(distanceInput, "blur")
+
+      expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ distance: 0 }))
+      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ distance: 0 }))
+    })
+
+    it("clamps accuracy threshold to min 50 on blur when value is below", () => {
+      const { getByText, getByDisplayValue } = renderComponent({
+        interval: 5,
+        filterInaccurateLocations: true,
+        accuracyThreshold: 100,
+        syncPreset: "custom"
+      })
+
+      fireEvent.press(getByText("+ Show Advanced Settings"))
+
+      const thresholdInput = getByDisplayValue("100")
+      fireEvent.changeText(thresholdInput, "10")
+      fireEvent(thresholdInput, "blur")
+
+      expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 50 }))
+      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 50 }))
+    })
+
+    it("does not clamp accuracy threshold on blur when value is valid", () => {
+      const { getByText, getByDisplayValue } = renderComponent({
+        interval: 5,
+        filterInaccurateLocations: true,
+        accuracyThreshold: 100,
+        syncPreset: "custom"
+      })
+
+      fireEvent.press(getByText("+ Show Advanced Settings"))
+
+      const thresholdInput = getByDisplayValue("100")
+      fireEvent.changeText(thresholdInput, "200")
+      fireEvent(thresholdInput, "blur")
+
+      expect(mockOnImmediateSave).not.toHaveBeenCalled()
+    })
+  })
 })

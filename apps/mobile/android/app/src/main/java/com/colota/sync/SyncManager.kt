@@ -117,7 +117,8 @@ class SyncManager(
 
     suspend fun manualFlush() {
         if (endpoint.isNotBlank()) {
-            syncQueue()
+            val total = dbHelper.getQueuedCount()
+            syncQueue { sent, failed -> LocationServiceModule.sendSyncProgressEvent(sent, failed, total) }
         }
     }
 
@@ -156,7 +157,7 @@ class SyncManager(
 
     private suspend fun performSyncAndCheckSuccess(): Boolean {
         val countBefore = dbHelper.getQueuedCount()
-        syncQueue()
+        syncQueue(onProgress = null)
         val countAfter = dbHelper.getQueuedCount()
 
         invalidateQueueCache()
@@ -185,9 +186,10 @@ class SyncManager(
         delay(backoffSeconds * 1000L)
     }
 
-    private suspend fun syncQueue() = coroutineScope {
+    private suspend fun syncQueue(onProgress: ((sent: Int, failed: Int) -> Unit)? = null) = coroutineScope {
         var totalProcessed = 0
         var totalSucceeded = 0
+        var totalFailed = 0
         var batchNumber = 1
 
         while (isActive && batchNumber <= MAX_BATCHES_PER_SYNC) {
@@ -248,6 +250,8 @@ class SyncManager(
                     dbHelper.removeBatchFromQueue(toRemove)
                     totalProcessed += toRemove.size
                     totalSucceeded += successfulIds.size
+                    totalFailed += permanentlyFailedIds.size
+                    onProgress?.invoke(totalSucceeded, totalFailed)
                 }
 
                 yield()

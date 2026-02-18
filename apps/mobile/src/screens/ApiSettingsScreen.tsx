@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useMemo, useRef } from "react"
 import { Text, StyleSheet, TextInput, View, ScrollView, TouchableOpacity } from "react-native"
 import {
   FieldMap,
@@ -16,9 +16,14 @@ import {
 } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
+import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
+import NativeLocationService from "../services/NativeLocationService"
 import { fonts } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Divider } from "../components"
+import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup } from "../components"
+import { findDuplicates } from "../utils/settingsValidation"
+
+type LocalCustomField = CustomField & { id: number }
 
 /** Field descriptions for UI display */
 const FIELD_DESCRIPTIONS: Record<keyof FieldMap, string> = {
@@ -69,20 +74,72 @@ export function ApiSettingsScreen({}: ScreenProps) {
   const { settings, setSettings, restartTracking } = useTracking()
   const { colors } = useTheme()
 
+  const nextIdRef = useRef(0)
+  const assignId = () => nextIdRef.current++
+
   const [localFieldMap, setLocalFieldMap] = useState<FieldMap>(settings.fieldMap || DEFAULT_FIELD_MAP)
-  const [localCustomFields, setLocalCustomFields] = useState<CustomField[]>(settings.customFields || [])
+  const [localCustomFields, setLocalCustomFields] = useState<LocalCustomField[]>(() =>
+    (settings.customFields || []).map((f) => ({ ...f, id: assignId() }))
+  )
   const [localTemplate, setLocalTemplate] = useState<ApiTemplateName>(settings.apiTemplate || "custom")
   const [localHttpMethod, setLocalHttpMethod] = useState<HttpMethod>(settings.httpMethod || "POST")
+  const [copied, setCopied] = useState(false)
+  const copiedTimeout = useTimeout()
   const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
 
   const referenceFieldMap = getReferenceFieldMap(localTemplate)
 
-  /**
-   * Check if field has been modified from the current template's defaults
-   */
-  const isModified = (key: keyof FieldMap): boolean => {
-    return localFieldMap[key] !== referenceFieldMap[key]
-  }
+  /** Set of field keys that differ from the current template's defaults */
+  const modifiedFields = useMemo(() => {
+    const set = new Set<keyof FieldMap>()
+    for (const key of Object.keys(referenceFieldMap) as Array<keyof FieldMap>) {
+      if (localFieldMap[key] !== referenceFieldMap[key]) set.add(key)
+    }
+    return set
+  }, [localFieldMap, referenceFieldMap])
+
+  const hasModifications = modifiedFields.size > 0
+
+  /** Set of field names that appear more than once across field map values and custom field keys */
+  const duplicateFieldNames = useMemo(() => {
+    const allNames: string[] = []
+    for (const v of Object.values(localFieldMap)) {
+      if (v && v.trim()) allNames.push(v.trim())
+    }
+    for (const f of localCustomFields) {
+      if (f.key.trim()) allNames.push(f.key.trim())
+    }
+    return findDuplicates(allNames)
+  }, [localFieldMap, localCustomFields])
+
+  /** Example payload string showing all fields */
+  const examplePayload = useMemo(() => {
+    const params: { key: string; value: string }[] = []
+
+    // Custom static fields first
+    localCustomFields.forEach((f) => {
+      if (f.key) params.push({ key: f.key, value: f.value })
+    })
+
+    // All mapped fields with realistic example values
+    params.push({ key: localFieldMap.lat, value: "52.12345" })
+    params.push({ key: localFieldMap.lon, value: "-2.12345" })
+    params.push({ key: localFieldMap.acc, value: "15" })
+    if (localFieldMap.alt) params.push({ key: localFieldMap.alt, value: "380" })
+    if (localFieldMap.vel) params.push({ key: localFieldMap.vel, value: "5" })
+    if (localFieldMap.batt) params.push({ key: localFieldMap.batt, value: "85" })
+    if (localFieldMap.bs) params.push({ key: localFieldMap.bs, value: "2" })
+    if (localFieldMap.tst) params.push({ key: localFieldMap.tst, value: "1739362800" })
+    if (localFieldMap.bear) params.push({ key: localFieldMap.bear, value: "180.0" })
+
+    if (localHttpMethod === "GET") {
+      const query = params.map((p) => `${p.key}=${p.value}`).join("&")
+      return `GET https://...?${query}`
+    }
+
+    const entries = params.map((p) => `  "${p.key}": ${isNaN(Number(p.value)) ? `"${p.value}"` : p.value}`)
+    return "{\n" + entries.join(",\n") + "\n}"
+  }, [localFieldMap, localCustomFields, localHttpMethod])
 
   /**
    * Build sanitized settings from current field map, custom fields, and template.
@@ -100,6 +157,15 @@ export function ApiSettingsScreen({}: ScreenProps) {
       ) as FieldMap
 
       if (Object.values(sanitizedMap).some((v) => v === "")) {
+        return null
+      }
+
+      // Block saving when duplicate field names exist
+      const allNames: string[] = [
+        ...Object.values(sanitizedMap).filter((v) => v),
+        ...newCustomFields.map((f) => f.key.trim()).filter((k) => k)
+      ]
+      if (new Set(allNames).size !== allNames.length) {
         return null
       }
 
@@ -161,7 +227,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
   )
 
   /**
-   * Handles template selection
+   * Handles template selection — applies the template's field map, custom fields, and HTTP method.
    */
   const handleTemplateChange = useCallback(
     (template: ApiTemplateName) => {
@@ -169,14 +235,16 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
       if (template === "custom") {
         saveImmediately(localFieldMap, localCustomFields, template, localHttpMethod)
-      } else {
-        const tmpl = API_TEMPLATES[template]
-        const method = tmpl.httpMethod ?? "POST"
-        setLocalFieldMap(tmpl.fieldMap)
-        setLocalCustomFields(tmpl.customFields)
-        setLocalHttpMethod(method)
-        saveImmediately(tmpl.fieldMap, tmpl.customFields, template, method)
+        return
       }
+
+      const tmpl = API_TEMPLATES[template]
+      const method = tmpl.httpMethod ?? "POST"
+      const newCustomFields = tmpl.customFields.map((f) => ({ ...f, id: assignId() }))
+      setLocalFieldMap(tmpl.fieldMap)
+      setLocalCustomFields(newCustomFields)
+      setLocalHttpMethod(method)
+      saveImmediately(tmpl.fieldMap, newCustomFields, template, method)
     },
     [localFieldMap, localCustomFields, localHttpMethod, saveImmediately]
   )
@@ -214,7 +282,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
    * Resets all fields to current template defaults
    */
   const handleResetAll = useCallback(() => {
-    const refFields = getReferenceCustomFields(localTemplate)
+    const refFields = getReferenceCustomFields(localTemplate).map((f) => ({ ...f, id: assignId() }))
     setLocalFieldMap(referenceFieldMap)
     setLocalCustomFields(refFields)
     saveImmediately(referenceFieldMap, refFields, localTemplate, localHttpMethod)
@@ -223,14 +291,13 @@ export function ApiSettingsScreen({}: ScreenProps) {
   // --- Custom Fields handlers ---
 
   const handleAddCustomField = useCallback(() => {
-    const newFields = [...localCustomFields, { key: "", value: "" }]
+    const newFields = [...localCustomFields, { key: "", value: "", id: assignId() }]
     setLocalCustomFields(newFields)
   }, [localCustomFields])
 
   const handleCustomFieldChange = useCallback(
-    (index: number, field: "key" | "value", text: string) => {
-      const newFields = [...localCustomFields]
-      newFields[index] = { ...newFields[index], [field]: text }
+    (id: number, field: "key" | "value", text: string) => {
+      const newFields = localCustomFields.map((f) => (f.id === id ? { ...f, [field]: text } : f))
       setLocalCustomFields(newFields)
 
       const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
@@ -242,8 +309,8 @@ export function ApiSettingsScreen({}: ScreenProps) {
   )
 
   const handleRemoveCustomField = useCallback(
-    (index: number) => {
-      const newFields = localCustomFields.filter((_, i) => i !== index)
+    (id: number) => {
+      const newFields = localCustomFields.filter((f) => f.id !== id)
       setLocalCustomFields(newFields)
 
       const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
@@ -266,37 +333,15 @@ export function ApiSettingsScreen({}: ScreenProps) {
     [localFieldMap, localCustomFields, localTemplate, saveImmediately]
   )
 
-  // Check if any field mapping is modified from the reference
-  const hasModifications = (Object.keys(DEFAULT_FIELD_MAP) as Array<keyof FieldMap>).some((key) => isModified(key))
-
-  // Build example payload string showing all fields
-  const examplePayload = (() => {
-    const params: { key: string; value: string }[] = []
-
-    // Custom static fields first
-    localCustomFields.forEach((f) => {
-      if (f.key) params.push({ key: f.key, value: f.value })
-    })
-
-    // All mapped fields with realistic example values
-    params.push({ key: localFieldMap.lat, value: "52.12345" })
-    params.push({ key: localFieldMap.lon, value: "-2.12345" })
-    params.push({ key: localFieldMap.acc, value: "15" })
-    if (localFieldMap.alt) params.push({ key: localFieldMap.alt, value: "380" })
-    if (localFieldMap.vel) params.push({ key: localFieldMap.vel, value: "5" })
-    if (localFieldMap.batt) params.push({ key: localFieldMap.batt, value: "85" })
-    if (localFieldMap.bs) params.push({ key: localFieldMap.bs, value: "2" })
-    if (localFieldMap.tst) params.push({ key: localFieldMap.tst, value: "1739362800" })
-    if (localFieldMap.bear) params.push({ key: localFieldMap.bear, value: "180.0" })
-
-    if (localHttpMethod === "GET") {
-      const query = params.map((p) => `${p.key}=${p.value}`).join("&")
-      return `GET https://...?${query}`
+  const handleCopyPayload = useCallback(async () => {
+    try {
+      await NativeLocationService.copyToClipboard(examplePayload, "API Payload")
+      setCopied(true)
+      copiedTimeout.set(() => setCopied(false), 2000)
+    } catch {
+      // Copy failed — no action needed
     }
-
-    const entries = params.map((p) => `  "${p.key}": ${isNaN(Number(p.value)) ? `"${p.value}"` : p.value}`)
-    return "{\n" + entries.join(",\n") + "\n}"
-  })()
+  }, [examplePayload, copiedTimeout])
 
   return (
     <Container>
@@ -312,40 +357,12 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Template Selector */}
         <View style={styles.section}>
           <SectionTitle>BACKEND TEMPLATE</SectionTitle>
-          <View style={styles.chipRow}>
-            {TEMPLATE_OPTIONS.map(({ value, label }) => {
-              const isSelected = localTemplate === value
-              return (
-                <TouchableOpacity
-                  key={value}
-                  style={[
-                    styles.chip,
-                    {
-                      borderColor: colors.border,
-                      backgroundColor: colors.background
-                    },
-                    isSelected && {
-                      borderColor: colors.primary,
-                      backgroundColor: colors.primary + "20"
-                    }
-                  ]}
-                  onPress={() => handleTemplateChange(value)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      {
-                        color: isSelected ? colors.primary : colors.text
-                      }
-                    ]}
-                  >
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
+          <ChipGroup
+            options={TEMPLATE_OPTIONS}
+            selected={localTemplate}
+            onSelect={handleTemplateChange}
+            colors={colors}
+          />
           {localTemplate !== "custom" && (
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
               {API_TEMPLATES[localTemplate].description}
@@ -356,40 +373,12 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* HTTP Method Selector */}
         <View style={styles.section}>
           <SectionTitle>HTTP METHOD</SectionTitle>
-          <View style={styles.chipRow}>
-            {HTTP_METHOD_OPTIONS.map(({ value, label }) => {
-              const isSelected = localHttpMethod === value
-              return (
-                <TouchableOpacity
-                  key={value}
-                  style={[
-                    styles.chip,
-                    {
-                      borderColor: colors.border,
-                      backgroundColor: colors.background
-                    },
-                    isSelected && {
-                      borderColor: colors.primary,
-                      backgroundColor: colors.primary + "20"
-                    }
-                  ]}
-                  onPress={() => handleHttpMethodChange(value)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      {
-                        color: isSelected ? colors.primary : colors.text
-                      }
-                    ]}
-                  >
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
+          <ChipGroup
+            options={HTTP_METHOD_OPTIONS}
+            selected={localHttpMethod}
+            onSelect={handleHttpMethodChange}
+            colors={colors}
+          />
           {localHttpMethod === "GET" && (
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
               Fields sent as URL query parameters instead of JSON body
@@ -409,59 +398,68 @@ export function ApiSettingsScreen({}: ScreenProps) {
           </View>
 
           <View style={[styles.fieldsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {(Object.keys(DEFAULT_FIELD_MAP) as Array<keyof FieldMap>).map((key, index) => (
-              <View key={key}>
-                {/* Two-column layout */}
-                <View style={styles.fieldRow}>
-                  {/* Left: Key info */}
-                  <View style={styles.keyColumn}>
-                    <View style={styles.keyHeader}>
-                      <Text style={[styles.fieldLabel, { color: colors.text }]}>{key.toUpperCase()}</Text>
-                      {isModified(key) && (
-                        <View style={[styles.modifiedBadge, { backgroundColor: colors.primary }]}>
-                          <Text style={[styles.modifiedText, { color: colors.textOnPrimary }]}>Modified</Text>
-                        </View>
-                      )}
+            {(Object.keys(DEFAULT_FIELD_MAP) as Array<keyof FieldMap>).map((key, index) => {
+              const isFieldModified = modifiedFields.has(key)
+              const fieldValue = localFieldMap[key]?.trim()
+              const isDuplicate = fieldValue != null && duplicateFieldNames.has(fieldValue)
+              return (
+                <View key={key}>
+                  {/* Two-column layout */}
+                  <View style={styles.fieldRow}>
+                    {/* Left: Key info */}
+                    <View style={styles.keyColumn}>
+                      <View style={styles.keyHeader}>
+                        <Text style={[styles.fieldLabel, { color: colors.text }]}>{key.toUpperCase()}</Text>
+                        {isFieldModified && (
+                          <View style={[styles.modifiedBadge, { backgroundColor: colors.primary }]}>
+                            <Text style={[styles.modifiedText, { color: colors.textOnPrimary }]}>Modified</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.fieldDescription, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {FIELD_DESCRIPTIONS[key]}
+                      </Text>
                     </View>
-                    <Text style={[styles.fieldDescription, { color: colors.textSecondary }]} numberOfLines={1}>
-                      {FIELD_DESCRIPTIONS[key]}
-                    </Text>
+
+                    {/* Right: Value input */}
+                    <View style={styles.valueColumn}>
+                      <View style={styles.inputRow}>
+                        <TextInput
+                          style={[
+                            styles.fieldInput,
+                            {
+                              borderColor: isDuplicate
+                                ? colors.error
+                                : isFieldModified
+                                ? colors.primary
+                                : colors.border,
+                              color: colors.text,
+                              backgroundColor: colors.background
+                            }
+                          ]}
+                          value={localFieldMap[key]}
+                          onChangeText={(text) => handleFieldChange(key, text)}
+                          placeholder={referenceFieldMap[key]}
+                          placeholderTextColor={colors.placeholder}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                        {isFieldModified && (
+                          <TouchableOpacity
+                            onPress={() => handleResetField(key)}
+                            style={[styles.resetButton, { backgroundColor: colors.border }]}
+                          >
+                            <Text style={[styles.resetIcon, { color: colors.textSecondary }]}>↺</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
                   </View>
 
-                  {/* Right: Value input */}
-                  <View style={styles.valueColumn}>
-                    <View style={styles.inputRow}>
-                      <TextInput
-                        style={[
-                          styles.fieldInput,
-                          {
-                            borderColor: isModified(key) ? colors.primary : colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
-                        value={localFieldMap[key]}
-                        onChangeText={(text) => handleFieldChange(key, text)}
-                        placeholder={referenceFieldMap[key]}
-                        placeholderTextColor={colors.placeholder}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
-                      {isModified(key) && (
-                        <TouchableOpacity
-                          onPress={() => handleResetField(key)}
-                          style={[styles.resetButton, { backgroundColor: colors.border }]}
-                        >
-                          <Text style={[styles.resetIcon, { color: colors.textSecondary }]}>↺</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  </View>
+                  {index < Object.keys(DEFAULT_FIELD_MAP).length - 1 && <Divider />}
                 </View>
-
-                {index < Object.keys(DEFAULT_FIELD_MAP).length - 1 && <Divider />}
-              </View>
-            ))}
+              )
+            })}
           </View>
         </View>
 
@@ -477,51 +475,54 @@ export function ApiSettingsScreen({}: ScreenProps) {
                 No custom fields. Add static key-value pairs to include in every payload.
               </Text>
             ) : (
-              localCustomFields.map((field, index) => (
-                <View key={index}>
-                  <View style={styles.customFieldRow}>
-                    <TextInput
-                      style={[
-                        styles.customFieldInput,
-                        {
-                          borderColor: colors.border,
-                          color: colors.text,
-                          backgroundColor: colors.background
-                        }
-                      ]}
-                      value={field.key}
-                      onChangeText={(text) => handleCustomFieldChange(index, "key", text)}
-                      placeholder="Key"
-                      placeholderTextColor={colors.placeholder}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    <TextInput
-                      style={[
-                        styles.customFieldInput,
-                        {
-                          borderColor: colors.border,
-                          color: colors.text,
-                          backgroundColor: colors.background
-                        }
-                      ]}
-                      value={field.value}
-                      onChangeText={(text) => handleCustomFieldChange(index, "value", text)}
-                      placeholder="Value"
-                      placeholderTextColor={colors.placeholder}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    <TouchableOpacity
-                      onPress={() => handleRemoveCustomField(index)}
-                      style={[styles.removeButton, { backgroundColor: colors.error + "15" }]}
-                    >
-                      <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                    </TouchableOpacity>
+              localCustomFields.map((field, index) => {
+                const isDuplicate = duplicateFieldNames.has(field.key.trim())
+                return (
+                  <View key={field.id}>
+                    <View style={styles.customFieldRow}>
+                      <TextInput
+                        style={[
+                          styles.customFieldInput,
+                          {
+                            borderColor: isDuplicate ? colors.error : colors.border,
+                            color: colors.text,
+                            backgroundColor: colors.background
+                          }
+                        ]}
+                        value={field.key}
+                        onChangeText={(text) => handleCustomFieldChange(field.id, "key", text)}
+                        placeholder="Key"
+                        placeholderTextColor={colors.placeholder}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                      <TextInput
+                        style={[
+                          styles.customFieldInput,
+                          {
+                            borderColor: colors.border,
+                            color: colors.text,
+                            backgroundColor: colors.background
+                          }
+                        ]}
+                        value={field.value}
+                        onChangeText={(text) => handleCustomFieldChange(field.id, "value", text)}
+                        placeholder="Value"
+                        placeholderTextColor={colors.placeholder}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                      <TouchableOpacity
+                        onPress={() => handleRemoveCustomField(field.id)}
+                        style={[styles.removeButton, { backgroundColor: colors.error + "15" }]}
+                      >
+                        <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
+                      </TouchableOpacity>
+                    </View>
+                    {index < localCustomFields.length - 1 && <Divider />}
                   </View>
-                  {index < localCustomFields.length - 1 && <Divider />}
-                </View>
-              ))
+                )
+              })
             )}
 
             <TouchableOpacity onPress={handleAddCustomField} style={[styles.addButton, { borderColor: colors.border }]}>
@@ -529,6 +530,17 @@ export function ApiSettingsScreen({}: ScreenProps) {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Duplicate field warning */}
+        {duplicateFieldNames.size > 0 && (
+          <View
+            style={[styles.warningBanner, { backgroundColor: colors.error + "15", borderColor: colors.error + "40" }]}
+          >
+            <Text style={[styles.warningText, { color: colors.error }]}>
+              Duplicate field names: {[...duplicateFieldNames].join(", ")}. Resolve duplicates to save changes.
+            </Text>
+          </View>
+        )}
 
         {/* Example payload preview */}
         <View style={styles.exampleSection}>
@@ -543,6 +555,11 @@ export function ApiSettingsScreen({}: ScreenProps) {
             ]}
           >
             <Text style={[styles.exampleCode, { color: colors.textSecondary }]}>{examplePayload}</Text>
+            <TouchableOpacity onPress={handleCopyPayload} style={styles.copyButton}>
+              <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
+                {copied ? "COPIED!" : "COPY"}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -581,22 +598,6 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8
-  },
-  chip: {
-    borderWidth: 2,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignItems: "center"
-  },
-  chipText: {
-    fontSize: 12,
-    ...fonts.bold
   },
   templateHint: {
     fontSize: 12,
@@ -730,8 +731,29 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: 8
   },
+  warningBanner: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 20
+  },
+  warningText: {
+    fontSize: 12,
+    lineHeight: 18
+  },
   exampleSection: {
     marginBottom: 20
+  },
+  copyButton: {
+    alignSelf: "flex-end",
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    marginTop: 8
+  },
+  copyButtonText: {
+    fontSize: 11,
+    ...fonts.bold,
+    letterSpacing: 0.5
   },
   exampleCard: {
     padding: 14,

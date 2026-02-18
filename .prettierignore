@@ -1,3 +1,48 @@
-package.json
+# Dependencies & lockfiles
+node_modules/
 package-lock.json
-android/app/src/main/assets/openlayers
+
+# Android native & build artifacts
+apps/mobile/android/.gradle/
+apps/mobile/android/build/
+apps/mobile/android/app/build/
+apps/mobile/android/app/src/main/java/
+apps/mobile/android/app/src/main/res/
+apps/mobile/android/app/src/main/assets/
+apps/mobile/android/app/src/test/
+apps/mobile/android/gradle/
+*.kt
+*.xml
+*.pro
+*.properties
+*.gradle
+*.gradle.kts
+
+# Build output & binaries
+*.so
+*.dex
+*.class
+*.o
+*.bin
+*.map
+*.cmake
+*.ninja
+*.flat
+*.len
+
+# IDE
+.idea/
+
+# Images & media
+*.png
+*.jpg
+*.svg
+*.gif
+*.ico
+
+# Docs build output
+apps/docs/build/
+apps/docs/.docusaurus/
+
+# Other
+screenshots/

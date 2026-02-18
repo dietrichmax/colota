@@ -30,7 +30,7 @@ Colota has nine screens, each focused on a specific task:
 | **API Config** | Endpoint field mapping with templates for Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or custom backends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | **Geofences** | Create, edit, and delete pause zones on an interactive map |
-| **Location History** | Browse recorded locations on a track map with day picker, or as a paginated list with accuracy indicators |
+| **Location History** | Browse recorded locations on a track map with day picker and daily distance traveled, or as a paginated list with accuracy indicators |
 | **Export Data** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
 | **Data Management** | Clear sent history, delete old data, vacuum the database |
 | **About** | App version, device info, links to repository and privacy policy |

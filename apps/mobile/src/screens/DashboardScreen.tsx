@@ -20,7 +20,7 @@ import {
   DatabaseStatistics,
   WelcomeCard
 } from "../components"
-import { STATS_REFRESH_IDLE } from "../constants"
+import { STATS_REFRESH_IDLE, MIN_STATS_INTERVAL_MS } from "../constants"
 import { Square, Play } from "lucide-react-native"
 import { logger } from "../utils/logger"
 
@@ -111,7 +111,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
       updateStats()
       updatePauseZone()
 
-      const interval = tracking ? Math.max(settings.interval * 1000, 2000) : STATS_REFRESH_IDLE
+      const interval = tracking ? Math.max(settings.interval * 1000, MIN_STATS_INTERVAL_MS) : STATS_REFRESH_IDLE
 
       const statsTimer = setInterval(updateStats, interval)
 

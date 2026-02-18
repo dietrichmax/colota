@@ -66,15 +66,25 @@ class PayloadBuilder {
         }
     }
 
-    /** Expected format: [{"key":"_type","value":"location"},...] */
+    /**
+     * Parses custom fields from either format:
+     * - Array:  [{"key":"_type","value":"location"},...]  (from DB / SettingsService)
+     * - Object: {"_type":"location",...}                   (from Intent / ReadableMap)
+     */
     fun parseCustomFields(jsonString: String?): Map<String, String>? {
-        if (jsonString.isNullOrBlank() || jsonString == "[]") return null
+        if (jsonString.isNullOrBlank() || jsonString == "[]" || jsonString == "{}") return null
+        val trimmed = jsonString.trim()
         return try {
-            val arr = org.json.JSONArray(jsonString)
             val map = mutableMapOf<String, String>()
-            for (i in 0 until arr.length()) {
-                val obj = arr.getJSONObject(i)
-                map[obj.getString("key")] = obj.getString("value")
+            if (trimmed.startsWith("[")) {
+                val arr = org.json.JSONArray(trimmed)
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    map[obj.getString("key")] = obj.getString("value")
+                }
+            } else {
+                val obj = JSONObject(trimmed)
+                obj.keys().forEach { key -> map[key] = obj.getString(key) }
             }
             if (map.isEmpty()) null else map
         } catch (e: Exception) {

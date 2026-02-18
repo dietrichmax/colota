@@ -6,8 +6,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Text, StyleSheet, View, ActivityIndicator, ScrollView, TouchableOpacity } from "react-native"
 import { fonts } from "../styles/typography"
-import { Download, type LucideIcon } from "lucide-react-native"
-import { Container, Card, SectionTitle, Divider } from "../components"
+import { Download, MapPinOff, type LucideIcon } from "lucide-react-native"
+import { Container, Card, SectionTitle, Divider, Button } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { ThemeColors, LocationCoords } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
@@ -15,20 +15,15 @@ import { LARGE_FILE_THRESHOLD, formatBytes, getByteSize, EXPORT_FORMATS, ExportF
 import { logger } from "../utils/logger"
 import { showAlert, showConfirm } from "../services/modalService"
 
-interface ExportStats {
-  totalLocations: number
-}
-
 export function ExportDataScreen() {
   const { colors } = useTheme()
   const [exporting, setExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState<string>("")
-  const [stats, setStats] = useState<ExportStats>({
-    totalLocations: 0
-  })
+  const [totalLocations, setTotalLocations] = useState(0)
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat | null>(null)
   const [fileSize, setFileSize] = useState<string | null>(null)
   const cachedData = useRef<LocationCoords[]>([])
+  const cachedContent = useRef<{ format: ExportFormat; content: string } | null>(null)
 
   const loadStats = useCallback(async () => {
     try {
@@ -40,7 +35,7 @@ export function ExportDataScreen() {
           timestamp: item.timestamp ? item.timestamp * 1000 : Date.now()
         }))
 
-        setStats({ totalLocations: data.length })
+        setTotalLocations(data.length)
       }
     } catch (error) {
       logger.error("[ExportDataScreen] Failed to load stats:", error)
@@ -51,18 +46,21 @@ export function ExportDataScreen() {
     loadStats()
   }, [loadStats])
 
+  // Convert once on format selection, cache the result for both size preview and export
   useEffect(() => {
     if (!selectedFormat || cachedData.current.length === 0) {
       setFileSize(null)
+      cachedContent.current = null
       return
     }
 
     const content = EXPORT_FORMATS[selectedFormat].convert(cachedData.current)
+    cachedContent.current = { format: selectedFormat, content }
     setFileSize(formatBytes(getByteSize(content)))
-  }, [selectedFormat, stats.totalLocations])
+  }, [selectedFormat, totalLocations])
 
   const handleExport = async (format: ExportFormat) => {
-    if (stats.totalLocations === 0) {
+    if (totalLocations === 0) {
       showAlert("No Data", "There are no locations in the database to export.", "info")
       return
     }
@@ -71,15 +69,15 @@ export function ExportDataScreen() {
     setExportProgress("Preparing export...")
 
     try {
-      const normalizedData = cachedData.current
+      setExportProgress(`Converting ${cachedData.current.length} locations...`)
 
-      setExportProgress(`Converting ${normalizedData.length} locations...`)
+      // Reuse cached conversion if format matches, otherwise convert fresh
+      const content =
+        cachedContent.current?.format === format
+          ? cachedContent.current.content
+          : EXPORT_FORMATS[format].convert(cachedData.current)
 
       const formatConfig = EXPORT_FORMATS[format]
-      const content = formatConfig.convert(normalizedData)
-      const fileExtension = formatConfig.extension
-      const mimeType = formatConfig.mimeType
-
       const exportSize = getByteSize(content)
 
       if (exportSize > LARGE_FILE_THRESHOLD) {
@@ -100,7 +98,7 @@ export function ExportDataScreen() {
         setExporting(true)
       }
 
-      const fileName = `colota_export_${Date.now()}${fileExtension}`
+      const fileName = `colota_export_${Date.now()}${formatConfig.extension}`
 
       setExportProgress(`Saving file (${formatBytes(exportSize)})...`)
 
@@ -109,10 +107,12 @@ export function ExportDataScreen() {
       setExporting(false)
       setExportProgress("")
 
-      await new Promise<void>((resolve) => setTimeout(resolve, 300))
-
       try {
-        await NativeLocationService.shareFile(filePath, mimeType, `Colota Export - ${stats.totalLocations} locations`)
+        await NativeLocationService.shareFile(
+          filePath,
+          formatConfig.mimeType,
+          `Colota Export - ${totalLocations} locations`
+        )
       } catch (shareError: any) {
         logger.warn("[ExportDataScreen] Share error:", shareError)
       }
@@ -134,87 +134,72 @@ export function ExportDataScreen() {
           <Text style={[styles.title, { color: colors.text }]}>Export Data</Text>
         </View>
 
-        {/* Stats Card */}
-        <View
-          style={[
-            styles.statsContainer,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border
-            }
-          ]}
-        >
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total</Text>
-              <Text style={[styles.statValue, { color: colors.primaryDark }]}>
-                {stats.totalLocations.toLocaleString()}
+        {totalLocations === 0 ? (
+          <Card>
+            <View style={styles.emptyState}>
+              <MapPinOff size={40} color={colors.textLight} />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.textLight }]}>
+                Start tracking to record locations that can be exported.
               </Text>
             </View>
-
-            <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
-
-            <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>File Size</Text>
-              <Text style={[styles.statValue, { color: colors.success }]}>{fileSize ?? "–"}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Format Selection */}
-        <View style={styles.section}>
-          <SectionTitle>Select Format</SectionTitle>
-
-          <Card>
-            {(Object.entries(EXPORT_FORMATS) as [ExportFormat, (typeof EXPORT_FORMATS)[ExportFormat]][]).map(
-              ([key, config], index, arr) => (
-                <React.Fragment key={key}>
-                  <FormatOption
-                    icon={config.icon}
-                    title={config.label}
-                    subtitle={config.subtitle}
-                    description={config.description}
-                    extension={config.extension}
-                    selected={selectedFormat === key}
-                    onPress={() => setSelectedFormat(key)}
-                    colors={colors}
-                  />
-                  {index < arr.length - 1 && <Divider />}
-                </React.Fragment>
-              )
-            )}
           </Card>
-        </View>
-
-        {/* Export Button */}
-        {selectedFormat && (
-          <View style={styles.exportSection}>
-            <TouchableOpacity
-              style={[
-                styles.exportButton,
-                {
-                  backgroundColor: colors.primary
-                },
-                exporting && styles.disabledButton
-              ]}
-              onPress={() => handleExport(selectedFormat)}
-              disabled={exporting || stats.totalLocations === 0}
-              activeOpacity={0.7}
-            >
-              <View style={styles.exportContent}>
-                <Download size={28} color={colors.textOnPrimary} style={styles.exportIcon} />
-                <View style={styles.exportText}>
-                  <Text style={[styles.exportTitle, { color: colors.textOnPrimary }]}>
-                    Export {EXPORT_FORMATS[selectedFormat].label}
-                  </Text>
-                  <Text style={[styles.exportSubtitle, { color: colors.textOnPrimary }]}>
-                    {stats.totalLocations.toLocaleString()} locations
-                    {fileSize ? ` • ${fileSize}` : ""}
+        ) : (
+          <>
+            {/* Stats Card */}
+            <Card>
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total</Text>
+                  <Text style={[styles.statValue, { color: colors.primaryDark }]}>
+                    {totalLocations.toLocaleString()}
                   </Text>
                 </View>
+
+                <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
+
+                <View style={styles.statItem}>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>File Size</Text>
+                  <Text style={[styles.statValue, { color: colors.success }]}>{fileSize ?? "–"}</Text>
+                </View>
               </View>
-            </TouchableOpacity>
-          </View>
+            </Card>
+
+            {/* Format Selection */}
+            <View style={styles.section}>
+              <SectionTitle>Select Format</SectionTitle>
+
+              <Card>
+                {(Object.entries(EXPORT_FORMATS) as [ExportFormat, (typeof EXPORT_FORMATS)[ExportFormat]][]).map(
+                  ([key, config], index, arr) => (
+                    <React.Fragment key={key}>
+                      <FormatOption
+                        icon={config.icon}
+                        title={config.label}
+                        subtitle={config.subtitle}
+                        description={config.description}
+                        extension={config.extension}
+                        selected={selectedFormat === key}
+                        onPress={() => setSelectedFormat(key)}
+                        colors={colors}
+                      />
+                      {index < arr.length - 1 && <Divider />}
+                    </React.Fragment>
+                  )
+                )}
+              </Card>
+            </View>
+
+            {/* Export Button */}
+            {selectedFormat && (
+              <Button
+                onPress={() => handleExport(selectedFormat)}
+                disabled={exporting}
+                title={`Export ${EXPORT_FORMATS[selectedFormat].label}`}
+                icon={Download}
+              />
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -313,12 +298,20 @@ const styles = StyleSheet.create({
     ...fonts.bold,
     letterSpacing: -0.5
   },
-  statsContainer: {
-    borderRadius: 16,
-    borderWidth: 2,
-    marginHorizontal: 0,
-    marginBottom: 24,
-    overflow: "hidden"
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 32
+  },
+  emptyTitle: {
+    fontSize: 18,
+    ...fonts.semiBold,
+    marginTop: 12,
+    marginBottom: 4
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 18
   },
   statsGrid: {
     flexDirection: "row",
@@ -419,39 +412,12 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6
   },
-  exportSection: {},
-  exportButton: {
-    borderRadius: 14,
-    padding: 18,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3
-  },
-  exportContent: {
-    flexDirection: "row",
-    alignItems: "center"
-  },
-  exportIcon: {
-    marginRight: 14
-  },
-  exportText: {
-    flex: 1
-  },
-  exportTitle: {
-    fontSize: 17,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  exportSubtitle: {
-    fontSize: 13,
-    opacity: 0.9
-  },
-  disabledButton: {
-    opacity: 0.5
-  },
   loader: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 999,
     justifyContent: "center",
     alignItems: "center"

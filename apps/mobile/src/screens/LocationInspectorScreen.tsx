@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useRef, useCallback, memo } from "react"
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react"
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Switch } from "react-native"
 import { fonts } from "../styles/typography"
 import { ChevronLeft, ChevronRight } from "lucide-react-native"
@@ -15,6 +15,7 @@ import { STATS_REFRESH_FAST } from "../constants"
 import { logger } from "../utils/logger"
 import { DatePicker } from "../components/features/inspector/DatePicker"
 import { TrackMap } from "../components/features/inspector/TrackMap"
+import { computeTotalDistance, formatDistance } from "../utils/geo"
 
 // Types
 interface LocationData {
@@ -130,20 +131,30 @@ export function LocationHistoryScreen() {
   const [trackLocations, setTrackLocations] = useState<LocationData[]>([])
   const [selectedPoint, setSelectedPoint] = useState<{ latitude: number; longitude: number } | null>(null)
 
+  const dailyDistance = useMemo(() => {
+    if (trackLocations.length < 2) return undefined
+    const meters = computeTotalDistance(trackLocations)
+    return formatDistance(meters)
+  }, [trackLocations])
+
+  const fetchIdRef = useRef(0)
+
   /** Fetches data based on current pagination */
   const fetchData = useCallback(async () => {
+    const id = ++fetchIdRef.current
     try {
       const offset = page * limit
       const result = await NativeLocationService.getTableData("locations", limit, offset)
-      setData(result || [])
+      if (id === fetchIdRef.current) setData(result || [])
     } catch (err) {
       logger.error("[LocationHistory] Fetch error:", err)
-      setData([])
+      if (id === fetchIdRef.current) setData([])
     }
   }, [limit, page])
 
   /** Fetch track data for the selected day */
   const fetchTrackData = useCallback(async () => {
+    const id = ++fetchIdRef.current
     try {
       const start = new Date(mapDate)
       start.setHours(0, 0, 0, 0)
@@ -154,10 +165,10 @@ export function LocationHistoryScreen() {
       const endTimestamp = Math.floor(end.getTime() / 1000)
 
       const result = await NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp)
-      setTrackLocations(result || [])
+      if (id === fetchIdRef.current) setTrackLocations(result || [])
     } catch (err) {
       logger.error("[LocationHistory] Track fetch error:", err)
-      setTrackLocations([])
+      if (id === fetchIdRef.current) setTrackLocations([])
     }
   }, [mapDate])
 
@@ -227,7 +238,13 @@ export function LocationHistoryScreen() {
 
       {activeTab === "map" ? (
         <View style={styles.mapContainer}>
-          <DatePicker date={mapDate} onDateChange={setMapDate} locationCount={trackLocations.length} colors={colors} />
+          <DatePicker
+            date={mapDate}
+            onDateChange={setMapDate}
+            locationCount={trackLocations.length}
+            distance={dailyDistance}
+            colors={colors}
+          />
           <TrackMap locations={trackLocations} selectedPoint={selectedPoint} colors={colors} isDark={isDark} />
         </View>
       ) : (

@@ -29,15 +29,7 @@ Export your location history in multiple formats.
   </figure>
 </div>
 
-## Data Management
-
-In the Data Management screen you can also:
-
-- **Clear Sent History** - Remove locations that have already been synced
-- **Delete Older Than X Days** - Clean up old data
-- **Vacuum Database** - Reclaim disk space after deletions
-
-### Storage Reference
+## Storage Reference
 
 - ~200 bytes per location
 - ~2 MB per 10,000 locations

@@ -26,7 +26,8 @@ class BuildConfigModule(reactContext: ReactApplicationContext) :
             "KOTLIN_VERSION" to BuildConfig.KOTLIN_VERSION,
             "NDK_VERSION" to BuildConfig.NDK_VERSION,
             "VERSION_NAME" to BuildConfig.VERSION_NAME,
-            "VERSION_CODE" to BuildConfig.VERSION_CODE
+            "VERSION_CODE" to BuildConfig.VERSION_CODE,
+            "FLAVOR" to BuildConfig.FLAVOR
         )
     }
 }

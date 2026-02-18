@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Switch, DeviceEventEmitter } from "react-native"
-import { WebView } from "react-native-webview"
+import { WebView, WebViewMessageEvent } from "react-native-webview"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
@@ -15,7 +15,15 @@ import { fonts } from "../styles/typography"
 import { X, WifiOff } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
-import { STATS_REFRESH_IDLE } from "../constants"
+import {
+  STATS_REFRESH_IDLE,
+  DEFAULT_MAP_ZOOM,
+  WORLD_MAP_ZOOM,
+  MAX_MAP_ZOOM,
+  GEOFENCE_ZOOM_PADDING,
+  MARKER_ANIMATION_DURATION_MS,
+  MAP_ANIMATION_DURATION_MS
+} from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { mapStyles, mapMarkerHelpers } from "../components/features/map/mapHtml"
 import { logger } from "../utils/logger"
@@ -138,7 +146,7 @@ export function GeofenceScreen({}: ScreenProps) {
   }, [geofences, mapReady])
 
   const onMessage = useCallback(
-    async (event: any) => {
+    async (event: WebViewMessageEvent) => {
       try {
         const data = JSON.parse(event.nativeEvent.data)
 
@@ -252,7 +260,7 @@ export function GeofenceScreen({}: ScreenProps) {
     const lon = initialCenter.current.longitude
     const lat = initialCenter.current.latitude
     const hasRealCoords = lat !== 0 || lon !== 0
-    const initialZoom = hasRealCoords ? 17 : 2
+    const initialZoom = hasRealCoords ? DEFAULT_MAP_ZOOM : WORLD_MAP_ZOOM
 
     return `
 <!DOCTYPE html>
@@ -362,12 +370,12 @@ export function GeofenceScreen({}: ScreenProps) {
         markerEl.style.display = data.tracking ? "block" : "none";
         if (data.tracking) {
           markerOverlay.setPosition(newPos);
-          animateMarker(newPos, 500);
+          animateMarker(newPos, ${MARKER_ANIMATION_DURATION_MS});
           // Only auto-center if user has not manually moved the map
           if (isMapCentered()) {
             map.getView().animate({
               center: newPos,
-              duration: 500,
+              duration: ${MARKER_ANIMATION_DURATION_MS},
               easing: ol.easing.linear
             });
           }
@@ -397,7 +405,7 @@ export function GeofenceScreen({}: ScreenProps) {
       
       if (data.action === "center_map") {
         const pos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
-        map.getView().animate({ center: pos, zoom: 17, duration: 400 });
+        map.getView().animate({ center: pos, zoom: ${DEFAULT_MAP_ZOOM}, duration: ${MAP_ANIMATION_DURATION_MS} });
       }
 
       if (data.action === "zoom_to_geofence") {
@@ -406,8 +414,8 @@ export function GeofenceScreen({}: ScreenProps) {
         const extent = circle.getExtent();
         map.getView().fit(extent, {
           duration: 600,
-          padding: [80, 80, 80, 80],
-          maxZoom: 18
+          padding: [${GEOFENCE_ZOOM_PADDING}],
+          maxZoom: ${MAX_MAP_ZOOM}
         });
       }
       
