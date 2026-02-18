@@ -1,0 +1,12 @@
+appId: com.colota
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Settings"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: "API Field Mapping"
+    direction: DOWN
+- tapOn: "API Field Mapping"
+- waitForAnimationToEnd
+- takeScreenshot: ApiFieldMapping

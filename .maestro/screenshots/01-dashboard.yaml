@@ -1,0 +1,6 @@
+appId: com.colota
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- takeScreenshot: Dashboard
