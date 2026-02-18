@@ -93,15 +93,30 @@ class ConditionMonitor(
     private fun registerCarModeMonitor() {
         carModeReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                if (intent.action == Intent.ACTION_CONFIGURATION_CHANGED) {
-                    val isCarMode = readCurrentCarModeState()
-                    if (BuildConfig.DEBUG) Log.d(TAG, "Configuration changed — carMode: $isCarMode")
-                    profileManager.onCarModeStateChanged(isCarMode)
+                when (intent.action) {
+                    UiModeManager.ACTION_ENTER_CAR_MODE -> {
+                        if (BuildConfig.DEBUG) Log.d(TAG, "Car mode entered")
+                        profileManager.onCarModeStateChanged(true)
+                    }
+                    UiModeManager.ACTION_EXIT_CAR_MODE -> {
+                        if (BuildConfig.DEBUG) Log.d(TAG, "Car mode exited")
+                        profileManager.onCarModeStateChanged(false)
+                    }
+                    Intent.ACTION_CONFIGURATION_CHANGED -> {
+                        val isCarMode = readCurrentCarModeState()
+                        if (BuildConfig.DEBUG) Log.d(TAG, "Configuration changed - carMode: $isCarMode")
+                        profileManager.onCarModeStateChanged(isCarMode)
+                    }
                 }
             }
         }
 
-        context.registerReceiver(carModeReceiver, IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED), Context.RECEIVER_NOT_EXPORTED)
+        val filter = IntentFilter().apply {
+            addAction(UiModeManager.ACTION_ENTER_CAR_MODE)
+            addAction(UiModeManager.ACTION_EXIT_CAR_MODE)
+            addAction(Intent.ACTION_CONFIGURATION_CHANGED)
+        }
+        context.registerReceiver(carModeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
     }
 
     private fun readCurrentChargingState(): Boolean {
