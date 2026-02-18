@@ -250,10 +250,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     fun startService(config: ReadableMap, promise: Promise) {
         Log.d(TAG, "Starting Service with config")
 
-        moduleScope.launch(Dispatchers.IO) {
-            dbHelper.saveSetting("tracking_enabled", "true")
-        }
-
         val serviceConfig = ServiceConfig.fromReadableMap(config, dbHelper)
         val serviceIntent = Intent(reactApplicationContext, LocationForegroundService::class.java)
         serviceConfig.toIntent(serviceIntent)
@@ -263,6 +259,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 reactApplicationContext.startForegroundService(serviceIntent)
             } else {
                 reactApplicationContext.startService(serviceIntent)
+            }
+            moduleScope.launch(Dispatchers.IO) {
+                dbHelper.saveSetting("tracking_enabled", "true")
             }
             promise.resolve(null)
         } catch (e: Exception) {

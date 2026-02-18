@@ -176,16 +176,21 @@ describe("TrackingProfilesScreen", () => {
   })
 
   it("shows confirmation dialog before deleting", async () => {
-    const { getByText } = renderScreen()
+    const { getByText, getByTestId } = renderScreen()
 
     await waitFor(() => {
       expect(getByText("Charging")).toBeTruthy()
     })
 
-    // The delete buttons are X icons — simulate by finding the delete touchable
-    // Since we can't easily target the X button, verify the confirm dialog is called
-    // when handleDelete is triggered
-    expect(mockDeleteProfile).not.toHaveBeenCalled()
+    fireEvent.press(getByTestId("delete-profile-1"))
+
+    await waitFor(() => {
+      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Delete Profile" }))
+    })
+
+    await waitFor(() => {
+      expect(mockDeleteProfile).toHaveBeenCalledWith(1)
+    })
   })
 
   it("shows section title with profile count", async () => {
@@ -199,10 +204,16 @@ describe("TrackingProfilesScreen", () => {
   it("shows error when toggle fails", async () => {
     mockUpdateProfile.mockRejectedValueOnce(new Error("Network error"))
 
-    const { getByText } = renderScreen()
+    const { getByText, getByTestId } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Charging")).toBeTruthy()
+      expect(getByText("Driving")).toBeTruthy()
+    })
+
+    fireEvent(getByTestId("toggle-profile-2"), "onValueChange", true)
+
+    await waitFor(() => {
+      expect(mockShowAlert).toHaveBeenCalledWith("Error", expect.any(String), "error")
     })
   })
 

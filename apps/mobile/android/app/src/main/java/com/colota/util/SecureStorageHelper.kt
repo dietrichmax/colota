@@ -45,11 +45,21 @@ class SecureStorageHelper private constructor(context: Context) {
     private val prefs: SharedPreferences
 
     init {
+        prefs = try {
+            createEncryptedPrefs(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "EncryptedSharedPreferences corrupted, clearing and retrying", e)
+            context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
+            createEncryptedPrefs(context)
+        }
+    }
+
+    private fun createEncryptedPrefs(context: Context): SharedPreferences {
         val masterKey = MasterKey.Builder(context.applicationContext)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
 
-        prefs = EncryptedSharedPreferences.create(
+        return EncryptedSharedPreferences.create(
             context.applicationContext,
             PREFS_NAME,
             masterKey,

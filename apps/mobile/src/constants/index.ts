@@ -11,8 +11,12 @@ export const AUTOSAVE_DEBOUNCE_MS = 1500
 export const STATS_REFRESH_IDLE = 30_000
 export const STATS_REFRESH_FAST = 3_000
 export const SERVER_TIMEOUT = 5_000
+export const CONNECTION_TEST_TIMEOUT = 10_000
 export const SERVER_CHECK_INTERVAL = 5 * 60 * 1000
 export const SAVE_SUCCESS_DISPLAY_MS = 2000
+export const TEST_RESULT_DISPLAY_MS = 3_000
+export const SERVICE_RESTART_DELAY_MS = 500
+export const RESTART_DEBOUNCE_MS = 100
 
 // Map
 export const DEFAULT_MAP_ZOOM = 17

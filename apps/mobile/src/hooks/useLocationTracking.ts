@@ -9,6 +9,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { LocationCoords, Settings, LocationTrackingResult } from "../types/global"
 import { ensurePermissions } from "../services/LocationServicePermission"
+import { SERVICE_RESTART_DELAY_MS, RESTART_DEBOUNCE_MS } from "../constants"
 import { logger } from "../utils/logger"
 
 const { LocationServiceModule } = NativeModules
@@ -251,7 +252,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
         stopTracking()
 
         // Android requires delay to fully release foreground service
-        await new Promise<void>((resolve) => setTimeout(resolve, 500))
+        await new Promise<void>((resolve) => setTimeout(resolve, SERVICE_RESTART_DELAY_MS))
 
         await startTracking(newSettings ?? settingsRef.current)
       } finally {
@@ -262,7 +263,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
         if (restartQueuedRef.current) {
           restartQueuedRef.current = false
           logger.debug("[useLocationTracking] Processing queued restart")
-          setTimeout(() => restartTracking(settingsRef.current), 100)
+          setTimeout(() => restartTracking(settingsRef.current), RESTART_DEBOUNCE_MS)
         }
       }
     },
