@@ -1,0 +1,12 @@
+appId: com.colota
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "Settings"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: "Data Management"
+    direction: DOWN
+- tapOn: "Data Management"
+- waitForAnimationToEnd
+- takeScreenshot: DataManagement

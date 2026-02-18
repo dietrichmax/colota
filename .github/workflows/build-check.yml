@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
     paths:
       - 'apps/mobile/android/**'
+      - '!apps/mobile/android/app/fastlane/**'
       - 'apps/mobile/src/**'
       - '!apps/mobile/src/**/__tests__/**'
       - 'packages/shared/**'

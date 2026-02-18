@@ -105,6 +105,8 @@ npm run build
 
 ```
 colota/
+├── .maestro/
+│   └── screenshots/                 # Maestro UI flows for screenshot capture
 ├── apps/
 │   ├── mobile/
 │   │   ├── android/                 # Android native project
@@ -124,6 +126,7 @@ colota/
 │   │   │   ├── hooks/               # Custom React hooks
 │   │   │   ├── services/            # Native bridge services
 │   │   │   ├── contexts/            # React Context providers
+│   │   │   ├── utils/               # Logger, validation, converters
 │   │   │   ├── styles/              # Re-exports from @colota/shared
 │   │   │   └── types/               # TypeScript type definitions
 │   │   └── App.tsx                  # Entry point with navigation
@@ -131,12 +134,15 @@ colota/
 │       ├── docs/                    # Markdown documentation
 │       ├── src/                     # Custom Docusaurus components
 │       └── docusaurus.config.ts     # Site configuration
-└── packages/
-    └── shared/
-        └── src/
-            ├── colors.ts            # Theme color definitions
-            ├── typography.ts        # Font family and sizes
-            └── index.ts             # Barrel exports
+├── packages/
+│   └── shared/
+│       └── src/
+│           ├── colors.ts            # Theme color definitions
+│           ├── typography.ts        # Font family and sizes
+│           └── index.ts             # Barrel exports
+├── scripts/                         # Version bump and screenshot sync
+└── screenshots/
+    └── mobile/original/             # Screenshot source of truth
 ```
 
 ## Running Tests
@@ -209,6 +215,12 @@ npm run version:bump 1.2.0
 ```
 
 This updates `version` in all `package.json` files, `versionName` in `build.gradle`, and auto-increments `versionCode`.
+
+### Generating Screenshots
+
+App screenshots live in `screenshots/mobile/original/` (single source of truth) and are synced to the docs site and Fastlane store metadata.
+
+**Capture**: Trigger the "Generate Screenshots" workflow manually from GitHub Actions. It starts an Android emulator, runs [Maestro](https://maestro.mobile.dev) flows from `.maestro/screenshots/`, and commits the updated screenshots.
 
 ### Adding Documentation
 

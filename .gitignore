@@ -30,6 +30,9 @@ yarn-error.log
 **/Pods/
 /vendor/bundle/
 
+# Fastlane
+**/fastlane/report.xml
+
 # Metro
 .metro-health-check*
 
