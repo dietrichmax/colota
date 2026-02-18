@@ -49,4 +49,4 @@ Add arbitrary key-value pairs that are included in every API payload. For exampl
 
 Configure in **Settings > API Settings > Custom Fields**.
 
-**Note:** Custom field values are always sent as strings. Custom fields are added to the payload before location fields — if a custom field key matches a location field key, the location field takes precedence.
+**Note:** Custom field values are always sent as strings. Custom fields are added to the payload before location fields - if a custom field key matches a location field key, the location field takes precedence.

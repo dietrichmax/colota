@@ -19,8 +19,8 @@ The F-Droid version uses Android's native LocationManager and has **no Google Pl
 ## From GitHub Releases
 
 1. Download the latest APK from [GitHub Releases](https://github.com/dietrichmax/colota/releases)
-   - **app-gms-release.apk** — Google Play Services variant
-   - **app-foss-release.apk** — FOSS variant (no Google Play Services)
+   - **app-gms-release.apk** - Google Play Services variant
+   - **app-foss-release.apk** - FOSS variant (no Google Play Services)
 2. Enable **Install from Unknown Sources** in Android settings
 3. Install the APK
 

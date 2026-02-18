@@ -27,7 +27,7 @@ See the [Development Guide](/docs/development/architecture) for architecture det
 - **TypeScript / React Native** for the UI layer
 - **Kotlin** for native Android modules
 - Follow existing patterns in the codebase
-- Use `logger` instead of `console.log` — import from `src/utils/logger`
+- Use `logger` instead of `console.log` - import from `src/utils/logger`
 - Test both build flavors if your changes touch native code:
   ```bash
   cd apps/mobile/android

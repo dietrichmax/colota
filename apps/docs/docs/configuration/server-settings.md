@@ -41,6 +41,6 @@ Attempt 4: +300s (5 minutes)
 Attempt 5+: +900s (15 minutes)
 ```
 
-By default, failed uploads are **permanently deleted after 5 failed send attempts**. Enable **Retry Failed Uploads** in advanced settings to keep retrying indefinitely — failed uploads stay in the queue until they succeed. Note that this may cause queue buildup if your server is unreachable for extended periods.
+By default, failed uploads are **permanently deleted after 5 failed send attempts**. Enable **Retry Failed Uploads** in advanced settings to keep retrying indefinitely - failed uploads stay in the queue until they succeed. Note that this may cause queue buildup if your server is unreachable for extended periods.
 
 The app also auto-syncs when network connectivity is restored.

@@ -166,17 +166,17 @@ cd apps/mobile/android
 
 Test files are located in `apps/mobile/android/app/src/test/java/com/Colota/`. The tests cover:
 
-- **SyncManager** — Instant/periodic sync modes, retry logic, Wi-Fi only gating, backoff
-- **NetworkManager** — HTTPS enforcement, private host detection, header masking, query strings
-- **DatabaseHelper** — Data model, cutoff calculations, batch operations
-- **SecureStorageHelper** — Basic Auth, Bearer token, custom headers, JSON parsing
-- **DeviceInfoHelper** — Battery threshold logic, status code mapping, percentage calculation
-- **NotificationHelper** — Status text generation, throttling, movement filter, deduplication
-- **LocationForegroundService** — Battery shutdown, accuracy filtering, zone state machine
-- **ServiceConfig** — Database/Intent/ReadableMap parsing, defaults, round-trips
-- **PayloadBuilder** — JSON payload construction and field map parsing
-- **GeofenceHelper** — Haversine distance calculations and radius checks
-- **TimedCache** — TTL cache logic
+- **SyncManager** - Instant/periodic sync modes, retry logic, Wi-Fi only gating, backoff
+- **NetworkManager** - HTTPS enforcement, private host detection, header masking, query strings
+- **DatabaseHelper** - Data model, cutoff calculations, batch operations
+- **SecureStorageHelper** - Basic Auth, Bearer token, custom headers, JSON parsing
+- **DeviceInfoHelper** - Battery threshold logic, status code mapping, percentage calculation
+- **NotificationHelper** - Status text generation, throttling, movement filter, deduplication
+- **LocationForegroundService** - Battery shutdown, accuracy filtering, zone state machine
+- **ServiceConfig** - Database/Intent/ReadableMap parsing, defaults, round-trips
+- **PayloadBuilder** - JSON payload construction and field map parsing
+- **GeofenceHelper** - Haversine distance calculations and radius checks
+- **TimedCache** - TTL cache logic
 
 ### Linting and Type Checking
 

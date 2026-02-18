@@ -17,4 +17,4 @@ Colota includes built-in templates for popular backends. Select a template in **
 
 All templates share the same base fields (`lat`, `lon`, `acc`, `alt`, `vel`, `batt`, `bs`, `tst`) with different field names. Key differences are the HTTP method, bearing field name, and auto-included custom fields.
 
-When you select a template, field mapping, custom fields, and HTTP method are automatically configured. You can still customize individual fields or switch the HTTP method after applying a template — doing so switches the template to "Custom".
+When you select a template, field mapping, custom fields, and HTTP method are automatically configured. You can still customize individual fields or switch the HTTP method after applying a template - doing so switches the template to "Custom".

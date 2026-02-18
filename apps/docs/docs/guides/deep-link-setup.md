@@ -4,7 +4,7 @@ sidebar_position: 7
 
 # Deep Link Setup
 
-Configure Colota instantly using a `colota://setup` URL. Generate a link or QR code with your server settings and share it with users — no manual typing required.
+Configure Colota instantly using a `colota://setup` URL. Generate a link or QR code with your server settings and share it with users - no manual typing required.
 
 ## URL Format
 
@@ -12,7 +12,7 @@ Configure Colota instantly using a `colota://setup` URL. Generate a link or QR c
 colota://setup?config=BASE64_ENCODED_JSON
 ```
 
-The `config` parameter is a base64-encoded JSON object. Only include the settings you want to change — everything else keeps its current value.
+The `config` parameter is a base64-encoded JSON object. Only include the settings you want to change - everything else keeps its current value.
 
 ## Supported Parameters
 

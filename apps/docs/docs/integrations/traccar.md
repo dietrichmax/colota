@@ -47,6 +47,6 @@ GET https://traccar.yourdomain.com:5055/?id=colota&lat=51.495065&lon=-0.043945&a
 
 ## Notes
 
-- The `id` custom field is required — Traccar uses it to identify the device
+- The `id` custom field is required - Traccar uses it to identify the device
 - Traccar also supports POST with JSON, but the OsmAnd GET protocol is the simplest integration
 - If you need POST, switch the HTTP method to POST and adjust field names as needed

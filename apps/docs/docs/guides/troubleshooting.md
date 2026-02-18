@@ -49,7 +49,7 @@ You can also use the **Location History** screen in the app to see recorded loca
 
 ## Locations not syncing on mobile data
 
-If **Wi-Fi Only Sync** is enabled, uploads are skipped while on cellular data. Locations continue to be recorded and queued locally — they sync automatically when you connect to Wi-Fi.
+If **Wi-Fi Only Sync** is enabled, uploads are skipped while on cellular data. Locations continue to be recorded and queued locally - they sync automatically when you connect to Wi-Fi.
 
 To disable: **Settings > Advanced Settings > Network Settings > Wi-Fi Only Sync**.
 

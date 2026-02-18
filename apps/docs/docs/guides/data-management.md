@@ -22,7 +22,7 @@ Manage your location database from the Data Management screen.
 | **Clear Queue**              | Remove unsent locations from the upload queue               |
 | **Delete Older Than X Days** | Clean up old data past a specified age                      |
 | **Vacuum Database**          | Reclaim disk space after deletions                          |
-| **Export Data**              | Export location history — see [Data Export](data-export.md) |
+| **Export Data**              | Export location history - see [Data Export](data-export.md) |
 
 ## Storage Reference
 

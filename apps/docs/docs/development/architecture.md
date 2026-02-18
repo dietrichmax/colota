@@ -48,9 +48,9 @@ The mobile app has a **React Native** UI layer and **native Kotlin** modules for
 
 All native code lives in `apps/mobile/android/app/src/`, organized by build flavor:
 
-- `src/main/java/com/colota/` — Shared code: `bridge/`, `service/`, `data/`, `sync/`, `util/`, `location/` (interface)
-- `src/gms/java/com/colota/location/` — Google Play Services location provider
-- `src/foss/java/com/colota/location/` — Native Android location provider
+- `src/main/java/com/colota/` - Shared code: `bridge/`, `service/`, `data/`, `sync/`, `util/`, `location/` (interface)
+- `src/gms/java/com/colota/location/` - Google Play Services location provider
+- `src/foss/java/com/colota/location/` - Native Android location provider
 
 ### LocationServiceModule
 
@@ -64,18 +64,18 @@ The primary React Native bridge module (exposed as `"LocationServiceModule"`). H
 
 Emits events back to JavaScript:
 
-- `onLocationUpdate` — new GPS fix received
-- `onTrackingStopped` — service stopped (user action or OOM kill)
-- `onSyncError` — 3+ consecutive sync failures
-- `onPauseZoneChange` — entered or exited a geofence pause zone
-- `onProfileSwitch` — a tracking profile was activated or deactivated
+- `onLocationUpdate` - new GPS fix received
+- `onTrackingStopped` - service stopped (user action or OOM kill)
+- `onSyncError` - 3+ consecutive sync failures
+- `onPauseZoneChange` - entered or exited a geofence pause zone
+- `onProfileSwitch` - a tracking profile was activated or deactivated
 
 ### LocationProvider Abstraction
 
 Location services are abstracted behind a `LocationProvider` interface (`location/LocationProvider.kt`), with flavor-specific implementations:
 
-- **GMS** (`src/gms/`) — `GmsLocationProvider` wraps Google Play Services `FusedLocationProviderClient`
-- **FOSS** (`src/foss/`) — `NativeLocationProvider` wraps Android's native `LocationManager` with `GPS_PROVIDER` and `NETWORK_PROVIDER` fallback
+- **GMS** (`src/gms/`) - `GmsLocationProvider` wraps Google Play Services `FusedLocationProviderClient`
+- **FOSS** (`src/foss/`) - `NativeLocationProvider` wraps Android's native `LocationManager` with `GPS_PROVIDER` and `NETWORK_PROVIDER` fallback
 
 Each flavor provides a `LocationProviderFactory` that returns the correct implementation. The service and bridge code in `src/main/` uses only the interface.
 
@@ -177,7 +177,7 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 
 | Utility | Purpose |
 | --- | --- |
-| `logger` | Environment-aware logging — suppresses debug/info in production via `__DEV__`, always logs warn/error |
+| `logger` | Environment-aware logging - suppresses debug/info in production via `__DEV__`, always logs warn/error |
 | `exportConverters` | Converts location data to CSV, GeoJSON, GPX, and KML export formats |
 | `queueStatus` | Maps sync queue size to color indicators for the dashboard |
 | `settingsValidation` | URL validation and security checks for endpoint configuration |
@@ -195,8 +195,8 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 
 The app uses React Context for global state:
 
-- **ThemeProvider** — Light/dark theme with system preference sync
-- **TrackingProvider** — Single source of truth for tracking state, coordinates, settings, and active profile name. Hydrates from SQLite on mount, restores the active profile from the running service on reconnect, and persists changes back through `SettingsService`.
+- **ThemeProvider** - Light/dark theme with system preference sync
+- **TrackingProvider** - Single source of truth for tracking state, coordinates, settings, and active profile name. Hydrates from SQLite on mount, restores the active profile from the running service on reconnect, and persists changes back through `SettingsService`.
 
 ### Data Flow
 
@@ -217,8 +217,8 @@ User taps "Start" → TrackingProvider.startTracking()
 
 `packages/shared` is the single source of truth for:
 
-- **Colors** — `lightColors` and `darkColors` objects with all theme colors
-- **Typography** — `fontFamily` ("Inter") and `fontSizes` scale
-- **Types** — `ThemeColors` interface and `ThemeMode` type
+- **Colors** - `lightColors` and `darkColors` objects with all theme colors
+- **Typography** - `fontFamily` ("Inter") and `fontSizes` scale
+- **Types** - `ThemeColors` interface and `ThemeMode` type
 
 Both the mobile app and docs site import from `@colota/shared`. The package compiles TypeScript to `dist/` via `tsc` so Docusaurus can consume it without a custom webpack loader.

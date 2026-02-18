@@ -10,15 +10,15 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 
 ## Features
 
-- **Self-Hosted** — Send location data to your own server. Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or any custom backend.
-- **Privacy First** — No analytics, no telemetry, no third-party SDKs. Open source (AGPL-3.0).
-- **Works Offline** — Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
-- **Reliable Tracking** — Foreground service, auto-start on boot, exponential backoff retry.
-- **Geofencing** — Pause zones that automatically pause tracking.
-- **Tracking Profiles** — Automatically adjust GPS interval, distance filter, and sync settings based on conditions like charging, car mode, or speed.
-- **Flexible Sync** — Instant, batch, Wi-Fi only, or offline modes.
-- **Quick Setup** — Configure devices via `colota://setup` deep links or QR codes.
-- **Authentication** — Basic Auth, Bearer Token, or custom headers with AES-256-GCM encryption.
+- **Self-Hosted** - Send location data to your own server. Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or any custom backend.
+- **Privacy First** - No analytics, no telemetry, no third-party SDKs. Open source (AGPL-3.0).
+- **Works Offline** - Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
+- **Reliable Tracking** - Foreground service, auto-start on boot, exponential backoff retry.
+- **Geofencing** - Pause zones that automatically pause tracking.
+- **Tracking Profiles** - Automatically adjust GPS interval, distance filter, and sync settings based on conditions like charging, car mode, or speed.
+- **Flexible Sync** - Instant, batch, Wi-Fi only, or offline modes.
+- **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
+- **Authentication** - Basic Auth, Bearer Token, or custom headers with AES-256-GCM encryption.
 
 ## Screenshots
 
@@ -72,7 +72,7 @@ See the [Contributing Guide](https://colota.app/docs/contributing) for details o
 
 ## License
 
-[AGPL-3.0](LICENSE) — Copyright (C) 2026 Max Dietrich
+[AGPL-3.0](LICENSE) - Copyright (C) 2026 Max Dietrich
 
 ## Support
 

@@ -8,10 +8,10 @@ Tracking profiles automatically adjust GPS interval, distance filter, and sync s
 
 ## Use Cases
 
-- **Charging** — Increase tracking frequency while plugged in (battery isn't a concern)
-- **Driving** — Switch to frequent updates when Android Auto connects or speed exceeds a threshold
-- **Walking** — Use longer intervals at low speeds to conserve battery
-- **Parked** — Reduce updates when stationary with a speed-below profile
+- **Charging** - Increase tracking frequency while plugged in (battery isn't a concern)
+- **Driving** - Switch to frequent updates when Android Auto connects or speed exceeds a threshold
+- **Walking** - Use longer intervals at low speeds to conserve battery
+- **Parked** - Reduce updates when stationary with a speed-below profile
 
 ## Setup
 
@@ -37,11 +37,11 @@ Speed conditions use a rolling average of the last 5 GPS readings to avoid trigg
 
 Each profile overrides the default tracking configuration with:
 
-- **GPS Interval** — How often to request a location fix (seconds)
-- **Distance Filter** — Minimum movement required between updates (meters)
-- **Sync Interval** — How often to sync with the server (Instant, 1 min, 5 min, or 15 min)
-- **Priority** — Determines which profile wins when multiple conditions match simultaneously (higher = wins)
-- **Deactivation Delay** — How long to wait after the condition stops matching before reverting to default settings (seconds). Prevents rapid toggling when conditions fluctuate.
+- **GPS Interval** - How often to request a location fix (seconds)
+- **Distance Filter** - Minimum movement required between updates (meters)
+- **Sync Interval** - How often to sync with the server (Instant, 1 min, 5 min, or 15 min)
+- **Priority** - Determines which profile wins when multiple conditions match simultaneously (higher = wins)
+- **Deactivation Delay** - How long to wait after the condition stops matching before reverting to default settings (seconds). Prevents rapid toggling when conditions fluctuate.
 
 ## How It Works
 
@@ -56,7 +56,7 @@ Each profile overrides the default tracking configuration with:
 
 When a profile is active, Colota shows it in two places:
 
-- **Notification** — The foreground notification title changes from "Colota Tracking" to "Colota · ProfileName" (e.g., "Colota · Charging")
-- **Dashboard** — An info card appears on the map showing the active profile name. When inside a pause zone, the pause card shows which profile will resume on exit (e.g., "Profile 'Charging' resumes on exit").
+- **Notification** - The foreground notification title changes from "Colota Tracking" to "Colota · ProfileName" (e.g., "Colota · Charging")
+- **Dashboard** - An info card appears on the map showing the active profile name. When inside a pause zone, the pause card shows which profile will resume on exit (e.g., "Profile 'Charging' resumes on exit").
 
 Both indicators disappear automatically when the profile deactivates (after the deactivation delay) or when tracking stops.

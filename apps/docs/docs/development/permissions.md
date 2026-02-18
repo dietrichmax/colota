@@ -24,10 +24,10 @@ These are the permissions Colota uses and why. None are related to analytics, ad
 
 When you start tracking for the first time, Colota requests permissions in sequence:
 
-1. **Fine Location** — Required to access GPS hardware
-2. **Background Location** (Android 10+) — Appears as a separate dialog asking to "Allow all the time"
-3. **Notification Permission** (Android 13+) — Required for the foreground service notification
-4. **Battery Optimization Exemption** — Optional dialog to prevent the system from restricting the app
+1. **Fine Location** - Required to access GPS hardware
+2. **Background Location** (Android 10+) - Appears as a separate dialog asking to "Allow all the time"
+3. **Notification Permission** (Android 13+) - Required for the foreground service notification
+4. **Battery Optimization Exemption** - Optional dialog to prevent the system from restricting the app
 
 If any required permission is denied, tracking cannot start. The app does not request permissions until you explicitly tap "Start Tracking".
 
@@ -83,7 +83,7 @@ Starting with Android 13, apps must request notification permission explicitly. 
 android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
 ```
 
-This allows Colota to show the system dialog asking to exempt the app from battery optimization (Doze mode). When exempted, Android is less likely to kill the tracking service during idle periods. This is optional — tracking works without it, but may be less reliable on some devices.
+This allows Colota to show the system dialog asking to exempt the app from battery optimization (Doze mode). When exempted, Android is less likely to kill the tracking service during idle periods. This is optional - tracking works without it, but may be less reliable on some devices.
 
 ## Revoking Permissions
 

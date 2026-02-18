@@ -21,8 +21,8 @@ When enabled, Colota queues locations locally and only uploads when connected to
 
 This is useful for:
 
-- **Limited mobile data** — Avoid using cellular bandwidth for location uploads
-- **Roaming** — Prevent expensive data charges while traveling abroad
-- **Battery savings** — Reduce radio usage on metered connections
+- **Limited mobile data** - Avoid using cellular bandwidth for location uploads
+- **Roaming** - Prevent expensive data charges while traveling abroad
+- **Battery savings** - Reduce radio usage on metered connections
 
-Toggle this in **Settings > Advanced Settings > Network Settings > Wi-Fi Only Sync**. Locations continue to be recorded and queued regardless of this setting — they sync automatically once Wi-Fi is available.
+Toggle this in **Settings > Advanced Settings > Network Settings > Wi-Fi Only Sync**. Locations continue to be recorded and queued regardless of this setting - they sync automatically once Wi-Fi is available.

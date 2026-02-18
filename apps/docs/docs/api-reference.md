@@ -58,12 +58,12 @@ All field names are [customizable](/docs/configuration/field-mapping).
 | `lat`  | Double  | Degrees                                    | Yes                                   |
 | `lon`  | Double  | Degrees                                    | Yes                                   |
 | `acc`  | Integer | Meters (rounded)                           | Yes                                   |
-| `alt`  | Integer | Meters (rounded)                           | No — only if device has altitude data |
-| `vel`  | Integer | m/s (rounded)                              | Yes — `0` when stationary             |
+| `alt`  | Integer | Meters (rounded)                           | No - only if device has altitude data |
+| `vel`  | Integer | m/s (rounded)                              | Yes - `0` when stationary             |
 | `batt` | Integer | Percent (0–100)                            | Yes                                   |
 | `bs`   | Integer | 0=unknown, 1=unplugged, 2=charging, 3=full | Yes                                   |
 | `tst`  | Long    | Unix seconds (not milliseconds)            | Yes                                   |
-| `bear` | Double  | Degrees (0–360)                            | No — only if device has bearing data  |
+| `bear` | Double  | Degrees (0–360)                            | No - only if device has bearing data  |
 
 **Important:** `alt` and `bear` are conditionally included. Your server should not reject payloads missing these fields.
 
@@ -75,7 +75,7 @@ Custom field values are always sent as strings.
 
 ## Batch Sync Behavior
 
-Colota sends **one location per HTTP request** — not an array. During batch sync, up to 10 requests are sent concurrently, processing up to 500 queued locations per sync cycle.
+Colota sends **one location per HTTP request** - not an array. During batch sync, up to 10 requests are sent concurrently, processing up to 500 queued locations per sync cycle.
 
 Your server should handle multiple simultaneous POST requests. If you have rate limiting, some requests may fail and be retried.
 
@@ -124,7 +124,7 @@ Your server only needs to return a 2xx status code. The response body is not rea
 | **Network timeout** | Retried with backoff (10s connection, 10s read timeout) |
 | **Max retries exceeded** | Item permanently deleted from queue (location data remains in the database and can still be exported). Enable "Retry Failed Uploads" to retry indefinitely instead. |
 
-There is no distinction between 4xx and 5xx in retry behavior — all failures are retried.
+There is no distinction between 4xx and 5xx in retry behavior - all failures are retried.
 
 ## Retry Strategy
 
@@ -136,7 +136,7 @@ Attempt 4: +300s delay (5 minutes)
 Attempt 5+: +900s delay (15 minutes)
 ```
 
-By default, failed items are permanently deleted from the sync queue after 5 failed send attempts. Enable **Retry Failed Uploads** in advanced settings to keep retrying indefinitely. Either way, the location data itself is never deleted — it stays in the `locations` table and can still be exported.
+By default, failed items are permanently deleted from the sync queue after 5 failed send attempts. Enable **Retry Failed Uploads** in advanced settings to keep retrying indefinitely. Either way, the location data itself is never deleted - it stays in the `locations` table and can still be exported.
 
 ## Network Requirements
 
@@ -147,7 +147,7 @@ By default, failed items are permanently deleted from the sync queue after 5 fai
   - `10.x.x.x`
   - `172.16–31.x.x`
 - Non-standard ports are supported (e.g., `https://my-server.com:8443/api`)
-- Colota uses Android's default SSL trust store — custom CA certificates and self-signed certificates are not supported
+- Colota uses Android's default SSL trust store - custom CA certificates and self-signed certificates are not supported
 
 ## Connectivity Check
 
