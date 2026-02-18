@@ -17,6 +17,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 - **Geofencing** — Pause zones that automatically pause tracking.
 - **Tracking Profiles** — Automatically adjust GPS interval, distance filter, and sync settings based on conditions like charging, car mode, or speed.
 - **Flexible Sync** — Instant, batch, Wi-Fi only, or offline modes.
+- **Quick Setup** — Configure devices via `colota://setup` deep links or QR codes.
 - **Authentication** — Basic Auth, Bearer Token, or custom headers with AES-256-GCM encryption.
 
 ## Screenshots

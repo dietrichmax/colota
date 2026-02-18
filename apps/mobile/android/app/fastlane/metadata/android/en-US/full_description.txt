@@ -10,6 +10,7 @@ Colota is an open-source GPS tracking application that sends your location to yo
 <li><b>Geofencing</b> — Define pause zones to automatically stop tracking in specific areas</li>
 <li><b>Flexible Sync</b> — Instant send, periodic batch sync, or fully offline mode</li>
 <li><b>Authentication</b> — Basic Auth, Bearer Token, or custom headers with AES-256-GCM encryption</li>
+<li><b>Quick Setup</b> — Configure devices instantly via colota:// deep links or QR codes</li>
 <li><b>Configurable</b> — Custom field mapping, update intervals, distance filters, and accuracy thresholds</li>
 </ul>
 

@@ -18,11 +18,12 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Sync Modes** — Instant, batch, or offline. Wi-Fi only sync, configurable intervals with automatic retry.
 - **Data Export** — Export location history in CSV, GeoJSON, GPX, or KML formats.
 - **Authentication** — Basic Auth, Bearer Token, or custom HTTP headers with AES-256-GCM encrypted storage.
+- **Quick Setup** — Configure devices instantly via `colota://setup` deep links or QR codes. No manual typing required.
 - **Dark Mode** — Full light and dark theme support.
 
 ## App Screens
 
-Colota has eleven screens, each focused on a specific task:
+Colota has twelve screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
@@ -36,6 +37,7 @@ Colota has eleven screens, each focused on a specific task:
 | **Location History** | Browse recorded locations on a track map with day picker and daily distance traveled, or as a paginated list with accuracy indicators |
 | **Export Data** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
 | **Data Management** | Clear sent history, delete old data, vacuum the database |
+| **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
 | **About** | App version, device info, links to repository and privacy policy |
 
 ## Screenshots

@@ -22,7 +22,8 @@ import {
   ExportDataScreen,
   AboutScreen,
   TrackingProfilesScreen,
-  ProfileEditorScreen
+  ProfileEditorScreen,
+  SetupImportScreen
 } from "./src/screens/"
 
 const Stack = createNativeStackNavigator()
@@ -82,6 +83,11 @@ const SCREEN_CONFIG = [
     name: "About Colota",
     component: AboutScreen,
     title: "About Colota"
+  },
+  {
+    name: "Setup Import",
+    component: SetupImportScreen,
+    title: "Import Configuration"
   }
 ] as const
 
@@ -117,10 +123,22 @@ function AppNavigator() {
     }),
     [colors.background, isDark]
   )
+  const linking = useMemo(
+    () => ({
+      prefixes: ["colota://"],
+      config: {
+        screens: {
+          "Setup Import": "setup"
+        }
+      }
+    }),
+    []
+  )
+
   return (
     <SafeAreaProvider>
       <StatusBar {...statusBarConfig} />
-      <NavigationContainer>
+      <NavigationContainer linking={linking}>
         <Stack.Navigator initialRouteName="Dashboard" screenOptions={screenOptions}>
           {SCREEN_CONFIG.map((screen) => (
             <Stack.Screen
