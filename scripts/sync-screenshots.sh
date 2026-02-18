@@ -32,11 +32,11 @@ STORE_ORDER=(
   "Settings.png"
   "Authentication.png"
   "DataManagement.png"
-  "DarkMode.png"
   "ApiFieldMapping.png"
   "Geofences.png"
   "LocationInspector.png"
   "ExportData.png"
+  "DarkMode.png"
 )
 
 # ---------------------------------------------------------------------------
