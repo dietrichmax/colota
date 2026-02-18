@@ -44,6 +44,7 @@ const sidebars: SidebarsConfig = {
         "guides/tracking-profiles",
         "guides/data-export",
         "guides/data-management",
+        "guides/deep-link-setup",
         "guides/battery-optimization",
         "guides/troubleshooting"
       ]
