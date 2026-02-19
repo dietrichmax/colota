@@ -59,14 +59,14 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
-          arch: x86_64
+          arch: arm64-v8a
           profile: pixel_6
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           emulator-boot-timeout: 600
           disable-animations: true
           script: |
-            adb install $(find apps/mobile/android/app/build/outputs/apk/gms/debug -name "*x86_64*debug.apk" -o -name "*universal*debug.apk" | head -1)
+            adb install $(find apps/mobile/android/app/build/outputs/apk/gms/debug -name "*arm64*debug.apk" | head -1)
 
             maestro test --output screenshots/mobile/original/ .maestro/screenshots/
 
