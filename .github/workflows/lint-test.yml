@@ -47,10 +47,3 @@ jobs:
 
       - name: Run tests
         run: npm test -w @colota/mobile -- --coverage
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./apps/mobile/coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
