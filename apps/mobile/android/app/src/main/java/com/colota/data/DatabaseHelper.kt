@@ -419,19 +419,26 @@ class DatabaseHelper private constructor(context: Context) :
 
     fun removeBatchFromQueue(queueIds: List<Long>) {
         if (queueIds.isEmpty()) return
-        
+
         val placeholders = queueIds.joinToString(",") { "?" }
         val args = queueIds.map { it.toString() }.toTypedArray()
-        
+
         val deleted = writableDatabase.delete(
             TABLE_QUEUE,
             "id IN ($placeholders)",
             args
         )
-        
+
         if (BuildConfig.DEBUG && deleted > 0) {
             Log.d(TAG, "Batch deleted $deleted queue items")
         }
+    }
+
+    fun deleteLocations(locationIds: List<Long>) {
+        if (locationIds.isEmpty()) return
+        val placeholders = locationIds.joinToString(",") { "?" }
+        val args = locationIds.map { it.toString() }.toTypedArray()
+        writableDatabase.delete(TABLE_LOCATIONS, "id IN ($placeholders)", args)
     }
 
     @Synchronized
@@ -507,7 +514,22 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun clearQueue(): Int {
-        return writableDatabase.delete(TABLE_QUEUE, null, null)
+        // Collect location IDs before deleting queue entries
+        val locationIds = mutableListOf<Long>()
+        readableDatabase.rawQuery("SELECT location_id FROM $TABLE_QUEUE", null).use { cursor ->
+            while (cursor.moveToNext()) locationIds.add(cursor.getLong(0))
+        }
+
+        val deleted = writableDatabase.delete(TABLE_QUEUE, null, null)
+
+        // Remove the unsent locations
+        if (locationIds.isNotEmpty()) {
+            val placeholders = locationIds.joinToString(",") { "?" }
+            val args = locationIds.map { it.toString() }.toTypedArray()
+            writableDatabase.delete(TABLE_LOCATIONS, "id IN ($placeholders)", args)
+        }
+
+        return deleted
     }
 
     fun clearAllLocations(): Int {
