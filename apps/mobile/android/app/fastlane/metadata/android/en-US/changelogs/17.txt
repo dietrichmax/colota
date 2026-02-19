@@ -1,0 +1,8 @@
+- Migrated maps from OpenLayers WebView to MapLibre GL Native
+- Added tracking profiles with condition-based GPS config switching
+- Added deep link setup via colota://setup URL scheme
+- Added speed-colored tracks with point popups
+- Added daily distance to Location Inspector
+- Added reliable Android Auto detection
+- Improved export, data management, about, and API settings screens
+- Fixed queue count, custom fields, stale location, and auth header bugs
