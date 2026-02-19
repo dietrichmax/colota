@@ -3,8 +3,10 @@ Colota is an open-source GPS tracking application that sends your location to yo
 <b>Features</b>
 
 <ul>
-<li><b>Self-Hosted</b> - Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or any custom backend that accepts JSON over HTTP</li>
+<li><b>Self-Hosted</b> - Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant, or any custom backend that accepts JSON over HTTP</li>
 <li><b>Privacy First</b> - No analytics, no telemetry, no third-party SDKs. Licensed under AGPL-3.0</li>
+<li><b>Tracking Profiles</b> - Create multiple GPS configurations that switch automatically based on charging, Android Auto, or speed</li>
+<li><b>Native Maps</b> - Smooth map rendering with MapLibre GL, speed-colored tracks, and tappable point details</li>
 <li><b>Works Offline</b> - Locations are queued locally and synced when connectivity returns. Export as CSV, GeoJSON, GPX, or KML</li>
 <li><b>Reliable Tracking</b> - Foreground service with auto-start on boot, exponential backoff for failed syncs</li>
 <li><b>Geofencing</b> - Define pause zones to automatically stop recording locations in specific areas</li>
