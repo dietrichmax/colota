@@ -11,6 +11,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import SettingsService from "../services/SettingsService"
 import { LocationDisclosureModal } from "../components/ui/LocationDisclosureModal"
 import { AppModal } from "../components/ui/AppModal"
+import { checkPermissions } from "../services/LocationServicePermission"
 import { logger } from "../utils/logger"
 
 type TrackingContextType = {
@@ -170,6 +171,15 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
         // Auto-reconnect UI if tracking was active
         const isTrackingActive = allRaw.tracking_enabled === "true"
         if (isTrackingActive) {
+          // Verify permission is still granted — Android kills the process
+          // when permission is revoked, leaving tracking_enabled stale
+          const perms = await checkPermissions()
+          if (!perms.location) {
+            logger.debug("[TrackingContext] Permission lost, clearing stale tracking state")
+            await NativeLocationService.saveSetting("tracking_enabled", "false")
+            return
+          }
+
           logger.debug("[TrackingContext] Re-syncing UI with active background service")
           internalReconnect()
 

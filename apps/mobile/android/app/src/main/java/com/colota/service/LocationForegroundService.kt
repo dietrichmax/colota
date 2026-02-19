@@ -255,7 +255,7 @@ class LocationForegroundService : Service() {
             )
         } catch (e: SecurityException) {
             Log.e(TAG, "Location permission missing", e)
-            stopSelf()
+            stopForegroundServiceWithReason("Location permission missing")
         }
     }
 
