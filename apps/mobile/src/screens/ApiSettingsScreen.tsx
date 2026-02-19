@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useRef } from "react"
-import { Text, StyleSheet, TextInput, View, ScrollView, TouchableOpacity } from "react-native"
+import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
 import {
   FieldMap,
   DEFAULT_FIELD_MAP,
@@ -391,9 +391,12 @@ export function ApiSettingsScreen({}: ScreenProps) {
           <View style={styles.sectionHeader}>
             <SectionTitle>FIELD MAPPINGS</SectionTitle>
             {hasModifications && (
-              <TouchableOpacity onPress={handleResetAll} style={styles.resetAllButton}>
+              <Pressable
+                onPress={handleResetAll}
+                style={({ pressed }) => [styles.resetAllButton, pressed && { opacity: 0.7 }]}
+              >
                 <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>RESET ALL</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
 
@@ -445,12 +448,16 @@ export function ApiSettingsScreen({}: ScreenProps) {
                           autoCorrect={false}
                         />
                         {isFieldModified && (
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => handleResetField(key)}
-                            style={[styles.resetButton, { backgroundColor: colors.border }]}
+                            style={({ pressed }) => [
+                              styles.resetButton,
+                              { backgroundColor: colors.border },
+                              pressed && { opacity: 0.7 }
+                            ]}
                           >
                             <Text style={[styles.resetIcon, { color: colors.textSecondary }]}>↺</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         )}
                       </View>
                     </View>
@@ -512,12 +519,16 @@ export function ApiSettingsScreen({}: ScreenProps) {
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => handleRemoveCustomField(field.id)}
-                        style={[styles.removeButton, { backgroundColor: colors.error + "15" }]}
+                        style={({ pressed }) => [
+                          styles.removeButton,
+                          { backgroundColor: colors.error + "15" },
+                          pressed && { opacity: 0.7 }
+                        ]}
                       >
                         <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                     {index < localCustomFields.length - 1 && <Divider />}
                   </View>
@@ -525,9 +536,12 @@ export function ApiSettingsScreen({}: ScreenProps) {
               })
             )}
 
-            <TouchableOpacity onPress={handleAddCustomField} style={[styles.addButton, { borderColor: colors.border }]}>
+            <Pressable
+              onPress={handleAddCustomField}
+              style={({ pressed }) => [styles.addButton, { borderColor: colors.border }, pressed && { opacity: 0.7 }]}
+            >
               <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Field</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -555,11 +569,14 @@ export function ApiSettingsScreen({}: ScreenProps) {
             ]}
           >
             <Text style={[styles.exampleCode, { color: colors.textSecondary }]}>{examplePayload}</Text>
-            <TouchableOpacity onPress={handleCopyPayload} style={styles.copyButton}>
+            <Pressable
+              onPress={handleCopyPayload}
+              style={({ pressed }) => [styles.copyButton, pressed && { opacity: 0.7 }]}
+            >
               <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
                 {copied ? "COPIED!" : "COPY"}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 

@@ -8,7 +8,7 @@ import { StyleSheet, View, ScrollView, DeviceEventEmitter, Animated } from "reac
 import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
-import { useTracking } from "../contexts/TrackingProvider"
+import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { useFocusEffect } from "@react-navigation/native"
 import {
   Button,
@@ -25,7 +25,8 @@ import { Square, Play } from "lucide-react-native"
 import { logger } from "../utils/logger"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
-  const { coords, settings, tracking, startTracking, stopTracking, setSettings, activeProfileName } = useTracking()
+  const { settings, tracking, startTracking, stopTracking, setSettings, activeProfileName } = useTracking()
+  const coords = useCoords()
   const { colors } = useTheme()
 
   const [stats, setStats] = useState<DatabaseStats>({

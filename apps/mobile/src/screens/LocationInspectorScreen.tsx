@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react"
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Switch } from "react-native"
+import { View, Text, FlatList, StyleSheet, Pressable, Switch } from "react-native"
 import { fonts } from "../styles/typography"
 import { ChevronLeft, ChevronRight } from "lucide-react-native"
 import { Container, Card } from "../components"
@@ -105,9 +105,9 @@ const LocationItem = memo(({ item, colors, onTap }: LocationItemProps) => {
 
   if (onTap) {
     return (
-      <TouchableOpacity activeOpacity={0.7} onPress={() => onTap(item)}>
+      <Pressable style={({ pressed }) => pressed && { opacity: 0.7 }} onPress={() => onTap(item)}>
         {card}
-      </TouchableOpacity>
+      </Pressable>
     )
   }
 
@@ -265,20 +265,21 @@ export function LocationHistoryScreen() {
                 />
               </View>
 
-              <TouchableOpacity
+              <Pressable
                 onPress={fetchData}
                 disabled={autoRefresh}
-                style={[
+                style={({ pressed }) => [
                   styles.refreshBtn,
                   {
                     backgroundColor: colors.card,
                     borderColor: colors.border
                   },
-                  autoRefresh && styles.refreshBtnDisabled
+                  autoRefresh && styles.refreshBtnDisabled,
+                  pressed && { opacity: 0.7 }
                 ]}
               >
                 <Text style={[styles.btnText, { color: colors.primaryDark }]}>Refresh</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
 
@@ -286,41 +287,42 @@ export function LocationHistoryScreen() {
           <View style={styles.limitBar}>
             <View style={styles.limitOptions}>
               {[10, 50, 100].map((v) => (
-                <TouchableOpacity
+                <Pressable
                   key={v}
                   onPress={() => handleLimitChange(v)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.limitBtn,
                     {
                       backgroundColor: limit === v ? colors.primary : colors.card,
                       borderColor: colors.border
-                    }
+                    },
+                    pressed && { opacity: 0.7 }
                   ]}
                 >
                   <Text style={[styles.limitBtnText, { color: limit === v ? colors.textOnPrimary : colors.text }]}>
                     {v}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               ))}
             </View>
 
             {!autoRefresh && (
               <View style={styles.paginationRow}>
-                <TouchableOpacity
+                <Pressable
                   onPress={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  style={styles.pageBtn}
+                  style={({ pressed }) => [styles.pageBtn, pressed && { opacity: 0.7 }]}
                 >
                   <ChevronLeft size={20} color={page === 0 ? colors.textDisabled : colors.primary} />
-                </TouchableOpacity>
+                </Pressable>
                 <Text style={[styles.pageIndicator, { color: colors.text }]}>{page + 1}</Text>
-                <TouchableOpacity
+                <Pressable
                   onPress={() => setPage((p) => p + 1)}
                   disabled={data.length < limit}
-                  style={styles.pageBtn}
+                  style={({ pressed }) => [styles.pageBtn, pressed && { opacity: 0.7 }]}
                 >
                   <ChevronRight size={20} color={data.length < limit ? colors.textDisabled : colors.primary} />
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
           </View>
@@ -355,11 +357,14 @@ const Tab = ({ label, active, onPress, colors }: TabProps) => {
   const textColor = active ? colors.primary : colors.textSecondary
 
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.tab, { borderBottomColor }]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.tab, { borderBottomColor }, pressed && { opacity: 0.7 }]}
+    >
       <Text style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive, { color: textColor }]}>
         {label}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   )
 }
 

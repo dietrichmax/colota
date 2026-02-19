@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
-import { Text, StyleSheet, View, ActivityIndicator, ScrollView, TouchableOpacity } from "react-native"
+import { Text, StyleSheet, View, ActivityIndicator, ScrollView, Pressable } from "react-native"
 import { fonts } from "../styles/typography"
 import { Download, MapPinOff, type LucideIcon } from "lucide-react-native"
 import { Container, Card, SectionTitle, Divider, Button } from "../components"
@@ -254,7 +254,10 @@ const FormatOption = ({
   const radioBgColor = selected ? colors.primary + "20" : "transparent"
 
   return (
-    <TouchableOpacity style={[styles.formatOption, { backgroundColor }]} onPress={onPress} activeOpacity={0.7}>
+    <Pressable
+      style={({ pressed }) => [styles.formatOption, { backgroundColor }, pressed && { opacity: 0.7 }]}
+      onPress={onPress}
+    >
       {selected && <View style={[styles.selectionBar, { backgroundColor: colors.primary }]} />}
 
       <View style={styles.formatContent}>
@@ -292,7 +295,7 @@ const FormatOption = ({
           {selected && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   )
 }
 

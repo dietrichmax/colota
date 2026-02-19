@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
-import { View, StyleSheet, Text, TouchableOpacity } from "react-native"
+import { View, StyleSheet, Text, Pressable } from "react-native"
 import { ShapeSource, LineLayer, CircleLayer } from "@maplibre/maplibre-react-native"
 import { MapPinOff, X } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
@@ -239,9 +239,13 @@ export function TrackMap({ locations, selectedPoint, colors }: Props) {
             <Text style={[styles.popupTime, { color: colors.text }]}>
               {popup.timestamp ? new Date(popup.timestamp * 1000).toLocaleTimeString() : "—"}
             </Text>
-            <TouchableOpacity onPress={() => setPopup(null)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <Pressable
+              onPress={() => setPopup(null)}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              style={({ pressed }) => pressed && { opacity: 0.7 }}
+            >
               <X size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <View style={styles.popupRow}>
             <Text style={[styles.popupLabel, { color: colors.textSecondary }]}>Speed</Text>

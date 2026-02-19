@@ -5,7 +5,7 @@
 
 import React, { useRef, useCallback } from "react"
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   View,
   Animated,
@@ -102,21 +102,21 @@ export function Button({
 
   return (
     <Animated.View style={[{ transform: [{ scale }] }, style]}>
-      <TouchableOpacity
-        style={[
+      <Pressable
+        style={({ pressed }) => [
           styles.button,
           {
             backgroundColor: v.bg,
             borderColor: v.borderColor,
             borderWidth: v.borderWidth,
-            borderRadius: colors.borderRadius
+            borderRadius: colors.borderRadius,
+            opacity: pressed ? activeOpacity ?? 0.7 : 1
           }
         ]}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled || loading}
-        activeOpacity={activeOpacity ?? 0.7}
       >
         <View style={styles.content}>
           {loading ? (
@@ -126,7 +126,7 @@ export function Button({
           ) : null}
           <Text style={[styles.text, { color: v.text }]}>{title}</Text>
         </View>
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   )
 }

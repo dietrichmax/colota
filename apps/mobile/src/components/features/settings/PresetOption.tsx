@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 import React from "react"
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
+import { View, Text, StyleSheet, Pressable } from "react-native"
 import { Zap, Check } from "lucide-react-native"
 import { ThemeColors, SelectablePreset, TRACKING_PRESETS } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
@@ -32,15 +32,15 @@ export function PresetOption({ preset, isSelected, onSelect, colors }: PresetOpt
   const radioBgColor = isSelected ? colors.primary + "20" : "transparent"
 
   return (
-    <TouchableOpacity
-      style={[
+    <Pressable
+      style={({ pressed }) => [
         styles.container,
         {
           backgroundColor: isSelected ? colors.primary + "12" : colors.background
-        }
+        },
+        pressed && { opacity: 0.7 }
       ]}
       onPress={() => onSelect(preset)}
-      activeOpacity={0.7}
     >
       {/* Selection indicator bar */}
       {isSelected && <View style={[styles.selectionBar, { backgroundColor: colors.primary }]} />}
@@ -101,7 +101,7 @@ export function PresetOption({ preset, isSelected, onSelect, colors }: PresetOpt
           {isSelected && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   )
 }
 

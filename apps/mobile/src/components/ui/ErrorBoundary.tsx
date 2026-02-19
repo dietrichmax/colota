@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 import React, { Component } from "react"
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
+import { View, Text, StyleSheet, Pressable } from "react-native"
 import { ThemeColors } from "../../types/global"
 import { useTheme } from "../../hooks/useTheme"
 import { logger } from "../../utils/logger"
@@ -47,12 +47,16 @@ class ErrorBoundaryInternal extends Component<ErrorBoundaryInternalProps, ErrorB
           <Text style={[styles.errorMessage, { color: colors.textSecondary }]}>
             {this.state.error?.message || "An unexpected error occurred"}
           </Text>
-          <TouchableOpacity
-            style={[styles.errorButton, { backgroundColor: colors.primary }]}
+          <Pressable
+            style={({ pressed }) => [
+              styles.errorButton,
+              { backgroundColor: colors.primary },
+              pressed && { opacity: 0.7 }
+            ]}
             onPress={this.handleReset}
           >
             <Text style={[styles.errorButtonText, { color: colors.textOnPrimary }]}>Try Again</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )
     }

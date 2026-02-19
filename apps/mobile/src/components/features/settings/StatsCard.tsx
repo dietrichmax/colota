@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 import React from "react"
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
+import { View, Text, StyleSheet, Pressable } from "react-native"
 import { AlertTriangle, ChevronRight } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
 import { getQueueColor } from "../../../utils/queueStatus"
@@ -118,16 +118,16 @@ export function StatsCard({ queueCount, sentCount, interval, isOfflineMode, onMa
 
       {/* Warning Banner */}
       {showWarning && onManageClick && (
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({ pressed }) => [
             styles.warningBanner,
             {
               backgroundColor: warningLevel === "critical" ? colors.error + "15" : colors.warning + "15",
               borderTopColor: colors.border
-            }
+            },
+            pressed && { opacity: 0.7 }
           ]}
           onPress={onManageClick}
-          activeOpacity={0.7}
         >
           <View style={styles.warningContent}>
             <AlertTriangle size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
@@ -146,7 +146,7 @@ export function StatsCard({ queueCount, sentCount, interval, isOfflineMode, onMa
             </View>
           </View>
           <ChevronRight size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
-        </TouchableOpacity>
+        </Pressable>
       )}
     </View>
   )

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, Switch, View, TouchableOpacity } from "react-native"
+import { Text, StyleSheet, Switch, View, Pressable } from "react-native"
 import { Lightbulb } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SyncPreset, SelectablePreset, ThemeColors } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
@@ -129,19 +129,19 @@ export function SyncStrategySettings({
           ))}
         </View>
 
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({ pressed }) => [
             styles.advancedToggle,
             showAdvanced ? styles.advancedToggleActive : styles.advancedToggleInactive,
-            { borderColor: showAdvanced ? colors.primary : colors.border }
+            { borderColor: showAdvanced ? colors.primary : colors.border },
+            pressed && { opacity: 0.7 }
           ]}
           onPress={() => setShowAdvanced(!showAdvanced)}
-          activeOpacity={0.7}
         >
           <Text style={[styles.advancedText, { color: colors.primaryDark }]}>
             {showAdvanced ? "− Hide" : "+ Show"} Advanced Settings
           </Text>
-        </TouchableOpacity>
+        </Pressable>
 
         {showAdvanced && (
           <View style={styles.advancedPanel}>
@@ -215,9 +215,9 @@ export function SyncStrategySettings({
                     const isSelected = settings.syncInterval === sec
 
                     return (
-                      <TouchableOpacity
+                      <Pressable
                         key={sec}
-                        style={[
+                        style={({ pressed }) => [
                           styles.gridOption,
                           {
                             borderColor: colors.border,
@@ -226,15 +226,15 @@ export function SyncStrategySettings({
                           isSelected && {
                             borderColor: colors.primary,
                             backgroundColor: colors.primary + "20"
-                          }
+                          },
+                          pressed && { opacity: 0.7 }
                         ]}
                         onPress={() => handleGridSelect("syncInterval", sec)}
-                        activeOpacity={0.7}
                       >
                         <Text style={[styles.gridLabel, { color: isSelected ? colors.primary : colors.text }]}>
                           {labels[sec]}
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     )
                   })}
                 </View>

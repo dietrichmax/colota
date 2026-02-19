@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, Switch, View, ScrollView, TouchableOpacity } from "react-native"
+import { Text, StyleSheet, Switch, View, ScrollView, Pressable } from "react-native"
 import { ScreenProps, Settings } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
@@ -147,10 +147,9 @@ export function SettingsScreen({ navigation }: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>Advanced</SectionTitle>
           <Card>
-            <TouchableOpacity
-              style={styles.linkRow}
+            <Pressable
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
               onPress={() => navigation.navigate("Tracking Profiles")}
-              activeOpacity={0.6}
             >
               <View style={styles.linkContent}>
                 <Text style={[styles.linkLabel, { color: colors.text }]}>Tracking Profiles</Text>
@@ -159,35 +158,33 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                 </Text>
               </View>
               <ChevronRight size={20} color={colors.textLight} />
-            </TouchableOpacity>
+            </Pressable>
 
             <Divider />
 
-            <TouchableOpacity
-              style={styles.linkRow}
+            <Pressable
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
               onPress={() => navigation.navigate("Data Management")}
-              activeOpacity={0.6}
             >
               <View style={styles.linkContent}>
                 <Text style={[styles.linkLabel, { color: colors.text }]}>Data Management</Text>
                 <Text style={[styles.linkSub, { color: colors.textSecondary }]}>View queue and clear data</Text>
               </View>
               <ChevronRight size={20} color={colors.textLight} />
-            </TouchableOpacity>
+            </Pressable>
 
             <Divider />
 
-            <TouchableOpacity
-              style={styles.linkRow}
+            <Pressable
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
               onPress={() => navigation.navigate("API Config")}
-              activeOpacity={0.6}
             >
               <View style={styles.linkContent}>
                 <Text style={[styles.linkLabel, { color: colors.text }]}>API Field Mapping</Text>
                 <Text style={[styles.linkSub, { color: colors.textSecondary }]}>Customize JSON payload structure</Text>
               </View>
               <ChevronRight size={20} color={colors.textLight} />
-            </TouchableOpacity>
+            </Pressable>
           </Card>
         </View>
       </ScrollView>

@@ -4,7 +4,7 @@
  */
 
 import React from "react"
-import { TouchableOpacity, StyleSheet, ViewStyle, StyleProp } from "react-native"
+import { Pressable, StyleSheet, ViewStyle, StyleProp } from "react-native"
 import { LocateFixed } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
 
@@ -20,13 +20,17 @@ export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) =>
   if (!visible) return null
 
   return (
-    <TouchableOpacity
-      style={[styles.centerButton, { backgroundColor: colors.card, borderColor: colors.border }, style]}
+    <Pressable
+      style={({ pressed }) => [
+        styles.centerButton,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        style,
+        pressed && { opacity: 0.7 }
+      ]}
       onPress={onPress}
-      activeOpacity={0.7}
     >
       <LocateFixed size={24} color={colors.text} />
-    </TouchableOpacity>
+    </Pressable>
   )
 }
 

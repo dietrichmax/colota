@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react"
-import { Text, StyleSheet, View, ScrollView, Linking, TouchableOpacity, Image } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Linking, Pressable, Image } from "react-native"
 import { ScreenProps, ThemeColors } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { ChevronRight, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check } from "lucide-react-native"
@@ -63,14 +63,14 @@ const LinkRow = ({
   colors: ThemeColors
   onOpenURL: (url: string) => void
 }) => (
-  <TouchableOpacity style={styles.linkRow} onPress={() => onOpenURL(url)} activeOpacity={0.7}>
+  <Pressable style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]} onPress={() => onOpenURL(url)}>
     <Icon size={20} color={colors.primaryDark} />
     <View style={styles.linkTextContainer}>
       <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
       <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>{subtitle}</Text>
     </View>
     <ChevronRight size={18} color={colors.textLight} />
-  </TouchableOpacity>
+  </Pressable>
 )
 
 const DEBUG_MODE_SETTING_KEY = "debug_mode_enabled"
@@ -219,13 +219,16 @@ export function AboutScreen({}: ScreenProps) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.appIconContainer} onPress={handleVersionTap} activeOpacity={0.8}>
+          <Pressable
+            style={({ pressed }) => [styles.appIconContainer, pressed && { opacity: 0.8 }]}
+            onPress={handleVersionTap}
+          >
             <Image source={icon} style={styles.appIcon} resizeMode="contain" />
-          </TouchableOpacity>
+          </Pressable>
           <Text style={[styles.title, { color: colors.text }]}>Colota</Text>
-          <TouchableOpacity onPress={handleVersionTap} activeOpacity={0.8}>
+          <Pressable onPress={handleVersionTap} style={({ pressed }) => pressed && { opacity: 0.8 }}>
             <Text style={[styles.version, { color: colors.textSecondary }]}>Version {buildConfig.VERSION_NAME}</Text>
-          </TouchableOpacity>
+          </Pressable>
 
           {/* Tap counter hint */}
           {tapCount > 0 && tapCount < 7 && (
@@ -235,13 +238,17 @@ export function AboutScreen({}: ScreenProps) {
           )}
 
           {showDebugInfo && (
-            <TouchableOpacity
+            <Pressable
               onPress={() => toggleDebugMode(false)}
-              style={[styles.debugBadge, { backgroundColor: colors.warning + "20" }]}
+              style={({ pressed }) => [
+                styles.debugBadge,
+                { backgroundColor: colors.warning + "20" },
+                pressed && { opacity: 0.7 }
+              ]}
             >
               <Bug size={14} color={colors.warning} />
               <Text style={[styles.debugText, { color: colors.warning }]}>Debug Mode (tap to hide)</Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
 
@@ -319,16 +326,15 @@ export function AboutScreen({}: ScreenProps) {
               </View>
             )}
 
-            <TouchableOpacity
-              style={[styles.copyButton, { borderColor: colors.border }]}
+            <Pressable
+              style={({ pressed }) => [styles.copyButton, { borderColor: colors.border }, pressed && { opacity: 0.7 }]}
               onPress={handleCopyDebugInfo}
-              activeOpacity={0.7}
             >
               {copied ? <Check size={16} color={colors.success} /> : <Copy size={16} color={colors.primaryDark} />}
               <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
                 {copied ? "Copied!" : "Copy Debug Info"}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </>
         )}
 

@@ -4,7 +4,7 @@
  */
 
 import React from "react"
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native"
+import { View, Pressable, Text, StyleSheet } from "react-native"
 import { ThemeColors } from "../../types/global"
 import { fonts } from "../../styles/typography"
 
@@ -21,18 +21,18 @@ export function ChipGroup<T extends string>({ options, selected, onSelect, color
       {options.map(({ value, label }) => {
         const isSelected = selected === value
         return (
-          <TouchableOpacity
+          <Pressable
             key={value}
-            style={[
+            style={({ pressed }) => [
               styles.chip,
               { borderColor: colors.border, backgroundColor: colors.background },
-              isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + "20" }
+              isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + "20" },
+              pressed && { opacity: 0.7 }
             ]}
             onPress={() => onSelect(value)}
-            activeOpacity={0.7}
           >
             <Text style={[styles.label, { color: isSelected ? colors.primary : colors.text }]}>{label}</Text>
-          </TouchableOpacity>
+          </Pressable>
         )
       })}
     </View>

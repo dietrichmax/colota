@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 import React from "react"
-import { View, StyleSheet, Text, TouchableOpacity, Linking } from "react-native"
+import { View, StyleSheet, Text, Pressable, Linking } from "react-native"
 import { Settings, Fence, Search, Download, Info, Heart, LucideIcon } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { fonts } from "../../../styles/typography"
@@ -67,15 +67,15 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
       <SectionTitle>QUICK ACCESS</SectionTitle>
       <View style={styles.navGrid}>
         {navItems.map((item) => (
-          <TouchableOpacity
+          <Pressable
             key={item.name}
-            activeOpacity={0.7}
-            style={[
+            style={({ pressed }) => [
               styles.navItem,
               {
                 backgroundColor: colors.card,
                 borderColor: colors.border
-              }
+              },
+              pressed && { opacity: 0.7 }
             ]}
             onPress={item.onPress}
           >
@@ -94,7 +94,7 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
             <Text style={[styles.navLabel, { color: colors.text }]} numberOfLines={1}>
               {item.name}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
     </View>

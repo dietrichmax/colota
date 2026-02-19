@@ -61,17 +61,13 @@ jest.mock("../../hooks/useTheme", () => ({
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text, TouchableOpacity } = require("react-native")
+  const { View, Text, Pressable } = require("react-native")
   return {
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Button: ({ title, onPress, disabled }: any) =>
-      R.createElement(
-        TouchableOpacity,
-        { onPress, disabled, accessibilityRole: "button" },
-        R.createElement(Text, null, title)
-      )
+      R.createElement(Pressable, { onPress, disabled, accessibilityRole: "button" }, R.createElement(Text, null, title))
   }
 })
 

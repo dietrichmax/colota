@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useImperativeHandle, forwardRef, useState, useEffect, useCallback } from "react"
-import { StyleProp, ViewStyle, View, Text, StyleSheet, Linking, TouchableOpacity } from "react-native"
+import { StyleProp, ViewStyle, View, Text, StyleSheet, Linking, Pressable } from "react-native"
 import { MapView, Camera } from "@maplibre/maplibre-react-native"
 import type { MapViewRef, CameraRef } from "@maplibre/maplibre-react-native"
 import type { RegionPayload } from "@maplibre/maplibre-react-native"
@@ -135,29 +135,35 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
 
       {/* Custom compass button */}
       {showCompass && (
-        <TouchableOpacity
-          style={[styles.compassButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+        <Pressable
+          style={({ pressed }) => [
+            styles.compassButton,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            pressed && { opacity: 0.7 }
+          ]}
           onPress={handleCompassPress}
-          activeOpacity={0.7}
         >
           <View style={{ transform: [{ rotate: `${-heading}deg` }] }}>
             <Compass size={24} color={colors.text} />
           </View>
-        </TouchableOpacity>
+        </Pressable>
       )}
 
       {/* Attribution */}
       <View style={[styles.attribution, { backgroundColor: colors.card + "CC" }]}>
-        <TouchableOpacity onPress={() => Linking.openURL("https://openfreemap.org")} activeOpacity={0.7}>
+        <Pressable
+          onPress={() => Linking.openURL("https://openfreemap.org")}
+          style={({ pressed }) => pressed && { opacity: 0.7 }}
+        >
           <Text style={[styles.attributionText, { color: colors.link }, fonts.regular]}>OpenFreeMap</Text>
-        </TouchableOpacity>
+        </Pressable>
         <Text style={[styles.attributionSep, { color: colors.textLight }]}>{" | "}</Text>
-        <TouchableOpacity
+        <Pressable
           onPress={() => Linking.openURL("https://www.openstreetmap.org/copyright")}
-          activeOpacity={0.7}
+          style={({ pressed }) => pressed && { opacity: 0.7 }}
         >
           <Text style={[styles.attributionText, { color: colors.link }, fonts.regular]}>OSM</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   )
