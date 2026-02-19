@@ -11,4 +11,4 @@ appId: com.colota
 - waitForAnimationToEnd
 - tapOn: "Create Profile"
 - waitForAnimationToEnd
-- takeScreenshot: ProfileEditor
+- takeScreenshot: TrackingProfiles
