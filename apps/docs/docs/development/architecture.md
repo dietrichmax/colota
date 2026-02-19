@@ -57,7 +57,7 @@ All native code lives in `apps/mobile/android/app/src/`, organized by build flav
 The primary React Native bridge module (exposed as `"LocationServiceModule"`). Handles all JS-to-native communication for:
 
 - Service control (`startService`, `stopService`)
-- Database queries (`getStats`, `getTableData`, `getLocationsByDateRange`, `getQueuedLocationsCount`)
+- Database queries (`getStats`, `getTableData`, `getLocationsByDateRange`)
 - Geofence CRUD operations
 - Settings persistence
 - Device info, file operations, authentication
@@ -85,7 +85,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 
 - GPS location capture via the `LocationProvider` abstraction
 - Pause zone detection (geofencing)
-- Battery critical shutdown (1-4% while discharging)
+- Battery critical shutdown (below 5% while discharging)
 - Location accuracy filtering
 - Queuing data for server sync
 
