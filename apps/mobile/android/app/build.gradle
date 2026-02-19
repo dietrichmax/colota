@@ -171,8 +171,8 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-    gmsImplementation 'com.google.android.gms:play-services-location:21.0.1'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    gmsImplementation 'com.google.android.gms:play-services-location:21.3.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
     implementation 'androidx.security:security-crypto:1.1.0'
     implementation 'androidx.car.app:app:1.7.0'
     
@@ -183,7 +183,7 @@ dependencies {
     }
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'io.mockk:mockk:1.13.12'
+    testImplementation 'io.mockk:mockk:1.14.9'
     testImplementation 'org.json:json:20240303'
-    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
 }
