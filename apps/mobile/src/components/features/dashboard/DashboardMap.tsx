@@ -5,23 +5,18 @@
 
 import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
 import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image } from "react-native"
-import { WebView } from "react-native-webview"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { fonts } from "../../../styles/typography"
 import { WifiOff } from "lucide-react-native"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { useFocusEffect } from "@react-navigation/native"
-import {
-  STATS_REFRESH_IDLE,
-  DEFAULT_MAP_ZOOM,
-  MAX_MAP_ZOOM,
-  GEOFENCE_ZOOM_PADDING,
-  MARKER_ANIMATION_DURATION_MS,
-  MAP_ANIMATION_DURATION_MS
-} from "../../../constants"
+import { STATS_REFRESH_IDLE, MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
-import { mapStyles, mapMarkerHelpers } from "../map/mapHtml"
+import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
+import { buildGeofencesGeoJSON } from "../map/mapUtils"
+import { GeofenceLayers } from "../map/GeofenceLayers"
+import { UserLocationOverlay } from "../map/UserLocationOverlay"
 import icon from "../../../assets/icons/icon.png"
 import { logger } from "../../../utils/logger"
 
@@ -32,16 +27,18 @@ type Props = {
   activeProfileName: string | null
 }
 
+const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
+  return c !== null && c.latitude !== 0 && c.longitude !== 0
+}
+
 export function DashboardMap({ coords, tracking, activeZoneName, activeProfileName }: Props) {
-  const webviewRef = useRef<WebView>(null)
-  const { colors, mode } = useTheme()
-  const isDark = mode === "dark"
+  const mapRef = useRef<ColotaMapRef>(null)
+  const { colors } = useTheme()
   const [geofences, setGeofences] = useState<any[]>([])
   const [isCentered, setIsCentered] = useState(true)
-  const [mapReady, setMapReady] = useState(false)
+  const isCenteredRef = useRef(true)
   const initialCoords = useRef<LocationCoords | null>(null)
   const [hasInitialCoords, setHasInitialCoords] = useState(false)
-
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
   const [isOffline, setIsOffline] = useState(false)
 
@@ -55,10 +52,6 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
       return () => clearInterval(interval)
     }, [])
   )
-
-  const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
-    return c !== null && c.latitude !== 0 && c.longitude !== 0
-  }
 
   useEffect(() => {
     if (!initialCoords.current && coords) {
@@ -80,7 +73,6 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
     loadGeofences()
   }, [loadGeofences])
 
-  // Check for pause zone
   useEffect(() => {
     const checkPauseZone = async () => {
       try {
@@ -94,225 +86,42 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
     checkPauseZone()
     const listener = DeviceEventEmitter.addListener("geofenceUpdated", () => {
       checkPauseZone()
-      loadGeofences() // Reload geofences when they're updated
+      loadGeofences()
     })
     return () => listener.remove()
   }, [loadGeofences])
 
-  // Update user position
+  // Auto-center camera when position changes (only if currently centered).
+  // Uses ref to avoid re-triggering when isCentered flips (which would
+  // override the setCamera zoom from handleCenterMe with a pan-only moveTo).
   useEffect(() => {
-    if (webviewRef.current && mapReady && coords) {
-      webviewRef.current.postMessage(
-        JSON.stringify({
-          action: "update_user_pos",
-          coords,
-          tracking,
-          isPaused: !!currentPauseZone
-        })
-      )
-    }
-  }, [coords, mapReady, tracking, currentPauseZone])
-
-  // Update geofences
-  useEffect(() => {
-    if (webviewRef.current && mapReady) {
-      webviewRef.current.postMessage(
-        JSON.stringify({
-          action: "update_geofences",
-          geofences
-        })
-      )
-    }
-  }, [geofences, mapReady])
-
-  const handleCenterMe = useCallback(() => {
-    if (coords) {
-      webviewRef.current?.postMessage(JSON.stringify({ action: "center_map", coords }))
+    if (coords && isCenteredRef.current && mapRef.current?.camera) {
+      mapRef.current.camera.moveTo([coords.longitude, coords.latitude], MAP_ANIMATION_DURATION_MS)
     }
   }, [coords])
-  const html = useMemo(() => {
-    if (!hasInitialCoords || !initialCoords.current) return ""
 
-    const lon = initialCoords.current.longitude
-    const lat = initialCoords.current.latitude
+  const handleCenterMe = useCallback(() => {
+    if (coords && mapRef.current?.camera) {
+      mapRef.current.camera.setCamera({
+        centerCoordinate: [coords.longitude, coords.latitude],
+        zoomLevel: MAX_MAP_ZOOM,
+        animationDuration: MAP_ANIMATION_DURATION_MS,
+        animationMode: "flyTo"
+      })
+      isCenteredRef.current = true
+      setIsCentered(true)
+    }
+  }, [coords])
 
-    return `
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  const handleRegionChange = useCallback((payload: { isUserInteraction: boolean }) => {
+    if (payload.isUserInteraction) {
+      isCenteredRef.current = false
+      setIsCentered(false)
+    }
+  }, [])
 
-    <link rel="stylesheet" href="openlayers/ol.css">
-    <style>${mapStyles(colors, isDark)}</style>
-  </head>
-  <body>
-    <div id="map"></div>
-    <script src="openlayers/ol.js"></script>
-    <script>
-      ${mapMarkerHelpers()}
-
-      const geofenceSource = new ol.source.Vector();
-      const accuracySource = new ol.source.Vector();
-
-      const map = new ol.Map({
-        target: "map",
-        layers: [
-          new ol.layer.Tile({ source: new ol.source.OSM() }),
-          new ol.layer.Vector({ source: geofenceSource }),
-          new ol.layer.Vector({ source: accuracySource }),
-        ],
-        view: new ol.View({
-          center: ol.proj.fromLonLat([${lon}, ${lat}]),
-          zoom: ${DEFAULT_MAP_ZOOM},
-        }),
-      });
-
-      let accuracyFeature = null;
-
-      const accuracyStyle = new ol.style.Style({
-        fill: new ol.style.Fill({
-          color: "${colors.primary}22"
-        })
-      });
-
-      const markerEl = document.createElement("div");
-      markerEl.innerHTML = \`
-        <div class="marker-pulse" style="display:none"></div>
-        <div class="marker"></div>
-      \`;
-
-      const markerOverlay = new ol.Overlay({
-        element: markerEl,
-        positioning: "center-center",
-        stopEvent: false
-      });
-
-      map.addOverlay(markerOverlay);
-      markerOverlay.setPosition(ol.proj.fromLonLat([${lon}, ${lat}]))
-
-      function drawGeofences(geofences) {
-        geofenceSource.clear();
-        geofences.forEach(zone => {
-          const center = ol.proj.fromLonLat([zone.lon, zone.lat]);
-          const circle = new ol.geom.Circle(center, zone.radius);
-          const feature = new ol.Feature(circle);
-
-          feature.setStyle(
-            new ol.style.Style({
-              stroke: new ol.style.Stroke({
-                color: zone.pauseTracking ? "${colors.warning}" : "${colors.info}",
-                width: 2,
-                lineDash: zone.pauseTracking ? null : [5, 5]
-              }),
-              fill: new ol.style.Fill({
-                color: zone.pauseTracking ? "${colors.warning}4D" : "${colors.info}1A"
-              }),
-            })
-          );
-
-          const label = new ol.Feature(new ol.geom.Point(center));
-          label.setStyle(
-            new ol.style.Style({
-              text: new ol.style.Text({
-                text: zone.name,
-                font: "bold 12px sans-serif",
-                fill: new ol.style.Fill({
-                  color: zone.pauseTracking ? "${colors.warning}" : "${colors.info}"
-                }),
-                stroke: new ol.style.Stroke({ color: "#fff", width: 3 }),
-                offsetY: -25
-              }),
-            })
-          );
-
-          geofenceSource.addFeature(feature);
-          geofenceSource.addFeature(label);
-        });
-      }
-
-      function handleInternalMessage(e) {
-        let data;
-        try {
-          data = JSON.parse(e.data);
-        } catch(err) {
-          return;
-        }
-
-        if (data.action === "update_user_pos") {
-          const newPos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
-          
-          animateMarker(newPos, ${MARKER_ANIMATION_DURATION_MS});
-
-          // Only auto-center if user has not manually moved the map
-          if (isMapCentered()) {
-            map.getView().animate({
-              center: newPos,
-              duration: ${MARKER_ANIMATION_DURATION_MS},
-              easing: ol.easing.linear
-            });
-          }
-          
-          const markerIcon = markerEl.querySelector(".marker");
-          const markerPulse = markerEl.querySelector(".marker-pulse");
-          
-          if (markerIcon && markerPulse) {
-            const isActive = data.tracking && !data.isPaused;
-            const markerColor = data.isPaused ? "${colors.textDisabled}" : "${colors.primary}";
-            markerIcon.style.background = markerColor;
-            markerPulse.style.borderColor = markerColor;
-            
-            markerPulse.style.display = isActive ? "block" : "none";
-          }
-            
-          if (data.coords.accuracy && data.coords.accuracy > 0) {
-            if (!accuracyFeature) {
-              accuracyFeature = new ol.Feature();
-              accuracyFeature.setStyle(accuracyStyle);
-              accuracySource.addFeature(accuracyFeature);
-            }
-
-            const circle = new ol.geom.Circle(newPos, data.coords.accuracy);
-            accuracyFeature.setGeometry(circle);
-          }
-        }
-        
-        if (data.action === "center_map") {
-          const pos = ol.proj.fromLonLat([data.coords.longitude, data.coords.latitude]);
-          map.getView().animate({ center: pos, zoom: ${DEFAULT_MAP_ZOOM}, duration: ${MAP_ANIMATION_DURATION_MS} });
-        }
-
-        if (data.action === "zoom_to_geofence") {
-          const center = ol.proj.fromLonLat([data.lon, data.lat]);
-          const circle = new ol.geom.Circle(center, data.radius);
-          const extent = circle.getExtent();
-          map.getView().fit(extent, {
-            duration: 600,
-            padding: [${GEOFENCE_ZOOM_PADDING}],
-            maxZoom: ${MAX_MAP_ZOOM}
-          });
-        }
-        
-        if (data.action === "update_geofences") {
-          drawGeofences(data.geofences);
-        }
-      }
-
-      window.addEventListener("message", handleInternalMessage);
-      document.addEventListener("message", handleInternalMessage)
-
-      
-      map.on("moveend", () => {
-        window.ReactNativeWebView.postMessage(
-          JSON.stringify({ type: "CENTERED", value: isMapCentered() })
-        );
-      });
-
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "MAP_READY" }));
-    </script>
-  </body>
-</html>
-`
-  }, [colors, isDark, hasInitialCoords])
+  // Geofence GeoJSON
+  const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences, colors), [geofences, colors])
 
   if (!tracking) {
     return (
@@ -338,55 +147,17 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
 
   return (
     <View style={[styles.container, { borderRadius: colors.borderRadius }]}>
-      {html ? (
-        <WebView
-          ref={webviewRef}
-          originWhitelist={["*"]}
-          source={{
-            html: html,
-            baseUrl: "file:///android_asset/"
-          }}
-          style={styles.webview}
-          scrollEnabled={false}
-          startInLoadingState={false}
-          onMessage={(event) => {
-            try {
-              const data = JSON.parse(event.nativeEvent.data)
+      {hasInitialCoords && initialCoords.current ? (
+        <ColotaMapView
+          ref={mapRef}
+          initialCenter={[initialCoords.current.longitude, initialCoords.current.latitude]}
+          onRegionDidChange={handleRegionChange}
+        >
+          <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
 
-              if (data.type === "MAP_READY") {
-                setMapReady(true)
-
-                // 1. Send Geofences immediately on ready
-                if (geofences.length > 0) {
-                  webviewRef.current?.postMessage(
-                    JSON.stringify({
-                      action: "update_geofences",
-                      geofences
-                    })
-                  )
-                }
-
-                // 2. Send current position immediately on ready
-                if (coords) {
-                  webviewRef.current?.postMessage(
-                    JSON.stringify({
-                      action: "update_user_pos",
-                      coords,
-                      tracking,
-                      isPaused: !!currentPauseZone
-                    })
-                  )
-                }
-              }
-
-              if (data.type === "CENTERED") {
-                setIsCentered(data.value)
-              }
-            } catch (err) {
-              logger.error("WebView message error:", err)
-            }
-          }}
-        />
+          {/* Accuracy circle + user marker */}
+          <UserLocationOverlay coords={coords} tracking={tracking} isPaused={!!currentPauseZone} colors={colors} />
+        </ColotaMapView>
       ) : (
         <View style={[styles.stateContainer, { backgroundColor: colors.card }]}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -440,7 +211,6 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
 
 const styles = StyleSheet.create({
   container: { flex: 1, width: "100%", overflow: "hidden" },
-  webview: { flex: 1 },
   stateContainer: {
     flex: 1,
     justifyContent: "center",
@@ -467,7 +237,7 @@ const styles = StyleSheet.create({
   topInfoCard: {
     position: "absolute",
     top: 20,
-    left: 80,
+    left: 20,
     right: 20,
     padding: 16,
     borderRadius: 16,

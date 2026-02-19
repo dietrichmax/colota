@@ -173,11 +173,37 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 | `ProfileService` | Thin wrapper over `NativeLocationService` for tracking profile CRUD and trip event queries |
 | `SettingsService` | Bridges UI state to native SQLite with type conversion (seconds↔ms, objects↔JSON) |
 
+### Map Components
+
+The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-native) (`@maplibre/maplibre-react-native`) for GPU-accelerated map rendering with [OpenFreeMap](https://openfreemap.org) vector tiles. No API tokens required. Fully FOSS-compatible.
+
+| Component | Purpose |
+| --- | --- |
+| `ColotaMapView` | Shared base map component wrapping MapLibre's `MapView` with OpenFreeMap vector tiles, dark mode style transformation, custom compass, and attribution |
+| `DashboardMap` | Live tracking map with user marker (animated pulse), accuracy circle, geofence polygons with labels, auto-center, and center button |
+| `TrackMap` | Location history map with speed-colored track segments, tappable point markers with popups, start/end markers, fit-to-track bounds, and speed legend |
+| `GeofenceLayers` | Shared geofence rendering (fill polygons, stroke outlines, labels) used by DashboardMap and GeofenceScreen |
+| `UserLocationOverlay` | User position dot with accuracy circle and pulse animation, used by DashboardMap and GeofenceScreen |
+| `MapCenterButton` | Reusable button overlay to re-center the map |
+
+Supporting utilities in `mapUtils.ts`:
+
+| Utility | Purpose |
+| --- | --- |
+| `getSpeedColor` | Returns a theme-aware color for a given speed (m/s) using green→yellow→red interpolation |
+| `createCirclePolygon` | Generates a 64-point GeoJSON `Polygon` approximating a circle on Earth's surface (for meter-based geofence radius) |
+| `buildTrackSegmentsGeoJSON` | Creates per-segment `LineString` features with pre-computed speed colors for data-driven styling |
+| `buildTrackPointsGeoJSON` | Creates `Point` features with speed, timestamp, accuracy, and altitude properties |
+| `buildGeofencesGeoJSON` | Creates fill polygons and label points for geofence visualization |
+| `computeTrackBounds` | Computes the bounding box for a set of track locations |
+| `darkifyStyle` | Transforms OpenFreeMap vector style JSON into a dark theme variant by overriding paint properties |
+
 ### Utils
 
 | Utility | Purpose |
 | --- | --- |
 | `logger` | Environment-aware logging - suppresses debug/info in production via `__DEV__`, always logs warn/error |
+| `geo` | Haversine distance, speed/distance formatting with locale-aware unit selection (km/h vs mph) |
 | `exportConverters` | Converts location data to CSV, GeoJSON, GPX, and KML export formats |
 | `queueStatus` | Maps sync queue size to color indicators for the dashboard |
 | `settingsValidation` | URL validation and security checks for endpoint configuration |

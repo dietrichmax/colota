@@ -4,339 +4,181 @@
  */
 
 import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
-import { View, StyleSheet, Text } from "react-native"
-import { WebView } from "react-native-webview"
-import { MapPinOff } from "lucide-react-native"
+import { View, StyleSheet, Text, TouchableOpacity } from "react-native"
+import { ShapeSource, LineLayer, CircleLayer } from "@maplibre/maplibre-react-native"
+import { MapPinOff, X } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
 import { MapCenterButton } from "../map/MapCenterButton"
-import { mapStyles, mapSpeedColorHelpers } from "../map/mapHtml"
+import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
+import {
+  buildTrackSegmentsGeoJSON,
+  buildTrackPointsGeoJSON,
+  computeTrackBounds,
+  type TrackLocation
+} from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
-import { MAX_MAP_ZOOM, MAP_ANIMATION_DURATION_MS } from "../../../constants"
 
-interface TrackLocation {
-  latitude: number
-  longitude: number
-  timestamp?: number
-  accuracy?: number
-  speed?: number
-  altitude?: number
+// MapLibre layer styles (extracted to satisfy no-inline-styles lint rule)
+const trackLineStyle = {
+  lineColor: ["get", "color"] as const,
+  lineWidth: 3,
+  lineCap: "round" as const,
+  lineJoin: "round" as const
 }
+
+const trackPointStyle = {
+  circleRadius: 4,
+  circleColor: ["get", "color"] as const,
+  circleOpacity: 0.4,
+  circleStrokeColor: ["get", "color"] as const,
+  circleStrokeWidth: 1.5
+}
+
+const endpointStyle = {
+  circleRadius: 8,
+  circleColor: ["get", "color"] as const,
+  circleStrokeColor: "#ffffff",
+  circleStrokeWidth: 2
+}
+import { MAP_ANIMATION_DURATION_MS } from "../../../constants"
 
 interface Props {
   locations: TrackLocation[]
   selectedPoint: { latitude: number; longitude: number } | null
   colors: ThemeColors
-  isDark: boolean
 }
 
-export function TrackMap({ locations, selectedPoint, colors, isDark }: Props) {
-  const webviewRef = useRef<WebView>(null)
-  const isMounted = useRef(true)
-  const [mapReady, setMapReady] = useState(false)
+export function TrackMap({ locations, selectedPoint, colors }: Props) {
+  const mapRef = useRef<ColotaMapRef>(null)
   const [isCentered, setIsCentered] = useState(true)
+  const [popup, setPopup] = useState<{
+    coordinate: [number, number]
+    speed: number
+    timestamp: number
+    accuracy: number
+    altitude: number
+  } | null>(null)
+  const [mapReady, setMapReady] = useState(false)
+
+  // Fit map to track bounds on first load
+  const bounds = useMemo(() => computeTrackBounds(locations), [locations])
+
   useEffect(() => {
-    return () => {
-      isMounted.current = false
+    if (bounds && mapReady && mapRef.current?.camera) {
+      mapRef.current.camera.fitBounds(bounds.ne, bounds.sw, [60, 60, 60, 60], MAP_ANIMATION_DURATION_MS)
+    }
+  }, [bounds, mapReady])
+
+  const handleMapReady = useCallback(() => setMapReady(true), [])
+
+  // Zoom to selected point from table tap
+  useEffect(() => {
+    if (selectedPoint && mapRef.current?.camera) {
+      mapRef.current.camera.setCamera({
+        centerCoordinate: [selectedPoint.longitude, selectedPoint.latitude],
+        zoomLevel: 17,
+        animationDuration: 500,
+        animationMode: "flyTo"
+      })
+    }
+  }, [selectedPoint])
+
+  const handleFitTrack = useCallback(() => {
+    if (bounds && mapRef.current?.camera) {
+      mapRef.current.camera.fitBounds(bounds.ne, bounds.sw, [60, 60, 60, 60], MAP_ANIMATION_DURATION_MS)
+      setIsCentered(true)
+    }
+  }, [bounds])
+
+  const handleRegionChange = useCallback((payload: { isUserInteraction: boolean }) => {
+    if (payload.isUserInteraction) {
+      setIsCentered(false)
     }
   }, [])
 
-  // Send locations to the map when they change or map becomes ready
-  useEffect(() => {
-    if (webviewRef.current && mapReady && locations.length > 0) {
-      webviewRef.current.postMessage(
-        JSON.stringify({
-          action: "update_track",
-          locations: locations.map((l) => ({
-            lon: l.longitude,
-            lat: l.latitude,
-            speed: l.speed ?? 0,
-            timestamp: l.timestamp ?? 0,
-            accuracy: l.accuracy ?? 0,
-            altitude: l.altitude ?? 0
-          }))
-        })
-      )
-    }
-  }, [locations, mapReady])
+  // GeoJSON data
+  const segmentsGeoJSON = useMemo(() => buildTrackSegmentsGeoJSON(locations, colors), [locations, colors])
+  const pointsGeoJSON = useMemo(() => buildTrackPointsGeoJSON(locations, colors), [locations, colors])
 
-  // Handle zoom to selected point from table tap
-  useEffect(() => {
-    if (webviewRef.current && mapReady && selectedPoint) {
-      webviewRef.current.postMessage(
-        JSON.stringify({
-          action: "zoom_to_point",
-          lon: selectedPoint.longitude,
-          lat: selectedPoint.latitude
-        })
-      )
+  // Highlight point GeoJSON
+  const highlightGeoJSON = useMemo(() => {
+    if (!selectedPoint) return null
+    return {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          properties: {},
+          geometry: {
+            type: "Point" as const,
+            coordinates: [selectedPoint.longitude, selectedPoint.latitude]
+          }
+        }
+      ]
     }
-  }, [selectedPoint, mapReady])
+  }, [selectedPoint])
 
-  const handleCenterTrack = useCallback(() => {
-    webviewRef.current?.postMessage(JSON.stringify({ action: "fit_track" }))
+  const highlightStyle = useMemo(
+    () => ({
+      circleRadius: 12,
+      circleColor: colors.primary + "44",
+      circleStrokeColor: colors.primary,
+      circleStrokeWidth: 2
+    }),
+    [colors.primary]
+  )
+
+  // Start/end endpoint GeoJSON (single ShapeSource with data-driven color)
+  const endpointsGeoJSON = useMemo(() => {
+    if (locations.length === 0) return null
+    const features: GeoJSON.Feature[] = [
+      {
+        type: "Feature",
+        properties: { color: colors.success },
+        geometry: { type: "Point", coordinates: [locations[0].longitude, locations[0].latitude] }
+      }
+    ]
+    if (locations.length > 1) {
+      const last = locations[locations.length - 1]
+      features.push({
+        type: "Feature",
+        properties: { color: colors.error },
+        geometry: { type: "Point", coordinates: [last.longitude, last.latitude] }
+      })
+    }
+    return { type: "FeatureCollection" as const, features }
+  }, [locations, colors])
+
+  // Speed legend data
+  const { factor: speedFactor, unit: speedUnit } = getSpeedUnit()
+  const slowLabel = `< ${Math.round(2 * speedFactor)} ${speedUnit}`
+  const midLabel = `${Math.round(2 * speedFactor)}–${Math.round(8 * speedFactor)} ${speedUnit}`
+  const fastLabel = `> ${Math.round(8 * speedFactor)} ${speedUnit}`
+
+  // Handle point tap (track timestamp to distinguish from map tap)
+  const lastPointPressRef = useRef(0)
+  const handlePointPress = useCallback(
+    (event: { features: GeoJSON.Feature[]; coordinates: { latitude: number; longitude: number } }) => {
+      const feature = event.features[0]
+      if (!feature?.properties) return
+      lastPointPressRef.current = Date.now()
+      setPopup({
+        coordinate: [event.coordinates.longitude, event.coordinates.latitude],
+        speed: feature.properties.speed,
+        timestamp: feature.properties.timestamp,
+        accuracy: feature.properties.accuracy,
+        altitude: feature.properties.altitude
+      })
+    },
+    []
+  )
+
+  // Tap on empty map area dismisses popup
+  const handleMapPress = useCallback(() => {
+    if (Date.now() - lastPointPressRef.current < 200) return
+    setPopup(null)
   }, [])
-
-  const html = useMemo(() => {
-    const { factor: speedFactor, unit: speedUnit } = getSpeedUnit()
-    const slowLabel = `&lt; ${Math.round(2 * speedFactor)} ${speedUnit}`
-    const midLabel = `${Math.round(2 * speedFactor)}–${Math.round(8 * speedFactor)} ${speedUnit}`
-    const fastLabel = `&gt; ${Math.round(8 * speedFactor)} ${speedUnit}`
-
-    return `
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="stylesheet" href="openlayers/ol.css">
-    <style>${mapStyles(colors, isDark)}</style>
-  </head>
-  <body>
-    <div id="map"></div>
-    <div id="popup" class="ol-popup">
-      <button id="popup-closer" class="ol-popup-closer">&times;</button>
-      <div id="popup-content" class="ol-popup-content"></div>
-    </div>
-    <div class="speed-legend">
-      <div class="speed-legend-item">
-        <div class="speed-legend-dot" style="background:${colors.success}"></div>
-        <span class="speed-legend-label">${slowLabel}</span>
-      </div>
-      <div class="speed-legend-item">
-        <div class="speed-legend-dot" style="background:${colors.warning}"></div>
-        <span class="speed-legend-label">${midLabel}</span>
-      </div>
-      <div class="speed-legend-item">
-        <div class="speed-legend-dot" style="background:${colors.error}"></div>
-        <span class="speed-legend-label">${fastLabel}</span>
-      </div>
-    </div>
-    <script src="openlayers/ol.js"></script>
-    <script>
-      ${mapSpeedColorHelpers(colors)}
-
-      var SPEED_FACTOR = ${speedFactor};
-      var SPEED_UNIT = "${speedUnit}";
-
-      var trackSource = new ol.source.Vector();
-      var pointSource = new ol.source.Vector();
-      var markerSource = new ol.source.Vector();
-      var highlightSource = new ol.source.Vector();
-
-      var popupEl = document.getElementById("popup");
-      var popupContent = document.getElementById("popup-content");
-      var popupCloser = document.getElementById("popup-closer");
-
-      var popupOverlay = new ol.Overlay({
-        element: popupEl,
-        autoPan: true,
-        autoPanAnimation: { duration: 250 }
-      });
-
-      var map = new ol.Map({
-        target: "map",
-        overlays: [popupOverlay],
-        layers: [
-          new ol.layer.Tile({ source: new ol.source.OSM() }),
-          new ol.layer.Vector({ source: trackSource }),
-          new ol.layer.Vector({ source: pointSource }),
-          new ol.layer.Vector({ source: markerSource }),
-          new ol.layer.Vector({ source: highlightSource })
-        ],
-        view: new ol.View({
-          center: ol.proj.fromLonLat([0, 0]),
-          zoom: 2
-        })
-      });
-
-      popupCloser.onclick = function() {
-        popupOverlay.setPosition(undefined);
-        return false;
-      };
-
-      var currentExtent = null;
-
-      function updateTrack(locations) {
-        trackSource.clear();
-        pointSource.clear();
-        markerSource.clear();
-        popupOverlay.setPosition(undefined);
-
-        if (!locations || locations.length === 0) return;
-
-        var allCoords = locations.map(function(l) {
-          return ol.proj.fromLonLat([l.lon, l.lat]);
-        });
-
-        // Speed-colored segments
-        for (var i = 1; i < locations.length; i++) {
-          var avgSpeed = (locations[i - 1].speed + locations[i].speed) / 2;
-          var segCoords = [allCoords[i - 1], allCoords[i]];
-          var seg = new ol.Feature(new ol.geom.LineString(segCoords));
-          seg.setStyle(new ol.style.Style({
-            stroke: new ol.style.Stroke({
-              color: getSpeedColor(avgSpeed),
-              width: 3
-            })
-          }));
-          trackSource.addFeature(seg);
-        }
-
-        // Point markers with stored properties
-        for (var j = 0; j < locations.length; j++) {
-          var loc = locations[j];
-          var pt = new ol.Feature(new ol.geom.Point(allCoords[j]));
-          pt.set("_speed", loc.speed);
-          pt.set("_timestamp", loc.timestamp);
-          pt.set("_accuracy", loc.accuracy);
-          pt.set("_altitude", loc.altitude);
-          pt.set("_type", "track_point");
-          var ptColor = getSpeedColor(loc.speed);
-          pt.setStyle(new ol.style.Style({
-            image: new ol.style.Circle({
-              radius: 4,
-              fill: new ol.style.Fill({ color: ptColor + "66" }),
-              stroke: new ol.style.Stroke({ color: ptColor, width: 1.5 })
-            })
-          }));
-          pointSource.addFeature(pt);
-        }
-
-        // Start marker (green)
-        var startFeature = new ol.Feature(new ol.geom.Point(allCoords[0]));
-        startFeature.setStyle(new ol.style.Style({
-          image: new ol.style.Circle({
-            radius: 8,
-            fill: new ol.style.Fill({ color: SPEED_COLORS.slow }),
-            stroke: new ol.style.Stroke({ color: "#fff", width: 2 })
-          })
-        }));
-        markerSource.addFeature(startFeature);
-
-        // End marker (red)
-        if (allCoords.length > 1) {
-          var endFeature = new ol.Feature(new ol.geom.Point(allCoords[allCoords.length - 1]));
-          endFeature.setStyle(new ol.style.Style({
-            image: new ol.style.Circle({
-              radius: 8,
-              fill: new ol.style.Fill({ color: SPEED_COLORS.fast }),
-              stroke: new ol.style.Stroke({ color: "#fff", width: 2 })
-            })
-          }));
-          markerSource.addFeature(endFeature);
-        }
-
-        // Fit map to track extent
-        var fullLine = new ol.geom.LineString(allCoords);
-        currentExtent = fullLine.getExtent();
-        fitTrack();
-      }
-
-      function fitTrack() {
-        if (currentExtent) {
-          map.getView().fit(currentExtent, {
-            duration: ${MAP_ANIMATION_DURATION_MS},
-            padding: [60, 60, 60, 60],
-            maxZoom: ${MAX_MAP_ZOOM}
-          });
-        }
-      }
-
-      function zoomToPoint(lon, lat) {
-        highlightSource.clear();
-
-        var pos = ol.proj.fromLonLat([lon, lat]);
-
-        var highlight = new ol.Feature(new ol.geom.Point(pos));
-        highlight.setStyle(new ol.style.Style({
-          image: new ol.style.Circle({
-            radius: 12,
-            fill: new ol.style.Fill({ color: "${colors.primary}44" }),
-            stroke: new ol.style.Stroke({ color: "${colors.primary}", width: 2 })
-          })
-        }));
-        highlightSource.addFeature(highlight);
-
-        map.getView().animate({
-          center: pos,
-          zoom: 17,
-          duration: 500
-        });
-      }
-
-      // Popup on point tap
-      map.on("singleclick", function(evt) {
-        var found = false;
-        map.forEachFeatureAtPixel(evt.pixel, function(feature) {
-          if (found) return;
-          if (feature.get("_type") !== "track_point") return;
-          found = true;
-
-          var ts = feature.get("_timestamp");
-          var speed = feature.get("_speed");
-          var accuracy = feature.get("_accuracy");
-          var altitude = feature.get("_altitude");
-
-          var timeStr = ts ? new Date(ts * 1000).toLocaleTimeString() : "—";
-          var speedStr = speed != null ? (speed * SPEED_FACTOR).toFixed(1) + " " + SPEED_UNIT : "—";
-          var accStr = accuracy != null ? "\\u00B1" + accuracy.toFixed(0) + "m" : "—";
-          var altStr = altitude != null ? altitude.toFixed(0) + "m" : "—";
-
-          popupContent.innerHTML =
-            '<div class="popup-time">' + timeStr + '</div>' +
-            '<div class="popup-row"><span class="popup-label">Speed</span><span class="popup-value">' + speedStr + '</span></div>' +
-            '<div class="popup-row"><span class="popup-label">Accuracy</span><span class="popup-value">' + accStr + '</span></div>' +
-            '<div class="popup-row"><span class="popup-label">Altitude</span><span class="popup-value">' + altStr + '</span></div>';
-
-          popupOverlay.setPosition(feature.getGeometry().getCoordinates());
-        }, { hitTolerance: 10 });
-
-        if (!found) {
-          popupOverlay.setPosition(undefined);
-        }
-      });
-
-      function handleInternalMessage(e) {
-        var data;
-        try {
-          data = JSON.parse(e.data);
-        } catch(err) {
-          return;
-        }
-
-        if (data.action === "update_track") {
-          updateTrack(data.locations);
-        }
-
-        if (data.action === "zoom_to_point") {
-          zoomToPoint(data.lon, data.lat);
-        }
-
-        if (data.action === "fit_track") {
-          fitTrack();
-        }
-      }
-
-      window.addEventListener("message", handleInternalMessage);
-      document.addEventListener("message", handleInternalMessage);
-
-      map.on("moveend", function() {
-        var centered = true;
-        if (currentExtent) {
-          var viewExtent = map.getView().calculateExtent(map.getSize());
-          centered = ol.extent.containsExtent(viewExtent, currentExtent);
-        }
-        window.ReactNativeWebView.postMessage(
-          JSON.stringify({ type: "CENTERED", value: centered })
-        );
-      });
-
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "MAP_READY" }));
-    </script>
-  </body>
-</html>
-`
-  }, [colors, isDark])
 
   if (locations.length === 0) {
     return (
@@ -352,52 +194,92 @@ export function TrackMap({ locations, selectedPoint, colors, isDark }: Props) {
 
   return (
     <View style={styles.container}>
-      <WebView
-        ref={webviewRef}
-        originWhitelist={["*"]}
-        source={{
-          html: html,
-          baseUrl: "file:///android_asset/"
-        }}
-        style={styles.webview}
-        scrollEnabled={false}
-        startInLoadingState={false}
-        onMessage={(event) => {
-          if (!isMounted.current) return
-          try {
-            const data = JSON.parse(event.nativeEvent.data)
+      <ColotaMapView
+        ref={mapRef}
+        initialCenter={locations.length > 0 ? [locations[0].longitude, locations[0].latitude] : [0, 0]}
+        initialZoom={2}
+        onPress={handleMapPress}
+        onRegionDidChange={handleRegionChange}
+        onMapReady={handleMapReady}
+      >
+        {/* Speed-colored track segments */}
+        <ShapeSource id="track-segments" shape={segmentsGeoJSON}>
+          <LineLayer id="track-line" style={trackLineStyle} />
+        </ShapeSource>
 
-            if (data.type === "MAP_READY") {
-              setMapReady(true)
+        {/* Track point dots */}
+        <ShapeSource
+          id="track-points"
+          shape={pointsGeoJSON}
+          onPress={handlePointPress}
+          hitbox={{ width: 20, height: 20 }}
+        >
+          <CircleLayer id="track-point-circles" style={trackPointStyle} />
+        </ShapeSource>
 
-              // Send track data immediately on ready
-              if (locations.length > 0) {
-                webviewRef.current?.postMessage(
-                  JSON.stringify({
-                    action: "update_track",
-                    locations: locations.map((l) => ({
-                      lon: l.longitude,
-                      lat: l.latitude,
-                      speed: l.speed ?? 0,
-                      timestamp: l.timestamp ?? 0,
-                      accuracy: l.accuracy ?? 0,
-                      altitude: l.altitude ?? 0
-                    }))
-                  })
-                )
-              }
-            }
+        {/* Highlight selected point */}
+        {highlightGeoJSON && (
+          <ShapeSource id="highlight" shape={highlightGeoJSON}>
+            <CircleLayer id="highlight-circle" style={highlightStyle} />
+          </ShapeSource>
+        )}
 
-            if (data.type === "CENTERED") {
-              setIsCentered(data.value)
-            }
-          } catch {
-            // Ignore parse errors
-          }
-        }}
-      />
+        {/* Start/end markers via ShapeSource + CircleLayer */}
+        {endpointsGeoJSON && (
+          <ShapeSource id="endpoints" shape={endpointsGeoJSON}>
+            <CircleLayer id="endpoint-circles" style={endpointStyle} />
+          </ShapeSource>
+        )}
+      </ColotaMapView>
 
-      <MapCenterButton visible={!isCentered} onPress={handleCenterTrack} />
+      {/* Popup card for tapped point (outside MapView for reliable touch on Android) */}
+      {popup && (
+        <View style={[styles.popupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.popupHeader}>
+            <Text style={[styles.popupTime, { color: colors.text }]}>
+              {popup.timestamp ? new Date(popup.timestamp * 1000).toLocaleTimeString() : "—"}
+            </Text>
+            <TouchableOpacity onPress={() => setPopup(null)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+              <X size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.popupRow}>
+            <Text style={[styles.popupLabel, { color: colors.textSecondary }]}>Speed</Text>
+            <Text style={[styles.popupValue, { color: colors.text }]}>
+              {(popup.speed * speedFactor).toFixed(1)} {speedUnit}
+            </Text>
+          </View>
+          <View style={styles.popupRow}>
+            <Text style={[styles.popupLabel, { color: colors.textSecondary }]}>Accuracy</Text>
+            <Text style={[styles.popupValue, { color: colors.text }]}>
+              {"\u00B1"}
+              {popup.accuracy.toFixed(0)}m
+            </Text>
+          </View>
+          <View style={styles.popupRow}>
+            <Text style={[styles.popupLabel, { color: colors.textSecondary }]}>Altitude</Text>
+            <Text style={[styles.popupValue, { color: colors.text }]}>{popup.altitude.toFixed(0)}m</Text>
+          </View>
+        </View>
+      )}
+
+      <MapCenterButton visible={!isCentered} onPress={handleFitTrack} />
+
+      {/* Speed legend */}
+      <View style={[styles.speedLegend, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
+          <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>{slowLabel}</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
+          <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>{midLabel}</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.error }]} />
+          <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>{fastLabel}</Text>
+        </View>
+      </View>
     </View>
   )
 }
@@ -406,9 +288,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     overflow: "hidden"
-  },
-  webview: {
-    flex: 1
   },
   emptyContainer: {
     flex: 1,
@@ -434,5 +313,72 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 8,
     lineHeight: 20
+  },
+  popupCard: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    right: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    zIndex: 10
+  },
+  popupHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4
+  },
+  popupTime: {
+    fontWeight: "600",
+    fontSize: 13
+  },
+  popupRow: {
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  popupLabel: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    fontWeight: "600"
+  },
+  popupValue: {
+    fontWeight: "500",
+    fontSize: 12
+  },
+  speedLegend: {
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 8,
+    gap: 4,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    zIndex: 10
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5
+  },
+  legendLabel: {
+    fontSize: 11,
+    fontWeight: "500"
   }
 })

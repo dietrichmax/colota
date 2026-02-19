@@ -1,10 +1,21 @@
 import React from "react"
 import { render } from "@testing-library/react-native"
 
-jest.mock("react-native-webview", () => {
+jest.mock("@maplibre/maplibre-react-native", () => {
   const R = require("react")
   const { View } = require("react-native")
-  return { WebView: (props: any) => R.createElement(View, { testID: "webview", ...props }) }
+  return {
+    __esModule: true,
+    default: { setAccessToken: jest.fn() },
+    MapView: (props: any) => R.createElement(View, { testID: "mapview", ...props }),
+    Camera: () => null,
+    ShapeSource: ({ children }: any) => children,
+    FillLayer: () => null,
+    LineLayer: () => null,
+    SymbolLayer: () => null,
+    CircleLayer: () => null,
+    MarkerView: ({ children }: any) => children
+  }
 })
 
 jest.mock("@react-navigation/native", () => ({
@@ -17,11 +28,17 @@ jest.mock("../../../../hooks/useTheme", () => ({
       primary: "#0d9488",
       text: "#000",
       textSecondary: "#6b7280",
+      textDisabled: "#d1d5db",
       card: "#fff",
       warning: "#f59e0b",
+      info: "#3b82f6",
       background: "#fff",
       border: "#e5e7eb",
-      borderRadius: 12
+      borderRadius: 12,
+      success: "#22c55e",
+      error: "#ef4444",
+      link: "#0d9488",
+      textLight: "#9ca3af"
     },
     mode: "light"
   })
@@ -35,11 +52,6 @@ jest.mock("../../../../services/NativeLocationService", () => ({
 }))
 
 jest.mock("../../../../assets/icons/icon.png", () => "mock-icon")
-
-jest.mock("../../map/mapHtml", () => ({
-  mapStyles: jest.fn().mockReturnValue(""),
-  mapMarkerHelpers: jest.fn().mockReturnValue("")
-}))
 
 jest.mock("../../map/MapCenterButton", () => {
   const R = require("react")
