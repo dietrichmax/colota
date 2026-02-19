@@ -481,24 +481,6 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
-    fun getSentCount(): Int = getTotalCount() - getQueuedCount()
-
-    fun getTotalCount(): Int {
-        return readableDatabase.rawQuery("SELECT COUNT(*) FROM $TABLE_LOCATIONS", null).use {
-            if (it.moveToFirst()) it.getInt(0) else 0
-        }
-    }
-
-    fun getTodayCount(): Int {
-        val todayStart = getTodayStartTimestamp()
-        return readableDatabase.rawQuery(
-            "SELECT COUNT(*) FROM $TABLE_LOCATIONS WHERE timestamp >= ?",
-            arrayOf(todayStart.toString())
-        ).use {
-            if (it.moveToFirst()) it.getInt(0) else 0
-        }
-    }
-
     fun getDatabaseSizeMB(): Double {
         val dbPath = readableDatabase.path ?: return 0.0
         return java.io.File(dbPath).length() / (1024.0 * 1024.0)
@@ -514,22 +496,12 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun clearQueue(): Int {
-        // Collect location IDs before deleting queue entries
-        val locationIds = mutableListOf<Long>()
-        readableDatabase.rawQuery("SELECT location_id FROM $TABLE_QUEUE", null).use { cursor ->
-            while (cursor.moveToNext()) locationIds.add(cursor.getLong(0))
-        }
-
-        val deleted = writableDatabase.delete(TABLE_QUEUE, null, null)
-
-        // Remove the unsent locations
-        if (locationIds.isNotEmpty()) {
-            val placeholders = locationIds.joinToString(",") { "?" }
-            val args = locationIds.map { it.toString() }.toTypedArray()
-            writableDatabase.delete(TABLE_LOCATIONS, "id IN ($placeholders)", args)
-        }
-
-        return deleted
+        // Deleting locations cascades to their queue entries via FK ON DELETE CASCADE
+        return writableDatabase.delete(
+            TABLE_LOCATIONS,
+            "id IN (SELECT location_id FROM $TABLE_QUEUE)",
+            null
+        )
     }
 
     fun clearAllLocations(): Int {

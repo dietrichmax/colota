@@ -36,18 +36,11 @@ class DeviceInfoHelper(private val context: Context) {
             putString("model", Build.MODEL)
             putString("brand", Build.BRAND)
             putString("manufacturer", Build.MANUFACTURER)
-            putString("device", Build.DEVICE)
             putString("deviceId", Build.DEVICE)
             putString("systemVersion", Build.VERSION.RELEASE)
             putInt("apiLevel", Build.VERSION.SDK_INT)
         }
     }
-
-    fun getSystemVersion(): String = Build.VERSION.RELEASE
-    fun getApiLevel(): Int = Build.VERSION.SDK_INT
-    fun getModel(): String = Build.MODEL
-    fun getBrand(): String = Build.BRAND
-    fun getDeviceId(): String = Build.DEVICE
 
     /**
      * @return Pair of (battery level %, status code: 0=Unknown, 1=Discharging, 2=Charging, 3=Full)

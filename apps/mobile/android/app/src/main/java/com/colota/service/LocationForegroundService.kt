@@ -50,9 +50,9 @@ class LocationForegroundService : Service() {
     @Volatile private var currentZoneName: String? = null
     @Volatile private var lastKnownLocation: android.location.Location? = null
 
-    private lateinit var config: ServiceConfig
+    @Volatile private lateinit var config: ServiceConfig
     private var fieldMap: Map<String, String>? = null
-    private var customFields: Map<String, String>? = null
+    @Volatile private var customFields: Map<String, String>? = null
 
     companion object {
         private const val TAG = "LocationService"
@@ -410,21 +410,14 @@ class LocationForegroundService : Service() {
         insidePauseZone = true
         currentZoneName = zoneName
 
-        lastKnownLocation?.let { loc ->
-            updateNotification(
-                lat = loc.latitude,
-                lon = loc.longitude,
-                pausedInZone = true,
-                zoneName = zoneName,
-                forceUpdate = true
-            )
-        } ?: run {
-            updateNotification(
-                pausedInZone = true,
-                zoneName = zoneName,
-                forceUpdate = true
-            )
-        }
+        val loc = lastKnownLocation
+        updateNotification(
+            lat = loc?.latitude,
+            lon = loc?.longitude,
+            pausedInZone = true,
+            zoneName = zoneName,
+            forceUpdate = true
+        )
 
         LocationServiceModule.sendPauseZoneEvent(true, zoneName)
 
@@ -439,11 +432,8 @@ class LocationForegroundService : Service() {
         val exited = currentZoneName
         currentZoneName = null
 
-        lastKnownLocation?.let { loc ->
-            updateNotification(loc.latitude, loc.longitude, forceUpdate = true)
-        } ?: run {
-            updateNotification(forceUpdate = true)
-        }
+        val loc = lastKnownLocation
+        updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
 
         LocationServiceModule.sendPauseZoneEvent(false, exited)
         if (BuildConfig.DEBUG) Log.d(TAG, "Exited pause zone: $exited")
@@ -533,9 +523,8 @@ class LocationForegroundService : Service() {
         }
 
         // Update notification to show/hide profile name in title
-        lastKnownLocation?.let {
-            updateNotification(lat = it.latitude, lon = it.longitude, forceUpdate = true)
-        } ?: updateNotification(forceUpdate = true)
+        val loc = lastKnownLocation
+        updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
 
         if (BuildConfig.DEBUG) {
             Log.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} — interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")

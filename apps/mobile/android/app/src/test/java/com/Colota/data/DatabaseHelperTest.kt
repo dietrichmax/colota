@@ -126,17 +126,6 @@ class DatabaseHelperTest {
         assertEquals((now / 1000).toDouble(), cutoff.toDouble(), 1.0)
     }
 
-    // --- getSentCount logic ---
-
-    @Test
-    fun `sent count is total minus queued`() {
-        // Verifies the formula used in getSentCount
-        val total = 100
-        val queued = 25
-        val sent = total - queued
-        assertEquals(75, sent)
-    }
-
     // --- getTodayStartTimestamp logic ---
 
     @Test
