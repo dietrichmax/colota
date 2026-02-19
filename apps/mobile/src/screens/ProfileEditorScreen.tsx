@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react"
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from "react-native"
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert } from "../services/modalService"
@@ -211,24 +211,24 @@ export function ProfileEditorScreen({ navigation, route }: any) {
               const Icon = opt.icon
               const selected = profile.condition.type === opt.type
               return (
-                <TouchableOpacity
+                <Pressable
                   key={opt.type}
-                  style={[
+                  style={({ pressed }) => [
                     styles.conditionOption,
                     {
                       backgroundColor: selected ? colors.primary + "15" : colors.background,
                       borderColor: selected ? colors.primary : colors.border
-                    }
+                    },
+                    pressed && { opacity: 0.7 }
                   ]}
                   onPress={() => setConditionType(opt.type)}
-                  activeOpacity={0.7}
                 >
                   <Icon size={20} color={selected ? colors.primary : colors.textSecondary} />
                   <Text style={[styles.conditionLabel, { color: selected ? colors.primary : colors.text }]}>
                     {opt.label}
                   </Text>
                   <Text style={[styles.conditionDesc, { color: colors.textLight }]}>{opt.description}</Text>
-                </TouchableOpacity>
+                </Pressable>
               )
             })}
           </View>
@@ -300,22 +300,22 @@ export function ProfileEditorScreen({ navigation, route }: any) {
             {SYNC_OPTIONS.map((opt) => {
               const selected = profile.syncInterval === opt.value
               return (
-                <TouchableOpacity
+                <Pressable
                   key={opt.value}
-                  style={[
+                  style={({ pressed }) => [
                     styles.syncOption,
                     {
                       backgroundColor: selected ? colors.primary + "15" : colors.background,
                       borderColor: selected ? colors.primary : colors.border
-                    }
+                    },
+                    pressed && { opacity: 0.7 }
                   ]}
                   onPress={() => setProfile((prev) => ({ ...prev, syncInterval: opt.value }))}
-                  activeOpacity={0.7}
                 >
                   <Text style={[styles.syncLabel, { color: selected ? colors.primary : colors.text }]}>
                     {opt.label}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               )
             })}
           </View>
@@ -346,17 +346,21 @@ export function ProfileEditorScreen({ navigation, route }: any) {
         </Card>
 
         {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveBtn, { backgroundColor: colors.primary }, saving && styles.saveBtnDisabled]}
+        <Pressable
+          style={({ pressed }) => [
+            styles.saveBtn,
+            { backgroundColor: colors.primary },
+            saving && styles.saveBtnDisabled,
+            pressed && { opacity: 0.7 }
+          ]}
           onPress={handleSave}
           disabled={saving}
-          activeOpacity={0.7}
         >
           <Check size={20} color={colors.textOnPrimary} />
           <Text style={[styles.saveBtnText, { color: colors.textOnPrimary }]}>
             {saving ? "Saving..." : isEditing ? "Save Changes" : "Create Profile"}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </ScrollView>
     </Container>
   )

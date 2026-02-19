@@ -17,7 +17,6 @@ type TrackingContextType = {
   settings: Settings
   setSettings: (s: Settings) => Promise<void>
   updateSettingsLocal: (s: Settings) => void
-  coords: LocationCoords | null
   tracking: boolean
   isLoading: boolean
   error: Error | null
@@ -28,6 +27,7 @@ type TrackingContextType = {
 }
 
 const TrackingContext = createContext<TrackingContextType | null>(null)
+const CoordsContext = createContext<LocationCoords | null>(null)
 
 /**
  * Parses raw SQLite settings (all strings) into typed Settings object
@@ -278,7 +278,6 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
       settings,
       setSettings,
       updateSettingsLocal: setSettingsState,
-      coords,
       tracking,
       isLoading,
       error,
@@ -287,25 +286,16 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
       stopTracking,
       restartTracking
     }),
-    [
-      settings,
-      coords,
-      tracking,
-      isLoading,
-      error,
-      activeProfileName,
-      setSettings,
-      startTracking,
-      stopTracking,
-      restartTracking
-    ]
+    [settings, tracking, isLoading, error, activeProfileName, setSettings, startTracking, stopTracking, restartTracking]
   )
 
   return (
     <TrackingContext.Provider value={value}>
-      <LocationDisclosureModal />
-      <AppModal />
-      {children}
+      <CoordsContext.Provider value={coords}>
+        <LocationDisclosureModal />
+        <AppModal />
+        {children}
+      </CoordsContext.Provider>
     </TrackingContext.Provider>
   )
 }
@@ -321,4 +311,8 @@ export function useTracking(): TrackingContextType {
     throw new Error("useTracking must be used within TrackingProvider")
   }
   return context
+}
+
+export function useCoords(): LocationCoords | null {
+  return useContext(CoordsContext)
 }

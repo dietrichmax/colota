@@ -31,9 +31,9 @@ jest.mock("../../../index", () => {
 jest.mock("../PresetOption", () => ({
   PresetOption: ({ preset, isSelected, onSelect }: any) => {
     const R = require("react")
-    const { TouchableOpacity, Text } = require("react-native")
+    const { Pressable, Text } = require("react-native")
     return R.createElement(
-      TouchableOpacity,
+      Pressable,
       { testID: `preset-${preset}`, onPress: () => onSelect(preset) },
       R.createElement(Text, null, preset, isSelected ? " (selected)" : "")
     )

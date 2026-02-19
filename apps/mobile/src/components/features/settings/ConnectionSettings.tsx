@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback } from "react"
-import { Text, StyleSheet, TextInput, Switch, View, TouchableOpacity } from "react-native"
+import { Text, StyleSheet, TextInput, Switch, View, Pressable } from "react-native"
 import { CheckCircle, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
@@ -236,10 +236,9 @@ export function ConnectionSettings({
 
             <Divider />
 
-            <TouchableOpacity
-              style={styles.linkRow}
+            <Pressable
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
               onPress={() => navigation.navigate("Auth Settings")}
-              activeOpacity={0.6}
             >
               <View style={styles.linkContent}>
                 <Text style={[styles.linkLabel, { color: colors.text }]}>Authentication & Headers</Text>
@@ -248,7 +247,7 @@ export function ConnectionSettings({
                 </Text>
               </View>
               <ChevronRight size={20} color={colors.textLight} />
-            </TouchableOpacity>
+            </Pressable>
           </>
         )}
       </Card>

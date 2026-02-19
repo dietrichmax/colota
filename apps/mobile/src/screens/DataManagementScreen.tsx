@@ -9,7 +9,7 @@ import {
   StyleSheet,
   View,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -370,7 +370,11 @@ const ActionRow = ({
   onPress: () => void
   disabled: boolean
 }) => (
-  <TouchableOpacity style={styles.actionRow} onPress={onPress} disabled={disabled} activeOpacity={0.7}>
+  <Pressable
+    style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.7 }]}
+    onPress={onPress}
+    disabled={disabled}
+  >
     <View style={styles.actionInfo}>
       <Text style={[styles.actionLabel, { color }]}>{label}</Text>
       <Text style={[styles.actionHint, { color: textColor }]}>{hint}</Text>
@@ -378,7 +382,7 @@ const ActionRow = ({
     <View style={[styles.actionBadge, { backgroundColor: color + "20", borderColor: color }]}>
       <Text style={[styles.actionBadgeText, { color }]}>{value}</Text>
     </View>
-  </TouchableOpacity>
+  </Pressable>
 )
 
 const styles = StyleSheet.create({

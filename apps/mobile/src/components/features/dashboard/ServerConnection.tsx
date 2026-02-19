@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useRef } from "react"
-import { StyleSheet, View, Text, TouchableOpacity } from "react-native"
+import { StyleSheet, View, Text, Pressable } from "react-native"
 import { ChevronRight } from "lucide-react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
@@ -118,10 +118,13 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
   }, [serverStatus, colors, isOffline])
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
+    <Pressable
       onPress={() => navigation.navigate("Settings")}
-      style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
+      style={({ pressed }) => [
+        styles.container,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        pressed && { opacity: 0.7 }
+      ]}
     >
       <View style={[styles.dot, { backgroundColor: config.color }]} />
       <Text style={[styles.host, { color: colors.text }]} numberOfLines={1}>
@@ -129,7 +132,7 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
       </Text>
       <Text style={[styles.status, { color: config.color }]}>{config.label}</Text>
       <ChevronRight size={16} color={colors.textLight} />
-    </TouchableOpacity>
+    </Pressable>
   )
 }
 

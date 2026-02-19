@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
-import { Modal, View, Text, TouchableOpacity, StyleSheet, BackHandler } from "react-native"
+import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fonts } from "../../styles/typography"
 import { fontSizes } from "@colota/shared"
@@ -79,21 +79,29 @@ export function LocationDisclosureModal() {
 
           {/* Buttons */}
           <View style={styles.buttons}>
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton, { borderColor: colors.border }]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                styles.secondaryButton,
+                { borderColor: colors.border },
+                pressed && { opacity: 0.7 }
+              ]}
               onPress={handleNotNow}
-              activeOpacity={0.7}
             >
               <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not Now</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={[styles.button, styles.primaryButton, { backgroundColor: colors.primary }]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                styles.primaryButton,
+                { backgroundColor: colors.primary },
+                pressed && { opacity: 0.7 }
+              ]}
               onPress={handleAgree}
-              activeOpacity={0.7}
             >
               <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>Agree</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </View>

@@ -4,12 +4,12 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Switch, DeviceEventEmitter } from "react-native"
+import { View, Text, StyleSheet, TextInput, Pressable, FlatList, Switch, DeviceEventEmitter } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
-import { useTracking } from "../contexts/TrackingProvider"
+import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { fonts } from "../styles/typography"
 import { X, WifiOff } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
@@ -30,7 +30,8 @@ import { UserLocationOverlay } from "../components/features/map/UserLocationOver
 import { logger } from "../utils/logger"
 
 export function GeofenceScreen({}: ScreenProps) {
-  const { coords, tracking } = useTracking()
+  const { tracking } = useTracking()
+  const coords = useCoords()
   const { colors } = useTheme()
 
   const [geofences, setGeofences] = useState<Geofence[]>([])
@@ -249,10 +250,13 @@ export function GeofenceScreen({}: ScreenProps) {
     ({ item }: { item: Geofence }) => (
       <Card style={styles.card}>
         <View style={styles.row}>
-          <TouchableOpacity style={styles.info} onPress={() => handleZoomToGeofence(item)} activeOpacity={0.7}>
+          <Pressable
+            style={({ pressed }) => [styles.info, pressed && { opacity: 0.7 }]}
+            onPress={() => handleZoomToGeofence(item)}
+          >
             <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
             <Text style={[styles.radius, { color: colors.textSecondary }]}>{item.radius}m radius</Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <View style={styles.actions}>
             <View style={styles.pauseSwitch}>
@@ -268,13 +272,16 @@ export function GeofenceScreen({}: ScreenProps) {
               />
             </View>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => handleDelete(item)}
-              style={[styles.deleteBtn, { backgroundColor: colors.error + "15" }]}
-              activeOpacity={0.7}
+              style={({ pressed }) => [
+                styles.deleteBtn,
+                { backgroundColor: colors.error + "15" },
+                pressed && { opacity: 0.7 }
+              ]}
             >
               <X size={16} color={colors.error} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </Card>
@@ -368,16 +375,19 @@ export function GeofenceScreen({}: ScreenProps) {
                   </View>
                 </View>
 
-                <TouchableOpacity
-                  style={[styles.placeBtn, { backgroundColor: colors.primary }]}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.placeBtn,
+                    { backgroundColor: colors.primary },
+                    pressed && { opacity: 0.7 }
+                  ]}
                   onPress={startPlacingGeofence}
                   disabled={placingGeofence}
-                  activeOpacity={0.7}
                 >
                   <Text style={[styles.placeBtnText, { color: colors.textOnPrimary }]}>
                     {placingGeofence ? "Tap Map to Place..." : "Place Geofence"}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </Card>
             </View>
 

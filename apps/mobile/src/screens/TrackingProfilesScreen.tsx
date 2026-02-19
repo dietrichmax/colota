@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react"
-import { View, Text, StyleSheet, FlatList, Switch, TouchableOpacity } from "react-native"
+import { View, Text, StyleSheet, FlatList, Switch, Pressable } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
@@ -100,10 +100,9 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
 
       return (
         <Card style={[styles.card, isActive && styles.activeCard, isActive && { borderColor: colors.primary }]}>
-          <TouchableOpacity
-            style={styles.row}
+          <Pressable
+            style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
             onPress={() => navigation.navigate("Profile Editor", { profileId: item.id })}
-            activeOpacity={0.7}
           >
             <View style={[styles.iconWrap, { backgroundColor: colors.primary + "15" }]}>
               <ConditionIcon size={18} color={colors.primary} />
@@ -134,16 +133,19 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
                 thumbColor={item.enabled ? colors.primary : colors.border}
               />
 
-              <TouchableOpacity
+              <Pressable
                 testID={`delete-profile-${item.id}`}
                 onPress={() => handleDelete(item)}
-                style={[styles.deleteBtn, { backgroundColor: colors.error + "15" }]}
-                activeOpacity={0.7}
+                style={({ pressed }) => [
+                  styles.deleteBtn,
+                  { backgroundColor: colors.error + "15" },
+                  pressed && { opacity: 0.7 }
+                ]}
               >
                 <X size={16} color={colors.error} />
-              </TouchableOpacity>
+              </Pressable>
             </View>
-          </TouchableOpacity>
+          </Pressable>
         </Card>
       )
     },
@@ -166,14 +168,17 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
               </Text>
             </View>
 
-            <TouchableOpacity
-              style={[styles.createBtn, { backgroundColor: colors.primary }]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.createBtn,
+                { backgroundColor: colors.primary },
+                pressed && { opacity: 0.7 }
+              ]}
               onPress={() => navigation.navigate("Profile Editor", {})}
-              activeOpacity={0.7}
             >
               <Plus size={20} color={colors.textOnPrimary} />
               <Text style={[styles.createBtnText, { color: colors.textOnPrimary }]}>Create Profile</Text>
-            </TouchableOpacity>
+            </Pressable>
 
             {profiles.length > 0 && <SectionTitle>Profiles ({profiles.length})</SectionTitle>}
           </>

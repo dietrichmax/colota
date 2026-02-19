@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react"
-import { Text, StyleSheet, TextInput, View, ScrollView, TouchableOpacity } from "react-native"
+import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
 import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
@@ -291,13 +291,16 @@ export function AuthSettingsScreen({}: ScreenProps) {
                           autoCorrect={false}
                         />
                       </View>
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => removeHeader(header.id)}
-                        style={[styles.removeButton, { backgroundColor: colors.error + "15" }]}
-                        activeOpacity={0.7}
+                        style={({ pressed }) => [
+                          styles.removeButton,
+                          { backgroundColor: colors.error + "15" },
+                          pressed && { opacity: 0.7 }
+                        ]}
                       >
                         <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </View>
                 )
@@ -306,13 +309,12 @@ export function AuthSettingsScreen({}: ScreenProps) {
 
             {localHeaders.length > 0 && <Divider />}
 
-            <TouchableOpacity
-              style={[styles.addButton, { borderColor: colors.primary }]}
+            <Pressable
+              style={({ pressed }) => [styles.addButton, { borderColor: colors.primary }, pressed && { opacity: 0.7 }]}
               onPress={addHeader}
-              activeOpacity={0.7}
             >
               <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Header</Text>
-            </TouchableOpacity>
+            </Pressable>
 
             <Text style={[styles.hint, { color: colors.textSecondary }]}>
               e.g., CF-Access-Client-Id for Cloudflare Access

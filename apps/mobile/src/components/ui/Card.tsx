@@ -4,7 +4,7 @@
  */
 
 import React from "react"
-import { View, TouchableOpacity, StyleSheet, ViewStyle, StyleProp } from "react-native"
+import { View, Pressable, StyleSheet, ViewStyle, StyleProp } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
 
 type CardVariant = "default" | "elevated" | "outlined" | "interactive"
@@ -66,9 +66,9 @@ export function Card({ children, style, danger = false, variant = "default", onP
 
   if (variant === "interactive" && onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
         {cardView}
-      </TouchableOpacity>
+      </Pressable>
     )
   }
 

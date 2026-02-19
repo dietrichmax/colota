@@ -4,7 +4,7 @@
  */
 
 import React from "react"
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native"
+import { View, Text, Pressable, StyleSheet } from "react-native"
 import { ChevronLeft, ChevronRight } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
@@ -51,31 +51,38 @@ export function DatePicker({ date, onDateChange, locationCount, distance, colors
   return (
     <View style={[styles.container, { borderBottomColor: colors.border }]}>
       <View style={styles.row}>
-        <TouchableOpacity onPress={goBack} style={styles.navBtn} activeOpacity={0.6}>
+        <Pressable onPress={goBack} style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.6 }]}>
           <ChevronLeft size={22} color={colors.primary} />
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity onPress={goToToday} style={styles.dateContainer} activeOpacity={0.7}>
+        <Pressable onPress={goToToday} style={({ pressed }) => [styles.dateContainer, pressed && { opacity: 0.7 }]}>
           <Text style={[styles.dateText, { color: colors.text }]}>{formatted}</Text>
           <Text style={[styles.countText, { color: colors.textSecondary }]}>
             {locationCount} {locationCount === 1 ? "location" : "locations"}
             {distance ? ` · ${distance}` : ""}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity onPress={goForward} style={styles.navBtn} activeOpacity={0.6} disabled={isToday}>
+        <Pressable
+          onPress={goForward}
+          style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.6 }]}
+          disabled={isToday}
+        >
           <ChevronRight size={22} color={isToday ? colors.textDisabled : colors.primary} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {!isToday && (
-        <TouchableOpacity
+        <Pressable
           onPress={goToToday}
-          style={[styles.todayBtn, { backgroundColor: colors.primary + "15" }]}
-          activeOpacity={0.7}
+          style={({ pressed }) => [
+            styles.todayBtn,
+            { backgroundColor: colors.primary + "15" },
+            pressed && { opacity: 0.7 }
+          ]}
         >
           <Text style={[styles.todayText, { color: colors.primary }]}>Today</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
     </View>
   )

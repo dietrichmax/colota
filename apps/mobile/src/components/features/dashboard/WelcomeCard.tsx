@@ -4,7 +4,7 @@
  */
 
 import React from "react"
-import { Text, StyleSheet, View, TouchableOpacity } from "react-native"
+import { Text, StyleSheet, View, Pressable } from "react-native"
 import { Check, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
@@ -57,9 +57,9 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
 
   if (onPress && !completed) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.6}>
+      <Pressable onPress={onPress} style={({ pressed }) => pressed && { opacity: 0.6 }}>
         {content}
-      </TouchableOpacity>
+      </Pressable>
     )
   }
 
@@ -94,21 +94,20 @@ export function WelcomeCard({
         </View>
 
         <View style={styles.linkRow}>
-          <TouchableOpacity onPress={onNavigateToApiConfig} activeOpacity={0.6}>
+          <Pressable onPress={onNavigateToApiConfig} style={({ pressed }) => pressed && { opacity: 0.6 }}>
             <Text style={[styles.link, { color: colors.primaryDark }]}>API field mapping</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onNavigateToSettings} activeOpacity={0.6}>
+          </Pressable>
+          <Pressable onPress={onNavigateToSettings} style={({ pressed }) => pressed && { opacity: 0.6 }}>
             <Text style={[styles.link, { color: colors.primaryDark }]}>Tracking presets</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
-        <TouchableOpacity
-          style={[styles.dismissButton, { borderColor: colors.border }]}
+        <Pressable
+          style={({ pressed }) => [styles.dismissButton, { borderColor: colors.border }, pressed && { opacity: 0.6 }]}
           onPress={onDismiss}
-          activeOpacity={0.6}
         >
           <Text style={[styles.dismissText, { color: colors.textSecondary }]}>Got it</Text>
-        </TouchableOpacity>
+        </Pressable>
       </Card>
     </View>
   )

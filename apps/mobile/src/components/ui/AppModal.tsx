@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
-import { Modal, View, Text, TouchableOpacity, StyleSheet, BackHandler } from "react-native"
+import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
 import { Info, AlertCircle, AlertTriangle, CheckCircle } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fonts } from "../../styles/typography"
@@ -75,14 +75,13 @@ export function AppModal() {
             {current.buttons.map((btn, i) => {
               const btnStyles = getButtonStyles(btn.style, colors)
               return (
-                <TouchableOpacity
+                <Pressable
                   key={i}
-                  style={[styles.button, btnStyles.container]}
+                  style={({ pressed }) => [styles.button, btnStyles.container, pressed && { opacity: 0.7 }]}
                   onPress={() => handlePress(i)}
-                  activeOpacity={0.7}
                 >
                   <Text style={[styles.buttonText, btnStyles.text]}>{btn.text}</Text>
-                </TouchableOpacity>
+                </Pressable>
               )
             })}
           </View>

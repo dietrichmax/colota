@@ -59,7 +59,7 @@ jest.mock("../../services/NativeLocationService", () => ({
 // Mock barrel exports to avoid native module imports
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text, TouchableOpacity } = require("react-native")
+  const { View, Text, Pressable } = require("react-native")
   return {
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     FloatingSaveIndicator: () => null,
@@ -71,7 +71,7 @@ jest.mock("../../components", () => {
         null,
         options.map((opt: any) =>
           R.createElement(
-            TouchableOpacity,
+            Pressable,
             { key: opt.value, onPress: () => onSelect(opt.value) },
             R.createElement(Text, null, opt.label)
           )
