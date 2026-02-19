@@ -9,7 +9,7 @@ permissions:
 jobs:
   screenshots:
     name: Capture App Screenshots
-    runs-on: macos-latest
+    runs-on: macos-13
 
     steps:
       - name: Checkout code
@@ -63,11 +63,10 @@ jobs:
           profile: pixel_6
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          emulator-boot-timeout: 600
           disable-animations: true
           script: |
-            adb install apps/mobile/android/app/build/outputs/apk/gms/debug/app-gms-arm64-v8a-debug.apk || \
-            adb install apps/mobile/android/app/build/outputs/apk/gms/debug/app-gms-x86_64-debug.apk || \
-            adb install $(find apps/mobile/android/app/build/outputs/apk/gms/debug -name "*.apk" | head -1)
+            adb install $(find apps/mobile/android/app/build/outputs/apk/gms/debug -name "*x86_64*debug.apk" -o -name "*universal*debug.apk" | head -1)
 
             maestro test --output screenshots/mobile/original/ .maestro/screenshots/
 
