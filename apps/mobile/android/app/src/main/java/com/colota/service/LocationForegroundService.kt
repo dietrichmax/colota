@@ -361,7 +361,7 @@ class LocationForegroundService : Service() {
 
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
 
-        if (battery in 1..4 && batteryStatus == 1) {
+        if (deviceInfoHelper.isBatteryCritical()) {
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "Battery critical ($battery%) during tracking - stopping")
             }
