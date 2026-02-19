@@ -174,6 +174,7 @@ dependencies {
     gmsImplementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'androidx.security:security-crypto:1.1.0'
+    implementation 'androidx.car.app:app:1.7.0'
     
       if (isHermesEnabled) {
         implementation("com.facebook.react:hermes-android")
