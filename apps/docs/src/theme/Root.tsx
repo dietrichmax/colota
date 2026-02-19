@@ -22,6 +22,11 @@ function colorVars(colors: ThemeColors) {
     --ifm-font-color-secondary: ${colors.textSecondary};
     --ifm-link-color: ${colors.link};
     --ifm-font-family-base: '${fontFamily}', system-ui, -apple-system, sans-serif;
+    --colota-card-bg: ${colors.card};
+    --colota-card-elevated-bg: ${colors.cardElevated};
+    --colota-border: ${colors.border};
+    --colota-card-radius: 12px;
+    --colota-card-padding: 16px;
   `
 }
 

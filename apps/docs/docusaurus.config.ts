@@ -47,6 +47,10 @@ const config: Config = {
     },
     navbar: {
       title: "Colota",
+      logo: {
+        alt: "Colota",
+        src: "img/app-icon.png"
+      },
       items: [
         {
           type: "docSidebar",
@@ -75,7 +79,7 @@ const config: Config = {
       style: "dark",
       links: [
         {
-          title: "Documentation",
+          title: "Docs",
           items: [
             {
               label: "Getting Started",
@@ -88,36 +92,44 @@ const config: Config = {
             {
               label: "Integrations",
               to: "/docs/integrations/api-templates"
-            }
-          ]
-        },
-        {
-          title: "Community",
-          items: [
-            {
-              label: "GitHub Issues",
-              href: "https://github.com/dietrichmax/colota/issues"
             },
             {
-              label: "GitHub Discussions",
-              href: "https://github.com/dietrichmax/colota/discussions"
+              label: "Guides",
+              to: "/docs/guides/geofencing"
             }
           ]
         },
         {
-          title: "More",
+          title: "Project",
           items: [
             {
               label: "GitHub",
               href: "https://github.com/dietrichmax/colota"
             },
             {
+              label: "Issues",
+              href: "https://github.com/dietrichmax/colota/issues"
+            },
+            {
+              label: "Discussions",
+              href: "https://github.com/dietrichmax/colota/discussions"
+            }
+          ]
+        },
+        {
+          title: "Download",
+          items: [
+            {
               label: "Google Play",
               href: "https://play.google.com/store/apps/details?id=com.Colota&hl=en-US"
             },
             {
-              label: "Privacy Policy",
-              to: "/privacy-policy"
+              label: "F-Droid",
+              href: "https://f-droid.org/packages/com.Colota/"
+            },
+            {
+              label: "Releases",
+              href: "https://github.com/dietrichmax/colota/releases"
             }
           ]
         },
@@ -131,6 +143,10 @@ const config: Config = {
             {
               label: "Ko-fi",
               href: "https://ko-fi.com/maxdietrich"
+            },
+            {
+              label: "Privacy Policy",
+              to: "/privacy-policy"
             }
           ]
         }

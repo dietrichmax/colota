@@ -1,23 +1,185 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
-
 .heroBanner {
-  padding: 4rem 0;
-  text-align: center;
+  padding: 5rem 0;
   position: relative;
   overflow: hidden;
 }
 
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 2rem;
-  }
+.heroInner {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+}
+
+.heroText {
+  flex: 1;
+}
+
+.heroSubtitle {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.heroScreenshot {
+  flex: 0 0 280px;
+}
+
+.heroScreenshot img {
+  width: 100%;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
 .buttons {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.outlineButton {
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: transparent;
+}
+
+.outlineButton:hover {
+  color: white;
+  border-color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Features */
+
+.features {
+  padding: 4rem 0 2rem;
+}
+
+.featureCard {
+  padding: var(--colota-card-padding);
+  border-radius: var(--colota-card-radius);
+  background: var(--colota-card-bg);
+  border: 1px solid var(--colota-border);
+  height: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.featureCard:hover {
+  border-color: var(--ifm-color-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.featureCard h3 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.featureCard p {
+  margin-bottom: 0;
+  font-size: 0.95rem;
+  color: var(--ifm-font-color-secondary);
+}
+
+/* Screenshots */
+
+.screenshots {
+  padding: 2rem 0 4rem;
+}
+
+.sectionHeading {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.screenshotStrip {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  padding: 0.5rem 0 1.5rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screenshotStrip::-webkit-scrollbar {
+  height: 6px;
+}
+
+.screenshotStrip::-webkit-scrollbar-track {
+  background: var(--ifm-color-emphasis-100);
+  border-radius: 3px;
+}
+
+.screenshotStrip::-webkit-scrollbar-thumb {
+  background: var(--ifm-color-emphasis-300);
+  border-radius: 3px;
+}
+
+.screenshotItem {
+  flex: 0 0 180px;
+  margin: 0;
+  text-align: center;
+  scroll-snap-align: start;
+}
+
+.screenshotItem img {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s;
+}
+
+.screenshotItem img:hover {
+  transform: scale(1.03);
+}
+
+.screenshotItem figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--ifm-font-color-secondary);
+}
+
+/* Lightbox */
+
+.lightbox {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.lightbox::backdrop {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.lightbox img {
+  max-height: 85vh;
+  border-radius: 16px;
+}
+
+.screenshotItem {
+  cursor: pointer;
+}
+
+/* Responsive */
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 3rem 1.5rem;
+  }
+
+  .heroInner {
+    flex-direction: column;
+    text-align: center;
+    gap: 2rem;
+  }
+
+  .heroScreenshot {
+    flex: 0 0 auto;
+    max-width: 220px;
+  }
+
+  .buttons {
+    justify-content: center;
+  }
 }
