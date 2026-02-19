@@ -481,14 +481,6 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
-    fun getSentCount(): Int = getTotalCount() - getQueuedCount()
-
-    fun getTotalCount(): Int {
-        return readableDatabase.rawQuery("SELECT COUNT(*) FROM $TABLE_LOCATIONS", null).use {
-            if (it.moveToFirst()) it.getInt(0) else 0
-        }
-    }
-
     fun getDatabaseSizeMB(): Double {
         val dbPath = readableDatabase.path ?: return 0.0
         return java.io.File(dbPath).length() / (1024.0 * 1024.0)
