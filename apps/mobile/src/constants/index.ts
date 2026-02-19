@@ -23,7 +23,6 @@ export const DEFAULT_MAP_ZOOM = 17
 export const WORLD_MAP_ZOOM = 2
 export const MAX_MAP_ZOOM = 18
 export const GEOFENCE_ZOOM_PADDING = [80, 80, 80, 80] as const
-export const MARKER_ANIMATION_DURATION_MS = 500
 export const MAP_ANIMATION_DURATION_MS = 400
 export const MIN_STATS_INTERVAL_MS = 2000
 

@@ -50,7 +50,7 @@ export function formatSpeed(metersPerSecond: number): string {
   return `${kmh.toFixed(1)} km/h`
 }
 
-/** Return the speed unit info for the current locale (used by map WebView). */
+/** Return the speed unit info for the current locale (used by TrackMap). */
 export function getSpeedUnit(): { factor: number; unit: string } {
   return usesMiles() ? { factor: 2.23694, unit: "mph" } : { factor: 3.6, unit: "km/h" }
 }

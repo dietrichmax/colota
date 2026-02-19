@@ -7,6 +7,7 @@ import { NavigationContainer } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { StatusBar, Platform } from "react-native"
+import MapLibreGL from "@maplibre/maplibre-react-native"
 import { ThemeProvider, useTheme } from "./src/hooks/useTheme"
 import { fonts } from "./src/styles/typography"
 import { TrackingProvider } from "./src/contexts/TrackingProvider"
@@ -25,6 +26,8 @@ import {
   ProfileEditorScreen,
   SetupImportScreen
 } from "./src/screens/"
+
+MapLibreGL.setAccessToken(null)
 
 const Stack = createNativeStackNavigator()
 

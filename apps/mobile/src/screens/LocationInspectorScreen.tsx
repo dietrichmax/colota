@@ -117,8 +117,7 @@ const LocationItem = memo(({ item, colors, onTap }: LocationItemProps) => {
 LocationItem.displayName = "LocationItem"
 
 export function LocationHistoryScreen() {
-  const { colors, mode } = useTheme()
-  const isDark = mode === "dark"
+  const { colors } = useTheme()
   const [activeTab, setActiveTab] = useState<TabType>("map")
   const [data, setData] = useState<LocationData[]>([])
   const [limit, setLimit] = useState(50)
@@ -246,7 +245,7 @@ export function LocationHistoryScreen() {
             distance={dailyDistance}
             colors={colors}
           />
-          <TrackMap locations={trackLocations} selectedPoint={selectedPoint} colors={colors} isDark={isDark} />
+          <TrackMap locations={trackLocations} selectedPoint={selectedPoint} colors={colors} />
         </View>
       ) : (
         <>
