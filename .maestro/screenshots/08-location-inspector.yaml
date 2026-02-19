@@ -1,7 +1,0 @@
-appId: com.colota
----
-- launchApp
-- waitForAnimationToEnd
-- tapOn: "History"
-- waitForAnimationToEnd
-- takeScreenshot: LocationInspector

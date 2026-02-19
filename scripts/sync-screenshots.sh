@@ -31,11 +31,9 @@ STORE_ORDER=(
   "Dashboard.png"
   "Settings.png"
   "Authentication.png"
+  "TrackingProfiles.png"
   "DataManagement.png"
   "ApiFieldMapping.png"
-  "ProfileEditor.png"
-  "Geofences.png"
-  "LocationInspector.png"
   "ExportData.png"
   "DarkMode.png"
 )
