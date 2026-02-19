@@ -59,7 +59,8 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
     fieldMap: (() => {
       try {
         return allRaw.fieldMap ? JSON.parse(allRaw.fieldMap) : DEFAULT_SETTINGS.fieldMap
-      } catch {
+      } catch (err) {
+        logger.warn("[TrackingContext] Corrupted fieldMap, using defaults:", err)
         return DEFAULT_SETTINGS.fieldMap
       }
     })(),
@@ -67,7 +68,8 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
     customFields: (() => {
       try {
         return allRaw.customFields ? JSON.parse(allRaw.customFields) : DEFAULT_SETTINGS.customFields
-      } catch {
+      } catch (err) {
+        logger.warn("[TrackingContext] Corrupted customFields, using defaults:", err)
         return DEFAULT_SETTINGS.customFields
       }
     })(),

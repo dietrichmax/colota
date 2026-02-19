@@ -16,19 +16,25 @@ export function findDuplicates(values: string[]): Set<string> {
   return dupes
 }
 
+function isPrivateIP(host: string): boolean {
+  const parts = host.split(".")
+  if (parts.length !== 4) return false
+  const octets = parts.map(Number)
+  if (octets.some((o) => isNaN(o) || o < 0 || o > 255)) return false
+  const [a, b] = octets
+  return (
+    (a === 127 && octets[1] === 0 && octets[2] === 0 && octets[3] === 1) ||
+    a === 10 ||
+    (a === 192 && b === 168) ||
+    (a === 172 && b >= 16 && b <= 31)
+  )
+}
+
 export function isPrivateHost(url: string) {
   try {
-    // Strip protocol
     const stripped = url.replace(/^https?:\/\//, "").split(/[/?#]/)[0]
-    // Extract host (before any port)
     const host = stripped.split(":")[0]
-
-    // Validate host: must be valid IP or hostname
-    const ipRegex =
-      /^(127\.0\.0\.1|10\.(\d{1,3}\.){2}\d{1,3}|192\.168\.(\d{1,3}\.)\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.(\d{1,3}\.)\d{1,3})$/
-    const hostnameRegex = /^localhost$/
-
-    return ipRegex.test(host) || hostnameRegex.test(host)
+    return isPrivateIP(host) || host === "localhost"
   } catch {
     return false
   }
