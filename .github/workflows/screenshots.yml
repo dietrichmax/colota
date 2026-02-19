@@ -70,7 +70,7 @@ jobs:
 
             maestro test --output screenshots/mobile/original/ .maestro/screenshots/
 
-            bash scripts/sync-screenshots.sh
+            python3 scripts/sync-screenshots.py
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
