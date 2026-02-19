@@ -1,32 +1,38 @@
-import type { ReactNode } from "react"
+import { type ReactNode, useRef } from "react"
 import clsx from "clsx"
 import Link from "@docusaurus/Link"
-import useDocusaurusContext from "@docusaurus/useDocusaurusContext"
 import Layout from "@theme/Layout"
 import Heading from "@theme/Heading"
 
 import styles from "./index.module.css"
 
 function HomepageHeader() {
-  const { siteConfig } = useDocusaurusContext()
   return (
     <header className={clsx("hero hero--primary", styles.heroBanner)}>
-      <div className="container">
-        <Heading as="h1" className="hero__title">
-          {siteConfig.title}
-        </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
-        <div className={styles.buttons}>
-          <Link className="button button--secondary button--lg" to="/docs/introduction">
-            Get Started
-          </Link>
-          <Link
-            className="button button--outline button--lg"
-            style={{ color: "white", borderColor: "white", marginLeft: "1rem" }}
-            href="https://play.google.com/store/apps/details?id=com.Colota&hl=en-US"
-          >
-            Google Play
-          </Link>
+      <div className={clsx("container", styles.heroInner)}>
+        <div className={styles.heroText}>
+          <Heading as="h1" className="hero__title">
+            Colota
+          </Heading>
+          <p className={styles.heroSubtitle}>
+            Self-hosted GPS tracking for Android.
+            <br />
+            Your data, your server, your rules.
+          </p>
+          <div className={styles.buttons}>
+            <Link className="button button--secondary button--lg" to="/docs/introduction">
+              Get Started
+            </Link>
+            <Link
+              className={clsx("button button--lg", styles.outlineButton)}
+              href="https://play.google.com/store/apps/details?id=com.Colota&hl=en-US"
+            >
+              Google Play
+            </Link>
+          </div>
+        </div>
+        <div className={styles.heroScreenshot}>
+          <img src="/img/screenshots/Dashboard.png" alt="Colota Dashboard" />
         </div>
       </div>
     </header>
@@ -35,44 +41,33 @@ function HomepageHeader() {
 
 const features = [
   {
-    title: "Self-Hosted",
+    title: "Self-Hosted & Private",
     description:
-      "Send location data to your own server over HTTPS. No cloud services, no third-party calls. Works with Dawarich, OwnTracks, Reitti, or any custom backend."
-  },
-  {
-    title: "Privacy First",
-    description:
-      "No analytics, no telemetry, no advertising IDs. All data stays on your device or your server. Open source under AGPL-3.0."
+      "No cloud, no analytics, no telemetry. Send data to Dawarich, OwnTracks, Home Assistant, Traccar, or any HTTP backend."
   },
   {
     title: "Works Offline",
-    description: "Works without a server. Store location history locally and export as CSV, GeoJSON, GPX, or KML."
+    description:
+      "Locations queue locally and sync when connectivity returns. Export anytime as CSV, GeoJSON, GPX, or KML."
   },
   {
-    title: "Background Tracking",
-    description:
-      "Foreground service, auto-start on boot, retry with exponential backoff, and battery-critical shutdown."
+    title: "Tracking Profiles",
+    description: "Multiple GPS configs that switch automatically based on charging state, Android Auto, or speed."
   },
   {
-    title: "Geofencing",
-    description:
-      "Create zones where tracking pauses automatically. Saves battery at home, work, or other regular stops."
-  },
-  {
-    title: "Sync Modes",
-    description:
-      "Instant, batch, or offline sync. Configurable intervals, exponential backoff, and auto-sync on reconnect."
+    title: "Maps & Geofencing",
+    description: "Native maps with speed-colored tracks. Define pause zones to stop tracking at home or work."
   }
 ]
 
 function HomepageFeatures(): ReactNode {
   return (
-    <section style={{ padding: "2rem 0" }}>
+    <section className={styles.features}>
       <div className="container">
         <div className="row">
           {features.map(({ title, description }, idx) => (
-            <div key={idx} className="col col--4" style={{ marginBottom: "1.5rem" }}>
-              <div className="feature-card">
+            <div key={idx} className="col col--3" style={{ marginBottom: "1.5rem" }}>
+              <div className={styles.featureCard}>
                 <Heading as="h3">{title}</Heading>
                 <p>{description}</p>
               </div>
@@ -85,32 +80,46 @@ function HomepageFeatures(): ReactNode {
 }
 
 function HomepageScreenshots(): ReactNode {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
+
   const screenshots = [
     { src: "/img/screenshots/Dashboard.png", label: "Dashboard" },
     { src: "/img/screenshots/Settings.png", label: "Settings" },
-    { src: "/img/screenshots/Geofences.png", label: "Geofences" },
+    { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking Profiles" },
     { src: "/img/screenshots/DataManagement.png", label: "Data Management" },
-    { src: "/img/screenshots/ExportData.png", label: "Export Data" },
     { src: "/img/screenshots/ApiFieldMapping.png", label: "API Field Mapping" },
+    { src: "/img/screenshots/ExportData.png", label: "Export" },
     { src: "/img/screenshots/Authentication.png", label: "Authentication" },
     { src: "/img/screenshots/DarkMode.png", label: "Dark Mode" }
   ]
 
+  function openLightbox(src: string, alt: string) {
+    if (imgRef.current) {
+      imgRef.current.src = src
+      imgRef.current.alt = alt
+    }
+    dialogRef.current?.showModal()
+  }
+
   return (
-    <section style={{ padding: "2rem 0" }}>
+    <section className={styles.screenshots}>
       <div className="container">
-        <Heading as="h2" style={{ textAlign: "center", marginBottom: "1rem" }}>
+        <Heading as="h2" className={styles.sectionHeading}>
           Screenshots
         </Heading>
-        <div className="screenshot-gallery">
+        <div className={styles.screenshotStrip}>
           {screenshots.map(({ src, label }) => (
-            <figure key={label}>
+            <figure key={label} className={styles.screenshotItem} onClick={() => openLightbox(src, label)}>
               <img src={src} alt={label} loading="lazy" />
               <figcaption>{label}</figcaption>
             </figure>
           ))}
         </div>
       </div>
+      <dialog ref={dialogRef} className={styles.lightbox} onClick={() => dialogRef.current?.close()}>
+        <img ref={imgRef} src="" alt="" />
+      </dialog>
     </section>
   )
 }
