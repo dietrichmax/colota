@@ -18,9 +18,9 @@ const OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/bright"
 
 /** Cached dark style object so we only fetch + transform once */
 let cachedDarkStyle: object | null = null
-let darkStyleFetchPromise: Promise<object> | null = null
+let darkStyleFetchPromise: Promise<object | null> | null = null
 
-async function getDarkStyle(): Promise<object> {
+async function getDarkStyle(): Promise<object | null> {
   if (cachedDarkStyle) return cachedDarkStyle
   if (darkStyleFetchPromise) return darkStyleFetchPromise
   darkStyleFetchPromise = fetch(OPENFREEMAP_STYLE)
@@ -32,7 +32,7 @@ async function getDarkStyle(): Promise<object> {
     })
     .catch(() => {
       darkStyleFetchPromise = null
-      return { version: 8, sources: {}, layers: [] }
+      return null
     })
   return darkStyleFetchPromise
 }
@@ -66,7 +66,9 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
 
   useEffect(() => {
     if (isDark && !darkStyle) {
-      getDarkStyle().then(setDarkStyle)
+      getDarkStyle().then((style) => {
+        if (style) setDarkStyle(style)
+      })
     }
   }, [isDark, darkStyle])
 
