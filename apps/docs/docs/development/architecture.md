@@ -140,7 +140,7 @@ Database access layer for tracking profiles and trip events. Maintains a `TimedC
 
 ### ConditionMonitor
 
-Registers and manages `BroadcastReceiver` instances for charging state and Android Auto / car mode detection. Forwards state changes to `ProfileManager` for condition evaluation.
+Monitors charging state via `BroadcastReceiver` and Android Auto connection via the `CarConnection` API. Forwards state changes to `ProfileManager` for condition evaluation.
 
 ### ProfileConstants
 
