@@ -4,12 +4,12 @@ sidebar_position: 1
 
 # Geofencing
 
-Create zones where tracking pauses automatically. These "pause zones" save battery and stop recording at places you visit often.
+Create zones where location recording stops automatically. These "pause zones" stop saving and syncing locations at places you visit often. GPS stays active to detect when you leave the zone.
 
 ## Use Cases
 
 - **Home** - Don't track when at home
-- **Work** - Pause tracking during work hours
+- **Work** - Stop recording during work hours
 - **Frequent locations** - Save battery in places you visit often
 
 ## Setup
@@ -29,7 +29,7 @@ Create zones where tracking pauses automatically. These "pause zones" save batte
 ## How It Works
 
 - Zone detection uses the Haversine formula (1-2ms per check)
-- When entering a pause zone, GPS stops updating
+- When entering a pause zone, location recording and syncing stops
 - The notification shows "Paused: [Zone Name]"
 - When exiting the zone, tracking automatically resumes
 - Zone checks happen every location update with minimal overhead

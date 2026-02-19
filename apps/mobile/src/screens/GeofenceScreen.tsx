@@ -389,7 +389,7 @@ export function GeofenceScreen({}: ScreenProps) {
             <View style={styles.empty}>
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No geofences yet</Text>
               <Text style={[styles.emptyHint, { color: colors.textLight }]}>
-                Create a geofence to pause tracking in specific areas
+                Create a geofence to stop recording locations in specific areas
               </Text>
             </View>
           ) : null

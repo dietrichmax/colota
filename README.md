@@ -14,7 +14,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 - **Privacy First** - No analytics, no telemetry, no third-party SDKs. Open source (AGPL-3.0).
 - **Works Offline** - Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
 - **Reliable Tracking** - Foreground service, auto-start on boot, exponential backoff retry.
-- **Geofencing** - Pause zones that automatically pause tracking.
+- **Geofencing** - Pause zones that automatically stop recording locations.
 - **Tracking Profiles** - Automatically adjust GPS interval, distance filter, and sync settings based on conditions like charging, car mode, or speed.
 - **Flexible Sync** - Instant, batch, Wi-Fi only, or offline modes.
 - **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
