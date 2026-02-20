@@ -118,35 +118,37 @@ export function StatsCard({ queueCount, sentCount, interval, isOfflineMode, onMa
 
       {/* Warning Banner */}
       {showWarning && onManageClick && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.warningBanner,
-            {
-              backgroundColor: warningLevel === "critical" ? colors.error + "15" : colors.warning + "15",
-              borderTopColor: colors.border
-            },
-            pressed && { opacity: 0.7 }
-          ]}
-          onPress={onManageClick}
-        >
-          <View style={styles.warningContent}>
-            <AlertTriangle size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
-            <View style={styles.warningText}>
-              <Text
-                style={[
-                  styles.warningTitle,
-                  {
-                    color: warningLevel === "critical" ? colors.error : colors.warning
-                  }
-                ]}
-              >
-                {warningLevel === "critical" ? "Critical Queue Size" : "High Queue Size"}
-              </Text>
-              <Text style={[styles.warningHint, { color: colors.textSecondary }]}>Tap to manage data</Text>
+        <View style={styles.warningBanner}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.warningBanner,
+              {
+                backgroundColor: warningLevel === "critical" ? colors.error + "15" : colors.warning + "15",
+                borderTopColor: colors.border
+              },
+              pressed && { opacity: 0.7 }
+            ]}
+            onPress={onManageClick}
+          >
+            <View style={styles.warningContent}>
+              <AlertTriangle size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
+              <View style={styles.warningText}>
+                <Text
+                  style={[
+                    styles.warningTitle,
+                    {
+                      color: warningLevel === "critical" ? colors.error : colors.warning
+                    }
+                  ]}
+                >
+                  {warningLevel === "critical" ? "Critical Queue Size" : "High Queue Size"}
+                </Text>
+                <Text style={[styles.warningHint, { color: colors.textSecondary }]}>Tap to manage data</Text>
+              </View>
             </View>
-          </View>
-          <ChevronRight size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
-        </Pressable>
+            <ChevronRight size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
+          </Pressable>
+        </View>
       )}
     </View>
   )
@@ -217,7 +219,8 @@ const styles = StyleSheet.create({
     marginRight: 12
   },
   warningText: {
-    flex: 1
+    flex: 1,
+    marginLeft: 12
   },
   warningTitle: {
     fontSize: 14,
