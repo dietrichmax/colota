@@ -1,0 +1,33 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pin-gradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M256 120
+           C196 120 152 164 152 224
+           C152 300 256 392 256 392
+           C256 392 360 300 360 224
+           C360 164 316 120 256 120 Z"
+        fill="url(#pin-gradient)"/>
+
+  <circle cx="256" cy="224" r="36" fill="#FFFFFF"/>
+
+  <path d="M256 88
+           a168 168 0 0 1 168 168"
+        fill="none"
+        stroke="url(#pin-gradient)"
+        stroke-width="16"
+        stroke-linecap="round"
+        opacity="0.6"/>
+
+  <path d="M256 56
+           a200 200 0 0 1 200 200"
+        fill="none"
+        stroke="url(#pin-gradient)"
+        stroke-width="12"
+        stroke-linecap="round"
+        opacity="0.4"/>
+</svg>
