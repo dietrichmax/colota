@@ -125,6 +125,7 @@ jobs:
       - name: Upload APKs to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
           files: |
             apps/mobile/android/app/build/outputs/apk/gms/release/*.apk
             apps/mobile/android/app/build/outputs/apk/foss/release/*.apk
