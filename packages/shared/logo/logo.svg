@@ -1,40 +1,48 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Pin gradient using primary dark → primary -->
-    <linearGradient id="pin" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0d9488"/>
-      <stop offset="100%" stop-color="#2DD4BF"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#14b8a6"/> 
+      <stop offset="100%" stop-color="#0d9488"/> 
     </linearGradient>
+    
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
-  <!-- Background (rounded square) -->
-  <rect x="32" y="32" width="448" height="448" rx="96" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="512" height="512" fill="url(#bg)"/>
 
-  <!-- Location Pin -->
   <path d="M256 120
            C196 120 152 164 152 224
            C152 300 256 392 256 392
            C256 392 360 300 360 224
            C360 164 316 120 256 120 Z"
-        fill="url(#pin)"/>
+        fill="#FFFFFF" 
+        filter="url(#shadow)"/>
 
-  <!-- Inner Circle (tracking dot) -->
-  <circle cx="256" cy="224" r="36" fill="#FFFFFF"/>
+  <circle cx="256" cy="224" r="36" fill="#0d9488"/>
 
-  <!-- Signal Waves -->
   <path d="M256 88
            a168 168 0 0 1 168 168"
         fill="none"
-        stroke="#2DD4BF"
+        stroke="#FFFFFF"
         stroke-width="16"
         stroke-linecap="round"
-        opacity="0.5"/>
+        opacity="0.6"/>
 
   <path d="M256 56
            a200 200 0 0 1 200 200"
         fill="none"
-        stroke="#2DD4BF"
+        stroke="#FFFFFF"
         stroke-width="12"
         stroke-linecap="round"
-        opacity="0.3"/>
+        opacity="0.4"/>
 </svg>
