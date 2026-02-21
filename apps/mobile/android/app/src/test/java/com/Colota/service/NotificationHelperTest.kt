@@ -1,117 +1,120 @@
 package com.Colota.service
 
+import io.mockk.*
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 /**
- * Tests for NotificationHelper's pure logic:
+ * Tests for NotificationHelper using a real instance with mocked Android deps:
  * - Status text generation (all branches)
  * - Time-since-last-sync formatting
  * - Throttle decisions
  * - Movement filter decisions
- * - Deduplication
- * - Initial status text
+ * - Title building
+ * - Deduplication via update()
  */
 class NotificationHelperTest {
+
+    private lateinit var helper: NotificationHelper
+
+    @Before
+    fun setUp() {
+        helper = spyk(
+            NotificationHelper(mockk(relaxed = true), mockk(relaxed = true))
+        )
+        // Stub buildTrackingNotification to avoid PendingIntent.getActivity()
+        every { helper.buildTrackingNotification(any(), any()) } returns mockk()
+    }
 
     // --- formatTimeSinceSync ---
 
     @Test
     fun `time since sync shows Never when no sync happened`() {
-        assertEquals("Never", formatTimeSinceSync(lastSyncTime = 0L, now = 1000L))
+        assertEquals("Never", helper.formatTimeSinceSync(lastSyncTime = 0L, now = 1000L))
     }
 
     @Test
     fun `time since sync shows Just now for less than 1 min`() {
         val now = 100000L
-        val lastSync = now - 30000L
-        assertEquals("Just now", formatTimeSinceSync(lastSync, now))
+        assertEquals("Just now", helper.formatTimeSinceSync(now - 30000L, now))
     }
 
     @Test
     fun `time since sync shows 1 min ago`() {
         val now = 100000L
-        val lastSync = now - 60000L
-        assertEquals("1 min ago", formatTimeSinceSync(lastSync, now))
+        assertEquals("1 min ago", helper.formatTimeSinceSync(now - 60000L, now))
     }
 
     @Test
     fun `time since sync shows N min ago for less than 1 hour`() {
         val now = 100000L
-        val lastSync = now - 1500000L
-        assertEquals("25 min ago", formatTimeSinceSync(lastSync, now))
+        assertEquals("25 min ago", helper.formatTimeSinceSync(now - 1500000L, now))
     }
 
     @Test
     fun `time since sync shows 1h ago for 60-119 minutes`() {
         val now = 10000000L
-        val lastSync = now - 3600000L
-        assertEquals("1h ago", formatTimeSinceSync(lastSync, now))
+        assertEquals("1h ago", helper.formatTimeSinceSync(now - 3600000L, now))
     }
 
     @Test
     fun `time since sync shows Nh ago for 120+ minutes`() {
         val now = 10000000L
-        val lastSync = now - 7200000L
-        assertEquals("2 h ago", formatTimeSinceSync(lastSync, now))
+        assertEquals("2 h ago", helper.formatTimeSinceSync(now - 7200000L, now))
     }
 
     @Test
     fun `time since sync shows 5h ago for 300 minutes`() {
         val now = 100000000L
-        val lastSync = now - 18000000L
-        assertEquals("5 h ago", formatTimeSinceSync(lastSync, now))
+        assertEquals("5 h ago", helper.formatTimeSinceSync(now - 18000000L, now))
     }
 
     // --- buildStatusText ---
 
     @Test
     fun `status text shows Paused with zone name`() {
-        val text = buildStatusText(true, "Home", 52.0, 13.0, 0, 0L)
-        assertEquals("Paused: Home", text)
+        assertEquals("Paused: Home", helper.buildStatusText(true, "Home", 52.0, 13.0, 0, 0L))
     }
 
     @Test
     fun `status text shows Paused Unknown when zone name is null`() {
-        val text = buildStatusText(true, null, 52.0, 13.0, 0, 0L)
-        assertEquals("Paused: Unknown", text)
+        assertEquals("Paused: Unknown", helper.buildStatusText(true, null, 52.0, 13.0, 0, 0L))
     }
 
     @Test
     fun `status text shows coordinates when tracking normally`() {
-        val text = buildStatusText(false, null, 52.51630, 13.37770, 0, 0L)
-        assertEquals("52.51630, 13.37770", text)
+        assertEquals("52.51630, 13.37770", helper.buildStatusText(false, null, 52.51630, 13.37770, 0, 0L))
     }
 
     @Test
     fun `status text shows Synced when queue empty and has synced`() {
-        val text = buildStatusText(false, null, 52.0, 13.0, 0, System.currentTimeMillis())
+        val text = helper.buildStatusText(false, null, 52.0, 13.0, 0, System.currentTimeMillis())
         assertEquals("52.00000, 13.00000 (Synced)", text)
     }
 
     @Test
     fun `status text shows queued count when never synced`() {
-        val text = buildStatusText(false, null, 52.0, 13.0, 15, 0L)
-        assertEquals("52.00000, 13.00000 (Queued: 15)", text)
+        assertEquals("52.00000, 13.00000 (Queued: 15)", helper.buildStatusText(false, null, 52.0, 13.0, 15, 0L))
     }
 
     @Test
     fun `status text shows queued count and last sync when both present`() {
         val now = System.currentTimeMillis()
-        val text = buildStatusText(false, null, 52.0, 13.0, 7, now - 30000L)
-        assertEquals("52.00000, 13.00000 (Queued: 7 · Just now)", text)
+        assertEquals(
+            "52.00000, 13.00000 (Queued: 7 \u00b7 Just now)",
+            helper.buildStatusText(false, null, 52.0, 13.0, 7, now - 30000L)
+        )
     }
 
     @Test
     fun `status text shows Searching GPS when no coordinates`() {
-        val text = buildStatusText(false, null, null, null, 0, 0L)
-        assertEquals("Searching GPS...", text)
+        assertEquals("Searching GPS...", helper.buildStatusText(false, null, null, null, 0, 0L))
     }
 
     @Test
     fun `status text uses locale-safe coordinate formatting`() {
-        // Verifies no comma-separated decimals on non-US locales
-        val text = buildStatusText(false, null, -33.86882, 151.20930, 0, 0L)
+        val text = helper.buildStatusText(false, null, -33.86882, 151.20930, 0, 0L)
         assertTrue(text.contains("-33.86882"))
         assertTrue(text.contains("151.20930"))
         assertFalse(text.contains(",209"))  // Would appear with German locale
@@ -119,133 +122,103 @@ class NotificationHelperTest {
 
     @Test
     fun `paused takes priority over coordinates`() {
-        val text = buildStatusText(true, "Office", 52.0, 13.0, 5, System.currentTimeMillis())
-        assertEquals("Paused: Office", text)
+        assertEquals(
+            "Paused: Office",
+            helper.buildStatusText(true, "Office", 52.0, 13.0, 5, System.currentTimeMillis())
+        )
     }
 
     // --- shouldThrottle ---
 
     @Test
     fun `throttle suppresses within 10s`() {
-        assertTrue(shouldThrottle(lastUpdateTime = 1000L, now = 5000L))
+        setField("lastUpdateTime", 1000L)
+        assertTrue(helper.shouldThrottle(now = 5000L))
     }
 
     @Test
     fun `throttle allows after 10s`() {
-        assertFalse(shouldThrottle(lastUpdateTime = 1000L, now = 12000L))
+        setField("lastUpdateTime", 1000L)
+        assertFalse(helper.shouldThrottle(now = 12000L))
     }
 
     @Test
     fun `throttle allows at exactly 10s`() {
-        assertFalse(shouldThrottle(lastUpdateTime = 1000L, now = 11000L))
+        setField("lastUpdateTime", 1000L)
+        assertFalse(helper.shouldThrottle(now = 11000L))
     }
 
     // --- shouldFilterByMovement ---
 
     @Test
     fun `movement less than 2m is filtered`() {
-        assertTrue(shouldFilterByMovement(1.5f))
+        assertTrue(helper.shouldFilterByMovement(1.5f))
     }
 
     @Test
     fun `movement of exactly 2m is not filtered`() {
-        assertFalse(shouldFilterByMovement(2.0f))
+        assertFalse(helper.shouldFilterByMovement(2.0f))
     }
 
     @Test
     fun `movement greater than 2m is not filtered`() {
-        assertFalse(shouldFilterByMovement(5.0f))
+        assertFalse(helper.shouldFilterByMovement(5.0f))
     }
 
     // --- buildTitle ---
 
     @Test
     fun `title shows Colota Tracking when no profile active`() {
-        assertEquals("Colota Tracking", buildTitle(null))
+        assertEquals("Colota Tracking", helper.buildTitle(null))
     }
 
     @Test
     fun `title includes profile name when active`() {
-        assertEquals("Colota \u00b7 Charging", buildTitle("Charging"))
+        assertEquals("Colota \u00b7 Charging", helper.buildTitle("Charging"))
     }
 
     @Test
     fun `title includes custom profile name`() {
-        assertEquals("Colota \u00b7 Fast Driving", buildTitle("Fast Driving"))
+        assertEquals("Colota \u00b7 Fast Driving", helper.buildTitle("Fast Driving"))
     }
 
-    // --- Deduplication ---
+    // --- Deduplication (via update()) ---
 
     @Test
-    fun `same cache key is deduplicated`() {
-        assertFalse(shouldUpdate("52.52000, 13.40500-3", "52.52000, 13.40500-3"))
+    fun `same state is deduplicated on second update`() {
+        assertTrue(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
+        assertFalse(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
     }
 
     @Test
-    fun `different cache key is not deduplicated`() {
-        assertTrue(shouldUpdate("52.52000, 13.40500-3", "52.52100, 13.40600-3"))
+    fun `different coordinates trigger update`() {
+        helper.update(lat = 52.52, lon = 13.405, forceUpdate = true)
+        assertTrue(helper.update(lat = 52.521, lon = 13.406, forceUpdate = true))
     }
 
     @Test
     fun `first update always proceeds`() {
-        assertTrue(shouldUpdate(null, "52.52000, 13.40500-0"))
+        assertTrue(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
     }
 
     @Test
-    fun `queue count change triggers update even if text same`() {
-        assertTrue(shouldUpdate("52.00000, 13.00000 (Synced)-0", "52.00000, 13.00000 (Synced)-5"))
+    fun `queue count change triggers update`() {
+        val now = System.currentTimeMillis()
+        helper.update(lat = 52.0, lon = 13.0, queuedCount = 0, lastSyncTime = now, forceUpdate = true)
+        assertTrue(helper.update(lat = 52.0, lon = 13.0, queuedCount = 5, lastSyncTime = now, forceUpdate = true))
     }
 
     @Test
     fun `profile name change triggers update`() {
-        assertTrue(shouldUpdate("52.00000, 13.00000-0-null", "52.00000, 13.00000-0-Charging"))
+        helper.update(lat = 52.0, lon = 13.0, forceUpdate = true)
+        assertTrue(helper.update(lat = 52.0, lon = 13.0, activeProfileName = "Charging", forceUpdate = true))
     }
 
-    // --- Helper methods that mirror NotificationHelper logic ---
+    // --- Reflection helper ---
 
-    private fun formatTimeSinceSync(lastSyncTime: Long, now: Long): String {
-        if (lastSyncTime == 0L) return "Never"
-        val elapsedMs = now - lastSyncTime
-        val elapsedMinutes = (elapsedMs / 60000).toInt()
-        return when {
-            elapsedMinutes < 1 -> "Just now"
-            elapsedMinutes == 1 -> "1 min ago"
-            elapsedMinutes < 60 -> "$elapsedMinutes min ago"
-            elapsedMinutes < 120 -> "1h ago"
-            else -> "${elapsedMinutes / 60} h ago"
-        }
+    private fun setField(name: String, value: Any?) {
+        val field = NotificationHelper::class.java.getDeclaredField(name)
+        field.isAccessible = true
+        field.set(helper, value)
     }
-
-    private fun buildStatusText(
-        isPaused: Boolean, zoneName: String?,
-        lat: Double?, lon: Double?,
-        queuedCount: Int, lastSyncTime: Long
-    ): String = when {
-        isPaused -> "Paused: ${zoneName ?: "Unknown"}"
-        lat != null && lon != null -> {
-            val coords = String.format(java.util.Locale.US, "%.5f, %.5f", lat, lon)
-            if (queuedCount > 0 && lastSyncTime > 0) {
-                "$coords (Queued: $queuedCount · ${formatTimeSinceSync(lastSyncTime, System.currentTimeMillis())})"
-            } else if (queuedCount > 0) {
-                "$coords (Queued: $queuedCount)"
-            } else if (lastSyncTime > 0) {
-                "$coords (Synced)"
-            } else {
-                coords
-            }
-        }
-        else -> "Searching GPS..."
-    }
-
-    private fun shouldThrottle(lastUpdateTime: Long, now: Long): Boolean =
-        (now - lastUpdateTime) < NotificationHelper.THROTTLE_MS
-
-    private fun shouldFilterByMovement(distance: Float): Boolean =
-        distance < NotificationHelper.MIN_MOVEMENT_METERS
-
-    private fun shouldUpdate(lastText: String?, newText: String): Boolean =
-        newText != lastText
-
-    private fun buildTitle(activeProfileName: String?): String =
-        if (activeProfileName != null) "Colota \u00b7 $activeProfileName" else "Colota Tracking"
 }
