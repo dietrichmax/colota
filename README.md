@@ -1,4 +1,4 @@
-# Colota
+# Colota - GPS Location Tracker
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) ![Version](https://img.shields.io/github/v/release/dietrichmax/colota) [![Lint & Test](https://github.com/dietrichmax/colota/actions/workflows/lint-test.yml/badge.svg)](https://github.com/dietrichmax/colota/actions/workflows/lint-test.yml) [![Android Build](https://github.com/dietrichmax/colota/actions/workflows/build-check.yml/badge.svg)](https://github.com/dietrichmax/colota/actions/workflows/build-check.yml) [![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com) [![React Native](https://img.shields.io/badge/React_Native-0.83-blue.svg)](https://reactnative.dev) [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 
