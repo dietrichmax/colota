@@ -304,7 +304,7 @@ export function GeofenceScreen({}: ScreenProps) {
 
             {/* Accuracy circle + user marker */}
             {coords && tracking && (
-              <UserLocationOverlay coords={coords} tracking={tracking} isPaused={!!currentPauseZone} colors={colors} />
+              <UserLocationOverlay coords={coords} isPaused={!!currentPauseZone} colors={colors} />
             )}
           </ColotaMapView>
         ) : null}

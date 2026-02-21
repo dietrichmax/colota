@@ -156,7 +156,7 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
           <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
 
           {/* Accuracy circle + user marker */}
-          <UserLocationOverlay coords={coords} tracking={tracking} isPaused={!!currentPauseZone} colors={colors} />
+          <UserLocationOverlay coords={coords} isPaused={!!currentPauseZone} colors={colors} />
         </ColotaMapView>
       ) : (
         <View style={[styles.stateContainer, { backgroundColor: colors.card }]}>
