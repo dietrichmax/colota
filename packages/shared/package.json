@@ -6,5 +6,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }
