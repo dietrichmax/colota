@@ -67,6 +67,7 @@ Emits events back to JavaScript:
 - `onLocationUpdate` - new GPS fix received
 - `onTrackingStopped` - service stopped (user action or OOM kill)
 - `onSyncError` - 3+ consecutive sync failures
+- `onSyncProgress` - batch sync progress updates with `{sent, failed, total}`
 - `onPauseZoneChange` - entered or exited a geofence pause zone
 - `onProfileSwitch` - a tracking profile was activated or deactivated
 
@@ -101,7 +102,7 @@ Handles all notification logic for the tracking service:
 
 ### DatabaseHelper
 
-SQLite database singleton with six tables:
+SQLite database singleton with five tables:
 
 | Table               | Purpose                                      |
 | ------------------- | -------------------------------------------- |
@@ -180,10 +181,10 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 | Component | Purpose |
 | --- | --- |
 | `ColotaMapView` | Shared base map component wrapping MapLibre's `MapView` with OpenFreeMap vector tiles, dark mode style transformation, custom compass, and attribution |
-| `DashboardMap` | Live tracking map with user marker (animated pulse), accuracy circle, geofence polygons with labels, auto-center, and center button |
+| `DashboardMap` | Live tracking map with user marker, accuracy circle, geofence polygons with labels, auto-center, and center button |
 | `TrackMap` | Location history map with speed-colored track segments, tappable point markers with popups, start/end markers, fit-to-track bounds, and speed legend |
 | `GeofenceLayers` | Shared geofence rendering (fill polygons, stroke outlines, labels) used by DashboardMap and GeofenceScreen |
-| `UserLocationOverlay` | User position dot with accuracy circle and pulse animation, used by DashboardMap and GeofenceScreen |
+| `UserLocationOverlay` | User position dot with accuracy circle, used by DashboardMap and GeofenceScreen |
 | `MapCenterButton` | Reusable button overlay to re-center the map |
 
 Supporting utilities in `mapUtils.ts`:
