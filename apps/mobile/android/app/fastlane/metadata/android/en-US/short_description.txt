@@ -1,1 +1,1 @@
-Self-hosted GPS tracking app with offline support and geofencing
+Self-hosted GPS tracking with offline support, geofencing, and native maps

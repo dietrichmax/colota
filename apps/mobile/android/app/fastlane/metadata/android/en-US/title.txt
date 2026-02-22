@@ -1,1 +1,1 @@
-Colota
+Colota - GPS Location Tracker
