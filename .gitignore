@@ -19,6 +19,7 @@ local.properties
 keystore.properties
 key.properties
 !debug.keystore
+**/fastlane/service-account.json
 
 # Node.js
 node_modules/
