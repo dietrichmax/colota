@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext HTTP for self-hosted servers on local networks -->
+    <!--
+        Cleartext HTTP is permitted here because Android's network_security_config
+        does not support IP-range matching (CIDR), and users need HTTP access to
+        self-hosted servers on private networks (10.x.x.x, 192.168.x.x, 172.16-31.x.x).
+
+        Actual enforcement happens at the app level:
+          - NetworkManager.isValidProtocol() restricts HTTP to private hosts
+          - settingsValidation.isEndpointAllowed() blocks public HTTP endpoints in the UI
+    -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />

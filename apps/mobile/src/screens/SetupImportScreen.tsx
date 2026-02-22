@@ -11,6 +11,7 @@ import { Container, Card, Button, SectionTitle } from "../components"
 import { fonts } from "../styles/typography"
 import { CircleAlert, CircleCheck, Import } from "lucide-react-native"
 import SettingsService from "../services/SettingsService"
+import { isEndpointAllowed } from "../utils/settingsValidation"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
@@ -40,6 +41,7 @@ interface ConfigEntry {
   label: string
   value: string
   category: "tracking" | "api" | "auth"
+  rejected?: boolean
 }
 
 interface ValidationResult {
@@ -84,8 +86,12 @@ function validateConfig(raw: unknown): ValidationResult {
   // --- API settings (endpoint) ---
 
   if ("endpoint" in obj && typeof obj.endpoint === "string" && obj.endpoint.length > 0) {
-    settings.endpoint = obj.endpoint
-    entries.push({ label: "Endpoint", value: obj.endpoint, category: "api" })
+    if (isEndpointAllowed(obj.endpoint)) {
+      settings.endpoint = obj.endpoint
+      entries.push({ label: "Endpoint", value: obj.endpoint, category: "api" })
+    } else {
+      entries.push({ label: "Endpoint", value: "HTTP not allowed for public hosts", category: "api", rejected: true })
+    }
   }
 
   // --- Tracking settings ---
@@ -332,8 +338,13 @@ export function SetupImportScreen({ route, navigation }: any) {
                 i < entries.length - 1 && { borderBottomColor: colors.border }
               ]}
             >
-              <Text style={[styles.settingLabel, { color: colors.textSecondary }]}>{entry.label}</Text>
-              <Text style={[styles.settingValue, { color: colors.text }]} numberOfLines={1}>
+              <Text style={[styles.settingLabel, { color: entry.rejected ? colors.error : colors.textSecondary }]}>
+                {entry.label}
+              </Text>
+              <Text
+                style={[styles.settingValue, { color: entry.rejected ? colors.error : colors.text }]}
+                numberOfLines={1}
+              >
                 {entry.value}
               </Text>
             </View>

@@ -11,7 +11,10 @@
 -keep class com.facebook.react.bridge.** { *; }
 -keep class com.facebook.react.modules.core.DeviceEventManagerModule$RCTDeviceEventEmitter { *; }
 
--keep class com.Colota.** { *; }
+# Keep classes accessed via React Native bridge and reflection
+-keep class com.Colota.bridge.** { *; }
+-keep class com.Colota.MainApplication { *; }
+-keep class com.Colota.MainActivity { *; }
 
 # Keep Google Play Services Location (only present in gms flavor)
 -keep class com.google.android.gms.location.** { *; }
