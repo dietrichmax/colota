@@ -19,6 +19,13 @@ import org.json.JSONObject
 
 /**
  * SQLite database helper for Colota location tracking.
+ *
+ * SECURITY NOTE: The database is NOT encrypted. Location history (coordinates,
+ * timestamps, battery) is stored in plaintext. This is a known limitation —
+ * an attacker with physical device access or root could read the data.
+ * Migrating to SQLCipher would address this but adds APK size (~3 MB) and
+ * a performance cost. Auth credentials are stored separately in
+ * EncryptedSharedPreferences (see SecureStorageHelper).
  */
 class DatabaseHelper private constructor(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {

@@ -362,7 +362,7 @@ describe("SyncStrategySettings", () => {
       expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ distance: 0 }))
     })
 
-    it("clamps accuracy threshold to min 50 on blur when value is below", () => {
+    it("clamps accuracy threshold to min 1 on blur when value is below", () => {
       const { getByText, getByDisplayValue } = renderComponent({
         interval: 5,
         filterInaccurateLocations: true,
@@ -373,11 +373,11 @@ describe("SyncStrategySettings", () => {
       fireEvent.press(getByText("+ Show Advanced Settings"))
 
       const thresholdInput = getByDisplayValue("100")
-      fireEvent.changeText(thresholdInput, "10")
+      fireEvent.changeText(thresholdInput, "0")
       fireEvent(thresholdInput, "blur")
 
-      expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 50 }))
-      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 50 }))
+      expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 1 }))
+      expect(mockOnImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ accuracyThreshold: 1 }))
     })
 
     it("does not clamp accuracy threshold on blur when value is valid", () => {

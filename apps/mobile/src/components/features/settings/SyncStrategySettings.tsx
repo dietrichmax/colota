@@ -331,8 +331,8 @@ export function SyncStrategySettings({
                   <NumericInput
                     label="Accuracy Threshold"
                     value={accuracyThresholdInput}
-                    onChange={(val) => handleNumericChange("accuracyThreshold", val, 50)}
-                    onBlur={() => handleNumericBlur("accuracyThreshold", 50)}
+                    onChange={(val) => handleNumericChange("accuracyThreshold", val, 1)}
+                    onBlur={() => handleNumericBlur("accuracyThreshold", 1)}
                     unit="meters"
                     placeholder="50"
                     hint="Reject readings with accuracy worse than this"
