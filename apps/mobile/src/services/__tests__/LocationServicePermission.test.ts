@@ -1,5 +1,11 @@
 import { Platform, PermissionsAndroid, Alert } from "react-native"
-import { ensurePermissions, checkPermissions, registerDisclosureCallback } from "../LocationServicePermission"
+import {
+  ensurePermissions,
+  checkPermissions,
+  ensureLocalNetworkPermission,
+  registerDisclosureCallback,
+  registerLocalNetworkDisclosureCallback
+} from "../LocationServicePermission"
 import { showAlert } from "../modalService"
 
 jest.mock("../modalService", () => ({
@@ -306,5 +312,129 @@ describe("checkPermissions", () => {
     const result = await checkPermissions()
 
     expect(result.batteryOptimized).toBe(false)
+  })
+
+  it("returns true for localNetwork on Android < 37", async () => {
+    setPlatform("android", 36)
+    mockIsIgnoring.mockResolvedValueOnce(true)
+
+    const result = await checkPermissions()
+
+    expect(result.localNetwork).toBe(true)
+  })
+
+  it("checks NEARBY_WIFI_DEVICES on Android 37+", async () => {
+    setPlatform("android", 37)
+    checkSpy.mockImplementation((permission: string) => {
+      if (permission === PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES) {
+        return Promise.resolve(false)
+      }
+      return Promise.resolve(true)
+    })
+    mockIsIgnoring.mockResolvedValueOnce(true)
+
+    const result = await checkPermissions()
+
+    expect(result.localNetwork).toBe(false)
+  })
+})
+
+describe("ensureLocalNetworkPermission", () => {
+  it("returns true on non-Android platforms", async () => {
+    setPlatform("ios", 0)
+
+    const result = await ensureLocalNetworkPermission()
+
+    expect(result).toBe(true)
+    expect(requestSpy).not.toHaveBeenCalled()
+  })
+
+  it("returns true on Android < 37 without requesting", async () => {
+    setPlatform("android", 36)
+
+    const result = await ensureLocalNetworkPermission()
+
+    expect(result).toBe(true)
+    expect(requestSpy).not.toHaveBeenCalled()
+  })
+
+  it("returns true if already granted", async () => {
+    setPlatform("android", 37)
+    checkSpy.mockResolvedValue(true)
+
+    const result = await ensureLocalNetworkPermission()
+
+    expect(result).toBe(true)
+    expect(requestSpy).not.toHaveBeenCalled()
+  })
+
+  it("shows disclosure before requesting permission", async () => {
+    setPlatform("android", 37)
+    const disclosureSpy = jest.fn().mockResolvedValue(true)
+    registerLocalNetworkDisclosureCallback(disclosureSpy)
+
+    await ensureLocalNetworkPermission()
+
+    expect(disclosureSpy).toHaveBeenCalledTimes(1)
+    expect(requestSpy).toHaveBeenCalledWith(PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES)
+  })
+
+  it("returns false if user denies disclosure", async () => {
+    setPlatform("android", 37)
+    registerLocalNetworkDisclosureCallback(() => Promise.resolve(false))
+
+    const result = await ensureLocalNetworkPermission()
+
+    expect(result).toBe(false)
+    expect(requestSpy).not.toHaveBeenCalled()
+  })
+
+  it("returns true if permission granted after request", async () => {
+    setPlatform("android", 37)
+    registerLocalNetworkDisclosureCallback(() => Promise.resolve(true))
+    requestSpy.mockResolvedValueOnce(PermissionsAndroid.RESULTS.GRANTED)
+
+    const result = await ensureLocalNetworkPermission()
+
+    expect(result).toBe(true)
+  })
+
+  it("returns false if permission denied after request", async () => {
+    setPlatform("android", 37)
+    registerLocalNetworkDisclosureCallback(() => Promise.resolve(true))
+    requestSpy.mockResolvedValueOnce(PermissionsAndroid.RESULTS.DENIED)
+
+    const result = await ensureLocalNetworkPermission()
+
+    expect(result).toBe(false)
+  })
+
+  it("uses fallback Alert if no callback registered", async () => {
+    setPlatform("android", 37)
+    registerLocalNetworkDisclosureCallback(undefined as any)
+
+    alertSpy.mockImplementation((_title: string, _msg: string, buttons: any[]) => {
+      const continueBtn = buttons.find((b: any) => b.text === "Continue")
+      if (continueBtn?.onPress) continueBtn.onPress()
+    })
+
+    const result = await ensureLocalNetworkPermission()
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Local Network Access",
+      expect.stringContaining("local network"),
+      expect.any(Array),
+      expect.any(Object)
+    )
+    expect(result).toBe(true)
+  })
+
+  it("returns false on unexpected error", async () => {
+    setPlatform("android", 37)
+    checkSpy.mockRejectedValueOnce(new Error("unexpected"))
+
+    const result = await ensureLocalNetworkPermission()
+
+    expect(result).toBe(false)
   })
 })
