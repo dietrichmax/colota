@@ -200,7 +200,7 @@ async function checkLocalNetwork(): Promise<boolean> {
 
 /**
  * Requests the local network permission for accessing private/local IP endpoints.
- * Only needed on Android 16+ and only when the sync endpoint is a local address.
+ * Only needed on Android 17+ and only when the sync endpoint is a local address.
  *
  * @returns True if permission is granted (or not needed)
  */
