@@ -10,6 +10,7 @@ import { useLocationTracking } from "../hooks/useLocationTracking"
 import NativeLocationService from "../services/NativeLocationService"
 import SettingsService from "../services/SettingsService"
 import { LocationDisclosureModal } from "../components/ui/LocationDisclosureModal"
+import { LocalNetworkDisclosureModal } from "../components/ui/LocalNetworkDisclosureModal"
 import { AppModal } from "../components/ui/AppModal"
 import { checkPermissions } from "../services/LocationServicePermission"
 import { logger } from "../utils/logger"
@@ -171,7 +172,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
         // Auto-reconnect UI if tracking was active
         const isTrackingActive = allRaw.tracking_enabled === "true"
         if (isTrackingActive) {
-          // Verify permission is still granted — Android kills the process
+          // Verify permission is still granted. Android kills the process
           // when permission is revoked, leaving tracking_enabled stale
           const perms = await checkPermissions()
           if (!perms.location) {
@@ -305,6 +306,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     <TrackingContext.Provider value={value}>
       <CoordsContext.Provider value={coords}>
         <LocationDisclosureModal />
+        <LocalNetworkDisclosureModal />
         <AppModal />
         {children}
       </CoordsContext.Provider>

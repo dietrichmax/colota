@@ -257,7 +257,8 @@ describe("checkPermissions", () => {
       location: true,
       background: true,
       notifications: true,
-      batteryOptimized: true
+      batteryOptimized: true,
+      localNetwork: true
     })
   })
 

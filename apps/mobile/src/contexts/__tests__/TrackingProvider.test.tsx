@@ -21,6 +21,10 @@ jest.mock("../../components/ui/LocationDisclosureModal", () => ({
   LocationDisclosureModal: () => null
 }))
 
+jest.mock("../../components/ui/LocalNetworkDisclosureModal", () => ({
+  LocalNetworkDisclosureModal: () => null
+}))
+
 jest.mock("../../components/ui/AppModal", () => ({
   AppModal: () => null
 }))

@@ -23,6 +23,7 @@ export { FloatingSaveIndicator } from "./ui/FloatingSaveIndicator"
 export { Footer } from "./ui/Footer"
 export { SpinningLoader } from "./ui/SpinningLoader"
 export { LocationDisclosureModal } from "./ui/LocationDisclosureModal"
+export { LocalNetworkDisclosureModal } from "./ui/LocalNetworkDisclosureModal"
 export { AppModal } from "./ui/AppModal"
 export { ChipGroup } from "./ui/ChipGroup"
 

@@ -82,5 +82,3 @@ See the [Contributing Guide](https://colota.app/docs/contributing) for details o
 
 - [GitHub Issues](https://github.com/dietrichmax/colota/issues)
 - [GitHub Discussions](https://github.com/dietrichmax/colota/discussions)
-- [GitHub Sponsors](https://github.com/sponsors/dietrichmax)
-- [Ko-fi](https://ko-fi.com/maxdietrich)

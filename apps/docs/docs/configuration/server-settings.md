@@ -20,6 +20,10 @@ Your server endpoint must accept HTTPS requests (POST or GET depending on your H
 - `192.168.x.x`
 - `10.x.x.x`
 - `172.16.x.x – 172.31.x.x`
+- `100.64.x.x – 100.127.x.x` (CGNAT)
+- `169.254.x.x` (link-local)
+
+On **Android 17+**, connecting to another device on the local network (everything above except `localhost`) requires the **Nearby Wi-Fi Devices** permission. Colota requests this when you use **Test Connection**. See [Permissions](/docs/development/permissions#local-network-nearby-wi-fi-devices) for details.
 
 Use the **Test Connection** button in settings to verify your server is reachable.
 

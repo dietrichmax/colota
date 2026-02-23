@@ -133,6 +133,13 @@ class NetworkManager(private val context: Context) {
                 Log.e(TAG, "${connection.requestMethod} failed: $responseCode - $errorBody")
                 false
             }
+        } catch (e: java.net.SocketException) {
+            if (isPrivateHost(url.host ?: "") && e.message?.contains("EPERM") == true) {
+                Log.e(TAG, "Local network access denied - grant Nearby Devices permission", e)
+            } else {
+                Log.e(TAG, "Network error: ${e.message}", e)
+            }
+            false
         } catch (e: Exception) {
             Log.e(TAG, "Network error: ${e.message}", e)
             false
@@ -161,6 +168,8 @@ class NetworkManager(private val context: Context) {
 
     /**
      * Checks if the given host is private or local.
+     * Matches Android's local network definition:
+     * loopback, site-local (RFC 1918), link-local, and CGNAT (100.64.0.0/10).
      * Results are cached to avoid repeated DNS lookups on every request.
      */
     private fun isPrivateHost(host: String): Boolean {
@@ -168,11 +177,24 @@ class NetworkManager(private val context: Context) {
         return privateHostCache.getOrPut(host) {
             try {
                 val address = java.net.InetAddress.getByName(host)
-                address.isAnyLocalAddress || address.isLoopbackAddress || address.isSiteLocalAddress
+                address.isAnyLocalAddress ||
+                    address.isLoopbackAddress ||
+                    address.isSiteLocalAddress ||
+                    address.isLinkLocalAddress ||
+                    isCgnatAddress(address)
             } catch (e: Exception) {
                 false
             }
         }
+    }
+
+    /** Checks if the address falls in the CGNAT range 100.64.0.0/10. */
+    private fun isCgnatAddress(address: java.net.InetAddress): Boolean {
+        val bytes = address.address
+        if (bytes.size != 4) return false
+        val a = bytes[0].toInt() and 0xFF
+        val b = bytes[1].toInt() and 0xFF
+        return a == 100 && b in 64..127
     }
 
     /**

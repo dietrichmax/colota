@@ -23,10 +23,12 @@ function isPrivateIP(host: string): boolean {
   if (octets.some((o) => isNaN(o) || o < 0 || o > 255)) return false
   const [a, b] = octets
   return (
-    (a === 127 && octets[1] === 0 && octets[2] === 0 && octets[3] === 1) ||
-    a === 10 ||
-    (a === 192 && b === 168) ||
-    (a === 172 && b >= 16 && b <= 31)
+    a === 127 || // Loopback (127.0.0.0/8)
+    a === 10 || // RFC 1918 (10.0.0.0/8)
+    (a === 192 && b === 168) || // RFC 1918 (192.168.0.0/16)
+    (a === 172 && b >= 16 && b <= 31) || // RFC 1918 (172.16.0.0/12)
+    (a === 100 && b >= 64 && b <= 127) || // CGNAT (100.64.0.0/10)
+    (a === 169 && b === 254) // Link-local (169.254.0.0/16)
   )
 }
 
