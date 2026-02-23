@@ -15,7 +15,7 @@ Your server needs to:
 - Handle `alt` and `bear` fields being absent (they are conditional)
 - Handle up to 10 concurrent requests during batch sync
 
-HTTPS is required for public endpoints. HTTP is allowed for local addresses (`127.0.0.1`, `192.168.x.x`, `10.x.x.x`).
+HTTPS is required for public endpoints. HTTP is allowed for local addresses (`127.0.0.1`, `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`). On Android 17+, connecting to local network addresses (not localhost) requires the Nearby Wi-Fi Devices permission, which Colota requests when you use **Test Connection**.
 
 ## Default Payload
 

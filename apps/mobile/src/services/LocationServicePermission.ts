@@ -16,6 +16,7 @@ export interface PermissionStatus {
   background: boolean
   notifications: boolean
   batteryOptimized: boolean
+  localNetwork: boolean
 }
 
 /** Android version for background location (Android 10) */
@@ -24,12 +25,16 @@ const ANDROID_10 = 29
 /** Android version for notifications (Android 13) */
 const ANDROID_13 = 33
 
+/** Android version for local network permission enforcement (expected Android 17) */
+const ANDROID_LOCAL_NETWORK = 37
+
 /**
  * Callback registered by LocationDisclosureModal to show the themed disclosure.
  * Falls back to Alert.alert if no modal is registered (e.g. in tests).
  */
 type DisclosureCallback = () => Promise<boolean>
 let _disclosureCallback: DisclosureCallback | null = null
+let _localNetworkDisclosureCallback: DisclosureCallback | null = null
 
 /**
  * Registers the disclosure modal callback.
@@ -37,6 +42,14 @@ let _disclosureCallback: DisclosureCallback | null = null
  */
 export function registerDisclosureCallback(cb: DisclosureCallback) {
   _disclosureCallback = cb
+}
+
+/**
+ * Registers the local network disclosure modal callback.
+ * Called by LocalNetworkDisclosureModal on mount.
+ */
+export function registerLocalNetworkDisclosureCallback(cb: DisclosureCallback) {
+  _localNetworkDisclosureCallback = cb
 }
 
 /**
@@ -130,22 +143,25 @@ export async function checkPermissions(): Promise<PermissionStatus> {
       location: true,
       background: true,
       notifications: true,
-      batteryOptimized: true
+      batteryOptimized: true,
+      localNetwork: true
     }
   }
 
-  const [location, background, notifications, batteryOptimized] = await Promise.all([
+  const [location, background, notifications, batteryOptimized, localNetwork] = await Promise.all([
     checkFineLocation(),
     checkBackgroundLocation(),
     checkNotifications(),
-    checkBatteryOptimization()
+    checkBatteryOptimization(),
+    checkLocalNetwork()
   ])
 
   return {
     location,
     background,
     notifications,
-    batteryOptimized
+    batteryOptimized,
+    localNetwork
   }
 }
 
@@ -175,4 +191,54 @@ async function checkBatteryOptimization(): Promise<boolean> {
     logger.error("[PermissionService] Battery optimization check failed:", err)
     return false
   }
+}
+
+async function checkLocalNetwork(): Promise<boolean> {
+  if (getAndroidVersion() < ANDROID_LOCAL_NETWORK) return true
+  return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES)
+}
+
+/**
+ * Requests the local network permission for accessing private/local IP endpoints.
+ * Only needed on Android 17+ and only when the sync endpoint is a local address.
+ *
+ * @returns True if permission is granted (or not needed)
+ */
+export async function ensureLocalNetworkPermission(): Promise<boolean> {
+  if (Platform.OS !== "android") return true
+  if (getAndroidVersion() < ANDROID_LOCAL_NETWORK) return true
+
+  try {
+    const granted = await checkLocalNetwork()
+    if (granted) return true
+
+    // Show themed disclosure modal first
+    const consented = _localNetworkDisclosureCallback
+      ? await _localNetworkDisclosureCallback()
+      : await fallbackLocalNetworkDisclosure()
+    if (!consented) return false
+
+    const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES)
+    return result === PermissionsAndroid.RESULTS.GRANTED
+  } catch (err) {
+    logger.error("[PermissionService] Local network permission request failed:", err)
+    return false
+  }
+}
+
+/**
+ * Fallback disclosure using Alert (for tests or if modal not mounted).
+ */
+function fallbackLocalNetworkDisclosure(): Promise<boolean> {
+  return new Promise((resolve) => {
+    Alert.alert(
+      "Local Network Access",
+      "Your server is on the local network. Colota needs the nearby devices permission to reach it.",
+      [
+        { text: "Not Now", style: "cancel", onPress: () => resolve(false) },
+        { text: "Continue", onPress: () => resolve(true) }
+      ],
+      { cancelable: false }
+    )
+  })
 }

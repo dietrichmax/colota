@@ -9,6 +9,7 @@ import { CheckCircle, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isPrivateHost, isEndpointAllowed } from "../../../utils/settingsValidation"
+import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
 import { fonts } from "../../../styles/typography"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { CONNECTION_TEST_TIMEOUT, TEST_RESULT_DISPLAY_MS } from "../../../constants"
@@ -52,7 +53,7 @@ export function ConnectionSettings({
     try {
       const recentLocation = await NativeLocationService.getMostRecentLocation()
       if (!recentLocation) {
-        setTestResponse("No location data yet — Start tracking to collect a test point, then try again.")
+        setTestResponse("No location data yet. Start tracking to collect a test point, then try again.")
         setTestError(true)
         return
       }
@@ -77,6 +78,15 @@ export function ConnectionSettings({
       if (fieldMap.bs) payload[fieldMap.bs] = recentLocation.batteryStatus ?? 0
       if (fieldMap.bear) payload[fieldMap.bear] = recentLocation.bearing ?? 0
       if (fieldMap.tst) payload[fieldMap.tst] = Math.floor(Date.now() / 1000)
+
+      if (isPrivateHost(endpointInput)) {
+        const granted = await ensureLocalNetworkPermission()
+        if (!granted) {
+          setTestResponse("Local network permission required to reach this server")
+          setTestError(true)
+          return
+        }
+      }
 
       let authHeaders: Record<string, string> = {}
       try {
@@ -194,7 +204,7 @@ export function ConnectionSettings({
 
               {!endpointInput && (
                 <Text style={[styles.endpointHint, { color: colors.warning }]}>
-                  No server configured — locations are saved locally
+                  No server configured. Locations are saved locally
                 </Text>
               )}
 
