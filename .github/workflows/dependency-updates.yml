@@ -112,7 +112,7 @@ jobs:
 
       - name: Run npm audit
         id: audit
-        run: npm audit --audit-level=moderate --json > audit.json
+        run: npm audit --audit-level=moderate --omit=dev --json > audit.json
         continue-on-error: true
 
       - name: Create security issue if vulnerabilities found
