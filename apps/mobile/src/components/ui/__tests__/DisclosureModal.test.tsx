@@ -21,7 +21,7 @@ import { DisclosureModal } from "../DisclosureModal"
 
 describe("DisclosureModal", () => {
   let triggerModal = () => Promise.resolve(false)
-  const mockRegister = (cb) => {
+  const mockRegister = (cb: () => Promise<boolean>) => {
     triggerModal = cb
   }
 
