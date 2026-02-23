@@ -105,8 +105,6 @@ npm run build
 
 ```
 colota/
-├── .maestro/
-│   └── screenshots/                 # Maestro UI flows for screenshot capture
 ├── apps/
 │   ├── mobile/
 │   │   ├── android/                 # Android native project
@@ -216,11 +214,13 @@ npm run version:bump 1.2.0
 
 This updates `version` in all `package.json` files, `versionName` in `build.gradle`, and auto-increments `versionCode`.
 
-### Generating Screenshots
+### Syncing Screenshots
 
-App screenshots live in `screenshots/mobile/original/` (single source of truth) and are synced to the docs site and Fastlane store metadata.
+App screenshots live in `screenshots/mobile/original/` (single source of truth). After adding or updating screenshots there, sync them to the docs site and Fastlane store metadata:
 
-**Capture**: Trigger the "Generate Screenshots" workflow manually from GitHub Actions. It starts an Android emulator, runs [Maestro](https://maestro.mobile.dev) flows from `.maestro/screenshots/`, and commits the updated screenshots.
+```bash
+npm run sync:screenshots
+```
 
 ### Adding Documentation
 
