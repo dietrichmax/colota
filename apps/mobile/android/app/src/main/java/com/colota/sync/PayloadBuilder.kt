@@ -43,7 +43,9 @@ class PayloadBuilder {
                 put(fieldMap["alt"] ?: "alt", location.altitude.roundToInt())
             }
 
-            put(fieldMap["vel"] ?: "vel", location.speed.roundToInt())
+            if (location.hasSpeed()) {
+                put(fieldMap["vel"] ?: "vel", location.speed.roundToInt())
+            }
             put(fieldMap["batt"] ?: "batt", batteryLevel)
             put(fieldMap["bs"] ?: "bs", batteryStatus)
             put(fieldMap["tst"] ?: "tst", timestamp)

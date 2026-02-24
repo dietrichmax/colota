@@ -94,6 +94,21 @@ class PayloadBuilderTest {
     }
 
     @Test
+    fun `buildPayload excludes speed when not available`() {
+        val location = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f, hasSpeed = false)
+
+        val payload = builder.buildPayload(
+            location = location,
+            batteryLevel = 80,
+            batteryStatus = 2,
+            fieldMap = emptyMap(),
+            timestamp = 1700000000L
+        )
+
+        assertFalse(payload.has("vel"))
+    }
+
+    @Test
     fun `buildPayload includes bearing when available`() {
         val location = createMockLocation(
             lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f,
@@ -199,6 +214,7 @@ class PayloadBuilderTest {
         speed: Float,
         hasAltitude: Boolean = false,
         altitude: Double = 0.0,
+        hasSpeed: Boolean = true,
         hasBearing: Boolean = false,
         bearing: Float = 0.0f
     ): Location = mockk {
@@ -206,6 +222,7 @@ class PayloadBuilderTest {
         every { longitude } returns lon
         every { accuracy } returns acc
         every { this@mockk.speed } returns speed
+        every { hasSpeed() } returns hasSpeed
         every { hasAltitude() } returns hasAltitude
         every { this@mockk.altitude } returns altitude
         every { hasBearing() } returns hasBearing

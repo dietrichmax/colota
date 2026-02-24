@@ -65,7 +65,7 @@ export const convertToGeoJSON = (data: LocationCoords[]): string => {
       type: "Feature",
       geometry: {
         type: "Point",
-        coordinates: [item.longitude || 0, item.latitude || 0]
+        coordinates: [item.longitude ?? 0, item.latitude ?? 0]
       },
       properties: {
         id: i,
@@ -104,12 +104,12 @@ export const convertToGPX = (data: LocationCoords[]): string => {
     const isoTime = new Date(timestamp).toISOString()
     gpx += `
       <trkpt lat="${item.latitude.toFixed(6)}" lon="${item.longitude.toFixed(6)}">
-        <ele>${item.altitude || 0}</ele>
+        <ele>${item.altitude ?? 0}</ele>
         <time>${isoTime}</time>
         <extensions>
-          <accuracy>${item.accuracy || 0}</accuracy>
-          <speed>${item.speed || 0}</speed>
-          <battery>${item.battery || 0}</battery>
+          <accuracy>${item.accuracy ?? 0}</accuracy>
+          <speed>${item.speed ?? 0}</speed>
+          <battery>${item.battery ?? 0}</battery>
         </extensions>
       </trkpt>`
   })
@@ -139,7 +139,7 @@ export const convertToKML = (data: LocationCoords[]): string => {
       <LineString>
         <tessellate>1</tessellate>
         <coordinates>
-          ${data.map((item) => `${item.longitude},${item.latitude},${item.altitude || 0}`).join("\n          ")}
+          ${data.map((item) => `${item.longitude},${item.latitude},${item.altitude ?? 0}`).join("\n          ")}
         </coordinates>
       </LineString>
     </Placemark>`
@@ -150,9 +150,9 @@ export const convertToKML = (data: LocationCoords[]): string => {
     kml += `
     <Placemark>
       <TimeStamp><when>${isoTime}</when></TimeStamp>
-      <description>Accuracy: ${item.accuracy}m, Speed: ${item.speed}m/s</description>
+      <description>Accuracy: ${item.accuracy}m, Speed: ${item.speed ?? 0}m/s</description>
       <Point>
-        <coordinates>${item.longitude},${item.latitude},${item.altitude || 0}</coordinates>
+        <coordinates>${item.longitude},${item.latitude},${item.altitude ?? 0}</coordinates>
       </Point>
     </Placemark>`
   })

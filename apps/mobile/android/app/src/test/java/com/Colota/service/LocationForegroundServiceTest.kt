@@ -140,9 +140,11 @@ class LocationForegroundServiceTest {
         altitude: Double = 50.0,
         hasAltitude: Boolean = true,
         speed: Float = 5f,
+        hasSpeed: Boolean = true,
         bearing: Float = 90f,
         hasBearing: Boolean = true,
-        time: Long = System.currentTimeMillis()
+        time: Long = System.currentTimeMillis(),
+        distanceTo: Float = 0f
     ): Location = mockk {
         every { latitude } returns lat
         every { longitude } returns lon
@@ -150,9 +152,12 @@ class LocationForegroundServiceTest {
         every { this@mockk.altitude } returns altitude
         every { hasAltitude() } returns hasAltitude
         every { this@mockk.speed } returns speed
+        every { hasSpeed() } returns hasSpeed
         every { this@mockk.bearing } returns bearing
         every { hasBearing() } returns hasBearing
         every { this@mockk.time } returns time
+        every { distanceTo(any()) } returns distanceTo
+        every { setSpeed(any()) } just Runs
     }
 
     // =========================================================================
@@ -281,6 +286,123 @@ class LocationForegroundServiceTest {
             altitude = null,
             any(), any(), any(), any(), any(), any()
         ) }
+    }
+
+    @Test
+    fun `handleLocationUpdate handles null speed when no previous location`() = testScope.runTest {
+        val location = mockLocation(hasSpeed = false)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify { dbHelper.saveLocation(
+            any(), any(), any(), any(),
+            speed = null,
+            any(), any(), any(), any(), any()
+        ) }
+        verify(exactly = 0) { location.setSpeed(any()) }
+    }
+
+    // =========================================================================
+    // applySpeedFallback
+    // =========================================================================
+
+    @Test
+    fun `applySpeedFallback calculates speed from consecutive points`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 10_000, distanceTo = 50f)  // 50m in 10s = 5 m/s
+        setField("lastKnownLocation", prev)
+
+        val location = mockLocation(hasSpeed = false, time = now)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify { location.setSpeed(5.0f) }
+    }
+
+    @Test
+    fun `applySpeedFallback does not override GPS-provided speed`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 10_000, distanceTo = 50f)
+        setField("lastKnownLocation", prev)
+
+        val location = mockLocation(hasSpeed = true, speed = 3f, time = now)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify(exactly = 0) { location.setSpeed(any()) }
+    }
+
+    @Test
+    fun `applySpeedFallback skips when time delta too small`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 500, distanceTo = 50f)  // 500ms
+        setField("lastKnownLocation", prev)
+
+        val location = mockLocation(hasSpeed = false, time = now)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify(exactly = 0) { location.setSpeed(any()) }
+    }
+
+    @Test
+    fun `applySpeedFallback skips when time delta too large`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 120_000, distanceTo = 500f)  // 2 minutes
+        setField("lastKnownLocation", prev)
+
+        val location = mockLocation(hasSpeed = false, time = now)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify(exactly = 0) { location.setSpeed(any()) }
+    }
+
+    @Test
+    fun `applySpeedFallback rejects unreasonable speed`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 1000, distanceTo = 500f)  // 500m/s > 278 cap
+        setField("lastKnownLocation", prev)
+
+        val location = mockLocation(hasSpeed = false, time = now)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify(exactly = 0) { location.setSpeed(any()) }
+    }
+
+    @Test
+    fun `applySpeedFallback calculates at exactly 1s boundary`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 1000, distanceTo = 10f)  // 10m in 1s = 10 m/s
+        setField("lastKnownLocation", prev)
+
+        val location = mockLocation(hasSpeed = false, time = now)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify { location.setSpeed(10.0f) }
+    }
+
+    @Test
+    fun `applySpeedFallback calculates at exactly 60s boundary`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 60_000, distanceTo = 120f)  // 120m in 60s = 2 m/s
+        setField("lastKnownLocation", prev)
+
+        val location = mockLocation(hasSpeed = false, time = now)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify { location.setSpeed(2.0f) }
     }
 
     @Test
