@@ -187,6 +187,12 @@ class SyncManager(
     }
 
     private suspend fun syncQueue(onProgress: ((sent: Int, failed: Int) -> Unit)? = null) = coroutineScope {
+        // Snapshot volatile config so it stays consistent for the entire sync pass
+        val currentEndpoint = endpoint
+        val currentAuthHeaders = authHeaders
+        val currentHttpMethod = httpMethod
+        val currentMaxRetries = maxRetries  // 0 = retry forever, >0 = give up after N attempts
+
         var totalProcessed = 0
         var totalSucceeded = 0
         var totalFailed = 0
@@ -206,24 +212,30 @@ class SyncManager(
             }
 
             // Chunks of 10 concurrent HTTP requests to avoid flooding the server
+            val processedBefore = totalProcessed
+
             for (chunk in queued.chunked(10)) {
                 val successfulIds = mutableListOf<Long>()
                 val permanentlyFailedIds = mutableListOf<Long>()
 
-                val (retriable, exceeded) = chunk.partition { it.retryCount < maxRetries }
+                val (retriable, exceeded) = if (currentMaxRetries <= 0) {
+                    chunk to emptyList()
+                } else {
+                    chunk.partition { it.retryCount < currentMaxRetries }
+                }
 
                 permanentlyFailedIds.addAll(exceeded.map { it.queueId })
                 if (BuildConfig.DEBUG && exceeded.isNotEmpty()) {
-                    Log.w(TAG, "Removing ${exceeded.size} items that exceeded $maxRetries retries")
+                    Log.w(TAG, "Removing ${exceeded.size} items that exceeded $currentMaxRetries retries")
                 }
 
                 val results = retriable.map { item ->
                     async {
                         val success = networkManager.sendToEndpoint(
                             JSONObject(item.payload),
-                            endpoint,
-                            authHeaders,
-                            httpMethod
+                            currentEndpoint,
+                            currentAuthHeaders,
+                            currentHttpMethod
                         )
                         item.queueId to success
                     }
@@ -236,7 +248,7 @@ class SyncManager(
                         val item = retriable.first { it.queueId == queueId }
                         dbHelper.incrementRetryCount(queueId, "Send failed")
 
-                        if (item.retryCount + 1 >= maxRetries) {
+                        if (currentMaxRetries > 0 && item.retryCount + 1 >= currentMaxRetries) {
                             permanentlyFailedIds.add(queueId)
                             if (BuildConfig.DEBUG) {
                                 Log.w(TAG, "Item $queueId reached max retries")
@@ -250,10 +262,12 @@ class SyncManager(
                     dbHelper.removeBatchFromQueue(toRemove)
 
                     // Delete locations of permanently failed items (never sent)
-                    val failedLocationIds = chunk
-                        .filter { it.queueId in permanentlyFailedIds }
-                        .map { it.locationId }
-                    dbHelper.deleteLocations(failedLocationIds)
+                    if (permanentlyFailedIds.isNotEmpty()) {
+                        val failedLocationIds = chunk
+                            .filter { it.queueId in permanentlyFailedIds }
+                            .map { it.locationId }
+                        dbHelper.deleteLocations(failedLocationIds)
+                    }
 
                     totalProcessed += toRemove.size
                     totalSucceeded += successfulIds.size
@@ -262,6 +276,14 @@ class SyncManager(
                 }
 
                 yield()
+            }
+
+            // No items removed from queue. Stop re-fetching the same failing items
+            if (totalProcessed == processedBefore) {
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "No progress in batch $batchNumber, stopping sync pass")
+                }
+                break
             }
 
             batchNumber++

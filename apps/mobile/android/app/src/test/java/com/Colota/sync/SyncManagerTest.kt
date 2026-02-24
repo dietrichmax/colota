@@ -354,13 +354,111 @@ class SyncManagerTest {
         verify { dbHelper.removeBatchFromQueue(match { it.containsAll(listOf(1L, 2L)) }) }
     }
 
-    // --- stopPeriodicSync ---
+    // --- syncQueue: maxRetries=0 (retry forever) ---
 
     @Test
-    fun `stopPeriodicSync cancels job`() {
-        syncManager.startPeriodicSync()
-        syncManager.stopPeriodicSync()
-        // No exception means the job was cancelled cleanly
+    fun `syncQueue retries all items when maxRetries is 0`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            maxRetries = 0,
+            isOfflineMode = false,
+            isWifiOnlySync = false,
+            authHeaders = emptyMap()
+        )
+
+        // Item with high retry count should still be sent, not treated as exceeded
+        val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 99)
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(item), emptyList())
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
+        verify { dbHelper.removeBatchFromQueue(listOf(1L)) }
+        // Location should NOT be deleted (it was successfully sent)
+        verify(exactly = 0) { dbHelper.deleteLocations(any()) }
+    }
+
+    @Test
+    fun `syncQueue does not permanently fail items when maxRetries is 0`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            maxRetries = 0,
+            isOfflineMode = false,
+            isWifiOnlySync = false,
+            authHeaders = emptyMap()
+        )
+
+        val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 50)
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(item), emptyList())
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns false
+
+        syncManager.manualFlush()
+
+        // Should increment retry count but NOT remove from queue or delete location
+        verify { dbHelper.incrementRetryCount(1L, "Send failed") }
+        verify(exactly = 0) { dbHelper.removeBatchFromQueue(any()) }
+        verify(exactly = 0) { dbHelper.deleteLocations(any()) }
+    }
+
+    @Test
+    fun `syncQueue stops fetching batches when all sends fail`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            maxRetries = 5,
+            isOfflineMode = false,
+            isWifiOnlySync = false,
+            authHeaders = emptyMap()
+        )
+
+        val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
+        // Always return the same item (it stays in queue after failure)
+        every { dbHelper.getQueuedLocations(50) } returns listOf(item)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns false
+
+        syncManager.manualFlush()
+
+        // Should only fetch ONE batch, not loop 10 times re-fetching the same failing item
+        verify(exactly = 1) { dbHelper.getQueuedLocations(50) }
+        coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `syncQueue continues to next batch after cleaning up exceeded items`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            maxRetries = 3,
+            isOfflineMode = false,
+            isWifiOnlySync = false,
+            authHeaders = emptyMap()
+        )
+
+        // Batch 1: only exceeded items (cleaned up, no sends)
+        // Batch 2: fresh items that should be sent
+        val exceeded = QueuedLocation(1L, 100L, """{"lat":52.0}""", 3)
+        val fresh = QueuedLocation(2L, 101L, """{"lat":53.0}""", 0)
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(
+            listOf(exceeded),
+            listOf(fresh),
+            emptyList()
+        )
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+
+        syncManager.manualFlush()
+
+        // Should process BOTH batches: clean up exceeded AND send fresh
+        verify(exactly = 3) { dbHelper.getQueuedLocations(50) }
+        coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
+        verify { dbHelper.removeBatchFromQueue(listOf(1L)) }
+        verify { dbHelper.removeBatchFromQueue(listOf(2L)) }
     }
 
     // --- getCachedQueuedCount ---
@@ -436,7 +534,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
 
-        // Always return items — loop should still stop at batch 10
+        // Always return items - loop should still stop at batch 10
         val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
         every { dbHelper.getQueuedLocations(50) } returns listOf(item)
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
@@ -648,11 +746,11 @@ class SyncManagerTest {
 
         syncManager.startPeriodicSync()
 
-        // Before interval elapses — no sync yet
+        // Before interval elapses - no sync yet
         advanceTimeBy(30_000)
         coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
 
-        // After interval elapses — sync happens
+        // After interval elapses - sync happens
         advanceTimeBy(31_000)
         coVerify(atLeast = 1) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
         syncManager.stopPeriodicSync()
