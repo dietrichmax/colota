@@ -346,6 +346,7 @@ class LocationServiceModuleTest {
             every { bearing } returns 90f
             every { time } returns 1700000000000L
             every { hasAltitude() } returns false
+            every { hasSpeed() } returns true
             every { hasBearing() } returns true
         }
     }

@@ -85,7 +85,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                         putNull("altitude")
                     }
                     
-                    putDouble("speed", location.speed.toDouble())
+                    if (location.hasSpeed()) {
+                        putDouble("speed", location.speed.toDouble())
+                    } else {
+                        putNull("speed")
+                    }
                     putDouble("bearing", if (location.hasBearing()) location.bearing.toDouble() else 0.0)
                     putDouble("timestamp", location.time.toDouble())
                     putInt("battery", battery) 

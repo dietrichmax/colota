@@ -338,10 +338,33 @@ class LocationForegroundService : Service() {
         }
     }
 
+    /**
+     * Calculates speed from consecutive GPS points when the device doesn't
+     * provide it natively. Sets speed on the Location object via setSpeed(),
+     * which also causes hasSpeed() to return true for all downstream consumers.
+     */
+    private fun applySpeedFallback(location: android.location.Location) {
+        if (location.hasSpeed()) return
+
+        val prev = lastKnownLocation ?: return
+
+        val timeDeltaMs = location.time - prev.time
+        if (timeDeltaMs < 1000 || timeDeltaMs > 60_000) return
+
+        val distanceMeters = prev.distanceTo(location)
+        val calculatedSpeed = distanceMeters / (timeDeltaMs / 1000.0f)
+
+        if (calculatedSpeed > 278f) return  // ~1000 km/h, reject GPS jitter
+
+        location.speed = calculatedSpeed
+    }
+
     private fun handleLocationUpdate(location: android.location.Location) {
         if (config.filterInaccurateLocations && location.accuracy > config.accuracyThreshold) {
             return
         }
+
+        applySpeedFallback(location)
 
         // Feed location to profile manager for speed-based condition evaluation
         // (after accuracy filter so bad GPS data doesn't pollute speed average)
@@ -379,7 +402,7 @@ class LocationForegroundService : Service() {
                 longitude = location.longitude,
                 accuracy = location.accuracy.toDouble(),
                 altitude = if (location.hasAltitude()) location.altitude.toInt() else null,
-                speed = location.speed.toDouble(),
+                speed = if (location.hasSpeed()) location.speed.toDouble() else null,
                 bearing = if (location.hasBearing()) location.bearing.toDouble() else 0.0,
                 battery = battery,
                 battery_status = batteryStatus,
