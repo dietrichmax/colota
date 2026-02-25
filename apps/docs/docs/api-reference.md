@@ -59,13 +59,13 @@ All field names are [customizable](/docs/configuration/field-mapping).
 | `lon`  | Double  | Degrees                                    | Yes                                   |
 | `acc`  | Integer | Meters (rounded)                           | Yes                                   |
 | `alt`  | Integer | Meters (rounded)                           | No - only if device has altitude data |
-| `vel`  | Integer | m/s (rounded)                              | Yes - `0` when stationary             |
+| `vel`  | Double  | m/s (1 decimal)                            | No - only if device has speed data    |
 | `batt` | Integer | Percent (0–100)                            | Yes                                   |
 | `bs`   | Integer | 0=unknown, 1=unplugged, 2=charging, 3=full | Yes                                   |
 | `tst`  | Long    | Unix seconds (not milliseconds)            | Yes                                   |
 | `bear` | Double  | Degrees (0–360)                            | No - only if device has bearing data  |
 
-**Important:** `alt` and `bear` are conditionally included. Your server should not reject payloads missing these fields.
+**Important:** `alt`, `vel`, and `bear` are conditionally included. Your server should not reject payloads missing these fields.
 
 ### Custom Fields
 

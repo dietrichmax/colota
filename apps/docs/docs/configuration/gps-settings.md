@@ -10,7 +10,7 @@ sidebar_position: 2
 | ------------------ | ------------------------------------ | --------- | ---------- |
 | Tracking Interval  | Time between GPS fixes               | 5 seconds | 1s - hours |
 | Movement Threshold | Minimum movement to trigger update   | 0 meters  | 0m - 1000m |
-| Accuracy Threshold | Filter out fixes above this accuracy | 50 meters | 0m - 1000m |
+| Accuracy Threshold | Filter out fixes above this accuracy | 50 meters | 1m - 1000m |
 | Filter Inaccurate  | Enable/disable accuracy filtering    | Disabled  | On/Off     |
 
 ## Tracking Interval
