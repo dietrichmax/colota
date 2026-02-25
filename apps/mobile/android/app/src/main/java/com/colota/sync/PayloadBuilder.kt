@@ -44,7 +44,7 @@ class PayloadBuilder {
             }
 
             if (location.hasSpeed()) {
-                put(fieldMap["vel"] ?: "vel", location.speed.roundToInt())
+                put(fieldMap["vel"] ?: "vel", Math.round(location.speed * 10.0f) / 10.0)
             }
             put(fieldMap["batt"] ?: "batt", batteryLevel)
             put(fieldMap["bs"] ?: "bs", batteryStatus)

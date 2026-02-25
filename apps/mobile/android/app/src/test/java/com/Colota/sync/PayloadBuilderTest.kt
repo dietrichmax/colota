@@ -34,7 +34,7 @@ class PayloadBuilderTest {
         assertEquals(52.52, payload.getDouble("lat"), 0.001)
         assertEquals(13.405, payload.getDouble("lon"), 0.001)
         assertEquals(11, payload.getInt("acc")) // 10.5 rounded
-        assertEquals(1, payload.getInt("vel")) // 1.2 rounded
+        assertEquals(1.2, payload.getDouble("vel"), 0.01) // one decimal
         assertEquals(85, payload.getInt("batt"))
         assertEquals(2, payload.getInt("bs"))
         assertEquals(1700000000L, payload.getLong("tst"))
@@ -109,6 +109,42 @@ class PayloadBuilderTest {
     }
 
     @Test
+    fun `buildPayload includes zero speed when hasSpeed is true`() {
+        val location = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f, hasSpeed = true)
+
+        val payload = builder.buildPayload(
+            location = location,
+            batteryLevel = 80,
+            batteryStatus = 2,
+            fieldMap = emptyMap(),
+            timestamp = 1700000000L
+        )
+
+        assertTrue(payload.has("vel"))
+        assertEquals(0.0, payload.getDouble("vel"), 0.001)
+    }
+
+    @Test
+    fun `buildPayload rounds speed to one decimal without float precision artifacts`() {
+        val location049 = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.049f)
+        val payload049 = builder.buildPayload(location049, 80, 2, emptyMap(), 1700000000L)
+        assertEquals(0.0, payload049.getDouble("vel"), 0.001) // 0.049 rounds down
+
+        val location050 = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.05f)
+        val payload050 = builder.buildPayload(location050, 80, 2, emptyMap(), 1700000000L)
+        assertEquals(0.1, payload050.getDouble("vel"), 0.001) // 0.05 rounds up
+
+        val location127 = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 1.27f)
+        val payload127 = builder.buildPayload(location127, 80, 2, emptyMap(), 1700000000L)
+        assertEquals(1.3, payload127.getDouble("vel"), 0.001) // 1.27 rounds to 1.3
+
+        // Verify no float precision artifacts like 0.10000000149011612
+        val location010 = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.1f)
+        val payload010 = builder.buildPayload(location010, 80, 2, emptyMap(), 1700000000L)
+        assertEquals("0.1", payload010.getDouble("vel").toString())
+    }
+
+    @Test
     fun `buildPayload includes bearing when available`() {
         val location = createMockLocation(
             lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f,
@@ -124,6 +160,21 @@ class PayloadBuilderTest {
         )
 
         assertEquals(180.5, payload.getDouble("bear"), 0.1)
+    }
+
+    @Test
+    fun `buildPayload excludes bearing when not available`() {
+        val location = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f)
+
+        val payload = builder.buildPayload(
+            location = location,
+            batteryLevel = 80,
+            batteryStatus = 2,
+            fieldMap = emptyMap(),
+            timestamp = 1700000000L
+        )
+
+        assertFalse(payload.has("bear"))
     }
 
     @Test
