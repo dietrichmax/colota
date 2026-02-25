@@ -3,3 +3,4 @@
 - Fixed sync retry-forever mode dropping locations after repeated failures
 - Hardened security: restrict HTTP to private networks, narrowed ProGuard rules
 - Lowered minimum accuracy threshold from 50m to 1m
+- Speed is now sent with one decimal precision instead of rounded to integer
