@@ -1,0 +1,5 @@
+- Added Android 17+ local network permission handling
+- Fixed speed data: guard with hasSpeed() and calculate fallback from GPS points
+- Fixed sync retry-forever mode dropping locations after repeated failures
+- Hardened security: restrict HTTP to private networks, narrowed ProGuard rules
+- Lowered minimum accuracy threshold from 50m to 1m
