@@ -25,9 +25,7 @@ import com.Colota.location.LocationUpdateCallback
 import kotlinx.coroutines.*
 import java.util.Locale
 
-/**
- * Foreground Service for continuous background location tracking.
- */
+/** Foreground service for continuous GPS tracking and location syncing. */
 class LocationForegroundService : Service() {
 
     private lateinit var locationProvider: LocationProvider
@@ -46,12 +44,13 @@ class LocationForegroundService : Service() {
 
     @Volatile private var serviceScope: CoroutineScope? = null
     @Volatile private var locationUpdateCallback: LocationUpdateCallback? = null
+    @Volatile private var locationRestartJob: Job? = null
     @Volatile private var insidePauseZone = false
     @Volatile private var currentZoneName: String? = null
     @Volatile private var lastKnownLocation: android.location.Location? = null
 
     @Volatile private lateinit var config: ServiceConfig
-    private var fieldMap: Map<String, String>? = null
+    @Volatile private var fieldMap: Map<String, String>? = null
     @Volatile private var customFields: Map<String, String>? = null
 
     companion object {
@@ -116,12 +115,15 @@ class LocationForegroundService : Service() {
         val action = intent?.action
         val isLightweight = action in LIGHTWEIGHT_ACTIONS
 
-        // Only reload config for full starts (not lightweight actions)
+        // Skip config reload for lightweight actions, but if the service was
+        // killed and restarted by one, load from DB so SyncManager has an endpoint.
         if (!isLightweight) {
             loadConfigFromIntent(intent)
+        } else if (!::config.isInitialized) {
+            loadConfigFromIntent(null)
         }
 
-        // Must call startForeground within 5s — use best available status
+        // Must call startForeground within 5s
         val initialStatus = notificationHelper.getInitialStatus(
             insidePauseZone, currentZoneName, lastKnownLocation
         )
@@ -154,7 +156,6 @@ class LocationForegroundService : Service() {
                         Log.d(TAG, "Force exit from zone: $currentZoneName")
                     }
                     exitPauseZone()
-                    // Immediately recheck with current location
                     lastKnownLocation?.let { recheckZoneWithLocation(it) }
                 }
                 return START_STICKY
@@ -175,23 +176,24 @@ class LocationForegroundService : Service() {
                 return START_STICKY
             }
             else -> {
-                serviceScope?.launch {
-                    // FusedLocationClient requires Main looper
+                locationRestartJob?.cancel()
+                locationRestartJob = serviceScope?.launch {
                     withContext(Dispatchers.Main) {
                         stopLocationUpdates()
                         syncManager.stopPeriodicSync()
 
                         setupLocationUpdates()
                         syncManager.startPeriodicSync()
+
+                        // Start after setup so profile evaluations don't race
+                        // with setupLocationUpdates above
+                        conditionMonitor.start()
                     }
 
                     if (config.syncIntervalSeconds == 0 && config.endpoint.isNotBlank()) {
                         syncManager.manualFlush()
                     }
                 }
-
-                // Start condition monitors for profile-based config switching
-                conditionMonitor.start()
             }
         }
 
@@ -241,12 +243,9 @@ class LocationForegroundService : Service() {
                 onSuccess = { location ->
                     location?.let {
                         lastKnownLocation = it
-
-                        // Check if starting in a pause zone
                         geofenceHelper.getPauseZone(it)?.let { zoneName ->
                             enterPauseZone(zoneName)
                         } ?: run {
-                            // Not in zone - show coordinates immediately
                             updateNotification(it.latitude, it.longitude, forceUpdate = true)
                         }
                     }
@@ -256,6 +255,9 @@ class LocationForegroundService : Service() {
         } catch (e: SecurityException) {
             Log.e(TAG, "Location permission missing", e)
             stopForegroundServiceWithReason("Location permission missing")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start location updates", e)
+            stopForegroundServiceWithReason("Location provider error")
         }
     }
 
@@ -270,18 +272,15 @@ class LocationForegroundService : Service() {
         val cachedLoc = lastKnownLocation
         val now = System.currentTimeMillis()
 
-        // If we have a fresh location (less than 1 min old), recheck immediately
-        if (cachedLoc != null && (now - cachedLoc.time) < 60000) {
+        if (cachedLoc != null && (now - cachedLoc.time) < 60_000) {
             recheckZoneWithLocation(cachedLoc)
         } else {
-            // Otherwise, request the last known location from the provider
             locationProvider.getLastLocation(
                 onSuccess = { location ->
                     if (location != null) {
                         lastKnownLocation = location
                         recheckZoneWithLocation(location)
                     } else {
-                        // No location available - if in zone, exit it
                         if (insidePauseZone) {
                             if (BuildConfig.DEBUG) {
                                 Log.d(TAG, "No location for recheck, forcing exit from zone")
@@ -292,7 +291,6 @@ class LocationForegroundService : Service() {
                 },
                 onFailure = { e ->
                     Log.e(TAG, "Recheck error", e)
-                    // On error, also exit zone if in one
                     if (insidePauseZone) {
                         exitPauseZone()
                     }
@@ -306,17 +304,13 @@ class LocationForegroundService : Service() {
         val zoneName = geofenceHelper.getPauseZone(location)
 
         when {
-            // Just entered a pause zone or changed zones
             zoneName != null && (!insidePauseZone || zoneName != currentZoneName) -> {
                 enterPauseZone(zoneName)
             }
-
-            // Just exited pause zone
             zoneName == null && insidePauseZone -> {
                 exitPauseZone()
             }
-
-            // Still in the same pause zone - update coords but keep paused status
+            // Same zone - refresh notification coords
             zoneName != null && insidePauseZone && zoneName == currentZoneName -> {
                 updateNotification(
                     lat = location.latitude,
@@ -327,7 +321,6 @@ class LocationForegroundService : Service() {
                 )
             }
 
-            // Standard movement (no zone) - show coords
             else -> {
                 updateNotification(
                     location.latitude,
@@ -338,11 +331,7 @@ class LocationForegroundService : Service() {
         }
     }
 
-    /**
-     * Calculates speed from consecutive GPS points when the device doesn't
-     * provide it natively. Sets speed on the Location object via setSpeed(),
-     * which also causes hasSpeed() to return true for all downstream consumers.
-     */
+    /** Derives speed from consecutive GPS points when the device doesn't report it. */
     private fun applySpeedFallback(location: android.location.Location) {
         if (location.hasSpeed()) return
 
@@ -364,10 +353,17 @@ class LocationForegroundService : Service() {
             return
         }
 
+        // Deduplicate: FLP can redeliver the same fix to a newly registered listener
+        val prev = lastKnownLocation
+        if (prev != null && location.time == prev.time
+            && location.latitude == prev.latitude
+            && location.longitude == prev.longitude) {
+            return
+        }
+
         applySpeedFallback(location)
 
-        // Feed location to profile manager for speed-based condition evaluation
-        // (after accuracy filter so bad GPS data doesn't pollute speed average)
+        // After accuracy filter so bad GPS doesn't pollute speed average
         profileManager.onLocationUpdate(location)
 
         lastKnownLocation = location
@@ -395,7 +391,6 @@ class LocationForegroundService : Service() {
         val timestampSec = location.time / 1000
         val currentFieldMap = fieldMap ?: emptyMap()
 
-        // DB + network on IO thread; notification dispatches back to Main
         serviceScope?.launch {
             val locationId = dbHelper.saveLocation(
                 latitude = location.latitude,
@@ -462,9 +457,6 @@ class LocationForegroundService : Service() {
         if (BuildConfig.DEBUG) Log.d(TAG, "Exited pause zone: $exited")
     }
 
-    /**
-     * Thin wrapper that delegates to NotificationHelper with current service state.
-     */
     private fun updateNotification(
         lat: Double? = null,
         lon: Double? = null,
@@ -492,7 +484,7 @@ class LocationForegroundService : Service() {
             Log.i(TAG, "Stopping: $reason")
         }
 
-        // Clear active profile so JS UI resets the profile indicator
+        // Reset profile indicator in JS UI
         if (profileManager.getActiveProfileName() != null) {
             LocationServiceModule.sendProfileSwitchEvent(null, null)
         }
@@ -512,14 +504,11 @@ class LocationForegroundService : Service() {
             notificationHelper.buildStoppedNotification(reason)
         )
 
-        locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
+        stopLocationUpdates()
         stopSelf()
     }
 
-    /**
-     * Dynamically switches GPS interval and sync config when a profile activates/deactivates.
-     * No full service restart — just re-requests location updates with new parameters.
-     */
+    /** Hot-swaps GPS interval and sync config on profile change. */
     private fun applyProfileConfig(interval: Long, distance: Float, syncInterval: Int) {
         config = config.copy(
             interval = interval,
@@ -527,40 +516,24 @@ class LocationForegroundService : Service() {
             syncIntervalSeconds = syncInterval
         )
 
-        syncManager.updateConfig(
-            endpoint = config.endpoint,
-            syncIntervalSeconds = syncInterval,
-            retryIntervalSeconds = config.retryIntervalSeconds,
-            maxRetries = config.maxRetries,
-            isOfflineMode = config.isOfflineMode,
-            isWifiOnlySync = config.isWifiOnlySync,
-            authHeaders = secureStorage.getAuthHeaders(),
-            httpMethod = config.httpMethod
-        )
+        pushConfigToSyncManager()
 
-        serviceScope?.launch {
-            withContext(Dispatchers.Main) {
-                stopLocationUpdates()
-                setupLocationUpdates()
-            }
-        }
+        // Synchronous restart on Main thread to avoid duplicate locations from
+        // the old listener firing during an async coroutine window.
+        locationRestartJob?.cancel()
+        locationRestartJob = null
+        stopLocationUpdates()
+        setupLocationUpdates()
 
-        // Update notification to show/hide profile name in title
         val loc = lastKnownLocation
         updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
 
         if (BuildConfig.DEBUG) {
-            Log.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} — interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
+            Log.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} - interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
         }
     }
 
-    private fun loadConfigFromIntent(intent: Intent?) {
-        config = if (intent != null) {
-            ServiceConfig.fromIntent(intent, dbHelper)
-        } else {
-            ServiceConfig.fromDatabase(dbHelper)
-        }
-
+    private fun pushConfigToSyncManager() {
         syncManager.updateConfig(
             endpoint = config.endpoint,
             syncIntervalSeconds = config.syncIntervalSeconds,
@@ -571,8 +544,18 @@ class LocationForegroundService : Service() {
             authHeaders = secureStorage.getAuthHeaders(),
             httpMethod = config.httpMethod
         )
+    }
 
-        // Store default values so ProfileManager can revert when no profile matches
+    private fun loadConfigFromIntent(intent: Intent?) {
+        config = if (intent != null) {
+            ServiceConfig.fromIntent(intent, dbHelper)
+        } else {
+            ServiceConfig.fromDatabase(dbHelper)
+        }
+
+        pushConfigToSyncManager()
+
+        // Defaults for ProfileManager to revert to when no profile matches
         profileManager.defaultInterval = config.interval
         profileManager.defaultDistance = config.minUpdateDistance
         profileManager.defaultSyncInterval = config.syncIntervalSeconds

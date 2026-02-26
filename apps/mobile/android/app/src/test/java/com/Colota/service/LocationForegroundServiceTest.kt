@@ -83,6 +83,9 @@ class LocationForegroundServiceTest {
         every { LocationServiceModule.sendTrackingStoppedEvent(any()) } returns true
         every { LocationServiceModule.sendProfileSwitchEvent(any(), any()) } returns true
 
+        mockkStatic(android.os.Looper::class)
+        every { android.os.Looper.getMainLooper() } returns mockk(relaxed = true)
+
         service = spyk(LocationForegroundService(), recordPrivateCalls = true)
         every { service.stopForeground(any<Int>()) } returns Unit
         @Suppress("DEPRECATION")
@@ -96,6 +99,7 @@ class LocationForegroundServiceTest {
         testScope.cancel()
         Dispatchers.resetMain()
         unmockkObject(LocationServiceModule)
+        unmockkStatic(android.os.Looper::class)
     }
 
     private fun injectDependencies() {
@@ -161,7 +165,7 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
-    // handleLocationUpdate — full pipeline
+    // handleLocationUpdate - full pipeline
     // =========================================================================
 
     @Test
@@ -483,6 +487,28 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // setupLocationUpdates - error handling
+    // =========================================================================
+
+    @Test
+    fun `setupLocationUpdates stops service on SecurityException`() {
+        every { locationProvider.requestLocationUpdates(any(), any(), any(), any()) } throws SecurityException("no permission")
+
+        invokeSetupLocationUpdates()
+
+        verify { service.stopSelf() }
+    }
+
+    @Test
+    fun `setupLocationUpdates stops service on generic Exception`() {
+        every { locationProvider.requestLocationUpdates(any(), any(), any(), any()) } throws RuntimeException("provider crashed")
+
+        invokeSetupLocationUpdates()
+
+        verify { service.stopSelf() }
+    }
+
+    // =========================================================================
     // Lightweight action handlers
     // =========================================================================
 
@@ -703,7 +729,7 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
-    // recheckZoneWithLocation — zone recheck state machine
+    // recheckZoneWithLocation - zone recheck state machine
     // =========================================================================
 
     @Test
@@ -785,7 +811,7 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
-    // applyProfileConfig — dynamic config switching
+    // applyProfileConfig - dynamic config switching
     // =========================================================================
 
     @Test
@@ -851,15 +877,10 @@ class LocationForegroundServiceTest {
         val oldCallback = mockk<LocationUpdateCallback>(relaxed = true)
         setField("locationUpdateCallback", oldCallback)
 
-        mockkStatic(android.os.Looper::class)
-        every { android.os.Looper.getMainLooper() } returns mockk(relaxed = true)
-
         invokeApplyProfileConfig(interval = 2000L, distance = 5f, syncInterval = 30)
 
         verify { locationProvider.removeLocationUpdates(oldCallback) }
         verify { locationProvider.requestLocationUpdates(2000L, 5f, any(), any()) }
-
-        unmockkStatic(android.os.Looper::class)
     }
 
     @Test
@@ -869,8 +890,19 @@ class LocationForegroundServiceTest {
         verify { notificationHelper.update(any(), any(), any(), any(), any(), any(), any(), forceUpdate = true) }
     }
 
+    @Test
+    fun `applyProfileConfig cancels pending locationRestartJob`() {
+        val mockJob = mockk<Job>(relaxed = true)
+        setField("locationRestartJob", mockJob)
+
+        invokeApplyProfileConfig(interval = 2000L, distance = 5f, syncInterval = 30)
+
+        verify { mockJob.cancel() }
+        assertNull(getField<Job?>("locationRestartJob"))
+    }
+
     // =========================================================================
-    // onDestroy — cleanup
+    // onDestroy - cleanup
     // =========================================================================
 
     @Test
@@ -935,7 +967,7 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
-    // stopForegroundServiceWithReason — battery critical path
+    // stopForegroundServiceWithReason - battery critical path
     // =========================================================================
 
     @Test
@@ -981,7 +1013,7 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
-    // Helpers — invoke private methods via reflection
+    // Helpers - invoke private methods via reflection
     // =========================================================================
 
     private fun invokeHandleLocationUpdate(location: Location) {
@@ -1031,6 +1063,13 @@ class LocationForegroundServiceTest {
     private fun invokeHandleZoneRecheckAction() {
         val method = LocationForegroundService::class.java
             .getDeclaredMethod("handleZoneRecheckAction")
+        method.isAccessible = true
+        method.invoke(service)
+    }
+
+    private fun invokeSetupLocationUpdates() {
+        val method = LocationForegroundService::class.java
+            .getDeclaredMethod("setupLocationUpdates")
         method.isAccessible = true
         method.invoke(service)
     }
