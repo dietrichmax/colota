@@ -5,3 +5,4 @@
 - Fixed manual sync falsely reporting "Sync complete" when nothing was synced
 - Sync failure feedback now shows in red instead of green
 - Improved service resilience after OOM kill by lightweight actions
+- Updated dependencies to latest compatible version
