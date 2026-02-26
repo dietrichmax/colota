@@ -14,14 +14,16 @@ interface Props {
   success: boolean
   /** Optional custom message. When provided, controls visibility instead of saving/success. */
   message?: string | null
+  isError?: boolean
   colors: {
     info: string
     success: string
+    error: string
     text: string
   }
 }
 
-export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, message, colors }) => {
+export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, message, isError, colors }) => {
   const hasMessage = message != null
   const visible = hasMessage || saving || success
 
@@ -50,8 +52,8 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
         style={[
           styles.badge,
           {
-            backgroundColor: saving ? colors.info : colors.success,
-            shadowColor: saving ? colors.info : colors.success
+            backgroundColor: saving ? colors.info : isError ? colors.error : colors.success,
+            shadowColor: saving ? colors.info : isError ? colors.error : colors.success
           }
         ]}
       >

@@ -10,10 +10,7 @@ import android.location.Location
 import android.os.Looper
 import com.google.android.gms.location.*
 
-/**
- * Location provider backed by Google Play Services FusedLocationProviderClient.
- * Used in the GMS product flavor (Google Play distribution).
- */
+/** FusedLocationProviderClient-based provider for GMS flavor. */
 class GmsLocationProvider(context: Context) : LocationProvider {
 
     private val fusedClient: FusedLocationProviderClient =
@@ -34,10 +31,9 @@ class GmsLocationProvider(context: Context) : LocationProvider {
         }
         callbackMap[callback] = gmsCallback
 
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMs * 2)
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMs)
             .setMinUpdateIntervalMillis(intervalMs)
             .setMinUpdateDistanceMeters(minDistanceMeters)
-            .setMaxUpdateDelayMillis(intervalMs * 2)
             .build()
 
         try {

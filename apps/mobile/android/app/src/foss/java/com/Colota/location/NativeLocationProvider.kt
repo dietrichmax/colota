@@ -14,26 +14,24 @@ import android.os.Bundle
 import android.os.Looper
 
 /**
- * Location provider backed by Android's native LocationManager.
- * Used in the FOSS product flavor (F-Droid distribution, no Google Play Services).
- * Registers both GPS_PROVIDER and NETWORK_PROVIDER for faster fixes — GPS is
- * primary but network provides a quick initial position (similar to FusedLocationProvider).
+ * LocationManager-based provider for FOSS flavor (no Google Play Services).
+ * Uses GPS as primary source with NETWORK_PROVIDER as coarse fallback.
  */
 @SuppressLint("MissingPermission")
 class NativeLocationProvider(context: Context) : LocationProvider {
 
     companion object {
-        /** Suppress network updates for this duration after the last GPS fix. */
+        /** Ignore network updates for this long after the last GPS fix. */
         private const val GPS_SUPPRESSION_MS = 10_000L
     }
 
     private val locationManager: LocationManager =
         context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-    /** Maps each callback to its GPS listener and optional network listener. */
+    /** Maps callback -> [GPS listener, network listener?]. */
     private val listenerMap = java.util.concurrent.ConcurrentHashMap<LocationUpdateCallback, List<LocationListener>>()
 
-    /** Timestamp of last GPS fix, used to suppress redundant network updates. */
+    /** Last GPS fix time; suppresses redundant network updates. */
     @Volatile private var lastGpsTime: Long = 0
 
     override fun requestLocationUpdates(
@@ -64,8 +62,7 @@ class NativeLocationProvider(context: Context) : LocationProvider {
                 looper
             )
 
-            // Also register NETWORK_PROVIDER for faster initial fix (WiFi/cell).
-            // GPS remains primary for accuracy; network provides coarse fallback.
+            // NETWORK_PROVIDER as coarse fallback for faster initial fix
             if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 val networkListener = object : LocationListener {
                     override fun onLocationChanged(location: Location) {
@@ -88,7 +85,6 @@ class NativeLocationProvider(context: Context) : LocationProvider {
                 )
             }
         } catch (e: SecurityException) {
-            // Clean up any listeners that were registered before the error
             listeners.forEach { locationManager.removeUpdates(it) }
             throw e
         }

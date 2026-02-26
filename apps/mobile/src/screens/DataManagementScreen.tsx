@@ -94,13 +94,15 @@ export function DataManagementScreen({}: ScreenProps) {
       setFeedback(`Syncing 0/${total}...`)
       feedbackTimeout.clear()
 
-      // Listen for native progress events during flush
+      const receivedProgress = { current: false }
+
       progressListenerRef.current = syncEmitter.addListener(
         "onSyncProgress",
         (event: { sent: number; failed: number; total: number }) => {
+          receivedProgress.current = true
           const processed = event.sent + event.failed
           if (processed >= event.total) {
-            // Sync finished — show final result, then clean up
+            // Sync finished
             const msg =
               event.failed > 0
                 ? `Synced ${event.sent}/${event.total} (${event.failed} failed)`
@@ -116,12 +118,11 @@ export function DataManagementScreen({}: ScreenProps) {
         }
       )
 
-      // manualFlush resolves immediately (fire-and-forget Intent),
-      // so use a long fallback in case no progress events arrive
+      // manualFlush is fire-and-forget; fall back after 30s if no progress events arrive
       await NativeLocationService.manualFlush()
       flushTimeout.set(async () => {
         await cleanupFlush()
-        showFeedback("Sync complete")
+        showFeedback(receivedProgress.current ? "Sync complete" : "Sync failed! Check connection")
       }, 30000)
     } catch (err) {
       logger.error("[DataManagementScreen] Manual flush error:", err)
@@ -346,13 +347,19 @@ export function DataManagementScreen({}: ScreenProps) {
         </ScrollView>
 
         {/* Floating Feedback */}
-        <FloatingSaveIndicator saving={isProcessing} success={false} message={feedback} colors={colors} />
+        <FloatingSaveIndicator
+          saving={isProcessing}
+          success={false}
+          message={feedback}
+          isError={feedback?.toLowerCase().includes("failed") ?? false}
+          colors={colors}
+        />
       </KeyboardAvoidingView>
     </Container>
   )
 }
 
-// --- Reusable ActionRow Component ---
+// ActionRow Component
 const ActionRow = ({
   label,
   hint,
