@@ -14,7 +14,7 @@ Customize field names sent to your server. Field names apply to both POST (JSON 
 | `lon`  | Longitude (Double)                                         | Yes                         |
 | `acc`  | Accuracy in meters (Integer, rounded)                      | Yes                         |
 | `alt`  | Altitude in meters (Integer, rounded)                      | Only if device has altitude |
-| `vel`  | Speed in m/s (Integer, rounded, `0` when stationary)       | Yes                         |
+| `vel`  | Speed in m/s (Double, 1 decimal)                           | Only if device has speed    |
 | `batt` | Battery level 0–100 (Integer)                              | Yes                         |
 | `bs`   | Battery status: 0=unknown, 1=unplugged, 2=charging, 3=full | Yes                         |
 | `tst`  | Timestamp in Unix seconds (Long, not milliseconds)         | Yes                         |

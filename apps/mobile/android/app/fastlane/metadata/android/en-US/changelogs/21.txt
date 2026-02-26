@@ -1,0 +1,7 @@
+- Fixed race condition in profile switching that could stop tracking silently
+- Fixed GPS interval not updating when switching between profiles
+- Fixed duplicate locations during profile transitions
+- Fixed GMS location provider requesting updates at 2x the configured interval
+- Fixed manual sync falsely reporting "Sync complete" when nothing was synced
+- Sync failure feedback now shows in red instead of green
+- Improved service resilience after OOM kill by lightweight actions
