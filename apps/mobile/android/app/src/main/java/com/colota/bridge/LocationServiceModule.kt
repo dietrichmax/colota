@@ -57,6 +57,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     companion object {
         private const val TAG = "LocationServiceModule"
+
         private var reactContextRef: WeakReference<ReactApplicationContext> = WeakReference(null)
         
         @Volatile
@@ -901,7 +902,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         val lines = process.inputStream.bufferedReader().readLines()
         process.waitFor()
         Arguments.createArray().apply {
-            lines.forEach { pushString(it) }
+            lines.filter { "Colota." in it }.forEach { pushString(it) }
         }
     }
 }

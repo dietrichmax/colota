@@ -612,7 +612,7 @@ class DatabaseHelper private constructor(context: Context) :
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting days with data", e)
+            AppLogger.e(TAG, "Error getting days with data", e)
         }
         return days
     }
@@ -696,7 +696,7 @@ class DatabaseHelper private constructor(context: Context) :
                 emitDay()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting daily stats", e)
+            AppLogger.e(TAG, "Error getting daily stats", e)
         }
         return stats
     }

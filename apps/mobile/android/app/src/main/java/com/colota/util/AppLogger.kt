@@ -19,8 +19,12 @@ import com.Colota.BuildConfig
  * needing to toggle debug mode, while release users can opt in via the setting.
  *
  * Errors (Log.e) are always logged regardless of debug mode.
+ *
+ * All tags are prefixed with "Colota." so native log export can filter on that prefix.
  */
 object AppLogger {
+
+    private const val PREFIX = "Colota."
 
     @Volatile
     var enabled: Boolean = false
@@ -29,18 +33,19 @@ object AppLogger {
         get() = enabled || BuildConfig.DEBUG
 
     fun d(tag: String, msg: String) {
-        if (active) Log.d(tag, msg)
+        if (active) Log.d(PREFIX + tag, msg)
     }
 
     fun i(tag: String, msg: String) {
-        if (active) Log.i(tag, msg)
+        if (active) Log.i(PREFIX + tag, msg)
     }
 
     fun w(tag: String, msg: String) {
-        if (active) Log.w(tag, msg)
+        if (active) Log.w(PREFIX + tag, msg)
     }
 
     fun e(tag: String, msg: String, throwable: Throwable? = null) {
-        if (throwable != null) Log.e(tag, msg, throwable) else Log.e(tag, msg)
+        val t = PREFIX + tag
+        if (throwable != null) Log.e(t, msg, throwable) else Log.e(t, msg)
     }
 }
