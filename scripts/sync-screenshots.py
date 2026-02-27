@@ -12,6 +12,7 @@ Targets:
     - apps/mobile/android/app/fastlane/metadata/  (numbered, for stores)
 """
 
+import filecmp
 import shutil
 import sys
 from pathlib import Path
@@ -24,12 +25,12 @@ STORE = REPO_ROOT / "apps" / "mobile" / "android" / "app" / "fastlane" / "metada
 
 STORE_ORDER = [
     "Dashboard.png",
+    "LocationHistory.png",
+    "TripDetails.png",
+    "Trips.png",
     "Settings.png",
-    "Authentication.png",
     "TrackingProfiles.png",
-    "DataManagement.png",
-    "ApiFieldMapping.png",
-    "ExportData.png",
+    "Authentication.png",
     "DarkMode.png",
 ]
 
@@ -48,7 +49,11 @@ def main():
 
     print("Docs (named):")
     for file in sorted(SRC.glob("*.png")):
-        shutil.copy2(file, DOCS / file.name)
+        dest = DOCS / file.name
+        if dest.is_file() and filecmp.cmp(file, dest, shallow=False):
+            print(f"  {file.name} (unchanged)")
+            continue
+        shutil.copy2(file, dest)
         print(f"  {file.name} -> docs")
 
     # Sync to Fastlane store metadata (numbered copies)
@@ -62,7 +67,11 @@ def main():
         if not src_file.is_file():
             print(f"  Warning: {name} not found in source - skipping.")
             continue
-        shutil.copy2(src_file, STORE / f"{i}.png")
+        dest_file = STORE / f"{i}.png"
+        if dest_file.is_file() and filecmp.cmp(src_file, dest_file, shallow=False):
+            print(f"  {name} -> {i}.png (unchanged)")
+            continue
+        shutil.copy2(src_file, dest_file)
         print(f"  {name} -> {i}.png")
         count += 1
 
