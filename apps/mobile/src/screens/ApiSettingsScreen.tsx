@@ -434,8 +434,8 @@ export function ApiSettingsScreen({}: ScreenProps) {
                               borderColor: isDuplicate
                                 ? colors.error
                                 : isFieldModified
-                                ? colors.primary
-                                : colors.border,
+                                  ? colors.primary
+                                  : colors.border,
                               color: colors.text,
                               backgroundColor: colors.background
                             }

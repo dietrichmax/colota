@@ -400,7 +400,7 @@ class DatabaseHelper private constructor(context: Context) :
             TABLE_QUEUE,
             arrayOf("id", "location_id", "payload", "retry_count"),
             null, null, null, null,
-            "created_at ASC",
+            "retry_count ASC, created_at ASC",
             limit.toString()
         ).use { cursor ->
             while (cursor.moveToNext()) {

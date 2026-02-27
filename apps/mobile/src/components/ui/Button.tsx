@@ -110,7 +110,7 @@ export function Button({
             borderColor: v.borderColor,
             borderWidth: v.borderWidth,
             borderRadius: colors.borderRadius,
-            opacity: pressed ? activeOpacity ?? 0.7 : 1
+            opacity: pressed ? (activeOpacity ?? 0.7) : 1
           }
         ]}
         onPress={onPress}

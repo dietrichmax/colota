@@ -302,6 +302,24 @@ class DatabaseHelperSQLiteTest {
     }
 
     @Test
+    fun `getQueuedLocations returns fresh items before high-retry items`() {
+        val loc1 = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L)
+        val loc2 = db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 2000L)
+        val q1 = db.addToQueue(loc1, """{"id":"failing"}""")
+        db.addToQueue(loc2, """{"id":"fresh"}""")
+
+        // Increment retry count on the first (older) item
+        db.incrementRetryCount(q1, "error")
+        db.incrementRetryCount(q1, "error")
+        db.incrementRetryCount(q1, "error")
+
+        // Fresh item (retry_count=0) should come first despite being newer
+        val queued = db.getQueuedLocations(10)
+        assertEquals("""{"id":"fresh"}""", queued[0].payload)
+        assertEquals("""{"id":"failing"}""", queued[1].payload)
+    }
+
+    @Test
     fun `removeFromQueueByLocationId deletes matching entries`() {
         val locId = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L)
         db.addToQueue(locId, """{"lat":52.0}""")

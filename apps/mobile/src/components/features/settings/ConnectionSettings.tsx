@@ -122,8 +122,8 @@ export function ConnectionSettings({
         err.name === "AbortError"
           ? "Connection timed out"
           : msg.includes("network request failed")
-          ? "No internet connection"
-          : "Connection failed"
+            ? "No internet connection"
+            : "Connection failed"
       setTestResponse(userMessage)
       setTestError(true)
     } finally {
