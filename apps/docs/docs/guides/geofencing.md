@@ -19,12 +19,9 @@ Create zones where location recording stops automatically. These "pause zones" s
 3. Tap the map to place the geofence
 4. Enable **Pause Tracking**
 
-<div className="screenshot-gallery">
-  <figure>
-    <img src="/img/screenshots/Geofences.png" alt="Geofence setup" />
-    <figcaption>Geofence setup</figcaption>
-  </figure>
-</div>
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Geofences.png", label: "Geofence setup" }, ]} />
 
 ## How It Works
 

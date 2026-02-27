@@ -49,30 +49,4 @@
   font-weight: 600;
 }
 
-/* Screenshot gallery (used on docs pages) */
-.screenshot-gallery {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  justify-content: center;
-  margin: 2rem 0;
-}
-
-.screenshot-gallery figure {
-  margin: 0;
-  text-align: center;
-  max-width: 200px;
-}
-
-.screenshot-gallery img {
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 100%;
-}
-
-.screenshot-gallery figcaption {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--ifm-font-color-secondary);
-}
 

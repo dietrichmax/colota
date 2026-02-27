@@ -364,3 +364,25 @@ export interface DatabaseStats {
   today: number
   databaseSizeMB: number
 }
+
+// ============================================================================
+// LOCATION HISTORY
+// ============================================================================
+
+export interface DailyStat {
+  day: string // "YYYY-MM-DD"
+  count: number
+  startTime: number // Unix seconds
+  endTime: number // Unix seconds
+  distanceMeters: number
+  tripCount: number
+}
+
+export interface Trip {
+  index: number
+  locations: LocationCoords[]
+  startTime: number // Unix seconds
+  endTime: number // Unix seconds
+  distance: number // meters
+  locationCount: number
+}

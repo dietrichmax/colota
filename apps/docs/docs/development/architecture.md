@@ -57,7 +57,7 @@ All native code lives in `apps/mobile/android/app/src/`, organized by build flav
 The primary React Native bridge module (exposed as `"LocationServiceModule"`). Handles all JS-to-native communication for:
 
 - Service control (`startService`, `stopService`)
-- Database queries (`getStats`, `getTableData`, `getLocationsByDateRange`)
+- Database queries (`getStats`, `getTableData`, `getLocationsByDateRange`, `getDaysWithData`, `getDailyStats`)
 - Geofence CRUD operations
 - Settings persistence
 - Device info, file operations, authentication
@@ -165,6 +165,25 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 
 ## React Native Layer
 
+### Screens
+
+| Screen | Purpose |
+| --- | --- |
+| `DashboardScreen` | Live map with tracking controls, coordinates, database stats, geofence and profile status |
+| `SettingsScreen` | GPS interval, distance filter, sync strategy, offline mode, accuracy threshold |
+| `ApiSettingsScreen` | Endpoint URL, HTTP method, field mapping with backend templates |
+| `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers |
+| `GeofenceScreen` | Create, edit, and delete pause zones on an interactive map |
+| `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
+| `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
+| `LocationHistoryScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards and export |
+| `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, and per-trip export |
+| `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
+| `ExportDataScreen` | Export all tracked locations as CSV, GeoJSON, GPX, or KML |
+| `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
+| `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
+| `AboutScreen` | App version, device info, links to repository and privacy policy |
+
 ### Services
 
 | Service | Purpose |
@@ -182,7 +201,9 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 | --- | --- |
 | `ColotaMapView` | Shared base map component wrapping MapLibre's `MapView` with OpenFreeMap vector tiles, dark mode style transformation, custom compass, and attribution |
 | `DashboardMap` | Live tracking map with user marker, accuracy circle, geofence polygons with labels, auto-center, and center button |
-| `TrackMap` | Location history map with speed-colored track segments, tappable point markers with popups, start/end markers, fit-to-track bounds, and speed legend |
+| `TrackMap` | Location history map with trip-colored track segments, tappable point markers with detail popups, fit-to-track bounds, and trip legend |
+| `CalendarPicker` | Day picker with month navigation, dot indicators for days with data, and daily distance/count display |
+| `TripList` | Segmented trip cards with distance, duration, avg speed, elevation gain/loss, and per-trip or bulk export |
 | `GeofenceLayers` | Shared geofence rendering (fill polygons, stroke outlines, labels) used by DashboardMap and GeofenceScreen |
 | `UserLocationOverlay` | User position dot with accuracy circle, used by DashboardMap and GeofenceScreen |
 | `MapCenterButton` | Reusable button overlay to re-center the map |
@@ -204,8 +225,9 @@ Supporting utilities in `mapUtils.ts`:
 | Utility | Purpose |
 | --- | --- |
 | `logger` | Environment-aware logging - suppresses debug/info in production via `__DEV__`, always logs warn/error |
-| `geo` | Haversine distance, speed/distance formatting with locale-aware unit selection (km/h vs mph) |
-| `exportConverters` | Converts location data to CSV, GeoJSON, GPX, and KML export formats |
+| `geo` | Haversine distance, speed/distance/duration/time formatting with locale-aware unit selection (km/h vs mph) |
+| `exportConverters` | Converts location data to CSV, GeoJSON, GPX, and KML export formats (flat and trip-aware variants) |
+| `trips` | Trip segmentation via time-gap detection (15-min threshold) with distance computation, trip stats (avg speed, elevation gain/loss), and trip color assignment |
 | `queueStatus` | Maps sync queue size to color indicators for the dashboard |
 | `settingsValidation` | URL validation and security checks for endpoint configuration |
 

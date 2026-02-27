@@ -66,8 +66,8 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
 
   useEffect(() => {
     if (isDark && !darkStyle) {
-      getDarkStyle().then((style) => {
-        if (style) setDarkStyle(style)
+      getDarkStyle().then((resolved) => {
+        if (resolved) setDarkStyle(resolved)
       })
     }
   }, [isDark, darkStyle])

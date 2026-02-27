@@ -20,11 +20,13 @@ import {
   GeofenceScreen,
   DataManagementScreen,
   LocationHistoryScreen,
+  LocationSummaryScreen,
   ExportDataScreen,
   AboutScreen,
   TrackingProfilesScreen,
   ProfileEditorScreen,
-  SetupImportScreen
+  SetupImportScreen,
+  TripDetailScreen
 } from "./src/screens/"
 
 MapLibreGL.setAccessToken(null)
@@ -63,6 +65,11 @@ const SCREEN_CONFIG = [
     title: "Location History"
   },
   {
+    name: "Location Summary",
+    component: LocationSummaryScreen,
+    title: "Summary"
+  },
+  {
     name: "Export Data",
     component: ExportDataScreen,
     title: "Export Data"
@@ -91,6 +98,11 @@ const SCREEN_CONFIG = [
     name: "Setup Import",
     component: SetupImportScreen,
     title: "Import Configuration"
+  },
+  {
+    name: "Trip Detail",
+    component: TripDetailScreen,
+    title: "Trip Detail"
   }
 ] as const
 

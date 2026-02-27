@@ -679,6 +679,138 @@ class DatabaseHelperSQLiteTest {
     }
 
     // ========================================================================
+    // getDaysWithData
+    // ========================================================================
+
+    @Test
+    fun `getDaysWithData returns distinct days`() {
+        // Two locations on same day, one on a different day
+        db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1708344000L) // midday
+        db.saveLocation(latitude = 52.1, longitude = 13.1, timestamp = 1708344060L) // +1 min same day
+        db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 1708430400L) // next day midday
+
+        val days = db.getDaysWithData(1708300000L, 1708500000L)
+        assertEquals(2, days.size)
+        // Ordered ASC
+        assertTrue(days[0] < days[1])
+    }
+
+    @Test
+    fun `getDaysWithData returns empty for no matches`() {
+        db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1708344000L)
+
+        val days = db.getDaysWithData(1700000000L, 1700100000L)
+        assertTrue(days.isEmpty())
+    }
+
+    @Test
+    fun `getDaysWithData respects range boundaries`() {
+        db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L) // outside range
+        db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 5000L) // inside range
+        db.saveLocation(latitude = 54.0, longitude = 15.0, timestamp = 9000L) // outside range
+
+        val days = db.getDaysWithData(4000L, 6000L)
+        assertEquals(1, days.size)
+    }
+
+    // ========================================================================
+    // getDailyStats
+    // ========================================================================
+
+    @Test
+    fun `getDailyStats returns per-day aggregated stats`() {
+        // Day 1: 3 locations close together (single trip)
+        db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1708344000L)
+        db.saveLocation(latitude = 52.001, longitude = 13.001, timestamp = 1708344060L)
+        db.saveLocation(latitude = 52.002, longitude = 13.002, timestamp = 1708344120L)
+
+        // Day 2: 2 locations
+        db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 1708430400L)
+        db.saveLocation(latitude = 53.001, longitude = 14.001, timestamp = 1708430460L)
+
+        val stats = db.getDailyStats(1708300000L, 1708500000L)
+        assertEquals(2, stats.size)
+
+        // Day 1 stats
+        assertEquals(3, stats[0]["count"])
+        assertTrue((stats[0]["distanceMeters"] as Double) > 0)
+        assertEquals(1, stats[0]["tripCount"]) // all within 60s, no gap
+    }
+
+    @Test
+    fun `getDailyStats counts trips based on time gaps`() {
+        // Trip 1: two locations 60s apart
+        db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1708344000L) // 12:00
+        db.saveLocation(latitude = 52.1, longitude = 13.1, timestamp = 1708344060L) // 12:01
+
+        // Gap of 16 minutes (> 900s threshold)
+
+        // Trip 2: two more locations
+        db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 1708345020L) // 12:17
+        db.saveLocation(latitude = 53.1, longitude = 14.1, timestamp = 1708345080L) // 12:18
+
+        val stats = db.getDailyStats(1708300000L, 1708400000L)
+        assertEquals(1, stats.size)
+        assertEquals(4, stats[0]["count"])
+        assertEquals(2, stats[0]["tripCount"])
+    }
+
+    @Test
+    fun `getDailyStats returns empty for no data`() {
+        val stats = db.getDailyStats(1708300000L, 1708400000L)
+        assertTrue(stats.isEmpty())
+    }
+
+    @Test
+    fun `getDailyStats computes distance via haversine`() {
+        // Two points roughly 11 km apart (Berlin to Potsdam)
+        db.saveLocation(latitude = 52.52, longitude = 13.405, timestamp = 1708344000L)
+        db.saveLocation(latitude = 52.39, longitude = 13.065, timestamp = 1708344060L)
+
+        val stats = db.getDailyStats(1708300000L, 1708400000L)
+        assertEquals(1, stats.size)
+        val distance = stats[0]["distanceMeters"] as Double
+        // Distance should be roughly 25-30 km (haversine)
+        assertTrue("Distance should be > 20km, was $distance", distance > 20000)
+        assertTrue("Distance should be < 40km, was $distance", distance < 40000)
+    }
+
+    // ========================================================================
+    // haversineDistance
+    // ========================================================================
+
+    @Test
+    fun `haversineDistance Berlin to Munich is approximately 504 km`() {
+        val distance = db.haversineDistance(52.52, 13.405, 48.1351, 11.582)
+        assertTrue("Expected ~504km, got ${distance / 1000}km", distance > 500000)
+        assertTrue("Expected ~504km, got ${distance / 1000}km", distance < 510000)
+    }
+
+    @Test
+    fun `haversineDistance same point returns zero`() {
+        val distance = db.haversineDistance(52.52, 13.405, 52.52, 13.405)
+        assertEquals(0.0, distance, 0.001)
+    }
+
+    // ========================================================================
+    // deleteOlderThan
+    // ========================================================================
+
+    @Test
+    fun `deleteOlderThan removes only old locations`() {
+        val now = System.currentTimeMillis() / 1000
+        db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = now - 86400 * 10) // 10 days ago
+        db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = now) // today
+
+        val deleted = db.deleteOlderThan(7)
+        assertEquals(1, deleted)
+
+        val remaining = db.getTableData(DatabaseHelper.TABLE_LOCATIONS, 100, 0)
+        assertEquals(1, remaining.size)
+        assertEquals(53.0, remaining[0]["latitude"] as Double, 0.001)
+    }
+
+    // ========================================================================
     // Helpers
     // ========================================================================
 

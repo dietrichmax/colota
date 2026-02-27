@@ -4,7 +4,11 @@ sidebar_position: 4
 
 # Field Mapping
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
 Customize field names sent to your server. Field names apply to both POST (JSON body) and GET (query parameters) requests.
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ApiFieldMapping.png", label: "Field Mapping" }, ]} />
 
 ## Default Fields
 

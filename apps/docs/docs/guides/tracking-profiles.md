@@ -4,7 +4,11 @@ sidebar_position: 2
 
 # Tracking Profiles
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
 Tracking profiles automatically adjust GPS interval, distance filter, and sync settings when conditions like charging, car mode, or speed thresholds are met.
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking Profiles" }, ]} />
 
 ## Use Cases
 

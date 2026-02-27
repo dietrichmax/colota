@@ -5,8 +5,8 @@
 
 const EARTH_RADIUS_METERS = 6371000.0
 
-/** Haversine formula — mirrors GeofenceHelper.kt */
-function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+/** Haversine formula - mirrors GeofenceHelper.kt */
+export function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const dLat = ((lat2 - lat1) * Math.PI) / 180
   const dLon = ((lon2 - lon1) * Math.PI) / 180
   const a =
@@ -53,6 +53,25 @@ export function formatSpeed(metersPerSecond: number): string {
 /** Return the speed unit info for the current locale (used by TrackMap). */
 export function getSpeedUnit(): { factor: number; unit: string } {
   return usesMiles() ? { factor: 2.23694, unit: "mph" } : { factor: 3.6, unit: "km/h" }
+}
+
+/** Format seconds duration as "Xh Ym" or "Ym" */
+export function formatDuration(seconds: number): string {
+  const s = Math.max(0, seconds)
+  const hours = Math.floor(s / 3600)
+  const minutes = Math.floor((s % 3600) / 60)
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
+
+/** Format a Unix-seconds timestamp as a localized time string. */
+export function formatTime(unixSeconds: number, showSeconds = false): string {
+  const d = new Date(unixSeconds * 1000)
+  return d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    ...(showSeconds && { second: "2-digit" })
+  })
 }
 
 /** Format meters into a human-readable string using the device locale's unit. */
