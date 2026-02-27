@@ -7,11 +7,13 @@ package com.Colota.service
 
 import android.location.Location
 import com.Colota.data.ProfileHelper
+import com.Colota.util.AppLogger
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -128,6 +130,18 @@ class ProfileManagerTest {
 
         mockkObject(com.Colota.bridge.LocationServiceModule)
         every { com.Colota.bridge.LocationServiceModule.sendProfileSwitchEvent(any(), any()) } returns true
+
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
+    }
+
+    @After
+    fun tearDown() {
+        unmockkObject(AppLogger)
+        unmockkObject(com.Colota.bridge.LocationServiceModule)
     }
 
     // --- Charging condition ---

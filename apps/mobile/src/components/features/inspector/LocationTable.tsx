@@ -142,6 +142,7 @@ export function LocationTable({ locations, colors }: Props) {
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           getItemLayout={getItemLayout}
+          extraData={locations}
           initialNumToRender={30}
           maxToRenderPerBatch={20}
           windowSize={11}

@@ -7,7 +7,9 @@ package com.Colota.data
 
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import com.Colota.util.AppLogger
 import io.mockk.*
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -32,6 +34,18 @@ class ProfileHelperTest {
         // Use reflection to set the singleton for tests
         mockkObject(DatabaseHelper.Companion)
         every { DatabaseHelper.getInstance(any()) } returns mockDbHelper
+
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
+    }
+
+    @After
+    fun tearDown() {
+        unmockkObject(AppLogger)
+        unmockkObject(DatabaseHelper.Companion)
     }
 
     private fun mockCursorWithProfiles(profiles: List<Map<String, Any?>>): Cursor {

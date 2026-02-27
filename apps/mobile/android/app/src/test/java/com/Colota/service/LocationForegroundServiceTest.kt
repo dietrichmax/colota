@@ -9,6 +9,7 @@ import com.Colota.location.LocationProvider
 import com.Colota.location.LocationUpdateCallback
 import com.Colota.sync.PayloadBuilder
 import com.Colota.sync.SyncManager
+import com.Colota.util.AppLogger
 import com.Colota.util.DeviceInfoHelper
 import com.Colota.util.SecureStorageHelper
 import io.mockk.*
@@ -77,6 +78,14 @@ class LocationForegroundServiceTest {
         every { profileManager.getActiveProfileName() } returns null
         every { secureStorage.getAuthHeaders() } returns emptyMap()
 
+        mockkObject(AppLogger)
+        every { AppLogger.enabled } returns false
+        every { AppLogger.enabled = any() } just Runs
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
+
         mockkObject(LocationServiceModule)
         every { LocationServiceModule.sendLocationEvent(any(), any(), any()) } returns true
         every { LocationServiceModule.sendPauseZoneEvent(any(), any()) } returns true
@@ -99,6 +108,7 @@ class LocationForegroundServiceTest {
         testScope.cancel()
         Dispatchers.resetMain()
         unmockkObject(LocationServiceModule)
+        unmockkObject(AppLogger)
         unmockkStatic(android.os.Looper::class)
     }
 
@@ -160,6 +170,7 @@ class LocationForegroundServiceTest {
         every { this@mockk.bearing } returns bearing
         every { hasBearing() } returns hasBearing
         every { this@mockk.time } returns time
+        every { provider } returns "gps"
         every { distanceTo(any()) } returns distanceTo
         every { setSpeed(any()) } just Runs
     }

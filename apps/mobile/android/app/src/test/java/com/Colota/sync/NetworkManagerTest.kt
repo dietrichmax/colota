@@ -4,12 +4,30 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import java.lang.reflect.Method
+import com.Colota.util.AppLogger
+import io.mockk.*
+import org.junit.After
+import org.junit.Before
 
 /**
  * Tests for NetworkManager's pure-logic methods.
  * Network I/O and Android ConnectivityManager are not tested here (require instrumented tests).
  */
 class NetworkManagerTest {
+
+    @Before
+    fun setUp() {
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
+    }
+
+    @After
+    fun tearDown() {
+        unmockkObject(AppLogger)
+    }
 
     // --- isValidProtocol ---
 
