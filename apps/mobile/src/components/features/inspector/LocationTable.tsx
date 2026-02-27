@@ -73,7 +73,7 @@ const LocationRow = React.memo(
         {item.battery != null ? `${item.battery}%` : "-"}
       </Text>
       <Text style={[styles.cell, styles.cellStatus, { color: colors.text }]} numberOfLines={1}>
-        {item.battery_status != null ? BATTERY_STATUS[item.battery_status] ?? String(item.battery_status) : "-"}
+        {item.battery_status != null ? (BATTERY_STATUS[item.battery_status] ?? String(item.battery_status)) : "-"}
       </Text>
     </View>
   )

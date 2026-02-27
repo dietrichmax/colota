@@ -254,14 +254,6 @@ class SyncManager(
                 if (toRemove.isNotEmpty()) {
                     dbHelper.removeBatchFromQueue(toRemove)
 
-                    // Delete locations of permanently failed items (never sent)
-                    if (permanentlyFailedIds.isNotEmpty()) {
-                        val failedLocationIds = chunk
-                            .filter { it.queueId in permanentlyFailedIds }
-                            .map { it.locationId }
-                        dbHelper.deleteLocations(failedLocationIds)
-                    }
-
                     totalProcessed += toRemove.size
                     totalSucceeded += successfulIds.size
                     totalFailed += permanentlyFailedIds.size

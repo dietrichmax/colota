@@ -577,7 +577,7 @@ class SyncManagerTest {
     }
 
     @Test
-    fun `syncQueue deletes locations of permanently failed items`() = scope.runTest {
+    fun `syncQueue preserves location data when removing exceeded items`() = scope.runTest {
         syncManager.updateConfig(
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
@@ -593,7 +593,9 @@ class SyncManagerTest {
 
         syncManager.manualFlush()
 
-        verify { dbHelper.deleteLocations(listOf(100L)) }
+        // Queue entry removed but location data always preserved
+        verify { dbHelper.removeBatchFromQueue(listOf(1L)) }
+        verify(exactly = 0) { dbHelper.deleteLocations(any()) }
     }
 
     // ========================================================================
