@@ -6,11 +6,10 @@
 package com.Colota.data
 
 import android.content.ContentValues
-import com.Colota.BuildConfig
+import com.Colota.util.AppLogger
 import com.Colota.util.TimedCache
 import android.content.Context
 import android.location.Location
-import android.util.Log
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableArray
 import kotlin.math.*
@@ -52,16 +51,19 @@ class GeofenceHelper(private val context: Context) {
 
     fun getPauseZone(location: Location): String? {
         val fences = getGeofences()
-        return fences.find { 
-            isWithinRadius(location.latitude, location.longitude, it.lat, it.lon, it.radius) 
-        }?.name
+        val match = fences.find {
+            isWithinRadius(location.latitude, location.longitude, it.lat, it.lon, it.radius)
+        }
+        if (fences.isNotEmpty() && match != null) {
+            val dist = calculateDistance(location.latitude, location.longitude, match.lat, match.lon)
+            AppLogger.d(TAG, "Inside zone '${match.name}' (${String.format("%.0f", dist)}m from center, radius=${match.radius}m)")
+        }
+        return match?.name
     }
     
     fun invalidateCache() {
         geofenceCache.invalidate()
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Geofence cache invalidated")
-        }
+        AppLogger.d(TAG, "Geofence cache invalidated")
     }
 
     private fun getGeofences(): List<CachedGeofence> = geofenceCache.get()
@@ -89,9 +91,10 @@ class GeofenceHelper(private val context: Context) {
                     ))
                 }
             }
+            AppLogger.d(TAG, "Loaded ${fences.size} active pause zone(s)")
             fences
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to refresh geofence cache", e)
+            AppLogger.e(TAG, "Failed to refresh geofence cache", e)
             emptyList()
         }
     }
@@ -128,7 +131,7 @@ class GeofenceHelper(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load geofences as array", e)
+            AppLogger.e(TAG, "Failed to load geofences as array", e)
         }
 
         return array

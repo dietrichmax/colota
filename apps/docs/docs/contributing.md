@@ -28,6 +28,7 @@ See the [Development Guide](/docs/development/architecture) for architecture det
 - **Kotlin** for native Android modules
 - Follow existing patterns in the codebase
 - Use `logger` instead of `console.log` - import from `src/utils/logger`
+- Use `AppLogger` instead of `android.util.Log` in Kotlin code - import from `com.Colota.util.AppLogger`
 - Test both build flavors if your changes touch native code:
   ```bash
   cd apps/mobile/android

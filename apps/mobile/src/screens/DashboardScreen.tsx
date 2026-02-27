@@ -110,7 +110,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   useFocusEffect(
     useCallback(() => {
       updateStats()
-      updatePauseZone()
+      if (tracking) updatePauseZone()
 
       const interval = tracking ? Math.max(settings.interval * 1000, MIN_STATS_INTERVAL_MS) : STATS_REFRESH_IDLE
 

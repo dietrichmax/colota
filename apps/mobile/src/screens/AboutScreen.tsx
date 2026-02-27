@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react"
-import { Text, StyleSheet, View, ScrollView, Linking, Pressable, Image } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Linking, Pressable, Image, ActivityIndicator } from "react-native"
 import { ScreenProps, ThemeColors } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { ChevronRight, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check } from "lucide-react-native"
@@ -14,7 +14,7 @@ import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
 import { REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL } from "../constants"
-import { logger } from "../utils/logger"
+import { logger, getLogEntries, setLogCollecting } from "../utils/logger"
 
 // Helper function to map SDK to Android version
 function getAndroidVersion(sdkVersion: number): string {
@@ -80,6 +80,7 @@ export function AboutScreen({}: ScreenProps) {
   const [showDebugInfo, setShowDebugInfo] = useState(false)
   const [tapCount, setTapCount] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [exportingLogs, setExportingLogs] = useState(false)
   const copiedTimeout = useTimeout()
   const [deviceInfo, setDeviceInfo] = useState<{
     model: string
@@ -94,13 +95,17 @@ export function AboutScreen({}: ScreenProps) {
   // Load persisted debug mode
   useEffect(() => {
     NativeLocationService.getSetting(DEBUG_MODE_SETTING_KEY, "false").then((value) => {
-      if (value === "true") setShowDebugInfo(true)
+      if (value === "true") {
+        setShowDebugInfo(true)
+        setLogCollecting(true)
+      }
     })
   }, [])
 
   // Persist debug mode changes
   const toggleDebugMode = useCallback((enabled: boolean) => {
     setShowDebugInfo(enabled)
+    setLogCollecting(enabled)
     NativeLocationService.saveSetting(DEBUG_MODE_SETTING_KEY, String(enabled))
   }, [])
 
@@ -174,6 +179,68 @@ export function AboutScreen({}: ScreenProps) {
       logger.error("Failed to copy debug info:", err)
     }
   }, [buildConfig, deviceInfo, copiedTimeout])
+
+  const handleExportLogs = useCallback(async () => {
+    if (!buildConfig) return
+    setExportingLogs(true)
+    try {
+      const entries = getLogEntries()
+      const lines: string[] = [
+        "=== Colota Debug Log Export ===",
+        `Exported: ${new Date().toISOString()}`,
+        "",
+        "--- App Info ---",
+        `Version: ${buildConfig.VERSION_NAME} (${buildConfig.VERSION_CODE})`,
+        ""
+      ]
+
+      if (deviceInfo) {
+        lines.push(
+          "--- Device Info ---",
+          `OS: Android ${deviceInfo.systemVersion} (API ${deviceInfo.apiLevel})`,
+          `Device: ${deviceInfo.brand} ${deviceInfo.model}`,
+          ""
+        )
+      }
+
+      // Merge JS and native logs chronologically
+      const merged: { time: number; line: string }[] = []
+
+      for (const entry of entries) {
+        merged.push({
+          time: new Date(entry.timestamp).getTime(),
+          line: `[${entry.timestamp}] [JS] ${entry.level} ${entry.message}`
+        })
+      }
+
+      try {
+        const nativeLogs = await NativeLocationService.getNativeLogs()
+        const year = new Date().getFullYear()
+        for (const raw of nativeLogs) {
+          // Logcat threadtime format: "MM-DD HH:MM:SS.mmm PID TID LEVEL TAG: message"
+          const match = raw.match(/^(\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}\.\d{3})/)
+          const time = match ? new Date(`${year}-${match[1]}T${match[2]}`).getTime() : 0
+          merged.push({ time, line: `[NATIVE] ${raw}` })
+        }
+      } catch {
+        // native logs are best-effort
+      }
+
+      merged.sort((a, b) => a.time - b.time)
+      lines.push(`--- Log Entries (${merged.length}) ---`, "")
+      for (const entry of merged) {
+        lines.push(entry.line)
+      }
+
+      const fileName = `colota_logs_${Date.now()}.txt`
+      const filePath = await NativeLocationService.writeFile(fileName, lines.join("\n"))
+      await NativeLocationService.shareFile(filePath, "text/plain", "Colota Debug Logs")
+    } catch (err) {
+      logger.error("[AboutScreen] Log export failed:", err)
+    } finally {
+      setExportingLogs(false)
+    }
+  }, [buildConfig, deviceInfo])
 
   // Fallback if buildConfig is not available
   if (!buildConfig) {
@@ -326,15 +393,46 @@ export function AboutScreen({}: ScreenProps) {
               </View>
             )}
 
-            <Pressable
-              style={({ pressed }) => [styles.copyButton, { borderColor: colors.border }, pressed && { opacity: 0.7 }]}
-              onPress={handleCopyDebugInfo}
-            >
-              {copied ? <Check size={16} color={colors.success} /> : <Copy size={16} color={colors.primaryDark} />}
-              <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
-                {copied ? "Copied!" : "Copy Debug Info"}
+            <View style={styles.debugActions}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.copyButton,
+                  { borderColor: colors.border },
+                  pressed && { opacity: 0.7 }
+                ]}
+                onPress={handleCopyDebugInfo}
+              >
+                {copied ? <Check size={16} color={colors.success} /> : <Copy size={16} color={colors.primaryDark} />}
+                <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
+                  {copied ? "Copied!" : "Copy Debug Info"}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.copyButton,
+                  { borderColor: colors.border },
+                  pressed && { opacity: 0.7 },
+                  exportingLogs && { opacity: 0.5 }
+                ]}
+                onPress={handleExportLogs}
+                disabled={exportingLogs}
+              >
+                {exportingLogs ? (
+                  <ActivityIndicator size={16} color={colors.primaryDark} />
+                ) : (
+                  <FileText size={16} color={colors.primaryDark} />
+                )}
+                <Text style={[styles.copyButtonText, { color: colors.primaryDark }]}>
+                  Export Logs ({getLogEntries().length})
+                </Text>
+              </Pressable>
+
+              <Text style={[styles.logHint, { color: colors.textLight }]}>
+                App activity is being recorded while debug mode is on. Try to reproduce the issue, then tap Export Logs.
+                When you're done, tap "Debug Mode" above to turn it off and stop recording.
               </Text>
-            </Pressable>
+            </View>
           </>
         )}
 
@@ -429,12 +527,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     ...fonts.semiBold
   },
+  debugActions: {
+    gap: 10,
+    marginTop: 16
+  },
   copyButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    marginTop: 16,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1
@@ -442,5 +543,11 @@ const styles = StyleSheet.create({
   copyButtonText: {
     fontSize: 14,
     ...fonts.semiBold
+  },
+  logHint: {
+    fontSize: 12,
+    textAlign: "center",
+    fontStyle: "italic",
+    lineHeight: 16
   }
 })

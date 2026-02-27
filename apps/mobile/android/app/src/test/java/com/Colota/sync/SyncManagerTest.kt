@@ -3,6 +3,7 @@ package com.Colota.sync
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.QueuedLocation
+import com.Colota.util.AppLogger
 import io.mockk.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.*
@@ -27,10 +28,17 @@ class SyncManagerTest {
         networkManager = mockk(relaxed = true)
         scope = TestScope(UnconfinedTestDispatcher())
         syncManager = SyncManager(dbHelper, networkManager, scope)
+
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
     }
 
     @After
     fun tearDown() {
+        unmockkObject(AppLogger)
         scope.cancel()
     }
 

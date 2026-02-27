@@ -1,11 +1,10 @@
 package com.Colota.sync
 
 import android.content.Context
-import com.Colota.BuildConfig
+import com.Colota.util.AppLogger
 import com.Colota.util.TimedCache
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -36,7 +35,7 @@ class NetworkManager(private val context: Context) {
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         } catch (e: Exception) {
-            Log.e(TAG, "Network check failed", e)
+            AppLogger.e(TAG, "Network check failed", e)
             false
         }
     }
@@ -52,24 +51,24 @@ class NetworkManager(private val context: Context) {
         httpMethod: String = "POST"
     ): Boolean = withContext(Dispatchers.IO) {
         if (endpoint.isBlank()) {
-            if (BuildConfig.DEBUG) Log.d(TAG, "Empty endpoint provided")
+            AppLogger.d(TAG, "Empty endpoint provided")
             return@withContext false
         }
 
         val url = try {
             URL(endpoint)
         } catch (e: Exception) {
-            Log.e(TAG, "Invalid URL: $endpoint")
+            AppLogger.e(TAG, "Invalid URL: $endpoint")
             return@withContext false
         }
 
         if (!isValidProtocol(url)) {
-            Log.e(TAG, "Protocol blocked or invalid: $endpoint")
+            AppLogger.e(TAG, "Protocol blocked or invalid: $endpoint")
             return@withContext false
         }
 
         if (!isNetworkAvailable()) {
-            if (BuildConfig.DEBUG) Log.d(TAG, "Sync skipped: No internet")
+            AppLogger.d(TAG, "Sync skipped: No internet")
             return@withContext false
         }
 
@@ -101,19 +100,19 @@ class NetworkManager(private val context: Context) {
                 useCaches = false
             }
 
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "=== HTTP REQUEST ===")
-                Log.d(TAG, "Endpoint: ${if (isGet) targetUrl else endpoint}")
-                Log.d(TAG, "Method: ${connection.requestMethod}")
-                Log.d(TAG, "Headers:")
+            if (AppLogger.enabled) {
+                AppLogger.d(TAG, "=== HTTP REQUEST ===")
+                AppLogger.d(TAG, "Endpoint: ${if (isGet) targetUrl else endpoint}")
+                AppLogger.d(TAG, "Method: ${connection.requestMethod}")
+                AppLogger.d(TAG, "Headers:")
                 connection.requestProperties.forEach { (key, values) ->
                     val masked = values.map { maskSensitiveHeaderValue(key, it) }
-                    Log.d(TAG, "$key: ${masked.joinToString()}")
+                    AppLogger.d(TAG, "$key: ${masked.joinToString()}")
                 }
                 if (!isGet) {
-                    Log.d(TAG, "Body: ${payload.toString(2)}")
+                    AppLogger.d(TAG, "Body: ${payload.toString(2)}")
                 }
-                Log.d(TAG, "===================")
+                AppLogger.d(TAG, "===================")
             }
 
             if (!isGet) {
@@ -124,24 +123,24 @@ class NetworkManager(private val context: Context) {
 
             val responseCode = connection.responseCode
             return@withContext if (responseCode in 200..299) {
-                if (BuildConfig.DEBUG) Log.d(TAG, "Location successfully sent")
+                AppLogger.d(TAG, "Location successfully sent")
                 true
             } else {
                 val errorBody = try {
                     connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
                 } catch (_: Exception) { "Could not read error body" }
-                Log.e(TAG, "${connection.requestMethod} failed: $responseCode - $errorBody")
+                AppLogger.e(TAG, "${connection.requestMethod} failed: $responseCode - $errorBody")
                 false
             }
         } catch (e: java.net.SocketException) {
             if (isPrivateHost(url.host ?: "") && e.message?.contains("EPERM") == true) {
-                Log.e(TAG, "Local network access denied - grant Nearby Devices permission", e)
+                AppLogger.e(TAG, "Local network access denied - grant Nearby Devices permission", e)
             } else {
-                Log.e(TAG, "Network error: ${e.message}", e)
+                AppLogger.e(TAG, "Network error: ${e.message}", e)
             }
             false
         } catch (e: Exception) {
-            Log.e(TAG, "Network error: ${e.message}", e)
+            AppLogger.e(TAG, "Network error: ${e.message}", e)
             false
         } finally {
             connection?.disconnect()
@@ -240,7 +239,7 @@ class NetworkManager(private val context: Context) {
             capabilities != null &&
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
         } catch (e: Exception) {
-            Log.e(TAG, "Unmetered check failed", e)
+            AppLogger.e(TAG, "Unmetered check failed", e)
             false
         }
     }

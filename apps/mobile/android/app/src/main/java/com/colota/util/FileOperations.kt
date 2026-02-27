@@ -9,9 +9,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import com.Colota.BuildConfig
 import android.net.Uri
-import android.util.Log
 import androidx.core.content.FileProvider
 import com.facebook.react.bridge.*
 import java.io.File
@@ -69,12 +67,10 @@ class FileOperations(private val context: ReactApplicationContext) {
             try {
                 if (file.exists()) {
                     file.delete()
-                    if (BuildConfig.DEBUG) {
-                        Log.d("FileOperations", "Cleaned up export file: ${file.name}")
-                    }
+                    AppLogger.d("FileOperations", "Cleaned up export file: ${file.name}")
                 }
             } catch (e: Exception) {
-                Log.w("FileOperations", "Failed to cleanup file", e)
+                AppLogger.w("FileOperations", "Failed to cleanup file")
             }
         }, 60000)
         

@@ -14,6 +14,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import com.Colota.util.AppLogger
+import io.mockk.*
 
 /**
  * SQLite integration tests for DatabaseHelper using Robolectric.
@@ -30,12 +32,19 @@ class DatabaseHelperSQLiteTest {
         // Reset singleton so each test gets a fresh database
         resetSingleton()
         db = DatabaseHelper.getInstance(ApplicationProvider.getApplicationContext())
+
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
     }
 
     @After
     fun tearDown() {
         db.close()
         resetSingleton()
+        unmockkObject(AppLogger)
     }
 
     private fun resetSingleton() {

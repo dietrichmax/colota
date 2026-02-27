@@ -7,6 +7,8 @@ import io.mockk.*
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import com.Colota.util.AppLogger
+import org.junit.After
 
 /**
  * Tests for DeviceInfoHelper using a real instance:
@@ -23,6 +25,17 @@ class DeviceInfoHelperTest {
     fun setUp() {
         context = mockk(relaxed = true)
         helper = spyk(DeviceInfoHelper(context))
+
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
+    }
+
+    @After
+    fun tearDown() {
+        unmockkObject(AppLogger)
     }
 
     // --- isBatteryCritical ---

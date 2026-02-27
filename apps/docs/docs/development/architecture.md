@@ -153,15 +153,16 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 
 ### Other Modules
 
-| Module                 | Purpose                                                   |
-| ---------------------- | --------------------------------------------------------- |
-| `LocationBootReceiver` | Auto-restarts tracking after device reboot                |
-| `DeviceInfoHelper`     | Device metadata and battery status with caching           |
-| `FileOperations`       | File I/O, sharing via FileProvider, and clipboard access  |
-| `PayloadBuilder`       | Builds JSON payloads with dynamic field mapping           |
-| `ServiceConfig`        | Centralized configuration data class                      |
-| `TimedCache`           | Generic TTL cache used for queue count and device info    |
-| `BuildConfigModule`    | Exposes build constants (SDK versions, app version) to JS |
+| Module                 | Purpose                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| `LocationBootReceiver` | Auto-restarts tracking after device reboot                                                 |
+| `DeviceInfoHelper`     | Device metadata and battery status with caching                                            |
+| `FileOperations`       | File I/O, sharing via FileProvider, and clipboard access                                   |
+| `PayloadBuilder`       | Builds JSON payloads with dynamic field mapping                                            |
+| `ServiceConfig`        | Centralized configuration data class                                                       |
+| `TimedCache`           | Generic TTL cache used for queue count and device info                                     |
+| `BuildConfigModule`    | Exposes build constants (SDK versions, app version) to JS                                  |
+| `AppLogger`            | Centralized logger - logs when debug mode is enabled or in debug builds, errors always log |
 
 ## React Native Layer
 

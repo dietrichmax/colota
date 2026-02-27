@@ -21,9 +21,9 @@ import com.Colota.sync.NetworkManager
 import com.Colota.sync.PayloadBuilder
 import com.Colota.util.DeviceInfoHelper
 import com.Colota.util.FileOperations
+import com.Colota.util.AppLogger
 import com.Colota.util.SecureStorageHelper
 import android.os.Build
-import android.util.Log
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.Colota.location.LocationProviderFactory
@@ -57,6 +57,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     companion object {
         private const val TAG = "LocationServiceModule"
+
         private var reactContextRef: WeakReference<ReactApplicationContext> = WeakReference(null)
         
         @Volatile
@@ -101,7 +102,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     .emit("onLocationUpdate", params)
                 true
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send location event", e)
+                AppLogger.e(TAG, "Failed to send location event", e)
                 false
             }
         }
@@ -121,7 +122,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     .emit("onTrackingStopped", params)
                 true
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send tracking stopped event", e)
+                AppLogger.e(TAG, "Failed to send tracking stopped event", e)
                 false
             }
         }
@@ -142,7 +143,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     .emit("onSyncError", params)
                 true
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send sync error event", e)
+                AppLogger.e(TAG, "Failed to send sync error event", e)
                 false
             }
         }
@@ -167,7 +168,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     .emit("onProfileSwitch", params)
                 true
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send profile switch event", e)
+                AppLogger.e(TAG, "Failed to send profile switch event", e)
                 false
             }
         }
@@ -189,7 +190,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     .emit("onSyncProgress", params)
                 true
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send sync progress event", e)
+                AppLogger.e(TAG, "Failed to send sync progress event", e)
                 false
             }
         }
@@ -210,7 +211,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     .emit("onPauseZoneChange", params)
                 true
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to send pause zone event", e)
+                AppLogger.e(TAG, "Failed to send pause zone event", e)
                 false
             }
         }
@@ -244,7 +245,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 val result = withContext(Dispatchers.IO) { operation() }
                 promise.resolve(result)
             } catch (e: Exception) {
-                Log.e(TAG, "Database operation failed", e)
+                AppLogger.e(TAG, "Database operation failed", e)
                 promise.reject("DB_ERROR", e.message, e)
             }
         }
@@ -252,7 +253,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun startService(config: ReadableMap, promise: Promise) {
-        Log.d(TAG, "Starting Service with config")
+        AppLogger.d(TAG, "Starting Service with config")
 
         val serviceConfig = ServiceConfig.fromReadableMap(config, dbHelper)
         val serviceIntent = Intent(reactApplicationContext, LocationForegroundService::class.java)
@@ -269,14 +270,14 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             }
             promise.resolve(null)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start service", e)
+            AppLogger.e(TAG, "Failed to start service", e)
             promise.reject("START_FAILED", e.message, e)
         }
     }
 
     @ReactMethod
     fun stopService() {
-        Log.d(TAG, "Stopping Service via UI")
+        AppLogger.d(TAG, "Stopping Service via UI")
 
         val intent = Intent(reactApplicationContext, LocationForegroundService::class.java)
         reactApplicationContext.stopService(intent)
@@ -493,7 +494,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             startServiceWithAction(LocationForegroundService.ACTION_MANUAL_FLUSH)
             promise.resolve(true)
         } catch (e: Exception) {
-            Log.e(TAG, "Manual flush failed", e)
+            AppLogger.e(TAG, "Manual flush failed", e)
             promise.reject("FLUSH_ERROR", e.message, e)
         }
     }
@@ -539,7 +540,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         try {
             startServiceWithAction(LocationForegroundService.ACTION_RECHECK_ZONE)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to trigger zone recheck", e)
+            AppLogger.e(TAG, "Failed to trigger zone recheck", e)
         }
     }
 
@@ -549,7 +550,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             try {
                 startServiceWithAction(LocationForegroundService.ACTION_REFRESH_NOTIFICATION)
             } catch (e: Exception) {
-                Log.w(TAG, "Notification refresh skipped: service not running", e)
+                AppLogger.w(TAG, "Notification refresh skipped: service not running")
             }
         }
     }
@@ -633,12 +634,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     }
                 },
                 onFailure = { e ->
-                    Log.e(TAG, "Failed to get location for pause zone check", e)
+                    AppLogger.e(TAG, "Failed to get location for pause zone check", e)
                     promise.resolve(null)
                 }
             )
         } catch (e: SecurityException) {
-            Log.e(TAG, "Location permission not granted", e)
+            AppLogger.e(TAG, "Location permission not granted", e)
             promise.resolve(null)
         }
     }
@@ -716,7 +717,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             triggerProfileRecheck()
             promise.resolve(true)
         } catch (e: Exception) {
-            Log.e(TAG, "Profile recheck failed", e)
+            AppLogger.e(TAG, "Profile recheck failed", e)
             promise.reject("RECHECK_ERROR", e.message, e)
         }
     }
@@ -727,7 +728,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             try {
                 startServiceWithAction(LocationForegroundService.ACTION_RECHECK_PROFILES)
             } catch (e: Exception) {
-                Log.w(TAG, "Profile recheck skipped: service not running", e)
+                AppLogger.w(TAG, "Profile recheck skipped: service not running")
             }
         }
     }
@@ -749,10 +750,13 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun saveSetting(key: String, value: String, promise: Promise) = 
-        executeAsync(promise) { 
+    fun saveSetting(key: String, value: String, promise: Promise) =
+        executeAsync(promise) {
             dbHelper.saveSetting(key, value)
-            true 
+            if (key == "debug_mode_enabled") {
+                AppLogger.enabled = value.toBoolean()
+            }
+            true
         }
 
     @ReactMethod
@@ -808,7 +812,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 reactApplicationContext.startService(intent)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start service with action: $action", e)
+            AppLogger.e(TAG, "Failed to start service with action: $action", e)
             throw e
         }
     }
@@ -888,6 +892,17 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         val headers = secureStorage.getAuthHeaders()
         Arguments.createMap().apply {
             headers.forEach { (k, v) -> putString(k, v) }
+        }
+    }
+
+    @ReactMethod
+    fun getNativeLogs(promise: Promise) = executeAsync(promise) {
+        val pid = android.os.Process.myPid()
+        val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "threadtime", "--pid=$pid"))
+        val lines = process.inputStream.bufferedReader().readLines()
+        process.waitFor()
+        Arguments.createArray().apply {
+            lines.filter { "Colota." in it }.forEach { pushString(it) }
         }
     }
 }

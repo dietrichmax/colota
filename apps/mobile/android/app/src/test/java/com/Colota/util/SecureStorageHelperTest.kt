@@ -3,7 +3,9 @@ package com.Colota.util
 import android.content.SharedPreferences
 import android.util.Base64
 import io.mockk.*
+import com.Colota.util.AppLogger
 import org.json.JSONObject
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -37,6 +39,17 @@ class SecureStorageHelperTest {
         val prefsField = SecureStorageHelper::class.java.getDeclaredField("prefs")
         prefsField.isAccessible = true
         prefsField.set(helper, prefs)
+
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
+    }
+
+    @After
+    fun tearDown() {
+        unmockkObject(AppLogger)
     }
 
     // --- getAuthHeaders: no auth ---

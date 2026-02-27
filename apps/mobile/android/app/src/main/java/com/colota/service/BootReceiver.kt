@@ -6,12 +6,11 @@
 package com.Colota.service
 
 import android.content.BroadcastReceiver
-import com.Colota.BuildConfig
 import com.Colota.data.DatabaseHelper
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
+import com.Colota.util.AppLogger
 import kotlinx.coroutines.*
 
 /**
@@ -47,7 +46,7 @@ class LocationBootReceiver : BroadcastReceiver() {
             try {
                 handleBootCompleted(context.applicationContext, action)
             } catch (e: Exception) {
-                Log.e(TAG, "Error handling boot", e)
+                AppLogger.e(TAG, "Error handling boot", e)
             } finally {
                 // CRITICAL: Always call finish()
                 pendingResult.finish()
@@ -66,9 +65,7 @@ class LocationBootReceiver : BroadcastReceiver() {
                 dbHelper.getSetting("tracking_enabled")
                 return true
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "DB not ready, attempt ${attempt + 1}/$MAX_DB_RETRIES")
-                }
+                AppLogger.d(TAG, "DB not ready, attempt ${attempt + 1}/$MAX_DB_RETRIES")
                 if (attempt < MAX_DB_RETRIES - 1) {
                     delay(RETRY_DELAY_MS)
                 }
@@ -83,22 +80,18 @@ class LocationBootReceiver : BroadcastReceiver() {
             
             // Wait for database to be ready
             if (!waitForDatabaseReady(dbHelper)) {
-                Log.e(TAG, "Database not ready after $MAX_DB_RETRIES attempts")
+                AppLogger.e(TAG, "Database not ready after $MAX_DB_RETRIES attempts")
                 return
             }
             
             val isEnabled = dbHelper.getSetting("tracking_enabled", "false") == "true"
             
             if (!isEnabled) {
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Boot detected but tracking disabled")
-                }
+                AppLogger.d(TAG, "Boot detected but tracking disabled")
                 return
             }
             
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Boot detected ($action). Restarting service...")
-            }
+            AppLogger.d(TAG, "Boot detected ($action). Restarting service...")
             
             // Load config using ServiceConfig (eliminates duplication)
             val config = ServiceConfig.fromDatabase(dbHelper)
@@ -114,14 +107,12 @@ class LocationBootReceiver : BroadcastReceiver() {
                 context.startService(serviceIntent)
             }
             
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Service start requested successfully")
-            }
+            AppLogger.d(TAG, "Service start requested successfully")
             
         } catch (e: SecurityException) {
-            Log.e(TAG, "Permission denied when starting service", e)
+            AppLogger.e(TAG, "Permission denied when starting service", e)
         } catch (e: Exception) {
-            Log.e(TAG, "Error restarting service on boot", e)
+            AppLogger.e(TAG, "Error restarting service on boot", e)
         }
     }
 }

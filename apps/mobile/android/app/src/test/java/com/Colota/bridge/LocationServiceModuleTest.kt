@@ -10,6 +10,7 @@ import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
 import com.Colota.data.ProfileHelper
 import com.Colota.service.LocationForegroundService
+import com.Colota.util.AppLogger
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.JavaOnlyMap
 import com.facebook.react.bridge.ReactApplicationContext
@@ -42,6 +43,14 @@ class LocationServiceModuleTest {
             every { getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java) } returns mockEmitter
         }
 
+        mockkObject(AppLogger)
+        every { AppLogger.enabled } returns false
+        every { AppLogger.enabled = any() } just Runs
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
+
         mockkStatic(Arguments::class)
         every { Arguments.createMap() } returns JavaOnlyMap()
 
@@ -52,6 +61,7 @@ class LocationServiceModuleTest {
 
     @After
     fun tearDown() {
+        unmockkObject(AppLogger)
         unmockkStatic(Arguments::class)
         setCompanionField("reactContextRef", WeakReference<ReactApplicationContext>(null))
         setCompanionField("isAppInForeground", true)

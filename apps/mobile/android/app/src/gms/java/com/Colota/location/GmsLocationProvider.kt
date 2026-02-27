@@ -8,10 +8,15 @@ package com.Colota.location
 import android.content.Context
 import android.location.Location
 import android.os.Looper
+import com.Colota.util.AppLogger
 import com.google.android.gms.location.*
 
 /** FusedLocationProviderClient-based provider for GMS flavor. */
 class GmsLocationProvider(context: Context) : LocationProvider {
+
+    companion object {
+        private const val TAG = "GmsLocationProvider"
+    }
 
     private val fusedClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
@@ -38,6 +43,7 @@ class GmsLocationProvider(context: Context) : LocationProvider {
 
         try {
             fusedClient.requestLocationUpdates(request, gmsCallback, looper)
+            AppLogger.d(TAG, "Started FusedLocationProvider updates: interval=${intervalMs}ms, distance=${minDistanceMeters}m")
         } catch (e: SecurityException) {
             callbackMap.remove(callback)
             throw e
@@ -45,7 +51,10 @@ class GmsLocationProvider(context: Context) : LocationProvider {
     }
 
     override fun removeLocationUpdates(callback: LocationUpdateCallback) {
-        callbackMap.remove(callback)?.let { fusedClient.removeLocationUpdates(it) }
+        callbackMap.remove(callback)?.let {
+            fusedClient.removeLocationUpdates(it)
+            AppLogger.d(TAG, "Stopped location updates")
+        }
     }
 
     override fun getLastLocation(

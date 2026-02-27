@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.Colota.data.DatabaseHelper
+import com.Colota.util.AppLogger
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -39,10 +40,17 @@ class LocationBootReceiverTest {
 
         mockkObject(DatabaseHelper.Companion)
         every { DatabaseHelper.getInstance(any()) } returns mockDbHelper
+
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
     }
 
     @After
     fun tearDown() {
+        unmockkObject(AppLogger)
         unmockkObject(DatabaseHelper.Companion)
     }
 

@@ -18,6 +18,8 @@ import io.mockk.*
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import com.Colota.util.AppLogger
+import org.junit.After
 
 /**
  * Tests for ConditionMonitor:
@@ -47,6 +49,17 @@ class ConditionMonitorTest {
         }
 
         monitor = createMonitor()
+
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
+    }
+
+    @After
+    fun tearDown() {
+        unmockkObject(AppLogger)
     }
 
     // ========================================================================

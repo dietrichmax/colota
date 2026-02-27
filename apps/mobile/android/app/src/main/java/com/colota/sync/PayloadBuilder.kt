@@ -6,7 +6,7 @@
 package com.Colota.sync
 
 import android.location.Location
-import android.util.Log
+import com.Colota.util.AppLogger
 import org.json.JSONObject
 import kotlin.math.*
 
@@ -63,7 +63,7 @@ class PayloadBuilder {
             val json = JSONObject(jsonString)
             json.keys().asSequence().associateWith { json.getString(it) }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse field map", e)
+            AppLogger.e(TAG, "Failed to parse field map", e)
             null
         }
     }
@@ -90,7 +90,7 @@ class PayloadBuilder {
             }
             if (map.isEmpty()) null else map
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse custom fields", e)
+            AppLogger.e(TAG, "Failed to parse custom fields", e)
             null
         }
     }

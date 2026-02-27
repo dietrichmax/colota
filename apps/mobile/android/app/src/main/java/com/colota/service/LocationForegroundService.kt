@@ -6,8 +6,8 @@
 package com.Colota.service
 
 import android.app.*
-import com.Colota.BuildConfig
 import com.Colota.bridge.LocationServiceModule
+import com.Colota.util.AppLogger
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
 import com.Colota.data.ProfileHelper
@@ -18,7 +18,6 @@ import com.Colota.util.DeviceInfoHelper
 import com.Colota.util.SecureStorageHelper
 import android.content.Intent
 import android.os.*
-import android.util.Log
 import com.Colota.location.LocationProvider
 import com.Colota.location.LocationProviderFactory
 import com.Colota.location.LocationUpdateCallback
@@ -93,6 +92,9 @@ class LocationForegroundService : Service() {
 
         notificationHelper = NotificationHelper(this, notificationManager)
         notificationHelper.createChannel()
+
+        AppLogger.enabled = dbHelper.getSetting("debug_mode_enabled")?.toBoolean() ?: false
+        AppLogger.d(TAG, "Service created - provider: ${locationProvider.javaClass.simpleName}")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -105,15 +107,15 @@ class LocationForegroundService : Service() {
 
         // intent == null: Android restarted the service after OOM kill
         if (intent == null && !shouldBeTracking) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "System restart prevented")
-            }
+            AppLogger.d(TAG, "System restart prevented")
             stopSelf()
             return START_NOT_STICKY
         }
 
         val action = intent?.action
         val isLightweight = action in LIGHTWEIGHT_ACTIONS
+
+        AppLogger.d(TAG, "onStartCommand: action=${action ?: "START"}, lightweight=$isLightweight")
 
         // Skip config reload for lightweight actions, but if the service was
         // killed and restarted by one, load from DB so SyncManager has an endpoint.
@@ -152,9 +154,7 @@ class LocationForegroundService : Service() {
             }
             ACTION_FORCE_EXIT_ZONE -> {
                 if (insidePauseZone) {
-                    if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "Force exit from zone: $currentZoneName")
-                    }
+                    AppLogger.d(TAG, "Force exit from zone: $currentZoneName")
                     exitPauseZone()
                     lastKnownLocation?.let { recheckZoneWithLocation(it) }
                 }
@@ -201,6 +201,8 @@ class LocationForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        AppLogger.d(TAG, "Service destroyed")
+
         conditionMonitor.stop()
         stopLocationUpdates()
         syncManager.stopPeriodicSync()
@@ -224,12 +226,12 @@ class LocationForegroundService : Service() {
 
         if (deviceInfoHelper.isBatteryCritical(threshold = 5)) {
             val (level, _) = deviceInfoHelper.getCachedBatteryStatus()
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Battery critical ($level%) and unplugged - stopping service")
-            }
+            AppLogger.d(TAG, "Battery critical ($level%) and unplugged - stopping service")
             stopForegroundServiceWithReason("Battery critical")
             return
         }
+
+        AppLogger.d(TAG, "Requesting location updates: interval=${config.interval}ms, distance=${config.minUpdateDistance}m")
 
         try {
             locationProvider.requestLocationUpdates(
@@ -253,10 +255,10 @@ class LocationForegroundService : Service() {
                 onFailure = { /* initial location unavailable, updates will arrive */ }
             )
         } catch (e: SecurityException) {
-            Log.e(TAG, "Location permission missing", e)
+            AppLogger.e(TAG, "Location permission missing", e)
             stopForegroundServiceWithReason("Location permission missing")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start location updates", e)
+            AppLogger.e(TAG, "Failed to start location updates", e)
             stopForegroundServiceWithReason("Location provider error")
         }
     }
@@ -282,15 +284,13 @@ class LocationForegroundService : Service() {
                         recheckZoneWithLocation(location)
                     } else {
                         if (insidePauseZone) {
-                            if (BuildConfig.DEBUG) {
-                                Log.d(TAG, "No location for recheck, forcing exit from zone")
-                            }
+                            AppLogger.d(TAG, "No location for recheck, forcing exit from zone")
                             exitPauseZone()
                         }
                     }
                 },
                 onFailure = { e ->
-                    Log.e(TAG, "Recheck error", e)
+                    AppLogger.e(TAG, "Recheck error", e)
                     if (insidePauseZone) {
                         exitPauseZone()
                     }
@@ -350,6 +350,7 @@ class LocationForegroundService : Service() {
 
     private fun handleLocationUpdate(location: android.location.Location) {
         if (config.filterInaccurateLocations && location.accuracy > config.accuracyThreshold) {
+            AppLogger.d(TAG, "Location filtered: accuracy ${location.accuracy}m > threshold ${config.accuracyThreshold}m")
             return
         }
 
@@ -358,8 +359,11 @@ class LocationForegroundService : Service() {
         if (prev != null && location.time == prev.time
             && location.latitude == prev.latitude
             && location.longitude == prev.longitude) {
+            AppLogger.d(TAG, "Duplicate location skipped (same timestamp and coords)")
             return
         }
+
+        AppLogger.d(TAG, "Location received: ${String.format(Locale.US, "%.5f, %.5f", location.latitude, location.longitude)} acc=${location.accuracy}m provider=${location.provider}")
 
         applySpeedFallback(location)
 
@@ -381,9 +385,7 @@ class LocationForegroundService : Service() {
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
 
         if (deviceInfoHelper.isBatteryCritical()) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Battery critical ($battery%) during tracking - stopping")
-            }
+            AppLogger.d(TAG, "Battery critical ($battery%) during tracking - stopping")
             stopForegroundServiceWithReason("Battery critical")
             return
         }
@@ -439,9 +441,7 @@ class LocationForegroundService : Service() {
 
         LocationServiceModule.sendPauseZoneEvent(true, zoneName)
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Entered pause zone: $zoneName")
-        }
+        AppLogger.d(TAG, "Entered pause zone: $zoneName")
     }
 
 
@@ -454,7 +454,7 @@ class LocationForegroundService : Service() {
         updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
 
         LocationServiceModule.sendPauseZoneEvent(false, exited)
-        if (BuildConfig.DEBUG) Log.d(TAG, "Exited pause zone: $exited")
+        AppLogger.d(TAG, "Exited pause zone: $exited")
     }
 
     private fun updateNotification(
@@ -480,9 +480,7 @@ class LocationForegroundService : Service() {
     }
 
     private fun stopForegroundServiceWithReason(reason: String) {
-        if (BuildConfig.DEBUG) {
-            Log.i(TAG, "Stopping: $reason")
-        }
+        AppLogger.i(TAG, "Stopping: $reason")
 
         // Reset profile indicator in JS UI
         if (profileManager.getActiveProfileName() != null) {
@@ -528,9 +526,7 @@ class LocationForegroundService : Service() {
         val loc = lastKnownLocation
         updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
 
-        if (BuildConfig.DEBUG) {
-            Log.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} - interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
-        }
+        AppLogger.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} - interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
     }
 
     private fun pushConfigToSyncManager() {
@@ -568,10 +564,10 @@ class LocationForegroundService : Service() {
             if (it.isNotBlank()) customFields = payloadBuilder.parseCustomFields(it)
         }
 
-        if (BuildConfig.DEBUG) {
+        if (AppLogger.enabled) {
             val batteryStatusStr = deviceInfoHelper.getBatteryStatusString()
 
-            Log.d(TAG, """
+            AppLogger.d(TAG, """
                 ╔════════════════════════════════════════════════════════════════╗
                 ║              COLOTA LOCATION SERVICE CONFIGURATION              ║
                 ╠════════════════════════════════════════════════════════════════╣

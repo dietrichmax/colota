@@ -12,10 +12,9 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import androidx.car.app.connection.CarConnection
 import androidx.lifecycle.Observer
-import com.Colota.BuildConfig
+import com.Colota.util.AppLogger
 
 /**
  * Monitors device conditions (charging state, Android Auto connection)
@@ -51,18 +50,14 @@ class ConditionMonitor(
         val charging = readCurrentChargingState()
         profileManager.onChargingStateChanged(charging)
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Condition monitors started — charging: $charging")
-        }
+        AppLogger.d(TAG, "Condition monitors started - charging: $charging")
     }
 
     fun stop() {
         chargingReceiver = unregisterSafely(chargingReceiver)
         stopCarConnectionMonitor()
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Condition monitors stopped")
-        }
+        AppLogger.d(TAG, "Condition monitors stopped")
     }
 
     private fun unregisterSafely(receiver: BroadcastReceiver?): Nothing? {
@@ -77,11 +72,11 @@ class ConditionMonitor(
             override fun onReceive(context: Context, intent: Intent) {
                 when (intent.action) {
                     Intent.ACTION_POWER_CONNECTED -> {
-                        if (BuildConfig.DEBUG) Log.d(TAG, "Power connected")
+                        AppLogger.d(TAG, "Power connected")
                         profileManager.onChargingStateChanged(true)
                     }
                     Intent.ACTION_POWER_DISCONNECTED -> {
-                        if (BuildConfig.DEBUG) Log.d(TAG, "Power disconnected")
+                        AppLogger.d(TAG, "Power disconnected")
                         profileManager.onChargingStateChanged(false)
                     }
                 }
@@ -101,9 +96,7 @@ class ConditionMonitor(
 
         val observer = Observer<Int> { connectionType ->
             val connected = connectionType != CarConnection.CONNECTION_TYPE_NOT_CONNECTED
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "CarConnection type: $connectionType (connected: $connected)")
-            }
+            AppLogger.d(TAG, "CarConnection type: $connectionType (connected: $connected)")
             profileManager.onCarModeStateChanged(connected)
         }
         carConnectionObserver = observer

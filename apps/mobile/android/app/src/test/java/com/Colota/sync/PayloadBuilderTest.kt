@@ -1,9 +1,10 @@
 package com.Colota.sync
 
 import android.location.Location
-import io.mockk.every
-import io.mockk.mockk
+import com.Colota.util.AppLogger
+import io.mockk.*
 import org.json.JSONObject
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -15,6 +16,17 @@ class PayloadBuilderTest {
     @Before
     fun setUp() {
         builder = PayloadBuilder()
+
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
+    }
+
+    @After
+    fun tearDown() {
+        unmockkObject(AppLogger)
     }
 
     // --- buildPayload tests ---

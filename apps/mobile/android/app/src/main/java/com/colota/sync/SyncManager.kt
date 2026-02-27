@@ -5,8 +5,7 @@
 
 package com.Colota.sync
 
-import android.util.Log
-import com.Colota.BuildConfig
+import com.Colota.util.AppLogger
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.util.TimedCache
@@ -67,6 +66,7 @@ class SyncManager(
     }
 
     fun startPeriodicSync() {
+        AppLogger.d(TAG, "Starting periodic sync: interval=${syncIntervalSeconds}s, endpoint=${if (endpoint.isBlank()) "NONE" else endpoint}")
         syncJob = scope.launch {
             while (isActive) {
                 val baseDelay = calculateNextSyncDelay()
@@ -82,8 +82,8 @@ class SyncManager(
                         val success = performSyncAndCheckSuccess()
 
                         if (success) {
-                            if (consecutiveFailures > 0 && BuildConfig.DEBUG) {
-                                Log.i(TAG, "Sync restored")
+                            if (consecutiveFailures > 0) {
+                                AppLogger.i(TAG, "Sync restored")
                             }
                             consecutiveFailures = 0
                             null
@@ -91,7 +91,7 @@ class SyncManager(
                             "Sync failed"
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Sync error", e)
+                        AppLogger.e(TAG, "Sync error", e)
                         e.message ?: "Sync error"
                     }
 
@@ -113,11 +113,13 @@ class SyncManager(
     fun stopPeriodicSync() {
         syncJob?.cancel()
         syncJob = null
+        AppLogger.d(TAG, "Periodic sync stopped")
     }
 
     suspend fun manualFlush() {
         if (endpoint.isNotBlank()) {
             val total = dbHelper.getQueuedCount()
+            AppLogger.d(TAG, "Manual flush started: $total items in queue")
             syncQueue { sent, failed -> LocationServiceModule.sendSyncProgressEvent(sent, failed, total) }
         }
     }
@@ -128,16 +130,14 @@ class SyncManager(
         invalidateQueueCache()
 
         if (endpoint.isBlank() || isOfflineMode) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Queued location $locationId - ${if (isOfflineMode) "offline mode" else "no endpoint"}")
-            }
+            AppLogger.d(TAG, "Queued location $locationId - ${if (isOfflineMode) "offline mode" else "no endpoint"}")
             return
         }
 
         // Immediate send mode (syncInterval = 0)
         if (syncIntervalSeconds == 0 && networkManager.isNetworkAvailable() &&
             !(isWifiOnlySync && !networkManager.isUnmeteredConnection())) {
-            if (BuildConfig.DEBUG) Log.d(TAG, "Instant send")
+            AppLogger.d(TAG, "Instant send")
             val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod)
 
             if (success) {
@@ -179,9 +179,7 @@ class SyncManager(
             else -> 900L
         }
 
-        if (BuildConfig.DEBUG) {
-            Log.w(TAG, "Backoff: ${backoffSeconds}s")
-        }
+        AppLogger.w(TAG, "Backoff: ${backoffSeconds}s")
 
         delay(backoffSeconds * 1000L)
     }
@@ -201,15 +199,13 @@ class SyncManager(
         while (isActive && batchNumber <= MAX_BATCHES_PER_SYNC) {
             val queued = dbHelper.getQueuedLocations(50)
             if (queued.isEmpty()) {
-                if (BuildConfig.DEBUG && totalProcessed > 0) {
-                    Log.d(TAG, "Sync complete: $totalProcessed items in $batchNumber batches")
+                if (totalProcessed > 0) {
+                    AppLogger.d(TAG, "Sync complete: $totalProcessed items in $batchNumber batches")
                 }
                 break
             }
 
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "Processing batch $batchNumber/$MAX_BATCHES_PER_SYNC: ${queued.size} items")
-            }
+            AppLogger.d(TAG, "Processing batch $batchNumber/$MAX_BATCHES_PER_SYNC: ${queued.size} items")
 
             // Chunks of 10 concurrent HTTP requests to avoid flooding the server
             val processedBefore = totalProcessed
@@ -225,8 +221,8 @@ class SyncManager(
                 }
 
                 permanentlyFailedIds.addAll(exceeded.map { it.queueId })
-                if (BuildConfig.DEBUG && exceeded.isNotEmpty()) {
-                    Log.w(TAG, "Removing ${exceeded.size} items that exceeded $currentMaxRetries retries")
+                if (exceeded.isNotEmpty()) {
+                    AppLogger.w(TAG, "Removing ${exceeded.size} items that exceeded $currentMaxRetries retries")
                 }
 
                 val results = retriable.map { item ->
@@ -250,9 +246,7 @@ class SyncManager(
 
                         if (currentMaxRetries > 0 && item.retryCount + 1 >= currentMaxRetries) {
                             permanentlyFailedIds.add(queueId)
-                            if (BuildConfig.DEBUG) {
-                                Log.w(TAG, "Item $queueId reached max retries")
-                            }
+                            AppLogger.w(TAG, "Item $queueId reached max retries")
                         }
                     }
                 }
@@ -280,17 +274,15 @@ class SyncManager(
 
             // No items removed from queue. Stop re-fetching the same failing items
             if (totalProcessed == processedBefore) {
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "No progress in batch $batchNumber, stopping sync pass")
-                }
+                AppLogger.d(TAG, "No progress in batch $batchNumber, stopping sync pass")
                 break
             }
 
             batchNumber++
         }
 
-        if (batchNumber > MAX_BATCHES_PER_SYNC && BuildConfig.DEBUG) {
-            Log.w(TAG, "Sync paused: reached batch limit. Remaining items will sync next cycle.")
+        if (batchNumber > MAX_BATCHES_PER_SYNC) {
+            AppLogger.w(TAG, "Sync paused: reached batch limit. Remaining items will sync next cycle.")
         }
 
         invalidateQueueCache()
