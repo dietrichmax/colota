@@ -6,7 +6,7 @@ package com.Colota.util
 
 /**
  * Generic time-based cache that reloads its value after a configurable TTL.
- * Thread-safe via @Volatile annotations.
+ * Thread-safe via @Synchronized access.
  *
  * @param ttlMs Time-to-live in milliseconds before the cached value is refreshed
  * @param loader Function that produces a fresh value when the cache is stale
@@ -15,8 +15,8 @@ class TimedCache<T>(
     private val ttlMs: Long,
     private val loader: () -> T
 ) {
-    @Volatile private var value: T? = null
-    @Volatile private var lastCheck: Long = 0
+    private var value: T? = null
+    private var lastCheck: Long = 0
 
     @Synchronized
     fun get(): T {

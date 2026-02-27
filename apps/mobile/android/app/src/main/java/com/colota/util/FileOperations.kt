@@ -11,11 +11,15 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
-import com.facebook.react.bridge.*
+import com.facebook.react.bridge.ReactApplicationContext
 import java.io.File
 
 class FileOperations(private val context: ReactApplicationContext) {
-    
+
+    companion object {
+        private const val TAG = "FileOperations"
+    }
+
     /**
      * Writes content to a file in the app's cache directory
      * @param fileName Name of the file to create
@@ -67,10 +71,10 @@ class FileOperations(private val context: ReactApplicationContext) {
             try {
                 if (file.exists()) {
                     file.delete()
-                    AppLogger.d("FileOperations", "Cleaned up export file: ${file.name}")
+                    AppLogger.d(TAG, "Cleaned up export file: ${file.name}")
                 }
             } catch (e: Exception) {
-                AppLogger.w("FileOperations", "Failed to cleanup file")
+                AppLogger.w(TAG, "Failed to cleanup file")
             }
         }, 60000)
         

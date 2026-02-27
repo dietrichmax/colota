@@ -23,6 +23,7 @@ class SyncManager(
 ) {
     companion object {
         private const val TAG = "SyncManager"
+        private const val MAX_BATCHES_PER_SYNC = 10
     }
 
     @Volatile private var endpoint: String = ""
@@ -42,8 +43,6 @@ class SyncManager(
     @Volatile private var consecutiveFailures = 0
 
     private val queueCountCache = TimedCache(5000L) { dbHelper.getQueuedCount() }
-
-    private val MAX_BATCHES_PER_SYNC = 10
 
     fun updateConfig(
         endpoint: String,
