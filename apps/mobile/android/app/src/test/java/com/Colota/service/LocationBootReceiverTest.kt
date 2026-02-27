@@ -91,24 +91,6 @@ class LocationBootReceiverTest {
     }
 
     @Test
-    fun `onReceive calls goAsync for QUICKBOOT_POWERON`() {
-        val spy = spyk(receiver)
-        val pendingResult = mockk<BroadcastReceiver.PendingResult>(relaxed = true)
-        every { spy.goAsync() } returns pendingResult
-        every { mockContext.applicationContext } returns mockContext
-        mockDbReadyAndDisabled()
-
-        val intent = mockk<Intent> {
-            every { action } returns "android.intent.action.QUICKBOOT_POWERON"
-        }
-        spy.onReceive(mockContext, intent)
-        Thread.sleep(500)
-
-        verify { spy.goAsync() }
-        verify { pendingResult.finish() }
-    }
-
-    @Test
     fun `onReceive always calls finish even on error`() {
         val spy = spyk(receiver)
         val pendingResult = mockk<BroadcastReceiver.PendingResult>(relaxed = true)
@@ -143,8 +125,7 @@ class LocationBootReceiverTest {
 
         callHandleBootCompleted(mockContext, Intent.ACTION_BOOT_COMPLETED)
 
-        // Build.VERSION.SDK_INT is 0 in unit tests → startService (not startForegroundService)
-        verify { mockContext.startService(any()) }
+        verify { mockContext.startForegroundService(any()) }
     }
 
     @Test
@@ -159,7 +140,7 @@ class LocationBootReceiverTest {
     @Test
     fun `handleBootCompleted handles SecurityException gracefully`() = runTest {
         mockDbReadyAndEnabled()
-        every { mockContext.startService(any()) } throws SecurityException("Permission denied")
+        every { mockContext.startForegroundService(any()) } throws SecurityException("Permission denied")
 
         // Should not throw
         callHandleBootCompleted(mockContext, Intent.ACTION_BOOT_COMPLETED)

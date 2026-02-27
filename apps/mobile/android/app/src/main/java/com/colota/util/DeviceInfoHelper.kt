@@ -90,18 +90,10 @@ class DeviceInfoHelper(private val context: Context) {
     fun invalidateBatteryCache() = batteryCache.invalidate()
 
     fun isIgnoringBatteryOptimizations(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            powerManager.isIgnoringBatteryOptimizations(context.packageName)
-        } else {
-            true // Battery optimization doesn't exist on older versions
-        }
+        return powerManager.isIgnoringBatteryOptimizations(context.packageName)
     }
 
     fun requestIgnoreBatteryOptimizations(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            return true // Not applicable on older versions
-        }
-
         return try {
             val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                 data = Uri.parse("package:${context.packageName}")
