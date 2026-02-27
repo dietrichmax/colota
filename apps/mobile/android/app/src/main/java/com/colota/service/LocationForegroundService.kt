@@ -17,7 +17,9 @@ import com.Colota.sync.SyncManager
 import com.Colota.util.DeviceInfoHelper
 import com.Colota.util.SecureStorageHelper
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.*
+import androidx.core.app.ServiceCompat
 import com.Colota.location.LocationProvider
 import com.Colota.location.LocationProviderFactory
 import com.Colota.location.LocationUpdateCallback
@@ -132,9 +134,11 @@ class LocationForegroundService : Service() {
         val initialTitle = notificationHelper.buildTitle(
             if (::profileManager.isInitialized) profileManager.getActiveProfileName() else null
         )
-        startForeground(
+        ServiceCompat.startForeground(
+            this,
             NotificationHelper.NOTIFICATION_ID,
-            notificationHelper.buildTrackingNotification(initialTitle, initialStatus)
+            notificationHelper.buildTrackingNotification(initialTitle, initialStatus),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
         )
 
         if (!isLightweight) {
