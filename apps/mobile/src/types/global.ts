@@ -26,6 +26,7 @@ export interface LocationCoords {
   bearing?: number
   battery?: number
   battery_status?: number
+  /** Unix epoch seconds */
   timestamp?: number
 }
 

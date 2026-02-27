@@ -68,10 +68,20 @@ function AnimatedNumber({
 }) {
   const animRef = useRef(new Animated.Value(0)).current
   const [display, setDisplay] = useState(format(0))
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     animRef.setValue(0)
-    const listener = animRef.addListener(({ value: v }) => setDisplay(format(Math.round(v))))
+    const listener = animRef.addListener(({ value: v }) => {
+      if (mountedRef.current) setDisplay(format(Math.round(v)))
+    })
     Animated.timing(animRef, { toValue: value, duration: COUNT_UP_DURATION, useNativeDriver: false }).start()
     return () => {
       animRef.stopAnimation()

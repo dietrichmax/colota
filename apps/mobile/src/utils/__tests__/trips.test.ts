@@ -1,5 +1,5 @@
 import { segmentTrips, getTripColor, TRIP_COLORS, computeTripStats } from "../trips"
-import { formatDuration, formatTime } from "../geo"
+import { formatDuration, formatTime, formatDate } from "../geo"
 
 describe("segmentTrips", () => {
   it("returns empty array for empty input", () => {
@@ -219,5 +219,29 @@ describe("formatTime", () => {
     const withoutSeconds = formatTime(ts, false)
     // The version with seconds should be longer
     expect(withSeconds.length).toBeGreaterThan(withoutSeconds.length)
+  })
+})
+
+describe("formatDate", () => {
+  it("returns a non-empty string", () => {
+    // 2024-01-15 12:00:00 UTC
+    const ts = Math.floor(new Date("2024-01-15T12:00:00Z").getTime() / 1000)
+    const result = formatDate(ts)
+    expect(result).toBeTruthy()
+    expect(result.length).toBeGreaterThan(0)
+  })
+
+  it("includes weekday and month", () => {
+    // Force a known date: 2024-01-15 is a Monday
+    const ts = Math.floor(new Date("2024-01-15T12:00:00Z").getTime() / 1000)
+    const result = formatDate(ts)
+    // Should contain abbreviated weekday and month (locale-dependent but always present)
+    expect(result).toMatch(/\w{2,}/)
+  })
+
+  it("returns different strings for different dates", () => {
+    const ts1 = Math.floor(new Date("2024-01-15T12:00:00Z").getTime() / 1000)
+    const ts2 = Math.floor(new Date("2024-06-20T12:00:00Z").getTime() / 1000)
+    expect(formatDate(ts1)).not.toBe(formatDate(ts2))
   })
 })

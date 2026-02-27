@@ -74,6 +74,15 @@ export function formatTime(unixSeconds: number, showSeconds = false): string {
   })
 }
 
+/** Format a Unix-seconds timestamp as a localized date string (e.g. "Wed, Feb 27"). */
+export function formatDate(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric"
+  })
+}
+
 /** Format meters into a human-readable string using the device locale's unit. */
 export function formatDistance(meters: number): string {
   if (usesMiles()) {

@@ -9,12 +9,13 @@ import { fonts } from "../styles/typography"
 import { BarChart2 } from "lucide-react-native"
 import { Container } from "../components"
 import { useTheme } from "../hooks/useTheme"
-import { Trip, LocationCoords } from "../types/global"
+import { Trip, LocationCoords, ThemeColors } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { CalendarPicker } from "../components/features/inspector/CalendarPicker"
 import { TrackMap } from "../components/features/inspector/TrackMap"
 import { TripList } from "../components/features/inspector/TripList"
+import { LocationTable } from "../components/features/inspector/LocationTable"
 import { formatDistance } from "../utils/geo"
 import { segmentTrips } from "../utils/trips"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
@@ -24,10 +25,10 @@ interface TabProps {
   label: string
   active: boolean
   onPress: () => void
-  colors: any
+  colors: ThemeColors
 }
 
-type TabType = "map" | "trips"
+type TabType = "map" | "trips" | "data"
 
 export function LocationHistoryScreen({ navigation, route }: { navigation: any; route: any }) {
   const { colors } = useTheme()
@@ -206,9 +207,10 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
       <View style={styles.tabBar}>
         <Tab label="Map" active={activeTab === "map"} onPress={() => setActiveTab("map")} colors={colors} />
         <Tab label="Trips" active={activeTab === "trips"} onPress={() => setActiveTab("trips")} colors={colors} />
+        <Tab label="Data" active={activeTab === "data"} onPress={() => setActiveTab("data")} colors={colors} />
       </View>
 
-      {activeTab === "map" ? (
+      {activeTab === "map" && (
         <View style={styles.mapContainer}>
           {calendarPicker}
           <TrackMap
@@ -233,7 +235,9 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
             </Pressable>
           )}
         </View>
-      ) : (
+      )}
+
+      {activeTab === "trips" && (
         <View style={styles.mapContainer}>
           {calendarPicker}
           <TripList
@@ -244,6 +248,13 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
             onExport={handleTripExport}
             onExportTrip={handleSingleTripExport}
           />
+        </View>
+      )}
+
+      {activeTab === "data" && (
+        <View style={styles.mapContainer}>
+          {calendarPicker}
+          <LocationTable locations={trackLocations} colors={colors} />
         </View>
       )}
     </Container>

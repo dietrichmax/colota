@@ -21,7 +21,7 @@ const sampleLocation = {
   bearing: 180,
   battery: 85,
   battery_status: 2,
-  timestamp: 1700000000000
+  timestamp: 1700000000
 }
 
 const minimalLocation = {

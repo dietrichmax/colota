@@ -38,10 +38,7 @@ export function ExportDataScreen() {
     if (cachedData.current.length > 0) return
     const data = await NativeLocationService.getExportData()
     if (data && data.length > 0) {
-      cachedData.current = data.map((item) => ({
-        ...item,
-        timestamp: item.timestamp ? item.timestamp * 1000 : Date.now()
-      }))
+      cachedData.current = data
     }
   }, [])
 

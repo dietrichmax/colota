@@ -5,26 +5,35 @@
 
 import React, { useMemo, useState, useCallback } from "react"
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native"
-import { Route, Clock, Gauge, TrendingUp, TrendingDown, MapPin, Share } from "lucide-react-native"
+import { Route, Clock, Gauge, TrendingUp, TrendingDown, MapPin, Share, type LucideIcon } from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
 import { fonts } from "../styles/typography"
 import { Card } from "../components/ui/Card"
 import { Container } from "../components/ui/Container"
 import { TrackMap } from "../components/features/inspector/TrackMap"
 import { getTripColor, computeTripStats } from "../utils/trips"
-import { formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
+import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
-import type { Trip } from "../types/global"
+import type { Trip, ThemeColors } from "../types/global"
 
-function formatDate(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric"
-  })
+const MAX_BARS = 120
+
+/** Downsample an array to at most maxBars entries by averaging buckets. */
+function downsample(values: number[], maxBars: number): number[] {
+  if (values.length <= maxBars) return values
+  const bucketSize = values.length / maxBars
+  const result: number[] = []
+  for (let i = 0; i < maxBars; i++) {
+    const start = Math.floor(i * bucketSize)
+    const end = Math.floor((i + 1) * bucketSize)
+    let sum = 0
+    for (let j = start; j < end; j++) sum += values[j]
+    result.push(sum / (end - start))
+  }
+  return result
 }
 
 export function TripDetailScreen({ route }: { navigation: any; route: any }) {
@@ -60,11 +69,13 @@ export function TripDetailScreen({ route }: { navigation: any; route: any }) {
   )
 
   const speedProfile = useMemo(() => {
-    return trip.locations.filter((loc) => loc.speed != null).map((loc) => loc.speed ?? 0)
+    const raw = trip.locations.filter((loc) => loc.speed != null).map((loc) => loc.speed ?? 0)
+    return downsample(raw, MAX_BARS)
   }, [trip])
 
   const elevationProfile = useMemo(() => {
-    return trip.locations.filter((loc) => loc.altitude != null).map((loc) => loc.altitude ?? 0)
+    const raw = trip.locations.filter((loc) => loc.altitude != null).map((loc) => loc.altitude ?? 0)
+    return downsample(raw, MAX_BARS)
   }, [trip])
 
   const maxSpeed = useMemo(() => speedProfile.reduce((max, v) => Math.max(max, v), 0), [speedProfile])
@@ -140,7 +151,7 @@ export function TripDetailScreen({ route }: { navigation: any; route: any }) {
                     return (
                       <View
                         key={i}
-                        style={[styles.bar, { height: `${Math.max(height, 2)}%`, backgroundColor: tripColor, flex: 1 }]}
+                        style={[styles.bar, { height: `${Math.max(height, 2)}%`, backgroundColor: tripColor }]}
                       />
                     )
                   })}
@@ -177,7 +188,7 @@ export function TripDetailScreen({ route }: { navigation: any; route: any }) {
                         key={i}
                         style={[
                           styles.bar,
-                          { height: `${Math.max(height, 2)}%`, backgroundColor: colors.primary + "80", flex: 1 }
+                          { height: `${Math.max(height, 2)}%`, backgroundColor: colors.primary + "80" }
                         ]}
                       />
                     )
@@ -235,10 +246,10 @@ function StatCard({
   value,
   colors
 }: {
-  icon: React.ComponentType<any>
+  icon: LucideIcon
   label: string
   value: string
-  colors: any
+  colors: ThemeColors
 }) {
   return (
     <Card style={styles.statCard}>
@@ -340,7 +351,8 @@ const styles = StyleSheet.create({
     gap: 1
   },
   bar: {
-    borderRadius: 2
+    borderRadius: 2,
+    flex: 1
   },
   chartLabels: {
     flexDirection: "row",
