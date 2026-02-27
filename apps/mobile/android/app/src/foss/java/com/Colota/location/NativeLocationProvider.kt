@@ -12,6 +12,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.Looper
+import com.Colota.util.AppLogger
 
 /**
  * LocationManager-based provider for FOSS flavor (no Google Play Services).
@@ -21,6 +22,7 @@ import android.os.Looper
 class NativeLocationProvider(context: Context) : LocationProvider {
 
     companion object {
+        private const val TAG = "NativeLocationProvider"
         /** Ignore network updates for this long after the last GPS fix. */
         private const val GPS_SUPPRESSION_MS = 10_000L
     }
@@ -62,6 +64,8 @@ class NativeLocationProvider(context: Context) : LocationProvider {
                 looper
             )
 
+            AppLogger.d(TAG, "Started GPS_PROVIDER updates: interval=${intervalMs}ms, distance=${minDistanceMeters}m")
+
             // NETWORK_PROVIDER as coarse fallback for faster initial fix
             if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 val networkListener = object : LocationListener {
@@ -83,6 +87,9 @@ class NativeLocationProvider(context: Context) : LocationProvider {
                     networkListener,
                     looper
                 )
+                AppLogger.d(TAG, "Also started NETWORK_PROVIDER as fallback")
+            } else {
+                AppLogger.d(TAG, "NETWORK_PROVIDER not available")
             }
         } catch (e: SecurityException) {
             listeners.forEach { locationManager.removeUpdates(it) }
@@ -93,7 +100,10 @@ class NativeLocationProvider(context: Context) : LocationProvider {
     }
 
     override fun removeLocationUpdates(callback: LocationUpdateCallback) {
-        listenerMap.remove(callback)?.forEach { locationManager.removeUpdates(it) }
+        listenerMap.remove(callback)?.let { listeners ->
+            listeners.forEach { locationManager.removeUpdates(it) }
+            AppLogger.d(TAG, "Stopped location updates (${listeners.size} listener(s))")
+        }
     }
 
     override fun getLastLocation(

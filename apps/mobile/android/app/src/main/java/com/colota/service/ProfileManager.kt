@@ -5,8 +5,7 @@
 
 package com.Colota.service
 
-import android.util.Log
-import com.Colota.BuildConfig
+import com.Colota.util.AppLogger
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.ProfileHelper
 import kotlinx.coroutines.*
@@ -126,7 +125,7 @@ class ProfileManager(
     }
 
     private fun matchesCondition(profile: ProfileHelper.CachedProfile): Boolean {
-        return when (profile.conditionType) {
+        val result = when (profile.conditionType) {
             ProfileConstants.CONDITION_CHARGING -> isCharging
             ProfileConstants.CONDITION_ANDROID_AUTO -> isCarMode
             ProfileConstants.CONDITION_SPEED_ABOVE -> {
@@ -141,6 +140,17 @@ class ProfileManager(
             }
             else -> false
         }
+
+        if (result) {
+            val detail = when (profile.conditionType) {
+                ProfileConstants.CONDITION_SPEED_ABOVE,
+                ProfileConstants.CONDITION_SPEED_BELOW -> " (avg=${String.format("%.1f", getAverageSpeed())}m/s, threshold=${profile.speedThreshold})"
+                else -> ""
+            }
+            AppLogger.d(TAG, "Profile '${profile.name}' matched: ${profile.conditionType}$detail")
+        }
+
+        return result
     }
 
     private fun getAverageSpeed(): Float? {
@@ -153,9 +163,7 @@ class ProfileManager(
     private fun activateProfile(profile: ProfileHelper.CachedProfile) {
         activeProfile = profile
 
-        if (BuildConfig.DEBUG) {
-            Log.i(TAG, "Activated profile: ${profile.name} (interval=${profile.intervalMs}ms, sync=${profile.syncIntervalSeconds}s)")
-        }
+        AppLogger.i(TAG, "Activated profile: ${profile.name} (interval=${profile.intervalMs}ms, sync=${profile.syncIntervalSeconds}s)")
 
         // Notify JS
         LocationServiceModule.sendProfileSwitchEvent(profile.name, profile.id)
@@ -180,9 +188,7 @@ class ProfileManager(
             deactivateIfStillActive(scheduledProfileId)
         }
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Scheduled deactivation of '${profile.name}' in ${profile.deactivationDelaySeconds}s")
-        }
+        AppLogger.d(TAG, "Scheduled deactivation of '${profile.name}' in ${profile.deactivationDelaySeconds}s")
     }
 
     /**
@@ -207,9 +213,7 @@ class ProfileManager(
         activeProfile = null
         deactivationJob = null
 
-        if (BuildConfig.DEBUG) {
-            Log.i(TAG, "Deactivated profile: ${previousProfile.name} — reverting to defaults")
-        }
+        AppLogger.i(TAG, "Deactivated profile: ${previousProfile.name} - reverting to defaults")
 
         // Notify JS
         LocationServiceModule.sendProfileSwitchEvent(null, null)

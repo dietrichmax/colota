@@ -153,15 +153,16 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 
 ### Other Modules
 
-| Module                 | Purpose                                                   |
-| ---------------------- | --------------------------------------------------------- |
-| `LocationBootReceiver` | Auto-restarts tracking after device reboot                |
-| `DeviceInfoHelper`     | Device metadata and battery status with caching           |
-| `FileOperations`       | File I/O, sharing via FileProvider, and clipboard access  |
-| `PayloadBuilder`       | Builds JSON payloads with dynamic field mapping           |
-| `ServiceConfig`        | Centralized configuration data class                      |
-| `TimedCache`           | Generic TTL cache used for queue count and device info    |
-| `BuildConfigModule`    | Exposes build constants (SDK versions, app version) to JS |
+| Module                 | Purpose                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| `LocationBootReceiver` | Auto-restarts tracking after device reboot                                                 |
+| `DeviceInfoHelper`     | Device metadata and battery status with caching                                            |
+| `FileOperations`       | File I/O, sharing via FileProvider, and clipboard access                                   |
+| `PayloadBuilder`       | Builds JSON payloads with dynamic field mapping                                            |
+| `ServiceConfig`        | Centralized configuration data class                                                       |
+| `TimedCache`           | Generic TTL cache used for queue count and device info                                     |
+| `BuildConfigModule`    | Exposes build constants (SDK versions, app version) to JS                                  |
+| `AppLogger`            | Centralized logger - logs when debug mode is enabled or in debug builds, errors always log |
 
 ## React Native Layer
 
@@ -203,7 +204,7 @@ Supporting utilities in `mapUtils.ts`:
 
 | Utility | Purpose |
 | --- | --- |
-| `logger` | Environment-aware logging - suppresses debug/info in production via `__DEV__`, always logs warn/error |
+| `logger` | Environment-aware logging with ring buffer - suppresses debug/info in production via `__DEV__`, always logs warn/error. Buffer is used for log export |
 | `geo` | Haversine distance, speed/distance formatting with locale-aware unit selection (km/h vs mph) |
 | `exportConverters` | Converts location data to CSV, GeoJSON, GPX, and KML export formats |
 | `queueStatus` | Maps sync queue size to color indicators for the dashboard |

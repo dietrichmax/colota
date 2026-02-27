@@ -6,12 +6,11 @@
 package com.Colota.data
 
 import android.content.ContentValues
-import com.Colota.BuildConfig
+import com.Colota.util.AppLogger
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteStatement
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.*
@@ -67,6 +66,7 @@ class DatabaseHelper private constructor(context: Context) :
     private var incrementRetryStmt: SQLiteStatement? = null
 
     override fun onCreate(db: SQLiteDatabase) {
+        AppLogger.i(TAG, "Creating database v$DATABASE_VERSION")
         db.execSQL("""
             CREATE TABLE $TABLE_LOCATIONS (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -178,7 +178,7 @@ class DatabaseHelper private constructor(context: Context) :
             }
             db.setTransactionSuccessful()
         } catch (e: Exception) {
-            Log.e(TAG, "Error prepopulating settings", e)
+            AppLogger.e(TAG, "Error prepopulating settings", e)
         } finally {
             db.endTransaction()
         }
@@ -191,6 +191,7 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        AppLogger.i(TAG, "Upgrading database from v$oldVersion to v$newVersion")
         if (oldVersion < 2) {
             db.execSQL("""
                 CREATE TABLE IF NOT EXISTS $TABLE_PROFILES (
@@ -279,7 +280,7 @@ class DatabaseHelper private constructor(context: Context) :
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Query failed", e)
+            AppLogger.e(TAG, "Query failed", e)
             null
         }
     }
@@ -326,7 +327,7 @@ class DatabaseHelper private constructor(context: Context) :
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error reading table $tableName", e)
+            AppLogger.e(TAG, "Error reading table $tableName", e)
         }
         
         return data
@@ -371,7 +372,7 @@ class DatabaseHelper private constructor(context: Context) :
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error reading locations by date range", e)
+            AppLogger.e(TAG, "Error reading locations by date range", e)
         }
 
         return data
@@ -436,8 +437,8 @@ class DatabaseHelper private constructor(context: Context) :
             args
         )
 
-        if (BuildConfig.DEBUG && deleted > 0) {
-            Log.d(TAG, "Batch deleted $deleted queue items")
+        if (deleted > 0) {
+            AppLogger.d(TAG, "Batch deleted $deleted queue items")
         }
     }
 
@@ -495,6 +496,7 @@ class DatabaseHelper private constructor(context: Context) :
 
 
     fun clearSentHistory(): Int {
+        AppLogger.d(TAG, "Clearing sent history")
         return writableDatabase.delete(
             TABLE_LOCATIONS,
             "id NOT IN (SELECT location_id FROM $TABLE_QUEUE)",
@@ -503,6 +505,7 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun clearQueue(): Int {
+        AppLogger.d(TAG, "Clearing queue")
         // Deleting locations cascades to their queue entries via FK ON DELETE CASCADE
         return writableDatabase.delete(
             TABLE_LOCATIONS,
@@ -523,11 +526,13 @@ class DatabaseHelper private constructor(context: Context) :
 
     /** Reclaims unused space. Call from background thread only. */
     fun vacuum() {
+        AppLogger.d(TAG, "Starting VACUUM + ANALYZE")
         try {
             writableDatabase.execSQL("VACUUM")
             writableDatabase.execSQL("ANALYZE")
+            AppLogger.d(TAG, "VACUUM + ANALYZE completed")
         } catch (e: Exception) {
-            Log.e(TAG, "Vacuum failed (likely concurrent access)", e)
+            AppLogger.e(TAG, "Vacuum failed (likely concurrent access)", e)
         }
     }
 
@@ -578,7 +583,7 @@ class DatabaseHelper private constructor(context: Context) :
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading settings", e)
+            AppLogger.e(TAG, "Error loading settings", e)
         }
         
         return settings

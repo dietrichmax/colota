@@ -26,8 +26,15 @@ import {
   ProfileEditorScreen,
   SetupImportScreen
 } from "./src/screens/"
+import NativeLocationService from "./src/services/NativeLocationService"
+import { setLogCollecting } from "./src/utils/logger"
 
 MapLibreGL.setAccessToken(null)
+
+// Enable log collection early if debug mode was previously enabled
+NativeLocationService.getSetting("debug_mode_enabled", "false").then((v) => {
+  if (v === "true") setLogCollecting(true)
+})
 
 const Stack = createNativeStackNavigator()
 

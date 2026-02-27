@@ -12,7 +12,7 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
-import android.util.Log
+import com.Colota.util.AppLogger
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
 
@@ -110,7 +110,7 @@ class DeviceInfoHelper(private val context: Context) {
             context.startActivity(intent)
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to open battery optimization settings", e)
+            AppLogger.e(TAG, "Failed to open battery optimization settings", e)
             // Fallback to general settings
             try {
                 val fallbackIntent = Intent(Settings.ACTION_SETTINGS).apply {
@@ -119,7 +119,7 @@ class DeviceInfoHelper(private val context: Context) {
                 context.startActivity(fallbackIntent)
                 false // Indicate fallback was used
             } catch (e2: Exception) {
-                Log.e(TAG, "Failed to open general settings", e2)
+                AppLogger.e(TAG, "Failed to open general settings", e2)
                 throw e2 // Let caller handle this
             }
         }

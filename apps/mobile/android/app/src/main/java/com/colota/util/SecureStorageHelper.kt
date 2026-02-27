@@ -8,7 +8,7 @@ package com.Colota.util
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
-import android.util.Log
+import com.Colota.util.AppLogger
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import org.json.JSONObject
@@ -48,7 +48,7 @@ class SecureStorageHelper private constructor(context: Context) {
         prefs = try {
             createEncryptedPrefs(context)
         } catch (e: Exception) {
-            Log.e(TAG, "EncryptedSharedPreferences corrupted, clearing and retrying", e)
+            AppLogger.e(TAG, "EncryptedSharedPreferences corrupted, clearing and retrying", e)
             context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
             createEncryptedPrefs(context)
         }
@@ -117,7 +117,7 @@ class SecureStorageHelper private constructor(context: Context) {
                     }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to parse custom headers", e)
+                AppLogger.w(TAG, "Failed to parse custom headers")
             }
         }
 

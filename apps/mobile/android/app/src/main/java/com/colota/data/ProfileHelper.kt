@@ -6,11 +6,10 @@
 package com.Colota.data
 
 import android.content.ContentValues
-import com.Colota.BuildConfig
+import com.Colota.util.AppLogger
 import com.Colota.service.ProfileConstants
 import com.Colota.util.TimedCache
 import android.content.Context
-import android.util.Log
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableArray
 
@@ -38,9 +37,7 @@ class ProfileHelper(private val context: Context) {
 
     fun invalidateCache() {
         profileCache.invalidate()
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Profile cache invalidated")
-        }
+        AppLogger.d(TAG, "Profile cache invalidated")
     }
 
     fun getEnabledProfiles(): List<CachedProfile> = profileCache.get()
@@ -80,7 +77,7 @@ class ProfileHelper(private val context: Context) {
             }
             profiles
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load profiles", e)
+            AppLogger.e(TAG, "Failed to load profiles", e)
             emptyList()
         }
     }
@@ -127,7 +124,7 @@ class ProfileHelper(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load profiles as array", e)
+            AppLogger.e(TAG, "Failed to load profiles as array", e)
         }
 
         return array

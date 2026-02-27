@@ -579,6 +579,14 @@ class NativeLocationService {
     return LocationServiceModule.getCacheDirectory()
   }
 
+  /**
+   * Returns native (Kotlin) Logcat entries for the app's process
+   */
+  static async getNativeLogs(): Promise<string[]> {
+    this.ensureModule()
+    return LocationServiceModule.getNativeLogs()
+  }
+
   // ============================================================================
   // SECURE STORAGE (Auth & Headers)
   // ============================================================================

@@ -27,6 +27,17 @@ sidebar_position: 4
 
 **Common causes**: Wrong URL, HTTPS required for non-localhost, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed certificate (not supported), **Wi-Fi Only Sync** enabled while on cellular data, missing local network permission on Android 17+.
 
+## Exporting app logs
+
+You can export app logs directly from the device for bug reports:
+
+1. Go to **About** and tap the version number 7 times to enable debug mode
+2. Log collection starts automatically - reproduce the issue you want to report
+3. Tap **Export Logs** to share a text file with the collected log entries
+4. The export includes app version, device info, and all collected log messages
+
+Log collection is only active while debug mode is enabled and uses minimal memory.
+
 ## Debugging with adb logcat
 
 Filter logs to see what Colota is doing:
