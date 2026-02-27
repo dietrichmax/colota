@@ -8,7 +8,6 @@ package com.Colota.util
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
-import com.Colota.util.AppLogger
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import org.json.JSONObject

@@ -8,7 +8,7 @@ package com.Colota.sync
 import android.location.Location
 import com.Colota.util.AppLogger
 import org.json.JSONObject
-import kotlin.math.*
+import kotlin.math.roundToInt
 
 /**
  * Builds and parses location payloads with dynamic field mapping.

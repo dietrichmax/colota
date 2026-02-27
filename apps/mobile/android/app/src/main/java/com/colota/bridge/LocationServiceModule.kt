@@ -23,11 +23,21 @@ import com.Colota.util.DeviceInfoHelper
 import com.Colota.util.FileOperations
 import com.Colota.util.AppLogger
 import com.Colota.util.SecureStorageHelper
-import com.facebook.react.bridge.*
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.LifecycleEventListener
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.Colota.location.LocationProviderFactory
-import org.json.JSONObject
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
 
 /**
@@ -623,8 +633,16 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                     if (loc == null) {
                         promise.resolve(null)
                     } else {
-                        executeAsync(promise) {
-                            geofenceHelper.getPauseZone(loc)
+                        moduleScope.launch {
+                            try {
+                                val zone = withContext(Dispatchers.IO) {
+                                    geofenceHelper.getPauseZone(loc)
+                                }
+                                promise.resolve(zone)
+                            } catch (e: Exception) {
+                                AppLogger.e(TAG, "Pause zone check failed", e)
+                                promise.resolve(null)
+                            }
                         }
                     }
                 },
