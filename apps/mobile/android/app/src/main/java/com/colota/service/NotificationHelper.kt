@@ -8,7 +8,6 @@ package com.Colota.service
 import android.app.*
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.Colota.MainActivity
 import java.util.Locale
@@ -36,17 +35,15 @@ class NotificationHelper(
     }
 
     fun createChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Location Tracking",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Shows active tracking status and sync queue"
-                setShowBadge(false)
-            }
-            notificationManager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Location Tracking",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Shows active tracking status and sync queue"
+            setShowBadge(false)
         }
+        notificationManager.createNotificationChannel(channel)
     }
 
     fun buildTrackingNotification(title: String, statusText: String): Notification {

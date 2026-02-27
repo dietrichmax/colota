@@ -494,12 +494,7 @@ class LocationForegroundService : Service() {
         LocationServiceModule.sendTrackingStoppedEvent(reason)
         dbHelper.saveSetting("tracking_enabled", "false")
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(Service.STOP_FOREGROUND_DETACH)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(false)
-        }
+        stopForeground(Service.STOP_FOREGROUND_DETACH)
 
         notificationManager.notify(
             NotificationHelper.NOTIFICATION_ID,

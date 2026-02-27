@@ -23,7 +23,6 @@ import com.Colota.util.DeviceInfoHelper
 import com.Colota.util.FileOperations
 import com.Colota.util.AppLogger
 import com.Colota.util.SecureStorageHelper
-import android.os.Build
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.Colota.location.LocationProviderFactory
@@ -260,11 +259,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         serviceConfig.toIntent(serviceIntent)
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                reactApplicationContext.startForegroundService(serviceIntent)
-            } else {
-                reactApplicationContext.startService(serviceIntent)
-            }
+            reactApplicationContext.startForegroundService(serviceIntent)
             moduleScope.launch(Dispatchers.IO) {
                 dbHelper.saveSetting("tracking_enabled", "true")
             }
@@ -806,11 +801,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 this.action = action
             }
             
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                reactApplicationContext.startForegroundService(intent)
-            } else {
-                reactApplicationContext.startService(intent)
-            }
+            reactApplicationContext.startForegroundService(intent)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to start service with action: $action", e)
             throw e
@@ -900,7 +891,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         val pid = android.os.Process.myPid()
         val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "threadtime", "--pid=$pid"))
         val lines = process.inputStream.bufferedReader().readLines()
-        process.waitFor()
+        process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
         Arguments.createArray().apply {
             lines.filter { "Colota." in it }.forEach { pushString(it) }
         }

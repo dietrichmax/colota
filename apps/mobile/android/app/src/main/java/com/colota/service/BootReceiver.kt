@@ -9,7 +9,6 @@ import android.content.BroadcastReceiver
 import com.Colota.data.DatabaseHelper
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import com.Colota.util.AppLogger
 import kotlinx.coroutines.*
 
@@ -21,11 +20,8 @@ class LocationBootReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "BootReceiver"
         
-        // Supported boot actions for better device compatibility
         private val BOOT_ACTIONS = setOf(
-            Intent.ACTION_BOOT_COMPLETED,
-            Intent.ACTION_LOCKED_BOOT_COMPLETED,
-            "android.intent.action.QUICKBOOT_POWERON"
+            Intent.ACTION_BOOT_COMPLETED
         )
         
         private const val MAX_DB_RETRIES = 3
@@ -100,12 +96,7 @@ class LocationBootReceiver : BroadcastReceiver() {
             val serviceIntent = Intent(context, LocationForegroundService::class.java)
             config.toIntent(serviceIntent)
             
-            // Start service based on Android version
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
-            }
+            context.startForegroundService(serviceIntent)
             
             AppLogger.d(TAG, "Service start requested successfully")
             
