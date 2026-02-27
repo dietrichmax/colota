@@ -7,7 +7,8 @@ import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
 import { View, StyleSheet, Text, Pressable } from "react-native"
 import { ShapeSource, LineLayer, CircleLayer } from "@maplibre/maplibre-react-native"
 import { MapPinOff, X } from "lucide-react-native"
-import { ThemeColors } from "../../../types/global"
+import { ThemeColors, Trip } from "../../../types/global"
+import { getTripColor } from "../../../utils/trips"
 import { fonts } from "../../../styles/typography"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
@@ -18,8 +19,8 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
+import { MAP_ANIMATION_DURATION_MS } from "../../../constants"
 
-// MapLibre layer styles (extracted to satisfy no-inline-styles lint rule)
 const trackLineStyle = {
   lineColor: ["get", "color"] as const,
   lineWidth: 3,
@@ -35,21 +36,15 @@ const trackPointStyle = {
   circleStrokeWidth: 1.5
 }
 
-const endpointStyle = {
-  circleRadius: 8,
-  circleColor: ["get", "color"] as const,
-  circleStrokeColor: "#ffffff",
-  circleStrokeWidth: 2
-}
-import { MAP_ANIMATION_DURATION_MS } from "../../../constants"
-
 interface Props {
   locations: TrackLocation[]
   selectedPoint: { latitude: number; longitude: number } | null
   colors: ThemeColors
+  trips?: Trip[]
+  fitVersion?: number
 }
 
-export function TrackMap({ locations, selectedPoint, colors }: Props) {
+export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }: Props) {
   const mapRef = useRef<ColotaMapRef>(null)
   const [isCentered, setIsCentered] = useState(true)
   const [popup, setPopup] = useState<{
@@ -58,19 +53,27 @@ export function TrackMap({ locations, selectedPoint, colors }: Props) {
     timestamp: number
     accuracy: number
     altitude: number
+    color: string
   } | null>(null)
   const [mapReady, setMapReady] = useState(false)
 
-  // Fit map to track bounds on first load
+  // Fit map to track bounds when fitVersion changes (date change, trip select)
   const bounds = useMemo(() => computeTrackBounds(locations), [locations])
+  const fittedVersionRef = useRef(-1)
 
   useEffect(() => {
-    if (bounds && mapReady && mapRef.current?.camera) {
-      mapRef.current.camera.fitBounds(bounds.ne, bounds.sw, [60, 60, 60, 60], MAP_ANIMATION_DURATION_MS)
-    }
-  }, [bounds, mapReady])
+    if (!bounds || !mapReady || !mapRef.current?.camera) return
+    if (fitVersion === fittedVersionRef.current) return
+    fittedVersionRef.current = fitVersion ?? 0
+    mapRef.current.camera.fitBounds(bounds.ne, bounds.sw, [60, 60, 60, 60], MAP_ANIMATION_DURATION_MS)
+  }, [bounds, mapReady, fitVersion])
 
   const handleMapReady = useCallback(() => setMapReady(true), [])
+
+  // Clear popup when underlying locations change (new day / different trip)
+  useEffect(() => {
+    setPopup(null)
+  }, [locations])
 
   // Zoom to selected point from table tap
   useEffect(() => {
@@ -97,88 +100,144 @@ export function TrackMap({ locations, selectedPoint, colors }: Props) {
     }
   }, [])
 
-  // GeoJSON data
-  const segmentsGeoJSON = useMemo(() => buildTrackSegmentsGeoJSON(locations, colors), [locations, colors])
-  const pointsGeoJSON = useMemo(() => buildTrackPointsGeoJSON(locations, colors), [locations, colors])
+  // Trip boundary indices to avoid drawing lines between trips
+  const skipIndices = useMemo(() => {
+    if (!trips || trips.length <= 1) return undefined
+    const indices = new Set<number>()
+    let offset = 0
+    for (const trip of trips) {
+      if (offset > 0) indices.add(offset)
+      offset += trip.locationCount
+    }
+    return indices
+  }, [trips])
 
-  // Highlight point GeoJSON
+  // Per-location colors
+  const locationColors = useMemo(() => {
+    if (trips) {
+      const arr: string[] = []
+      for (const trip of trips) {
+        const tripColor = getTripColor(trip.index)
+        for (let j = 0; j < trip.locationCount; j++) {
+          arr.push(tripColor)
+        }
+      }
+      // Fill remaining points with default color
+      while (arr.length < locations.length) {
+        arr.push(colors.primary)
+      }
+      return arr
+    }
+    return locations.map(() => colors.primary)
+  }, [trips, locations, colors.primary])
+
+  // GeoJSON data
+  const segmentsGeoJSON = useMemo(
+    () => buildTrackSegmentsGeoJSON(locations, colors, skipIndices, locationColors),
+    [locations, colors, skipIndices, locationColors]
+  )
+  const pointsGeoJSON = useMemo(
+    () => buildTrackPointsGeoJSON(locations, colors, locationColors),
+    [locations, colors, locationColors]
+  )
+
+  // Highlight GeoJSON for selected point
   const highlightGeoJSON = useMemo(() => {
-    if (!selectedPoint) return null
+    const coord = selectedPoint ? [selectedPoint.longitude, selectedPoint.latitude] : null
     return {
       type: "FeatureCollection" as const,
       features: [
         {
           type: "Feature" as const,
-          properties: {},
-          geometry: {
-            type: "Point" as const,
-            coordinates: [selectedPoint.longitude, selectedPoint.latitude]
-          }
+          properties: { color: colors.primary, visible: coord ? 1 : 0 },
+          geometry: { type: "Point" as const, coordinates: coord ?? [0, 0] }
         }
       ]
     }
-  }, [selectedPoint])
+  }, [selectedPoint, colors.primary])
 
   const highlightStyle = useMemo(
     () => ({
-      circleRadius: 12,
-      circleColor: colors.primary + "44",
-      circleStrokeColor: colors.primary,
-      circleStrokeWidth: 2
+      circleRadius: 8,
+      circleColor: ["get", "color"] as any,
+      circleOpacity: ["get", "visible"] as any,
+      circleStrokeColor: "#ffffff",
+      circleStrokeWidth: ["*", 2.5, ["get", "visible"]] as any
     }),
-    [colors.primary]
+    []
   )
 
-  // Start/end endpoint GeoJSON (single ShapeSource with data-driven color)
-  const endpointsGeoJSON = useMemo(() => {
-    if (locations.length === 0) return null
-    const features: GeoJSON.Feature[] = [
-      {
-        type: "Feature",
-        properties: { color: colors.success },
-        geometry: { type: "Point", coordinates: [locations[0].longitude, locations[0].latitude] }
-      }
-    ]
-    if (locations.length > 1) {
-      const last = locations[locations.length - 1]
-      features.push({
-        type: "Feature",
-        properties: { color: colors.error },
-        geometry: { type: "Point", coordinates: [last.longitude, last.latitude] }
-      })
-    }
-    return { type: "FeatureCollection" as const, features }
-  }, [locations, colors])
-
-  // Speed legend data
   const { factor: speedFactor, unit: speedUnit } = getSpeedUnit()
-  const slowLabel = `< ${Math.round(2 * speedFactor)} ${speedUnit}`
-  const midLabel = `${Math.round(2 * speedFactor)}–${Math.round(8 * speedFactor)} ${speedUnit}`
-  const fastLabel = `> ${Math.round(8 * speedFactor)} ${speedUnit}`
 
-  // Handle point tap (track timestamp to distinguish from map tap)
   const lastPointPressRef = useRef(0)
   const handlePointPress = useCallback(
     (event: { features: GeoJSON.Feature[]; coordinates: { latitude: number; longitude: number } }) => {
       const feature = event.features[0]
-      if (!feature?.properties) return
+      if (!feature?.properties || !feature?.geometry) return
       lastPointPressRef.current = Date.now()
+      const geom = feature.geometry as GeoJSON.Point
+      const coord = geom.coordinates as [number, number]
       setPopup({
-        coordinate: [event.coordinates.longitude, event.coordinates.latitude],
+        coordinate: coord,
         speed: feature.properties.speed,
         timestamp: feature.properties.timestamp,
         accuracy: feature.properties.accuracy,
-        altitude: feature.properties.altitude
+        altitude: feature.properties.altitude,
+        color: feature.properties.color ?? colors.primary
       })
     },
-    []
+    [colors.primary]
   )
 
-  // Tap on empty map area dismisses popup
   const handleMapPress = useCallback(() => {
     if (Date.now() - lastPointPressRef.current < 200) return
     setPopup(null)
   }, [])
+
+  const initialCenter = useMemo(
+    () => [locations[0]?.longitude ?? 0, locations[0]?.latitude ?? 0] as [number, number],
+    [locations]
+  )
+
+  // Memoize the map block to prevent popup state changes from triggering re-renders
+  const mapView = useMemo(
+    () => (
+      <ColotaMapView
+        ref={mapRef}
+        initialCenter={initialCenter}
+        initialZoom={2}
+        onPress={handleMapPress}
+        onRegionDidChange={handleRegionChange}
+        onMapReady={handleMapReady}
+      >
+        <ShapeSource id="track-segments" shape={segmentsGeoJSON}>
+          <LineLayer id="track-line" style={trackLineStyle} />
+        </ShapeSource>
+        <ShapeSource
+          id="track-points"
+          shape={pointsGeoJSON}
+          onPress={handlePointPress}
+          hitbox={{ width: 20, height: 20 }}
+        >
+          <CircleLayer id="track-point-circles" style={trackPointStyle} />
+        </ShapeSource>
+        <ShapeSource id="highlight-point" shape={highlightGeoJSON}>
+          <CircleLayer id="highlight-circle" style={highlightStyle} />
+        </ShapeSource>
+      </ColotaMapView>
+    ),
+    [
+      initialCenter,
+      handleMapPress,
+      handleRegionChange,
+      handleMapReady,
+      segmentsGeoJSON,
+      pointsGeoJSON,
+      highlightGeoJSON,
+      handlePointPress,
+      highlightStyle
+    ]
+  )
 
   if (locations.length === 0) {
     return (
@@ -194,50 +253,14 @@ export function TrackMap({ locations, selectedPoint, colors }: Props) {
 
   return (
     <View style={styles.container}>
-      <ColotaMapView
-        ref={mapRef}
-        initialCenter={locations.length > 0 ? [locations[0].longitude, locations[0].latitude] : [0, 0]}
-        initialZoom={2}
-        onPress={handleMapPress}
-        onRegionDidChange={handleRegionChange}
-        onMapReady={handleMapReady}
-      >
-        {/* Speed-colored track segments */}
-        <ShapeSource id="track-segments" shape={segmentsGeoJSON}>
-          <LineLayer id="track-line" style={trackLineStyle} />
-        </ShapeSource>
+      {mapView}
 
-        {/* Track point dots */}
-        <ShapeSource
-          id="track-points"
-          shape={pointsGeoJSON}
-          onPress={handlePointPress}
-          hitbox={{ width: 20, height: 20 }}
-        >
-          <CircleLayer id="track-point-circles" style={trackPointStyle} />
-        </ShapeSource>
-
-        {/* Highlight selected point */}
-        {highlightGeoJSON && (
-          <ShapeSource id="highlight" shape={highlightGeoJSON}>
-            <CircleLayer id="highlight-circle" style={highlightStyle} />
-          </ShapeSource>
-        )}
-
-        {/* Start/end markers via ShapeSource + CircleLayer */}
-        {endpointsGeoJSON && (
-          <ShapeSource id="endpoints" shape={endpointsGeoJSON}>
-            <CircleLayer id="endpoint-circles" style={endpointStyle} />
-          </ShapeSource>
-        )}
-      </ColotaMapView>
-
-      {/* Popup card for tapped point (outside MapView for reliable touch on Android) */}
+      {/* Point detail popup */}
       {popup && (
         <View style={[styles.popupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.popupHeader}>
             <Text style={[styles.popupTime, { color: colors.text }]}>
-              {popup.timestamp ? new Date(popup.timestamp * 1000).toLocaleTimeString() : "—"}
+              {popup.timestamp ? new Date(popup.timestamp * 1000).toLocaleTimeString() : "-"}
             </Text>
             <Pressable
               onPress={() => setPopup(null)}
@@ -269,21 +292,17 @@ export function TrackMap({ locations, selectedPoint, colors }: Props) {
 
       <MapCenterButton visible={!isCentered} onPress={handleFitTrack} />
 
-      {/* Speed legend */}
-      <View style={[styles.speedLegend, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
-          <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>{slowLabel}</Text>
+      {/* Trip legend */}
+      {trips && trips.length > 1 && (
+        <View style={[styles.legend, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {trips.map((trip) => (
+            <View key={trip.index} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: getTripColor(trip.index) }]} />
+              <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Trip {trip.index}</Text>
+            </View>
+          ))}
         </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
-          <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>{midLabel}</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.error }]} />
-          <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>{fastLabel}</Text>
-        </View>
-      </View>
+      )}
     </View>
   )
 }
@@ -356,7 +375,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     fontSize: 12
   },
-  speedLegend: {
+  legend: {
     position: "absolute",
     bottom: 10,
     left: 10,

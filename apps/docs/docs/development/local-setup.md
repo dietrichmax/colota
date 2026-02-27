@@ -119,7 +119,7 @@ colota/
 │   │   │       ├── gms/java/com/colota/location/   # GMS implementation
 │   │   │       └── foss/java/com/colota/location/  # Native implementation
 │   │   ├── src/
-│   │   │   ├── screens/             # 12 app screens
+│   │   │   ├── screens/             # 14 app screens
 │   │   │   ├── components/          # UI and feature components
 │   │   │   ├── hooks/               # Custom React hooks
 │   │   │   ├── services/            # Native bridge services

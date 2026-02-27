@@ -4,7 +4,11 @@ sidebar_position: 5
 
 # Authentication
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
 Colota supports multiple authentication methods, configurable in **Settings > Authentication & Headers**.
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Authentication.png", label: "Authentication" }, ]} />
 
 ## Methods
 

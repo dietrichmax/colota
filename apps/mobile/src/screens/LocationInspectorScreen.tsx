@@ -3,46 +3,23 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react"
-import { View, Text, FlatList, StyleSheet, Pressable, Switch } from "react-native"
+import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react"
+import { View, Text, StyleSheet, Pressable } from "react-native"
 import { fonts } from "../styles/typography"
-import { ChevronLeft, ChevronRight } from "lucide-react-native"
-import { Container, Card } from "../components"
+import { BarChart2 } from "lucide-react-native"
+import { Container } from "../components"
 import { useTheme } from "../hooks/useTheme"
-import { ThemeColors } from "../types/global"
+import { Trip, LocationCoords, ThemeColors } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
-import { STATS_REFRESH_FAST } from "../constants"
 import { logger } from "../utils/logger"
-import { DatePicker } from "../components/features/inspector/DatePicker"
+import { CalendarPicker } from "../components/features/inspector/CalendarPicker"
 import { TrackMap } from "../components/features/inspector/TrackMap"
-import { computeTotalDistance, formatDistance } from "../utils/geo"
-
-// Types
-interface LocationData {
-  id?: number
-  timestamp?: number
-  created_at?: number
-  latitude: number
-  longitude: number
-  altitude?: number
-  speed?: number
-  accuracy?: number
-  bearing?: number
-  battery: number
-  battery_status: number
-}
-
-interface LocationItemProps {
-  item: LocationData
-  colors: ThemeColors
-  onTap?: (item: LocationData) => void
-}
-
-interface MetricProps {
-  label: string
-  value: string
-  colors: ThemeColors
-}
+import { TripList } from "../components/features/inspector/TripList"
+import { LocationTable } from "../components/features/inspector/LocationTable"
+import { formatDistance } from "../utils/geo"
+import { segmentTrips } from "../utils/trips"
+import { TRIP_CONVERTERS, EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
+import { showAlert } from "../services/modalService"
 
 interface TabProps {
   label: string
@@ -51,106 +28,86 @@ interface TabProps {
   colors: ThemeColors
 }
 
-type TabType = "list" | "map"
+type TabType = "map" | "trips" | "data"
 
-/**
- * Memoized row component to prevent re-renders during scrolling
- */
-const LocationItem = memo(({ item, colors, onTap }: LocationItemProps) => {
-  const getBatteryStatus = (status: number): string => {
-    switch (status) {
-      case 0:
-        return "Unknown"
-      case 1:
-        return "Unplugged"
-      case 2:
-        return "Charging"
-      case 3:
-        return "Full"
-      default:
-        return "Unknown"
-    }
-  }
-
-  const timestamp = item.timestamp || item.created_at || Date.now()
-
-  const card = (
-    <Card style={styles.itemCard}>
-      <View style={styles.row}>
-        <Text style={[styles.id, { color: colors.primaryDark }]}>#{item.id}</Text>
-        <Text style={[styles.time, { color: colors.textSecondary }]}>
-          {new Date(timestamp * 1000).toLocaleTimeString()}
-        </Text>
-      </View>
-
-      <Text style={[styles.coords, { color: colors.text }]}>
-        {item.latitude?.toFixed(6)}°, {item.longitude?.toFixed(6)}°
-      </Text>
-
-      <View style={[styles.metricsGrid, { borderTopColor: colors.border }]}>
-        <Metric label="Altitude" value={`${item.altitude?.toFixed(1) ?? 0}m`} colors={colors} />
-        <Metric label="Speed" value={`${item.speed?.toFixed(1) ?? 0}m/s`} colors={colors} />
-        <Metric label="Accuracy" value={`±${item.accuracy?.toFixed(1) ?? 0}m`} colors={colors} />
-        <Metric label="Bearing" value={`${item.bearing?.toFixed(0) ?? 0}°`} colors={colors} />
-      </View>
-
-      <View style={[styles.metricsGrid, styles.batteryGrid, { borderTopColor: colors.border }]}>
-        <Metric label="Battery" value={`${item.battery}%`} colors={colors} />
-        <Metric label="Battery Status" value={getBatteryStatus(item.battery_status)} colors={colors} />
-        <View style={styles.spacer} />
-        <View style={styles.spacer} />
-      </View>
-    </Card>
-  )
-
-  if (onTap) {
-    return (
-      <Pressable style={({ pressed }) => pressed && { opacity: 0.7 }} onPress={() => onTap(item)}>
-        {card}
-      </Pressable>
-    )
-  }
-
-  return card
-})
-
-LocationItem.displayName = "LocationItem"
-
-export function LocationHistoryScreen() {
+export function LocationHistoryScreen({ navigation, route }: { navigation: any; route: any }) {
   const { colors } = useTheme()
-  const [activeTab, setActiveTab] = useState<TabType>("map")
-  const [data, setData] = useState<LocationData[]>([])
-  const [limit, setLimit] = useState(50)
-  const [page, setPage] = useState(0)
-  const [autoRefresh, setAutoRefresh] = useState(false)
-  const refreshInterval = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [activeTab, setActiveTab] = useState<TabType>(route?.params?.initialTab ?? "map")
 
-  // Map tab state
-  const [mapDate, setMapDate] = useState(new Date())
-  const [trackLocations, setTrackLocations] = useState<LocationData[]>([])
-  const [selectedPoint, setSelectedPoint] = useState<{ latitude: number; longitude: number } | null>(null)
+  // Map tab state - accept initialDate from Summary screen navigation
+  const [mapDate, setMapDate] = useState(() => {
+    const initialDate = route?.params?.initialDate
+    return initialDate ? new Date(initialDate) : new Date()
+  })
+  const [trackLocations, setTrackLocations] = useState<LocationCoords[]>([])
+  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
+  const [fitVersion, setFitVersion] = useState(0)
 
+  // Calendar state
+  const [daysWithData, setDaysWithData] = useState<Set<string>>(new Set())
+  const daysCache = useRef<Map<string, Set<string>>>(new Map())
+
+  // Trip segmentation from already-fetched day data
+  const trips = useMemo(() => segmentTrips(trackLocations), [trackLocations])
+
+  // Sum of per-trip distances (excludes gap jumps between trips)
   const dailyDistance = useMemo(() => {
-    if (trackLocations.length < 2) return undefined
-    const meters = computeTotalDistance(trackLocations)
-    return formatDistance(meters)
-  }, [trackLocations])
+    if (trips.length === 0) return undefined
+    const meters = trips.reduce((sum, t) => sum + t.distance, 0)
+    return meters > 0 ? formatDistance(meters) : undefined
+  }, [trips])
 
-  const fetchListIdRef = useRef(0)
   const fetchTrackIdRef = useRef(0)
 
-  /** Fetches data based on current pagination */
-  const fetchData = useCallback(async () => {
-    const id = ++fetchListIdRef.current
+  // Summary navigation button
+  const headerRight = useCallback(
+    () => (
+      <Pressable
+        onPress={() => navigation.navigate("Location Summary")}
+        style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
+      >
+        <BarChart2 size={20} color={colors.text} />
+      </Pressable>
+    ),
+    [navigation, colors]
+  )
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerRight })
+  }, [navigation, headerRight])
+
+  /** Fetch days-with-data for a month into cache; returns the Set. */
+  const prefetchMonth = useCallback(async (year: number, month: number): Promise<Set<string>> => {
+    const key = `${year}-${String(month + 1).padStart(2, "0")}`
+    if (daysCache.current.has(key)) return daysCache.current.get(key)!
     try {
-      const offset = page * limit
-      const result = await NativeLocationService.getTableData("locations", limit, offset)
-      if (id === fetchListIdRef.current) setData(result || [])
+      const start = new Date(year, month, 1)
+      const end = new Date(year, month + 1, 0, 23, 59, 59)
+      const startTs = Math.floor(start.getTime() / 1000)
+      const endTs = Math.floor(end.getTime() / 1000)
+      const days = await NativeLocationService.getDaysWithData(startTs, endTs)
+      const daySet = new Set(days)
+      daysCache.current.set(key, daySet)
+      return daySet
     } catch (err) {
-      logger.error("[LocationHistory] Fetch error:", err)
-      if (id === fetchListIdRef.current) setData([])
+      logger.error("[LocationHistory] Failed to fetch days with data:", err)
+      return new Set()
     }
-  }, [limit, page])
+  }, [])
+
+  /** Fetch and display days with data for a given month */
+  const fetchDaysWithData = useCallback(
+    async (year: number, month: number) => {
+      const daySet = await prefetchMonth(year, month)
+      setDaysWithData(daySet)
+    },
+    [prefetchMonth]
+  )
+
+  // Fetch days for current month on mount and when date changes month
+  useEffect(() => {
+    fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
+  }, [mapDate, fetchDaysWithData])
 
   /** Fetch track data for the selected day */
   const fetchTrackData = useCallback(async () => {
@@ -165,192 +122,144 @@ export function LocationHistoryScreen() {
       const endTimestamp = Math.floor(end.getTime() / 1000)
 
       const result = await NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp)
-      if (id === fetchTrackIdRef.current) setTrackLocations(result || [])
+      if (id === fetchTrackIdRef.current) {
+        setTrackLocations(result || [])
+        setSelectedTrip(null)
+        setFitVersion((v) => v + 1)
+      }
     } catch (err) {
       logger.error("[LocationHistory] Track fetch error:", err)
-      if (id === fetchTrackIdRef.current) setTrackLocations([])
+      if (id === fetchTrackIdRef.current) {
+        setTrackLocations([])
+        setSelectedTrip(null)
+        setFitVersion((v) => v + 1)
+      }
     }
   }, [mapDate])
 
-  /** Fetch table data when dependencies change */
-  useEffect(() => {
-    if (activeTab === "list") {
-      fetchData()
-    }
-  }, [fetchData, activeTab])
-
   /** Fetch track data when map date changes */
   useEffect(() => {
-    if (activeTab === "map") {
-      fetchTrackData()
-    }
-  }, [fetchTrackData, activeTab])
+    fetchTrackData()
+  }, [fetchTrackData])
 
-  /** Auto-refresh logic */
-  useEffect(() => {
-    if (autoRefresh && activeTab === "list") {
-      setPage(0)
-      refreshInterval.current = setInterval(fetchData, STATS_REFRESH_FAST)
-    } else {
-      if (refreshInterval.current) {
-        clearInterval(refreshInterval.current)
+  /** Tap a trip card -> open detail screen */
+  const handleTripSelect = useCallback(
+    (trip: Trip) => {
+      navigation.navigate("Trip Detail", { trip })
+    },
+    [navigation]
+  )
+
+  /** Export trips (all or single) */
+  const exportTrips = useCallback(
+    async (format: ExportFormat, tripsToExport: Trip[]) => {
+      if (tripsToExport.length === 0) return
+      try {
+        const content = TRIP_CONVERTERS[format](tripsToExport)
+        const dateStr = mapDate.toISOString().slice(0, 10)
+        const isSingle = tripsToExport.length === 1
+        const label = isSingle ? `Trip ${tripsToExport[0].index}` : "Trips"
+        const fileName = `colota_${isSingle ? `trip${tripsToExport[0].index}` : "trips"}_${dateStr}${
+          EXPORT_FORMATS[format].extension
+        }`
+        const filePath = await NativeLocationService.writeFile(fileName, content)
+        await NativeLocationService.shareFile(filePath, EXPORT_FORMATS[format].mimeType, `Colota ${label} - ${dateStr}`)
+      } catch (error) {
+        logger.error("[LocationHistory] Trip export failed:", error)
+        showAlert("Export Failed", "Unable to export. Please try again.", "error")
       }
-    }
-    return () => {
-      if (refreshInterval.current) {
-        clearInterval(refreshInterval.current)
-      }
-    }
-  }, [autoRefresh, fetchData, activeTab])
+    },
+    [mapDate]
+  )
 
-  const handleTabChange = (tab: TabType) => {
-    setActiveTab(tab)
-    if (tab === "list") {
-      setPage(0)
-      setSelectedPoint(null)
-    }
-  }
+  const handleShowFullDay = useCallback(() => {
+    setSelectedTrip(null)
+    setFitVersion((v) => v + 1)
+  }, [])
 
-  const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit)
-    setPage(0)
-  }
+  const handleTripExport = useCallback((format: ExportFormat) => exportTrips(format, trips), [exportTrips, trips])
+  const handleSingleTripExport = useCallback(
+    (format: ExportFormat, trip: Trip) => exportTrips(format, [trip]),
+    [exportTrips]
+  )
 
-  /** Tap a location row in List → switch to Map and zoom */
-  const handleLocationTap = (item: LocationData) => {
-    if (item.latitude && item.longitude) {
-      if (item.timestamp) {
-        const itemDate = new Date(item.timestamp * 1000)
-        setMapDate(itemDate)
-      }
-      setSelectedPoint({ latitude: item.latitude, longitude: item.longitude })
-      setActiveTab("map")
-    }
-  }
+  const mapLocations = selectedTrip ? (selectedTrip.locations as LocationCoords[]) : trackLocations
+
+  const calendarPicker = useMemo(
+    () => (
+      <CalendarPicker
+        date={mapDate}
+        onDateChange={setMapDate}
+        locationCount={trackLocations.length}
+        distance={dailyDistance}
+        colors={colors}
+        daysWithData={daysWithData}
+        onMonthChange={fetchDaysWithData}
+        onPrefetchMonth={prefetchMonth}
+      />
+    ),
+    [mapDate, trackLocations.length, dailyDistance, colors, daysWithData, fetchDaysWithData, prefetchMonth]
+  )
 
   return (
     <Container>
       {/* Tab Bar */}
       <View style={styles.tabBar}>
-        <Tab label="Map" active={activeTab === "map"} onPress={() => handleTabChange("map")} colors={colors} />
-        <Tab label="List" active={activeTab === "list"} onPress={() => handleTabChange("list")} colors={colors} />
+        <Tab label="Map" active={activeTab === "map"} onPress={() => setActiveTab("map")} colors={colors} />
+        <Tab label="Trips" active={activeTab === "trips"} onPress={() => setActiveTab("trips")} colors={colors} />
+        <Tab label="Data" active={activeTab === "data"} onPress={() => setActiveTab("data")} colors={colors} />
       </View>
 
-      {activeTab === "map" ? (
+      {activeTab === "map" && (
         <View style={styles.mapContainer}>
-          <DatePicker
-            date={mapDate}
-            onDateChange={setMapDate}
-            locationCount={trackLocations.length}
-            distance={dailyDistance}
+          {calendarPicker}
+          <TrackMap
+            locations={mapLocations}
+            selectedPoint={null}
             colors={colors}
+            trips={selectedTrip ? undefined : trips}
+            fitVersion={fitVersion}
           />
-          <TrackMap locations={trackLocations} selectedPoint={selectedPoint} colors={colors} />
+          {selectedTrip && (
+            <Pressable
+              onPress={handleShowFullDay}
+              style={({ pressed }) => [
+                styles.floatingPill,
+                { backgroundColor: colors.primary, borderRadius: colors.borderRadius },
+                pressed && { opacity: 0.7 }
+              ]}
+            >
+              <Text style={[styles.floatingPillText, { color: colors.textOnPrimary }]}>
+                Trip {selectedTrip.index} · Show full day
+              </Text>
+            </Pressable>
+          )}
         </View>
-      ) : (
-        <>
-          {/* Header with Live Mode Toggle */}
-          <View style={styles.headerRow}>
-            <Text style={[styles.statusText, { color: autoRefresh ? colors.primary : colors.textSecondary }]}>
-              {autoRefresh ? "● Live Mode" : "Manual Mode"}
-            </Text>
+      )}
 
-            <View style={styles.controls}>
-              <View style={styles.toggleContainer}>
-                <Text style={[styles.controlLabel, { color: colors.textSecondary }]}>LIVE</Text>
-                <Switch
-                  value={autoRefresh}
-                  onValueChange={setAutoRefresh}
-                  thumbColor={autoRefresh ? colors.primary : colors.border}
-                />
-              </View>
-
-              <Pressable
-                onPress={fetchData}
-                disabled={autoRefresh}
-                style={({ pressed }) => [
-                  styles.refreshBtn,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border
-                  },
-                  autoRefresh && styles.refreshBtnDisabled,
-                  pressed && { opacity: 0.7 }
-                ]}
-              >
-                <Text style={[styles.btnText, { color: colors.primaryDark }]}>Refresh</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Limit Selection and Pagination */}
-          <View style={styles.limitBar}>
-            <View style={styles.limitOptions}>
-              {[10, 50, 100].map((v) => (
-                <Pressable
-                  key={v}
-                  onPress={() => handleLimitChange(v)}
-                  style={({ pressed }) => [
-                    styles.limitBtn,
-                    {
-                      backgroundColor: limit === v ? colors.primary : colors.card,
-                      borderColor: colors.border
-                    },
-                    pressed && { opacity: 0.7 }
-                  ]}
-                >
-                  <Text style={[styles.limitBtnText, { color: limit === v ? colors.textOnPrimary : colors.text }]}>
-                    {v}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {!autoRefresh && (
-              <View style={styles.paginationRow}>
-                <Pressable
-                  onPress={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                  style={({ pressed }) => [styles.pageBtn, pressed && { opacity: 0.7 }]}
-                >
-                  <ChevronLeft size={20} color={page === 0 ? colors.textDisabled : colors.primary} />
-                </Pressable>
-                <Text style={[styles.pageIndicator, { color: colors.text }]}>{page + 1}</Text>
-                <Pressable
-                  onPress={() => setPage((p) => p + 1)}
-                  disabled={data.length < limit}
-                  style={({ pressed }) => [styles.pageBtn, pressed && { opacity: 0.7 }]}
-                >
-                  <ChevronRight size={20} color={data.length < limit ? colors.textDisabled : colors.primary} />
-                </Pressable>
-              </View>
-            )}
-          </View>
-
-          {/* Location List */}
-          <FlatList
-            data={data}
-            contentContainerStyle={styles.listContent}
-            keyExtractor={(item, index) => `loc-${item.id || index}`}
-            ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textLight }]}>No data available</Text>}
-            renderItem={({ item }) => <LocationItem item={item} colors={colors} onTap={handleLocationTap} />}
-            initialNumToRender={10}
-            maxToRenderPerBatch={10}
-            windowSize={5}
+      {activeTab === "trips" && (
+        <View style={styles.mapContainer}>
+          {calendarPicker}
+          <TripList
+            trips={trips}
+            colors={colors}
+            onTripSelect={handleTripSelect}
+            selectedTripIndex={selectedTrip?.index ?? null}
+            onExport={handleTripExport}
+            onExportTrip={handleSingleTripExport}
           />
-        </>
+        </View>
+      )}
+
+      {activeTab === "data" && (
+        <View style={styles.mapContainer}>
+          {calendarPicker}
+          <LocationTable locations={trackLocations} colors={colors} />
+        </View>
       )}
     </Container>
   )
 }
-
-// Subcomponents
-const Metric = ({ label, value, colors }: MetricProps) => (
-  <View style={styles.metricItem}>
-    <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>{label}</Text>
-    <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
-  </View>
-)
 
 const Tab = ({ label, active, onPress, colors }: TabProps) => {
   const borderBottomColor = active ? colors.primary : "transparent"
@@ -369,80 +278,27 @@ const Tab = ({ label, active, onPress, colors }: TabProps) => {
 }
 
 const styles = StyleSheet.create({
+  headerBtn: {
+    padding: 8
+  },
   mapContainer: {
     flex: 1
   },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingTop: 12
+  floatingPill: {
+    position: "absolute",
+    bottom: 16,
+    alignSelf: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4
   },
-  statusText: {
-    fontSize: 11,
+  floatingPillText: {
+    fontSize: 16,
     ...fonts.semiBold
-  },
-  controls: {
-    flexDirection: "row",
-    alignItems: "center"
-  },
-  toggleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 12
-  },
-  controlLabel: {
-    fontSize: 10,
-    ...fonts.bold,
-    marginRight: 6
-  },
-  refreshBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    borderWidth: 1
-  },
-  refreshBtnDisabled: {
-    opacity: 0.5
-  },
-  btnText: {
-    fontSize: 12,
-    ...fonts.bold
-  },
-  limitBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    marginTop: 12,
-    marginBottom: 12
-  },
-  limitOptions: {
-    flexDirection: "row"
-  },
-  limitBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginRight: 6,
-    borderWidth: 1
-  },
-  limitBtnText: {
-    fontSize: 12,
-    ...fonts.semiBold
-  },
-  paginationRow: {
-    flexDirection: "row",
-    alignItems: "center"
-  },
-  pageBtn: {
-    padding: 8
-  },
-  pageIndicator: {
-    fontSize: 14,
-    ...fonts.bold,
-    marginHorizontal: 8
   },
   tabBar: {
     flexDirection: "row",
@@ -462,66 +318,5 @@ const styles = StyleSheet.create({
   },
   tabTextInactive: {
     ...fonts.regular
-  },
-  listContent: {
-    paddingHorizontal: 12,
-    paddingBottom: 20
-  },
-  itemCard: {
-    marginBottom: 10,
-    padding: 12
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6
-  },
-  id: {
-    ...fonts.bold,
-    fontSize: 12
-  },
-  time: {
-    fontSize: 11,
-    ...fonts.regular
-  },
-  coords: {
-    fontFamily: "monospace",
-    fontSize: 15,
-    ...fonts.semiBold,
-    marginBottom: 8
-  },
-  metricsGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
-    marginTop: 4
-  },
-  batteryGrid: {
-    paddingTop: 6,
-    marginTop: 2
-  },
-  metricItem: {
-    flex: 1,
-    alignItems: "flex-start"
-  },
-  metricLabel: {
-    fontSize: 9,
-    ...fonts.bold,
-    textTransform: "uppercase"
-  },
-  metricValue: {
-    fontSize: 12,
-    marginTop: 2
-  },
-  spacer: {
-    flex: 1
-  },
-  emptyText: {
-    textAlign: "center",
-    marginTop: 40,
-    fontSize: 14,
-    ...fonts.regular,
-    fontStyle: "italic"
   }
 })
