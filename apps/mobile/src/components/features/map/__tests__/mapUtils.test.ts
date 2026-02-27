@@ -8,6 +8,7 @@ import {
   computeTrackBounds,
   darkifyStyle
 } from "../mapUtils"
+import { haversine as haversineDistance } from "../../../../utils/geo"
 
 // Only the color keys used by mapUtils functions
 const colors = {
@@ -162,6 +163,27 @@ describe("buildTrackSegmentsGeoJSON", () => {
     // @ts-ignore
     expect(geom.coordinates[1]).toEqual([13.406, 52.53])
   })
+
+  it("skips segments at skipIndices (trip boundaries)", () => {
+    const locs = [
+      { latitude: 52.52, longitude: 13.405, speed: 1 },
+      { latitude: 52.53, longitude: 13.406, speed: 1 },
+      { latitude: 52.54, longitude: 13.407, speed: 1 },
+      { latitude: 52.55, longitude: 13.408, speed: 1 }
+    ]
+    // Skip index 2 → no segment from point 1 to point 2
+    const result = buildTrackSegmentsGeoJSON(locs, colors, new Set([2]))
+    expect(result.features).toHaveLength(2) // segments 0→1 and 2→3, not 1→2
+  })
+
+  it("uses locationColors when provided", () => {
+    const locs = [
+      { latitude: 52.52, longitude: 13.405, speed: 0 },
+      { latitude: 52.53, longitude: 13.406, speed: 0 }
+    ]
+    const result = buildTrackSegmentsGeoJSON(locs, colors, undefined, ["#FF0000", "#00FF00"])
+    expect(result.features[0].properties?.color).toBe("#00FF00")
+  })
 })
 
 // ============================================================================
@@ -204,6 +226,16 @@ describe("buildTrackPointsGeoJSON", () => {
     expect(props?.timestamp).toBe(0)
     expect(props?.accuracy).toBe(0)
     expect(props?.altitude).toBe(0)
+  })
+
+  it("uses locationColors when provided", () => {
+    const locs = [
+      { latitude: 52.52, longitude: 13.405, speed: 0 },
+      { latitude: 52.53, longitude: 13.406, speed: 10 }
+    ]
+    const result = buildTrackPointsGeoJSON(locs, colors, ["#AAAAAA", "#BBBBBB"])
+    expect(result.features[0].properties?.color).toBe("#AAAAAA")
+    expect(result.features[1].properties?.color).toBe("#BBBBBB")
   })
 })
 
@@ -412,17 +444,3 @@ describe("darkifyStyle", () => {
     expect(result.version).toBe(8)
   })
 })
-
-// ============================================================================
-// Test helper
-// ============================================================================
-
-const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371000
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLon = ((lon2 - lon1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}

@@ -45,6 +45,7 @@ class DatabaseHelper private constructor(context: Context) :
         )
 
         private const val TAG = "LocationDB"
+        private const val TRIP_GAP_SECONDS = 900L // 15 min, matches JS segmentTrips
 
         @Volatile
         private var INSTANCE: DatabaseHelper? = null
@@ -589,6 +590,126 @@ class DatabaseHelper private constructor(context: Context) :
         return settings
     }
 
+
+    /**
+     * Returns distinct dates (YYYY-MM-DD) that have location data within the range.
+     * Used by the calendar view to show activity dots.
+     */
+    fun getDaysWithData(startTimestamp: Long, endTimestamp: Long): List<String> {
+        val days = mutableListOf<String>()
+        try {
+            readableDatabase.rawQuery(
+                """
+                SELECT DISTINCT strftime('%Y-%m-%d', timestamp, 'unixepoch', 'localtime') as day
+                FROM $TABLE_LOCATIONS
+                WHERE timestamp >= ? AND timestamp <= ?
+                ORDER BY day ASC
+                """.trimIndent(),
+                arrayOf(startTimestamp.toString(), endTimestamp.toString())
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    days.add(cursor.getString(0))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting days with data", e)
+        }
+        return days
+    }
+
+    /**
+     * Returns per-day aggregated stats for a date range in a single query.
+     * Computes distance (haversine) and trip count (15-min gap threshold) inline
+     * to avoid nested cursors.
+     */
+    fun getDailyStats(startTimestamp: Long, endTimestamp: Long): List<Map<String, Any>> {
+        val stats = mutableListOf<Map<String, Any>>()
+        try {
+            readableDatabase.rawQuery(
+                """
+                SELECT
+                    strftime('%Y-%m-%d', timestamp, 'unixepoch', 'localtime') as day,
+                    latitude, longitude, timestamp
+                FROM $TABLE_LOCATIONS
+                WHERE timestamp >= ? AND timestamp <= ?
+                ORDER BY day ASC, timestamp ASC
+                """.trimIndent(),
+                arrayOf(startTimestamp.toString(), endTimestamp.toString())
+            ).use { cursor ->
+                var currentDay: String? = null
+                var count = 0
+                var startTime = 0L
+                var endTime = 0L
+                var distance = 0.0
+                var tripCount = 0
+                var segmentSize = 0
+                var prevLat = 0.0
+                var prevLon = 0.0
+                var prevTs = 0L
+
+                fun emitDay() {
+                    if (currentDay != null) {
+                        stats.add(mapOf(
+                            "day" to currentDay!!,
+                            "count" to count,
+                            "startTime" to startTime,
+                            "endTime" to endTime,
+                            "distanceMeters" to distance,
+                            "tripCount" to tripCount
+                        ))
+                    }
+                }
+
+                while (cursor.moveToNext()) {
+                    val day = cursor.getString(0)
+                    val lat = cursor.getDouble(1)
+                    val lon = cursor.getDouble(2)
+                    val ts = cursor.getLong(3)
+
+                    if (day != currentDay) {
+                        emitDay()
+                        currentDay = day
+                        count = 1
+                        startTime = ts
+                        endTime = ts
+                        distance = 0.0
+                        tripCount = 0
+                        segmentSize = 1
+                        prevLat = lat
+                        prevLon = lon
+                        prevTs = ts
+                    } else {
+                        count++
+                        endTime = ts
+                        if (ts - prevTs >= TRIP_GAP_SECONDS) {
+                            segmentSize = 1
+                        } else {
+                            segmentSize++
+                            if (segmentSize == 2) tripCount++
+                            distance += haversineDistance(prevLat, prevLon, lat, lon)
+                        }
+                    }
+                    prevLat = lat
+                    prevLon = lon
+                    prevTs = ts
+                }
+                emitDay()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting daily stats", e)
+        }
+        return stats
+    }
+
+    internal fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6371000.0
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    }
 
     private fun getTodayStartTimestamp(): Long {
         return Calendar.getInstance().apply {

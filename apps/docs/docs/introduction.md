@@ -23,7 +23,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## App Screens
 
-Colota has twelve screens, each focused on a specific task:
+Colota has fourteen screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
@@ -34,7 +34,9 @@ Colota has twelve screens, each focused on a specific task:
 | **Geofences** | Create, edit, and delete pause zones on an interactive map |
 | **Tracking Profiles** | Create and manage condition-based profiles that automatically adjust tracking settings |
 | **Profile Editor** | Configure profile name, condition trigger, GPS interval, distance filter, sync interval, priority, and deactivation delay |
-| **Location History** | Browse recorded locations on a track map with day picker and daily distance traveled, or as a paginated list with accuracy indicators |
+| **Location History** | Browse recorded locations on a track map with calendar day picker and trip-colored segments, view segmented trips with per-trip stats |
+| **Trip Detail** | Full trip view with dedicated map, stats grid (distance, duration, avg speed, elevation), speed and elevation profile charts, and export |
+| **Location Summary** | Aggregated stats (total distance, trips, active days, avg distance) for selectable periods with daily breakdown and tap-to-inspect navigation |
 | **Export Data** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
 | **Data Management** | Clear sent history, delete old data, vacuum the database |
 | **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
@@ -42,24 +44,9 @@ Colota has twelve screens, each focused on a specific task:
 
 ## Screenshots
 
-<div className="screenshot-gallery">
-  <figure>
-    <img src="/img/screenshots/Dashboard.png" alt="Dashboard" />
-    <figcaption>Dashboard</figcaption>
-  </figure>
-  <figure>
-    <img src="/img/screenshots/Settings.png" alt="Settings" />
-    <figcaption>Settings</figcaption>
-  </figure>
-  <figure>
-    <img src="/img/screenshots/Geofences.png" alt="Geofences" />
-    <figcaption>Geofences</figcaption>
-  </figure>
-  <figure>
-    <img src="/img/screenshots/DataManagement.png" alt="Data Management" />
-    <figcaption>Data Management</figcaption>
-  </figure>
-</div>
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Dashboard.png", label: "Dashboard" }, { src: "/img/screenshots/LocationHistory.png", label: "Location History" }, { src: "/img/screenshots/TripDetails.png", label: "Trip Detail" }, { src: "/img/screenshots/Trips.png", label: "Trips" }, { src: "/img/screenshots/Settings.png", label: "Settings" }, { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking Profiles" }, { src: "/img/screenshots/DataManagement.png", label: "Data Management" }, { src: "/img/screenshots/ApiFieldMapping.png", label: "API Field Mapping" }, { src: "/img/screenshots/ExportData.png", label: "Export" }, { src: "/img/screenshots/Authentication.png", label: "Authentication" }, { src: "/img/screenshots/DarkMode.png", label: "Dark Mode" }, ]} />
 
 ## Architecture
 

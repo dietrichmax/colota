@@ -83,14 +83,24 @@ export interface TrackLocation {
   altitude?: number
 }
 
-/** Build per-segment LineString features with a pre-computed `color` property */
-export function buildTrackSegmentsGeoJSON(locations: TrackLocation[], colors: ThemeColors): GeoJSON.FeatureCollection {
+/** Build per-segment LineString features with a pre-computed `color` property.
+ *  Pass `skipIndices` to leave gaps between trips (indices where a new trip starts).
+ *  Pass `locationColors` to override speed-based coloring with per-location colors. */
+export function buildTrackSegmentsGeoJSON(
+  locations: TrackLocation[],
+  colors: ThemeColors,
+  skipIndices?: Set<number>,
+  locationColors?: string[]
+): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = []
   for (let i = 1; i < locations.length; i++) {
-    const avgSpeed = ((locations[i - 1].speed ?? 0) + (locations[i].speed ?? 0)) / 2
+    if (skipIndices?.has(i)) continue
+    const color = locationColors
+      ? locationColors[i]
+      : getSpeedColor(((locations[i - 1].speed ?? 0) + (locations[i].speed ?? 0)) / 2, colors)
     features.push({
       type: "Feature",
-      properties: { color: getSpeedColor(avgSpeed, colors) },
+      properties: { color },
       geometry: {
         type: "LineString",
         coordinates: [
@@ -103,18 +113,23 @@ export function buildTrackSegmentsGeoJSON(locations: TrackLocation[], colors: Th
   return { type: "FeatureCollection", features }
 }
 
-/** Build Point features for each track location with metadata properties */
-export function buildTrackPointsGeoJSON(locations: TrackLocation[], colors: ThemeColors): GeoJSON.FeatureCollection {
+/** Build Point features for each track location with metadata properties.
+ *  Pass `locationColors` to override speed-based dot coloring. */
+export function buildTrackPointsGeoJSON(
+  locations: TrackLocation[],
+  colors: ThemeColors,
+  locationColors?: string[]
+): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
-    features: locations.map((loc) => ({
+    features: locations.map((loc, i) => ({
       type: "Feature" as const,
       properties: {
         speed: loc.speed ?? 0,
         timestamp: loc.timestamp ?? 0,
         accuracy: loc.accuracy ?? 0,
         altitude: loc.altitude ?? 0,
-        color: getSpeedColor(loc.speed ?? 0, colors)
+        color: locationColors ? locationColors[i] : getSpeedColor(loc.speed ?? 0, colors)
       },
       geometry: {
         type: "Point" as const,

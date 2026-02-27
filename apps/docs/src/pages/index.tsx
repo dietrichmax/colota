@@ -1,8 +1,9 @@
-import { type ReactNode, useRef } from "react"
+import { type ReactNode } from "react"
 import clsx from "clsx"
 import Link from "@docusaurus/Link"
 import Layout from "@theme/Layout"
 import Heading from "@theme/Heading"
+import ScreenshotGallery from "../components/ScreenshotGallery"
 
 import styles from "./index.module.css"
 
@@ -79,47 +80,28 @@ function HomepageFeatures(): ReactNode {
   )
 }
 
+const homepageScreenshots = [
+  { src: "/img/screenshots/Dashboard.png", label: "Dashboard" },
+  { src: "/img/screenshots/LocationHistory.png", label: "Location History" },
+  { src: "/img/screenshots/TripDetails.png", label: "Trip Detail" },
+  { src: "/img/screenshots/Trips.png", label: "Trips" },
+  { src: "/img/screenshots/Settings.png", label: "Settings" },
+  { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking Profiles" },
+  { src: "/img/screenshots/DataManagement.png", label: "Data Management" },
+  { src: "/img/screenshots/ApiFieldMapping.png", label: "API Field Mapping" },
+  { src: "/img/screenshots/Authentication.png", label: "Authentication" },
+  { src: "/img/screenshots/DarkMode.png", label: "Dark Mode" }
+]
+
 function HomepageScreenshots(): ReactNode {
-  const dialogRef = useRef<HTMLDialogElement>(null)
-  const imgRef = useRef<HTMLImageElement>(null)
-
-  const screenshots = [
-    { src: "/img/screenshots/Dashboard.png", label: "Dashboard" },
-    { src: "/img/screenshots/Settings.png", label: "Settings" },
-    { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking Profiles" },
-    { src: "/img/screenshots/DataManagement.png", label: "Data Management" },
-    { src: "/img/screenshots/ApiFieldMapping.png", label: "API Field Mapping" },
-    { src: "/img/screenshots/ExportData.png", label: "Export" },
-    { src: "/img/screenshots/Authentication.png", label: "Authentication" },
-    { src: "/img/screenshots/DarkMode.png", label: "Dark Mode" }
-  ]
-
-  function openLightbox(src: string, alt: string) {
-    if (imgRef.current) {
-      imgRef.current.src = src
-      imgRef.current.alt = alt
-    }
-    dialogRef.current?.showModal()
-  }
-
   return (
     <section className={styles.screenshots}>
       <div className="container">
         <Heading as="h2" className={styles.sectionHeading}>
           Screenshots
         </Heading>
-        <div className={styles.screenshotStrip}>
-          {screenshots.map(({ src, label }) => (
-            <figure key={label} className={styles.screenshotItem} onClick={() => openLightbox(src, label)}>
-              <img src={src} alt={label} loading="lazy" />
-              <figcaption>{label}</figcaption>
-            </figure>
-          ))}
-        </div>
+        <ScreenshotGallery screenshots={homepageScreenshots} />
       </div>
-      <dialog ref={dialogRef} className={styles.lightbox} onClick={() => dialogRef.current?.close()}>
-        <img ref={imgRef} src="" alt="" />
-      </dialog>
     </section>
   )
 }

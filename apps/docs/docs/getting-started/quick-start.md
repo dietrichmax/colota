@@ -12,6 +12,10 @@ Minimal setup to start tracking:
 4. Press **Start Tracking**
 5. View live coordinates on the dashboard
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Dashboard.png", label: "Dashboard" }, ]} />
+
 The app works completely offline. Server setup is optional.
 
 ## Next Steps

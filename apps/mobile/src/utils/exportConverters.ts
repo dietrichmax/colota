@@ -5,9 +5,16 @@
 
 import { type LucideIcon } from "lucide-react-native"
 import { Table2, Globe, MapPin, Earth } from "lucide-react-native"
-import { LocationCoords } from "../types/global"
+import { LocationCoords, Trip } from "../types/global"
+import { getTripColor } from "./trips"
 
 export const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024 // 10 MB
+
+/** Convert hex RGB (#RRGGBB) to KML's ABGR format (ffBBGGRR) */
+function hexToKmlColor(hex: string): string {
+  const h = hex.replace("#", "")
+  return `ff${h.slice(4, 6)}${h.slice(2, 4)}${h.slice(0, 2)}`
+}
 
 export const formatBytes = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`
@@ -24,7 +31,7 @@ export const getByteSize = (content: string): number => {
     } else if (code <= 0x7ff) {
       bytes += 2
     } else if (code >= 0xd800 && code <= 0xdbff) {
-      // High surrogate — pair encodes a 4-byte UTF-8 character
+      // High surrogate - pair encodes a 4-byte UTF-8 character
       bytes += 4
       i++ // skip the low surrogate
     } else {
@@ -34,15 +41,19 @@ export const getByteSize = (content: string): number => {
   return bytes
 }
 
+// ============================================================================
+// FLAT CONVERTERS (timestamps in Unix seconds)
+// ============================================================================
+
 export const convertToCSV = (data: LocationCoords[]): string => {
   const headers = "id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,battery\n"
   const rows = data
     .map((item, i) => {
-      const timestamp = item.timestamp ?? Date.now()
-      const isoTime = new Date(timestamp).toISOString()
+      const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
+      const isoTime = new Date(ts * 1000).toISOString()
       return [
         i,
-        item.timestamp,
+        ts,
         isoTime,
         item.latitude,
         item.longitude,
@@ -58,8 +69,8 @@ export const convertToCSV = (data: LocationCoords[]): string => {
 
 export const convertToGeoJSON = (data: LocationCoords[]): string => {
   const features = data.map((item, i) => {
-    const timestamp = item.timestamp ? new Date(item.timestamp) : new Date()
-    const timeStr = isNaN(timestamp.getTime()) ? new Date().toISOString() : timestamp.toISOString()
+    const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
+    const timeStr = new Date(ts * 1000).toISOString()
 
     return {
       type: "Feature",
@@ -89,7 +100,8 @@ export const convertToGeoJSON = (data: LocationCoords[]): string => {
 }
 
 export const convertToGPX = (data: LocationCoords[]): string => {
-  let gpx = `<?xml version="1.0" encoding="UTF-8"?>
+  const parts: string[] = [
+    `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Colota" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>Colota Location Export</name>
@@ -98,31 +110,33 @@ export const convertToGPX = (data: LocationCoords[]): string => {
   <trk>
     <name>Colota Track Export</name>
     <trkseg>`
+  ]
 
-  data.forEach((item) => {
-    const timestamp = item.timestamp ?? Date.now()
-    const isoTime = new Date(timestamp).toISOString()
-    gpx += `
+  for (const item of data) {
+    const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
+    parts.push(`
       <trkpt lat="${item.latitude.toFixed(6)}" lon="${item.longitude.toFixed(6)}">
         <ele>${item.altitude ?? 0}</ele>
-        <time>${isoTime}</time>
+        <time>${new Date(ts * 1000).toISOString()}</time>
         <extensions>
           <accuracy>${item.accuracy ?? 0}</accuracy>
           <speed>${item.speed ?? 0}</speed>
           <battery>${item.battery ?? 0}</battery>
         </extensions>
-      </trkpt>`
-  })
+      </trkpt>`)
+  }
 
-  gpx += `
+  parts.push(`
     </trkseg>
   </trk>
-</gpx>`
-  return gpx
+</gpx>`)
+  return parts.join("")
 }
 
 export const convertToKML = (data: LocationCoords[]): string => {
-  let kml = `<?xml version="1.0" encoding="UTF-8"?>
+  const coords = data.map((item) => `${item.longitude},${item.latitude},${item.altitude ?? 0}`).join("\n          ")
+  const parts: string[] = [
+    `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
     <name>Colota Location Export</name>
@@ -139,31 +153,188 @@ export const convertToKML = (data: LocationCoords[]): string => {
       <LineString>
         <tessellate>1</tessellate>
         <coordinates>
-          ${data.map((item) => `${item.longitude},${item.latitude},${item.altitude ?? 0}`).join("\n          ")}
+          ${coords}
         </coordinates>
       </LineString>
     </Placemark>`
+  ]
 
-  data.forEach((item) => {
-    const timestamp = item.timestamp ?? Date.now()
-    const isoTime = new Date(timestamp).toISOString()
-    kml += `
+  for (const item of data) {
+    const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
+    parts.push(`
     <Placemark>
-      <TimeStamp><when>${isoTime}</when></TimeStamp>
+      <TimeStamp><when>${new Date(ts * 1000).toISOString()}</when></TimeStamp>
       <description>Accuracy: ${item.accuracy}m, Speed: ${item.speed ?? 0}m/s</description>
       <Point>
         <coordinates>${item.longitude},${item.latitude},${item.altitude ?? 0}</coordinates>
       </Point>
-    </Placemark>`
-  })
+    </Placemark>`)
+  }
 
-  kml += `
+  parts.push(`
   </Document>
-</kml>`
-  return kml
+</kml>`)
+  return parts.join("")
+}
+
+// ============================================================================
+// TRIP-AWARE CONVERTERS (timestamps in Unix seconds)
+// ============================================================================
+
+export const convertTripsToCSV = (trips: Trip[]): string => {
+  const headers = "trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,battery\n"
+  const rows = trips
+    .flatMap((trip) =>
+      trip.locations.map((item, i) => {
+        const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
+        const isoTime = new Date(ts * 1000).toISOString()
+        return [
+          trip.index,
+          i,
+          ts,
+          isoTime,
+          item.latitude,
+          item.longitude,
+          item.accuracy ?? 0,
+          item.altitude ?? 0,
+          item.speed ?? 0,
+          item.battery ?? 0
+        ].join(",")
+      })
+    )
+    .join("\n")
+  return headers + rows
+}
+
+export const convertTripsToGeoJSON = (trips: Trip[]): string => {
+  const features = trips.flatMap((trip) =>
+    trip.locations.map((item, i) => {
+      const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
+      return {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [item.longitude || 0, item.latitude || 0]
+        },
+        properties: {
+          trip: trip.index,
+          id: i,
+          accuracy: item.accuracy,
+          altitude: item.altitude,
+          speed: item.speed,
+          battery: item.battery,
+          time: new Date(ts * 1000).toISOString()
+        }
+      }
+    })
+  )
+  return JSON.stringify({ type: "FeatureCollection", features }, null, 2)
+}
+
+export const convertTripsToGPX = (trips: Trip[]): string => {
+  const parts: string[] = [
+    `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Colota" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Colota Trip Export</name>
+    <time>${new Date().toISOString()}</time>
+  </metadata>`
+  ]
+
+  for (const trip of trips) {
+    parts.push(`
+  <trk>
+    <name>Trip ${trip.index}</name>
+    <trkseg>`)
+    for (const item of trip.locations) {
+      const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
+      parts.push(`
+      <trkpt lat="${item.latitude.toFixed(6)}" lon="${item.longitude.toFixed(6)}">
+        <ele>${item.altitude || 0}</ele>
+        <time>${new Date(ts * 1000).toISOString()}</time>
+        <extensions>
+          <accuracy>${item.accuracy || 0}</accuracy>
+          <speed>${item.speed || 0}</speed>
+          <battery>${item.battery || 0}</battery>
+        </extensions>
+      </trkpt>`)
+    }
+    parts.push(`
+    </trkseg>
+  </trk>`)
+  }
+
+  parts.push(`
+</gpx>`)
+  return parts.join("")
+}
+
+export const convertTripsToKML = (trips: Trip[]): string => {
+  const parts: string[] = [
+    `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Colota Trip Export</name>
+    <description>Exported trips from Colota</description>`
+  ]
+
+  for (const trip of trips) {
+    const styleId = `tripStyle${trip.index}`
+    const coords = trip.locations
+      .map((item) => `${item.longitude},${item.latitude},${item.altitude || 0}`)
+      .join("\n            ")
+    parts.push(`
+    <Style id="${styleId}">
+      <LineStyle>
+        <color>${hexToKmlColor(getTripColor(trip.index))}</color>
+        <width>4</width>
+      </LineStyle>
+    </Style>
+    <Folder>
+      <name>Trip ${trip.index}</name>
+      <Placemark>
+        <name>Trip ${trip.index} Path</name>
+        <styleUrl>#${styleId}</styleUrl>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            ${coords}
+          </coordinates>
+        </LineString>
+      </Placemark>`)
+
+    for (const item of trip.locations) {
+      const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
+      parts.push(`
+      <Placemark>
+        <TimeStamp><when>${new Date(ts * 1000).toISOString()}</when></TimeStamp>
+        <description>Trip ${trip.index} - Accuracy: ${item.accuracy ?? 0}m, Speed: ${item.speed ?? 0}m/s</description>
+        <Point>
+          <coordinates>${item.longitude},${item.latitude},${item.altitude || 0}</coordinates>
+        </Point>
+      </Placemark>`)
+    }
+
+    parts.push(`
+    </Folder>`)
+  }
+
+  parts.push(`
+  </Document>
+</kml>`)
+  return parts.join("")
+}
+
+export const TRIP_CONVERTERS: Record<ExportFormat, (trips: Trip[]) => string> = {
+  csv: convertTripsToCSV,
+  geojson: convertTripsToGeoJSON,
+  gpx: convertTripsToGPX,
+  kml: convertTripsToKML
 }
 
 export type ExportFormat = "csv" | "geojson" | "gpx" | "kml"
+
+export const EXPORT_FORMAT_KEYS: ExportFormat[] = ["csv", "geojson", "gpx", "kml"]
 
 export interface ExportFormatConfig {
   label: string

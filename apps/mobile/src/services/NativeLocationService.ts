@@ -4,7 +4,15 @@
  */
 
 import { NativeModules } from "react-native"
-import { AuthConfig, DatabaseStats, Geofence, Settings, TrackingProfile, SavedTrackingProfile } from "../types/global"
+import {
+  AuthConfig,
+  DailyStat,
+  DatabaseStats,
+  Geofence,
+  Settings,
+  TrackingProfile,
+  SavedTrackingProfile
+} from "../types/global"
 import { logger } from "../utils/logger"
 
 const { LocationServiceModule, BuildConfigModule } = NativeModules
@@ -184,6 +192,38 @@ class NativeLocationService {
   static async getMostRecentLocation(): Promise<any | null> {
     this.ensureModule()
     return this.safeExecute(() => LocationServiceModule.getMostRecentLocation(), null, "getMostRecentLocation failed")
+  }
+
+  /**
+   * Returns date strings (YYYY-MM-DD) that have location data in the range.
+   * Used by the calendar view to show activity dots.
+   */
+  static async getDaysWithData(startTimestamp: number, endTimestamp: number): Promise<string[]> {
+    this.ensureModule()
+    return this.safeExecute(
+      () => LocationServiceModule.getDaysWithData(startTimestamp, endTimestamp),
+      [],
+      "getDaysWithData failed"
+    )
+  }
+
+  /**
+   * Returns per-day aggregated stats for a date range.
+   * Each entry: { day, count, startTime, endTime, distanceMeters, tripCount }
+   */
+  static async getDailyStats(startTimestamp: number, endTimestamp: number): Promise<DailyStat[]> {
+    this.ensureModule()
+    return this.safeExecute(
+      () => LocationServiceModule.getDailyStats(startTimestamp, endTimestamp),
+      [],
+      "getDailyStats failed"
+    )
+  }
+
+  /** DEV ONLY: Insert dummy location data for testing */
+  static async insertDummyData(): Promise<number> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.insertDummyData(), 0, "insertDummyData failed")
   }
 
   // ============================================================================
@@ -603,7 +643,7 @@ class NativeLocationService {
       try {
         customHeaders = JSON.parse(raw.customHeaders)
       } catch {
-        // Corrupted JSON — reset to empty
+        // Corrupted JSON - reset to empty
       }
     }
 

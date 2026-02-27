@@ -322,6 +322,172 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
 
     @ReactMethod
+    fun getDaysWithData(startTimestamp: Double, endTimestamp: Double, promise: Promise) =
+        executeAsync(promise) {
+            val days = dbHelper.getDaysWithData(startTimestamp.toLong(), endTimestamp.toLong())
+            Arguments.createArray().apply {
+                days.forEach { pushString(it) }
+            }
+        }
+
+    @ReactMethod
+    fun getDailyStats(startTimestamp: Double, endTimestamp: Double, promise: Promise) =
+        executeAsync(promise) {
+            val stats = dbHelper.getDailyStats(startTimestamp.toLong(), endTimestamp.toLong())
+            Arguments.createArray().apply {
+                stats.forEach { row -> pushMap(Arguments.makeNativeMap(row)) }
+            }
+        }
+
+    @ReactMethod
+    fun insertDummyData(promise: Promise) {
+        if (!BuildConfig.DEBUG) {
+            promise.reject("ERR_NOT_DEBUG", "insertDummyData is only available in debug builds")
+            return
+        }
+        executeAsync(promise) {
+        val now = System.currentTimeMillis() / 1000
+        var count = 0
+
+        // Realistic scenario: Home (Friedrichshain) → Supermarket → Gym → Home
+        // All locations follow real Berlin streets for plausible GPS tracks.
+
+        // Home: Boxhagener Platz area, Friedrichshain
+        // Supermarket: REWE on Warschauer Str (~1.2 km south)
+        // Gym: FitX Ostkreuz (~1.5 km south-east of supermarket)
+
+        // Trip 1: Home → Supermarket (driving, ~12 min)
+        val trip1 = arrayOf(
+            //             lat         lon       alt  speed  acc
+            doubleArrayOf(52.51420, 13.45830, 38.0, 0.2, 4.0),   // parked at home
+            doubleArrayOf(52.51390, 13.45780, 37.0, 3.5, 5.0),   // pulling out
+            doubleArrayOf(52.51310, 13.45650, 36.0, 8.2, 4.0),   // Grünberger Str
+            doubleArrayOf(52.51220, 13.45490, 35.0, 11.5, 3.5),  // heading south
+            doubleArrayOf(52.51120, 13.45340, 35.0, 12.8, 3.0),  // Revaler Str
+            doubleArrayOf(52.50980, 13.45220, 34.0, 10.1, 4.0),  // turning onto Warschauer
+            doubleArrayOf(52.50870, 13.45100, 34.0, 8.7, 3.5),   // Warschauer Str south
+            doubleArrayOf(52.50760, 13.44950, 33.0, 11.3, 3.0),  // passing S-Bahn bridge
+            doubleArrayOf(52.50650, 13.44820, 33.0, 9.4, 4.0),   // Stralauer Allee
+            doubleArrayOf(52.50560, 13.44710, 33.0, 6.2, 4.5),   // slowing down
+            doubleArrayOf(52.50490, 13.44650, 32.0, 2.1, 5.0),   // arriving
+            doubleArrayOf(52.50460, 13.44630, 32.0, 0.3, 4.0)    // parked at supermarket
+        )
+
+        // Trip 2: Supermarket → Gym (driving, ~8 min)
+        val trip2 = arrayOf(
+            doubleArrayOf(52.50460, 13.44630, 32.0, 0.5, 4.0),   // leaving supermarket
+            doubleArrayOf(52.50430, 13.44700, 32.0, 5.8, 4.5),   // pulling out east
+            doubleArrayOf(52.50380, 13.44890, 33.0, 10.2, 3.5),  // Stralauer Allee east
+            doubleArrayOf(52.50340, 13.45120, 33.0, 12.5, 3.0),  // along the Spree
+            doubleArrayOf(52.50310, 13.45380, 34.0, 11.8, 3.5),  // heading east
+            doubleArrayOf(52.50270, 13.45640, 34.0, 9.6, 4.0),   // Modersohnstr area
+            doubleArrayOf(52.50230, 13.45900, 35.0, 8.3, 4.0),   // near Ostkreuz
+            doubleArrayOf(52.50180, 13.46100, 35.0, 5.1, 4.5),   // slowing for turn
+            doubleArrayOf(52.50150, 13.46250, 35.0, 2.4, 5.0),   // arriving at gym
+            doubleArrayOf(52.50140, 13.46280, 35.0, 0.2, 4.0)    // parked at gym
+        )
+
+        // Trip 3: Gym → Home (driving, ~14 min, slightly different route)
+        val trip3 = arrayOf(
+            doubleArrayOf(52.50140, 13.46280, 35.0, 0.4, 4.0),   // leaving gym
+            doubleArrayOf(52.50190, 13.46180, 35.0, 4.2, 4.5),   // pulling out
+            doubleArrayOf(52.50280, 13.45980, 34.0, 9.7, 3.5),   // Sonntagstr north
+            doubleArrayOf(52.50390, 13.45820, 34.0, 11.4, 3.0),  // heading north-west
+            doubleArrayOf(52.50510, 13.45700, 33.0, 12.1, 3.5),  // Simplonstr
+            doubleArrayOf(52.50630, 13.45590, 33.0, 10.5, 4.0),  // crossing rail tracks
+            doubleArrayOf(52.50740, 13.45480, 34.0, 8.9, 3.5),   // Warschauer north
+            doubleArrayOf(52.50860, 13.45360, 34.0, 11.0, 3.0),  // RAW-Gelände area
+            doubleArrayOf(52.50970, 13.45280, 35.0, 9.3, 4.0),   // Revaler Str
+            doubleArrayOf(52.51080, 13.45370, 36.0, 10.8, 3.5),  // turning onto Grünberger
+            doubleArrayOf(52.51190, 13.45490, 37.0, 8.2, 4.0),   // Grünberger Str north
+            doubleArrayOf(52.51290, 13.45620, 37.0, 6.5, 4.5),   // approaching home
+            doubleArrayOf(52.51370, 13.45740, 38.0, 3.1, 5.0),   // slowing down
+            doubleArrayOf(52.51420, 13.45830, 38.0, 0.2, 4.0)    // back home
+        )
+
+        // Generate data for the past 7 days with slight daily variation
+        for (dayOffset in 6 downTo 0) {
+            val dayMidnight = now - (now % 86400) - (dayOffset * 86400L)
+            val battery = 92 - (dayOffset * 3)
+            // Small daily jitter so tracks aren't perfectly identical
+            val jitterLat = (dayOffset * 0.00003) - 0.00009
+            val jitterLon = (dayOffset * 0.00002) - 0.00006
+
+            // Trip 1: Home → Supermarket, depart 09:30, ~30s between points
+            val t1Start = dayMidnight + 9 * 3600 + 1800
+            for ((i, wp) in trip1.withIndex()) {
+                val ts = t1Start + (i * 30L)
+                if (ts > now) break
+                dbHelper.saveLocation(
+                    wp[0] + jitterLat, wp[1] + jitterLon,
+                    wp[4], wp[2].toInt(), wp[3],
+                    null, battery - i, 1, ts
+                )
+                count++
+            }
+
+            // Gap: 45 min at supermarket (triggers trip segmentation at 15-min threshold)
+
+            // Trip 2: Supermarket → Gym, depart 10:20, ~30s between points
+            val t2Start = dayMidnight + 10 * 3600 + 1200
+            for ((i, wp) in trip2.withIndex()) {
+                val ts = t2Start + (i * 30L)
+                if (ts > now) break
+                dbHelper.saveLocation(
+                    wp[0] + jitterLat, wp[1] + jitterLon,
+                    wp[4], wp[2].toInt(), wp[3],
+                    null, battery - 15 - i, 2, ts
+                )
+                count++
+            }
+
+            // Gap: 1h 30min at gym
+
+            // Trip 3: Gym → Home, depart 12:00, ~30s between points
+            val t3Start = dayMidnight + 12 * 3600
+            for ((i, wp) in trip3.withIndex()) {
+                val ts = t3Start + (i * 30L)
+                if (ts > now) break
+                dbHelper.saveLocation(
+                    wp[0] + jitterLat, wp[1] + jitterLon,
+                    wp[4], wp[2].toInt(), wp[3],
+                    null, battery - 30 - i, 1, ts
+                )
+                count++
+            }
+
+            // Skip afternoon trip on some days for variety
+            if (dayOffset % 2 == 0) continue
+
+            // Trip 4 (some days): Quick evening walk, depart 18:00
+            // Short loop around Boxhagener Platz (~10 min walk)
+            val walkTrip = arrayOf(
+                doubleArrayOf(52.51420, 13.45830, 38.0, 1.2, 6.0),
+                doubleArrayOf(52.51450, 13.45900, 38.0, 1.4, 5.5),
+                doubleArrayOf(52.51480, 13.45970, 38.0, 1.3, 5.0),
+                doubleArrayOf(52.51500, 13.46050, 38.0, 1.5, 5.5),
+                doubleArrayOf(52.51480, 13.46130, 38.0, 1.4, 6.0),
+                doubleArrayOf(52.51450, 13.46080, 38.0, 1.3, 5.5),
+                doubleArrayOf(52.51430, 13.45970, 38.0, 1.2, 5.0),
+                doubleArrayOf(52.51420, 13.45830, 38.0, 0.3, 6.0)
+            )
+            val t4Start = dayMidnight + 18 * 3600
+            for ((i, wp) in walkTrip.withIndex()) {
+                val ts = t4Start + (i * 75L)
+                if (ts > now) break
+                dbHelper.saveLocation(
+                    wp[0] + jitterLat, wp[1] + jitterLon,
+                    wp[4], wp[2].toInt(), wp[3],
+                    null, battery - 45 - i, 1, ts
+                )
+                count++
+            }
+        }
+        count
+    }
+    }
+
+    @ReactMethod
     fun manualFlush(promise: Promise) {
         try {
             startServiceWithAction(LocationForegroundService.ACTION_MANUAL_FLUSH)

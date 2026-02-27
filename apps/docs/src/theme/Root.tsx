@@ -1,5 +1,5 @@
 /**
- * Docusaurus Root wrapper — injects CSS custom properties from @colota/shared.
+ * Docusaurus Root wrapper - injects CSS custom properties from @colota/shared.
  * This makes packages/shared/src/colors.ts the single source of truth
  * for both the mobile app and the docs site.
  */

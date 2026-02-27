@@ -45,7 +45,6 @@ export { MapCenterButton } from "./features/map/MapCenterButton"
 // ============================================================================
 // Feature Components - Inspector
 // ============================================================================
-export { DatePicker } from "./features/inspector/DatePicker"
 export { TrackMap } from "./features/inspector/TrackMap"
 
 // ============================================================================

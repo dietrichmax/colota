@@ -1,0 +1,114 @@
+/* Gallery grid */
+.gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.item {
+  margin: 0;
+  text-align: center;
+  max-width: 200px;
+  cursor: pointer;
+}
+
+.item img {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  transition: transform 0.2s;
+}
+
+.item img:hover {
+  transform: scale(1.03);
+}
+
+.item figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ifm-font-color-secondary);
+}
+
+/* Lightbox dialog */
+.lightbox {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 100vw;
+  max-height: 100vh;
+  overflow: visible;
+}
+
+.lightbox::backdrop {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.lightboxInner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+}
+
+.lightboxInner > img {
+  max-height: 85vh;
+  max-width: 80vw;
+  border-radius: 16px;
+}
+
+/* Nav arrows */
+.navBtn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  font-size: 2.5rem;
+  line-height: 1;
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.navBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Caption + counter */
+.caption {
+  position: absolute;
+  bottom: -2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.counter {
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+/* Close button */
+.closeBtn {
+  position: absolute;
+  top: -2rem;
+  right: -0.5rem;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.75rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem;
+}
+
+.closeBtn:hover {
+  color: white;
+}

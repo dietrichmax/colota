@@ -17,17 +17,25 @@ Export your location history in multiple formats.
 
 ## How to Export
 
+### Bulk Export
+
 1. Go to **Data Management**
 2. Tap **Export Data**
 3. Select the format
 4. Share the exported file via Android's share menu
 
-<div className="screenshot-gallery">
-  <figure>
-    <img src="/img/screenshots/ExportData.png" alt="Export Data" />
-    <figcaption>Export Data</figcaption>
-  </figure>
-</div>
+### Trip Export
+
+1. Go to **Location History** → **Trips** tab
+2. Tap the export icon to export all trips for the selected day, or tap a trip card and export that single trip
+3. Select the format
+4. Share via Android's share menu
+
+Trip exports include a `trip` column/property so each location is tagged with its trip number.
+
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ExportData.png", label: "Export Data" }, ]} />
 
 ## Storage Reference
 

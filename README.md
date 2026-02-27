@@ -17,6 +17,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 - **Self-Hosted** - Send location data to your own server. Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant, or any custom backend.
 - **Privacy First** - No analytics, no telemetry, no third-party SDKs. Open source (AGPL-3.0).
 - **Works Offline** - Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
+- **Location History** - View daily summaries, trip segmentation, calendar with activity dots, and per-trip export.
 - **Reliable Tracking** - Foreground service, auto-start on boot, exponential backoff retry.
 - **Geofencing** - Pause zones that automatically stop recording locations.
 - **Tracking Profiles** - Automatically adjust GPS interval, distance filter, and sync settings based on conditions like charging, car mode, or speed.
@@ -29,15 +30,30 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 <table>
   <tr>
     <td><img src="screenshots/mobile/original/Dashboard.png" alt="Dashboard" width="200"/></td>
-    <td><img src="screenshots/mobile/original/Settings.png" alt="Settings" width="200"/></td>
-    <td><img src="screenshots/mobile/original/TrackingProfiles.png" alt="TrackingProfiles" width="200"/></td>
-    <td><img src="screenshots/mobile/original/DataManagement.png" alt="Data Management" width="200"/></td>
+    <td><img src="screenshots/mobile/original/LocationHistory.png" alt="Location History (Map)" width="200"/></td>
+    <td><img src="screenshots/mobile/original/TripDetails.png" alt="Trip Details" width="200"/></td>
+    <td><img src="screenshots/mobile/original/Trips.png" alt="Trips" width="200"/></td>
   </tr>
   <tr>
     <td align="center">Dashboard</td>
+    <td align="center">Location History (Map)</td>
+    <td align="center">Trip Details</td>
+    <td align="center">Trips</td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td><img src="screenshots/mobile/original/Settings.png" alt="Settings" width="200"/></td>
+    <td><img src="screenshots/mobile/original/TrackingProfiles.png" alt="TrackingProfiles" width="200"/></td>
+    <td><img src="screenshots/mobile/original/Authentication.png" alt="Authentication" width="200"/></td>
+    <td><img src="screenshots/mobile/original/DarkMode.png" alt="Dark Mode" width="200"/></td>
+  </tr>
+  <tr>
     <td align="center">Settings</td>
-    <td align="center">Tracking Profiles</td>
-    <td align="center">Data Management</td>
+    <td align="center">TrackingProfiles</td>
+    <td align="center">Authentication</td>
+    <td align="center">Dark Mode</td>
   </tr>
 </table>
 

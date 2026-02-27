@@ -6,12 +6,9 @@ sidebar_position: 3
 
 Manage your location database from the Data Management screen.
 
-<div className="screenshot-gallery">
-  <figure>
-    <img src="/img/screenshots/DataManagement.png" alt="Data Management" />
-    <figcaption>Data Management</figcaption>
-  </figure>
-</div>
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/DataManagement.png", label: "Data Management" }, ]} />
 
 ## Actions
 
