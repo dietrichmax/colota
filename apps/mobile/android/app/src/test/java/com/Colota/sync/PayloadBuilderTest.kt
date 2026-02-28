@@ -268,6 +268,116 @@ class PayloadBuilderTest {
         assertNull(builder.parseCustomFields("not json"))
     }
 
+    // --- buildPayload custom fields edge-case tests ---
+
+    @Test
+    fun `buildPayload includes multiple custom fields`() {
+        val location = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f)
+        val customFields = mapOf(
+            "_type" to "location",
+            "device" to "phone1",
+            "region" to "eu-west"
+        )
+
+        val payload = builder.buildPayload(
+            location = location,
+            batteryLevel = 80,
+            batteryStatus = 2,
+            fieldMap = emptyMap(),
+            timestamp = 1700000000L,
+            customFields = customFields
+        )
+
+        assertEquals("location", payload.getString("_type"))
+        assertEquals("phone1", payload.getString("device"))
+        assertEquals("eu-west", payload.getString("region"))
+    }
+
+    @Test
+    fun `buildPayload custom field does not override standard fields`() {
+        val location = createMockLocation(lat = 52.52, lon = 13.405, acc = 5.0f, speed = 0.0f)
+        // Custom field uses the same key "lat" as the standard latitude field
+        val customFields = mapOf("lat" to "999.0")
+
+        val payload = builder.buildPayload(
+            location = location,
+            batteryLevel = 80,
+            batteryStatus = 2,
+            fieldMap = emptyMap(),
+            timestamp = 1700000000L,
+            customFields = customFields
+        )
+
+        // Standard fields are written after custom fields, so the standard value wins
+        assertEquals(52.52, payload.getDouble("lat"), 0.001)
+    }
+
+    @Test
+    fun `buildPayload with empty custom fields map`() {
+        val location = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f)
+        val customFields = emptyMap<String, String>()
+
+        val payload = builder.buildPayload(
+            location = location,
+            batteryLevel = 80,
+            batteryStatus = 2,
+            fieldMap = emptyMap(),
+            timestamp = 1700000000L,
+            customFields = customFields
+        )
+
+        // Only standard fields should be present (no altitude/speed/bearing since mocked without them)
+        assertEquals(52.0, payload.getDouble("lat"), 0.001)
+        assertEquals(13.0, payload.getDouble("lon"), 0.001)
+        assertEquals(5, payload.getInt("acc"))
+        assertEquals(80, payload.getInt("batt"))
+        assertEquals(2, payload.getInt("bs"))
+        assertEquals(1700000000L, payload.getLong("tst"))
+        // Verify the payload has exactly the expected keys (no extras from custom fields)
+        val keys = payload.keys().asSequence().toSet()
+        assertEquals(setOf("lat", "lon", "acc", "vel", "batt", "bs", "tst"), keys)
+    }
+
+    @Test
+    fun `buildPayload includes blank custom field keys`() {
+        val location = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f)
+        // The implementation does not filter blank keys - they are passed through as-is
+        val customFields = mapOf("" to "some_value", "valid" to "data")
+
+        val payload = builder.buildPayload(
+            location = location,
+            batteryLevel = 80,
+            batteryStatus = 2,
+            fieldMap = emptyMap(),
+            timestamp = 1700000000L,
+            customFields = customFields
+        )
+
+        // Blank key is included because buildPayload does not filter it
+        assertEquals("some_value", payload.getString(""))
+        assertEquals("data", payload.getString("valid"))
+    }
+
+    @Test
+    fun `buildPayload includes blank custom field values`() {
+        val location = createMockLocation(lat = 52.0, lon = 13.0, acc = 5.0f, speed = 0.0f)
+        // The implementation does not filter blank values - they are passed through as-is
+        val customFields = mapOf("myfield" to "", "other" to "ok")
+
+        val payload = builder.buildPayload(
+            location = location,
+            batteryLevel = 80,
+            batteryStatus = 2,
+            fieldMap = emptyMap(),
+            timestamp = 1700000000L,
+            customFields = customFields
+        )
+
+        // Blank value is included because buildPayload does not filter it
+        assertEquals("", payload.getString("myfield"))
+        assertEquals("ok", payload.getString("other"))
+    }
+
     // --- helpers ---
 
     private fun createMockLocation(

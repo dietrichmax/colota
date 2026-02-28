@@ -419,6 +419,32 @@ class ProfileManagerTest {
         assertEquals("Car Mode", switchedProfileName)
     }
 
+    @Test
+    fun `applies new tracking interval when switching between profiles`() = runTest {
+        val charging = chargingProfile(id = 1, intervalMs = 10000, priority = 10)
+        val carMode = carModeProfile(id = 2, intervalMs = 3000, priority = 20)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+
+        // Activate charging profile - interval should be 10s
+        manager.onChargingStateChanged(true)
+        assertEquals("Charging", switchedProfileName)
+        assertEquals(10000L, switchedInterval)
+
+        // Enable car mode - higher priority takes over, interval switches to 3s
+        manager.onCarModeStateChanged(true)
+        assertEquals("Car Mode", switchedProfileName)
+        assertEquals(3000L, switchedInterval)
+        assertEquals(5f, switchedDistance, 0.01f)
+        assertEquals(60, switchedSyncInterval)
+
+        // Disable car mode - charging still active, falls back immediately
+        manager.onCarModeStateChanged(false)
+        assertEquals("Charging", switchedProfileName)
+        assertEquals(10000L, switchedInterval)
+    }
+
     // --- Immediate deactivation when profile disabled/deleted ---
 
     @Test
