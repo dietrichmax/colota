@@ -89,20 +89,20 @@ jest.mock("../../components", () => {
   const R = require("react")
   const RN = require("react-native")
   return {
-    Button: function (props) {
+    Button: function (props: any) {
       return R.createElement(
         RN.Pressable,
         { onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
         R.createElement(RN.Text, null, props.title)
       )
     },
-    SectionTitle: function (props) {
+    SectionTitle: function (props: any) {
       return R.createElement(RN.Text, null, props.children)
     },
-    Card: function (props) {
+    Card: function (props: any) {
       return R.createElement(RN.View, null, props.children)
     },
-    Container: function (props) {
+    Container: function (props: any) {
       return R.createElement(RN.View, null, props.children)
     },
     Divider: function () {
@@ -117,7 +117,7 @@ jest.mock("../../components", () => {
 jest.mock("lucide-react-native", () => {
   const R = require("react")
   const RN = require("react-native")
-  function stub(name) {
+  function stub(name: any) {
     return function () {
       return R.createElement(RN.Text, null, name)
     }

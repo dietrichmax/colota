@@ -66,12 +66,12 @@ jest.mock("../../services/modalService", () => ({
 
 jest.mock("../../utils/exportConverters", () => ({
   LARGE_FILE_THRESHOLD: 10 * 1024 * 1024,
-  formatBytes: function (bytes) {
+  formatBytes: function (bytes: any) {
     if (bytes < 1024) return bytes + " B"
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
     return (bytes / (1024 * 1024)).toFixed(1) + " MB"
   },
-  getByteSize: function (content) {
+  getByteSize: function (content: any) {
     return content.length
   },
   EXPORT_FORMATS: {
@@ -138,19 +138,19 @@ jest.mock("../../components", () => {
   const R = require("react")
   const RN = require("react-native")
   return {
-    Container: function (props) {
+    Container: function (props: any) {
       return R.createElement(RN.View, null, props.children)
     },
-    Card: function (props) {
+    Card: function (props: any) {
       return R.createElement(RN.View, null, props.children)
     },
-    SectionTitle: function (props) {
+    SectionTitle: function (props: any) {
       return R.createElement(RN.Text, null, props.children)
     },
     Divider: function () {
       return R.createElement(RN.View, null)
     },
-    Button: function (props) {
+    Button: function (props: any) {
       return R.createElement(
         RN.Pressable,
         { onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
@@ -163,7 +163,7 @@ jest.mock("../../components", () => {
 jest.mock("lucide-react-native", () => {
   const R = require("react")
   const RN = require("react-native")
-  function stub(name) {
+  function stub(name: any) {
     return function () {
       return R.createElement(RN.Text, null, name)
     }
