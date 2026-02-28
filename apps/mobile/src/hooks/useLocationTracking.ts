@@ -155,7 +155,6 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
         listenerRef.current = null
       }
       setTracking(false)
-      setCoords(null)
     })
     return () => sub.remove()
   }, [])
@@ -221,7 +220,6 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
 
     NativeLocationService.stop()
     setTracking(false)
-    setCoords(null)
   }, [])
 
   /**

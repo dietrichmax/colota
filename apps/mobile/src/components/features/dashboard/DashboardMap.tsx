@@ -123,58 +123,67 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
   // Geofence GeoJSON
   const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences, colors), [geofences, colors])
 
-  if (!tracking) {
-    return (
-      <View style={[styles.stateContainer, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
-        <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
-          <Image source={icon} style={styles.icon} />
-        </View>
-        <Text style={[styles.stateTitle, { color: colors.text }]}>Tracking Disabled</Text>
-        <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Start tracking to see the map.</Text>
-      </View>
-    )
-  }
-
-  if (!isValidCoords(coords)) {
-    return (
-      <View style={[styles.stateContainer, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.stateTitle, styles.stateTitleSpaced, { color: colors.text }]}>Searching GPS...</Text>
-        <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Waiting for GPS signal.</Text>
-      </View>
-    )
-  }
+  const showMap = tracking && isValidCoords(coords)
 
   return (
     <View style={[styles.container, { borderRadius: colors.borderRadius }]}>
+      {/* Keep map mounted to avoid MapLibre/Fabric unmount race condition.
+          Hide it behind the placeholder when not tracking. */}
       {hasInitialCoords && initialCoords.current ? (
-        <ColotaMapView
-          ref={mapRef}
-          initialCenter={[initialCoords.current.longitude, initialCoords.current.latitude]}
-          onRegionDidChange={handleRegionChange}
-        >
-          <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
+        <View style={showMap ? styles.mapVisible : styles.mapHidden} pointerEvents={showMap ? "auto" : "none"}>
+          <ColotaMapView
+            ref={mapRef}
+            initialCenter={[initialCoords.current.longitude, initialCoords.current.latitude]}
+            onRegionDidChange={handleRegionChange}
+          >
+            <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
 
-          {/* Accuracy circle + user marker */}
-          <UserLocationOverlay coords={coords} isPaused={!!currentPauseZone} colors={colors} />
-        </ColotaMapView>
-      ) : (
-        <View style={[styles.stateContainer, { backgroundColor: colors.card }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.stateTitle, styles.stateTitleSpaced, { color: colors.text }]}>Loading Map...</Text>
+            {/* Always keep overlay mounted to avoid MapLibre/Fabric unmount race condition */}
+            {coords && <UserLocationOverlay coords={coords} isPaused={!!currentPauseZone} colors={colors} />}
+          </ColotaMapView>
+        </View>
+      ) : null}
+
+      {!tracking && (
+        <View
+          style={[
+            styles.stateContainer,
+            styles.overlay,
+            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
+          ]}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
+            <Image source={icon} style={styles.icon} />
+          </View>
+          <Text style={[styles.stateTitle, { color: colors.text }]}>Tracking Disabled</Text>
+          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Start tracking to see the map.</Text>
         </View>
       )}
 
-      <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />
+      {tracking && !isValidCoords(coords) && (
+        <View
+          style={[
+            styles.stateContainer,
+            styles.overlay,
+            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
+          ]}
+        >
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.stateTitle, styles.stateTitleSpaced, { color: colors.text }]}>Searching GPS...</Text>
+          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Waiting for GPS signal.</Text>
+        </View>
+      )}
 
-      {isOffline && (
+      {showMap && <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />}
+
+      {showMap && isOffline && (
         <View style={[styles.offlineBanner, { backgroundColor: colors.card }]}>
           <WifiOff size={14} color={colors.textSecondary} />
-          <Text style={[styles.offlineText, { color: colors.textSecondary }]}>Map tiles unavailable — no internet</Text>
+          <Text style={[styles.offlineText, { color: colors.textSecondary }]}>Map tiles unavailable - no internet</Text>
         </View>
       )}
 
-      {activeZoneName && (
+      {showMap && activeZoneName && (
         <View
           style={[
             styles.topInfoCard,
@@ -191,7 +200,7 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
         </View>
       )}
 
-      {!activeZoneName && activeProfileName && (
+      {showMap && !activeZoneName && activeProfileName && (
         <View
           style={[
             styles.topInfoCard,
@@ -211,6 +220,9 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
 
 const styles = StyleSheet.create({
   container: { flex: 1, width: "100%", overflow: "hidden" },
+  mapVisible: { flex: 1 },
+  mapHidden: { flex: 1, opacity: 0 },
+  overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
   stateContainer: {
     flex: 1,
     justifyContent: "center",

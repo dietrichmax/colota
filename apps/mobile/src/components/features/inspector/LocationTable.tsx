@@ -89,17 +89,17 @@ const getItemLayout = (_: any, index: number) => ({
 export function LocationTable({ locations, colors }: Props) {
   const speedUnit = useMemo(() => getSpeedUnit(), [])
 
-  const data = useMemo<TableRow[]>(
-    () =>
-      locations.map((loc, i) => ({
-        ...loc,
-        delta:
-          i > 0 && loc.timestamp && locations[i - 1].timestamp
-            ? Math.round(loc.timestamp - locations[i - 1].timestamp!)
-            : null
-      })),
-    [locations]
-  )
+  const data = useMemo<TableRow[]>(() => {
+    // Compute deltas in chronological order, then reverse for newest-first display
+    const rows = locations.map((loc, i) => ({
+      ...loc,
+      delta:
+        i > 0 && loc.timestamp && locations[i - 1].timestamp
+          ? Math.round(loc.timestamp - locations[i - 1].timestamp!)
+          : null
+    }))
+    return rows.reverse()
+  }, [locations])
 
   const renderItem = useCallback(
     ({ item }: { item: TableRow }) => <LocationRow item={item} speedUnit={speedUnit} colors={colors} />,
