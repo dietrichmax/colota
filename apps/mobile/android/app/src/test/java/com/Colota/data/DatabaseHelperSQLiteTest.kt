@@ -538,8 +538,14 @@ class DatabaseHelperSQLiteTest {
 
         assertEquals(3, page1.size)
         assertEquals(3, page2.size)
-        // Locations ordered by timestamp DESC — page 1 has newest
-        assertNotEquals(page1[0]["timestamp"], page2[0]["timestamp"])
+        // Locations ordered by timestamp DESC — newest first
+        val t1 = page1[0]["timestamp"] as Long
+        val t2 = page1[1]["timestamp"] as Long
+        val t3 = page1[2]["timestamp"] as Long
+        assertTrue("Page 1 should be sorted newest-first", t1 > t2 && t2 > t3)
+        // Page 2 starts after page 1
+        val t4 = page2[0]["timestamp"] as Long
+        assertTrue("Page 2 should continue after page 1", t3 > t4)
     }
 
     @Test
