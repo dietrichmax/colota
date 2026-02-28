@@ -1,0 +1,7 @@
+- New Location History Inspector with calendar view, trip detection, and route maps
+- New centralized logging system with debug mode and native log export
+- Fixed MapLibre crash when stopping tracking while dashboard map was visible
+- Fixed sync failure deleting location data - GPS data is always preserved now
+- Fresh items in sync queue are now prioritized over failing items
+- Added foreground service type for Android 14+ compliance
+- Code cleanup and expanded test coverage
