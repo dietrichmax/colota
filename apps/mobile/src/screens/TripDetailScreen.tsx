@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     marginTop: 12
   },
   mapContainer: {
-    height: 250
+    height: 480
   },
   headerTitleRow: {
     flexDirection: "row",
