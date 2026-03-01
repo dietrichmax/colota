@@ -48,6 +48,7 @@ class LocationForegroundService : Service() {
     @Volatile private var locationRestartJob: Job? = null
     @Volatile private var insidePauseZone = false
     @Volatile private var currentZoneName: String? = null
+    @Volatile private var currentZoneGeofence: GeofenceHelper.CachedGeofence? = null
     @Volatile private var lastKnownLocation: android.location.Location? = null
 
     @Volatile private lateinit var config: ServiceConfig
@@ -249,8 +250,8 @@ class LocationForegroundService : Service() {
                 onSuccess = { location ->
                     location?.let {
                         lastKnownLocation = it
-                        geofenceHelper.getPauseZone(it)?.let { zoneName ->
-                            enterPauseZone(zoneName)
+                        geofenceHelper.getPauseZone(it)?.let { zone ->
+                            enterPauseZone(zone)
                         } ?: run {
                             updateNotification(it.latitude, it.longitude, forceUpdate = true)
                         }
@@ -305,17 +306,17 @@ class LocationForegroundService : Service() {
 
 
     private fun recheckZoneWithLocation(location: android.location.Location) {
-        val zoneName = geofenceHelper.getPauseZone(location)
+        val zone = geofenceHelper.getPauseZone(location)
 
         when {
-            zoneName != null && (!insidePauseZone || zoneName != currentZoneName) -> {
-                enterPauseZone(zoneName)
+            zone != null && (!insidePauseZone || zone.name != currentZoneName) -> {
+                enterPauseZone(zone)
             }
-            zoneName == null && insidePauseZone -> {
+            zone == null && insidePauseZone -> {
                 exitPauseZone()
             }
             // Same zone - refresh notification coords
-            zoneName != null && insidePauseZone && zoneName == currentZoneName -> {
+            zone != null && insidePauseZone && zone.name == currentZoneName -> {
                 updateNotification(
                     lat = location.latitude,
                     lon = location.longitude,
@@ -376,14 +377,14 @@ class LocationForegroundService : Service() {
 
         lastKnownLocation = location
 
-        val zoneName = geofenceHelper.getPauseZone(location)
+        val zone = geofenceHelper.getPauseZone(location)
         when {
-            zoneName != null && !insidePauseZone -> {
-                enterPauseZone(zoneName)
+            zone != null && (!insidePauseZone || zone.name != currentZoneName) -> {
+                enterPauseZone(zone)
                 return
             }
-            zoneName == null && insidePauseZone -> exitPauseZone()
-            zoneName != null && insidePauseZone -> return
+            zone == null && insidePauseZone -> exitPauseZone()
+            zone != null && insidePauseZone -> return
         }
 
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
@@ -430,35 +431,95 @@ class LocationForegroundService : Service() {
         }
     }
 
-    private fun enterPauseZone(zoneName: String) {
+    private fun enterPauseZone(geofence: GeofenceHelper.CachedGeofence) {
+        if (!insidePauseZone) {
+            saveAnchorPoint(geofence)
+        }
+
         insidePauseZone = true
-        currentZoneName = zoneName
+        currentZoneName = geofence.name
+        currentZoneGeofence = geofence
 
         val loc = lastKnownLocation
         updateNotification(
             lat = loc?.latitude,
             lon = loc?.longitude,
             pausedInZone = true,
-            zoneName = zoneName,
+            zoneName = geofence.name,
             forceUpdate = true
         )
 
-        LocationServiceModule.sendPauseZoneEvent(true, zoneName)
+        LocationServiceModule.sendPauseZoneEvent(true, geofence.name)
 
-        AppLogger.d(TAG, "Entered pause zone: $zoneName")
+        AppLogger.d(TAG, "Entered pause zone: ${geofence.name}")
     }
 
 
     private fun exitPauseZone() {
+        val exitedGeofence = currentZoneGeofence
+        val exitedName = currentZoneName
+
         insidePauseZone = false
-        val exited = currentZoneName
         currentZoneName = null
+        currentZoneGeofence = null
+
+        if (exitedGeofence != null) {
+            saveAnchorPoint(exitedGeofence)
+        }
 
         val loc = lastKnownLocation
         updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
 
-        LocationServiceModule.sendPauseZoneEvent(false, exited)
-        AppLogger.d(TAG, "Exited pause zone: $exited")
+        LocationServiceModule.sendPauseZoneEvent(false, exitedName)
+        AppLogger.d(TAG, "Exited pause zone: $exitedName")
+    }
+
+    /** Logs a synthetic location at the geofence center for clean track start/end points. */
+    private fun saveAnchorPoint(geofence: GeofenceHelper.CachedGeofence) {
+        if (!::config.isInitialized) {
+            AppLogger.w(TAG, "Config not yet initialized, skipping anchor point for '${geofence.name}'")
+            return
+        }
+
+        val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
+        val nowMs = System.currentTimeMillis()
+        val timestampSec = nowMs / 1000
+        val currentFieldMap = fieldMap ?: emptyMap()
+
+        val syntheticLocation = android.location.Location("geofence").apply {
+            latitude = geofence.lat
+            longitude = geofence.lon
+            accuracy = geofence.radius.toFloat()
+            time = nowMs
+        }
+
+        serviceScope?.launch {
+            val locationId = dbHelper.saveLocation(
+                latitude = geofence.lat,
+                longitude = geofence.lon,
+                accuracy = geofence.radius,
+                altitude = null,
+                speed = null,
+                bearing = null,
+                battery = battery,
+                battery_status = batteryStatus,
+                timestamp = timestampSec,
+                endpoint = config.endpoint
+            )
+
+            val payload = payloadBuilder.buildPayload(
+                syntheticLocation,
+                battery,
+                batteryStatus,
+                currentFieldMap,
+                timestampSec,
+                customFields
+            )
+
+            syncManager.queueAndSend(locationId, payload)
+
+            AppLogger.d(TAG, "Anchor point saved at geofence '${geofence.name}' center (${geofence.lat}, ${geofence.lon})")
+        }
     }
 
     private fun updateNotification(

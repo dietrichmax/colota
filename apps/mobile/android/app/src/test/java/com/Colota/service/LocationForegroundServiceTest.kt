@@ -432,7 +432,7 @@ class LocationForegroundServiceTest {
 
     @Test
     fun `handleLocationUpdate enters pause zone when location is in geofence`() = testScope.runTest {
-        every { geofenceHelper.getPauseZone(any()) } returns "Home"
+        every { geofenceHelper.getPauseZone(any()) } returns homeGeofence
         val location = mockLocation()
 
         invokeHandleLocationUpdate(location)
@@ -440,14 +440,27 @@ class LocationForegroundServiceTest {
         assertTrue(getField("insidePauseZone"))
         assertEquals("Home", getField<String?>("currentZoneName"))
         verify { LocationServiceModule.sendPauseZoneEvent(true, "Home") }
-        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        // Anchor point is saved at geofence center, but regular GPS location is not saved
+        verify(exactly = 1) { dbHelper.saveLocation(
+            latitude = homeGeofence.lat,
+            longitude = homeGeofence.lon,
+            accuracy = homeGeofence.radius,
+            altitude = null,
+            speed = null,
+            bearing = null,
+            battery = any(),
+            battery_status = any(),
+            timestamp = any(),
+            endpoint = any()
+        ) }
     }
 
     @Test
     fun `handleLocationUpdate skips saving when already inside pause zone`() = testScope.runTest {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
-        every { geofenceHelper.getPauseZone(any()) } returns "Home"
+        setField("currentZoneGeofence", homeGeofence)
+        every { geofenceHelper.getPauseZone(any()) } returns homeGeofence
         val location = mockLocation()
 
         invokeHandleLocationUpdate(location)
@@ -456,9 +469,27 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `handleLocationUpdate updates zone when moving to different zone`() = testScope.runTest {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        every { geofenceHelper.getPauseZone(any()) } returns officeGeofence
+        val location = mockLocation()
+
+        invokeHandleLocationUpdate(location)
+
+        assertTrue(getField("insidePauseZone"))
+        assertEquals("Office", getField<String?>("currentZoneName"))
+        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("currentZoneGeofence"))
+        // No anchor saved for zone-to-zone transition
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
     fun `handleLocationUpdate exits pause zone and resumes saving`() = testScope.runTest {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
         every { geofenceHelper.getPauseZone(any()) } returns null
         val location = mockLocation()
         every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
@@ -468,8 +499,8 @@ class LocationForegroundServiceTest {
         assertFalse(getField("insidePauseZone"))
         assertNull(getField<String?>("currentZoneName"))
         verify { LocationServiceModule.sendPauseZoneEvent(false, "Home") }
-        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
-        coVerify { syncManager.queueAndSend(1L, any()) }
+        // Anchor point + regular GPS location = 2 saves
+        verify(atLeast = 2) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -527,6 +558,7 @@ class LocationForegroundServiceTest {
     fun `ACTION_FORCE_EXIT_ZONE rechecks zone after forced exit`() {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Office")
+        setField("currentZoneGeofence", officeGeofence)
         val location = mockLocation()
         setField("lastKnownLocation", location)
         every { geofenceHelper.getPauseZone(location) } returns null
@@ -541,9 +573,10 @@ class LocationForegroundServiceTest {
     fun `ACTION_FORCE_EXIT_ZONE re-enters if still in zone after recheck`() {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Office")
+        setField("currentZoneGeofence", officeGeofence)
         val location = mockLocation()
         setField("lastKnownLocation", location)
-        every { geofenceHelper.getPauseZone(location) } returns "Office"
+        every { geofenceHelper.getPauseZone(location) } returns officeGeofence
 
         invokeExitPauseZone()
         invokeRecheckZoneWithLocation(location)
@@ -556,7 +589,7 @@ class LocationForegroundServiceTest {
     fun `ACTION_RECHECK_ZONE with fresh location rechecks immediately`() {
         val freshLocation = mockLocation(time = System.currentTimeMillis())
         setField("lastKnownLocation", freshLocation)
-        every { geofenceHelper.getPauseZone(freshLocation) } returns "Park"
+        every { geofenceHelper.getPauseZone(freshLocation) } returns parkGeofence
 
         invokeHandleZoneRecheckAction()
 
@@ -590,6 +623,7 @@ class LocationForegroundServiceTest {
         setField("lastKnownLocation", null)
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
 
         every { locationProvider.getLastLocation(any(), any()) } answers {
             val onSuccess = firstArg<(Location?) -> Unit>()
@@ -606,6 +640,7 @@ class LocationForegroundServiceTest {
         setField("lastKnownLocation", null)
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
 
         every { locationProvider.getLastLocation(any(), any()) } answers {
             val onFailure = secondArg<(Exception) -> Unit>()
@@ -642,11 +677,55 @@ class LocationForegroundServiceTest {
         val location = mockLocation()
         setField("lastKnownLocation", location)
 
-        invokeEnterPauseZone("Home")
+        invokeEnterPauseZone(homeGeofence)
 
         assertTrue(getField("insidePauseZone"))
         assertEquals("Home", getField<String?>("currentZoneName"))
+        assertEquals(homeGeofence, getField<GeofenceHelper.CachedGeofence?>("currentZoneGeofence"))
         verify { LocationServiceModule.sendPauseZoneEvent(true, "Home") }
+    }
+
+    @Test
+    fun `enterPauseZone saves anchor point at geofence center`() = testScope.runTest {
+        val location = mockLocation()
+        setField("lastKnownLocation", location)
+
+        invokeEnterPauseZone(homeGeofence)
+
+        verify { dbHelper.saveLocation(
+            latitude = homeGeofence.lat,
+            longitude = homeGeofence.lon,
+            accuracy = homeGeofence.radius,
+            altitude = null,
+            speed = null,
+            bearing = null,
+            battery = 80,
+            battery_status = 2,
+            timestamp = any(),
+            endpoint = "https://example.com"
+        ) }
+    }
+
+    @Test
+    fun `enterPauseZone anchor queues sync after DB save`() = testScope.runTest {
+        val location = mockLocation()
+        setField("lastKnownLocation", location)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 42L
+
+        invokeEnterPauseZone(homeGeofence)
+
+        coVerify { syncManager.queueAndSend(42L, any()) }
+    }
+
+    @Test
+    fun `saveAnchorPoint skips when config not initialized`() = testScope.runTest {
+        // Reset config to uninitialized (lateinit backs to null at JVM level)
+        setField("config", null)
+
+        invokeSaveAnchorPoint(homeGeofence)
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify { AppLogger.w("LocationService", match { it.contains("Config not yet initialized") }) }
     }
 
     @Test
@@ -654,7 +733,7 @@ class LocationForegroundServiceTest {
         val location = mockLocation(lat = 52.0, lon = 13.0)
         setField("lastKnownLocation", location)
 
-        invokeEnterPauseZone("Office")
+        invokeEnterPauseZone(officeGeofence)
 
         verify { notificationHelper.update(
             lat = 52.0,
@@ -672,7 +751,7 @@ class LocationForegroundServiceTest {
     fun `enterPauseZone handles null lastKnownLocation`() {
         setField("lastKnownLocation", null)
 
-        invokeEnterPauseZone("Home")
+        invokeEnterPauseZone(homeGeofence)
 
         verify { notificationHelper.update(
             lat = null,
@@ -690,12 +769,47 @@ class LocationForegroundServiceTest {
     fun `exitPauseZone clears state and sends event`() {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
 
         invokeExitPauseZone()
 
         assertFalse(getField("insidePauseZone"))
         assertNull(getField<String?>("currentZoneName"))
+        assertNull(getField<GeofenceHelper.CachedGeofence?>("currentZoneGeofence"))
         verify { LocationServiceModule.sendPauseZoneEvent(false, "Home") }
+    }
+
+    @Test
+    fun `exitPauseZone saves anchor point from stored geofence`() = testScope.runTest {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeExitPauseZone()
+
+        verify { dbHelper.saveLocation(
+            latitude = homeGeofence.lat,
+            longitude = homeGeofence.lon,
+            accuracy = homeGeofence.radius,
+            altitude = null,
+            speed = null,
+            bearing = null,
+            battery = 80,
+            battery_status = 2,
+            timestamp = any(),
+            endpoint = "https://example.com"
+        ) }
+    }
+
+    @Test
+    fun `exitPauseZone skips anchor when no stored geofence`() = testScope.runTest {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", null)
+
+        invokeExitPauseZone()
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -703,6 +817,7 @@ class LocationForegroundServiceTest {
         val location = mockLocation(lat = 52.0, lon = 13.0)
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
         setField("lastKnownLocation", location)
 
         invokeExitPauseZone()
@@ -721,22 +836,38 @@ class LocationForegroundServiceTest {
 
     @Test
     fun `zone transition enter then exit restores clean state`() {
-        invokeEnterPauseZone("Home")
+        invokeEnterPauseZone(homeGeofence)
         assertTrue(getField("insidePauseZone"))
 
         invokeExitPauseZone()
         assertFalse(getField("insidePauseZone"))
         assertNull(getField<String?>("currentZoneName"))
+        assertNull(getField<GeofenceHelper.CachedGeofence?>("currentZoneGeofence"))
     }
 
     @Test
     fun `zone change from one zone to another updates name`() {
-        invokeEnterPauseZone("Home")
+        invokeEnterPauseZone(homeGeofence)
         assertEquals("Home", getField<String?>("currentZoneName"))
 
-        invokeEnterPauseZone("Office")
+        invokeEnterPauseZone(officeGeofence)
         assertEquals("Office", getField<String?>("currentZoneName"))
         assertTrue(getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `zone-to-zone transition skips anchor for second zone`() = testScope.runTest {
+        val location = mockLocation()
+        setField("lastKnownLocation", location)
+
+        invokeEnterPauseZone(homeGeofence)
+
+        clearMocks(dbHelper, answers = false)
+
+        invokeEnterPauseZone(officeGeofence)
+
+        // No anchor saved when switching directly between zones (no trip in between)
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     // =========================================================================
@@ -747,7 +878,7 @@ class LocationForegroundServiceTest {
     fun `recheckZone enters zone when not currently in zone`() {
         setField("insidePauseZone", false)
         val location = mockLocation()
-        every { geofenceHelper.getPauseZone(location) } returns "Park"
+        every { geofenceHelper.getPauseZone(location) } returns parkGeofence
 
         invokeRecheckZoneWithLocation(location)
 
@@ -759,6 +890,7 @@ class LocationForegroundServiceTest {
     fun `recheckZone exits zone when location leaves geofence`() {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
         val location = mockLocation()
         every { geofenceHelper.getPauseZone(location) } returns null
 
@@ -771,8 +903,9 @@ class LocationForegroundServiceTest {
     fun `recheckZone changes zone when moving between zones`() {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
         val location = mockLocation()
-        every { geofenceHelper.getPauseZone(location) } returns "Office"
+        every { geofenceHelper.getPauseZone(location) } returns officeGeofence
 
         invokeRecheckZoneWithLocation(location)
 
@@ -781,11 +914,30 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `recheckZone zone-to-zone transition skips anchor for new zone`() = testScope.runTest {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        val location = mockLocation()
+        every { geofenceHelper.getPauseZone(location) } returns officeGeofence
+
+        clearMocks(dbHelper, answers = false)
+
+        invokeRecheckZoneWithLocation(location)
+
+        // No anchor saved when switching directly between zones (no trip in between)
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        // State should still update
+        assertEquals("Office", getField<String?>("currentZoneName"))
+    }
+
+    @Test
     fun `recheckZone updates notification when staying in same zone`() {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
         val location = mockLocation(lat = 52.0, lon = 13.0)
-        every { geofenceHelper.getPauseZone(location) } returns "Home"
+        every { geofenceHelper.getPauseZone(location) } returns homeGeofence
 
         invokeRecheckZoneWithLocation(location)
 
@@ -1035,12 +1187,12 @@ class LocationForegroundServiceTest {
         method.invoke(service, location)
     }
 
-    private fun invokeEnterPauseZone(zoneName: String) {
+    private fun invokeEnterPauseZone(geofence: GeofenceHelper.CachedGeofence) {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
-            "enterPauseZone", String::class.java
+            "enterPauseZone", GeofenceHelper.CachedGeofence::class.java
         )
         method.isAccessible = true
-        method.invoke(service, zoneName)
+        method.invoke(service, geofence)
     }
 
     private fun invokeExitPauseZone() {
@@ -1084,4 +1236,19 @@ class LocationForegroundServiceTest {
         method.isAccessible = true
         method.invoke(service)
     }
+
+    private fun invokeSaveAnchorPoint(geofence: GeofenceHelper.CachedGeofence) {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "saveAnchorPoint", GeofenceHelper.CachedGeofence::class.java
+        )
+        method.isAccessible = true
+        method.invoke(service, geofence)
+    }
+
+    private fun geofence(name: String, lat: Double = 52.52, lon: Double = 13.405, radius: Double = 100.0) =
+        GeofenceHelper.CachedGeofence(name, lat, lon, radius)
+
+    private val homeGeofence = geofence("Home", 52.50, 13.40, 150.0)
+    private val officeGeofence = geofence("Office", 48.14, 11.58, 200.0)
+    private val parkGeofence = geofence("Park", 52.51, 13.35, 100.0)
 }

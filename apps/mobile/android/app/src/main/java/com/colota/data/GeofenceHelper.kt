@@ -49,16 +49,16 @@ class GeofenceHelper(private val context: Context) {
         }
     }
 
-    fun getPauseZone(location: Location): String? {
+    fun getPauseZone(location: Location): CachedGeofence? {
         val fences = getGeofences()
         val match = fences.find {
             isWithinRadius(location.latitude, location.longitude, it.lat, it.lon, it.radius)
         }
-        if (fences.isNotEmpty() && match != null) {
+        if (match != null) {
             val dist = calculateDistance(location.latitude, location.longitude, match.lat, match.lon)
             AppLogger.d(TAG, "Inside zone '${match.name}' (${String.format("%.0f", dist)}m from center, radius=${match.radius}m)")
         }
-        return match?.name
+        return match
     }
     
     fun invalidateCache() {
