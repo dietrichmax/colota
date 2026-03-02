@@ -638,7 +638,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                                 val zone = withContext(Dispatchers.IO) {
                                     geofenceHelper.getPauseZone(loc)
                                 }
-                                promise.resolve(zone)
+                                promise.resolve(zone?.name)
                             } catch (e: Exception) {
                                 AppLogger.e(TAG, "Pause zone check failed", e)
                                 promise.resolve(null)

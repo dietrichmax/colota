@@ -86,6 +86,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 
 - GPS location capture via the `LocationProvider` abstraction
 - Pause zone detection (geofencing)
+- Anchor points - synthetic locations at geofence centers on zone enter/exit for clean track endpoints
 - Battery critical shutdown (below 5% while discharging)
 - Location accuracy filtering
 - Queuing data for server sync

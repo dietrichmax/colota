@@ -67,6 +67,15 @@ All field names are [customizable](/docs/configuration/field-mapping).
 
 **Important:** `alt`, `vel`, and `bear` are conditionally included. Your server should not reject payloads missing these fields.
 
+### Anchor Points
+
+When entering or exiting a [pause zone](/docs/guides/geofencing#anchor-points), Colota sends a synthetic location at the geofence center. These payloads look like regular locations but have specific characteristics:
+
+- `lat`/`lon` are the geofence center coordinates (not the actual GPS position)
+- `acc` is set to the geofence radius in meters
+- `alt`, `vel`, and `bear` are not included
+- `batt` and `bs` reflect the current battery state
+
 ### Custom Fields
 
 Custom static fields (configured in API Settings) are added to the payload first, then location fields are added. If a custom field has the same name as a location field, the location field overwrites it.

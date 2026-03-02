@@ -31,3 +31,12 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 - When exiting the zone, tracking automatically resumes
 - Zone checks happen every location update with minimal overhead
 - You can create unlimited geofence zones
+
+## Anchor Points
+
+When you enter or exit a pause zone, Colota saves a synthetic location at the geofence center. This gives your tracks clean start and end points instead of starting or ending mid-road.
+
+- **On enter:** An anchor point is logged at the zone center, then recording pauses
+- **On exit:** Recording resumes and an anchor point is logged at the zone center
+
+Anchor points use the geofence center coordinates (not your actual GPS position) and set accuracy to the zone radius. They are saved to the database and synced to your server like regular locations.
