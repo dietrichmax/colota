@@ -19,6 +19,10 @@
   "devDependencies": {
     "prettier": "^3.8.1"
   },
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
   "engines": {
     "node": ">=20"
   }
