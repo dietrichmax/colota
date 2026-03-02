@@ -195,7 +195,8 @@ class LocationForegroundService : Service() {
                         conditionMonitor.start()
                     }
 
-                    if (config.syncIntervalSeconds == 0 && config.endpoint.isNotBlank()) {
+                    if (config.syncIntervalSeconds == 0 && config.endpoint.isNotBlank() &&
+                        !(config.isWifiOnlySync && !networkManager.isUnmeteredConnection())) {
                         syncManager.manualFlush()
                     }
                 }
