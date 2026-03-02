@@ -17,7 +17,7 @@
     "generate:icons": "node packages/shared/logo/generate-icons.mjs"
   },
   "devDependencies": {
-    "prettier": "^2.8.8"
+    "prettier": "^3.8.1"
   },
   "engines": {
     "node": ">=20"
