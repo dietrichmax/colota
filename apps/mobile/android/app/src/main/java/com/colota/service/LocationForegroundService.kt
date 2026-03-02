@@ -379,12 +379,13 @@ class LocationForegroundService : Service() {
         lastKnownLocation = location
 
         val zone = geofenceHelper.getPauseZone(location)
+        var anchorJob: Job? = null
         when {
             zone != null && (!insidePauseZone || zone.name != currentZoneName) -> {
                 enterPauseZone(zone)
                 return
             }
-            zone == null && insidePauseZone -> exitPauseZone()
+            zone == null && insidePauseZone -> anchorJob = exitPauseZone()
             zone != null && insidePauseZone -> return
         }
 
@@ -400,6 +401,7 @@ class LocationForegroundService : Service() {
         val currentFieldMap = fieldMap ?: emptyMap()
 
         serviceScope?.launch {
+            anchorJob?.join()
             val locationId = dbHelper.saveLocation(
                 latitude = location.latitude,
                 longitude = location.longitude,
@@ -456,7 +458,7 @@ class LocationForegroundService : Service() {
     }
 
 
-    private fun exitPauseZone() {
+    private fun exitPauseZone(): Job? {
         val exitedGeofence = currentZoneGeofence
         val exitedName = currentZoneName
 
@@ -464,22 +466,22 @@ class LocationForegroundService : Service() {
         currentZoneName = null
         currentZoneGeofence = null
 
-        if (exitedGeofence != null) {
-            saveAnchorPoint(exitedGeofence)
-        }
+        val anchorJob = exitedGeofence?.let { saveAnchorPoint(it) }
 
         val loc = lastKnownLocation
         updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
 
         LocationServiceModule.sendPauseZoneEvent(false, exitedName)
         AppLogger.d(TAG, "Exited pause zone: $exitedName")
+
+        return anchorJob
     }
 
     /** Logs a synthetic location at the geofence center for clean track start/end points. */
-    private fun saveAnchorPoint(geofence: GeofenceHelper.CachedGeofence) {
+    private fun saveAnchorPoint(geofence: GeofenceHelper.CachedGeofence): Job? {
         if (!::config.isInitialized) {
             AppLogger.w(TAG, "Config not yet initialized, skipping anchor point for '${geofence.name}'")
-            return
+            return null
         }
 
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
@@ -494,7 +496,7 @@ class LocationForegroundService : Service() {
             time = nowMs
         }
 
-        serviceScope?.launch {
+        return serviceScope?.launch {
             val locationId = dbHelper.saveLocation(
                 latitude = geofence.lat,
                 longitude = geofence.lon,
