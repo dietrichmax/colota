@@ -58,7 +58,7 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
       name: "Support",
       icon: Heart,
       color: colors.error,
-      onPress: () => Linking.openURL("https://mxd.codes/colota/support")
+      onPress: () => Linking.openURL("https://mxd.codes/support")
     }
   ]
 
