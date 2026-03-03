@@ -1,0 +1,5 @@
+- Geofence anchor points: logs zone center on enter/exit for clean trip start/end pointss
+- Fixed Wi-Fi only sync bypass when switching to instant sync
+- Fixed React version mismatch causing runtime crash
+- Updated dark theme to blue-tinted palette and softened light theme borders
+- Updated dependencies and migrated ESLint to flat config
