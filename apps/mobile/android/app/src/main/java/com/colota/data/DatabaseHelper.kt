@@ -352,7 +352,7 @@ class DatabaseHelper private constructor(context: Context) :
                 "timestamp >= ? AND timestamp <= ?",
                 arrayOf(startTimestamp.toString(), endTimestamp.toString()),
                 null, null,
-                "timestamp ASC"
+                "timestamp ASC, id ASC"
             ).use { cursor ->
                 val columnNames = cursor.columnNames
 
@@ -632,7 +632,7 @@ class DatabaseHelper private constructor(context: Context) :
                     latitude, longitude, timestamp
                 FROM $TABLE_LOCATIONS
                 WHERE timestamp >= ? AND timestamp <= ?
-                ORDER BY day ASC, timestamp ASC
+                ORDER BY day ASC, timestamp ASC, id ASC
                 """.trimIndent(),
                 arrayOf(startTimestamp.toString(), endTimestamp.toString())
             ).use { cursor ->
