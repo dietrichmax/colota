@@ -43,7 +43,7 @@ Each profile overrides the default tracking configuration with:
 
 - **GPS Interval** - How often to request a location fix (seconds)
 - **Distance Filter** - Minimum movement required between updates (meters)
-- **Sync Interval** - How often to sync with the server (Instant, 1 min, 5 min, or 15 min)
+- **Sync Interval** - How often to sync with the server (Instant, 1 min, 5 min, 15 min, or Custom)
 - **Priority** - Determines which profile wins when multiple conditions match simultaneously (higher = wins)
 - **Deactivation Delay** - How long to wait after the condition stops matching before reverting to default settings (seconds). Prevents rapid toggling when conditions fluctuate.
 
