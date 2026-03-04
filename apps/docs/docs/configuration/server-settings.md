@@ -4,13 +4,13 @@ sidebar_position: 3
 
 # Server Settings
 
-| Setting              | Description                               | Default         | Range      |
-| -------------------- | ----------------------------------------- | --------------- | ---------- |
-| Endpoint             | HTTPS URL of your server                  | Empty (offline) | --         |
-| HTTP Method          | POST (JSON body) or GET (query params)    | POST            | POST / GET |
-| Sync Interval        | Batch mode interval                       | Instant (0)     | 0s - 15min |
-| Retry Failed Uploads | Keep retrying failed uploads indefinitely | Off             | On/Off     |
-| Offline Mode         | Disable all network activity              | Disabled        | On/Off     |
+| Setting              | Description                               | Default         | Range       |
+| -------------------- | ----------------------------------------- | --------------- | ----------- |
+| Endpoint             | HTTPS URL of your server                  | Empty (offline) | --          |
+| HTTP Method          | POST (JSON body) or GET (query params)    | POST            | POST / GET  |
+| Sync Interval        | Batch mode interval                       | Instant (0)     | 0s - Custom |
+| Retry Failed Uploads | Keep retrying failed uploads indefinitely | Off             | On/Off      |
+| Offline Mode         | Disable all network activity              | Disabled        | On/Off      |
 
 ## Endpoint URL
 
@@ -30,7 +30,7 @@ Use the **Test Connection** button in settings to verify your server is reachabl
 ## Sync Modes
 
 - **Instant (0s)**: Each location is sent immediately after recording
-- **Batch (1-60 min)**: Locations are queued and sent in batches at the configured interval
+- **Batch (1 min, 5 min, 15 min, or Custom)**: Locations are queued and sent in batches at the configured interval
 - **Offline**: No network activity - data is stored locally only
 
 ## Retry Behavior
