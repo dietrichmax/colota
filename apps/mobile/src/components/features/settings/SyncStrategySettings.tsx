@@ -11,6 +11,8 @@ import { fonts, fontSizes } from "../../../styles/typography"
 import { SectionTitle, Card, Divider, NumericInput } from "../../index"
 import { PresetOption } from "./PresetOption"
 
+const SYNC_PRESETS: readonly number[] = [0, 60, 300, 900]
+
 interface SyncStrategySettingsProps {
   settings: Settings
   onSettingsChange: (newSettings: Settings) => void
@@ -29,14 +31,18 @@ export function SyncStrategySettings({
   const [intervalInput, setIntervalInput] = useState(settings.interval.toString())
   const [distanceInput, setDistanceInput] = useState(settings.distance?.toString() || "0")
   const [accuracyThresholdInput, setAccuracyTresholdInput] = useState(settings.accuracyThreshold.toString())
+  const [syncIntervalInput, setSyncIntervalInput] = useState(settings.syncInterval.toString())
   const [showAdvanced, setShowAdvanced] = useState(false)
+
+  const isCustomSyncInterval = !SYNC_PRESETS.includes(settings.syncInterval)
 
   // Sync inputs with settings changes (e.g. preset selection)
   useEffect(() => {
     setIntervalInput(settings.interval.toString())
     setDistanceInput(settings.distance?.toString() || "0")
     setAccuracyTresholdInput(settings.accuracyThreshold.toString())
-  }, [settings.interval, settings.distance, settings.accuracyThreshold])
+    setSyncIntervalInput(settings.syncInterval.toString())
+  }, [settings.interval, settings.distance, settings.accuracyThreshold, settings.syncInterval])
 
   const handleNumericChange = useCallback(
     (key: "interval" | "distance" | "accuracyThreshold", value: string, min: number = 0) => {
@@ -205,14 +211,14 @@ export function SyncStrategySettings({
                 </Text>
 
                 <View style={styles.optionsGrid}>
-                  {([0, 60, 300, 900] as const).map((sec) => {
+                  {SYNC_PRESETS.map((sec) => {
                     const labels: Record<number, string> = {
                       0: "Instant",
                       60: "1 min",
                       300: "5 min",
                       900: "15 min"
                     }
-                    const isSelected = settings.syncInterval === sec
+                    const isSelected = settings.syncInterval === sec && !isCustomSyncInterval
 
                     return (
                       <Pressable
@@ -237,7 +243,63 @@ export function SyncStrategySettings({
                       </Pressable>
                     )
                   })}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.gridOption,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.background
+                      },
+                      isCustomSyncInterval && {
+                        borderColor: colors.primary,
+                        backgroundColor: colors.primary + "20"
+                      },
+                      pressed && { opacity: 0.7 }
+                    ]}
+                    onPress={() => {
+                      if (!isCustomSyncInterval) {
+                        const customValue = 1800
+                        setSyncIntervalInput(customValue.toString())
+                        handleGridSelect("syncInterval", customValue)
+                      }
+                    }}
+                  >
+                    <Text style={[styles.gridLabel, { color: isCustomSyncInterval ? colors.primary : colors.text }]}>
+                      Custom
+                    </Text>
+                  </Pressable>
                 </View>
+
+                {isCustomSyncInterval && (
+                  <View style={styles.customSyncInput}>
+                    <NumericInput
+                      label="Custom Sync Interval"
+                      value={syncIntervalInput}
+                      onChange={(val) => {
+                        setSyncIntervalInput(val)
+                        const num = Number(val)
+                        if (!isNaN(num) && num >= 1) {
+                          const next = { ...settings, syncInterval: num, syncPreset: "custom" as const }
+                          onDebouncedSave(next)
+                        }
+                      }}
+                      onBlur={() => {
+                        let val = Number(syncIntervalInput)
+                        if (isNaN(val) || val < 1) {
+                          val = 1
+                          setSyncIntervalInput("1")
+                          const next = { ...settings, syncInterval: val, syncPreset: "custom" as const }
+                          onSettingsChange(next)
+                          onImmediateSave(next)
+                        }
+                      }}
+                      unit="seconds"
+                      placeholder="1800"
+                      hint="Custom interval in seconds"
+                      colors={colors}
+                    />
+                  </View>
+                )}
               </View>
 
               {/* Retry Forever Toggle */}
@@ -425,7 +487,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap"
   },
   gridOption: {
-    minWidth: "22%",
+    flex: 1,
     borderWidth: 2,
     borderRadius: 10,
     paddingVertical: 14,
@@ -462,5 +524,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingLeft: 16,
     borderLeftWidth: 3
+  },
+  customSyncInput: {
+    marginTop: 12
   }
 })
