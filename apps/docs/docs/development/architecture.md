@@ -150,20 +150,20 @@ Centralized constants for condition type strings (`charging`, `android_auto`, `s
 
 ### SecureStorageHelper
 
-Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credential storage (Basic Auth passwords, Bearer tokens, custom headers).
+Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (AES-256-GCM for values, AES-256-SIV for keys). Stores Basic Auth passwords, Bearer tokens, and custom headers.
 
 ### Other Modules
 
-| Module                 | Purpose                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------ |
-| `LocationBootReceiver` | Auto-restarts tracking after device reboot                                                 |
-| `DeviceInfoHelper`     | Device metadata and battery status with caching                                            |
-| `FileOperations`       | File I/O, sharing via FileProvider, and clipboard access                                   |
-| `PayloadBuilder`       | Builds JSON payloads with dynamic field mapping                                            |
-| `ServiceConfig`        | Centralized configuration data class                                                       |
-| `TimedCache`           | Generic TTL cache used for queue count and device info                                     |
-| `BuildConfigModule`    | Exposes build constants (SDK versions, app version) to JS                                  |
-| `AppLogger`            | Centralized logger - logs when debug mode is enabled or in debug builds, errors always log |
+| Module                 | Purpose                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------- |
+| `LocationBootReceiver` | Auto-restarts tracking after device reboot                                                  |
+| `DeviceInfoHelper`     | Device metadata and battery status with caching                                             |
+| `FileOperations`       | File I/O, sharing via FileProvider, and clipboard access                                    |
+| `PayloadBuilder`       | Builds JSON payloads with dynamic field mapping                                             |
+| `ServiceConfig`        | Centralized configuration data class                                                        |
+| `TimedCache`           | Generic TTL cache used for queue count, device info, geofences, profiles, and network state |
+| `BuildConfigModule`    | Exposes build constants (SDK versions, app version) to JS                                   |
+| `AppLogger`            | Centralized logger - logs when debug mode is enabled or in debug builds, errors always log  |
 
 ## React Native Layer
 
@@ -178,7 +178,7 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 | `GeofenceScreen` | Create, edit, and delete pause zones on an interactive map |
 | `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
 | `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
-| `LocationHistoryScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards and export |
+| `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards and export |
 | `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, and per-trip export |
 | `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
 | `ExportDataScreen` | Export all tracked locations as CSV, GeoJSON, GPX, or KML |
@@ -194,6 +194,7 @@ Wraps Android's `EncryptedSharedPreferences` for AES-256-GCM encrypted credentia
 | `LocationServicePermission` | Sequential Android permission requests (fine location → background location → notifications → battery exemption) |
 | `ProfileService` | Thin wrapper over `NativeLocationService` for tracking profile CRUD and trip event queries |
 | `SettingsService` | Bridges UI state to native SQLite with type conversion (seconds↔ms, objects↔JSON) |
+| `modalService` | Centralized alert and confirm dialogs via `showAlert()` and `showConfirm()` |
 
 ### Map Components
 

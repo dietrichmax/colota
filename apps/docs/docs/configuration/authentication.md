@@ -21,7 +21,7 @@ Colota supports multiple authentication methods, configurable in **Settings > Au
 
 ## Credential Storage
 
-All credentials are stored encrypted on-device using **AES-256-GCM** via Android's `EncryptedSharedPreferences`. Credentials never leave the device except as HTTP headers sent to your configured endpoint.
+All credentials are stored encrypted on-device using Android's `EncryptedSharedPreferences`. Credentials never leave the device except as HTTP headers sent to your configured endpoint.
 
 ## Custom HTTP Headers
 

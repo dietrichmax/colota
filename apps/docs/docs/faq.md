@@ -32,7 +32,7 @@ To ensure modifications stay open source, especially server-side components.
 
 ### Can I export my location history?
 
-Yes. Go to **Data Management > Export Data** to export in CSV, GeoJSON, GPX, or KML. See [Data Export](/docs/guides/data-export) for details.
+Yes. Tap **Export** on the Dashboard to export in CSV, GeoJSON, GPX, or KML. See [Data Export](/docs/guides/data-export) for details.
 
 ### What happens when the phone restarts?
 

@@ -138,7 +138,7 @@ colota/
 │           ├── colors.ts            # Theme color definitions
 │           ├── typography.ts        # Font family and sizes
 │           └── index.ts             # Barrel exports
-├── scripts/                         # Version bump and screenshot sync
+├── scripts/                         # Screenshot sync
 └── screenshots/
     └── mobile/original/             # Screenshot source of truth
 ```
@@ -203,16 +203,6 @@ npx -w @colota/mobile tsc --noEmit    # TypeScript type check
 1. Edit `packages/shared/src/colors.ts`
 2. Run `npm run build` in `packages/shared/`
 3. Both the mobile app and docs site will pick up the changes
-
-### Bumping the Version
-
-Use the version bump script to update all packages and the Android build in one command:
-
-```bash
-npm run version:bump 1.2.0
-```
-
-This updates `version` in all `package.json` files, `versionName` in `build.gradle`, and auto-increments `versionCode`.
 
 ### Syncing Screenshots
 

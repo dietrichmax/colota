@@ -32,4 +32,4 @@ Only records a new location if you've moved at least this many meters since the 
 
 When enabled, GPS fixes with accuracy worse than the threshold are discarded. This prevents recording poor-quality positions from indoor or urban environments.
 
-Colota uses Android's `HIGH_ACCURACY` positioning mode, which combines GPS, Wi-Fi, and cellular data.
+The Google Play variant uses Android's `HIGH_ACCURACY` positioning mode via FusedLocationProvider, which combines GPS, Wi-Fi, and cellular data. The FOSS variant uses Android's native `LocationManager` with `GPS_PROVIDER` directly.

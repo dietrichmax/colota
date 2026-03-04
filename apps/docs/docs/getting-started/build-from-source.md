@@ -25,7 +25,7 @@ cd apps/mobile/android
 ./gradlew assembleGmsRelease
 ```
 
-Output: `app/build/outputs/apk/gms/release/app-gms-release.apk`
+Output: `app/build/outputs/apk/gms/release/app-gms-arm64-v8a-release.apk` (per-ABI)
 
 ### FOSS variant (no Google Play Services)
 
@@ -33,7 +33,7 @@ Output: `app/build/outputs/apk/gms/release/app-gms-release.apk`
 ./gradlew assembleFossRelease
 ```
 
-Output: `app/build/outputs/apk/foss/release/app-foss-release.apk`
+Output: `app/build/outputs/apk/foss/release/app-foss-arm64-v8a-release.apk` (per-ABI)
 
 ### Build both
 
@@ -53,4 +53,4 @@ npm start          # Start Metro bundler
 npm run android    # Build and install on connected device
 ```
 
-Use `npm run android:debug:foss` to build and run the FOSS variant instead.
+Use `npm run android:foss` to build and run the FOSS variant instead.

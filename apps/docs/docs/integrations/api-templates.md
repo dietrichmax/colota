@@ -10,7 +10,7 @@ Colota includes built-in templates for popular backends. Select a template in **
 | -------------- | ----------- | ------------- | -------------------------------- | --------------------------------- |
 | **Dawarich**   | POST        | `cog`         | `_type: "location"`              | OwnTracks-compatible format       |
 | **OwnTracks**  | POST        | `cog`         | `_type: "location"`, `tid: "AA"` | Standard OwnTracks HTTP format    |
-| **PhoneTrack** | POST        | `bearing`     | `_type: "location"`              | Nextcloud PhoneTrack format       |
+| **PhoneTrack** | POST        | `bearing`     | `useragent: "Colota"`            | Nextcloud PhoneTrack format       |
 | **Reitti**     | POST        | `bear`        | `_type: "location"`              | Standard field names              |
 | **Traccar**    | GET         | `bearing`     | `id: "colota"`                   | OsmAnd protocol with query params |
 | **Custom**     | POST        | `bear`        | _(none)_                         | Fully user-defined                |

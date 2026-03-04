@@ -24,7 +24,7 @@ The PhoneTrack template auto-configures the following payload:
 
 ```json
 {
-  "_type": "location",
+  "useragent": "Colota",
   "lat": 51.495065,
   "lon": -0.043945,
   "acc": 12,
