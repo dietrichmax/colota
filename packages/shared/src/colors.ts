@@ -110,7 +110,7 @@ export const lightColors: ThemeColors = {
   link: "#115E59",
   linkVisited: "#134E4A",
   overlay: "rgba(0, 0, 0, 0.5)",
-  shadow: "rgba(0, 0, 0, 0.08)",
+  shadow: "rgba(0, 0, 0, 0.1)",
 
   // Special
   transparent: "transparent",
@@ -142,11 +142,11 @@ export const darkColors: ThemeColors = {
   infoLight: "#BBDEFB",
 
   // UI
-  background: "#0f1117",
-  backgroundElevated: "#161825",
-  card: "#1a1d2e",
-  cardElevated: "#222640",
-  surface: "#161825",
+  background: "#121212",
+  backgroundElevated: "#1E1E1E",
+  card: "#2D2D2D",
+  cardElevated: "#3D3D3D",
+  surface: "#1E1E1E",
 
   // Text
   text: "#E8EAED",
@@ -155,19 +155,19 @@ export const darkColors: ThemeColors = {
   textDisabled: "#666666",
 
   // Border & divider
-  border: "#2a2d3a",
-  borderLight: "#1f2233",
-  divider: "#2a2d3a",
+  border: "#424242",
+  borderLight: "#333333",
+  divider: "#333333",
 
   // Interactive
   placeholder: "#AAAAAA",
   link: "#2DD4BF",
   linkVisited: "#14B8A6",
   overlay: "rgba(0, 0, 0, 0.7)",
-  shadow: "rgba(0, 0, 0, 0.25)",
+  shadow: "rgba(0, 0, 0, 0.3)",
 
   // Special
   transparent: "transparent",
   borderRadius: 8,
-  textOnPrimary: "#0f1117"
+  textOnPrimary: "#121212"
 }
