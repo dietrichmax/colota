@@ -22,6 +22,8 @@ Yes. The **FOSS variant** (available on F-Droid and GitHub Releases) uses Androi
 
 The Google Play variant uses `FusedLocationProvider` for potentially better location accuracy through Wi-Fi and cell tower fusion.
 
+**GrapheneOS users:** You can use the GMS variant with sandboxed Google Play. GrapheneOS reroutes location requests to its own reimplementation of the Play geolocation service, so you get the accuracy benefits of `FusedLocationProvider` without sending location data to Google.
+
 ### Why AGPL-3.0?
 
 To ensure modifications stay open source, especially server-side components.

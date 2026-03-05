@@ -14,7 +14,9 @@ The Google Play version uses Google Play Services for location (FusedLocationPro
 
 [Get it on F-Droid](https://f-droid.org/packages/com.Colota/)
 
-The F-Droid version uses Android's native LocationManager and has **no Google Play Services dependency**. This is the recommended option for devices running LineageOS, GrapheneOS, CalyxOS, or any ROM without Google services.
+The F-Droid version uses Android's native LocationManager and has **no Google Play Services dependency**. This is the recommended option for devices running LineageOS, CalyxOS, or any ROM without Google services.
+
+**GrapheneOS users:** You can use the Google Play variant with sandboxed Google Play. GrapheneOS reroutes location requests to its own reimplementation of the Play geolocation service, so you get the accuracy benefits of FusedLocationProvider without sending location data to Google.
 
 ## From GitHub Releases
 
