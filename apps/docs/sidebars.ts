@@ -31,6 +31,7 @@ const sidebars: SidebarsConfig = {
         "integrations/dawarich",
         "integrations/home-assistant",
         "integrations/owntracks",
+        "integrations/geopulse",
         "integrations/reitti",
         "integrations/phonetrack",
         "integrations/traccar",
