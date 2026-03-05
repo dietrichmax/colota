@@ -128,6 +128,16 @@ class LocationForegroundService : Service() {
             loadConfigFromIntent(null)
         }
 
+        // Restore pause zone state so restarts don't trigger duplicate anchor points
+        if (!insidePauseZone) {
+            val savedZone = savedSettings["pause_zone_name"]
+            if (!savedZone.isNullOrBlank()) {
+                insidePauseZone = true
+                currentZoneName = savedZone
+                AppLogger.d(TAG, "Restored pause zone state: $savedZone")
+            }
+        }
+
         // Must call startForeground within 5s
         val initialStatus = notificationHelper.getInitialStatus(
             insidePauseZone, currentZoneName, lastKnownLocation
@@ -442,6 +452,7 @@ class LocationForegroundService : Service() {
         insidePauseZone = true
         currentZoneName = geofence.name
         currentZoneGeofence = geofence
+        dbHelper.saveSetting("pause_zone_name", geofence.name)
 
         val loc = lastKnownLocation
         updateNotification(
@@ -465,6 +476,7 @@ class LocationForegroundService : Service() {
         insidePauseZone = false
         currentZoneName = null
         currentZoneGeofence = null
+        dbHelper.saveSetting("pause_zone_name", "")
 
         val anchorJob = exitedGeofence?.let { saveAnchorPoint(it) }
 
@@ -557,6 +569,7 @@ class LocationForegroundService : Service() {
 
         LocationServiceModule.sendTrackingStoppedEvent(reason)
         dbHelper.saveSetting("tracking_enabled", "false")
+        dbHelper.saveSetting("pause_zone_name", "")
 
         stopForeground(Service.STOP_FOREGROUND_DETACH)
 
