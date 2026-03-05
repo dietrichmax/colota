@@ -96,7 +96,7 @@ export interface CustomField {
 
 export type HttpMethod = "POST" | "GET"
 
-export type ApiTemplateName = "custom" | "dawarich" | "owntracks" | "phonetrack" | "reitti" | "traccar"
+export type ApiTemplateName = "custom" | "dawarich" | "geopulse" | "owntracks" | "phonetrack" | "reitti" | "traccar"
 
 export interface ApiTemplate {
   name: ApiTemplateName
@@ -108,6 +108,23 @@ export interface ApiTemplate {
 }
 
 export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTemplate> = {
+  geopulse: {
+    name: "geopulse",
+    label: "GeoPulse",
+    description: "Native Colota format for GeoPulse",
+    fieldMap: {
+      lat: "lat",
+      lon: "lon",
+      acc: "acc",
+      alt: "alt",
+      vel: "vel",
+      batt: "batt",
+      bs: "bs",
+      tst: "tst",
+      bear: "bear"
+    },
+    customFields: []
+  },
   dawarich: {
     name: "dawarich",
     label: "Dawarich",

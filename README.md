@@ -14,7 +14,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 
 ## Features
 
-- **Self-Hosted** - Send location data to your own server. Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant, or any custom backend.
+- **Self-Hosted** - Send location data to your own server. Works with GeoPulse, Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant, or any custom backend.
 - **Privacy First** - No analytics, no telemetry, no third-party SDKs. Open source (AGPL-3.0).
 - **Works Offline** - Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
 - **Location History** - View daily summaries, trip segmentation, calendar with activity dots, and per-trip export.
@@ -71,7 +71,7 @@ For full setup, server configuration, and integration guides, see the [documenta
 
 ## Documentation
 
-Full docs at **[colota.app](https://colota.app)** covers configuration, server integration (Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant, and custom backends), geofencing, data export, API reference, battery optimization, troubleshooting, and development setup.
+Full docs at **[colota.app](https://colota.app)** covers configuration, server integration (GeoPulse, Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant, and custom backends), geofencing, data export, API reference, battery optimization, troubleshooting, and development setup.
 
 ## Build from Source
 
