@@ -15,7 +15,7 @@ on:
       - '.github/workflows/lint-test.yml'
       - '.github/workflows/pr-labeler.yml'
       - '.github/workflows/dependency-updates.yml'
-      - '**/fastlane/**'
+      - 'fastlane/**'
   workflow_dispatch:
 
 permissions:
