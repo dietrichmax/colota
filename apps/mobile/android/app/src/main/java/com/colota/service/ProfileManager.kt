@@ -76,6 +76,9 @@ class ProfileManager(
 
     fun getActiveProfileName(): String? = activeProfile?.name
 
+    fun getNeededConditionTypes(): Set<String> =
+        profileHelper.getEnabledProfiles().map { it.conditionType }.toSet()
+
     /**
      * Re-evaluates all enabled profiles against current conditions.
      * Must handle concurrent calls from location updates, broadcasts, and service actions.

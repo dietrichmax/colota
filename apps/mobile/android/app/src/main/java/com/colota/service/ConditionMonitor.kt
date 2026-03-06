@@ -43,14 +43,19 @@ class ConditionMonitor(
         // Unregister first to prevent duplicate observers on repeated start() calls
         stop()
 
-        registerChargingMonitor()
-        startCarConnectionMonitor()
+        val needed = profileManager.getNeededConditionTypes()
 
-        // Read initial charging state
-        val charging = readCurrentChargingState()
-        profileManager.onChargingStateChanged(charging)
+        if (ProfileConstants.CONDITION_CHARGING in needed) {
+            registerChargingMonitor()
+            val charging = readCurrentChargingState()
+            profileManager.onChargingStateChanged(charging)
+        }
 
-        AppLogger.d(TAG, "Condition monitors started - charging: $charging")
+        if (ProfileConstants.CONDITION_ANDROID_AUTO in needed) {
+            startCarConnectionMonitor()
+        }
+
+        AppLogger.d(TAG, "Condition monitors started for: ${needed.ifEmpty { setOf("none") }}")
     }
 
     fun stop() {
@@ -91,18 +96,22 @@ class ConditionMonitor(
     }
 
     private fun startCarConnectionMonitor() {
-        val connection = CarConnection(context)
-        carConnection = connection
+        try {
+            val connection = CarConnection(context)
+            carConnection = connection
 
-        val observer = Observer<Int> { connectionType ->
-            val connected = connectionType != CarConnection.CONNECTION_TYPE_NOT_CONNECTED
-            AppLogger.d(TAG, "CarConnection type: $connectionType (connected: $connected)")
-            profileManager.onCarModeStateChanged(connected)
-        }
-        carConnectionObserver = observer
+            val observer = Observer<Int> { connectionType ->
+                val connected = connectionType != CarConnection.CONNECTION_TYPE_NOT_CONNECTED
+                AppLogger.d(TAG, "CarConnection type: $connectionType (connected: $connected)")
+                profileManager.onCarModeStateChanged(connected)
+            }
+            carConnectionObserver = observer
 
-        mainHandler.post {
-            connection.type.observeForever(observer)
+            mainHandler.post {
+                connection.type.observeForever(observer)
+            }
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "CarConnection unavailable: ${e.message}")
         }
     }
 
