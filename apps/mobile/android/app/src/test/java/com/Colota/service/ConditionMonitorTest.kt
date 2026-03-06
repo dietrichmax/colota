@@ -50,6 +50,12 @@ class ConditionMonitorTest {
 
         monitor = createMonitor()
 
+        // By default, return all condition types so monitors are started
+        every { mockProfileManager.getNeededConditionTypes() } returns setOf(
+            ProfileConstants.CONDITION_CHARGING,
+            ProfileConstants.CONDITION_ANDROID_AUTO
+        )
+
         mockkObject(AppLogger)
         every { AppLogger.d(any(), any()) } just Runs
         every { AppLogger.i(any(), any()) } just Runs
