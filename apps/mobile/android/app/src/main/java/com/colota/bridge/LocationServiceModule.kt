@@ -908,10 +908,14 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     fun getNativeLogs(promise: Promise) = executeAsync(promise) {
         val pid = android.os.Process.myPid()
         val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "threadtime", "--pid=$pid"))
-        val lines = process.inputStream.bufferedReader().readLines()
-        process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
-        Arguments.createArray().apply {
-            lines.filter { "Colota." in it }.forEach { pushString(it) }
+        try {
+            val lines = process.inputStream.bufferedReader().readLines()
+            process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
+            Arguments.createArray().apply {
+                lines.filter { "Colota." in it }.forEach { pushString(it) }
+            }
+        } finally {
+            process.destroy()
         }
     }
 }

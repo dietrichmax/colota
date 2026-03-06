@@ -11,7 +11,7 @@ package com.Colota.util
  * @param ttlMs Time-to-live in milliseconds before the cached value is refreshed
  * @param loader Function that produces a fresh value when the cache is stale
  */
-class TimedCache<T>(
+class TimedCache<T : Any>(
     private val ttlMs: Long,
     private val loader: () -> T
 ) {
