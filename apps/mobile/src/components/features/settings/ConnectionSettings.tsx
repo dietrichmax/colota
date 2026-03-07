@@ -13,6 +13,7 @@ import { ensureLocalNetworkPermission } from "../../../services/LocationServiceP
 import { fonts } from "../../../styles/typography"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { CONNECTION_TEST_TIMEOUT, TEST_RESULT_DISPLAY_MS } from "../../../constants"
+import { logger } from "../../../utils/logger"
 import { Button, Card, SectionTitle, Divider } from "../../index"
 
 interface ConnectionSettingsProps {
@@ -113,17 +114,21 @@ export function ConnectionSettings({
         setTestResponse("Connection successful")
         onSettingsChange({ ...settings, endpoint: endpointInput })
       } else {
-        setTestResponse(`Failed: ${response.status}`)
+        logger.warn("[ConnectionSettings] Test failed: HTTP", response.status)
+        setTestResponse(`Server returned ${response.status} ${response.statusText || ""}`.trim())
         setTestError(true)
       }
     } catch (err: any) {
-      const msg = err.message?.toLowerCase() || ""
-      const userMessage =
-        err.name === "AbortError"
-          ? "Connection timed out"
-          : msg.includes("network request failed")
-            ? "No internet connection"
-            : "Connection failed"
+      const msg = err.message || ""
+      let userMessage: string
+      if (err.name === "AbortError") {
+        userMessage = `Connection timed out - server did not respond within ${CONNECTION_TEST_TIMEOUT / 1000}s`
+      } else if (msg.toLowerCase().includes("network request failed")) {
+        userMessage = "Network request failed - check your URL, connection, and SSL certificate"
+      } else {
+        userMessage = `Connection failed: ${msg || "Unknown error"}`
+      }
+      logger.warn("[ConnectionSettings] Test failed:", err.name, msg)
       setTestResponse(userMessage)
       setTestError(true)
     } finally {
