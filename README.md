@@ -80,7 +80,8 @@ Full docs at **[colota.app](https://colota.app)** covers configuration, server i
 ```bash
 git clone https://github.com/dietrichmax/colota.git
 cd colota
-npm install
+npm ci
+npm run build -w @colota/shared
 cd apps/mobile/android
 ./gradlew assembleGmsRelease    # Google Play variant
 ./gradlew assembleFossRelease   # F-Droid variant (no Google Play Services)
