@@ -1,0 +1,8 @@
+- Added custom sync interval option to settings
+- Improved connection test error messages and diagnostic logging
+- Fixed duplicate geofence anchor points on settings change
+- Fixed condition monitors starting without matching profiles
+- Reverted dark theme to neutral grays
+- Improved FOSS build reproducibility
+- Reduced APK size with legacy JNI packaging and resource shrinking
+- Removed unused NEARBY_WIFI_DEVICES permission
