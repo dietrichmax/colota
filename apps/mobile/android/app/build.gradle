@@ -171,7 +171,8 @@ android {
     splits {
         abi {
             reset()
-            enable true
+            // Disable ABI splits for bundle tasks (AABs handle this natively)
+            enable !gradle.startParameter.taskNames.any { it.toLowerCase().contains("bundle") }
             universalApk false
             include "arm64-v8a", "armeabi-v7a", "x86_64", "x86"
         }
