@@ -122,7 +122,7 @@ export function ConnectionSettings({
       const msg = err.message || ""
       let userMessage: string
       if (err.name === "AbortError") {
-        userMessage = "Connection timed out - server did not respond within 10s"
+        userMessage = `Connection timed out - server did not respond within ${CONNECTION_TEST_TIMEOUT / 1000}s`
       } else if (msg.toLowerCase().includes("network request failed")) {
         userMessage = "Network request failed - check your URL, connection, and SSL certificate"
       } else {
