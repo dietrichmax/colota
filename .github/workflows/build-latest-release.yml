@@ -73,7 +73,7 @@ jobs:
 
       - name: Pin dev server IP for reproducible builds
         run: |
-          sed -i 's/getHostIpAddress()/project.properties["reactNativeDevServerIp"]?.toString() ?: "localhost"/' \
+          sed -i '/react_native_dev_server_ip/s/getHostIpAddress()/project.properties["reactNativeDevServerIp"]?.toString() ?: "localhost"/' \
             node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
 
       - name: Append signing config to gradle.properties
