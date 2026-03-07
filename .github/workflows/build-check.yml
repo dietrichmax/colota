@@ -46,30 +46,18 @@ jobs:
       - name: Build shared package
         run: npm run build -w @colota/shared
 
-      - name: Create gradle.properties
-        run: |
-          cat <<EOF > apps/mobile/android/gradle.properties
-          org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m
-          android.useAndroidX=true
-          hermesEnabled=true
-          newArchEnabled=true
-          EOF
-
       - name: Run Kotlin unit tests
         run: |
           cd apps/mobile/android
           chmod +x gradlew
-          ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon \
-            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+          ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon
 
       - name: Build GMS Debug APK
         run: |
           cd apps/mobile/android
-          ./gradlew assembleGmsDebug --no-daemon \
-            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+          ./gradlew assembleGmsDebug --no-daemon
 
       - name: Build FOSS Debug APK
         run: |
           cd apps/mobile/android
-          ./gradlew assembleFossDebug --no-daemon \
-            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+          ./gradlew clean assembleFossDebug --no-daemon
