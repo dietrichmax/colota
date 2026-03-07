@@ -19,7 +19,7 @@ sidebar_position: 2
 ```bash
 git clone https://github.com/dietrichmax/colota.git
 cd colota
-npm install
+npm ci
 ```
 
 This installs dependencies for all workspace packages (`apps/mobile`, `apps/docs`, `packages/shared`).
@@ -29,8 +29,7 @@ This installs dependencies for all workspace packages (`apps/mobile`, `apps/docs
 The shared package must be compiled before other packages can use it:
 
 ```bash
-cd packages/shared
-npm run build
+npm run build -w @colota/shared
 ```
 
 This runs `tsc` and outputs compiled JavaScript to `packages/shared/dist/`.

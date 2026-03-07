@@ -63,16 +63,14 @@ jobs:
       - name: Build shared package
         run: npm run build -w @colota/shared
 
-      - name: Create gradle.properties
+      - name: Pin dev server IP for reproducible builds
+        run: |
+          sed -i 's/getHostIpAddress()/project.properties["reactNativeDevServerIp"]?.toString() ?: "localhost"/' \
+            node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
+
+      - name: Append signing config to gradle.properties
         run: |
           cat <<EOF >> apps/mobile/android/gradle.properties
-          org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m
-          android.useAndroidX=true
-          android.enableJetifier=true
-          hermesEnabled=true
-          newArchEnabled=true
-          reactNativeArchitectures=arm64-v8a,armeabi-v7a
-
           MYAPP_UPLOAD_STORE_FILE=release.keystore
           MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.KEY_ALIAS }}
@@ -95,24 +93,17 @@ jobs:
         run: |
           cd apps/mobile/android
           chmod +x gradlew
-          ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon \
-            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+          ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon
 
       - name: Build GMS Release APKs
         run: |
           cd apps/mobile/android
-          ./gradlew assembleGmsRelease --no-daemon \
-            -PhermesEnabled=true \
-            -Pandroid.useAndroidX=true \
-            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+          ./gradlew assembleGmsRelease --no-daemon
 
       - name: Build FOSS Release APKs
         run: |
           cd apps/mobile/android
-          ./gradlew assembleFossRelease --no-daemon \
-            -PhermesEnabled=true \
-            -Pandroid.useAndroidX=true \
-            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m"
+          ./gradlew clean assembleFossRelease --no-daemon
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
