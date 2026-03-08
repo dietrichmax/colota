@@ -152,6 +152,12 @@ jest.mock("../../utils/logger", () => ({
   logger: { debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn() }
 }))
 
+jest.mock("../../utils/geo", () => ({
+  formatShortDistance: (meters: number) => `${Math.round(meters)}m`,
+  shortDistanceUnit: () => "m",
+  inputToMeters: (value: number) => value
+}))
+
 import { GeofenceScreen } from "../GeofenceScreen"
 
 // --- Test data ---
