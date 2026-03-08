@@ -181,6 +181,7 @@ class LocationForegroundService : Service() {
             }
             ACTION_RECHECK_PROFILES -> {
                 profileManager.invalidateProfiles()
+                conditionMonitor.start()
                 profileManager.evaluate()
                 return START_STICKY
             }
