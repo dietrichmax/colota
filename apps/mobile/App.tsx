@@ -29,11 +29,13 @@ import {
   TripDetailScreen
 } from "./src/screens/"
 import NativeLocationService from "./src/services/NativeLocationService"
+import { loadDisplayPreferences } from "./src/utils/geo"
 import { setLogCollecting } from "./src/utils/logger"
 
 MapLibreGL.setAccessToken(null)
 
-// Enable log collection early if debug mode was previously enabled
+// Load display preferences and enable log collection early
+loadDisplayPreferences()
 NativeLocationService.getSetting("debug_mode_enabled", "false").then((v) => {
   if (v === "true") setLogCollecting(true)
 })

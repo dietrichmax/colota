@@ -13,12 +13,14 @@ import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
 import { fonts } from "../styles/typography"
-import { SectionTitle, Card, Container, Divider } from "../components"
+import { SectionTitle, Card, Container, Divider, SettingRow } from "../components"
 import { ChevronRight } from "lucide-react-native"
 import { StatsCard } from "../components"
 import { logger } from "../utils/logger"
 import { ConnectionSettings } from "../components/features/settings/ConnectionSettings"
 import { SyncStrategySettings } from "../components/features/settings/SyncStrategySettings"
+import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
+import type { UnitSystem, TimeFormat } from "../utils/geo"
 
 /**
  * Settings screen for configuring location tracking.
@@ -35,6 +37,40 @@ export function SettingsScreen({ navigation }: ScreenProps) {
 
   // Endpoint input (managed here since ConnectionSettings needs it and we sync with settings)
   const [endpointInput, setEndpointInput] = useState(settings.endpoint || "")
+
+  // Display preferences (preselect from locale if not yet saved)
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>(getUnitSystem)
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>(getTimeFormat)
+
+  const toggleUnitSystem = useCallback(
+    async (imperial: boolean) => {
+      const value: UnitSystem = imperial ? "imperial" : "metric"
+      const prev = unitSystem
+      setUnitSystem(value)
+      try {
+        await NativeLocationService.saveSetting("unitSystem", value)
+        await loadDisplayPreferences()
+      } catch {
+        setUnitSystem(prev)
+      }
+    },
+    [unitSystem]
+  )
+
+  const toggleTimeFormat = useCallback(
+    async (use12h: boolean) => {
+      const value: TimeFormat = use12h ? "12h" : "24h"
+      const prev = timeFormat
+      setTimeFormat(value)
+      try {
+        await NativeLocationService.saveSetting("timeFormat", value)
+        await loadDisplayPreferences()
+      } catch {
+        setTimeFormat(prev)
+      }
+    },
+    [timeFormat]
+  )
 
   // Sync endpoint input with settings changes
   useEffect(() => {
@@ -126,10 +162,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>Appearance</SectionTitle>
           <Card>
-            <View style={styles.settingRow}>
-              <View style={styles.settingContent}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>Dark Mode</Text>
-              </View>
+            <SettingRow label="Dark Mode">
               <Switch
                 value={mode === "dark"}
                 onValueChange={toggleTheme}
@@ -139,7 +172,35 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                 }}
                 thumbColor={mode === "dark" ? colors.primary : colors.border}
               />
-            </View>
+            </SettingRow>
+
+            <Divider />
+
+            <SettingRow label="Imperial Units" hint="Use miles, feet, and mph">
+              <Switch
+                value={unitSystem === "imperial"}
+                onValueChange={toggleUnitSystem}
+                trackColor={{
+                  false: colors.border,
+                  true: colors.primary + "80"
+                }}
+                thumbColor={unitSystem === "imperial" ? colors.primary : colors.border}
+              />
+            </SettingRow>
+
+            <Divider />
+
+            <SettingRow label="12-Hour Time" hint="Use AM/PM instead of 24-hour format">
+              <Switch
+                value={timeFormat === "12h"}
+                onValueChange={toggleTimeFormat}
+                trackColor={{
+                  false: colors.border,
+                  true: colors.primary + "80"
+                }}
+                thumbColor={timeFormat === "12h" ? colors.primary : colors.border}
+              />
+            </SettingRow>
           </Card>
         </View>
 
@@ -210,21 +271,6 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24
-  },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4
-  },
-  settingContent: {
-    flex: 1,
-    marginRight: 16
-  },
-  settingLabel: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
   },
   linkRow: {
     flexDirection: "row",
