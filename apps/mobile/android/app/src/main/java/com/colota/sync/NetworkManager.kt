@@ -134,7 +134,7 @@ class NetworkManager(private val context: Context) {
             }
         } catch (e: java.net.SocketException) {
             if (isPrivateHost(url.host ?: "") && e.message?.contains("EPERM") == true) {
-                AppLogger.e(TAG, "Local network access denied - grant Nearby Devices permission", e)
+                AppLogger.e(TAG, "Local network access denied - grant Local Network Access permission", e)
             } else {
                 AppLogger.e(TAG, "Network error: ${e.message}", e)
             }

@@ -18,7 +18,7 @@ These are the permissions Colota uses and why. None are related to analytics, ad
 | Network State                  | Yes         | Check connectivity before syncing                 |
 | Boot Completed                 | Yes         | Auto-restart tracking after device reboot         |
 | Notifications                  | Android 13+ | Display the foreground service notification       |
-| Nearby Wi-Fi Devices           | Android 17+ | Access local network servers (self-hosted)        |
+| Local Network Access           | Android 17+ | Access local network servers (self-hosted)        |
 | Battery Optimization Exemption | Optional    | Prevent Android from killing the tracking service |
 
 ## Permission Request Flow
@@ -80,13 +80,15 @@ android.permission.POST_NOTIFICATIONS
 
 Starting with Android 13, apps must request notification permission explicitly. Colota needs this for the foreground service notification. If denied, the service may still run but with reduced reliability depending on the Android version.
 
-### Local Network (Nearby Wi-Fi Devices)
+### Local Network Access
 
 ```
-android.permission.NEARBY_WIFI_DEVICES
+android.permission.ACCESS_LOCAL_NETWORK
 ```
 
-Starting with Android 17, apps need this permission to connect to other devices on the local network. Colota requests it when you use **Test Connection** with a private/local IP endpoint (e.g. `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`, or `100.64.x.x`). Loopback addresses (`localhost` / `127.0.0.1`) do not require this permission. The `neverForLocation` flag is set, indicating this permission is not used to derive location, only for network access. If your server is a public HTTPS endpoint, this permission is never requested.
+Starting with Android 17, apps need this permission to connect to devices on the local network. Colota requests it when you use **Test Connection** with a private/local IP endpoint (e.g. `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`, or `100.64.x.x`). Loopback addresses (`localhost` / `127.0.0.1`) do not require this permission. If your server is a public HTTPS endpoint, this permission is never requested.
+
+:::note Android 16 On some Android 16 devices, local network access may be enforced early via security patches. In this case, Android uses the **Nearby Wi-Fi Devices** (`NEARBY_WIFI_DEVICES`) permission instead. If your local server is unreachable on Android 16, go to **Android Settings > Apps > Colota > Permissions** and enable **Nearby devices** manually. :::
 
 ### Battery Optimization
 

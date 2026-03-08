@@ -25,7 +25,7 @@ sidebar_position: 4
 4. Verify network connectivity
 5. Check the queue count in **Data Management**
 
-**Common causes**: Wrong URL, HTTPS required for non-localhost, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed certificate (not supported), **Wi-Fi Only Sync** enabled while on cellular data, missing local network permission on Android 17+.
+**Common causes**: Wrong URL, HTTPS required for non-localhost, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed certificate (not supported), **Wi-Fi Only Sync** enabled while on cellular data, missing local network permission on Android 16+.
 
 ## Exporting app logs
 
@@ -58,15 +58,18 @@ Key log tags:
 
 You can also use the **Location History** screen in the app to see recorded locations on a track map or as a list with their accuracy and timestamps.
 
-## Local server not reachable (Android 17+)
+## Local server not reachable (Android 16+)
 
-On Android 17 and later, connecting to local/private network addresses requires the **Nearby Wi-Fi Devices** permission. Colota requests this automatically when you test a local endpoint.
+Starting with Android 17, connecting to local/private network addresses requires the **Local Network Access** permission. Colota requests this automatically when you test a local endpoint.
+
+On some Android 16 devices, this may already be enforced via security patches using the **Nearby Wi-Fi Devices** permission instead.
 
 If sync to a local server stopped working after an Android update:
 
 1. Go to **Android Settings > Apps > Colota > Permissions**
-2. Grant the **Nearby devices** permission
-3. Use the **Test Connection** button to verify
+2. On Android 17+: Grant the **Local network access** permission
+3. On Android 16: Grant the **Nearby devices** permission
+4. Use the **Test Connection** button to verify
 
 If you denied the permission and the system no longer shows the dialog, reset it from Android Settings.
 
