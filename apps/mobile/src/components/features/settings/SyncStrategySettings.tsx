@@ -8,10 +8,9 @@ import { Text, StyleSheet, Switch, View, Pressable } from "react-native"
 import { Lightbulb } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SyncPreset, SelectablePreset, ThemeColors } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
-import { SectionTitle, Card, Divider, NumericInput } from "../../index"
+import { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } from "../../../constants"
+import { SectionTitle, Card, Divider, NumericInput, SettingRow } from "../../index"
 import { PresetOption } from "./PresetOption"
-
-const SYNC_PRESETS: readonly number[] = [0, 60, 300, 900]
 
 interface SyncStrategySettingsProps {
   settings: Settings
@@ -34,7 +33,7 @@ export function SyncStrategySettings({
   const [syncIntervalInput, setSyncIntervalInput] = useState(settings.syncInterval.toString())
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  const isCustomSyncInterval = !SYNC_PRESETS.includes(settings.syncInterval)
+  const isCustomSyncInterval = !SYNC_INTERVAL_PRESETS.includes(settings.syncInterval)
 
   // Sync inputs with settings changes (e.g. preset selection)
   useEffect(() => {
@@ -121,16 +120,11 @@ export function SyncStrategySettings({
     <View style={styles.section}>
       <SectionTitle>Tracking Configuration</SectionTitle>
       <Card>
-        <View style={styles.presetsContainer}>
+        <View accessibilityRole="radiogroup">
           {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map((preset, index) => (
             <View key={preset}>
-              <PresetOption
-                preset={preset}
-                isSelected={settings.syncPreset === preset}
-                onSelect={handlePresetSelect}
-                colors={colors}
-              />
-              {index < Object.keys(TRACKING_PRESETS).length - 1 && <View style={styles.presetSpacer} />}
+              {index > 0 && <View style={styles.presetSpacer} />}
+              <PresetOption preset={preset} isSelected={settings.syncPreset === preset} onSelect={handlePresetSelect} />
             </View>
           ))}
         </View>
@@ -138,7 +132,6 @@ export function SyncStrategySettings({
         <Pressable
           style={({ pressed }) => [
             styles.advancedToggle,
-            showAdvanced ? styles.advancedToggleActive : styles.advancedToggleInactive,
             { borderColor: showAdvanced ? colors.primary : colors.border },
             pressed && { opacity: 0.7 }
           ]}
@@ -211,15 +204,8 @@ export function SyncStrategySettings({
                 </Text>
 
                 <View style={styles.optionsGrid}>
-                  {SYNC_PRESETS.map((sec) => {
-                    const labels: Record<number, string> = {
-                      0: "Instant",
-                      60: "1 min",
-                      300: "5 min",
-                      900: "15 min"
-                    }
+                  {SYNC_INTERVAL_PRESETS.map((sec) => {
                     const isSelected = settings.syncInterval === sec && !isCustomSyncInterval
-
                     return (
                       <Pressable
                         key={sec}
@@ -238,7 +224,7 @@ export function SyncStrategySettings({
                         onPress={() => handleGridSelect("syncInterval", sec)}
                       >
                         <Text style={[styles.gridLabel, { color: isSelected ? colors.primary : colors.text }]}>
-                          {labels[sec]}
+                          {SYNC_INTERVAL_LABELS[sec]}
                         </Text>
                       </Pressable>
                     )
@@ -269,49 +255,48 @@ export function SyncStrategySettings({
                     </Text>
                   </Pressable>
                 </View>
-
-                {isCustomSyncInterval && (
-                  <View style={styles.customSyncInput}>
-                    <NumericInput
-                      label="Custom Sync Interval"
-                      value={syncIntervalInput}
-                      onChange={(val) => {
-                        setSyncIntervalInput(val)
-                        const num = Number(val)
-                        if (!isNaN(num) && num >= 1) {
-                          const next = { ...settings, syncInterval: num, syncPreset: "custom" as const }
-                          onDebouncedSave(next)
-                        }
-                      }}
-                      onBlur={() => {
-                        let val = Number(syncIntervalInput)
-                        if (isNaN(val) || val < 1) {
-                          val = 1
-                          setSyncIntervalInput("1")
-                          const next = { ...settings, syncInterval: val, syncPreset: "custom" as const }
-                          onSettingsChange(next)
-                          onImmediateSave(next)
-                        }
-                      }}
-                      unit="seconds"
-                      placeholder="1800"
-                      hint="Custom interval in seconds"
-                      colors={colors}
-                    />
-                  </View>
-                )}
               </View>
 
-              {/* Retry Forever Toggle */}
-              <View style={styles.settingRow}>
-                <View style={styles.settingContent}>
-                  <Text style={[styles.settingLabel, { color: colors.text }]}>Retry Failed Uploads</Text>
-                  <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
-                    {settings.maxRetries === 0
-                      ? "Failed uploads stay in the queue until they succeed"
-                      : "Failed uploads are permanently deleted after 5 failed send attempts"}
-                  </Text>
+              {isCustomSyncInterval && (
+                <View style={styles.customSyncInput}>
+                  <NumericInput
+                    label="Custom Sync Interval"
+                    value={syncIntervalInput}
+                    onChange={(val) => {
+                      setSyncIntervalInput(val)
+                      const num = Number(val)
+                      if (!isNaN(num) && num >= 1) {
+                        const next = { ...settings, syncInterval: num, syncPreset: "custom" as const }
+                        onDebouncedSave(next)
+                      }
+                    }}
+                    onBlur={() => {
+                      let val = Number(syncIntervalInput)
+                      if (isNaN(val) || val < 1) {
+                        val = 1
+                        setSyncIntervalInput("1")
+                        const next = { ...settings, syncInterval: val, syncPreset: "custom" as const }
+                        onSettingsChange(next)
+                        onImmediateSave(next)
+                      }
+                    }}
+                    unit="seconds"
+                    placeholder="1800"
+                    hint="Custom interval in seconds"
+                    colors={colors}
+                  />
                 </View>
+              )}
+
+              {/* Retry Forever Toggle */}
+              <SettingRow
+                label="Retry Failed Uploads"
+                hint={
+                  settings.maxRetries === 0
+                    ? "Failed uploads stay in the queue until they succeed"
+                    : "Failed uploads are permanently deleted after 5 failed send attempts"
+                }
+              >
                 <Switch
                   value={settings.maxRetries === 0}
                   onValueChange={(retryForever) => {
@@ -329,16 +314,14 @@ export function SyncStrategySettings({
                   }}
                   thumbColor={settings.maxRetries === 0 ? colors.primary : colors.border}
                 />
-              </View>
+              </SettingRow>
 
               {/* Wi-Fi Only Sync Toggle */}
-              <View style={[styles.settingRow, styles.settingRowSpaced]}>
-                <View style={styles.settingContent}>
-                  <Text style={[styles.settingLabel, { color: colors.text }]}>Wi-Fi Only Sync</Text>
-                  <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
-                    Only upload when connected to Wi-Fi
-                  </Text>
-                </View>
+              <SettingRow
+                label="Wi-Fi Only Sync"
+                hint="Only upload when connected to Wi-Fi"
+                style={styles.settingRowSpaced}
+              >
                 <Switch
                   value={settings.isWifiOnlySync}
                   onValueChange={(value) => {
@@ -356,7 +339,7 @@ export function SyncStrategySettings({
                   }}
                   thumbColor={settings.isWifiOnlySync ? colors.primary : colors.border}
                 />
-              </View>
+              </SettingRow>
             </View>
 
             <Divider />
@@ -365,13 +348,7 @@ export function SyncStrategySettings({
             <View style={styles.paramGroup}>
               <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Quality Filters</Text>
 
-              <View style={styles.settingRow}>
-                <View style={styles.settingContent}>
-                  <Text style={[styles.settingLabel, { color: colors.text }]}>Filter Inaccurate Locations</Text>
-                  <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
-                    Reject low-accuracy GPS readings
-                  </Text>
-                </View>
+              <SettingRow label="Filter Inaccurate Locations" hint="Reject low-accuracy GPS readings">
                 <Switch
                   value={settings.filterInaccurateLocations}
                   onValueChange={(value) =>
@@ -386,7 +363,7 @@ export function SyncStrategySettings({
                   }}
                   thumbColor={settings.filterInaccurateLocations ? colors.primary : colors.border}
                 />
-              </View>
+              </SettingRow>
 
               {settings.filterInaccurateLocations && (
                 <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
@@ -414,9 +391,6 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24
   },
-  presetsContainer: {
-    marginBottom: 16
-  },
   presetSpacer: {
     height: 8
   },
@@ -426,13 +400,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 12,
     borderWidth: 1.5,
-    marginTop: 8
-  },
-  advancedToggleActive: {
-    backgroundColor: "transparent"
-  },
-  advancedToggleInactive: {
-    backgroundColor: "transparent"
+    marginTop: 16
   },
   advancedText: {
     fontSize: 15,
@@ -487,7 +455,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap"
   },
   gridOption: {
-    flex: 1,
+    width: "31%", // ~3 per row with gap in a flexWrap container
     borderWidth: 2,
     borderRadius: 10,
     paddingVertical: 14,
@@ -496,26 +464,6 @@ const styles = StyleSheet.create({
   gridLabel: {
     fontSize: 14,
     ...fonts.semiBold
-  },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4
-  },
-  settingContent: {
-    flex: 1,
-    marginRight: 16
-  },
-  settingLabel: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  settingHint: {
-    fontSize: 13,
-    ...fonts.regular,
-    lineHeight: 18
   },
   settingRowSpaced: {
     marginTop: 16

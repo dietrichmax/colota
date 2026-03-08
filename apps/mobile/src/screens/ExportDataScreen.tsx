@@ -3,13 +3,13 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useCallback, useRef } from "react"
-import { Text, StyleSheet, View, ActivityIndicator, ScrollView, Pressable } from "react-native"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { Text, StyleSheet, View, ActivityIndicator, ScrollView } from "react-native"
 import { fonts } from "../styles/typography"
-import { Download, MapPinOff, type LucideIcon } from "lucide-react-native"
-import { Container, Card, SectionTitle, Divider, Button } from "../components"
+import { Download, MapPinOff } from "lucide-react-native"
+import { Container, Card, SectionTitle, Button, FormatSelector } from "../components"
 import { useTheme } from "../hooks/useTheme"
-import { ThemeColors, LocationCoords } from "../types/global"
+import { LocationCoords } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { LARGE_FILE_THRESHOLD, formatBytes, getByteSize, EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
 import { logger } from "../utils/logger"
@@ -177,25 +177,8 @@ export function ExportDataScreen() {
             {/* Format Selection */}
             <View style={styles.section}>
               <SectionTitle>Select Format</SectionTitle>
-
               <Card>
-                {(Object.entries(EXPORT_FORMATS) as [ExportFormat, (typeof EXPORT_FORMATS)[ExportFormat]][]).map(
-                  ([key, config], index, arr) => (
-                    <React.Fragment key={key}>
-                      <FormatOption
-                        icon={config.icon}
-                        title={config.label}
-                        subtitle={config.subtitle}
-                        description={config.description}
-                        extension={config.extension}
-                        selected={selectedFormat === key}
-                        onPress={() => setSelectedFormat(key)}
-                        colors={colors}
-                      />
-                      {index < arr.length - 1 && <Divider />}
-                    </React.Fragment>
-                  )
-                )}
+                <FormatSelector selectedFormat={selectedFormat} onSelectFormat={setSelectedFormat} />
               </Card>
             </View>
 
@@ -223,76 +206,6 @@ export function ExportDataScreen() {
         </View>
       )}
     </Container>
-  )
-}
-
-// --- Format Option Component ---
-
-const FormatOption = ({
-  icon: Icon,
-  title,
-  subtitle,
-  description,
-  extension,
-  selected,
-  onPress,
-  colors
-}: {
-  icon: LucideIcon
-  title: string
-  subtitle: string
-  description: string
-  extension: string
-  selected: boolean
-  onPress: () => void
-  colors: ThemeColors
-}) => {
-  const backgroundColor = selected ? colors.primary + "12" : "transparent"
-  const radioBgColor = selected ? colors.primary + "20" : "transparent"
-
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.formatOption, { backgroundColor }, pressed && { opacity: 0.7 }]}
-      onPress={onPress}
-    >
-      {selected && <View style={[styles.selectionBar, { backgroundColor: colors.primary }]} />}
-
-      <View style={styles.formatContent}>
-        <View style={styles.leftContent}>
-          <Icon size={28} color={colors.primaryDark} />
-          <View style={styles.textContent}>
-            <View style={styles.titleRow}>
-              <Text style={[styles.formatTitle, { color: colors.text }]}>{title}</Text>
-              <View
-                style={[
-                  styles.extensionBadge,
-                  {
-                    backgroundColor: selected ? colors.primary + "20" : colors.primary + "15",
-                    borderColor: selected ? colors.primary + "60" : colors.primary + "30"
-                  }
-                ]}
-              >
-                <Text style={[styles.extensionText, { color: colors.primaryDark }]}>{extension}</Text>
-              </View>
-            </View>
-            <Text style={[styles.formatSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
-            <Text style={[styles.formatDescription, { color: colors.textLight }]}>{description}</Text>
-          </View>
-        </View>
-
-        <View
-          style={[
-            styles.radio,
-            {
-              borderColor: selected ? colors.primary : colors.border,
-              backgroundColor: radioBgColor
-            }
-          ]}
-        >
-          {selected && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
-        </View>
-      </View>
-    </Pressable>
   )
 }
 
@@ -359,76 +272,6 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24
-  },
-  formatOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginHorizontal: -16,
-    position: "relative"
-  },
-  selectionBar: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4
-  },
-  formatContent: {
-    flexDirection: "row",
-    alignItems: "center"
-  },
-  leftContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14
-  },
-  textContent: {
-    flex: 1
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 2
-  },
-  formatTitle: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    letterSpacing: -0.2
-  },
-  extensionBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1
-  },
-  extensionText: {
-    fontSize: 10,
-    ...fonts.bold,
-    letterSpacing: 0.3
-  },
-  formatSubtitle: {
-    fontSize: 13,
-    marginBottom: 2
-  },
-  formatDescription: {
-    fontSize: 12,
-    lineHeight: 16
-  },
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 12
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6
   },
   loader: {
     position: "absolute",

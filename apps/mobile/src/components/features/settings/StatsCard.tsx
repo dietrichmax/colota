@@ -118,16 +118,19 @@ export function StatsCard({ queueCount, sentCount, interval, isOfflineMode, onMa
 
       {/* Warning Banner */}
       {showWarning && onManageClick && (
-        <View style={styles.warningBanner}>
+        <View style={styles.warningWrapper}>
           <Pressable
-            style={({ pressed }) => [
-              styles.warningBanner,
-              {
-                backgroundColor: warningLevel === "critical" ? colors.error + "15" : colors.warning + "15",
-                borderTopColor: colors.border
-              },
-              pressed && { opacity: 0.7 }
-            ]}
+            style={({ pressed }) => {
+              const accent = warningLevel === "critical" ? colors.error : colors.warning
+              return [
+                styles.warningButton,
+                {
+                  backgroundColor: accent + "15",
+                  borderColor: accent + "40"
+                },
+                pressed && { opacity: 0.7 }
+              ]
+            }}
             onPress={onManageClick}
           >
             <View style={styles.warningContent}>
@@ -202,21 +205,23 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     opacity: 0.3
   },
-  warningBanner: {
+  warningWrapper: {
+    paddingHorizontal: 12,
+    paddingBottom: 12
+  },
+  warningButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5
   },
   warningContent: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1
-  },
-  warningIcon: {
-    marginRight: 12
   },
   warningText: {
     flex: 1,

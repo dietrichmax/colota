@@ -24,6 +24,14 @@ jest.mock("../../../index", () => {
           keyboardType: "numeric"
         }),
         R.createElement(Text, null, unit)
+      ),
+    SettingRow: ({ label, hint, children }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        hint && R.createElement(Text, null, hint),
+        children
       )
   }
 })
@@ -84,9 +92,10 @@ describe("SyncStrategySettings", () => {
   }
 
   describe("presets", () => {
-    it("renders all three presets", () => {
+    it("renders all three presets inline", () => {
       const { getByTestId } = renderComponent()
 
+      // Presets are rendered inline (no picker to open)
       expect(getByTestId("preset-instant")).toBeTruthy()
       expect(getByTestId("preset-balanced")).toBeTruthy()
       expect(getByTestId("preset-powersaver")).toBeTruthy()
@@ -95,6 +104,7 @@ describe("SyncStrategySettings", () => {
     it("selecting a preset applies its config via onImmediateSave", () => {
       const { getByTestId } = renderComponent()
 
+      // Select balanced directly (inline)
       fireEvent.press(getByTestId("preset-balanced"))
 
       expect(mockOnSettingsChange).toHaveBeenCalledWith(
@@ -157,16 +167,17 @@ describe("SyncStrategySettings", () => {
     })
   })
 
-  describe("sync interval grid", () => {
-    it("renders all sync interval options", () => {
-      const { getByText } = renderComponent()
+  describe("sync interval chips", () => {
+    it("renders all sync interval options inline", () => {
+      const { getByText, getAllByText } = renderComponent()
 
       fireEvent.press(getByText("+ Show Advanced Settings"))
 
-      expect(getByText("Instant")).toBeTruthy()
+      expect(getAllByText("Instant").length).toBeGreaterThan(0)
       expect(getByText("1 min")).toBeTruthy()
       expect(getByText("5 min")).toBeTruthy()
       expect(getByText("15 min")).toBeTruthy()
+      expect(getByText("Custom")).toBeTruthy()
     })
 
     it("selecting a sync interval sets preset to custom", () => {
@@ -323,7 +334,7 @@ describe("SyncStrategySettings", () => {
       fireEvent.changeText(intervalInput, "10")
       fireEvent(intervalInput, "blur")
 
-      // Valid value — onSettingsChange should only have been called from changeText (debounced save),
+      // Valid value - onSettingsChange should only have been called from changeText (debounced save),
       // not from blur (no clamping needed)
       expect(mockOnImmediateSave).not.toHaveBeenCalled()
     })

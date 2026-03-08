@@ -10,17 +10,10 @@ import { ProfileService } from "../services/ProfileService"
 import { showAlert } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
 import { fonts } from "../styles/typography"
-import { Container, SectionTitle, Card, Divider } from "../components"
+import { Container, SectionTitle, Card, Divider, SettingRow, NumericInput } from "../components"
 import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
-import { MS_TO_KMH, PROFILE_CONDITIONS } from "../constants"
-
-const SYNC_OPTIONS = [
-  { label: "Instant", value: 0 },
-  { label: "1 min", value: 60 },
-  { label: "5 min", value: 300 },
-  { label: "15 min", value: 900 }
-]
+import { MS_TO_KMH, PROFILE_CONDITIONS, SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } from "../constants"
 
 const DEFAULT_PROFILE: Omit<TrackingProfile, "id" | "createdAt"> = {
   name: "",
@@ -47,6 +40,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
   const [distanceStr, setDistanceStr] = useState("0")
   const [priorityStr, setPriorityStr] = useState("10")
   const [delayStr, setDelayStr] = useState("60")
+  const [syncIntervalStr, setSyncIntervalStr] = useState("0")
 
   useEffect(() => {
     if (!profileId) return
@@ -69,6 +63,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
           setDistanceStr(String(existing.distance))
           setPriorityStr(String(existing.priority))
           setDelayStr(String(existing.deactivationDelay))
+          setSyncIntervalStr(String(existing.syncInterval))
           if (existing.condition.speedThreshold) {
             setSpeedKmh((existing.condition.speedThreshold * MS_TO_KMH).toFixed(0))
           }
@@ -149,6 +144,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
   }, [profile, isEditing, profileId, navigation])
 
   const isSpeed = profile.condition.type === "speed_above" || profile.condition.type === "speed_below"
+  const isCustomSyncInterval = !SYNC_INTERVAL_PRESETS.includes(profile.syncInterval)
 
   const inputStyle = [
     styles.numInput,
@@ -185,13 +181,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
 
           <Divider />
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingContent}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Priority</Text>
-              <Text style={[styles.settingHint, { color: colors.textLight }]}>
-                Higher number wins when multiple profiles match
-              </Text>
-            </View>
+          <SettingRow label="Priority" hint="Higher number wins when multiple profiles match">
             <TextInput
               style={inputStyle}
               keyboardType="numeric"
@@ -200,7 +190,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
               placeholder="10"
               placeholderTextColor={colors.placeholder}
             />
-          </View>
+          </SettingRow>
         </Card>
 
         {/* Condition */}
@@ -257,10 +247,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
         {/* Tracking Settings */}
         <SectionTitle style={styles.sectionGap}>Tracking Settings</SectionTitle>
         <Card>
-          <View style={styles.settingRow}>
-            <View style={styles.settingContent}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Tracking Interval</Text>
-            </View>
+          <SettingRow label="Tracking Interval">
             <View style={styles.inputWithUnit}>
               <TextInput
                 style={inputStyle}
@@ -272,14 +259,11 @@ export function ProfileEditorScreen({ navigation, route }: any) {
               />
               <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
             </View>
-          </View>
+          </SettingRow>
 
           <Divider />
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingContent}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Movement Threshold</Text>
-            </View>
+          <SettingRow label="Movement Threshold">
             <View style={styles.inputWithUnit}>
               <TextInput
                 style={inputStyle}
@@ -291,46 +275,91 @@ export function ProfileEditorScreen({ navigation, route }: any) {
               />
               <Text style={[styles.unit, { color: colors.textSecondary }]}>m</Text>
             </View>
-          </View>
+          </SettingRow>
 
           <Divider />
 
-          <Text style={[styles.label, styles.syncSectionLabel, { color: colors.textSecondary }]}>Sync Interval</Text>
+          <Text style={[styles.syncLabel, { color: colors.textSecondary }]}>Sync Interval</Text>
           <View style={styles.syncGrid}>
-            {SYNC_OPTIONS.map((opt) => {
-              const selected = profile.syncInterval === opt.value
+            {SYNC_INTERVAL_PRESETS.map((sec) => {
+              const isSelected = profile.syncInterval === sec && SYNC_INTERVAL_PRESETS.includes(profile.syncInterval)
               return (
                 <Pressable
-                  key={opt.value}
+                  key={sec}
                   style={({ pressed }) => [
                     styles.syncOption,
                     {
-                      backgroundColor: selected ? colors.primary + "15" : colors.background,
-                      borderColor: selected ? colors.primary : colors.border
+                      backgroundColor: isSelected ? colors.primary + "15" : colors.background,
+                      borderColor: isSelected ? colors.primary : colors.border
                     },
                     pressed && { opacity: 0.7 }
                   ]}
-                  onPress={() => setProfile((prev) => ({ ...prev, syncInterval: opt.value }))}
+                  onPress={() => setProfile((prev) => ({ ...prev, syncInterval: sec }))}
                 >
-                  <Text style={[styles.syncLabel, { color: selected ? colors.primary : colors.text }]}>
-                    {opt.label}
+                  <Text style={[styles.syncOptionLabel, { color: isSelected ? colors.primary : colors.text }]}>
+                    {SYNC_INTERVAL_LABELS[sec]}
                   </Text>
                 </Pressable>
               )
             })}
+            <Pressable
+              style={({ pressed }) => [
+                styles.syncOption,
+                {
+                  backgroundColor: isCustomSyncInterval ? colors.primary + "15" : colors.background,
+                  borderColor: isCustomSyncInterval ? colors.primary : colors.border
+                },
+                pressed && { opacity: 0.7 }
+              ]}
+              onPress={() => {
+                if (!isCustomSyncInterval) {
+                  const customValue = 1800
+                  setSyncIntervalStr(customValue.toString())
+                  setProfile((prev) => ({ ...prev, syncInterval: customValue }))
+                }
+              }}
+            >
+              <Text style={[styles.syncOptionLabel, { color: isCustomSyncInterval ? colors.primary : colors.text }]}>
+                Custom
+              </Text>
+            </Pressable>
           </View>
+
+          {isCustomSyncInterval && (
+            <View style={styles.customSyncInput}>
+              <NumericInput
+                label="Custom Sync Interval"
+                value={syncIntervalStr}
+                onChange={(val) => {
+                  setSyncIntervalStr(val)
+                  const num = Number(val)
+                  if (!isNaN(num) && num >= 0) {
+                    setProfile((prev) => ({ ...prev, syncInterval: num }))
+                  }
+                }}
+                onBlur={() => {
+                  const num = Number(syncIntervalStr)
+                  if (isNaN(num) || num < 0) {
+                    setSyncIntervalStr("0")
+                    setProfile((prev) => ({ ...prev, syncInterval: 0 }))
+                  }
+                }}
+                unit="seconds"
+                placeholder="1800"
+                hint="Custom interval in seconds"
+                colors={colors}
+              />
+            </View>
+          )}
         </Card>
 
         {/* Deactivation Delay */}
         <SectionTitle style={styles.sectionGap}>Deactivation</SectionTitle>
         <Card>
-          <View style={styles.settingRow}>
-            <View style={styles.settingContent}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Deactivation Delay</Text>
-              <Text style={[styles.settingHint, { color: colors.textLight }]}>
-                Wait before reverting to default settings after the condition stops matching. Prevents rapid switching.
-              </Text>
-            </View>
+          <SettingRow
+            label="Deactivation Delay"
+            hint="Wait before reverting to default settings after the condition stops matching. Prevents rapid switching."
+          >
             <View style={styles.inputWithUnit}>
               <TextInput
                 style={inputStyle}
@@ -342,7 +371,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
               />
               <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
             </View>
-          </View>
+          </SettingRow>
         </Card>
 
         {/* Save Button */}
@@ -390,15 +419,6 @@ const styles = StyleSheet.create({
   },
   inputWithUnit: { flexDirection: "row", alignItems: "center", gap: 6 },
   unit: { fontSize: 14, ...fonts.medium, minWidth: 28 },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4
-  },
-  settingContent: { flex: 1, marginRight: 16 },
-  settingLabel: { fontSize: 15, ...fonts.semiBold, marginBottom: 2 },
-  settingHint: { fontSize: 12, ...fonts.regular, lineHeight: 16 },
   conditionGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -414,15 +434,11 @@ const styles = StyleSheet.create({
   },
   conditionLabel: { fontSize: 13, ...fonts.semiBold },
   conditionDesc: { fontSize: 11, ...fonts.regular, textAlign: "center" },
-  syncGrid: { flexDirection: "row", gap: 8 },
-  syncOption: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    alignItems: "center"
-  },
-  syncLabel: { fontSize: 13, ...fonts.semiBold },
+  syncLabel: { fontSize: 12, ...fonts.semiBold, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 },
+  syncGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  syncOption: { width: "31%", padding: 12, borderRadius: 10, borderWidth: 1.5, alignItems: "center" }, // ~3 per row with gap
+  syncOptionLabel: { fontSize: 13, ...fonts.semiBold },
+  customSyncInput: { marginTop: 12 },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -434,6 +450,5 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { fontSize: 16, ...fonts.semiBold },
   saveBtnDisabled: { opacity: 0.6 },
-  syncSectionLabel: { marginBottom: 8 },
   sectionGap: { marginTop: 24 }
 })

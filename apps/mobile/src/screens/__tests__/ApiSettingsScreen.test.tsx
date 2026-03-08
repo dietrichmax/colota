@@ -65,7 +65,7 @@ jest.mock("../../components", () => {
     FloatingSaveIndicator: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
-    ChipGroup: ({ options, onSelect }: any) =>
+    ChipGroup: ({ options, selected, onSelect }: any) =>
       R.createElement(
         View,
         null,
@@ -73,7 +73,7 @@ jest.mock("../../components", () => {
           R.createElement(
             Pressable,
             { key: opt.value, onPress: () => onSelect(opt.value) },
-            R.createElement(Text, null, opt.label)
+            R.createElement(Text, null, opt.label, selected === opt.value ? " (selected)" : "")
           )
         )
       )
@@ -97,12 +97,12 @@ describe("ApiSettingsScreen", () => {
 
   describe("template switching", () => {
     it("renders all template options", () => {
-      const { getByText } = renderScreen()
+      const { getByText, getAllByText } = renderScreen()
 
-      expect(getByText("Custom")).toBeTruthy()
+      expect(getAllByText(/Custom/).length).toBeGreaterThan(0)
       expect(getByText("Dawarich")).toBeTruthy()
       expect(getByText("OwnTracks")).toBeTruthy()
-      expect(getByText("PhoneTrack")).toBeTruthy()
+      expect(getByText(/PhoneTrack/)).toBeTruthy()
       expect(getByText("Reitti")).toBeTruthy()
       expect(getByText("Traccar")).toBeTruthy()
     })
@@ -134,7 +134,7 @@ describe("ApiSettingsScreen", () => {
     it("selecting PhoneTrack template applies its unique field names", () => {
       const { getByText, getByDisplayValue } = renderScreen()
 
-      fireEvent.press(getByText("PhoneTrack"))
+      fireEvent.press(getByText(/PhoneTrack/))
 
       // PhoneTrack uses different field names
       expect(getByDisplayValue("speed")).toBeTruthy() // vel -> speed
@@ -155,10 +155,10 @@ describe("ApiSettingsScreen", () => {
       const { getByText, getByDisplayValue } = renderScreen()
 
       // First switch to PhoneTrack
-      fireEvent.press(getByText("PhoneTrack"))
+      fireEvent.press(getByText(/PhoneTrack/))
       expect(getByDisplayValue("speed")).toBeTruthy()
 
-      // Switch to Custom — field map stays as PhoneTrack's
+      // Switch to Custom - field map stays as PhoneTrack's
       fireEvent.press(getByText("Custom"))
       expect(getByDisplayValue("speed")).toBeTruthy()
     })
@@ -191,17 +191,18 @@ describe("ApiSettingsScreen", () => {
   })
 
   describe("HTTP method switching", () => {
-    it("renders POST and GET options", () => {
-      const { getByText } = renderScreen()
+    it("renders POST and GET options inline", () => {
+      const { getAllByText, getByText } = renderScreen()
 
-      expect(getByText("POST")).toBeTruthy()
-      expect(getByText("GET")).toBeTruthy()
+      // ChipGroup renders both options inline (no picker to open)
+      expect(getAllByText(/POST/).length).toBeGreaterThan(0)
+      expect(getByText(/GET/)).toBeTruthy()
     })
 
     it("switching to GET shows query parameter hint", () => {
       const { getByText } = renderScreen()
 
-      fireEvent.press(getByText("GET"))
+      fireEvent.press(getByText(/^GET$/))
 
       expect(getByText("Fields sent as URL query parameters instead of JSON body")).toBeTruthy()
     })
@@ -209,7 +210,7 @@ describe("ApiSettingsScreen", () => {
     it("switching method triggers immediate save", () => {
       const { getByText } = renderScreen()
 
-      fireEvent.press(getByText("GET"))
+      fireEvent.press(getByText(/^GET$/))
 
       expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
     })
@@ -217,7 +218,7 @@ describe("ApiSettingsScreen", () => {
     it("example payload changes format for GET method", () => {
       const { getByText } = renderScreen()
 
-      fireEvent.press(getByText("GET"))
+      fireEvent.press(getByText(/^GET$/))
 
       expect(getByText("EXAMPLE REQUEST")).toBeTruthy()
     })

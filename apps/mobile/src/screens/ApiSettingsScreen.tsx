@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useMemo, useRef } from "react"
+import { useState, useCallback, useMemo, useRef } from "react"
 import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
 import {
   FieldMap,
@@ -40,11 +40,10 @@ const FIELD_DESCRIPTIONS: Record<keyof FieldMap, string> = {
 
 const TEMPLATE_OPTIONS: { value: ApiTemplateName; label: string }[] = [
   { value: "custom", label: "Custom" },
-  { value: "dawarich", label: "Dawarich" },
-  { value: "owntracks", label: "OwnTracks" },
-  { value: "phonetrack", label: "PhoneTrack" },
-  { value: "reitti", label: "Reitti" },
-  { value: "traccar", label: "Traccar" }
+  ...Object.entries(API_TEMPLATES).map(([key, tmpl]) => ({
+    value: key as ApiTemplateName,
+    label: tmpl.label
+  }))
 ]
 
 const HTTP_METHOD_OPTIONS: { value: HttpMethod; label: string }[] = [

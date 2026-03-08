@@ -11,6 +11,7 @@ import NativeLocationService from "../../../services/NativeLocationService"
 import { isPrivateHost, isEndpointAllowed } from "../../../utils/settingsValidation"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
 import { fonts } from "../../../styles/typography"
+import { SettingRow } from "../../ui/SettingRow"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { CONNECTION_TEST_TIMEOUT, TEST_RESULT_DISPLAY_MS } from "../../../constants"
 import { logger } from "../../../utils/logger"
@@ -141,11 +142,7 @@ export function ConnectionSettings({
     <View style={styles.section}>
       <SectionTitle>Connection</SectionTitle>
       <Card>
-        <View style={styles.settingRow}>
-          <View style={styles.settingContent}>
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Offline Mode</Text>
-            <Text style={[styles.settingHint, { color: colors.textSecondary }]}>Save locally, no network sync</Text>
-          </View>
+        <SettingRow label="Offline Mode" hint="Save locally, no network sync">
           <Switch
             value={settings.isOfflineMode}
             onValueChange={handleOfflineModeChange}
@@ -155,7 +152,7 @@ export function ConnectionSettings({
             }}
             thumbColor={settings.isOfflineMode ? colors.primary : colors.border}
           />
-        </View>
+        </SettingRow>
 
         {!settings.isOfflineMode && (
           <>
@@ -273,26 +270,6 @@ export function ConnectionSettings({
 const styles = StyleSheet.create({
   section: {
     marginBottom: 24
-  },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4
-  },
-  settingContent: {
-    flex: 1,
-    marginRight: 16
-  },
-  settingLabel: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  settingHint: {
-    fontSize: 13,
-    ...fonts.regular,
-    lineHeight: 18
   },
   inputGroup: {
     marginBottom: 12

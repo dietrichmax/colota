@@ -2,55 +2,44 @@
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
-import React from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { Zap, Check } from "lucide-react-native"
-import { ThemeColors, SelectablePreset, TRACKING_PRESETS } from "../../../types/global"
+import { SelectablePreset, TRACKING_PRESETS } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
+import { useTheme } from "../../../hooks/useTheme"
+import { RadioDot } from "../../ui/RadioDot"
 
 interface PresetOptionProps {
   preset: SelectablePreset
   isSelected: boolean
   onSelect: (preset: SelectablePreset) => void
-  colors: ThemeColors
 }
 
-/**
- * PresetOption Component - Improved Design
- *
- * Enhanced with:
- * - Better visual hierarchy
- * - Cleaner badge placement
- * - Improved selection states
- * - More accessible touch targets
- */
-export function PresetOption({ preset, isSelected, onSelect, colors }: PresetOptionProps) {
+export function PresetOption({ preset, isSelected, onSelect }: PresetOptionProps) {
+  const { colors } = useTheme()
   const config = TRACKING_PRESETS[preset]
   const showRecommendedBadge = preset === "balanced"
   const showWarningBadge = config.batteryImpact === "High"
 
-  const radioBgColor = isSelected ? colors.primary + "20" : "transparent"
-
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        {
-          backgroundColor: isSelected ? colors.primary + "12" : colors.background
-        },
-        pressed && { opacity: 0.7 }
-      ]}
+      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
       onPress={() => onSelect(preset)}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: isSelected }}
     >
-      {/* Selection indicator bar */}
-      {isSelected && <View style={[styles.selectionBar, { backgroundColor: colors.primary }]} />}
-
       <View style={styles.content}>
-        {/* Left side - Icon and text */}
         <View style={styles.leftContent}>
           <View style={styles.textContent}>
             <View style={styles.titleRow}>
-              <Text style={[styles.label, { color: colors.text }]}>{config.label}</Text>
+              <Text
+                style={[
+                  styles.label,
+                  isSelected ? { color: colors.primaryDark, ...fonts.bold } : { color: colors.text }
+                ]}
+              >
+                {config.label}
+              </Text>
               {showRecommendedBadge && (
                 <View
                   style={[
@@ -88,54 +77,23 @@ export function PresetOption({ preset, isSelected, onSelect, colors }: PresetOpt
           </View>
         </View>
 
-        {/* Right side - Radio button */}
-        <View
-          style={[
-            styles.radio,
-            {
-              borderColor: isSelected ? colors.primary : colors.border,
-              backgroundColor: radioBgColor
-            }
-          ]}
-        >
-          {isSelected && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
-        </View>
+        <RadioDot selected={isSelected} />
       </View>
     </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    borderRadius: 14,
-    overflow: "hidden",
-    position: "relative",
-    marginBottom: 8
-  },
-  selectionBar: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4
-  },
   content: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    paddingLeft: 20
+    padding: 12
   },
   leftContent: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 14
-  },
-  iconContainer: {
-    width: 28,
-    height: 28,
-    justifyContent: "center",
-    alignItems: "center"
   },
   textContent: {
     flex: 1
@@ -172,19 +130,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     ...fonts.regular,
     lineHeight: 18
-  },
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 12
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6
   }
 })
