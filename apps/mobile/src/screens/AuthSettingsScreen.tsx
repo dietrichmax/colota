@@ -15,7 +15,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
 
-const AUTH_TYPES: { value: AuthType; label: string }[] = [
+const AUTH_TYPE_OPTIONS: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
   { value: "basic", label: "Basic Auth" },
   { value: "bearer", label: "Bearer Token" }
@@ -162,7 +162,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
           <SectionTitle>Authentication</SectionTitle>
           <Card>
             <ChipGroup
-              options={AUTH_TYPES}
+              options={AUTH_TYPE_OPTIONS}
               selected={config.authType}
               onSelect={handleAuthTypeChange}
               colors={colors}

@@ -60,6 +60,16 @@ export const PROFILE_CONDITIONS: {
   }
 ]
 
+// Sync Interval
+export const SYNC_INTERVAL_PRESETS: readonly number[] = [0, 60, 300, 900]
+
+export const SYNC_INTERVAL_LABELS: Record<number, string> = {
+  0: "Instant",
+  60: "1 min",
+  300: "5 min",
+  900: "15 min"
+}
+
 // Thresholds
 export const HIGH_QUEUE_THRESHOLD = 50
 export const CRITICAL_QUEUE_THRESHOLD = 100

@@ -63,7 +63,15 @@ jest.mock("../../components", () => {
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
-    Divider: () => R.createElement(View, null)
+    Divider: () => R.createElement(View, null),
+    SettingRow: ({ label, hint, children }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        hint && R.createElement(Text, null, hint),
+        children
+      )
   }
 })
 
@@ -110,10 +118,10 @@ describe("ProfileEditorScreen", () => {
     expect(getByText("Speed Below")).toBeTruthy()
   })
 
-  it("shows all sync interval options", () => {
-    const { getByText } = renderNewProfile()
+  it("shows all sync interval options inline", () => {
+    const { getByText, getAllByText } = renderNewProfile()
 
-    expect(getByText("Instant")).toBeTruthy()
+    expect(getAllByText("Instant").length).toBeGreaterThan(0)
     expect(getByText("1 min")).toBeTruthy()
     expect(getByText("5 min")).toBeTruthy()
     expect(getByText("15 min")).toBeTruthy()
@@ -146,7 +154,7 @@ describe("ProfileEditorScreen", () => {
     const nameInput = getByDisplayValue("")
     fireEvent.changeText(nameInput, "Speed Test")
 
-    // Select speed_above condition — defaults to 30 km/h threshold
+    // Select speed_above condition - defaults to 30 km/h threshold
     fireEvent.press(getByText("Speed Above"))
 
     fireEvent.press(getByText("Create Profile"))
@@ -269,7 +277,7 @@ describe("ProfileEditorScreen", () => {
   it("shows speed threshold input only for speed conditions", () => {
     const { getByText, queryByText } = renderNewProfile()
 
-    // Default is charging — no speed input
+    // Default is charging - no speed input
     expect(queryByText("Speed Threshold (km/h)")).toBeNull()
 
     // Select Speed Above

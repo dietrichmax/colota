@@ -137,6 +137,7 @@ jest.mock("../../utils/logger", () => ({
 jest.mock("../../components", () => {
   const R = require("react")
   const RN = require("react-native")
+  const { EXPORT_FORMATS } = require("../../utils/exportConverters")
   return {
     Container: function (props: any) {
       return R.createElement(RN.View, null, props.children)
@@ -155,6 +156,24 @@ jest.mock("../../components", () => {
         RN.Pressable,
         { onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
         R.createElement(RN.Text, null, props.title)
+      )
+    },
+    FormatSelector: function ({ onSelectFormat }: any) {
+      return R.createElement(
+        RN.View,
+        null,
+        Object.entries(EXPORT_FORMATS).map(function ([key, config]: any) {
+          return R.createElement(
+            RN.Pressable,
+            {
+              key: key,
+              onPress: function () {
+                onSelectFormat(key)
+              }
+            },
+            R.createElement(RN.Text, null, config.label)
+          )
+        })
       )
     }
   }
