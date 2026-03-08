@@ -36,6 +36,12 @@ jest.mock("../../../index", () => {
   }
 })
 
+jest.mock("../../../../utils/geo", () => ({
+  shortDistanceUnit: () => "m",
+  inputToMeters: (value: number) => value,
+  metersToInput: (meters: number) => meters
+}))
+
 jest.mock("../PresetOption", () => ({
   PresetOption: ({ preset, isSelected, onSelect }: any) => {
     const R = require("react")

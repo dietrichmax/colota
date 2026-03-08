@@ -28,6 +28,7 @@ import { buildGeofencesGeoJSON } from "../components/features/map/mapUtils"
 import { GeofenceLayers } from "../components/features/map/GeofenceLayers"
 import { UserLocationOverlay } from "../components/features/map/UserLocationOverlay"
 import { logger } from "../utils/logger"
+import { formatShortDistance, shortDistanceUnit, inputToMeters } from "../utils/geo"
 
 export function GeofenceScreen({}: ScreenProps) {
   const { tracking } = useTracking()
@@ -134,7 +135,7 @@ export function GeofenceScreen({}: ScreenProps) {
           name: newName,
           lat: pressCoords.latitude,
           lon: pressCoords.longitude,
-          radius: Number(newRadius),
+          radius: inputToMeters(Number(newRadius)),
           enabled: true,
           pauseTracking: true
         })
@@ -255,7 +256,9 @@ export function GeofenceScreen({}: ScreenProps) {
             onPress={() => handleZoomToGeofence(item)}
           >
             <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
-            <Text style={[styles.radius, { color: colors.textSecondary }]}>{item.radius}m radius</Text>
+            <Text style={[styles.radius, { color: colors.textSecondary }]}>
+              {formatShortDistance(item.radius)} radius
+            </Text>
           </Pressable>
 
           <View style={styles.actions}>
@@ -355,7 +358,7 @@ export function GeofenceScreen({}: ScreenProps) {
                   </View>
 
                   <View style={[styles.inputGroup, styles.inputGroupRadius]}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>Radius (m)</Text>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Radius ({shortDistanceUnit()})</Text>
                     <TextInput
                       style={[
                         styles.input,

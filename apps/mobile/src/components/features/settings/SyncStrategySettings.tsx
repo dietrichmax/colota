@@ -11,6 +11,7 @@ import { fonts, fontSizes } from "../../../styles/typography"
 import { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } from "../../../constants"
 import { SectionTitle, Card, Divider, NumericInput, SettingRow } from "../../index"
 import { PresetOption } from "./PresetOption"
+import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 
 interface SyncStrategySettingsProps {
   settings: Settings
@@ -28,8 +29,10 @@ export function SyncStrategySettings({
   colors
 }: SyncStrategySettingsProps) {
   const [intervalInput, setIntervalInput] = useState(settings.interval.toString())
-  const [distanceInput, setDistanceInput] = useState(settings.distance?.toString() || "0")
-  const [accuracyThresholdInput, setAccuracyTresholdInput] = useState(settings.accuracyThreshold.toString())
+  const [distanceInput, setDistanceInput] = useState(metersToInput(settings.distance ?? 0).toString())
+  const [accuracyThresholdInput, setAccuracyThresholdInput] = useState(
+    metersToInput(settings.accuracyThreshold).toString()
+  )
   const [syncIntervalInput, setSyncIntervalInput] = useState(settings.syncInterval.toString())
   const [showAdvanced, setShowAdvanced] = useState(false)
 
@@ -38,8 +41,8 @@ export function SyncStrategySettings({
   // Sync inputs with settings changes (e.g. preset selection)
   useEffect(() => {
     setIntervalInput(settings.interval.toString())
-    setDistanceInput(settings.distance?.toString() || "0")
-    setAccuracyTresholdInput(settings.accuracyThreshold.toString())
+    setDistanceInput(metersToInput(settings.distance ?? 0).toString())
+    setAccuracyThresholdInput(metersToInput(settings.accuracyThreshold).toString())
     setSyncIntervalInput(settings.syncInterval.toString())
   }, [settings.interval, settings.distance, settings.accuracyThreshold, settings.syncInterval])
 
@@ -47,11 +50,12 @@ export function SyncStrategySettings({
     (key: "interval" | "distance" | "accuracyThreshold", value: string, min: number = 0) => {
       if (key === "interval") setIntervalInput(value)
       if (key === "distance") setDistanceInput(value)
-      if (key === "accuracyThreshold") setAccuracyTresholdInput(value)
+      if (key === "accuracyThreshold") setAccuracyThresholdInput(value)
 
       const num = Number(value)
       if (!isNaN(num) && num >= min) {
-        const next = { ...settings, [key]: num, syncPreset: "custom" as const }
+        const stored = key === "distance" || key === "accuracyThreshold" ? inputToMeters(num) : num
+        const next = { ...settings, [key]: stored, syncPreset: "custom" as const }
         onDebouncedSave(next)
       }
     },
@@ -68,9 +72,10 @@ export function SyncStrategySettings({
         val = min
         if (key === "interval") setIntervalInput(min.toString())
         if (key === "distance") setDistanceInput(min.toString())
-        if (key === "accuracyThreshold") setAccuracyTresholdInput(min.toString())
+        if (key === "accuracyThreshold") setAccuracyThresholdInput(min.toString())
 
-        const next = { ...settings, [key]: val }
+        const stored = key === "distance" || key === "accuracyThreshold" ? inputToMeters(val) : val
+        const next = { ...settings, [key]: stored }
         onSettingsChange(next)
         onImmediateSave(next)
       }
@@ -183,7 +188,7 @@ export function SyncStrategySettings({
                 value={distanceInput}
                 onChange={(val) => handleNumericChange("distance", val, 0)}
                 onBlur={() => handleNumericBlur("distance", 0)}
-                unit="meters"
+                unit={shortDistanceUnit()}
                 placeholder="10"
                 hint="Only record if moved more than this distance"
                 colors={colors}
@@ -372,7 +377,7 @@ export function SyncStrategySettings({
                     value={accuracyThresholdInput}
                     onChange={(val) => handleNumericChange("accuracyThreshold", val, 1)}
                     onBlur={() => handleNumericBlur("accuracyThreshold", 1)}
-                    unit="meters"
+                    unit={shortDistanceUnit()}
                     placeholder="50"
                     hint="Reject readings with accuracy worse than this"
                     colors={colors}

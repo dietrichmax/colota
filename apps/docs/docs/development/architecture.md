@@ -172,7 +172,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | Screen | Purpose |
 | --- | --- |
 | `DashboardScreen` | Live map with tracking controls, coordinates, database stats, geofence and profile status |
-| `SettingsScreen` | GPS interval, distance filter, sync strategy, offline mode, accuracy threshold |
+| `SettingsScreen` | GPS interval, distance filter, sync strategy, offline mode, accuracy threshold, unit system, time format |
 | `ApiSettingsScreen` | Endpoint URL, HTTP method, field mapping with backend templates |
 | `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | `GeofenceScreen` | Create, edit, and delete pause zones on an interactive map |
@@ -228,7 +228,7 @@ Supporting utilities in `mapUtils.ts`:
 | Utility | Purpose |
 | --- | --- |
 | `logger` | Environment-aware logging - suppresses debug/info in production via `__DEV__`, always logs warn/error |
-| `geo` | Haversine distance, speed/distance/duration/time formatting with locale-aware unit selection (km/h vs mph) |
+| `geo` | Haversine distance, speed/distance/duration/time formatting with configurable unit system (metric/imperial) and time format (12h/24h), auto-detected from locale on first use |
 | `exportConverters` | Converts location data to CSV, GeoJSON, GPX, and KML export formats (flat and trip-aware variants) |
 | `trips` | Trip segmentation via time-gap detection (15-min threshold) with distance computation, trip stats (avg speed, elevation gain/loss), and trip color assignment |
 | `queueStatus` | Maps sync queue size to color indicators for the dashboard |

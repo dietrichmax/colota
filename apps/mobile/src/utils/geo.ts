@@ -3,6 +3,8 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import NativeLocationService from "../services/NativeLocationService"
+
 const EARTH_RADIUS_METERS = 6371000.0
 
 /** Haversine formula - mirrors GeofenceHelper.kt */
@@ -29,9 +31,61 @@ export function computeTotalDistance(locations: { latitude: number; longitude: n
   return total
 }
 
+// -- Display preferences (cached from SQLite) --
+
+export type UnitSystem = "metric" | "imperial"
+export type TimeFormat = "12h" | "24h"
+
+let cachedUnitSystem: UnitSystem | null = null
+let cachedTimeFormat: TimeFormat | null = null
+
+/** Detect whether the device locale uses 12h time. */
+function localeUses12h(): boolean {
+  try {
+    const sample = new Date(2000, 0, 1, 14).toLocaleTimeString(undefined, { hour: "numeric" })
+    return /am|pm/i.test(sample)
+  } catch {
+    return false
+  }
+}
+
+/** Resolve the effective unit system, using locale detection as fallback. */
+function resolveUnitSystem(): UnitSystem {
+  return cachedUnitSystem ?? (localeUsesMiles() ? "imperial" : "metric")
+}
+
+/** Resolve the effective time format, using locale detection as fallback. */
+function resolveTimeFormat(): TimeFormat {
+  return cachedTimeFormat ?? (localeUses12h() ? "12h" : "24h")
+}
+
+/** Load display preferences from native storage. Call on app start and after saving. */
+export async function loadDisplayPreferences(): Promise<void> {
+  try {
+    const [unit, time] = await Promise.all([
+      NativeLocationService.getSetting("unitSystem", ""),
+      NativeLocationService.getSetting("timeFormat", "")
+    ])
+    cachedUnitSystem = unit === "metric" || unit === "imperial" ? unit : null
+    cachedTimeFormat = time === "12h" || time === "24h" ? time : null
+  } catch {
+    // Keep defaults on error
+  }
+}
+
+export function getUnitSystem(): UnitSystem {
+  return resolveUnitSystem()
+}
+
+export function getTimeFormat(): TimeFormat {
+  return resolveTimeFormat()
+}
+
+// -- Unit detection --
+
 const MILE_LOCALES = new Set(["en-US", "en-GB", "en-MM", "en-LR"])
 
-function usesMiles(): boolean {
+function localeUsesMiles(): boolean {
   try {
     const locale = Intl.NumberFormat().resolvedOptions().locale
     return MILE_LOCALES.has(locale)
@@ -40,7 +94,13 @@ function usesMiles(): boolean {
   }
 }
 
-/** Format m/s into a human-readable speed string using the device locale's unit. */
+function usesMiles(): boolean {
+  return resolveUnitSystem() === "imperial"
+}
+
+// -- Formatting functions --
+
+/** Format m/s into a human-readable speed string. */
 export function formatSpeed(metersPerSecond: number): string {
   if (usesMiles()) {
     const mph = metersPerSecond * 2.23694
@@ -50,7 +110,7 @@ export function formatSpeed(metersPerSecond: number): string {
   return `${kmh.toFixed(1)} km/h`
 }
 
-/** Return the speed unit info for the current locale (used by TrackMap). */
+/** Return the speed unit info (used by TrackMap). */
 export function getSpeedUnit(): { factor: number; unit: string } {
   return usesMiles() ? { factor: 2.23694, unit: "mph" } : { factor: 3.6, unit: "km/h" }
 }
@@ -70,7 +130,8 @@ export function formatTime(unixSeconds: number, showSeconds = false): string {
   return d.toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
-    ...(showSeconds && { second: "2-digit" })
+    ...(showSeconds && { second: "2-digit" }),
+    ...(cachedTimeFormat && { hour12: cachedTimeFormat === "12h" })
   })
 }
 
@@ -83,12 +144,29 @@ export function formatDate(unixSeconds: number): string {
   })
 }
 
-/** Format meters into a human-readable string using the device locale's unit. */
+/** Format meters as a long distance string (e.g. "12.3 km" / "7.6 mi"). */
 export function formatDistance(meters: number): string {
-  if (usesMiles()) {
-    const miles = meters / 1609.344
-    return `${miles.toFixed(1)} mi`
-  }
-  const km = meters / 1000
-  return `${km.toFixed(1)} km`
+  if (usesMiles()) return `${(meters / 1609.344).toFixed(1)} mi`
+  return `${(meters / 1000).toFixed(1)} km`
+}
+
+/** Format meters as a short distance string (e.g. "50m" / "164 ft"). */
+export function formatShortDistance(meters: number): string {
+  if (usesMiles()) return `${Math.round(meters * 3.28084)} ft`
+  return `${Math.round(meters)}m`
+}
+
+/** Returns the short distance unit label for input fields ("m" or "ft"). */
+export function shortDistanceUnit(): string {
+  return usesMiles() ? "ft" : "m"
+}
+
+/** Convert a user-entered short distance to meters. */
+export function inputToMeters(value: number): number {
+  return usesMiles() ? value / 3.28084 : value
+}
+
+/** Convert meters to the user's short distance unit for pre-filling inputs. */
+export function metersToInput(meters: number): number {
+  return usesMiles() ? Math.round(meters * 3.28084) : meters
 }

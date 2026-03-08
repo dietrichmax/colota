@@ -13,6 +13,7 @@ import { fonts } from "../styles/typography"
 import { Container, SectionTitle, Card, Divider, SettingRow, NumericInput } from "../components"
 import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
+import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { MS_TO_KMH, PROFILE_CONDITIONS, SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } from "../constants"
 
 const DEFAULT_PROFILE: Omit<TrackingProfile, "id" | "createdAt"> = {
@@ -60,7 +61,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
             enabled: existing.enabled
           })
           setIntervalStr(String(existing.interval))
-          setDistanceStr(String(existing.distance))
+          setDistanceStr(String(metersToInput(existing.distance)))
           setPriorityStr(String(existing.priority))
           setDelayStr(String(existing.deactivationDelay))
           setSyncIntervalStr(String(existing.syncInterval))
@@ -81,7 +82,8 @@ export function ProfileEditorScreen({ navigation, route }: any) {
       setter(value)
       const num = Number(value)
       if (!isNaN(num) && num >= min) {
-        setProfile((prev) => ({ ...prev, [field]: num }))
+        const stored = field === "distance" ? inputToMeters(num) : num
+        setProfile((prev) => ({ ...prev, [field]: stored }))
       }
     },
     []
@@ -273,7 +275,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
                 placeholder="0"
                 placeholderTextColor={colors.placeholder}
               />
-              <Text style={[styles.unit, { color: colors.textSecondary }]}>m</Text>
+              <Text style={[styles.unit, { color: colors.textSecondary }]}>{shortDistanceUnit()}</Text>
             </View>
           </SettingRow>
 
