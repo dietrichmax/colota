@@ -88,7 +88,11 @@ android.permission.ACCESS_LOCAL_NETWORK
 
 Starting with Android 17, apps need this permission to connect to devices on the local network. Colota requests it when you use **Test Connection** with a private/local IP endpoint (e.g. `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`, or `100.64.x.x`). Loopback addresses (`localhost` / `127.0.0.1`) do not require this permission. If your server is a public HTTPS endpoint, this permission is never requested.
 
-:::note Android 16 On some Android 16 devices, local network access may be enforced early via security patches. In this case, Android uses the **Nearby Wi-Fi Devices** (`NEARBY_WIFI_DEVICES`) permission instead. If your local server is unreachable on Android 16, go to **Android Settings > Apps > Colota > Permissions** and enable **Nearby devices** manually. :::
+:::note[Android 16]
+
+On some Android 16 devices, local network access may be enforced early via security patches. In this case, Android uses the **Nearby Wi-Fi Devices** (`NEARBY_WIFI_DEVICES`) permission instead. If your local server is unreachable on Android 16, go to **Android Settings > Apps > Colota > Permissions** and enable **Nearby devices** manually.
+
+:::
 
 ### Battery Optimization
 

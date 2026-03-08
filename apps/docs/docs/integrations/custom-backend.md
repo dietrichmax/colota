@@ -98,22 +98,6 @@ your-domain.com {
 }
 ```
 
-## Compatible Backends
-
-Colota works with any service that accepts HTTP POST or GET requests. Built-in templates are available for:
-
-- **[Dawarich](/docs/integrations/dawarich)** - Self-hosted location history
-- **[OwnTracks](/docs/integrations/owntracks)** - Self-hosted presence tracking
-- **[PhoneTrack](/docs/integrations/phonetrack)** - Nextcloud location tracking
-- **[Reitti](/docs/integrations/reitti)** - Self-hosted location tracking
-- **[Traccar](/docs/integrations/traccar)** - GPS tracking platform (HTTP GET)
-
-Also works with:
-
-- **Home Assistant** - via webhook or REST API
-- **Node-RED** - flow-based automation
-- **Any HTTP server** - that accepts POST (JSON) or GET (query params)
-
 ## Configuration
 
 1. Go to **Settings > API Settings**
