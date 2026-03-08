@@ -25,7 +25,7 @@ const ANDROID_10 = 29
 /** Android version for notifications (Android 13) */
 const ANDROID_13 = 33
 
-/** Android version for local network permission enforcement (expected Android 17) */
+/** Android 17 (API 37) - local network enforced via ACCESS_LOCAL_NETWORK */
 const ANDROID_LOCAL_NETWORK = 37
 
 /**
@@ -195,12 +195,12 @@ async function checkBatteryOptimization(): Promise<boolean> {
 
 async function checkLocalNetwork(): Promise<boolean> {
   if (getAndroidVersion() < ANDROID_LOCAL_NETWORK) return true
-  return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES)
+  return await PermissionsAndroid.check("android.permission.ACCESS_LOCAL_NETWORK" as any)
 }
 
 /**
  * Requests the local network permission for accessing private/local IP endpoints.
- * Only needed on Android 17+ and only when the sync endpoint is a local address.
+ * Needed on Android 16+ when the sync endpoint is a local address.
  *
  * @returns True if permission is granted (or not needed)
  */
@@ -218,7 +218,7 @@ export async function ensureLocalNetworkPermission(): Promise<boolean> {
       : await fallbackLocalNetworkDisclosure()
     if (!consented) return false
 
-    const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES)
+    const result = await PermissionsAndroid.request("android.permission.ACCESS_LOCAL_NETWORK" as any)
     return result === PermissionsAndroid.RESULTS.GRANTED
   } catch (err) {
     logger.error("[PermissionService] Local network permission request failed:", err)
@@ -233,7 +233,7 @@ function fallbackLocalNetworkDisclosure(): Promise<boolean> {
   return new Promise((resolve) => {
     Alert.alert(
       "Local Network Access",
-      "Your server is on the local network. Colota needs the nearby devices permission to reach it.",
+      "Your server is on the local network. Colota needs local network access permission to reach it.",
       [
         { text: "Not Now", style: "cancel", onPress: () => resolve(false) },
         { text: "Continue", onPress: () => resolve(true) }

@@ -10,8 +10,8 @@ import { registerLocalNetworkDisclosureCallback } from "../../services/LocationS
 import { DisclosureModal } from "./DisclosureModal"
 
 /**
- * Disclosure modal for the local network (Nearby Devices) permission.
- * Shown before requesting NEARBY_WIFI_DEVICES on Android 17+.
+ * Disclosure modal for the local network permission.
+ * Shown before requesting ACCESS_LOCAL_NETWORK on Android 16+.
  */
 export function LocalNetworkDisclosureModal() {
   const { colors } = useTheme()
@@ -21,7 +21,7 @@ export function LocalNetworkDisclosureModal() {
       icon={<Wifi size={28} color={colors.primary} />}
       title="Local Network Access"
       paragraphs={[
-        "Your server is on the local network. Colota needs the nearby devices permission to reach it.",
+        "Your server is on the local network. Colota needs local network access permission to reach it.",
         "This permission is only used to connect to your self-hosted server. No device scanning or discovery is performed."
       ]}
       confirmLabel="Continue"

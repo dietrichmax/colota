@@ -48,6 +48,6 @@ Depends on your settings. With the **Balanced** preset (30s interval, batch sync
 
 Colota requires Android 8.0 (API 26) or higher.
 
-### Why does Colota ask for "Nearby devices" permission?
+### Why does Colota ask for "Local network access" permission?
 
-On Android 17+, apps need the Nearby Wi-Fi Devices permission to connect to local network addresses. Colota only requests this when your server is on a private/local IP (e.g. `192.168.x.x`). It is not used for device scanning or discovery, only to reach your self-hosted server.
+On Android 17+, apps need the Local Network Access permission to connect to local network addresses. Colota only requests this when your server is on a private/local IP (e.g. `192.168.x.x`). It is not used for device scanning or discovery, only to reach your self-hosted server. On some Android 16 devices, this may be enforced early via security patches under the "Nearby devices" permission name.

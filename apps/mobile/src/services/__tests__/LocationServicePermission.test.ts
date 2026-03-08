@@ -323,10 +323,10 @@ describe("checkPermissions", () => {
     expect(result.localNetwork).toBe(true)
   })
 
-  it("checks NEARBY_WIFI_DEVICES on Android 37+", async () => {
+  it("checks ACCESS_LOCAL_NETWORK on Android 37+", async () => {
     setPlatform("android", 37)
     checkSpy.mockImplementation((permission: string) => {
-      if (permission === PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES) {
+      if (permission === "android.permission.ACCESS_LOCAL_NETWORK") {
         return Promise.resolve(false)
       }
       return Promise.resolve(true)
@@ -376,7 +376,7 @@ describe("ensureLocalNetworkPermission", () => {
     await ensureLocalNetworkPermission()
 
     expect(disclosureSpy).toHaveBeenCalledTimes(1)
-    expect(requestSpy).toHaveBeenCalledWith(PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES)
+    expect(requestSpy).toHaveBeenCalledWith("android.permission.ACCESS_LOCAL_NETWORK")
   })
 
   it("returns false if user denies disclosure", async () => {
