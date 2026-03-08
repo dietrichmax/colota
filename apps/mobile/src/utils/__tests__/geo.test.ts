@@ -18,13 +18,13 @@ const mockGetSetting = jest.fn()
 jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
   default: {
-    getSetting: (...args) => mockGetSetting(...args)
+    getSetting: (...args: string[]) => mockGetSetting(...args)
   }
 }))
 
 /** Helper to set cached preferences via loadDisplayPreferences */
-async function setPreferences(unit, time) {
-  mockGetSetting.mockImplementation((key) => {
+async function setPreferences(unit: string, time: string) {
+  mockGetSetting.mockImplementation((key: string) => {
     if (key === "unitSystem") return Promise.resolve(unit)
     if (key === "timeFormat") return Promise.resolve(time)
     return Promise.resolve("")
@@ -33,7 +33,7 @@ async function setPreferences(unit, time) {
 }
 
 /** Helper to mock locale */
-function mockLocale(locale) {
+function mockLocale(locale: string) {
   // @ts-ignore - mock Intl
   Intl.NumberFormat = jest.fn(() => ({
     resolvedOptions: () => ({ locale })
@@ -81,7 +81,7 @@ describe("computeTotalDistance", () => {
 })
 
 describe("formatDistance", () => {
-  let originalNumberFormat
+  let originalNumberFormat: typeof Intl.NumberFormat
 
   beforeEach(() => {
     originalNumberFormat = Intl.NumberFormat
