@@ -117,6 +117,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
+          prerelease: ${{ contains(github.ref, '-') }}
           files: |
             apps/mobile/android/app/build/outputs/apk/gms/release/*.apk
             apps/mobile/android/app/build/outputs/apk/foss/release/*.apk
