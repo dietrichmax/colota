@@ -27,18 +27,26 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
       - run: npm ci
       - run: npm run build -w @colota/shared
       - run: npm run lint -w @colota/mobile
       - run: npx -w @colota/mobile tsc --noEmit
       - run: npm test -w @colota/mobile
+      - name: Run Kotlin unit tests
+        run: |
+          cd apps/mobile/android
+          chmod +x gradlew
+          ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon
 
-  build:
-    name: Build Release APKs
+  build-gms:
+    name: Build GMS Release APK
     needs: test
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout code
@@ -89,29 +97,115 @@ jobs:
           test -n "${{ secrets.KEY_ALIAS }}" || exit 1
           test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
 
-      - name: Run Kotlin unit tests
-        run: |
-          cd apps/mobile/android
-          chmod +x gradlew
-          ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon
-
       - name: Build GMS Release APKs
         run: |
           cd apps/mobile/android
+          chmod +x gradlew
           ./gradlew assembleGmsRelease --no-daemon
+
+      - name: Upload GMS APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: gms-release-apks
+          path: apps/mobile/android/app/build/outputs/apk/gms/release/*.apk
+
+      - name: Secure Cleanup
+        if: always()
+        run: |
+          rm -f apps/mobile/android/app/release.keystore
+          rm -f apps/mobile/android/gradle.properties
+
+  build-foss:
+    name: Build FOSS Release APK
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node & Java
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w @colota/shared
+
+      - name: Pin dev server IP for reproducible builds
+        run: |
+          sed -i 's/getHostIpAddress(),/project.properties["reactNativeDevServerIp"]?.toString() ?: "localhost",/' \
+            node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
+
+      - name: Append signing config to gradle.properties
+        run: |
+          cat <<EOF >> apps/mobile/android/gradle.properties
+          MYAPP_UPLOAD_STORE_FILE=release.keystore
+          MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}
+          MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.KEY_ALIAS }}
+          MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+          EOF
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo $KEYSTORE_BASE64 | base64 -d > apps/mobile/android/app/release.keystore
+
+      - name: Validate signing inputs
+        run: |
+          test -f apps/mobile/android/app/release.keystore || (echo "Keystore missing" && exit 1)
+          test -n "${{ secrets.KEYSTORE_PASSWORD }}" || exit 1
+          test -n "${{ secrets.KEY_ALIAS }}" || exit 1
+          test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
 
       - name: Build FOSS Release APKs
         run: |
           cd apps/mobile/android
-          ./gradlew clean assembleFossRelease --no-daemon
+          chmod +x gradlew
+          ./gradlew assembleFossRelease --no-daemon
 
-      - name: Upload APKs
+      - name: Upload FOSS APKs
         uses: actions/upload-artifact@v4
         with:
-          name: release-apks
-          path: |
-            apps/mobile/android/app/build/outputs/apk/gms/release/*.apk
-            apps/mobile/android/app/build/outputs/apk/foss/release/*.apk
+          name: foss-release-apks
+          path: apps/mobile/android/app/build/outputs/apk/foss/release/*.apk
+
+      - name: Secure Cleanup
+        if: always()
+        run: |
+          rm -f apps/mobile/android/app/release.keystore
+          rm -f apps/mobile/android/gradle.properties
+
+  release:
+    name: Publish GitHub Release
+    needs: [build-gms, build-foss]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download GMS APKs
+        uses: actions/download-artifact@v4
+        with:
+          name: gms-release-apks
+          path: apks/gms
+
+      - name: Download FOSS APKs
+        uses: actions/download-artifact@v4
+        with:
+          name: foss-release-apks
+          path: apks/foss
 
       - name: Upload APKs to GitHub Release
         uses: softprops/action-gh-release@v2
@@ -119,12 +213,5 @@ jobs:
           draft: true
           prerelease: ${{ contains(github.ref, '-') }}
           files: |
-            apps/mobile/android/app/build/outputs/apk/gms/release/*.apk
-            apps/mobile/android/app/build/outputs/apk/foss/release/*.apk
-
-      - name: Secure Cleanup
-        if: always()
-        run: |
-          echo "Cleaning up sensitive files..."
-          rm -f apps/mobile/android/app/release.keystore
-          rm -f apps/mobile/android/gradle.properties
+            apks/gms/*.apk
+            apks/foss/*.apk

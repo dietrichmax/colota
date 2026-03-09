@@ -4,10 +4,8 @@ on:
   pull_request:
     branches: [main, develop]
     paths:
-      - 'apps/mobile/android/**'
+      - 'apps/mobile/**'
       - '!fastlane/**'
-      - 'apps/mobile/src/**'
-      - '!apps/mobile/src/**/__tests__/**'
       - 'packages/shared/**'
       - 'package-lock.json'
 
@@ -19,8 +17,8 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build Debug APKs
+  test:
+    name: Lint & Test
     runs-on: ubuntu-latest
 
     steps:
@@ -46,18 +44,85 @@ jobs:
       - name: Build shared package
         run: npm run build -w @colota/shared
 
+      - name: Run ESLint
+        run: npm run lint -w @colota/mobile
+
+      - name: Run TypeScript check
+        run: npx -w @colota/mobile tsc --noEmit
+
+      - name: Run tests
+        run: npm test -w @colota/mobile
+
       - name: Run Kotlin unit tests
         run: |
           cd apps/mobile/android
           chmod +x gradlew
           ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon
 
+  build-gms:
+    name: Build GMS Debug APK
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w @colota/shared
+
       - name: Build GMS Debug APK
         run: |
           cd apps/mobile/android
+          chmod +x gradlew
           ./gradlew assembleGmsDebug --no-daemon
+
+  build-foss:
+    name: Build FOSS Debug APK
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w @colota/shared
 
       - name: Build FOSS Debug APK
         run: |
           cd apps/mobile/android
-          ./gradlew clean assembleFossDebug --no-daemon
+          chmod +x gradlew
+          ./gradlew assembleFossDebug --no-daemon
