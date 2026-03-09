@@ -20,6 +20,7 @@
     
     <!-- Foreground service type (Android 10+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Notification permission (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -73,6 +74,12 @@
                 <action android:name="com.Colota.ACTION_MANUAL_FLUSH" />
             </intent-filter>
         </service>
+
+        <!-- WorkManager foreground service (auto-export) -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
 
         <!-- Boot Receiver -->
         <receiver

@@ -4,6 +4,7 @@
  */
 
 export { ApiSettingsScreen } from "./ApiSettingsScreen"
+export { AutoExportScreen } from "./AutoExportScreen"
 export { AuthSettingsScreen } from "./AuthSettingsScreen"
 export { DashboardScreen } from "./DashboardScreen"
 export { DataManagementScreen } from "./DataManagementScreen"

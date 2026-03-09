@@ -6,6 +6,7 @@
 package com.Colota.data
 
 import android.content.ContentValues
+import android.database.Cursor
 import com.Colota.util.AppLogger
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
@@ -288,10 +289,27 @@ class DatabaseHelper private constructor(context: Context) :
 
     private val ALLOWED_TABLES = setOf(TABLE_LOCATIONS, TABLE_QUEUE, TABLE_SETTINGS, TABLE_GEOFENCES, TABLE_PROFILES)
 
+    private fun Cursor.toMapList(): List<Map<String, Any?>> = buildList {
+        val columns = columnNames
+        while (moveToNext()) {
+            add(buildMap {
+                for (col in columns) {
+                    val idx = getColumnIndex(col)
+                    if (idx != -1) {
+                        put(col, when (getType(idx)) {
+                            Cursor.FIELD_TYPE_INTEGER -> getLong(idx)
+                            Cursor.FIELD_TYPE_FLOAT -> getDouble(idx)
+                            Cursor.FIELD_TYPE_STRING -> getString(idx)
+                            else -> null
+                        })
+                    }
+                }
+            })
+        }
+    }
+
     fun getTableData(tableName: String, limit: Int, offset: Int): List<Map<String, Any?>> {
         require(tableName in ALLOWED_TABLES) { "Invalid table name: $tableName" }
-
-        val data = mutableListOf<Map<String, Any?>>()
 
         val orderBy = when(tableName) {
             TABLE_LOCATIONS -> "timestamp DESC"
@@ -300,38 +318,31 @@ class DatabaseHelper private constructor(context: Context) :
             else -> "ROWID DESC"
         }
 
-        try {
+        return try {
             readableDatabase.query(
-                tableName, 
-                null, 
-                null, null, null, null, 
-                orderBy, 
-                "$limit OFFSET $offset"
-            ).use { cursor ->
-                val columnNames = cursor.columnNames
-                
-                while (cursor.moveToNext()) {
-                    val row = mutableMapOf<String, Any?>()
-                    
-                    for (column in columnNames) {
-                        val idx = cursor.getColumnIndex(column)
-                        if (idx != -1) {
-                            row[column] = when (cursor.getType(idx)) {
-                                android.database.Cursor.FIELD_TYPE_INTEGER -> cursor.getLong(idx)
-                                android.database.Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(idx)
-                                android.database.Cursor.FIELD_TYPE_STRING -> cursor.getString(idx)
-                                else -> null
-                            }
-                        }
-                    }
-                    data.add(row)
-                }
-            }
+                tableName, null, null, null, null, null,
+                orderBy, "$limit OFFSET $offset"
+            ).use { it.toMapList() }
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error reading table $tableName", e)
+            emptyList()
         }
-        
-        return data
+    }
+
+    /**
+     * Returns all locations ordered chronologically (ASC) with pagination.
+     * Used for export operations where chronological order is required.
+     */
+    fun getLocationsChronological(limit: Int, offset: Int): List<Map<String, Any?>> {
+        return try {
+            readableDatabase.query(
+                TABLE_LOCATIONS, null, null, null, null, null,
+                "timestamp ASC, id ASC", "$limit OFFSET $offset"
+            ).use { it.toMapList() }
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error reading locations chronologically", e)
+            emptyList()
+        }
     }
 
     /**
@@ -342,42 +353,27 @@ class DatabaseHelper private constructor(context: Context) :
      * @param endTimestamp End of range (Unix seconds, inclusive)
      * @return Locations ordered by timestamp ASC for polyline drawing
      */
-    fun getLocationsByDateRange(startTimestamp: Long, endTimestamp: Long): List<Map<String, Any?>> {
-        val data = mutableListOf<Map<String, Any?>>()
-
-        try {
+    fun getLocationsByDateRange(
+        startTimestamp: Long,
+        endTimestamp: Long,
+        limit: Int = 0,
+        offset: Int = 0
+    ): List<Map<String, Any?>> {
+        return try {
             readableDatabase.query(
-                TABLE_LOCATIONS,
-                null,
+                TABLE_LOCATIONS, null,
                 "timestamp >= ? AND timestamp <= ?",
                 arrayOf(startTimestamp.toString(), endTimestamp.toString()),
                 null, null,
-                "timestamp ASC, id ASC"
-            ).use { cursor ->
-                val columnNames = cursor.columnNames
-
-                while (cursor.moveToNext()) {
-                    val row = mutableMapOf<String, Any?>()
-                    for (column in columnNames) {
-                        val idx = cursor.getColumnIndex(column)
-                        if (idx != -1) {
-                            row[column] = when (cursor.getType(idx)) {
-                                android.database.Cursor.FIELD_TYPE_INTEGER -> cursor.getLong(idx)
-                                android.database.Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(idx)
-                                android.database.Cursor.FIELD_TYPE_STRING -> cursor.getString(idx)
-                                else -> null
-                            }
-                        }
-                    }
-                    data.add(row)
-                }
-            }
+                "timestamp ASC, id ASC",
+                if (limit > 0) "$limit OFFSET $offset" else null
+            ).use { it.toMapList() }
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error reading locations by date range", e)
+            emptyList()
         }
-
-        return data
     }
+
 
     /**
     * Adds location to transmission queue.

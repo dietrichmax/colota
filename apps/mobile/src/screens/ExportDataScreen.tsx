@@ -3,27 +3,28 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react"
-import { Text, StyleSheet, View, ActivityIndicator, ScrollView } from "react-native"
+import { useState, useEffect, useCallback } from "react"
+import { Text, StyleSheet, View, ActivityIndicator, ScrollView, Pressable } from "react-native"
 import { fonts } from "../styles/typography"
-import { Download, MapPinOff } from "lucide-react-native"
+import { Download, MapPinOff, Clock, ChevronRight } from "lucide-react-native"
 import { Container, Card, SectionTitle, Button, FormatSelector } from "../components"
 import { useTheme } from "../hooks/useTheme"
-import { LocationCoords } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
-import { LARGE_FILE_THRESHOLD, formatBytes, getByteSize, EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
+import { EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
 import { logger } from "../utils/logger"
-import { showAlert, showConfirm } from "../services/modalService"
+import { showAlert } from "../services/modalService"
+import { ScreenProps } from "../types/global"
 
-export function ExportDataScreen() {
+export function ExportDataScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
   const [exporting, setExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState<string>("")
   const [totalLocations, setTotalLocations] = useState(0)
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat | null>(null)
-  const [fileSize, setFileSize] = useState<string | null>(null)
-  const cachedData = useRef<LocationCoords[]>([])
-  const cachedContent = useRef<{ format: ExportFormat; content: string } | null>(null)
+  const [autoExportEnabled, setAutoExportEnabled] = useState(false)
+  const [autoExportInterval, setAutoExportInterval] = useState("")
+  const [autoExportFormat, setAutoExportFormat] = useState("")
+  const [lastExportTs, setLastExportTs] = useState(0)
 
   const loadStats = useCallback(async () => {
     try {
@@ -34,38 +35,22 @@ export function ExportDataScreen() {
     }
   }, [])
 
-  const loadExportData = useCallback(async () => {
-    if (cachedData.current.length > 0) return
-    const data = await NativeLocationService.getExportData()
-    if (data && data.length > 0) {
-      cachedData.current = data
+  const loadAutoExportStatus = useCallback(async () => {
+    try {
+      const status = await NativeLocationService.getAutoExportStatus()
+      setAutoExportEnabled(status.enabled)
+      setAutoExportInterval(status.interval)
+      setAutoExportFormat(status.format)
+      setLastExportTs(status.lastExportTimestamp)
+    } catch (error) {
+      logger.error("[ExportDataScreen] Failed to load auto-export status:", error)
     }
   }, [])
 
   useEffect(() => {
     loadStats()
-  }, [loadStats])
-
-  // Convert once on format selection, cache the result for both size preview and export
-  useEffect(() => {
-    if (!selectedFormat || totalLocations === 0) {
-      setFileSize(null)
-      cachedContent.current = null
-      return
-    }
-
-    let cancelled = false
-    ;(async () => {
-      await loadExportData()
-      if (cancelled || cachedData.current.length === 0) return
-      const content = EXPORT_FORMATS[selectedFormat].convert(cachedData.current)
-      cachedContent.current = { format: selectedFormat, content }
-      setFileSize(formatBytes(getByteSize(content)))
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [selectedFormat, totalLocations, loadExportData])
+    loadAutoExportStatus()
+  }, [loadStats, loadAutoExportStatus])
 
   const handleExport = async (format: ExportFormat) => {
     if (totalLocations === 0) {
@@ -74,53 +59,26 @@ export function ExportDataScreen() {
     }
 
     setExporting(true)
-    setExportProgress("Preparing export...")
+    setExportProgress("Exporting locations...")
 
     try {
-      await loadExportData()
-      setExportProgress(`Converting ${cachedData.current.length} locations...`)
+      const result = await NativeLocationService.exportToFile(format)
 
-      // Reuse cached conversion if format matches, otherwise convert fresh
-      const content =
-        cachedContent.current?.format === format
-          ? cachedContent.current.content
-          : EXPORT_FORMATS[format].convert(cachedData.current)
-
-      const formatConfig = EXPORT_FORMATS[format]
-      const exportSize = getByteSize(content)
-
-      if (exportSize > LARGE_FILE_THRESHOLD) {
-        setExporting(false)
-        setExportProgress("")
-
-        const confirmed = await showConfirm({
-          title: "Large Export",
-          message: `The export file is ${formatBytes(exportSize)}. This may take a moment to save and share. Continue?`,
-          confirmText: "Continue"
-        })
-
-        if (!confirmed) {
-          setSelectedFormat(null)
-          return
-        }
-
-        setExporting(true)
+      if (!result) {
+        showAlert("No Data", "There are no locations in the database to export.", "info")
+        return
       }
 
-      const fileName = `colota_export_${Date.now()}${formatConfig.extension}`
-
-      setExportProgress(`Saving file (${formatBytes(exportSize)})...`)
-
-      const filePath = await NativeLocationService.writeFile(fileName, content)
+      setExportProgress(`Exported ${result.rowCount.toLocaleString()} locations`)
 
       setExporting(false)
       setExportProgress("")
 
       try {
         await NativeLocationService.shareFile(
-          filePath,
-          formatConfig.mimeType,
-          `Colota Export - ${totalLocations} locations`
+          result.filePath,
+          result.mimeType,
+          `Colota Export - ${result.rowCount} locations`
         )
       } catch (shareError: any) {
         logger.warn("[ExportDataScreen] Share error:", shareError)
@@ -144,7 +102,7 @@ export function ExportDataScreen() {
         </View>
 
         {totalLocations === 0 ? (
-          <Card>
+          <Card style={styles.emptyCard}>
             <View style={styles.emptyState}>
               <MapPinOff size={40} color={colors.textLight} />
               <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
@@ -159,17 +117,10 @@ export function ExportDataScreen() {
             <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Locations</Text>
                   <Text style={[styles.statValue, { color: colors.primaryDark }]}>
                     {totalLocations.toLocaleString()}
                   </Text>
-                </View>
-
-                <View style={[styles.statsDivider, { backgroundColor: colors.border }]} />
-
-                <View style={styles.statItem}>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>File Size</Text>
-                  <Text style={[styles.statValue, { color: colors.success }]}>{fileSize ?? "–"}</Text>
                 </View>
               </View>
             </View>
@@ -184,15 +135,39 @@ export function ExportDataScreen() {
 
             {/* Export Button */}
             {selectedFormat && (
-              <Button
-                onPress={() => handleExport(selectedFormat)}
-                disabled={exporting}
-                title={`Export ${EXPORT_FORMATS[selectedFormat].label}`}
-                icon={Download}
-              />
+              <View style={styles.exportButtonWrapper}>
+                <Button
+                  onPress={() => handleExport(selectedFormat)}
+                  disabled={exporting}
+                  title={`Export ${EXPORT_FORMATS[selectedFormat].label}`}
+                  icon={Download}
+                />
+              </View>
             )}
           </>
         )}
+
+        {/* Auto-Export */}
+        <View style={styles.section}>
+          <SectionTitle>Scheduled Export</SectionTitle>
+          <Card>
+            <Pressable
+              style={({ pressed }) => [styles.autoExportRow, pressed && { opacity: 0.6 }]}
+              onPress={() => navigation.navigate("Auto-Export")}
+            >
+              <Clock size={22} color={autoExportEnabled ? colors.primary : colors.textLight} />
+              <View style={styles.autoExportContent}>
+                <Text style={[styles.autoExportLabel, { color: colors.text }]}>Auto-Export</Text>
+                <Text style={[styles.autoExportSub, { color: colors.textSecondary }]}>
+                  {autoExportEnabled
+                    ? `${autoExportInterval === "daily" ? "Daily" : autoExportInterval === "weekly" ? "Weekly" : "Monthly"} - ${autoExportFormat.toUpperCase()}${lastExportTs > 0 ? ` - Last: ${new Date(lastExportTs * 1000).toLocaleDateString()}` : ""}`
+                    : "Schedule automatic exports"}
+                </Text>
+              </View>
+              <ChevronRight size={20} color={colors.textLight} />
+            </Pressable>
+          </Card>
+        </View>
       </ScrollView>
 
       {/* Loading Overlay */}
@@ -222,6 +197,9 @@ const styles = StyleSheet.create({
     fontSize: 28,
     ...fonts.bold,
     letterSpacing: -0.5
+  },
+  emptyCard: {
+    marginBottom: 24
   },
   emptyState: {
     alignItems: "center",
@@ -265,11 +243,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     textAlign: "center"
   },
-  statsDivider: {
-    width: 1,
-    marginHorizontal: 12,
-    opacity: 0.3
-  },
   section: {
     marginBottom: 24
   },
@@ -302,5 +275,26 @@ const styles = StyleSheet.create({
   loaderText: {
     fontSize: 13,
     textAlign: "center"
+  },
+  autoExportRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 8
+  },
+  autoExportContent: {
+    flex: 1
+  },
+  autoExportLabel: {
+    fontSize: 16,
+    ...fonts.semiBold,
+    marginBottom: 2
+  },
+  autoExportSub: {
+    fontSize: 13,
+    ...fonts.regular
+  },
+  exportButtonWrapper: {
+    marginBottom: 16
   }
 })
