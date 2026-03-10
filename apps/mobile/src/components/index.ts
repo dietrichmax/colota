@@ -37,7 +37,7 @@ export { SettingRow } from "./ui/SettingRow"
 export { DashboardMap } from "./features/dashboard/DashboardMap"
 export { CoordinateDisplay } from "./features/dashboard/CoordinateDisplay"
 export { QuickAccess } from "./features/dashboard/QuickAccess"
-export { ServerConnection } from "./features/dashboard/ServerConnection"
+export { ConnectionStatus } from "./features/dashboard/ConnectionStatus"
 export { WelcomeCard } from "./features/dashboard/WelcomeCard"
 export { DatabaseStatistics } from "./features/dashboard/DatabaseStatistics"
 

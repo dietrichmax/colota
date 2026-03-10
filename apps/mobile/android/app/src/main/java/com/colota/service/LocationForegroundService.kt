@@ -206,7 +206,7 @@ class LocationForegroundService : Service() {
                         conditionMonitor.start()
                     }
 
-                    if (config.syncIntervalSeconds == 0 && config.endpoint.isNotBlank() &&
+                    if (!config.isOfflineMode && config.syncIntervalSeconds == 0 && config.endpoint.isNotBlank() &&
                         !(config.isWifiOnlySync && !networkManager.isUnmeteredConnection())) {
                         syncManager.manualFlush()
                     }
@@ -548,15 +548,17 @@ class LocationForegroundService : Service() {
         val isCurrentlyPaused = pausedInZone || insidePauseZone
         val activeZone = zoneName ?: currentZoneName
 
+        val offline = ::config.isInitialized && config.isOfflineMode
         notificationHelper.update(
             lat = lat,
             lon = lon,
             isPaused = isCurrentlyPaused,
             zoneName = activeZone,
-            queuedCount = syncManager.getCachedQueuedCount(),
-            lastSyncTime = syncManager.lastSuccessfulSyncTime,
+            queuedCount = if (offline) 0 else syncManager.getCachedQueuedCount(),
+            lastSyncTime = if (offline) 0L else syncManager.lastSuccessfulSyncTime,
             activeProfileName = profileManager.getActiveProfileName(),
-            forceUpdate = forceUpdate
+            forceUpdate = forceUpdate,
+            isOfflineMode = offline
         )
     }
 

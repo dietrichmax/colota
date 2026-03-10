@@ -34,6 +34,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
   // Stats
   const [queueCount, setQueueCount] = useState(0)
   const [sentCount, setSentCount] = useState(0)
+  const [todayCount, setTodayCount] = useState(0)
 
   // Endpoint input (managed here since ConnectionSettings needs it and we sync with settings)
   const [endpointInput, setEndpointInput] = useState(settings.endpoint || "")
@@ -83,6 +84,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
       const stats = await NativeLocationService.getStats()
       setQueueCount(stats.queued)
       setSentCount(stats.sent)
+      setTodayCount(stats.today)
     } catch (err) {
       logger.error("[SettingsScreen] Failed to get stats:", err)
     }
@@ -133,8 +135,8 @@ export function SettingsScreen({ navigation }: ScreenProps) {
         <StatsCard
           queueCount={queueCount}
           sentCount={sentCount}
+          todayCount={todayCount}
           interval={settings.interval.toString()}
-          isOfflineMode={settings.isOfflineMode}
           onManageClick={() => navigation.navigate("Data Management")}
           colors={colors}
         />
@@ -234,18 +236,24 @@ export function SettingsScreen({ navigation }: ScreenProps) {
               <ChevronRight size={20} color={colors.textLight} />
             </Pressable>
 
-            <Divider />
+            {!settings.isOfflineMode && (
+              <>
+                <Divider />
 
-            <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
-              onPress={() => navigation.navigate("API Config")}
-            >
-              <View style={styles.linkContent}>
-                <Text style={[styles.linkLabel, { color: colors.text }]}>API Field Mapping</Text>
-                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>Customize JSON payload structure</Text>
-              </View>
-              <ChevronRight size={20} color={colors.textLight} />
-            </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+                  onPress={() => navigation.navigate("API Config")}
+                >
+                  <View style={styles.linkContent}>
+                    <Text style={[styles.linkLabel, { color: colors.text }]}>API Field Mapping</Text>
+                    <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
+                      Customize JSON payload structure
+                    </Text>
+                  </View>
+                  <ChevronRight size={20} color={colors.textLight} />
+                </Pressable>
+              </>
+            )}
           </Card>
         </View>
       </ScrollView>

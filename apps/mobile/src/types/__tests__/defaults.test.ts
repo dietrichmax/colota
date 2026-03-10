@@ -112,6 +112,13 @@ describe("TRACKING_PRESETS", () => {
     expect(TRACKING_PRESETS[name].label).toBeTruthy()
   })
 
+  it.each(presetNames)("%s description uses bullet separator for sync info", (name) => {
+    const parts = TRACKING_PRESETS[name].description.split(" • ")
+    expect(parts[0]).toBeTruthy()
+    expect(parts[0]).not.toContain("Send")
+    expect(parts[0]).not.toContain("Batch")
+  })
+
   it.each(presetNames)("%s has valid batteryImpact", (name) => {
     expect(["Low", "Medium", "High"]).toContain(TRACKING_PRESETS[name].batteryImpact)
   })

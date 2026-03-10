@@ -22,6 +22,7 @@ import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { fonts, fontSizes } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
+import { useTracking } from "../contexts/TrackingProvider"
 import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
 import { STATS_REFRESH_FAST, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
@@ -30,6 +31,8 @@ import { logger } from "../utils/logger"
 
 export function DataManagementScreen({}: ScreenProps) {
   const { colors } = useTheme()
+  const { settings } = useTracking()
+  const isOfflineMode = settings.isOfflineMode
 
   const [stats, setStats] = useState<DatabaseStats>({
     queued: 0,
@@ -185,6 +188,21 @@ export function DataManagementScreen({}: ScreenProps) {
     )
   }, [handleDeleteAction, stats.queued])
 
+  const handleDeleteAllLocations = useCallback(async () => {
+    const confirmed = await showConfirm({
+      title: "Delete All Locations",
+      message: `Delete all ${stats.total} stored location${stats.total !== 1 ? "s" : ""}? This cannot be undone.`,
+      confirmText: "Delete All",
+      destructive: true
+    })
+    if (!confirmed) return
+
+    handleDeleteAction(
+      () => NativeLocationService.clearAllLocations(),
+      (count) => `Deleted ${count} location${count !== 1 ? "s" : ""}`
+    )
+  }, [handleDeleteAction, stats.total])
+
   const handleDeleteOlderThan = useCallback(async () => {
     const days = parseInt(daysInput, 10)
     if (isNaN(days) || days <= 0) {
@@ -263,8 +281,12 @@ export function DataManagementScreen({}: ScreenProps) {
             <Card>
               {[
                 ["Total Locations", stats.total.toLocaleString(), colors.text],
-                ["Sent", stats.sent.toLocaleString(), colors.success],
-                ["Queued", stats.queued.toLocaleString(), colors.warning],
+                ...(!isOfflineMode
+                  ? [
+                      ["Sent", stats.sent.toLocaleString(), colors.success],
+                      ["Queued", stats.queued.toLocaleString(), colors.warning]
+                    ]
+                  : []),
                 ["Today", stats.today.toLocaleString(), colors.info],
                 ["Storage", `${stats.databaseSizeMB.toFixed(2)} MB`, colors.primary]
               ].map(([label, value, color], i, arr) => (
@@ -280,45 +302,65 @@ export function DataManagementScreen({}: ScreenProps) {
           </View>
 
           {/* Queue Actions */}
-          <View style={styles.section}>
-            <SectionTitle>QUEUE ACTIONS</SectionTitle>
-            <Card>
-              <Button onPress={handleManualFlush} disabled={isProcessing || stats.queued === 0} title="Sync Now" />
-              <Text style={[styles.hint, { color: colors.textLight }]}>
-                {stats.queued === 0
-                  ? "Queue is empty"
-                  : `Trigger immediate sync of ${stats.queued} queued location${stats.queued !== 1 ? "s" : ""}`}
-              </Text>
-            </Card>
-          </View>
+          {!isOfflineMode && (
+            <View style={styles.section}>
+              <SectionTitle>QUEUE ACTIONS</SectionTitle>
+              <Card>
+                <Button onPress={handleManualFlush} disabled={isProcessing || stats.queued === 0} title="Sync Now" />
+                <Text style={[styles.hint, { color: colors.textLight }]}>
+                  {stats.queued === 0
+                    ? "Queue is empty"
+                    : `Trigger immediate sync of ${stats.queued} queued location${stats.queued !== 1 ? "s" : ""}`}
+                </Text>
+              </Card>
+            </View>
+          )}
 
           {/* Cleanup Actions */}
           <View style={styles.section}>
             <SectionTitle>CLEANUP ACTIONS</SectionTitle>
             <Card>
-              {/* Clear Sent History */}
-              <ActionRow
-                label="Clear Sent History"
-                hint="Delete all successfully sent locations"
-                color={colors.success}
-                textColor={colors.textLight}
-                value={stats.sent.toLocaleString()}
-                onPress={handleClearSentHistory}
-                disabled={isProcessing || stats.sent === 0}
-              />
-              <Divider />
+              {!isOfflineMode ? (
+                <>
+                  {/* Clear Sent History */}
+                  <ActionRow
+                    label="Clear Sent History"
+                    hint="Delete all successfully sent locations"
+                    color={colors.success}
+                    textColor={colors.textLight}
+                    value={stats.sent.toLocaleString()}
+                    onPress={handleClearSentHistory}
+                    disabled={isProcessing || stats.sent === 0}
+                  />
+                  <Divider />
 
-              {/* Clear Queue */}
-              <ActionRow
-                label="Clear Queue"
-                hint="Delete all pending locations"
-                color={colors.warning}
-                textColor={colors.textLight}
-                value={stats.queued.toLocaleString()}
-                onPress={handleClearQueue}
-                disabled={isProcessing || stats.queued === 0}
-              />
-              <Divider />
+                  {/* Clear Queue */}
+                  <ActionRow
+                    label="Clear Queue"
+                    hint="Delete all pending locations"
+                    color={colors.warning}
+                    textColor={colors.textLight}
+                    value={stats.queued.toLocaleString()}
+                    onPress={handleClearQueue}
+                    disabled={isProcessing || stats.queued === 0}
+                  />
+                  <Divider />
+                </>
+              ) : (
+                <>
+                  {/* Delete All Locations (offline mode) */}
+                  <ActionRow
+                    label="Delete All Locations"
+                    hint="Remove all stored locations from the database"
+                    color={colors.error}
+                    textColor={colors.textLight}
+                    value={stats.total.toLocaleString()}
+                    onPress={handleDeleteAllLocations}
+                    disabled={isProcessing || stats.total === 0}
+                  />
+                  <Divider />
+                </>
+              )}
 
               {/* Delete Older Than */}
               <View style={styles.actionColumn}>

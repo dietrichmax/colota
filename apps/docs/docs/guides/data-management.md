@@ -21,6 +21,8 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 | **Vacuum Database**          | Reclaim disk space after deletions                          |
 | **Export Data**              | Export location history - see [Data Export](data-export.md) |
 
+In [offline mode](/docs/configuration/server-settings#offline-mode), sync-related actions (Sync Now, Clear Sent History, Clear Queue) are hidden since no queue is used. A **Delete All Locations** action is available instead. Data export remains fully available - see [Data Export](data-export.md).
+
 ## Storage Reference
 
 - ~200 bytes per location

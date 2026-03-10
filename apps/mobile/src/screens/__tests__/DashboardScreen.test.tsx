@@ -70,7 +70,7 @@ jest.mock("../../components", () => {
     DashboardMap: () => R.createElement(View, { testID: "DashboardMap" }),
     CoordinateDisplay: () => R.createElement(View, { testID: "CoordinateDisplay" }),
     DatabaseStatistics: () => R.createElement(View, { testID: "DatabaseStatistics" }),
-    ServerConnection: () => R.createElement(View, { testID: "ServerConnection" }),
+    ConnectionStatus: () => R.createElement(View, { testID: "ConnectionStatus" }),
     QuickAccess: () => R.createElement(View, { testID: "QuickAccess" }),
     WelcomeCard: () => R.createElement(View, { testID: "WelcomeCard" }),
     Container: ({ children }: any) => R.createElement(View, null, children),
@@ -146,9 +146,25 @@ describe("DashboardScreen", () => {
     expect(getByTestId("DatabaseStatistics")).toBeTruthy()
   })
 
-  it("renders ServerConnection component", () => {
+  it("renders ConnectionStatus component", () => {
     const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 
-    expect(getByTestId("ServerConnection")).toBeTruthy()
+    expect(getByTestId("ConnectionStatus")).toBeTruthy()
+  })
+
+  it("hides ConnectionStatus when offline mode is enabled", () => {
+    mockSettings = { ...DEFAULT_SETTINGS, isOfflineMode: true }
+
+    const { queryByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
+
+    expect(queryByTestId("ConnectionStatus")).toBeNull()
+  })
+
+  it("still renders DatabaseStatistics when offline mode is enabled", () => {
+    mockSettings = { ...DEFAULT_SETTINGS, isOfflineMode: true }
+
+    const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
+
+    expect(getByTestId("DatabaseStatistics")).toBeTruthy()
   })
 })

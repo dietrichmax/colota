@@ -7,6 +7,7 @@ import React from "react"
 import { Text, StyleSheet, View, Pressable } from "react-native"
 import { Check, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
+import { useTracking } from "../../../contexts/TrackingProvider"
 import { fonts } from "../../../styles/typography"
 import { Card } from "../../ui/Card"
 
@@ -75,6 +76,9 @@ export function WelcomeCard({
   onNavigateToSettings,
   onNavigateToApiConfig
 }: WelcomeCardProps) {
+  const {
+    settings: { isOfflineMode }
+  } = useTracking()
   const hasEndpoint = settings.endpoint.trim().length > 0
 
   return (
@@ -85,18 +89,22 @@ export function WelcomeCard({
 
         <View style={styles.checklist}>
           <ChecklistItem label="1. Start tracking" completed={tracking} colors={colors} onPress={onStartTracking} />
-          <ChecklistItem
-            label="2. Configure your server endpoint"
-            completed={hasEndpoint}
-            colors={colors}
-            onPress={onNavigateToSettings}
-          />
+          {!isOfflineMode && (
+            <ChecklistItem
+              label="2. Configure your server endpoint"
+              completed={hasEndpoint}
+              colors={colors}
+              onPress={onNavigateToSettings}
+            />
+          )}
         </View>
 
         <View style={styles.linkRow}>
-          <Pressable onPress={onNavigateToApiConfig} style={({ pressed }) => pressed && { opacity: 0.6 }}>
-            <Text style={[styles.link, { color: colors.primaryDark }]}>API field mapping</Text>
-          </Pressable>
+          {!isOfflineMode && (
+            <Pressable onPress={onNavigateToApiConfig} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+              <Text style={[styles.link, { color: colors.primaryDark }]}>API field mapping</Text>
+            </Pressable>
+          )}
           <Pressable onPress={onNavigateToSettings} style={({ pressed }) => pressed && { opacity: 0.6 }}>
             <Text style={[styles.link, { color: colors.primaryDark }]}>Tracking presets</Text>
           </Pressable>

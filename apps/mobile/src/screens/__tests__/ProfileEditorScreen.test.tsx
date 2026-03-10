@@ -36,6 +36,12 @@ jest.mock("../../services/modalService", () => ({
   showAlert: (...args: any[]) => mockShowAlert(...args)
 }))
 
+jest.mock("../../contexts/TrackingProvider", () => ({
+  useTracking: () => ({
+    settings: { isOfflineMode: false }
+  })
+}))
+
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
     colors: {

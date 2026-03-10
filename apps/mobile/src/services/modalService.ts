@@ -41,6 +41,45 @@ export function showAlert(title: string, message: string, variant: AlertVariant 
   })
 }
 
+export function showChoice(options: {
+  title: string
+  message: string
+  variant?: AlertVariant
+  buttons: Array<{
+    text: string
+    style?: "primary" | "secondary" | "destructive"
+  }>
+}): Promise<number> {
+  const { title, message, variant = "warning", buttons } = options
+
+  return new Promise((resolve) => {
+    if (!_handler) {
+      Alert.alert(
+        title,
+        message,
+        buttons.map((btn, i) => ({
+          text: btn.text,
+          style: btn.style === "destructive" ? "destructive" : btn.style === "secondary" ? "cancel" : "default",
+          onPress: () => resolve(i)
+        })),
+        { cancelable: false }
+      )
+      return
+    }
+
+    _handler({
+      title,
+      message,
+      variant,
+      buttons: buttons.map((btn) => ({
+        text: btn.text,
+        style: btn.style ?? "secondary"
+      })),
+      resolve: (index) => resolve(index)
+    })
+  })
+}
+
 export function showConfirm(options: {
   title: string
   message: string

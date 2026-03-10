@@ -9,12 +9,12 @@ import { ChevronRight } from "lucide-react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
-import { ServerStatus, ServerConnectionProps } from "../../../types/global"
+import { ServerStatus, ConnectionStatusProps } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { SERVER_TIMEOUT, SERVER_CHECK_INTERVAL } from "../../../constants"
 
-export function ServerConnection({ endpoint, navigation }: ServerConnectionProps) {
+export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps) {
   const { colors } = useTheme()
   const { settings } = useTracking()
   const isOffline = settings.isOfflineMode
@@ -107,7 +107,7 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
       error: { color: colors.error, label: "Unreachable" },
       notConfigured: { color: colors.warning, label: "No endpoint" },
       deviceOffline: { color: colors.textSecondary, label: "Device offline" },
-      offline: { color: colors.textSecondary, label: "Offline" },
+      offline: { color: colors.textSecondary, label: "Offline Mode" },
       loading: { color: colors.textLight, label: "Checking" }
     }
 
@@ -128,9 +128,9 @@ export function ServerConnection({ endpoint, navigation }: ServerConnectionProps
     >
       <View style={[styles.dot, { backgroundColor: config.color }]} />
       <Text style={[styles.host, { color: colors.text }]} numberOfLines={1}>
-        {displayUrl || "Server"}
+        {isOffline ? "Offline Mode" : displayUrl || "Server"}
       </Text>
-      <Text style={[styles.status, { color: config.color }]}>{config.label}</Text>
+      {!isOffline && <Text style={[styles.status, { color: config.color }]}>{config.label}</Text>}
       <ChevronRight size={16} color={colors.textLight} />
     </Pressable>
   )

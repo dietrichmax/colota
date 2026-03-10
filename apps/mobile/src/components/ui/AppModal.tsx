@@ -71,13 +71,18 @@ export function AppModal() {
           <Text style={[styles.title, { color: colors.text }]}>{current.title}</Text>
           <Text style={[styles.body, { color: colors.textSecondary }]}>{current.message}</Text>
 
-          <View style={styles.buttons}>
+          <View style={[styles.buttons, current.buttons.length > 2 && styles.buttonsVertical]}>
             {current.buttons.map((btn, i) => {
               const btnStyles = getButtonStyles(btn.style, colors)
               return (
                 <Pressable
                   key={i}
-                  style={({ pressed }) => [styles.button, btnStyles.container, pressed && { opacity: 0.7 }]}
+                  style={({ pressed }) => [
+                    styles.button,
+                    current.buttons.length > 2 && styles.buttonFullWidth,
+                    btnStyles.container,
+                    pressed && { opacity: 0.7 }
+                  ]}
                   onPress={() => handlePress(i)}
                 >
                   <Text style={[styles.buttonText, btnStyles.text]}>{btn.text}</Text>
@@ -168,6 +173,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     marginTop: 24
+  },
+  buttonsVertical: {
+    flexDirection: "column"
+  },
+  buttonFullWidth: {
+    flex: 0
   },
   button: {
     flex: 1,

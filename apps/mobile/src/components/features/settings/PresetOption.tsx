@@ -7,6 +7,7 @@ import { Zap, Check } from "lucide-react-native"
 import { SelectablePreset, TRACKING_PRESETS } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
 import { useTheme } from "../../../hooks/useTheme"
+import { useTracking } from "../../../contexts/TrackingProvider"
 import { RadioDot } from "../../ui/RadioDot"
 
 interface PresetOptionProps {
@@ -16,6 +17,8 @@ interface PresetOptionProps {
 }
 
 export function PresetOption({ preset, isSelected, onSelect }: PresetOptionProps) {
+  const { settings } = useTracking()
+  const isOfflineMode = settings.isOfflineMode
   const { colors } = useTheme()
   const config = TRACKING_PRESETS[preset]
   const showRecommendedBadge = preset === "balanced"
@@ -73,7 +76,9 @@ export function PresetOption({ preset, isSelected, onSelect }: PresetOptionProps
                 </View>
               )}
             </View>
-            <Text style={[styles.description, { color: colors.textSecondary }]}>{config.description}</Text>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              {isOfflineMode ? config.description.split(" • ")[0] : config.description}
+            </Text>
           </View>
         </View>
 

@@ -6,6 +6,7 @@ import React from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { AlertTriangle, ChevronRight } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
+import { useTracking } from "../../../contexts/TrackingProvider"
 import { getQueueColor } from "../../../utils/queueStatus"
 import { fonts } from "../../../styles/typography"
 import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../constants"
@@ -13,8 +14,8 @@ import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../constan
 interface StatsCardProps {
   queueCount: number
   sentCount: number
+  todayCount?: number
   interval: string
-  isOfflineMode: boolean
   onManageClick?: () => void
   colors: ThemeColors
 }
@@ -30,7 +31,9 @@ type WarningLevel = "normal" | "warning" | "critical"
  * - Improved warning states
  * - More prominent CTA when needed
  */
-export function StatsCard({ queueCount, sentCount, interval, isOfflineMode, onManageClick, colors }: StatsCardProps) {
+export function StatsCard({ queueCount, sentCount, todayCount, interval, onManageClick, colors }: StatsCardProps) {
+  const { settings } = useTracking()
+  const isOfflineMode = settings.isOfflineMode
   const getWarningLevel = (): WarningLevel => {
     if (queueCount > CRITICAL_QUEUE_THRESHOLD) return "critical"
     if (queueCount > HIGH_QUEUE_THRESHOLD) return "warning"
@@ -80,31 +83,35 @@ export function StatsCard({ queueCount, sentCount, interval, isOfflineMode, onMa
 
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
-        {/* Queued */}
-        <View style={styles.statItem}>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Queued</Text>
-          <Text style={[styles.statValue, { color: queuedColor }]}>{queueCount.toLocaleString()}</Text>
-        </View>
+        {isOfflineMode ? (
+          <>
+            {/* Today */}
+            <View style={styles.statItem}>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Today</Text>
+              <Text style={[styles.statValue, { color: colors.info }]}>{(todayCount ?? 0).toLocaleString()}</Text>
+            </View>
 
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          </>
+        ) : (
+          <>
+            {/* Queued */}
+            <View style={styles.statItem}>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Queued</Text>
+              <Text style={[styles.statValue, { color: queuedColor }]}>{queueCount.toLocaleString()}</Text>
+            </View>
 
-        {/* Sent */}
-        <View style={styles.statItem}>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sent</Text>
-          <Text
-            style={[
-              styles.statValue,
-              {
-                color: isOfflineMode ? colors.textLight : colors.success
-              }
-            ]}
-          >
-            {isOfflineMode ? "—" : sentCount.toLocaleString()}
-          </Text>
-          {isOfflineMode && <Text style={[styles.disabledHint, { color: colors.textLight }]}>Offline</Text>}
-        </View>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            {/* Sent */}
+            <View style={styles.statItem}>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sent</Text>
+              <Text style={[styles.statValue, { color: colors.success }]}>{sentCount.toLocaleString()}</Text>
+            </View>
+
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          </>
+        )}
 
         {/* Interval */}
         <View style={styles.statItem}>
@@ -117,7 +124,7 @@ export function StatsCard({ queueCount, sentCount, interval, isOfflineMode, onMa
       </View>
 
       {/* Warning Banner */}
-      {showWarning && onManageClick && (
+      {!isOfflineMode && showWarning && onManageClick && (
         <View style={styles.warningWrapper}>
           <Pressable
             style={({ pressed }) => {
