@@ -45,7 +45,7 @@ class SyncManagerTest {
     // --- queueAndSend: offline / no endpoint ---
 
     @Test
-    fun `queueAndSend adds to queue even in offline mode`() = scope.runTest {
+    fun `queueAndSend skips queue and send in offline mode`() = scope.runTest {
         syncManager.updateConfig(
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
@@ -59,7 +59,7 @@ class SyncManagerTest {
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
 
-        verify { dbHelper.addToQueue(1L, any()) }
+        verify(exactly = 0) { dbHelper.addToQueue(any(), any()) }
         coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
     }
 

@@ -95,21 +95,51 @@ class DatabaseHelperSQLiteTest {
     // ========================================================================
 
     @Test
-    fun `onUpgrade from v1 creates profiles table`() {
+    fun `onUpgrade from v1 creates profiles table and adds sent column`() {
         val rawDb = db.writableDatabase
 
-        // Drop profiles table to simulate v1 state
+        // Simulate v1 state: no profiles table, no sent column
         rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_PROFILES}")
         rawDb.execSQL("DROP INDEX IF EXISTS idx_profiles_enabled")
+        // Recreate locations table without sent column to simulate v1 schema
+        rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_QUEUE}")
+        rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_LOCATIONS}")
+        rawDb.execSQL("""
+            CREATE TABLE ${DatabaseHelper.TABLE_LOCATIONS} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                accuracy INTEGER,
+                altitude INTEGER,
+                speed INTEGER,
+                bearing REAL,
+                battery INTEGER,
+                battery_status INTEGER,
+                timestamp INTEGER NOT NULL,
+                endpoint TEXT,
+                created_at INTEGER NOT NULL
+            )
+        """)
+        rawDb.execSQL("""
+            CREATE TABLE ${DatabaseHelper.TABLE_QUEUE} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                location_id INTEGER NOT NULL,
+                payload TEXT NOT NULL,
+                retry_count INTEGER DEFAULT 0,
+                last_error TEXT,
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY (location_id) REFERENCES ${DatabaseHelper.TABLE_LOCATIONS}(id) ON DELETE CASCADE
+            )
+        """)
 
-        // Run upgrade
-        db.onUpgrade(rawDb, 1, 2)
+        // Run full upgrade from v1
+        db.onUpgrade(rawDb, 1, 3)
 
-        // Verify table was recreated
+        // Verify profiles table was created
         val tables = queryTableNames()
         assertTrue(tables.contains("tracking_profiles"))
 
-        // Verify we can insert into it
+        // Verify we can insert into profiles
         val values = ContentValues().apply {
             put("name", "Test")
             put("interval_ms", 5000)
@@ -122,14 +152,18 @@ class DatabaseHelperSQLiteTest {
         }
         val id = rawDb.insert(DatabaseHelper.TABLE_PROFILES, null, values)
         assertTrue(id > 0)
+
+        // Verify sent column was added
+        val columns = queryColumnNames(DatabaseHelper.TABLE_LOCATIONS)
+        assertTrue(columns.contains("sent"))
     }
 
     @Test
     fun `onUpgrade is idempotent for same version`() {
         val rawDb = db.writableDatabase
 
-        // Run upgrade again — CREATE TABLE IF NOT EXISTS should be safe
-        db.onUpgrade(rawDb, 1, 2)
+        // Running upgrade on current version should be safe (no-op)
+        db.onUpgrade(rawDb, 3, 3)
 
         val tables = queryTableNames()
         assertTrue(tables.contains("tracking_profiles"))
@@ -441,10 +475,11 @@ class DatabaseHelperSQLiteTest {
     }
 
     @Test
-    fun `clearSentHistory removes only unqueued locations`() {
+    fun `clearSentHistory removes only sent locations`() {
         val queued = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L)
         val sent = db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 2000L)
         db.addToQueue(queued, """{"lat":52.0}""")
+        db.markLocationSent(sent)
 
         val deleted = db.clearSentHistory()
         assertEquals(1, deleted)
@@ -628,18 +663,20 @@ class DatabaseHelperSQLiteTest {
         val loc2 = db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = System.currentTimeMillis() / 1000)
         db.addToQueue(loc1, """{"lat":52.0}""")
 
-        val (queued, total, today) = db.getStats()
-        assertEquals(1, queued)
-        assertEquals(2, total)
-        assertEquals(2, today)
+        val stats = db.getStats()
+        assertEquals(1, stats.queued)
+        assertEquals(0, stats.sent)
+        assertEquals(2, stats.total)
+        assertEquals(2, stats.today)
     }
 
     @Test
     fun `getStats returns zeros for empty database`() {
-        val (queued, total, today) = db.getStats()
-        assertEquals(0, queued)
-        assertEquals(0, total)
-        assertEquals(0, today)
+        val stats = db.getStats()
+        assertEquals(0, stats.queued)
+        assertEquals(0, stats.sent)
+        assertEquals(0, stats.total)
+        assertEquals(0, stats.today)
     }
 
     @Test
@@ -858,6 +895,16 @@ class DatabaseHelperSQLiteTest {
             }
         }
         return tables
+    }
+
+    private fun queryColumnNames(table: String): Set<String> {
+        val columns = mutableSetOf<String>()
+        db.readableDatabase.rawQuery("PRAGMA table_info($table)", null).use { cursor ->
+            while (cursor.moveToNext()) {
+                columns.add(cursor.getString(cursor.getColumnIndexOrThrow("name")))
+            }
+        }
+        return columns
     }
 
     private fun queryIndexNames(): Set<String> {
