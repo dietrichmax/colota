@@ -49,7 +49,7 @@ const features = [
   {
     title: "Works Offline",
     description:
-      "Locations queue locally and sync when connectivity returns. Export anytime as CSV, GeoJSON, GPX, or KML."
+      "Locations queue locally and sync when connectivity returns. Export anytime or scheduled as CSV, GeoJSON, GPX, or KML."
   },
   {
     title: "Tracking Profiles",

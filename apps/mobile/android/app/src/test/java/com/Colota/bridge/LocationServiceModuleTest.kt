@@ -197,6 +197,34 @@ class LocationServiceModuleTest {
     }
 
     // ========================================================================
+    // sendAutoExportEvent
+    // ========================================================================
+
+    @Test
+    fun `sendAutoExportEvent emits onAutoExportComplete on success`() {
+        assertTrue(LocationServiceModule.sendAutoExportEvent(true, "export.geojson", 42, null))
+        verify { mockEmitter.emit("onAutoExportComplete", any()) }
+    }
+
+    @Test
+    fun `sendAutoExportEvent emits onAutoExportComplete on failure`() {
+        assertTrue(LocationServiceModule.sendAutoExportEvent(false, null, 0, "IO error"))
+        verify { mockEmitter.emit("onAutoExportComplete", any()) }
+    }
+
+    @Test
+    fun `sendAutoExportEvent returns false when no context`() {
+        setCompanionField("reactContextRef", WeakReference<ReactApplicationContext>(null))
+        assertFalse(LocationServiceModule.sendAutoExportEvent(true, "file.csv", 10, null))
+    }
+
+    @Test
+    fun `sendAutoExportEvent returns false when no catalyst`() {
+        every { mockContext.hasActiveCatalystInstance() } returns false
+        assertFalse(LocationServiceModule.sendAutoExportEvent(true, "file.csv", 10, null))
+    }
+
+    // ========================================================================
     // sendPauseZoneEvent
     // ========================================================================
 

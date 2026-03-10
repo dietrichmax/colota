@@ -5,7 +5,7 @@
 
 import { type LucideIcon } from "lucide-react-native"
 import { Table2, Globe, MapPin, Earth } from "lucide-react-native"
-import { LocationCoords, Trip } from "../types/global"
+import { Trip } from "../types/global"
 import { getTripColor } from "./trips"
 
 export const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024 // 10 MB
@@ -39,142 +39,6 @@ export const getByteSize = (content: string): number => {
     }
   }
   return bytes
-}
-
-// ============================================================================
-// FLAT CONVERTERS (timestamps in Unix seconds)
-// ============================================================================
-
-export const convertToCSV = (data: LocationCoords[]): string => {
-  const headers = "id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,battery\n"
-  const rows = data
-    .map((item, i) => {
-      const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
-      const isoTime = new Date(ts * 1000).toISOString()
-      return [
-        i,
-        ts,
-        isoTime,
-        item.latitude,
-        item.longitude,
-        item.accuracy,
-        item.altitude ?? 0,
-        item.speed ?? 0,
-        item.battery ?? 0
-      ].join(",")
-    })
-    .join("\n")
-  return headers + rows
-}
-
-export const convertToGeoJSON = (data: LocationCoords[]): string => {
-  const features = data.map((item, i) => {
-    const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
-    const timeStr = new Date(ts * 1000).toISOString()
-
-    return {
-      type: "Feature",
-      geometry: {
-        type: "Point",
-        coordinates: [item.longitude ?? 0, item.latitude ?? 0]
-      },
-      properties: {
-        id: i,
-        accuracy: item.accuracy,
-        altitude: item.altitude,
-        speed: item.speed,
-        battery: item.battery,
-        time: timeStr
-      }
-    }
-  })
-
-  return JSON.stringify(
-    {
-      type: "FeatureCollection",
-      features
-    },
-    null,
-    2
-  )
-}
-
-export const convertToGPX = (data: LocationCoords[]): string => {
-  const parts: string[] = [
-    `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Colota" xmlns="http://www.topografix.com/GPX/1/1">
-  <metadata>
-    <name>Colota Location Export</name>
-    <time>${new Date().toISOString()}</time>
-  </metadata>
-  <trk>
-    <name>Colota Track Export</name>
-    <trkseg>`
-  ]
-
-  for (const item of data) {
-    const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
-    parts.push(`
-      <trkpt lat="${item.latitude.toFixed(6)}" lon="${item.longitude.toFixed(6)}">
-        <ele>${item.altitude ?? 0}</ele>
-        <time>${new Date(ts * 1000).toISOString()}</time>
-        <extensions>
-          <accuracy>${item.accuracy ?? 0}</accuracy>
-          <speed>${item.speed ?? 0}</speed>
-          <battery>${item.battery ?? 0}</battery>
-        </extensions>
-      </trkpt>`)
-  }
-
-  parts.push(`
-    </trkseg>
-  </trk>
-</gpx>`)
-  return parts.join("")
-}
-
-export const convertToKML = (data: LocationCoords[]): string => {
-  const coords = data.map((item) => `${item.longitude},${item.latitude},${item.altitude ?? 0}`).join("\n          ")
-  const parts: string[] = [
-    `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-  <Document>
-    <name>Colota Location Export</name>
-    <description>Exported tracks from Colota Tracking</description>
-    <Style id="pathStyle">
-      <LineStyle>
-        <color>ff0000ff</color>
-        <width>4</width>
-      </LineStyle>
-    </Style>
-    <Placemark>
-      <name>Track Path</name>
-      <styleUrl>#pathStyle</styleUrl>
-      <LineString>
-        <tessellate>1</tessellate>
-        <coordinates>
-          ${coords}
-        </coordinates>
-      </LineString>
-    </Placemark>`
-  ]
-
-  for (const item of data) {
-    const ts = item.timestamp ?? Math.floor(Date.now() / 1000)
-    parts.push(`
-    <Placemark>
-      <TimeStamp><when>${new Date(ts * 1000).toISOString()}</when></TimeStamp>
-      <description>Accuracy: ${item.accuracy}m, Speed: ${item.speed ?? 0}m/s</description>
-      <Point>
-        <coordinates>${item.longitude},${item.latitude},${item.altitude ?? 0}</coordinates>
-      </Point>
-    </Placemark>`)
-  }
-
-  parts.push(`
-  </Document>
-</kml>`)
-  return parts.join("")
 }
 
 // ============================================================================
@@ -343,7 +207,6 @@ export interface ExportFormatConfig {
   icon: LucideIcon
   extension: string
   mimeType: string
-  convert: (data: LocationCoords[]) => string
 }
 
 export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
@@ -353,8 +216,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
     description: "Excel, Google Sheets, data analysis",
     icon: Table2,
     extension: ".csv",
-    mimeType: "text/csv",
-    convert: convertToCSV
+    mimeType: "text/csv"
   },
   geojson: {
     label: "GeoJSON",
@@ -362,8 +224,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
     description: "Mapbox, Leaflet, QGIS, ArcGIS",
     icon: Globe,
     extension: ".geojson",
-    mimeType: "application/json",
-    convert: convertToGeoJSON
+    mimeType: "application/json"
   },
   gpx: {
     label: "GPX",
@@ -371,8 +232,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
     description: "Garmin, Strava, Google Earth",
     icon: MapPin,
     extension: ".gpx",
-    mimeType: "application/gpx+xml",
-    convert: convertToGPX
+    mimeType: "application/gpx+xml"
   },
   kml: {
     label: "KML",
@@ -380,7 +240,6 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
     description: "Google Earth, Google Maps, ArcGIS",
     icon: Earth,
     extension: ".kml",
-    mimeType: "application/vnd.google-earth.kml+xml",
-    convert: convertToKML
+    mimeType: "application/vnd.google-earth.kml+xml"
   }
 }

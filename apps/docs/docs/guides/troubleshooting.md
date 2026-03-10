@@ -48,13 +48,14 @@ adb logcat | grep -E "LocationDB|NetworkManager|SyncManager|LocationService|Geof
 
 Key log tags:
 
-| Tag               | What it shows                      |
-| ----------------- | ---------------------------------- |
-| `LocationService` | GPS fixes, service lifecycle       |
-| `SyncManager`     | Queue processing, retry attempts   |
-| `NetworkManager`  | HTTP requests, endpoint validation |
-| `LocationDB`      | Database operations                |
-| `GeofenceHelper`  | Zone detection                     |
+| Tag                | What it shows                      |
+| ------------------ | ---------------------------------- |
+| `LocationService`  | GPS fixes, service lifecycle       |
+| `SyncManager`      | Queue processing, retry attempts   |
+| `NetworkManager`   | HTTP requests, endpoint validation |
+| `LocationDB`       | Database operations                |
+| `GeofenceHelper`   | Zone detection                     |
+| `AutoExportWorker` | Scheduled export execution         |
 
 You can also use the **Location History** screen in the app to see recorded locations on a track map or as a list with their accuracy and timestamps.
 
@@ -78,6 +79,17 @@ If you denied the permission and the system no longer shows the dialog, reset it
 If **Wi-Fi Only Sync** is enabled, uploads are skipped while on cellular data. Locations continue to be recorded and queued locally - they sync automatically when you connect to Wi-Fi.
 
 To disable: **Settings > Advanced Settings > Network Settings > Wi-Fi Only Sync**.
+
+## Auto-export not working
+
+- Verify a directory is selected in **Export Data > Auto-Export**
+- Check that the toggle is enabled
+- Make sure battery is not critically low (exports are deferred when battery is low)
+- If you see a "Directory permission lost" notification, re-select the export directory
+- Check that the selected directory still exists and is accessible
+- Transient errors (I/O failures) retry up to 3 times automatically; permanent errors (invalid config, directory issues) fail immediately without retrying
+- If old exports seem to disappear, check the **File Retention** setting - by default only the last 10 files are kept
+- Check the `AutoExportWorker` log tag in native logs for details
 
 ## Database growing too large
 

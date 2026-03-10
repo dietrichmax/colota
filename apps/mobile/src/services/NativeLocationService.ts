@@ -160,18 +160,6 @@ class NativeLocationService {
   }
 
   /**
-   * Fetches all locations for export
-   */
-  static async getExportData(): Promise<any[]> {
-    this.ensureModule()
-    return this.safeExecute(
-      () => LocationServiceModule.getTableData("locations", 1000000, 0),
-      [],
-      "getExportData failed"
-    )
-  }
-
-  /**
    * Fetches locations within a date range, ordered chronologically.
    * Used for track polyline rendering on the map view.
    * @param startTimestamp Start of range (Unix seconds, inclusive)
@@ -625,6 +613,95 @@ class NativeLocationService {
   static async getNativeLogs(): Promise<string[]> {
     this.ensureModule()
     return LocationServiceModule.getNativeLogs()
+  }
+
+  // ============================================================================
+  // AUTO-EXPORT
+  // ============================================================================
+
+  /**
+   * Opens SAF directory picker for auto-export destination.
+   * @returns URI string of selected directory, or null if cancelled
+   */
+  static async pickExportDirectory(): Promise<string | null> {
+    this.ensureModule()
+    return LocationServiceModule.pickExportDirectory()
+  }
+
+  /**
+   * Schedules the daily auto-export check worker via WorkManager.
+   * The worker checks AutoExportConfig.isExportDue() to determine
+   * if an export should actually run (daily/weekly/monthly).
+   */
+  static async scheduleAutoExport(): Promise<boolean> {
+    this.ensureModule()
+    return LocationServiceModule.scheduleAutoExport()
+  }
+
+  /**
+   * Triggers an immediate one-time auto-export, bypassing the interval check.
+   */
+  static async runAutoExportNow(): Promise<boolean> {
+    this.ensureModule()
+    return LocationServiceModule.runAutoExportNow()
+  }
+
+  /**
+   * Cancels any scheduled auto-export.
+   */
+  static async cancelAutoExport(): Promise<boolean> {
+    this.ensureModule()
+    return LocationServiceModule.cancelAutoExport()
+  }
+
+  /**
+   * Returns current auto-export configuration and status.
+   */
+  static async getAutoExportStatus(): Promise<{
+    enabled: boolean
+    format: string
+    interval: string
+    uri: string | null
+    mode: string
+    lastExportTimestamp: number
+    nextExportTimestamp: number
+    fileCount: number
+    retentionCount: number
+    lastFileName: string | null
+    lastRowCount: number
+    lastError: string | null
+  }> {
+    this.ensureModule()
+    return LocationServiceModule.getAutoExportStatus()
+  }
+
+  /**
+   * Returns list of export files in the export directory, sorted newest first.
+   */
+  static async getExportFiles(): Promise<{ name: string; size: number; lastModified: number; uri: string }[]> {
+    this.ensureModule()
+    return LocationServiceModule.getExportFiles()
+  }
+
+  /**
+   * Shares an export file via the system share sheet.
+   */
+  static async shareExportFile(fileUri: string, mimeType: string): Promise<boolean> {
+    this.ensureModule()
+    return LocationServiceModule.shareExportFile(fileUri, mimeType)
+  }
+
+  /**
+   * Exports all locations to a file using native streaming converters.
+   * Returns file path, mime type, and row count, or null if no data.
+   */
+  static async exportToFile(format: string): Promise<{
+    filePath: string
+    mimeType: string
+    rowCount: number
+  } | null> {
+    this.ensureModule()
+    return LocationServiceModule.exportToFile(format)
   }
 
   // ============================================================================

@@ -27,11 +27,11 @@ jest.mock("../../hooks/useTheme", () => ({
 }))
 
 const mockGetStats = jest.fn().mockResolvedValue({ total: 100 })
-const mockGetExportData = jest.fn().mockResolvedValue([
-  { latitude: 52.52, longitude: 13.405, accuracy: 10, altitude: 34, speed: 1.2, battery: 85, timestamp: 1700000000 },
-  { latitude: 48.8566, longitude: 2.3522, accuracy: 15, altitude: 40, speed: 0.5, battery: 72, timestamp: 1700003600 }
-])
-const mockWriteFile = jest.fn().mockResolvedValue("/path/file.csv")
+const mockExportToFile = jest.fn().mockResolvedValue({
+  filePath: "/path/file.csv",
+  mimeType: "text/csv",
+  rowCount: 100
+})
 const mockShareFile = jest.fn().mockResolvedValue(undefined)
 
 jest.mock("../../services/NativeLocationService", () => ({
@@ -40,15 +40,23 @@ jest.mock("../../services/NativeLocationService", () => ({
     getStats: function () {
       return mockGetStats.apply(null, arguments)
     },
-    getExportData: function () {
-      return mockGetExportData.apply(null, arguments)
-    },
-    writeFile: function () {
-      return mockWriteFile.apply(null, arguments)
+    exportToFile: function () {
+      return mockExportToFile.apply(null, arguments)
     },
     shareFile: function () {
       return mockShareFile.apply(null, arguments)
-    }
+    },
+    getAutoExportStatus: jest.fn().mockResolvedValue({
+      enabled: false,
+      format: "geojson",
+      interval: "daily",
+      uri: null,
+      mode: "all",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0,
+      retentionCount: 10
+    })
   }
 }))
 
@@ -65,15 +73,6 @@ jest.mock("../../services/modalService", () => ({
 }))
 
 jest.mock("../../utils/exportConverters", () => ({
-  LARGE_FILE_THRESHOLD: 10 * 1024 * 1024,
-  formatBytes: function (bytes: any) {
-    if (bytes < 1024) return bytes + " B"
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB"
-  },
-  getByteSize: function (content: any) {
-    return content.length
-  },
   EXPORT_FORMATS: {
     csv: {
       label: "CSV",
@@ -83,10 +82,7 @@ jest.mock("../../utils/exportConverters", () => ({
         return null
       },
       extension: ".csv",
-      mimeType: "text/csv",
-      convert: function () {
-        return "id,lat,lon\n1,52.52,13.405"
-      }
+      mimeType: "text/csv"
     },
     geojson: {
       label: "GeoJSON",
@@ -96,10 +92,7 @@ jest.mock("../../utils/exportConverters", () => ({
         return null
       },
       extension: ".geojson",
-      mimeType: "application/json",
-      convert: function () {
-        return '{"type":"FeatureCollection","features":[]}'
-      }
+      mimeType: "application/json"
     },
     gpx: {
       label: "GPX",
@@ -109,10 +102,7 @@ jest.mock("../../utils/exportConverters", () => ({
         return null
       },
       extension: ".gpx",
-      mimeType: "application/gpx+xml",
-      convert: function () {
-        return "<gpx></gpx>"
-      }
+      mimeType: "application/gpx+xml"
     },
     kml: {
       label: "KML",
@@ -122,10 +112,7 @@ jest.mock("../../utils/exportConverters", () => ({
         return null
       },
       extension: ".kml",
-      mimeType: "application/vnd.google-earth.kml+xml",
-      convert: function () {
-        return "<kml></kml>"
-      }
+      mimeType: "application/vnd.google-earth.kml+xml"
     }
   }
 }))
@@ -190,6 +177,8 @@ jest.mock("lucide-react-native", () => {
   return {
     Download: stub("Download"),
     MapPinOff: stub("MapPinOff"),
+    ChevronRight: stub("ChevronRight"),
+    Clock: stub("Clock"),
     Table2: stub("Table2"),
     Globe: stub("Globe"),
     MapPin: stub("MapPin"),
@@ -203,30 +192,17 @@ describe("ExportDataScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetStats.mockResolvedValue({ total: 100 })
-    mockGetExportData.mockResolvedValue([
-      {
-        latitude: 52.52,
-        longitude: 13.405,
-        accuracy: 10,
-        altitude: 34,
-        speed: 1.2,
-        battery: 85,
-        timestamp: 1700000000
-      },
-      {
-        latitude: 48.8566,
-        longitude: 2.3522,
-        accuracy: 15,
-        altitude: 40,
-        speed: 0.5,
-        battery: 72,
-        timestamp: 1700003600
-      }
-    ])
+    mockExportToFile.mockResolvedValue({
+      filePath: "/path/file.csv",
+      mimeType: "text/csv",
+      rowCount: 100
+    })
   })
 
+  const mockNavigation = { navigate: jest.fn() } as any
+
   function renderScreen() {
-    return render(<ExportDataScreen />)
+    return render(<ExportDataScreen navigation={mockNavigation} />)
   }
 
   it("shows Export Data title", async () => {
@@ -252,7 +228,7 @@ describe("ExportDataScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Total")).toBeTruthy()
+      expect(getByText("Total Locations")).toBeTruthy()
       expect(getByText("100")).toBeTruthy()
     })
   })
@@ -283,8 +259,8 @@ describe("ExportDataScreen", () => {
   })
 
   it("shows loading overlay during export", async () => {
-    // Make writeFile hang so we can observe the loading state
-    mockWriteFile.mockImplementation(() => new Promise(() => {}))
+    // Make exportToFile hang so we can observe the loading state
+    mockExportToFile.mockImplementation(() => new Promise(() => {}))
 
     const { getByText } = renderScreen()
 
@@ -316,5 +292,46 @@ describe("ExportDataScreen", () => {
 
     // totalLocations is 0 so the format cards are not rendered and no export button exists
     expect(queryByText("CSV")).toBeNull()
+  })
+
+  it("shows auto-export section with status", async () => {
+    const { getByText } = renderScreen()
+
+    await waitFor(() => {
+      expect(getByText("Scheduled Export")).toBeTruthy()
+      expect(getByText("Auto-Export")).toBeTruthy()
+    })
+  })
+
+  it("shows auto-export summary when enabled", async () => {
+    const mockModule = require("../../services/NativeLocationService").default
+    mockModule.getAutoExportStatus.mockResolvedValueOnce({
+      enabled: true,
+      format: "csv",
+      interval: "weekly",
+      uri: "content://some-uri",
+      mode: "all",
+      lastExportTimestamp: 1700000000,
+      nextExportTimestamp: 1700604800,
+      fileCount: 5
+    })
+
+    const { getByText } = renderScreen()
+
+    await waitFor(() => {
+      expect(getByText(/Weekly/)).toBeTruthy()
+    })
+  })
+
+  it("navigates to Auto-Export screen on press", async () => {
+    const { getByText } = renderScreen()
+
+    await waitFor(() => {
+      expect(getByText("Auto-Export")).toBeTruthy()
+    })
+
+    fireEvent.press(getByText("Auto-Export"))
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith("Auto-Export")
   })
 })

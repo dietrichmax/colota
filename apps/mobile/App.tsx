@@ -17,6 +17,7 @@ import {
   SettingsScreen,
   ApiSettingsScreen,
   AuthSettingsScreen,
+  AutoExportScreen,
   GeofenceScreen,
   DataManagementScreen,
   LocationHistoryScreen,
@@ -82,6 +83,11 @@ const SCREEN_CONFIG = [
     name: "Export Data",
     component: ExportDataScreen,
     title: "Export Data"
+  },
+  {
+    name: "Auto-Export",
+    component: AutoExportScreen,
+    title: "Auto-Export"
   },
   {
     name: "Data Management",

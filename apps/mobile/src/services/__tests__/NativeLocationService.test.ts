@@ -42,6 +42,25 @@ jest.mock("react-native", () => ({
       }),
       writeFile: jest.fn().mockResolvedValue("/cache/test.csv"),
       shareFile: jest.fn().mockResolvedValue(true),
+      pickExportDirectory: jest.fn().mockResolvedValue("content://com.android.externalstorage/tree/primary%3AExports"),
+      scheduleAutoExport: jest.fn().mockResolvedValue(true),
+      cancelAutoExport: jest.fn().mockResolvedValue(true),
+      runAutoExportNow: jest.fn().mockResolvedValue(true),
+      exportToFile: jest.fn().mockResolvedValue({
+        filePath: "/cache/manual_export_2024-01-15_0930.geojson",
+        mimeType: "application/json",
+        rowCount: 150
+      }),
+      getAutoExportStatus: jest.fn().mockResolvedValue({
+        enabled: true,
+        format: "geojson",
+        interval: "daily",
+        uri: "content://some-uri",
+        mode: "all",
+        lastExportTimestamp: 1700000000,
+        nextExportTimestamp: 1700086400,
+        fileCount: 3
+      }),
       copyToClipboard: jest.fn().mockResolvedValue(undefined),
       deleteFile: jest.fn().mockResolvedValue(true),
       getCacheDirectory: jest.fn().mockResolvedValue("/cache"),
@@ -280,6 +299,62 @@ describe("NativeLocationService", () => {
     it("writeFile returns file path", async () => {
       const path = await NativeLocationService.writeFile("test.csv", "data")
       expect(path).toBe("/cache/test.csv")
+    })
+  })
+
+  describe("auto-export", () => {
+    it("pickExportDirectory returns SAF URI", async () => {
+      const uri = await NativeLocationService.pickExportDirectory()
+      expect(uri).toBe("content://com.android.externalstorage/tree/primary%3AExports")
+      expect(nativeMock.pickExportDirectory).toHaveBeenCalled()
+    })
+
+    it("scheduleAutoExport calls native module", async () => {
+      const result = await NativeLocationService.scheduleAutoExport()
+      expect(result).toBe(true)
+      expect(nativeMock.scheduleAutoExport).toHaveBeenCalled()
+    })
+
+    it("cancelAutoExport calls native module", async () => {
+      const result = await NativeLocationService.cancelAutoExport()
+      expect(result).toBe(true)
+      expect(nativeMock.cancelAutoExport).toHaveBeenCalled()
+    })
+
+    it("getAutoExportStatus returns status object", async () => {
+      const status = await NativeLocationService.getAutoExportStatus()
+      expect(status).toEqual({
+        enabled: true,
+        format: "geojson",
+        interval: "daily",
+        uri: "content://some-uri",
+        mode: "all",
+        lastExportTimestamp: 1700000000,
+        nextExportTimestamp: 1700086400,
+        fileCount: 3
+      })
+    })
+
+    it("runAutoExportNow calls native module", async () => {
+      const result = await NativeLocationService.runAutoExportNow()
+      expect(result).toBe(true)
+      expect(nativeMock.runAutoExportNow).toHaveBeenCalled()
+    })
+
+    it("exportToFile returns file info", async () => {
+      const result = await NativeLocationService.exportToFile("geojson")
+      expect(result).toEqual({
+        filePath: "/cache/manual_export_2024-01-15_0930.geojson",
+        mimeType: "application/json",
+        rowCount: 150
+      })
+      expect(nativeMock.exportToFile).toHaveBeenCalledWith("geojson")
+    })
+
+    it("exportToFile returns null when no data", async () => {
+      nativeMock.exportToFile.mockResolvedValueOnce(null)
+      const result = await NativeLocationService.exportToFile("csv")
+      expect(result).toBeNull()
     })
   })
 })

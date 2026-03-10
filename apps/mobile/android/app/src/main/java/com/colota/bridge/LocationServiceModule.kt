@@ -5,6 +5,7 @@
  
 package com.Colota.bridge
 
+import android.app.Activity
 import android.content.Intent
 import com.Colota.BuildConfig
 import com.Colota.data.DatabaseHelper
@@ -20,10 +21,14 @@ import com.Colota.service.getBooleanOrNull
 import com.Colota.sync.NetworkManager
 import com.Colota.sync.PayloadBuilder
 import com.Colota.util.DeviceInfoHelper
+import com.Colota.export.AutoExportConfig
+import com.Colota.export.AutoExportScheduler
+import com.Colota.export.ExportConverters
 import com.Colota.util.FileOperations
 import com.Colota.util.AppLogger
 import com.Colota.util.SecureStorageHelper
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.BaseActivityEventListener
 import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -59,9 +64,33 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     private val moduleScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    // SAF directory picker
+    private var safPickerPromise: Promise? = null
+    private val SAF_PICKER_REQUEST = 9002
+
+    private val activityEventListener = object : BaseActivityEventListener() {
+        override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
+            if (requestCode != SAF_PICKER_REQUEST) return
+            val promise = safPickerPromise ?: return
+            safPickerPromise = null
+
+            if (resultCode != Activity.RESULT_OK || data?.data == null) {
+                promise.resolve(null)
+                return
+            }
+
+            val uri = data.data!!
+            // Persist permission so WorkManager can access it later
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            reactApplicationContext.contentResolver.takePersistableUriPermission(uri, flags)
+            promise.resolve(uri.toString())
+        }
+    }
+
     init {
         reactContextRef = WeakReference(reactContext)
         reactContext.addLifecycleEventListener(this)
+        reactContext.addActivityEventListener(activityEventListener)
     }
 
     companion object {
@@ -200,6 +229,29 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 true
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Failed to send sync progress event", e)
+                false
+            }
+        }
+
+        /** Emits auto-export completion events to JS for real-time status updates. */
+        @JvmStatic
+        fun sendAutoExportEvent(success: Boolean, fileName: String?, rowCount: Int, error: String?): Boolean {
+            val context = reactContextRef.get() ?: return false
+            if (!context.hasActiveCatalystInstance()) return false
+
+            return try {
+                val params = Arguments.createMap().apply {
+                    putBoolean("success", success)
+                    if (fileName != null) putString("fileName", fileName) else putNull("fileName")
+                    putInt("rowCount", rowCount)
+                    if (error != null) putString("error", error) else putNull("error")
+                }
+                context
+                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                    .emit("onAutoExportComplete", params)
+                true
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to send auto-export event", e)
                 false
             }
         }
@@ -753,16 +805,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun forceExitZone(promise: Promise) {
-        try {
-            startServiceWithAction(LocationForegroundService.ACTION_FORCE_EXIT_ZONE)
-            promise.resolve(true)
-        } catch (e: Exception) {
-            promise.reject("FORCE_EXIT_ERROR", e.message, e)
-        }
-    }
-
-    @ReactMethod
     fun saveSetting(key: String, value: String, promise: Promise) =
         executeAsync(promise) {
             dbHelper.saveSetting(key, value)
@@ -916,6 +958,154 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             }
         } finally {
             process.destroy()
+        }
+    }
+
+    // =========================================================================
+    // AUTO-EXPORT
+    // =========================================================================
+
+    @ReactMethod
+    fun pickExportDirectory(promise: Promise) {
+        val activity = reactApplicationContext.currentActivity
+        if (activity == null) {
+            promise.reject("E_NO_ACTIVITY", "No current activity")
+            return
+        }
+        safPickerPromise = promise
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        activity.startActivityForResult(intent, SAF_PICKER_REQUEST)
+    }
+
+    @ReactMethod
+    fun scheduleAutoExport(promise: Promise) = executeAsync(promise) {
+        // Validate that the export directory URI is still accessible
+        val config = AutoExportConfig.from(dbHelper)
+        if (config.uri != null) {
+            val uri = android.net.Uri.parse(config.uri)
+            val hasPermission = reactApplicationContext.contentResolver.persistedUriPermissions.any {
+                it.uri == uri && it.isReadPermission && it.isWritePermission
+            }
+            if (!hasPermission) {
+                config.saveEnabled(dbHelper, false)
+                config.savePermissionLost(dbHelper, true)
+                throw Exception("Export directory permission lost. Please re-select the directory.")
+            }
+        }
+        AutoExportScheduler.schedule(reactApplicationContext)
+        true
+    }
+
+    @ReactMethod
+    fun runAutoExportNow(promise: Promise) = executeAsync(promise) {
+        AutoExportScheduler.runNow(reactApplicationContext)
+        true
+    }
+
+    @ReactMethod
+    fun cancelAutoExport(promise: Promise) = executeAsync(promise) {
+        AutoExportScheduler.cancel(reactApplicationContext)
+        true
+    }
+
+    @ReactMethod
+    fun getAutoExportStatus(promise: Promise) = executeAsync(promise) {
+        val config = AutoExportConfig.from(dbHelper)
+        val fileCount = config.uri?.let { countExportFiles(it) } ?: 0
+
+        Arguments.createMap().apply {
+            putBoolean("enabled", config.enabled)
+            putString("format", config.format)
+            putString("interval", config.interval)
+            putString("uri", config.uri)
+            putString("mode", config.mode)
+            putDouble("lastExportTimestamp", config.lastExportTimestamp.toDouble())
+            putDouble("nextExportTimestamp", config.nextExportTimestamp().toDouble())
+            putInt("fileCount", fileCount)
+            putInt("retentionCount", config.retentionCount)
+            putString("lastFileName", config.lastFileName)
+            putInt("lastRowCount", config.lastRowCount)
+            putString("lastError", config.lastError)
+        }
+    }
+
+    @ReactMethod
+    fun exportToFile(format: String, promise: Promise) = executeAsync(promise) {
+        val ext = ExportConverters.extensionFor(format)
+        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd_HHmm", java.util.Locale.US)
+            .format(java.util.Date())
+        val tempFile = java.io.File(reactApplicationContext.cacheDir, "manual_export_$dateStr$ext")
+
+        val totalRows = ExportConverters.exportToFile(dbHelper, format, tempFile)
+
+        if (totalRows == 0) {
+            tempFile.delete()
+            null
+        } else {
+            Arguments.createMap().apply {
+                putString("filePath", tempFile.absolutePath)
+                putString("mimeType", ExportConverters.mimeTypeFor(format))
+                putInt("rowCount", totalRows)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun getExportFiles(promise: Promise) = executeAsync(promise) {
+        val config = AutoExportConfig.from(dbHelper)
+        if (config.uri == null) {
+            Arguments.createArray()
+        } else {
+            val dirUri = android.net.Uri.parse(config.uri)
+            val dir = androidx.documentfile.provider.DocumentFile.fromTreeUri(reactApplicationContext, dirUri)
+            val files = dir?.listFiles()
+                ?.filter { it.name?.startsWith("colota_export_") == true }
+                ?.sortedByDescending { it.name }
+                ?: emptyList()
+
+            Arguments.createArray().apply {
+                for (file in files) {
+                    pushMap(Arguments.createMap().apply {
+                        putString("name", file.name)
+                        putDouble("size", file.length().toDouble())
+                        putDouble("lastModified", (file.lastModified() / 1000).toDouble())
+                        putString("uri", file.uri.toString())
+                    })
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun shareExportFile(fileUri: String, mimeType: String, promise: Promise) {
+        try {
+            val uri = android.net.Uri.parse(fileUri)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val chooser = Intent.createChooser(intent, "Share Export")
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            reactApplicationContext.startActivity(chooser)
+            promise.resolve(true)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Failed to share export file", e)
+            promise.reject("SHARE_ERROR", e.message, e)
+        }
+    }
+
+    private fun countExportFiles(uriString: String): Int {
+        return try {
+            val dirUri = android.net.Uri.parse(uriString)
+            val dir = androidx.documentfile.provider.DocumentFile.fromTreeUri(reactApplicationContext, dirUri)
+            dir?.listFiles()?.count { it.name?.startsWith("colota_export_") == true } ?: 0
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Could not count export files: ${e.message}")
+            0
         }
     }
 }

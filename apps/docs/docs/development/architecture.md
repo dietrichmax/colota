@@ -70,6 +70,7 @@ Emits events back to JavaScript:
 - `onSyncProgress` - batch sync progress updates with `{sent, failed, total}`
 - `onPauseZoneChange` - entered or exited a geofence pause zone
 - `onProfileSwitch` - a tracking profile was activated or deactivated
+- `onAutoExportComplete` - auto-export finished with `{success, fileName, rowCount, error}`
 
 ### LocationProvider Abstraction
 
@@ -154,16 +155,20 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 
 ### Other Modules
 
-| Module                 | Purpose                                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------------------- |
-| `LocationBootReceiver` | Auto-restarts tracking after device reboot                                                  |
-| `DeviceInfoHelper`     | Device metadata and battery status with caching                                             |
-| `FileOperations`       | File I/O, sharing via FileProvider, and clipboard access                                    |
-| `PayloadBuilder`       | Builds JSON payloads with dynamic field mapping                                             |
-| `ServiceConfig`        | Centralized configuration data class                                                        |
-| `TimedCache`           | Generic TTL cache used for queue count, device info, geofences, profiles, and network state |
-| `BuildConfigModule`    | Exposes build constants (SDK versions, app version) to JS                                   |
-| `AppLogger`            | Centralized logger - logs when debug mode is enabled or in debug builds, errors always log  |
+| Module | Purpose |
+| --- | --- |
+| `LocationBootReceiver` | Auto-restarts tracking after device reboot |
+| `DeviceInfoHelper` | Device metadata and battery status with caching |
+| `FileOperations` | File I/O, sharing via FileProvider, and clipboard access |
+| `PayloadBuilder` | Builds JSON payloads with dynamic field mapping |
+| `ServiceConfig` | Centralized configuration data class |
+| `TimedCache` | Generic TTL cache used for queue count, device info, geofences, profiles, and network state |
+| `BuildConfigModule` | Exposes build constants (SDK versions, app version) to JS |
+| `AppLogger` | Centralized logger - logs when debug mode is enabled or in debug builds, errors always log |
+| `AutoExportWorker` | WorkManager `CoroutineWorker` for scheduled exports - checks `AutoExportConfig.isExportDue()` on each run, streams chunked writes, verifies output, and cleans up old files beyond retention limit |
+| `AutoExportScheduler` | Schedules a daily (24h) check worker via WorkManager with battery-not-low constraint - frequency logic (daily/weekly/monthly) is handled at runtime by the worker |
+| `AutoExportConfig` | Typed data class wrapping auto-export settings from the SQLite settings table with validation, `isExportDue()`, and `nextExportTimestamp()` |
+| `ExportConverters` | Native Kotlin export converters (CSV, GeoJSON, GPX, KML) with in-memory, streaming, and file-based (`exportToFile`) interfaces |
 
 ## React Native Layer
 
@@ -181,7 +186,8 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards and export |
 | `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, and per-trip export |
 | `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
-| `ExportDataScreen` | Export all tracked locations as CSV, GeoJSON, GPX, or KML |
+| `ExportDataScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
+| `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, export range, and file retention |
 | `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
 | `AboutScreen` | App version, device info, links to repository and privacy policy |

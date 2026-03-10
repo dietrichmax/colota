@@ -23,6 +23,9 @@
 # Keep location provider abstraction
 -keep class com.Colota.location.** { *; }
 
+# Keep WorkManager worker (instantiated by class name)
+-keep class com.Colota.export.AutoExportWorker { *; }
+
 # Standard optimization settings
 -dontwarn com.facebook.react.**
 -keepattributes Signature
