@@ -26,16 +26,18 @@ function formatCondition(profile: SavedTrackingProfile): string {
   return label
 }
 
-function formatSettings(profile: SavedTrackingProfile): string {
+function formatSettings(profile: SavedTrackingProfile, isOfflineMode?: boolean): string {
   const parts = [`${profile.interval}s interval`]
   if (profile.distance > 0) parts.push(`${profile.distance}m threshold`)
-  parts.push(profile.syncInterval === 0 ? "instant sync" : `${profile.syncInterval}s sync`)
+  if (!isOfflineMode) {
+    parts.push(profile.syncInterval === 0 ? "instant sync" : `${profile.syncInterval}s sync`)
+  }
   return parts.join(" \u2022 ")
 }
 
 export function TrackingProfilesScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
-  const { activeProfileName } = useTracking()
+  const { settings, activeProfileName } = useTracking()
   const [profiles, setProfiles] = useState<SavedTrackingProfile[]>([])
 
   const loadProfiles = useCallback(async () => {
@@ -121,7 +123,9 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
                 </View>
               </View>
               <Text style={[styles.condition, { color: colors.textSecondary }]}>{formatCondition(item)}</Text>
-              <Text style={[styles.settings, { color: colors.textLight }]}>{formatSettings(item)}</Text>
+              <Text style={[styles.settings, { color: colors.textLight }]}>
+                {formatSettings(item, settings.isOfflineMode)}
+              </Text>
             </View>
 
             <View style={styles.actions}>
@@ -149,7 +153,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         </Card>
       )
     },
-    [colors, activeProfileName, toggleEnabled, handleDelete, navigation]
+    [colors, activeProfileName, settings.isOfflineMode, toggleEnabled, handleDelete, navigation]
   )
 
   return (

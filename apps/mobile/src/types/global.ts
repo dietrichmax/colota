@@ -60,7 +60,7 @@ export interface LocationTrackingResult {
 
 export type ServerStatus = "connected" | "error" | "notConfigured"
 
-export interface ServerConnectionProps {
+export interface ConnectionStatusProps {
   endpoint: string | null
   navigation: any
 }

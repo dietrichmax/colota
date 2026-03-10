@@ -98,8 +98,7 @@ export function SyncStrategySettings({
         syncPreset: preset,
         interval: config.interval,
         distance: config.distance,
-        syncInterval: config.syncInterval,
-        retryInterval: config.retryInterval
+        ...(settings.isOfflineMode ? {} : { syncInterval: config.syncInterval, retryInterval: config.retryInterval })
       }
 
       onSettingsChange(next)
@@ -195,159 +194,165 @@ export function SyncStrategySettings({
               />
             </View>
 
-            <Divider />
+            {!settings.isOfflineMode && (
+              <>
+                <Divider />
 
-            {/* Network Parameters Group */}
-            <View style={styles.paramGroup}>
-              <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Network Settings</Text>
+                {/* Network Parameters Group */}
+                <View style={styles.paramGroup}>
+                  <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Network Settings</Text>
 
-              {/* Sync Interval */}
-              <View style={styles.settingBlock}>
-                <Text style={[styles.blockLabel, { color: colors.text }]}>Sync Interval</Text>
-                <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
-                  How often to upload data to server
-                </Text>
+                  {/* Sync Interval */}
+                  <View style={styles.settingBlock}>
+                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync Interval</Text>
+                    <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
+                      How often to upload data to server
+                    </Text>
 
-                <View style={styles.optionsGrid}>
-                  {SYNC_INTERVAL_PRESETS.map((sec) => {
-                    const isSelected = settings.syncInterval === sec && !isCustomSyncInterval
-                    return (
+                    <View style={styles.optionsGrid}>
+                      {SYNC_INTERVAL_PRESETS.map((sec) => {
+                        const isSelected = settings.syncInterval === sec && !isCustomSyncInterval
+                        return (
+                          <Pressable
+                            key={sec}
+                            style={({ pressed }) => [
+                              styles.gridOption,
+                              {
+                                borderColor: colors.border,
+                                backgroundColor: colors.background
+                              },
+                              isSelected && {
+                                borderColor: colors.primary,
+                                backgroundColor: colors.primary + "20"
+                              },
+                              pressed && { opacity: 0.7 }
+                            ]}
+                            onPress={() => handleGridSelect("syncInterval", sec)}
+                          >
+                            <Text style={[styles.gridLabel, { color: isSelected ? colors.primary : colors.text }]}>
+                              {SYNC_INTERVAL_LABELS[sec]}
+                            </Text>
+                          </Pressable>
+                        )
+                      })}
                       <Pressable
-                        key={sec}
                         style={({ pressed }) => [
                           styles.gridOption,
                           {
                             borderColor: colors.border,
                             backgroundColor: colors.background
                           },
-                          isSelected && {
+                          isCustomSyncInterval && {
                             borderColor: colors.primary,
                             backgroundColor: colors.primary + "20"
                           },
                           pressed && { opacity: 0.7 }
                         ]}
-                        onPress={() => handleGridSelect("syncInterval", sec)}
+                        onPress={() => {
+                          if (!isCustomSyncInterval) {
+                            const customValue = 1800
+                            setSyncIntervalInput(customValue.toString())
+                            handleGridSelect("syncInterval", customValue)
+                          }
+                        }}
                       >
-                        <Text style={[styles.gridLabel, { color: isSelected ? colors.primary : colors.text }]}>
-                          {SYNC_INTERVAL_LABELS[sec]}
+                        <Text
+                          style={[styles.gridLabel, { color: isCustomSyncInterval ? colors.primary : colors.text }]}
+                        >
+                          Custom
                         </Text>
                       </Pressable>
-                    )
-                  })}
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.gridOption,
-                      {
-                        borderColor: colors.border,
-                        backgroundColor: colors.background
-                      },
-                      isCustomSyncInterval && {
-                        borderColor: colors.primary,
-                        backgroundColor: colors.primary + "20"
-                      },
-                      pressed && { opacity: 0.7 }
-                    ]}
-                    onPress={() => {
-                      if (!isCustomSyncInterval) {
-                        const customValue = 1800
-                        setSyncIntervalInput(customValue.toString())
-                        handleGridSelect("syncInterval", customValue)
-                      }
-                    }}
-                  >
-                    <Text style={[styles.gridLabel, { color: isCustomSyncInterval ? colors.primary : colors.text }]}>
-                      Custom
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
+                    </View>
+                  </View>
 
-              {isCustomSyncInterval && (
-                <View style={styles.customSyncInput}>
-                  <NumericInput
-                    label="Custom Sync Interval"
-                    value={syncIntervalInput}
-                    onChange={(val) => {
-                      setSyncIntervalInput(val)
-                      const num = Number(val)
-                      if (!isNaN(num) && num >= 1) {
-                        const next = { ...settings, syncInterval: num, syncPreset: "custom" as const }
-                        onDebouncedSave(next)
-                      }
-                    }}
-                    onBlur={() => {
-                      let val = Number(syncIntervalInput)
-                      if (isNaN(val) || val < 1) {
-                        val = 1
-                        setSyncIntervalInput("1")
-                        const next = { ...settings, syncInterval: val, syncPreset: "custom" as const }
+                  {isCustomSyncInterval && (
+                    <View style={styles.customSyncInput}>
+                      <NumericInput
+                        label="Custom Sync Interval"
+                        value={syncIntervalInput}
+                        onChange={(val) => {
+                          setSyncIntervalInput(val)
+                          const num = Number(val)
+                          if (!isNaN(num) && num >= 1) {
+                            const next = { ...settings, syncInterval: num, syncPreset: "custom" as const }
+                            onDebouncedSave(next)
+                          }
+                        }}
+                        onBlur={() => {
+                          let val = Number(syncIntervalInput)
+                          if (isNaN(val) || val < 1) {
+                            val = 1
+                            setSyncIntervalInput("1")
+                            const next = { ...settings, syncInterval: val, syncPreset: "custom" as const }
+                            onSettingsChange(next)
+                            onImmediateSave(next)
+                          }
+                        }}
+                        unit="seconds"
+                        placeholder="1800"
+                        hint="Custom interval in seconds"
+                        colors={colors}
+                      />
+                    </View>
+                  )}
+
+                  {/* Retry Forever Toggle */}
+                  <SettingRow
+                    label="Retry Failed Uploads"
+                    hint={
+                      settings.maxRetries === 0
+                        ? "Failed uploads stay in the queue until they succeed"
+                        : "Failed uploads are permanently deleted after 5 failed send attempts"
+                    }
+                  >
+                    <Switch
+                      value={settings.maxRetries === 0}
+                      onValueChange={(retryForever) => {
+                        const next = {
+                          ...settings,
+                          maxRetries: retryForever ? 0 : 5,
+                          syncPreset: "custom" as const
+                        }
                         onSettingsChange(next)
                         onImmediateSave(next)
-                      }
-                    }}
-                    unit="seconds"
-                    placeholder="1800"
-                    hint="Custom interval in seconds"
-                    colors={colors}
-                  />
+                      }}
+                      trackColor={{
+                        false: colors.border,
+                        true: colors.primary + "80"
+                      }}
+                      thumbColor={settings.maxRetries === 0 ? colors.primary : colors.border}
+                    />
+                  </SettingRow>
+
+                  {/* Wi-Fi Only Sync Toggle */}
+                  <SettingRow
+                    label="Wi-Fi Only Sync"
+                    hint="Only upload when connected to Wi-Fi"
+                    style={styles.settingRowSpaced}
+                  >
+                    <Switch
+                      value={settings.isWifiOnlySync}
+                      onValueChange={(value) => {
+                        const next = {
+                          ...settings,
+                          isWifiOnlySync: value,
+                          syncPreset: "custom" as const
+                        }
+                        onSettingsChange(next)
+                        onImmediateSave(next)
+                      }}
+                      trackColor={{
+                        false: colors.border,
+                        true: colors.primary + "80"
+                      }}
+                      thumbColor={settings.isWifiOnlySync ? colors.primary : colors.border}
+                    />
+                  </SettingRow>
                 </View>
-              )}
 
-              {/* Retry Forever Toggle */}
-              <SettingRow
-                label="Retry Failed Uploads"
-                hint={
-                  settings.maxRetries === 0
-                    ? "Failed uploads stay in the queue until they succeed"
-                    : "Failed uploads are permanently deleted after 5 failed send attempts"
-                }
-              >
-                <Switch
-                  value={settings.maxRetries === 0}
-                  onValueChange={(retryForever) => {
-                    const next = {
-                      ...settings,
-                      maxRetries: retryForever ? 0 : 5,
-                      syncPreset: "custom" as const
-                    }
-                    onSettingsChange(next)
-                    onImmediateSave(next)
-                  }}
-                  trackColor={{
-                    false: colors.border,
-                    true: colors.primary + "80"
-                  }}
-                  thumbColor={settings.maxRetries === 0 ? colors.primary : colors.border}
-                />
-              </SettingRow>
-
-              {/* Wi-Fi Only Sync Toggle */}
-              <SettingRow
-                label="Wi-Fi Only Sync"
-                hint="Only upload when connected to Wi-Fi"
-                style={styles.settingRowSpaced}
-              >
-                <Switch
-                  value={settings.isWifiOnlySync}
-                  onValueChange={(value) => {
-                    const next = {
-                      ...settings,
-                      isWifiOnlySync: value,
-                      syncPreset: "custom" as const
-                    }
-                    onSettingsChange(next)
-                    onImmediateSave(next)
-                  }}
-                  trackColor={{
-                    false: colors.border,
-                    true: colors.primary + "80"
-                  }}
-                  thumbColor={settings.isWifiOnlySync ? colors.primary : colors.border}
-                />
-              </SettingRow>
-            </View>
-
-            <Divider />
+                <Divider />
+              </>
+            )}
 
             {/* Quality Parameters Group */}
             <View style={styles.paramGroup}>

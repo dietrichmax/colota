@@ -350,13 +350,13 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getStats(promise: Promise) = executeAsync(promise) {
-        val (queued, total, today) = dbHelper.getStats()
-        
+        val stats = dbHelper.getStats()
+
         Arguments.createMap().apply {
-            putInt("queued", queued)
-            putInt("sent", total - queued)
-            putInt("total", total)
-            putInt("today", today)
+            putInt("queued", stats.queued)
+            putInt("sent", stats.sent)
+            putInt("total", stats.total)
+            putInt("today", stats.today)
             putDouble("databaseSizeMB", dbHelper.getDatabaseSizeMB())
         }
     }

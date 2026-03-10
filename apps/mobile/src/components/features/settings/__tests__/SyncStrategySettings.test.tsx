@@ -130,6 +130,20 @@ describe("SyncStrategySettings", () => {
         })
       )
     })
+
+    it("selecting a preset in offline mode skips sync fields", () => {
+      const { getByTestId } = renderComponent({ isOfflineMode: true })
+
+      fireEvent.press(getByTestId("preset-balanced"))
+
+      const savedSettings = mockOnImmediateSave.mock.calls[0][0]
+      expect(savedSettings.syncPreset).toBe("balanced")
+      expect(savedSettings.interval).toBe(TRACKING_PRESETS.balanced.interval)
+      expect(savedSettings.distance).toBe(TRACKING_PRESETS.balanced.distance)
+      // syncInterval and retryInterval should NOT be overwritten in offline mode
+      expect(savedSettings.syncInterval).toBe(DEFAULT_SETTINGS.syncInterval)
+      expect(savedSettings.retryInterval).toBe(DEFAULT_SETTINGS.retryInterval)
+    })
   })
 
   describe("advanced toggle", () => {

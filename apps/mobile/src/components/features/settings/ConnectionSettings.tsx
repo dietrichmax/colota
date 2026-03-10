@@ -16,6 +16,7 @@ import { useTimeout } from "../../../hooks/useTimeout"
 import { CONNECTION_TEST_TIMEOUT, TEST_RESULT_DISPLAY_MS } from "../../../constants"
 import { logger } from "../../../utils/logger"
 import { Button, Card, SectionTitle, Divider } from "../../index"
+import { showChoice } from "../../../services/modalService"
 
 interface ConnectionSettingsProps {
   settings: Settings
@@ -40,7 +41,46 @@ export function ConnectionSettings({
   const timeout = useTimeout()
 
   const handleOfflineModeChange = useCallback(
-    (enabled: boolean) => {
+    async (enabled: boolean) => {
+      if (enabled) {
+        try {
+          const stats = await NativeLocationService.getStats()
+          if (stats.queued > 0) {
+            const hasEndpoint = !!settings.endpoint
+            const buttons = [
+              ...(hasEndpoint ? [{ text: "Sync First", style: "primary" as const }] : []),
+              { text: "Keep in Queue", style: "secondary" as const },
+              { text: "Delete Queue", style: "destructive" as const },
+              { text: "Cancel", style: "secondary" as const }
+            ]
+            const choice = await showChoice({
+              title: "Unsent Locations",
+              message: `You have ${stats.queued} locations waiting to sync. What would you like to do?`,
+              buttons
+            })
+            // Normalize index: with endpoint [Sync, Keep, Delete, Cancel], without [Keep, Delete, Cancel]
+            const action = hasEndpoint
+              ? (["sync", "keep", "delete", "cancel"] as const)[choice]
+              : (["keep", "delete", "cancel"] as const)[choice]
+            if (action === "sync") {
+              try {
+                await NativeLocationService.manualFlush()
+              } catch {
+                // sync may fail, proceed to offline anyway
+              }
+              onSettingsChange({ ...settings, isOfflineMode: true })
+            } else if (action === "keep") {
+              onSettingsChange({ ...settings, isOfflineMode: true })
+            } else if (action === "delete") {
+              await NativeLocationService.clearQueue()
+              onSettingsChange({ ...settings, isOfflineMode: true })
+            }
+            return
+          }
+        } catch {
+          // stats fetch failed, proceed normally
+        }
+      }
       onSettingsChange({ ...settings, isOfflineMode: enabled })
     },
     [settings, onSettingsChange]

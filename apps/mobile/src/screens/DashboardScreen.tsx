@@ -12,7 +12,7 @@ import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { useFocusEffect } from "@react-navigation/native"
 import {
   Button,
-  ServerConnection,
+  ConnectionStatus,
   DashboardMap,
   CoordinateDisplay,
   Container,
@@ -207,7 +207,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
           <DatabaseStatistics stats={stats} />
 
           {/* Server Connection */}
-          <ServerConnection endpoint={settings.endpoint} navigation={navigation} />
+          {!settings.isOfflineMode && <ConnectionStatus endpoint={settings.endpoint} navigation={navigation} />}
 
           {/* Quick Access */}
           <QuickAccess navigation={navigation} />

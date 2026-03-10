@@ -124,12 +124,17 @@ class SyncManager(
     }
 
     suspend fun queueAndSend(locationId: Long, payload: JSONObject) {
+        if (isOfflineMode) {
+            AppLogger.d(TAG, "Skipping queue for location $locationId - offline mode")
+            return
+        }
+
         val queueId = dbHelper.addToQueue(locationId, payload.toString())
 
         invalidateQueueCache()
 
-        if (endpoint.isBlank() || isOfflineMode) {
-            AppLogger.d(TAG, "Queued location $locationId - ${if (isOfflineMode) "offline mode" else "no endpoint"}")
+        if (endpoint.isBlank()) {
+            AppLogger.d(TAG, "Queued location $locationId - no endpoint configured")
             return
         }
 
@@ -140,6 +145,7 @@ class SyncManager(
             val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod)
 
             if (success) {
+                dbHelper.markLocationSent(locationId)
                 dbHelper.removeFromQueueByLocationId(locationId)
                 invalidateQueueCache()
                 lastSuccessfulSyncTime = System.currentTimeMillis()
@@ -251,6 +257,10 @@ class SyncManager(
                 }
 
                 val toRemove = successfulIds + permanentlyFailedIds
+                if (successfulIds.isNotEmpty()) {
+                    val sentLocationIds = retriable.filter { it.queueId in successfulIds }.map { it.locationId }
+                    dbHelper.markLocationsSent(sentLocationIds)
+                }
                 if (toRemove.isNotEmpty()) {
                     dbHelper.removeBatchFromQueue(toRemove)
 

@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useCallback } from "react"
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from "react-native"
 import { useTheme } from "../hooks/useTheme"
+import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
@@ -29,6 +30,7 @@ const DEFAULT_PROFILE: Omit<TrackingProfile, "id" | "createdAt"> = {
 
 export function ProfileEditorScreen({ navigation, route }: any) {
   const { colors } = useTheme()
+  const { settings } = useTracking()
   const profileId = route?.params?.profileId as number | undefined
   const isEditing = !!profileId
 
@@ -279,79 +281,86 @@ export function ProfileEditorScreen({ navigation, route }: any) {
             </View>
           </SettingRow>
 
-          <Divider />
+          {!settings.isOfflineMode && (
+            <>
+              <Divider />
 
-          <Text style={[styles.syncLabel, { color: colors.textSecondary }]}>Sync Interval</Text>
-          <View style={styles.syncGrid}>
-            {SYNC_INTERVAL_PRESETS.map((sec) => {
-              const isSelected = profile.syncInterval === sec && SYNC_INTERVAL_PRESETS.includes(profile.syncInterval)
-              return (
+              <Text style={[styles.syncLabel, { color: colors.textSecondary }]}>Sync Interval</Text>
+              <View style={styles.syncGrid}>
+                {SYNC_INTERVAL_PRESETS.map((sec) => {
+                  const isSelected =
+                    profile.syncInterval === sec && SYNC_INTERVAL_PRESETS.includes(profile.syncInterval)
+                  return (
+                    <Pressable
+                      key={sec}
+                      style={({ pressed }) => [
+                        styles.syncOption,
+                        {
+                          backgroundColor: isSelected ? colors.primary + "15" : colors.background,
+                          borderColor: isSelected ? colors.primary : colors.border
+                        },
+                        pressed && { opacity: 0.7 }
+                      ]}
+                      onPress={() => setProfile((prev) => ({ ...prev, syncInterval: sec }))}
+                    >
+                      <Text style={[styles.syncOptionLabel, { color: isSelected ? colors.primary : colors.text }]}>
+                        {SYNC_INTERVAL_LABELS[sec]}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
                 <Pressable
-                  key={sec}
                   style={({ pressed }) => [
                     styles.syncOption,
                     {
-                      backgroundColor: isSelected ? colors.primary + "15" : colors.background,
-                      borderColor: isSelected ? colors.primary : colors.border
+                      backgroundColor: isCustomSyncInterval ? colors.primary + "15" : colors.background,
+                      borderColor: isCustomSyncInterval ? colors.primary : colors.border
                     },
                     pressed && { opacity: 0.7 }
                   ]}
-                  onPress={() => setProfile((prev) => ({ ...prev, syncInterval: sec }))}
+                  onPress={() => {
+                    if (!isCustomSyncInterval) {
+                      const customValue = 1800
+                      setSyncIntervalStr(customValue.toString())
+                      setProfile((prev) => ({ ...prev, syncInterval: customValue }))
+                    }
+                  }}
                 >
-                  <Text style={[styles.syncOptionLabel, { color: isSelected ? colors.primary : colors.text }]}>
-                    {SYNC_INTERVAL_LABELS[sec]}
+                  <Text
+                    style={[styles.syncOptionLabel, { color: isCustomSyncInterval ? colors.primary : colors.text }]}
+                  >
+                    Custom
                   </Text>
                 </Pressable>
-              )
-            })}
-            <Pressable
-              style={({ pressed }) => [
-                styles.syncOption,
-                {
-                  backgroundColor: isCustomSyncInterval ? colors.primary + "15" : colors.background,
-                  borderColor: isCustomSyncInterval ? colors.primary : colors.border
-                },
-                pressed && { opacity: 0.7 }
-              ]}
-              onPress={() => {
-                if (!isCustomSyncInterval) {
-                  const customValue = 1800
-                  setSyncIntervalStr(customValue.toString())
-                  setProfile((prev) => ({ ...prev, syncInterval: customValue }))
-                }
-              }}
-            >
-              <Text style={[styles.syncOptionLabel, { color: isCustomSyncInterval ? colors.primary : colors.text }]}>
-                Custom
-              </Text>
-            </Pressable>
-          </View>
+              </View>
 
-          {isCustomSyncInterval && (
-            <View style={styles.customSyncInput}>
-              <NumericInput
-                label="Custom Sync Interval"
-                value={syncIntervalStr}
-                onChange={(val) => {
-                  setSyncIntervalStr(val)
-                  const num = Number(val)
-                  if (!isNaN(num) && num >= 0) {
-                    setProfile((prev) => ({ ...prev, syncInterval: num }))
-                  }
-                }}
-                onBlur={() => {
-                  const num = Number(syncIntervalStr)
-                  if (isNaN(num) || num < 0) {
-                    setSyncIntervalStr("0")
-                    setProfile((prev) => ({ ...prev, syncInterval: 0 }))
-                  }
-                }}
-                unit="seconds"
-                placeholder="1800"
-                hint="Custom interval in seconds"
-                colors={colors}
-              />
-            </View>
+              {isCustomSyncInterval && (
+                <View style={styles.customSyncInput}>
+                  <NumericInput
+                    label="Custom Sync Interval"
+                    value={syncIntervalStr}
+                    onChange={(val) => {
+                      setSyncIntervalStr(val)
+                      const num = Number(val)
+                      if (!isNaN(num) && num >= 0) {
+                        setProfile((prev) => ({ ...prev, syncInterval: num }))
+                      }
+                    }}
+                    onBlur={() => {
+                      const num = Number(syncIntervalStr)
+                      if (isNaN(num) || num < 0) {
+                        setSyncIntervalStr("0")
+                        setProfile((prev) => ({ ...prev, syncInterval: 0 }))
+                      }
+                    }}
+                    unit="seconds"
+                    placeholder="1800"
+                    hint="Custom interval in seconds"
+                    colors={colors}
+                  />
+                </View>
+              )}
+            </>
           )}
         </Card>
 

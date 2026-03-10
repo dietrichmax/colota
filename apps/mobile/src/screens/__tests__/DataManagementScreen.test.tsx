@@ -85,6 +85,13 @@ jest.mock("../../utils/logger", () => ({
   logger: { error: jest.fn(), warn: jest.fn() }
 }))
 
+let mockIsOfflineMode = false
+jest.mock("../../contexts/TrackingProvider", () => ({
+  useTracking: () => ({
+    settings: { isOfflineMode: mockIsOfflineMode }
+  })
+}))
+
 jest.mock("../../components", () => {
   const R = require("react")
   const RN = require("react-native")
@@ -147,6 +154,7 @@ import { DataManagementScreen } from "../DataManagementScreen"
 describe("DataManagementScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockIsOfflineMode = false
     mockGetStats.mockResolvedValue({ queued: 5, sent: 100, total: 105, today: 3, databaseSizeMB: 1.5 })
     mockGetSetting.mockResolvedValue("false")
     mockShowConfirm.mockResolvedValue(true)
@@ -277,6 +285,92 @@ describe("DataManagementScreen", () => {
           destructive: true
         })
       )
+    })
+  })
+
+  describe("offline mode", () => {
+    beforeEach(() => {
+      mockIsOfflineMode = true
+    })
+
+    it("hides Sent and Queued stats", async () => {
+      const { queryByText, getByText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByText("Total Locations")).toBeTruthy()
+      })
+
+      expect(queryByText("Sent")).toBeNull()
+      expect(queryByText("Queued")).toBeNull()
+    })
+
+    it("hides Queue Actions section", async () => {
+      const { queryByText, getByText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByText("Data Management")).toBeTruthy()
+      })
+
+      expect(queryByText("QUEUE ACTIONS")).toBeNull()
+      expect(queryByText("Sync Now")).toBeNull()
+    })
+
+    it("hides Clear Sent History and Clear Queue actions", async () => {
+      const { queryByText, getByText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByText("Data Management")).toBeTruthy()
+      })
+
+      expect(queryByText("Clear Sent History")).toBeNull()
+      expect(queryByText("Clear Queue")).toBeNull()
+    })
+
+    it("still shows Delete Old Locations and Optimize Database", async () => {
+      const { getByText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByText("Delete Old Locations")).toBeTruthy()
+        expect(getByText("Optimize Database")).toBeTruthy()
+      })
+    })
+
+    it("still shows Today and Storage stats", async () => {
+      const { getByText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByText("Today")).toBeTruthy()
+        expect(getByText("Storage")).toBeTruthy()
+      })
+    })
+
+    it("shows Delete All Locations action with total count", async () => {
+      const { getByText, getAllByText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByText("Delete All Locations")).toBeTruthy()
+        // "105" appears as Total Locations stat and as Delete All badge
+        expect(getAllByText("105").length).toBeGreaterThanOrEqual(2)
+      })
+    })
+
+    it("Delete All Locations shows confirmation dialog", async () => {
+      const { getByText, getAllByText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getAllByText("105").length).toBeGreaterThanOrEqual(1)
+      })
+
+      fireEvent.press(getByText("Delete All Locations"))
+
+      await waitFor(() => {
+        expect(mockShowConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: "Delete All Locations",
+            destructive: true
+          })
+        )
+      })
     })
   })
 })

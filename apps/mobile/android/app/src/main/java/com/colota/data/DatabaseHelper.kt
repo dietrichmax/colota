@@ -32,7 +32,7 @@ class DatabaseHelper private constructor(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "Colota.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
 
         const val TABLE_LOCATIONS = "locations"
         const val TABLE_QUEUE = "queue"
@@ -82,6 +82,7 @@ class DatabaseHelper private constructor(context: Context) :
                 battery_status INTEGER,
                 timestamp INTEGER NOT NULL,
                 endpoint TEXT,
+                sent INTEGER NOT NULL DEFAULT 0,
                 created_at INTEGER NOT NULL
             )
         """)
@@ -211,6 +212,11 @@ class DatabaseHelper private constructor(context: Context) :
                 )
             """)
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_profiles_enabled ON $TABLE_PROFILES(enabled, priority DESC)")
+        }
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE $TABLE_LOCATIONS ADD COLUMN sent INTEGER NOT NULL DEFAULT 0")
+            // Mark existing locations not in queue as sent (accurate for pre-offline-mode users)
+            db.execSQL("UPDATE $TABLE_LOCATIONS SET sent = 1 WHERE id NOT IN (SELECT location_id FROM $TABLE_QUEUE)")
         }
     }
 
@@ -457,27 +463,48 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
 
-    fun getStats(): Triple<Int, Int, Int> {
+    data class Stats(val queued: Int, val sent: Int, val total: Int, val today: Int)
+
+    fun getStats(): Stats {
         val query = """
-            SELECT 
+            SELECT
                 (SELECT COUNT(*) FROM $TABLE_QUEUE) as queued,
+                (SELECT COUNT(*) FROM $TABLE_LOCATIONS WHERE sent = 1) as sent,
                 (SELECT COUNT(*) FROM $TABLE_LOCATIONS) as total,
                 (SELECT COUNT(*) FROM $TABLE_LOCATIONS WHERE timestamp >= ?) as today
         """.trimIndent()
-        
+
         val todayStart = getTodayStartTimestamp()
-        
+
         return readableDatabase.rawQuery(query, arrayOf(todayStart.toString())).use { cursor ->
             if (cursor.moveToFirst()) {
-                Triple(
-                    cursor.getInt(0), // queued
-                    cursor.getInt(1), // total
-                    cursor.getInt(2)  // today
+                Stats(
+                    queued = cursor.getInt(0),
+                    sent = cursor.getInt(1),
+                    total = cursor.getInt(2),
+                    today = cursor.getInt(3)
                 )
             } else {
-                Triple(0, 0, 0)
+                Stats(0, 0, 0, 0)
             }
         }
+    }
+
+    fun markLocationSent(locationId: Long) {
+        writableDatabase.execSQL(
+            "UPDATE $TABLE_LOCATIONS SET sent = 1 WHERE id = ?",
+            arrayOf(locationId)
+        )
+    }
+
+    fun markLocationsSent(locationIds: List<Long>) {
+        if (locationIds.isEmpty()) return
+        val placeholders = locationIds.joinToString(",") { "?" }
+        val args = locationIds.map { it.toString() }.toTypedArray()
+        writableDatabase.execSQL(
+            "UPDATE $TABLE_LOCATIONS SET sent = 1 WHERE id IN ($placeholders)",
+            args
+        )
     }
 
     fun getQueuedCount(): Int {
@@ -496,7 +523,7 @@ class DatabaseHelper private constructor(context: Context) :
         AppLogger.d(TAG, "Clearing sent history")
         return writableDatabase.delete(
             TABLE_LOCATIONS,
-            "id NOT IN (SELECT location_id FROM $TABLE_QUEUE)",
+            "sent = 1",
             null
         )
     }

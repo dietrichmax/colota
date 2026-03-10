@@ -52,7 +52,10 @@ jest.mock("../../services/modalService", () => ({
 let mockActiveProfileName: string | null = null
 
 jest.mock("../../contexts/TrackingProvider", () => ({
-  useTracking: () => ({ activeProfileName: mockActiveProfileName })
+  useTracking: () => ({
+    activeProfileName: mockActiveProfileName,
+    settings: { isOfflineMode: false }
+  })
 }))
 
 jest.mock("../../hooks/useTheme", () => ({

@@ -26,3 +26,7 @@ This is useful for:
 - **Battery savings** - Reduce radio usage on metered connections
 
 Toggle this in **Settings > Advanced Settings > Network Settings > Wi-Fi Only Sync**. Locations continue to be recorded and queued regardless of this setting - they sync automatically once Wi-Fi is available.
+
+## Offline Mode
+
+In [offline mode](/docs/configuration/server-settings#offline-mode), network settings (sync interval, retry behavior, Wi-Fi only sync) are hidden since no syncing occurs. Preset descriptions adjust to show only tracking parameters.
