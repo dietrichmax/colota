@@ -6,7 +6,6 @@
 package com.Colota.export
 
 import android.content.Context
-import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
@@ -33,14 +32,9 @@ object AutoExportScheduler {
      * Schedules the daily auto-export check worker.
      */
     fun schedule(context: Context) {
-        val constraints = Constraints.Builder()
-            .setRequiresBatteryNotLow(true)
-            .build()
-
         val request = PeriodicWorkRequestBuilder<AutoExportWorker>(
             CHECK_INTERVAL_HOURS, TimeUnit.HOURS
         )
-            .setConstraints(constraints)
             .build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(

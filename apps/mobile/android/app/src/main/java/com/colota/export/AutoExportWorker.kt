@@ -72,6 +72,11 @@ class AutoExportWorker(
         val db = DatabaseHelper.getInstance(appContext)
         val config = AutoExportConfig.from(db)
 
+        if (!config.enabled) {
+            AppLogger.d(TAG, "Auto-export is disabled, skipping")
+            return Result.success()
+        }
+
         if (config.uri == null) {
             AppLogger.e(TAG, "No export directory configured")
             return Result.failure()
