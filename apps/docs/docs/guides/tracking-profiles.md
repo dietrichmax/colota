@@ -47,6 +47,8 @@ Each profile overrides the default tracking configuration with:
 - **Priority** - Determines which profile wins when multiple conditions match simultaneously (higher = wins)
 - **Deactivation Delay** - How long to wait after the condition stops matching before reverting to default settings (seconds). Prevents rapid toggling when conditions fluctuate.
 
+When creating a new profile, GPS interval, distance filter, and sync interval are pre-filled with your current values from main Settings. Each field also shows a hint with the default value for reference.
+
 ## How It Works
 
 - When tracking starts, all enabled profiles are evaluated against current conditions

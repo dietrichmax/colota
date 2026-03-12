@@ -38,7 +38,12 @@ jest.mock("../../services/modalService", () => ({
 
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
-    settings: { isOfflineMode: false }
+    settings: {
+      isOfflineMode: false,
+      interval: 5,
+      distance: 0,
+      syncInterval: 0
+    }
   })
 }))
 
@@ -131,6 +136,21 @@ describe("ProfileEditorScreen", () => {
     expect(getByText("1 min")).toBeTruthy()
     expect(getByText("5 min")).toBeTruthy()
     expect(getByText("15 min")).toBeTruthy()
+  })
+
+  it("pre-fills fields with main settings values", () => {
+    const { getByDisplayValue } = renderNewProfile()
+
+    expect(getByDisplayValue("5")).toBeTruthy() // interval from settings
+    expect(getByDisplayValue("0")).toBeTruthy() // distance from settings
+  })
+
+  it("shows default hints from main settings", () => {
+    const { getByText } = renderNewProfile()
+
+    expect(getByText("Default: 5s")).toBeTruthy()
+    expect(getByText("Default: 0 m")).toBeTruthy()
+    expect(getByText("Default: Instant")).toBeTruthy()
   })
 
   // --- Validation ---

@@ -43,9 +43,8 @@ export function SettingsScreen({ navigation }: ScreenProps) {
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(getUnitSystem)
   const [timeFormat, setTimeFormat] = useState<TimeFormat>(getTimeFormat)
 
-  const toggleUnitSystem = useCallback(
-    async (imperial: boolean) => {
-      const value: UnitSystem = imperial ? "imperial" : "metric"
+  const selectUnitSystem = useCallback(
+    async (value: UnitSystem) => {
       const prev = unitSystem
       setUnitSystem(value)
       try {
@@ -58,9 +57,8 @@ export function SettingsScreen({ navigation }: ScreenProps) {
     [unitSystem]
   )
 
-  const toggleTimeFormat = useCallback(
-    async (use12h: boolean) => {
-      const value: TimeFormat = use12h ? "12h" : "24h"
+  const selectTimeFormat = useCallback(
+    async (value: TimeFormat) => {
       const prev = timeFormat
       setTimeFormat(value)
       try {
@@ -178,30 +176,56 @@ export function SettingsScreen({ navigation }: ScreenProps) {
 
             <Divider />
 
-            <SettingRow label="Imperial Units" hint="Use miles, feet, and mph">
-              <Switch
-                value={unitSystem === "imperial"}
-                onValueChange={toggleUnitSystem}
-                trackColor={{
-                  false: colors.border,
-                  true: colors.primary + "80"
-                }}
-                thumbColor={unitSystem === "imperial" ? colors.primary : colors.border}
-              />
+            <SettingRow label="Units">
+              <View style={styles.chipGroup}>
+                {(["metric", "imperial"] as const).map((unit) => {
+                  const selected = unitSystem === unit
+                  return (
+                    <Pressable
+                      key={unit}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: selected ? colors.primary + "15" : colors.background,
+                          borderColor: selected ? colors.primary : colors.border
+                        }
+                      ]}
+                      onPress={() => selectUnitSystem(unit)}
+                    >
+                      <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>
+                        {unit === "metric" ? "Metric" : "Imperial"}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
             </SettingRow>
 
             <Divider />
 
-            <SettingRow label="12-Hour Time" hint="Use AM/PM instead of 24-hour format">
-              <Switch
-                value={timeFormat === "12h"}
-                onValueChange={toggleTimeFormat}
-                trackColor={{
-                  false: colors.border,
-                  true: colors.primary + "80"
-                }}
-                thumbColor={timeFormat === "12h" ? colors.primary : colors.border}
-              />
+            <SettingRow label="Time Format">
+              <View style={styles.chipGroup}>
+                {(["24h", "12h"] as const).map((fmt) => {
+                  const selected = timeFormat === fmt
+                  return (
+                    <Pressable
+                      key={fmt}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: selected ? colors.primary + "15" : colors.background,
+                          borderColor: selected ? colors.primary : colors.border
+                        }
+                      ]}
+                      onPress={() => selectTimeFormat(fmt)}
+                    >
+                      <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>
+                        {fmt === "24h" ? "24h" : "12h"}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
             </SettingRow>
           </Card>
         </View>
@@ -297,5 +321,19 @@ const styles = StyleSheet.create({
   linkSub: {
     fontSize: 13,
     ...fonts.regular
+  },
+  chipGroup: {
+    flexDirection: "row",
+    gap: 8
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5
+  },
+  chipLabel: {
+    fontSize: 13,
+    ...fonts.semiBold
   }
 })
