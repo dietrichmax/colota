@@ -358,6 +358,38 @@ export function AboutScreen({}: ScreenProps) {
           />
         </Card>
 
+        {/* Map Data Attribution */}
+        <View style={styles.debugSection}>
+          <SectionTitle>Map Data</SectionTitle>
+          <Card>
+            <Pressable
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}
+              onPress={() => handleOpenURL("https://openfreemap.org")}
+            >
+              <View style={styles.linkTextContainer}>
+                <Text style={[styles.linkTitle, { color: colors.text }]}>OpenFreeMap</Text>
+                <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>
+                  Free and open-source map tile hosting
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.textLight} />
+            </Pressable>
+            <Divider />
+            <Pressable
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}
+              onPress={() => handleOpenURL("https://www.openstreetmap.org/copyright")}
+            >
+              <View style={styles.linkTextContainer}>
+                <Text style={[styles.linkTitle, { color: colors.text }]}>OpenStreetMap</Text>
+                <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>
+                  Map data by OpenStreetMap contributors
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.textLight} />
+            </Pressable>
+          </Card>
+        </View>
+
         {/* Debug Info - Only shown when enabled */}
         {showDebugInfo && (
           <>
