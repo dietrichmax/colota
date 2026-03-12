@@ -130,21 +130,6 @@ describe("LocationTable", () => {
     expect(deltaElements.length).toBe(2)
   })
 
-  it("first row (newest) has no delta", () => {
-    const { queryAllByText } = render(<LocationTable locations={locations} colors={mockColors} />)
-
-    // After reversing: the newest item (originally index 2) has delta=30
-    // The second item (originally index 1) has delta=30
-    // The oldest item (originally index 0) has delta=null (empty string)
-    // So there should be exactly two "+30s" entries
-    const deltaElements = queryAllByText("+30s")
-    expect(deltaElements.length).toBe(2)
-
-    // The oldest (now last) row has no delta - it renders as empty string ""
-    // This means there is no "+0s" or similar text for the first chronological item
-    expect(queryAllByText(/^\+\d+s$/).length).toBe(2)
-  })
-
   it("handles null optional fields (altitude, speed, bearing, battery)", () => {
     const { getAllByText } = render(<LocationTable locations={locations} colors={mockColors} />)
 

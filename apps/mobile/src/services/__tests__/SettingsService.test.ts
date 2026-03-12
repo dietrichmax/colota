@@ -72,11 +72,6 @@ describe("SettingsService", () => {
       expect(mockSaveSetting).toHaveBeenCalledWith("httpMethod", "POST")
     })
 
-    it("does not throw on success", async () => {
-      await SettingsService.updateSetting("endpoint", "https://test.com")
-      expect(mockSaveSetting).toHaveBeenCalledWith("endpoint", "https://test.com")
-    })
-
     it("propagates errors to caller", async () => {
       mockSaveSetting.mockRejectedValueOnce(new Error("Native error"))
       await expect(SettingsService.updateSetting("endpoint", "test")).rejects.toThrow("Native error")

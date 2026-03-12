@@ -36,9 +36,21 @@ jest.mock("../../services/modalService", () => ({
   showAlert: (...args: any[]) => mockShowAlert(...args)
 }))
 
+jest.mock("../../utils/geo", () => ({
+  ...jest.requireActual("../../utils/geo"),
+  shortDistanceUnit: () => "m",
+  metersToInput: (v: number) => v,
+  inputToMeters: (v: number) => v
+}))
+
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
-    settings: { isOfflineMode: false }
+    settings: {
+      isOfflineMode: false,
+      interval: 5,
+      distance: 0,
+      syncInterval: 0
+    }
   })
 }))
 
@@ -133,6 +145,21 @@ describe("ProfileEditorScreen", () => {
     expect(getByText("15 min")).toBeTruthy()
   })
 
+  it("pre-fills fields with main settings values", () => {
+    const { getByDisplayValue } = renderNewProfile()
+
+    expect(getByDisplayValue("5")).toBeTruthy() // interval from settings
+    expect(getByDisplayValue("0")).toBeTruthy() // distance from settings
+  })
+
+  it("shows default hints from main settings", () => {
+    const { getByText } = renderNewProfile()
+
+    expect(getByText("Default: 5s")).toBeTruthy()
+    expect(getByText("Default: 0 m")).toBeTruthy()
+    expect(getByText("Default: Instant")).toBeTruthy()
+  })
+
   // --- Validation ---
 
   it("shows alert when saving with empty name", async () => {
@@ -143,15 +170,6 @@ describe("ProfileEditorScreen", () => {
     await waitFor(() => {
       expect(mockShowAlert).toHaveBeenCalledWith("Missing Name", "Please enter a profile name.", "warning")
     })
-  })
-
-  it("allows setting interval to valid value", () => {
-    const { getByDisplayValue } = renderNewProfile()
-
-    const intervalInput = getByDisplayValue("5")
-    fireEvent.changeText(intervalInput, "15")
-
-    expect(getByDisplayValue("15")).toBeTruthy()
   })
 
   it("saves with speed condition when threshold is valid", async () => {

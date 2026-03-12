@@ -17,15 +17,10 @@ import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { MS_TO_KMH, PROFILE_CONDITIONS, SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } from "../constants"
 
-const DEFAULT_PROFILE: Omit<TrackingProfile, "id" | "createdAt"> = {
-  name: "",
-  interval: 5,
-  distance: 0,
-  syncInterval: 0,
-  priority: 10,
-  condition: { type: "charging" },
-  deactivationDelay: 60,
-  enabled: true
+function formatSyncDefault(seconds: number): string {
+  if (SYNC_INTERVAL_LABELS[seconds]) return SYNC_INTERVAL_LABELS[seconds]
+  if (seconds < 60) return `${seconds}s`
+  return `${Math.round(seconds / 60)} min`
 }
 
 export function ProfileEditorScreen({ navigation, route }: any) {
@@ -34,16 +29,25 @@ export function ProfileEditorScreen({ navigation, route }: any) {
   const profileId = route?.params?.profileId as number | undefined
   const isEditing = !!profileId
 
-  const [profile, setProfile] = useState<Omit<TrackingProfile, "id" | "createdAt">>(DEFAULT_PROFILE)
+  const [profile, setProfile] = useState<Omit<TrackingProfile, "id" | "createdAt">>({
+    name: "",
+    interval: settings.interval,
+    distance: settings.distance,
+    syncInterval: settings.syncInterval,
+    priority: 10,
+    condition: { type: "charging" },
+    deactivationDelay: 60,
+    enabled: true
+  })
   const [speedKmh, setSpeedKmh] = useState("30")
   const [saving, setSaving] = useState(false)
 
   // String representations for numeric inputs
-  const [intervalStr, setIntervalStr] = useState("5")
-  const [distanceStr, setDistanceStr] = useState("0")
+  const [intervalStr, setIntervalStr] = useState(String(settings.interval))
+  const [distanceStr, setDistanceStr] = useState(String(metersToInput(settings.distance)))
   const [priorityStr, setPriorityStr] = useState("10")
   const [delayStr, setDelayStr] = useState("60")
-  const [syncIntervalStr, setSyncIntervalStr] = useState("0")
+  const [syncIntervalStr, setSyncIntervalStr] = useState(String(settings.syncInterval))
 
   useEffect(() => {
     if (!profileId) return
@@ -251,7 +255,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
         {/* Tracking Settings */}
         <SectionTitle style={styles.sectionGap}>Tracking Settings</SectionTitle>
         <Card>
-          <SettingRow label="Tracking Interval">
+          <SettingRow label="Tracking Interval" hint={`Default: ${settings.interval}s`}>
             <View style={styles.inputWithUnit}>
               <TextInput
                 style={inputStyle}
@@ -267,7 +271,10 @@ export function ProfileEditorScreen({ navigation, route }: any) {
 
           <Divider />
 
-          <SettingRow label="Movement Threshold">
+          <SettingRow
+            label="Movement Threshold"
+            hint={`Default: ${metersToInput(settings.distance)} ${shortDistanceUnit()}`}
+          >
             <View style={styles.inputWithUnit}>
               <TextInput
                 style={inputStyle}
@@ -285,7 +292,12 @@ export function ProfileEditorScreen({ navigation, route }: any) {
             <>
               <Divider />
 
-              <Text style={[styles.syncLabel, { color: colors.textSecondary }]}>Sync Interval</Text>
+              <View style={styles.syncLabelRow}>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Sync Interval</Text>
+                <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
+                  Default: {formatSyncDefault(settings.syncInterval)}
+                </Text>
+              </View>
               <View style={styles.syncGrid}>
                 {SYNC_INTERVAL_PRESETS.map((sec) => {
                   const isSelected =
@@ -445,7 +457,9 @@ const styles = StyleSheet.create({
   },
   conditionLabel: { fontSize: 13, ...fonts.semiBold },
   conditionDesc: { fontSize: 11, ...fonts.regular, textAlign: "center" },
-  syncLabel: { fontSize: 12, ...fonts.semiBold, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 },
+  syncLabelRow: { marginBottom: 8 },
+  settingLabel: { fontSize: 16, ...fonts.semiBold, marginBottom: 2 },
+  settingHint: { fontSize: 13, ...fonts.regular, lineHeight: 18 },
   syncGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   syncOption: { width: "31%", padding: 12, borderRadius: 10, borderWidth: 1.5, alignItems: "center" }, // ~3 per row with gap
   syncOptionLabel: { fontSize: 13, ...fonts.semiBold },

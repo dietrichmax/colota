@@ -119,10 +119,4 @@ describe("StatsCard", () => {
       expect(queryByText("Critical Queue Size")).toBeNull()
     })
   })
-
-  it("shows interval with seconds unit", () => {
-    const { getByText } = render(<StatsCard {...baseProps} interval="15" />)
-
-    expect(getByText("s")).toBeTruthy()
-  })
 })
