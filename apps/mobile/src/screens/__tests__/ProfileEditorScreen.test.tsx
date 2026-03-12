@@ -36,6 +36,13 @@ jest.mock("../../services/modalService", () => ({
   showAlert: (...args: any[]) => mockShowAlert(...args)
 }))
 
+jest.mock("../../utils/geo", () => ({
+  ...jest.requireActual("../../utils/geo"),
+  shortDistanceUnit: () => "m",
+  metersToInput: (v: number) => v,
+  inputToMeters: (v: number) => v
+}))
+
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
     settings: {
