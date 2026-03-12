@@ -4,13 +4,13 @@
 
 # Colota - GPS Location Tracker
 
-[![Version](https://img.shields.io/github/v/release/dietrichmax/colota)](https://github.com/dietrichmax/colota/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Lint & Test](https://github.com/dietrichmax/colota/actions/workflows/lint-test.yml/badge.svg)](https://github.com/dietrichmax/colota/actions/workflows/lint-test.yml) [![Android Build](https://github.com/dietrichmax/colota/actions/workflows/build-check.yml/badge.svg)](https://github.com/dietrichmax/colota/actions/workflows/build-check.yml) [![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://developer.android.com) [![React Native](https://img.shields.io/badge/React_Native-0.83-blue.svg)](https://reactnative.dev) [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
+[![Version](https://img.shields.io/github/v/release/dietrichmax/colota)](https://github.com/dietrichmax/colota/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Google Play](https://img.shields.io/badge/Google_Play-Download-green.svg?logo=google-play)](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US)
 
 **Self-hosted GPS tracking app for Android.**
 
 Colota sends your location to your own server over HTTP(S). It works offline, supports geofencing, and doesn't share any data except with your backend.
 
-[Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) | [F-Droid](https://f-droid.org/packages/com.Colota/) | [Documentation](https://colota.app/docs/introduction) | [Privacy Policy](https://colota.app/privacy-policy)
+[Documentation](https://colota.app/docs/introduction) | [Privacy Policy](https://colota.app/privacy-policy)
 
 ## Features
 
@@ -60,13 +60,10 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 
 ## Quick Start
 
-```bash
-# Install from Google Play, F-Droid, or download APK from Releases
-# Then:
-1. Grant location permissions (precise, all the time)
-2. Disable battery optimization for Colota
-3. Press Start Tracking
-```
+1. Install from [Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) or download the APK from [GitHub Releases](https://github.com/dietrichmax/colota/releases)
+2. Grant location permissions (precise, all the time)
+3. Disable battery optimization for Colota
+4. Press **Start Tracking**
 
 For full setup, server configuration, and integration guides, see the [documentation](https://colota.app).
 
