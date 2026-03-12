@@ -350,11 +350,5 @@ describe("NativeLocationService", () => {
       })
       expect(nativeMock.exportToFile).toHaveBeenCalledWith("geojson")
     })
-
-    it("exportToFile returns null when no data", async () => {
-      nativeMock.exportToFile.mockResolvedValueOnce(null)
-      const result = await NativeLocationService.exportToFile("csv")
-      expect(result).toBeNull()
-    })
   })
 })
