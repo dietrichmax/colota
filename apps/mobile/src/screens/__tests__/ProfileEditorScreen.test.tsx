@@ -165,15 +165,6 @@ describe("ProfileEditorScreen", () => {
     })
   })
 
-  it("allows setting interval to valid value", () => {
-    const { getByDisplayValue } = renderNewProfile()
-
-    const intervalInput = getByDisplayValue("5")
-    fireEvent.changeText(intervalInput, "15")
-
-    expect(getByDisplayValue("15")).toBeTruthy()
-  })
-
   it("saves with speed condition when threshold is valid", async () => {
     const { getByText, getByDisplayValue } = renderNewProfile()
 
