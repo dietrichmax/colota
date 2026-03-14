@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 SRC = REPO_ROOT / "screenshots" / "mobile" / "original"
 DOCS = REPO_ROOT / "apps" / "docs" / "static" / "img" / "screenshots"
-STORE = REPO_ROOT / "apps" / "mobile" / "android" / "app" / "fastlane" / "metadata" / "android" / "en-US" / "images" / "phoneScreenshots"
+STORE = REPO_ROOT / "fastlane" / "metadata" / "android" / "en-US" / "images" / "phoneScreenshots"
 
 STORE_ORDER = [
     "Dashboard.png",
