@@ -12,6 +12,7 @@ Settings and tips to reduce battery usage without losing GPS fixes.
 - **Batch processing**: 50 items per batch, 10 concurrent network requests
 - **Smart sync**: Only syncs when queue has items and network is available
 - **Battery critical shutdown**: Stops tracking below 5% (when unplugged)
+- **Passive location listener**: Records free fixes from other apps at zero battery cost, improving track density without extra GPS usage
 
 ## Tips
 

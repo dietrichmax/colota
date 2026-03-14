@@ -18,6 +18,8 @@ import com.Colota.util.DeviceInfoHelper
 import com.Colota.util.SecureStorageHelper
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.*
 import androidx.core.app.ServiceCompat
 import com.Colota.location.LocationProvider
@@ -45,6 +47,7 @@ class LocationForegroundService : Service() {
 
     @Volatile private var serviceScope: CoroutineScope? = null
     @Volatile private var locationUpdateCallback: LocationUpdateCallback? = null
+    @Volatile private var passiveLocationListener: LocationListener? = null
     @Volatile private var locationRestartJob: Job? = null
     @Volatile private var insidePauseZone = false
     @Volatile private var currentZoneName: String? = null
@@ -277,6 +280,7 @@ class LocationForegroundService : Service() {
                 },
                 onFailure = { /* initial location unavailable, updates will arrive */ }
             )
+            startPassiveListener()
         } catch (e: SecurityException) {
             AppLogger.e(TAG, "Location permission missing", e)
             stopForegroundServiceWithReason("Location permission missing")
@@ -289,6 +293,33 @@ class LocationForegroundService : Service() {
     private fun stopLocationUpdates() {
         locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
         locationUpdateCallback = null
+        stopPassiveListener()
+    }
+
+    private fun startPassiveListener() {
+        try {
+            val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+            val listener = LocationListener { location -> handleLocationUpdate(location) }
+            locationManager.requestLocationUpdates(
+                LocationManager.PASSIVE_PROVIDER, 1000L, 0f, listener, Looper.getMainLooper()
+            )
+            passiveLocationListener = listener
+            AppLogger.d(TAG, "Passive location listener started")
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Failed to start passive listener: ${e.message}")
+        }
+    }
+
+    private fun stopPassiveListener() {
+        passiveLocationListener?.let {
+            try {
+                val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+                locationManager.removeUpdates(it)
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "Failed to remove passive listener: ${e.message}")
+            }
+        }
+        passiveLocationListener = null
     }
 
     private fun handleZoneRecheckAction() {
@@ -384,6 +415,15 @@ class LocationForegroundService : Service() {
             && location.longitude == prev.longitude) {
             AppLogger.d(TAG, "Duplicate location skipped (same timestamp and coords)")
             return
+        }
+
+        // Software-side distance filter (passive fixes bypass the OS-level distance filter)
+        if (config.minUpdateDistance > 0f && prev != null) {
+            val distance = prev.distanceTo(location)
+            if (distance < config.minUpdateDistance) {
+                AppLogger.d(TAG, "Location filtered: distance ${String.format(Locale.US, "%.1f", distance)}m < threshold ${config.minUpdateDistance}m")
+                return
+            }
         }
 
         AppLogger.d(TAG, "Location received: ${String.format(Locale.US, "%.5f, %.5f", location.latitude, location.longitude)} acc=${location.accuracy}m provider=${location.provider}")
