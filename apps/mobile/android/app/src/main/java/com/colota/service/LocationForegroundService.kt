@@ -145,12 +145,18 @@ class LocationForegroundService : Service() {
         val initialTitle = notificationHelper.buildTitle(
             if (::profileManager.isInitialized) profileManager.getActiveProfileName() else null
         )
-        ServiceCompat.startForeground(
-            this,
-            NotificationHelper.NOTIFICATION_ID,
-            notificationHelper.buildTrackingNotification(initialTitle, initialStatus),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-        )
+        try {
+            ServiceCompat.startForeground(
+                this,
+                NotificationHelper.NOTIFICATION_ID,
+                notificationHelper.buildTrackingNotification(initialTitle, initialStatus),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            )
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Cannot start foreground service - background start restricted", e)
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         if (!isLightweight) {
             dbHelper.saveSetting("tracking_enabled", "true")

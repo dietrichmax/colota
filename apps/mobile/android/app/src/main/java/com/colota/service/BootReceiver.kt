@@ -102,6 +102,9 @@ class LocationBootReceiver : BroadcastReceiver() {
             
         } catch (e: SecurityException) {
             AppLogger.e(TAG, "Permission denied when starting service", e)
+        } catch (e: IllegalStateException) {
+            // ForegroundServiceStartNotAllowedException on Android 12+
+            AppLogger.e(TAG, "Cannot start foreground service from background", e)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error restarting service on boot", e)
         }
