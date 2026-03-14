@@ -6,7 +6,7 @@ sidebar_position: 2
 
 ## Prerequisites
 
-- **Node.js** ≥ 20
+- **Node.js** ≥ 22
 - **npm** ≥ 9 (ships with Node.js)
 - **Java Development Kit** (JDK) 17
 - **Android SDK** (API level 36)
