@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-**Last updated: February 18, 2026**
+**Last updated: March 14, 2026**
 
 Colota ("the App") is a self-hosted GPS tracking application for Android, developed by Max Dietrich. This privacy policy explains what data the App collects, how it is used, and your rights regarding that data.
 
@@ -42,6 +42,8 @@ All data is stored **locally on your device** and is never sent anywhere unless 
 
 Collected data is stored in a local SQLite database on your device. The data is not accessible to other apps.
 
+If you configure auto-export, the App will write export files (CSV, GeoJSON, GPX, or KML) to a directory you select on your device. No data leaves your device as part of this process.
+
 Authentication credentials (if configured) are encrypted using **AES-256-GCM** via Android's `EncryptedSharedPreferences`.
 
 The App supports configuration via `colota://setup` deep links. These links can include server endpoints and authentication credentials. You must explicitly confirm before any configuration is applied. Only open setup links from sources you trust.
@@ -64,6 +66,10 @@ Colota does not share your data with anyone. The only data transmission occurs t
 ### Google Play
 
 The App is distributed via Google Play, which may collect data according to [Google's Privacy Policy](https://policies.google.com/privacy). This is outside the App's control.
+
+### OpenFreeMap
+
+The App displays maps using [OpenFreeMap](https://openfreemap.org), which serves map tiles. When the map is visible, your device makes requests to OpenFreeMap's servers to download tiles for the visible area. OpenFreeMap does not log IP addresses by default and uses no cookies or tracking. OpenFreeMap is a free, open-source service. See [OpenFreeMap's privacy policy](https://openfreemap.org/privacy/) for details.
 
 ### No Other Third Parties
 
@@ -92,6 +98,7 @@ Since all data is stored locally on your device, you have full control:
 | Permission                        | Purpose                                            |
 | --------------------------------- | -------------------------------------------------- |
 | Location (Precise)                | GPS tracking                                       |
+| Location (Approximate)            | Required alongside precise location on Android     |
 | Background Location (Android 10+) | Tracking while the app is not in the foreground    |
 | Foreground Service                | Background tracking with notification              |
 | Notification (Android 13+)        | Foreground service notification                    |
