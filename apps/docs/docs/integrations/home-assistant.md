@@ -22,6 +22,14 @@ Colota integrates with Home Assistant via the built-in [OwnTracks integration](h
      https://your-ha-instance/api/webhook/abc123
      ```
    - No authentication is needed - the webhook ID acts as the secret
+   - Add the following **custom headers** - these are required for Home Assistant to create the `device_tracker` entity:
+
+     | Header      | Value        | Description                                    |
+     | ----------- | ------------ | ---------------------------------------------- |
+     | `X-Limit-U` | e.g. `john`  | Your username - used as part of the entity ID  |
+     | `X-Limit-D` | e.g. `phone` | Your device ID - used as part of the entity ID |
+
+   Without these headers, Home Assistant will accept the webhook but will not create a device tracker entity. The entity will appear as `device_tracker.<username>_<device>`.
 
 Your device will appear as a `device_tracker` entity in Home Assistant that you can use for automations, zones, and the map.
 
