@@ -118,7 +118,8 @@ describe("NativeLocationService", () => {
         apiTemplate: "custom" as const,
         syncPreset: "instant" as const,
         httpMethod: "POST" as const,
-        hasCompletedSetup: false
+        hasCompletedSetup: false,
+        pauseWhenStationary: true
       }
 
       await NativeLocationService.start(settings)
@@ -149,7 +150,8 @@ describe("NativeLocationService", () => {
         apiTemplate: "traccar" as const,
         syncPreset: "instant" as const,
         httpMethod: "GET" as const,
-        hasCompletedSetup: false
+        hasCompletedSetup: false,
+        pauseWhenStationary: true
       }
 
       await NativeLocationService.start(settings)

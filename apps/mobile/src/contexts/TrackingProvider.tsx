@@ -54,6 +54,7 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
 
     isOfflineMode: allRaw.isOfflineMode === "true",
     isWifiOnlySync: allRaw.isWifiOnlySync === "true",
+    pauseWhenStationary: allRaw.pauseWhenStationary !== "false",
     endpoint: allRaw.endpoint ?? DEFAULT_SETTINGS.endpoint,
     syncPreset: (allRaw.syncPreset as any) ?? DEFAULT_SETTINGS.syncPreset,
     filterInaccurateLocations: allRaw.filterInaccurateLocations === "true",

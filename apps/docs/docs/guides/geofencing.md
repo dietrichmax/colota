@@ -28,6 +28,8 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 - Zone detection uses the Haversine formula (1-2ms per check)
 - When entering a pause zone, location recording and syncing stops
 - The notification shows "Paused: [Zone Name]"
+- GPS continues running inside the zone to detect when you leave
+- If you stay stationary inside a zone, GPS is paused after 60s (if stationary detection is enabled) - the hardware motion sensor then wakes GPS when you start moving
 - When exiting the zone, tracking automatically resumes
 - Zone checks happen every location update with minimal overhead
 - You can create unlimited geofence zones

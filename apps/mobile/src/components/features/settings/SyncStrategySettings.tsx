@@ -192,6 +192,21 @@ export function SyncStrategySettings({
                 hint="Only record if moved more than this distance"
                 colors={colors}
               />
+
+              <SettingRow
+                label="Pause GPS when stationary"
+                hint="Stops active GPS after 60s without movement and resumes on motion"
+              >
+                <Switch
+                  value={settings.pauseWhenStationary}
+                  onValueChange={(value) => onImmediateSave({ ...settings, pauseWhenStationary: value })}
+                  trackColor={{
+                    false: colors.border,
+                    true: colors.primary + "80"
+                  }}
+                  thumbColor={settings.pauseWhenStationary ? colors.primary : colors.border}
+                />
+              </SettingRow>
             </View>
 
             {!settings.isOfflineMode && (

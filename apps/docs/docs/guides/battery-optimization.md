@@ -8,6 +8,7 @@ Settings and tips to reduce battery usage without losing GPS fixes.
 
 ## Built-in Optimizations
 
+- **Stationary detection**: Automatically pauses GPS after 60s without movement, resumes on motion via hardware sensor (enabled by default)
 - **Notification throttling**: Max 1 update per 10 seconds, plus 2-meter movement filter
 - **Batch processing**: 50 items per batch, 10 concurrent network requests
 - **Smart sync**: Only syncs when queue has items and network is available
@@ -18,7 +19,7 @@ Settings and tips to reduce battery usage without losing GPS fixes.
 1. **Increase GPS interval** - 5s to 30s saves significant battery
 2. **Enable accuracy filtering** - Reject poor GPS fixes to avoid unnecessary processing
 3. **Use batch sync** instead of instant - Reduces network usage and wake-ups
-4. **Create geofences** for home/work - Stops recording locations in zones
+4. **Create geofences** for home/work - Stops recording locations in zones, and GPS is also paused after 60s stationary inside a zone
 5. **Enable movement threshold** - 10-50m, skip stationary updates
 6. **Disable battery optimization** for Colota in Android settings to prevent the OS from killing the service
 
