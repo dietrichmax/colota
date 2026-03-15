@@ -86,10 +86,10 @@ class MotionDetectorTest {
 
     @Test
     fun `onTrigger invokes callback and resets armed state`() {
+        val detector = makeDetector()
         val listenerSlot = slot<TriggerEventListener>()
         every { sensorManager.requestTriggerSensor(capture(listenerSlot), any()) } returns true
 
-        val detector = makeDetector()
         detector.arm()
         listenerSlot.captured.onTrigger(null)
 
