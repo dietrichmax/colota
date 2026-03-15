@@ -18,7 +18,7 @@ permissions:
   security-events: write
 
 jobs:
-  analyze:
+  analyze-kotlin:
     name: Analyze (kotlin)
     runs-on: ubuntu-latest
 
@@ -61,3 +61,22 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:java-kotlin"
+
+  analyze-javascript:
+    name: Analyze (javascript)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
