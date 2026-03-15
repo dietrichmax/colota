@@ -214,6 +214,41 @@ class NotificationHelperTest {
         assertTrue(helper.update(lat = 52.0, lon = 13.0, activeProfileName = "Charging", forceUpdate = true))
     }
 
+    // --- Stationary status ---
+
+    @Test
+    fun `buildStatusText shows stationary with coords`() {
+        val text = helper.buildStatusText(
+            isPaused = false, zoneName = null,
+            lat = 52.52, lon = 13.405,
+            queuedCount = 0, lastSyncTime = 0L,
+            isStationary = true
+        )
+        assertEquals("Stationary - 52.52000, 13.40500", text)
+    }
+
+    @Test
+    fun `buildStatusText shows stationary without coords`() {
+        val text = helper.buildStatusText(
+            isPaused = false, zoneName = null,
+            lat = null, lon = null,
+            queuedCount = 0, lastSyncTime = 0L,
+            isStationary = true
+        )
+        assertEquals("Stationary - GPS paused", text)
+    }
+
+    @Test
+    fun `buildStatusText pause zone takes priority over stationary`() {
+        val text = helper.buildStatusText(
+            isPaused = true, zoneName = "Home",
+            lat = 52.52, lon = 13.405,
+            queuedCount = 0, lastSyncTime = 0L,
+            isStationary = true
+        )
+        assertEquals("Paused: Home", text)
+    }
+
     // --- Reflection helper ---
 
     private fun setField(name: String, value: Any?) {

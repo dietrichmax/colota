@@ -105,9 +105,14 @@ class NotificationHelper(
         lon: Double?,
         queuedCount: Int,
         lastSyncTime: Long,
-        isOfflineMode: Boolean = false
+        isOfflineMode: Boolean = false,
+        isStationary: Boolean = false
     ): String = when {
         isPaused -> "Paused: ${zoneName ?: "Unknown"}"
+        isStationary -> {
+            val coords = if (lat != null && lon != null) String.format(Locale.US, "%.5f, %.5f", lat, lon) else ""
+            if (coords.isNotEmpty()) "Stationary - $coords" else "Stationary - GPS paused"
+        }
         lat != null && lon != null -> {
             val coords = String.format(Locale.US, "%.5f, %.5f", lat, lon)
             if (isOfflineMode) {
@@ -162,7 +167,8 @@ class NotificationHelper(
         lastSyncTime: Long = 0L,
         activeProfileName: String? = null,
         forceUpdate: Boolean = false,
-        isOfflineMode: Boolean = false
+        isOfflineMode: Boolean = false,
+        isStationary: Boolean = false
     ): Boolean {
         val now = System.currentTimeMillis()
 
@@ -188,7 +194,7 @@ class NotificationHelper(
             lastCoords = Pair(lat, lon)
         }
 
-        val statusText = buildStatusText(isPaused, zoneName, lat, lon, queuedCount, lastSyncTime, isOfflineMode)
+        val statusText = buildStatusText(isPaused, zoneName, lat, lon, queuedCount, lastSyncTime, isOfflineMode, isStationary)
 
         // Dedup: skip if notification text hasn't changed
         val cacheKey = "$statusText-$queuedCount-$activeProfileName"

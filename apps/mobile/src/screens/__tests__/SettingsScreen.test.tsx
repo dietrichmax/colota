@@ -134,6 +134,7 @@ describe("SettingsScreen", () => {
     const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
 
     expect(getByText("Settings")).toBeTruthy()
+    expect(getByText("Battery")).toBeTruthy()
     expect(getByText("Appearance")).toBeTruthy()
     expect(getByText("Advanced")).toBeTruthy()
   })
@@ -211,6 +212,14 @@ describe("SettingsScreen", () => {
     fireEvent.press(getByText("API Field Mapping"))
 
     expect(mockNavigate).toHaveBeenCalledWith("API Config")
+  })
+
+  // --- Battery ---
+
+  it("renders pause GPS when stationary toggle", () => {
+    const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
+
+    expect(getByText("Pause GPS when stationary")).toBeTruthy()
   })
 
   // --- Offline mode ---
