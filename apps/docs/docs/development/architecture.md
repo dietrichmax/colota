@@ -79,7 +79,7 @@ Location services are abstracted behind a `LocationProvider` interface (`locatio
 - **GMS** (`src/gms/`) - `GmsLocationProvider` wraps Google Play Services `FusedLocationProviderClient`
 - **FOSS** (`src/foss/`) - `NativeLocationProvider` wraps Android's native `LocationManager` with `GPS_PROVIDER` and `NETWORK_PROVIDER` fallback
 
-Each flavor provides a `LocationProviderFactory` that returns the correct implementation. The service and bridge code in `src/main/` uses only the interface.
+Each flavor provides a `LocationProviderFactory` that instantiates and returns the correct implementation at runtime. The service and bridge code in `src/main/` depends only on the `LocationProvider` interface, never on a concrete class.
 
 ### LocationForegroundService
 
@@ -90,6 +90,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Anchor points - synthetic locations at geofence centers on zone enter/exit for clean track endpoints
 - Battery critical shutdown (below 5% while discharging)
 - Location accuracy filtering
+- Stationary detection - pauses GPS after 60s without movement and arms `MotionDetector` to resume on motion
 - Queuing data for server sync
 
 ### NotificationHelper
@@ -157,7 +158,8 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 
 | Module | Purpose |
 | --- | --- |
-| `LocationBootReceiver` | Auto-restarts tracking after device reboot |
+| `BootReceiver` | Auto-restarts tracking after device reboot |
+| `MotionDetector` | Wraps `TYPE_SIGNIFICANT_MOTION` sensor - arms a one-shot hardware trigger that fires when the device starts moving, used to resume GPS after a stationary pause |
 | `DeviceInfoHelper` | Device metadata and battery status with caching |
 | `FileOperations` | File I/O, sharing via FileProvider, and clipboard access |
 | `PayloadBuilder` | Builds JSON payloads with dynamic field mapping |
@@ -221,6 +223,7 @@ Supporting utilities in `mapUtils.ts`:
 
 | Utility | Purpose |
 | --- | --- |
+| `lerpColor` | Linearly interpolates between two hex colors by factor `t` - used by `getSpeedColor` |
 | `getSpeedColor` | Returns a theme-aware color for a given speed (m/s) using green→yellow→red interpolation |
 | `createCirclePolygon` | Generates a 64-point GeoJSON `Polygon` approximating a circle on Earth's surface (for meter-based geofence radius) |
 | `buildTrackSegmentsGeoJSON` | Creates per-segment `LineString` features with pre-computed speed colors for data-driven styling |
