@@ -68,14 +68,13 @@ By default, auto-export keeps the last **10** export files and deletes older one
 - Streams data in chunks (10,000 locations at a time) to keep memory usage low even with very large datasets
 - Writes to a temporary file first, then copies to the export directory - if something goes wrong mid-export, you never get a partial or corrupted file
 - After copying, verifies the destination file exists and has the correct size before deleting the temp file
-- Requires battery not low - exports are deferred when battery is critically low
 - If the export loop is cancelled (e.g. by disabling auto-export), it cleans up gracefully without leaving partial files
 - Permanent errors (invalid config, directory access issues) fail immediately; transient errors (I/O failures) retry up to 3 times
 - If the selected directory becomes inaccessible (permissions revoked), auto-export disables itself and a notification prompts you to re-select the directory
 - A notification is shown after each export with the file name and location count
 - Old export files beyond the retention limit are cleaned up after each successful export
 
-:::note **Monthly** frequency uses a calendar month (e.g. Jan 15 to Feb 15), not a fixed 30-day interval. **Daily** and **Weekly** use fixed 24h and 168h intervals respectively. All schedules are approximate due to Android battery optimization.
+:::note **Monthly** frequency uses a calendar month (e.g. Jan 15 to Feb 15), not a fixed 30-day interval. **Daily** and **Weekly** intervals are approximate due to Android battery optimization.
 
 :::
 
