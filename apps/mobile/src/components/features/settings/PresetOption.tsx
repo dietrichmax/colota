@@ -26,7 +26,11 @@ export function PresetOption({ preset, isSelected, onSelect }: PresetOptionProps
 
   return (
     <Pressable
-      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [
+        styles.container,
+        { backgroundColor: isSelected ? colors.primary + "12" : colors.background },
+        pressed && { opacity: 0.7 }
+      ]}
       onPress={() => onSelect(preset)}
       accessibilityRole="radio"
       accessibilityState={{ checked: isSelected }}
@@ -35,14 +39,7 @@ export function PresetOption({ preset, isSelected, onSelect }: PresetOptionProps
         <View style={styles.leftContent}>
           <View style={styles.textContent}>
             <View style={styles.titleRow}>
-              <Text
-                style={[
-                  styles.label,
-                  isSelected ? { color: colors.primaryDark, ...fonts.bold } : { color: colors.text }
-                ]}
-              >
-                {config.label}
-              </Text>
+              <Text style={[styles.label, { color: colors.text }]}>{config.label}</Text>
               {showRecommendedBadge && (
                 <View
                   style={[
@@ -89,10 +86,16 @@ export function PresetOption({ preset, isSelected, onSelect }: PresetOptionProps
 }
 
 const styles = StyleSheet.create({
+  container: {
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 8
+  },
   content: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12
+    padding: 16,
+    paddingLeft: 20
   },
   leftContent: {
     flex: 1,
