@@ -75,7 +75,9 @@ By default, auto-export keeps the last **10** export files and deletes older one
 - A notification is shown after each export with the file name and location count
 - Old export files beyond the retention limit are cleaned up after each successful export
 
-:::note **Monthly** frequency uses a calendar month (e.g. Jan 15 to Feb 15), not a fixed 30-day interval. **Daily** and **Weekly** use fixed 24h and 168h intervals respectively. All schedules are approximate due to Android battery optimization. :::
+:::note **Monthly** frequency uses a calendar month (e.g. Jan 15 to Feb 15), not a fixed 30-day interval. **Daily** and **Weekly** use fixed 24h and 168h intervals respectively. All schedules are approximate due to Android battery optimization.
+
+:::
 
 ### File naming
 
