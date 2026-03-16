@@ -74,6 +74,9 @@ export const SYNC_INTERVAL_LABELS: Record<number, string> = {
 export const HIGH_QUEUE_THRESHOLD = 50
 export const CRITICAL_QUEUE_THRESHOLD = 100
 
+// Map style
+export const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/bright"
+
 // URLs
 export const REPO_URL = "https://github.com/dietrichmax/colota"
 export const ISSUES_URL = `${REPO_URL}/issues`

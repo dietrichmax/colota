@@ -5,7 +5,7 @@
 
 import NativeLocationService from "../services/NativeLocationService"
 
-const EARTH_RADIUS_METERS = 6371000.0
+const EARTH_RADIUS_METERS = 6_371_000
 
 /** Haversine formula - mirrors GeofenceHelper.kt */
 export function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -15,6 +15,19 @@ export function haversine(lat1: number, lon1: number, lat2: number, lon2: number
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
   return EARTH_RADIUS_METERS * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+/**
+ * Convert center + radius (meters) to a bounding box [[neLng, neLat], [swLng, swLat]].
+ * Used by MapLibre offline pack creation and tile count estimation.
+ */
+export function radiusToBounds(lat: number, lon: number, radiusMeters: number): [[number, number], [number, number]] {
+  const latDelta = radiusMeters / 111320
+  const lonDelta = radiusMeters / (111320 * Math.cos((lat * Math.PI) / 180))
+  return [
+    [lon + lonDelta, lat + latDelta],
+    [lon - lonDelta, lat - latDelta]
+  ]
 }
 
 /** Sum of Haversine distances between consecutive points, in meters. */
@@ -49,16 +62,6 @@ function localeUses12h(): boolean {
   }
 }
 
-/** Resolve the effective unit system, using locale detection as fallback. */
-function resolveUnitSystem(): UnitSystem {
-  return cachedUnitSystem ?? (localeUsesMiles() ? "imperial" : "metric")
-}
-
-/** Resolve the effective time format, using locale detection as fallback. */
-function resolveTimeFormat(): TimeFormat {
-  return cachedTimeFormat ?? (localeUses12h() ? "12h" : "24h")
-}
-
 /** Load display preferences from native storage. Call on app start and after saving. */
 export async function loadDisplayPreferences(): Promise<void> {
   try {
@@ -71,14 +74,6 @@ export async function loadDisplayPreferences(): Promise<void> {
   } catch {
     // Keep defaults on error
   }
-}
-
-export function getUnitSystem(): UnitSystem {
-  return resolveUnitSystem()
-}
-
-export function getTimeFormat(): TimeFormat {
-  return resolveTimeFormat()
 }
 
 // -- Unit detection --
@@ -94,8 +89,16 @@ function localeUsesMiles(): boolean {
   }
 }
 
+export function getUnitSystem(): UnitSystem {
+  return cachedUnitSystem ?? (localeUsesMiles() ? "imperial" : "metric")
+}
+
+export function getTimeFormat(): TimeFormat {
+  return cachedTimeFormat ?? (localeUses12h() ? "12h" : "24h")
+}
+
 function usesMiles(): boolean {
-  return resolveUnitSystem() === "imperial"
+  return getUnitSystem() === "imperial"
 }
 
 // -- Formatting functions --
@@ -169,4 +172,14 @@ export function inputToMeters(value: number): number {
 /** Convert meters to the user's short distance unit for pre-filling inputs. */
 export function metersToInput(meters: number): number {
   return usesMiles() ? Math.round(meters * 3.28084) : meters
+}
+
+/** Returns the long distance unit label for input fields ("km" or "mi"). */
+export function longDistanceUnit(): string {
+  return usesMiles() ? "mi" : "km"
+}
+
+/** Convert a user-entered long distance (km or mi) to meters. */
+export function longInputToMeters(value: number): number {
+  return usesMiles() ? value * 1609.344 : value * 1000
 }

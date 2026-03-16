@@ -219,9 +219,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                       ]}
                       onPress={() => selectTimeFormat(fmt)}
                     >
-                      <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>
-                        {fmt === "24h" ? "24h" : "12h"}
-                      </Text>
+                      <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>{fmt}</Text>
                     </Pressable>
                   )
                 })}
@@ -242,6 +240,21 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                 <Text style={[styles.linkLabel, { color: colors.text }]}>Tracking Profiles</Text>
                 <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
                   Auto-switch GPS settings based on conditions
+                </Text>
+              </View>
+              <ChevronRight size={20} color={colors.textLight} />
+            </Pressable>
+
+            <Divider />
+
+            <Pressable
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+              onPress={() => navigation.navigate("Offline Maps")}
+            >
+              <View style={styles.linkContent}>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Offline Maps</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
+                  Download map tiles for use without internet
                 </Text>
               </View>
               <ChevronRight size={20} color={colors.textLight} />

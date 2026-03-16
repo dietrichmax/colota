@@ -11,7 +11,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 - **Self-Hosted** - Send location data to your own server via REST API. Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or any custom backend.
 - **Privacy First** - No analytics, no telemetry, no third-party SDKs, no cloud services. Open source under AGPL-3.0.
-- **Works Offline** - Works without a server. Store location history locally and export as CSV, GeoJSON, GPX, or KML.
+- **Works Offline** - Works without a server. Store location history locally, export as CSV, GeoJSON, GPX, or KML, and download map areas for offline viewing.
 - **Background Tracking** - Foreground service, auto-start on boot, retry with exponential backoff, battery-critical shutdown, automatic GPS pause when stationary.
 - **Geofencing** - Create pause zones where location recording automatically stops.
 - **Tracking Profiles** - Automatically switch GPS interval, distance filter, and sync settings based on conditions like charging, car mode, or speed thresholds.
@@ -24,7 +24,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## App Screens
 
-Colota has fourteen screens, each focused on a specific task:
+Colota has fifteen screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
@@ -39,6 +39,7 @@ Colota has fourteen screens, each focused on a specific task:
 | **Trip Detail** | Full trip view with dedicated map, stats grid (distance, duration, avg speed, elevation), speed and elevation profile charts, and export |
 | **Location Summary** | Aggregated stats (total distance, trips, active days, avg distance) for selectable periods with daily breakdown and tap-to-inspect navigation |
 | **Export Data** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
+| **Offline Maps** | Download map areas for offline use - choose a center, radius (up to 100 km), and detail level (Standard or Hiking); manage and delete saved areas |
 | **Data Management** | Clear sent history, delete old data, vacuum the database |
 | **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
 | **About** | App version, device info, links to repository and privacy policy |

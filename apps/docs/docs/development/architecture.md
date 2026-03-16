@@ -190,6 +190,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
 | `ExportDataScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
 | `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, export range, and file retention |
+| `OfflineMapsScreen` | Download and manage offline map areas - interactive radius picker, detail level selection (Standard/Hiking), progress tracking, and area deletion |
 | `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
 | `AboutScreen` | App version, device info, links to repository and privacy policy |
@@ -218,6 +219,17 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 | `GeofenceLayers` | Shared geofence rendering (fill polygons, stroke outlines, labels) used by DashboardMap and GeofenceScreen |
 | `UserLocationOverlay` | User position dot with accuracy circle, used by DashboardMap and GeofenceScreen |
 | `MapCenterButton` | Reusable button overlay to re-center the map |
+
+`OfflinePackManager.ts` handles the offline maps feature:
+
+| Export | Purpose |
+| --- | --- |
+| `createOfflinePack` | Creates a MapLibre offline pack for a center + radius bounding box at a given detail level (Standard = z8-14, Hiking = z8-16) |
+| `loadOfflineAreas` | Fetches all stored packs from MapLibre's `OfflineManager` and returns status info (size, complete, active) |
+| `deleteOfflineArea` | Unsubscribes, pauses, deletes a pack, and clears the ambient tile cache |
+| `willExceedTileLimit` | Estimates whether an area would hit the 100k-tile cap before downloading |
+| `estimateSizeLabel` / `estimateSizeBytes` | Pre-download size estimates using per-zoom tile counting and per-tile byte averages |
+| `loadOfflineAreaBounds` / `saveOfflineAreaBounds` / `removeOfflineAreaBounds` | Persist area metadata (center, radius) to the native SQLite settings table |
 
 Supporting utilities in `mapUtils.ts`:
 

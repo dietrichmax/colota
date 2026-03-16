@@ -43,6 +43,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.os.Environment
+import android.os.StatFs
 import java.lang.ref.WeakReference
 
 /**
@@ -834,6 +836,23 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun isUnmeteredConnection(promise: Promise) {
+        promise.resolve(networkManager.isUnmeteredConnection())
+    }
+
+    @ReactMethod
+    fun getAvailableStorageMB(promise: Promise) {
+        try {
+            val stat = StatFs(Environment.getDataDirectory().path)
+            val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
+            promise.resolve((availableBytes / (1024 * 1024)).toDouble())
+        } catch (e: Exception) {
+            AppLogger.e("LocationServiceModule", "getAvailableStorageMB failed", e)
+            promise.resolve(-1.0)
+        }
+    }
+
+    @ReactMethod
     fun getMostRecentLocation(promise: Promise) = executeAsync(promise) {
         dbHelper.getRawMostRecentLocation()?.let { data ->
             Arguments.makeNativeMap(data)
@@ -949,7 +968,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun getNativeLogs(promise: Promise) = executeAsync(promise) {
         val pid = android.os.Process.myPid()
-        val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "threadtime", "--pid=$pid"))
+        val process = Runtime.getRuntime().exec(arrayOf("/system/bin/logcat", "-d", "-v", "threadtime", "--pid=$pid"))
         try {
             val lines = process.inputStream.bufferedReader().readLines()
             process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)

@@ -10,20 +10,17 @@ import type { MapViewRef, CameraRef } from "@maplibre/maplibre-react-native"
 import type { RegionPayload } from "@maplibre/maplibre-react-native"
 import { Compass } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
-import { DEFAULT_MAP_ZOOM } from "../../../constants"
+import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL } from "../../../constants"
 import { fonts } from "../../../styles/typography"
 import { darkifyStyle } from "./mapUtils"
 
-const OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/bright"
-
-/** Cached dark style object so we only fetch + transform once */
 let cachedDarkStyle: object | null = null
 let darkStyleFetchPromise: Promise<object | null> | null = null
 
 async function getDarkStyle(): Promise<object | null> {
   if (cachedDarkStyle) return cachedDarkStyle
   if (darkStyleFetchPromise) return darkStyleFetchPromise
-  darkStyleFetchPromise = fetch(OPENFREEMAP_STYLE)
+  darkStyleFetchPromise = fetch(MAP_STYLE_URL)
     .then((res) => res.json())
     .then((json) => {
       cachedDarkStyle = darkifyStyle(json)
@@ -72,19 +69,23 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
     }
   }, [isDark, darkStyle])
 
-  useImperativeHandle(ref, () => ({
-    get camera() {
-      return cameraRef.current
-    },
-    get mapView() {
-      return mapViewRef.current
-    }
-  }))
+  useImperativeHandle(
+    ref,
+    () => ({
+      get camera() {
+        return cameraRef.current
+      },
+      get mapView() {
+        return mapViewRef.current
+      }
+    }),
+    []
+  )
 
-  const mapStyle = isDark && darkStyle ? darkStyle : OPENFREEMAP_STYLE
+  const mapStyle = isDark && darkStyle ? darkStyle : MAP_STYLE_URL
 
   const handleRegionDidChange = useCallback(
-    (feature: any) => {
+    (feature: GeoJSON.Feature<GeoJSON.Point, RegionPayload>) => {
       const props = feature.properties as RegionPayload & { isUserInteraction: boolean }
       setHeading(props.heading ?? 0)
       if (onRegionDidChange) {
@@ -104,6 +105,16 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
     }
   }, [])
 
+  const handlePress = useCallback(
+    (feature: GeoJSON.Feature) => {
+      if (onPress && feature.geometry?.type === "Point") {
+        const [lon, lat] = (feature.geometry as GeoJSON.Point).coordinates
+        onPress({ latitude: lat, longitude: lon })
+      }
+    },
+    [onPress]
+  )
+
   const showCompass = Math.abs(heading) > 3
 
   return (
@@ -116,12 +127,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
         logoEnabled={false}
         compassEnabled={false}
         onDidFinishLoadingMap={onMapReady}
-        onPress={(feature) => {
-          if (onPress && feature.geometry?.type === "Point") {
-            const [lon, lat] = (feature.geometry as GeoJSON.Point).coordinates
-            onPress({ latitude: lat, longitude: lon })
-          }
-        }}
+        onPress={handlePress}
         onRegionDidChange={handleRegionDidChange}
       >
         <Camera
@@ -159,7 +165,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
         >
           <Text style={[styles.attributionText, { color: colors.link }, fonts.regular]}>OpenFreeMap</Text>
         </Pressable>
-        <Text style={[styles.attributionSep, { color: colors.textLight }]}>{" | "}</Text>
+        <Text style={[styles.attributionText, { color: colors.textLight }]}>{" | "}</Text>
         <Pressable
           onPress={() => Linking.openURL("https://www.openstreetmap.org/copyright")}
           style={({ pressed }) => pressed && { opacity: 0.7 }}
@@ -202,9 +208,6 @@ const styles = StyleSheet.create({
     borderRadius: 4
   },
   attributionText: {
-    fontSize: 10
-  },
-  attributionSep: {
     fontSize: 10
   }
 })
