@@ -1,0 +1,7 @@
+- Added offline mode - disable sync and track sent status independently
+- Added scheduled auto-export via background worker
+- Added GPS pause when stationary to save battery
+- Added configurable unit system (metric/imperial) and time format
+- Pre-fill profile editor with current settings values and show defaults as hints
+- Added map data attribution (OpenFreeMap, OpenStreetMap) to About screen
+- Fixed ForegroundServiceStartNotAllowedException on Android 12+
