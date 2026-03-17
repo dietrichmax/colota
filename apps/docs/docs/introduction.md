@@ -5,7 +5,7 @@ slug: /introduction
 
 # Introduction
 
-Colota is a self-hosted GPS tracking app for Android. It sends your location to your own server over HTTP(S), works offline, supports geofencing, and doesn't share any data except with your configured backends.
+Colota is a self-hosted GPS tracking app for Android. It sends your location to your own server over HTTP(S), works offline, supports geofencing, and has no analytics or telemetry.
 
 ## Key Features
 

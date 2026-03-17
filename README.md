@@ -8,7 +8,7 @@
 
 **Self-hosted GPS tracking app for Android.**
 
-Colota sends your location to your own server over HTTP(S). It works offline, supports geofencing, and doesn't share any data except with your backend.
+Colota sends your location to your own server over HTTP(S). It works offline, supports geofencing, and has no analytics or telemetry.
 
 [Documentation](https://colota.app/docs/introduction) | [Privacy Policy](https://colota.app/privacy-policy)
 

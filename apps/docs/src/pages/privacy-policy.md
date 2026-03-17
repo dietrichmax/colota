@@ -53,9 +53,8 @@ The App supports configuration via `colota://setup` deep links. These links can 
 The App **only transmits data to a server endpoint that you configure**. No data is sent anywhere by default.
 
 - Data is sent via HTTPS (HTTP is only allowed for local/private network addresses)
-- The App makes no network calls to any third-party service
 - No analytics, tracking pixels, or advertising networks are used
-- No data is shared with the developer or any third party
+- No data is shared with the developer, advertisers or analytics providers
 
 ## Data Sharing
 
