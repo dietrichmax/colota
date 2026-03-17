@@ -9,22 +9,23 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## Key Features
 
-- **Self-Hosted** - Send location data to your own server via REST API. Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or any custom backend.
-- **Privacy First** - No analytics, no telemetry, no third-party SDKs, no cloud services. Open source under AGPL-3.0.
-- **Works Offline** - Works without a server. Store location history locally and export as CSV, GeoJSON, GPX, or KML.
-- **Background Tracking** - Foreground service, auto-start on boot, retry with exponential backoff, battery-critical shutdown, automatic GPS pause when stationary.
-- **Geofencing** - Create pause zones where location recording automatically stops.
-- **Tracking Profiles** - Automatically switch GPS interval, distance filter, and sync settings based on conditions like charging, car mode, or speed thresholds.
-- **Sync Modes** - Instant, batch, or offline. Wi-Fi only sync, configurable intervals with automatic retry.
-- **Data Export** - Export location history in CSV, GeoJSON, GPX, or KML formats.
-- **Authentication** - Basic Auth, Bearer Token, or custom HTTP headers with AES-256-GCM encrypted storage.
-- **Quick Setup** - Configure devices instantly via `colota://setup` deep links or QR codes. No manual typing required.
+- **Self-Hosted** - Send location data to your own server. Works with Dawarich, GeoPulse, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant or any custom backend.
+- **Privacy First** - No analytics, no telemetry, no third-party SDKs. Open source (AGPL-3.0).
+- **Works Offline** - Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
+- **Scheduled Export** - Automatic daily, weekly or monthly exports to a local directory with file retention management.
+- **Location History** - View daily summaries, trip segmentation, calendar with activity dots and per-trip export.
+- **Reliable Tracking** - Foreground service, auto-start on boot, exponential backoff retry and automatic GPS pause when stationary.
+- **Geofencing** - Pause zones that automatically stop recording locations.
+- **Tracking Profiles** - Automatically adjust GPS interval, distance filter and sync settings based on conditions like charging, car mode or speed.
+- **Flexible Sync** - Instant, batch, Wi-Fi only or offline modes.
 - **Display Settings** - Choose between metric and imperial units, 12h or 24h time format. Auto-detected from device locale on first use.
+- **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
+- **Authentication** - Basic Auth, Bearer Token or custom headers with AES-256-GCM encryption.
 - **Dark Mode** - Full light and dark theme support.
 
 ## App Screens
 
-Colota has fourteen screens, each focused on a specific task:
+Colota has fifteen screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
@@ -39,6 +40,7 @@ Colota has fourteen screens, each focused on a specific task:
 | **Trip Detail** | Full trip view with dedicated map, stats grid (distance, duration, avg speed, elevation), speed and elevation profile charts, and export |
 | **Location Summary** | Aggregated stats (total distance, trips, active days, avg distance) for selectable periods with daily breakdown and tap-to-inspect navigation |
 | **Export Data** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
+| **Auto-Export** | Configure scheduled exports: format, directory, frequency, export range, and file retention |
 | **Data Management** | Clear sent history, delete old data, vacuum the database |
 | **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
 | **About** | App version, device info, links to repository and privacy policy |
