@@ -35,7 +35,7 @@ Trip exports include a `trip` column/property so each location is tagged with it
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ExportData.png", label: "Export Data" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ExportData.png", label: "Export Data" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-Export" }, ]} />
 
 ## Scheduled Export (Auto-Export)
 
