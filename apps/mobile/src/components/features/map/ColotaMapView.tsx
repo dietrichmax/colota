@@ -9,33 +9,17 @@ import { MapView, Camera } from "@maplibre/maplibre-react-native"
 import type { MapViewRef, CameraRef } from "@maplibre/maplibre-react-native"
 import type { RegionPayload } from "@maplibre/maplibre-react-native"
 import { Compass } from "lucide-react-native"
+import { useIsFocused } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
-import { DEFAULT_MAP_ZOOM } from "../../../constants"
+import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_LIGHT, MAP_STYLE_URL_DARK } from "../../../constants"
 import { fonts } from "../../../styles/typography"
-import { darkifyStyle } from "./mapUtils"
+import NativeLocationService from "../../../services/NativeLocationService"
 
-const OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/bright"
-
-/** Cached dark style object so we only fetch + transform once */
-let cachedDarkStyle: object | null = null
-let darkStyleFetchPromise: Promise<object | null> | null = null
-
-async function getDarkStyle(): Promise<object | null> {
-  if (cachedDarkStyle) return cachedDarkStyle
-  if (darkStyleFetchPromise) return darkStyleFetchPromise
-  darkStyleFetchPromise = fetch(OPENFREEMAP_STYLE)
-    .then((res) => res.json())
-    .then((json) => {
-      cachedDarkStyle = darkifyStyle(json)
-      darkStyleFetchPromise = null
-      return cachedDarkStyle
-    })
-    .catch(() => {
-      darkStyleFetchPromise = null
-      return null
-    })
-  return darkStyleFetchPromise
-}
+const DEFAULT_ATTRIBUTION_LINKS = [
+  { url: "https://mxd.codes", label: "mxd.codes" },
+  { url: "https://openmaptiles.org/", label: "© OpenMapTiles" },
+  { url: "https://www.openstreetmap.org/copyright", label: "© OpenStreetMap contributors" }
+]
 
 export interface ColotaMapRef {
   camera: CameraRef | null
@@ -61,30 +45,43 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
   const { colors, mode } = useTheme()
   const isDark = mode === "dark"
 
-  const [darkStyle, setDarkStyle] = useState<object | null>(cachedDarkStyle)
+  const [mapStyleLight, setMapStyleLight] = useState(MAP_STYLE_URL_LIGHT)
+  const [mapStyleDark, setMapStyleDark] = useState(MAP_STYLE_URL_DARK)
   const [heading, setHeading] = useState(0)
 
+  const isFocused = useIsFocused()
+
   useEffect(() => {
-    if (isDark && !darkStyle) {
-      getDarkStyle().then((resolved) => {
-        if (resolved) setDarkStyle(resolved)
+    if (!isFocused) return
+    Promise.all([
+      NativeLocationService.getSetting("mapStyleUrlLight"),
+      NativeLocationService.getSetting("mapStyleUrlDark")
+    ])
+      .then(([light, dark]) => {
+        setMapStyleLight(light || MAP_STYLE_URL_LIGHT)
+        setMapStyleDark(dark || MAP_STYLE_URL_DARK)
       })
-    }
-  }, [isDark, darkStyle])
+      .catch(() => {})
+  }, [isFocused])
 
-  useImperativeHandle(ref, () => ({
-    get camera() {
-      return cameraRef.current
-    },
-    get mapView() {
-      return mapViewRef.current
-    }
-  }))
+  useImperativeHandle(
+    ref,
+    () => ({
+      get camera() {
+        return cameraRef.current
+      },
+      get mapView() {
+        return mapViewRef.current
+      }
+    }),
+    []
+  )
 
-  const mapStyle = isDark && darkStyle ? darkStyle : OPENFREEMAP_STYLE
+  const mapStyle = isDark ? mapStyleDark : mapStyleLight
+  const isCustomStyle = mapStyleLight !== MAP_STYLE_URL_LIGHT || mapStyleDark !== MAP_STYLE_URL_DARK
 
   const handleRegionDidChange = useCallback(
-    (feature: any) => {
+    (feature: GeoJSON.Feature<GeoJSON.Point, RegionPayload>) => {
       const props = feature.properties as RegionPayload & { isUserInteraction: boolean }
       setHeading(props.heading ?? 0)
       if (onRegionDidChange) {
@@ -104,6 +101,16 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
     }
   }, [])
 
+  const handlePress = useCallback(
+    (feature: GeoJSON.Feature) => {
+      if (onPress && feature.geometry?.type === "Point") {
+        const [lon, lat] = (feature.geometry as GeoJSON.Point).coordinates
+        onPress({ latitude: lat, longitude: lon })
+      }
+    },
+    [onPress]
+  )
+
   const showCompass = Math.abs(heading) > 3
 
   return (
@@ -112,16 +119,11 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
         ref={mapViewRef}
         style={styles.map}
         mapStyle={mapStyle}
-        attributionEnabled={false}
+        attributionEnabled={isCustomStyle}
         logoEnabled={false}
         compassEnabled={false}
         onDidFinishLoadingMap={onMapReady}
-        onPress={(feature) => {
-          if (onPress && feature.geometry?.type === "Point") {
-            const [lon, lat] = (feature.geometry as GeoJSON.Point).coordinates
-            onPress({ latitude: lat, longitude: lon })
-          }
-        }}
+        onPress={onPress ? handlePress : undefined}
         onRegionDidChange={handleRegionDidChange}
       >
         <Camera
@@ -151,22 +153,19 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
         </Pressable>
       )}
 
-      {/* Attribution */}
-      <View style={[styles.attribution, { backgroundColor: colors.card + "CC" }]}>
-        <Pressable
-          onPress={() => Linking.openURL("https://openfreemap.org")}
-          style={({ pressed }) => pressed && { opacity: 0.7 }}
-        >
-          <Text style={[styles.attributionText, { color: colors.link }, fonts.regular]}>OpenFreeMap</Text>
-        </Pressable>
-        <Text style={[styles.attributionSep, { color: colors.textLight }]}>{" | "}</Text>
-        <Pressable
-          onPress={() => Linking.openURL("https://www.openstreetmap.org/copyright")}
-          style={({ pressed }) => pressed && { opacity: 0.7 }}
-        >
-          <Text style={[styles.attributionText, { color: colors.link }, fonts.regular]}>OSM</Text>
-        </Pressable>
-      </View>
+      {/* Attribution - custom overlay for default server, MapLibre built-in for custom styles */}
+      {!isCustomStyle && (
+        <View style={[styles.attribution, { backgroundColor: colors.card + "CC" }]}>
+          {DEFAULT_ATTRIBUTION_LINKS.map((link, i) => (
+            <React.Fragment key={link.url}>
+              {i > 0 && <Text style={[styles.attributionText, { color: colors.textLight }, fonts.regular]}> · </Text>}
+              <Pressable onPress={() => Linking.openURL(link.url)} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+                <Text style={[styles.attributionText, { color: colors.link }, fonts.regular]}>{link.label}</Text>
+              </Pressable>
+            </React.Fragment>
+          ))}
+        </View>
+      )}
     </View>
   )
 })
@@ -202,9 +201,6 @@ const styles = StyleSheet.create({
     borderRadius: 4
   },
   attributionText: {
-    fontSize: 10
-  },
-  attributionSep: {
     fontSize: 10
   }
 })

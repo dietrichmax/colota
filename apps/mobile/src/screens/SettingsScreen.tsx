@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, Switch, View, ScrollView, Pressable } from "react-native"
+import { Text, StyleSheet, Switch, View, ScrollView, Pressable, TextInput } from "react-native"
 import { ScreenProps, Settings } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
@@ -13,9 +13,8 @@ import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
 import { fonts } from "../styles/typography"
-import { SectionTitle, Card, Container, Divider, SettingRow } from "../components"
-import { ChevronRight } from "lucide-react-native"
-import { StatsCard } from "../components"
+import { SectionTitle, Card, Container, Divider, SettingRow, StatsCard } from "../components"
+import { ChevronRight, ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { ConnectionSettings } from "../components/features/settings/ConnectionSettings"
 import { SyncStrategySettings } from "../components/features/settings/SyncStrategySettings"
@@ -42,6 +41,11 @@ export function SettingsScreen({ navigation }: ScreenProps) {
   // Display preferences (preselect from locale if not yet saved)
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(getUnitSystem)
   const [timeFormat, setTimeFormat] = useState<TimeFormat>(getTimeFormat)
+
+  // Map style URLs
+  const [mapStyleUrlLight, setMapStyleUrlLight] = useState("")
+  const [mapStyleUrlDark, setMapStyleUrlDark] = useState("")
+  const [showMapTileServer, setShowMapTileServer] = useState(false)
 
   const selectUnitSystem = useCallback(
     async (value: UnitSystem) => {
@@ -70,6 +74,36 @@ export function SettingsScreen({ navigation }: ScreenProps) {
     },
     [timeFormat]
   )
+
+  // Load map style URLs from settings
+  useEffect(() => {
+    Promise.all([
+      NativeLocationService.getSetting("mapStyleUrlLight"),
+      NativeLocationService.getSetting("mapStyleUrlDark")
+    ])
+      .then(([light, dark]) => {
+        setMapStyleUrlLight(light ?? "")
+        setMapStyleUrlDark(dark ?? "")
+      })
+      .catch(() => {})
+  }, [])
+
+  const saveMapStyleUrl = useCallback(async (key: "mapStyleUrlLight" | "mapStyleUrlDark", value: string) => {
+    try {
+      await NativeLocationService.saveSetting(key, value.trim())
+    } catch (err) {
+      logger.error("[SettingsScreen] Failed to save map style URL:", err)
+    }
+  }, [])
+
+  const resetMapStyle = useCallback(() => {
+    setMapStyleUrlLight("")
+    setMapStyleUrlDark("")
+    Promise.all([
+      NativeLocationService.saveSetting("mapStyleUrlLight", ""),
+      NativeLocationService.saveSetting("mapStyleUrlDark", "")
+    ]).catch((err) => logger.error("[SettingsScreen] Failed to reset map style URLs:", err))
+  }, [])
 
   // Sync endpoint input with settings changes
   useEffect(() => {
@@ -117,6 +151,10 @@ export function SettingsScreen({ navigation }: ScreenProps) {
     [setSettings, immediateSaveAndRestart, restartTracking]
   )
 
+  const handleNavigateDataManagement = useCallback(() => {
+    navigation.navigate("Data Management")
+  }, [navigation])
+
   return (
     <Container>
       <ScrollView
@@ -135,7 +173,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
           sentCount={sentCount}
           todayCount={todayCount}
           interval={settings.interval.toString()}
-          onManageClick={() => navigation.navigate("Data Management")}
+          onManageClick={handleNavigateDataManagement}
           colors={colors}
         />
 
@@ -219,14 +257,74 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                       ]}
                       onPress={() => selectTimeFormat(fmt)}
                     >
-                      <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>
-                        {fmt === "24h" ? "24h" : "12h"}
-                      </Text>
+                      <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>{fmt}</Text>
                     </Pressable>
                   )
                 })}
               </View>
             </SettingRow>
+
+            <Divider />
+
+            <Pressable
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+              onPress={() => setShowMapTileServer(!showMapTileServer)}
+            >
+              <Text style={[styles.linkLabel, { color: colors.text }]}>Map Tile Server</Text>
+              {showMapTileServer ? (
+                <ChevronUp size={20} color={colors.textLight} />
+              ) : (
+                <ChevronDown size={20} color={colors.textLight} />
+              )}
+            </Pressable>
+
+            {showMapTileServer && (
+              <View style={styles.mapTilePanel}>
+                <Divider />
+                <Text style={[styles.mapStyleSub, styles.mapStyleSubFirst, { color: colors.textSecondary }]}>
+                  Light style URL
+                </Text>
+                <TextInput
+                  style={[
+                    styles.mapStyleInput,
+                    { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
+                  ]}
+                  value={mapStyleUrlLight}
+                  onChangeText={setMapStyleUrlLight}
+                  onBlur={() => saveMapStyleUrl("mapStyleUrlLight", mapStyleUrlLight)}
+                  placeholder="Default"
+                  placeholderTextColor={colors.placeholder}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
+                <Text style={[styles.mapStyleSub, styles.mapStyleSubSecond, { color: colors.textSecondary }]}>
+                  Dark style URL
+                </Text>
+                <TextInput
+                  style={[
+                    styles.mapStyleInput,
+                    { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
+                  ]}
+                  value={mapStyleUrlDark}
+                  onChangeText={setMapStyleUrlDark}
+                  onBlur={() => saveMapStyleUrl("mapStyleUrlDark", mapStyleUrlDark)}
+                  placeholder="Default"
+                  placeholderTextColor={colors.placeholder}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
+                <View style={styles.mapStyleFooter}>
+                  <Text style={[styles.mapStyleHint, { color: colors.textLight }]}>Leave empty to use the default</Text>
+                  {mapStyleUrlLight.trim() || mapStyleUrlDark.trim() ? (
+                    <Pressable onPress={resetMapStyle} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+                      <Text style={[styles.mapStyleHint, { color: colors.primary }]}>Reset to default</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+            )}
           </Card>
         </View>
 
@@ -242,6 +340,21 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                 <Text style={[styles.linkLabel, { color: colors.text }]}>Tracking Profiles</Text>
                 <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
                   Auto-switch GPS settings based on conditions
+                </Text>
+              </View>
+              <ChevronRight size={20} color={colors.textLight} />
+            </Pressable>
+
+            <Divider />
+
+            <Pressable
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+              onPress={() => navigation.navigate("Offline Maps")}
+            >
+              <View style={styles.linkContent}>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Offline Maps</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
+                  Download map tiles for use without internet
                 </Text>
               </View>
               <ChevronRight size={20} color={colors.textLight} />
@@ -335,5 +448,33 @@ const styles = StyleSheet.create({
   chipLabel: {
     fontSize: 13,
     ...fonts.semiBold
+  },
+  mapTilePanel: {
+    marginTop: 4,
+    paddingBottom: 4
+  },
+  mapStyleSub: {
+    fontSize: 12,
+    ...fonts.medium,
+    marginBottom: 6
+  },
+  mapStyleSubFirst: { marginTop: 12 },
+  mapStyleSubSecond: { marginTop: 10 },
+  mapStyleInput: {
+    borderWidth: 1.5,
+    padding: 12,
+    borderRadius: 12,
+    fontSize: 13,
+    ...fonts.regular
+  },
+  mapStyleFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8
+  },
+  mapStyleHint: {
+    fontSize: 11,
+    ...fonts.regular
   }
 })

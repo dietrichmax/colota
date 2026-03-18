@@ -487,6 +487,23 @@ class NativeLocationService {
     return this.safeExecute(() => LocationServiceModule.isNetworkAvailable(), false, "isNetworkAvailable failed")
   }
 
+  /**
+   * Returns true if the current connection is unmetered (WiFi or ethernet).
+   * Returns false on mobile data or when offline.
+   */
+  static async isUnmeteredConnection(): Promise<boolean> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.isUnmeteredConnection(), false, "isUnmeteredConnection failed")
+  }
+
+  /**
+   * Returns available device storage in MB, or -1 if the check fails.
+   */
+  static async getAvailableStorageMB(): Promise<number> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.getAvailableStorageMB(), -1, "getAvailableStorageMB failed")
+  }
+
   // ============================================================================
   // BATTERY OPTIMIZATION
   // ============================================================================

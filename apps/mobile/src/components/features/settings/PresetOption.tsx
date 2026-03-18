@@ -2,23 +2,39 @@
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
+import React from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { Zap, Check } from "lucide-react-native"
 import { SelectablePreset, TRACKING_PRESETS } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
 import { useTheme } from "../../../hooks/useTheme"
-import { useTracking } from "../../../contexts/TrackingProvider"
 import { RadioDot } from "../../ui/RadioDot"
+
+interface BadgeProps {
+  icon: React.ReactElement
+  label: string
+  color: string
+}
+
+function Badge({ icon, label, color }: BadgeProps) {
+  return (
+    <View style={[styles.badge, { backgroundColor: color + "20", borderColor: color + "40" }]}>
+      <View style={styles.badgeContent}>
+        {icon}
+        <Text style={[styles.badgeText, { color }]}>{label}</Text>
+      </View>
+    </View>
+  )
+}
 
 interface PresetOptionProps {
   preset: SelectablePreset
   isSelected: boolean
+  isOfflineMode: boolean
   onSelect: (preset: SelectablePreset) => void
 }
 
-export function PresetOption({ preset, isSelected, onSelect }: PresetOptionProps) {
-  const { settings } = useTracking()
-  const isOfflineMode = settings.isOfflineMode
+export function PresetOption({ preset, isSelected, isOfflineMode, onSelect }: PresetOptionProps) {
   const { colors } = useTheme()
   const config = TRACKING_PRESETS[preset]
   const showRecommendedBadge = preset === "balanced"
@@ -26,11 +42,7 @@ export function PresetOption({ preset, isSelected, onSelect }: PresetOptionProps
 
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        { backgroundColor: isSelected ? colors.primary + "12" : colors.background },
-        pressed && { opacity: 0.7 }
-      ]}
+      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
       onPress={() => onSelect(preset)}
       accessibilityRole="radio"
       accessibilityState={{ checked: isSelected }}
@@ -39,38 +51,23 @@ export function PresetOption({ preset, isSelected, onSelect }: PresetOptionProps
         <View style={styles.leftContent}>
           <View style={styles.textContent}>
             <View style={styles.titleRow}>
-              <Text style={[styles.label, { color: colors.text }]}>{config.label}</Text>
+              <Text
+                style={[
+                  styles.label,
+                  isSelected ? { color: colors.primaryDark, ...fonts.bold } : { color: colors.text }
+                ]}
+              >
+                {config.label}
+              </Text>
               {showRecommendedBadge && (
-                <View
-                  style={[
-                    styles.badge,
-                    {
-                      backgroundColor: colors.success + "20",
-                      borderColor: colors.success + "40"
-                    }
-                  ]}
-                >
-                  <View style={styles.badgeContent}>
-                    <Check size={10} color={colors.success} />
-                    <Text style={[styles.badgeText, { color: colors.success }]}>Recommended</Text>
-                  </View>
-                </View>
+                <Badge icon={<Check size={10} color={colors.success} />} label="Recommended" color={colors.success} />
               )}
               {showWarningBadge && (
-                <View
-                  style={[
-                    styles.badge,
-                    {
-                      backgroundColor: colors.warning + "20",
-                      borderColor: colors.warning + "40"
-                    }
-                  ]}
-                >
-                  <View style={styles.badgeContent}>
-                    <Zap size={10} color={colors.warning} />
-                    <Text style={[styles.badgeText, { color: colors.warning }]}>High Battery Usage</Text>
-                  </View>
-                </View>
+                <Badge
+                  icon={<Zap size={10} color={colors.warning} />}
+                  label="High Battery Usage"
+                  color={colors.warning}
+                />
               )}
             </View>
             <Text style={[styles.description, { color: colors.textSecondary }]}>
@@ -86,22 +83,13 @@ export function PresetOption({ preset, isSelected, onSelect }: PresetOptionProps
 }
 
 const styles = StyleSheet.create({
-  container: {
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 8
-  },
   content: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    paddingLeft: 20
+    padding: 12
   },
   leftContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14
+    flex: 1
   },
   textContent: {
     flex: 1

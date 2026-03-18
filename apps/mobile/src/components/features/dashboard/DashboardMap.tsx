@@ -8,10 +8,8 @@ import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image } 
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { fonts } from "../../../styles/typography"
-import { WifiOff } from "lucide-react-native"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { useFocusEffect } from "@react-navigation/native"
-import { STATS_REFRESH_IDLE, MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
+import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
 import { buildGeofencesGeoJSON } from "../map/mapUtils"
@@ -40,18 +38,6 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
   const initialCoords = useRef<LocationCoords | null>(null)
   const [hasInitialCoords, setHasInitialCoords] = useState(false)
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
-  const [isOffline, setIsOffline] = useState(false)
-
-  useFocusEffect(
-    useCallback(() => {
-      const check = () => {
-        NativeLocationService.isNetworkAvailable().then((available) => setIsOffline(!available))
-      }
-      check()
-      const interval = setInterval(check, STATS_REFRESH_IDLE)
-      return () => clearInterval(interval)
-    }, [])
-  )
 
   useEffect(() => {
     if (!initialCoords.current && coords) {
@@ -176,13 +162,6 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
 
       {showMap && <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />}
 
-      {showMap && isOffline && (
-        <View style={[styles.offlineBanner, { backgroundColor: colors.card }]}>
-          <WifiOff size={14} color={colors.textSecondary} />
-          <Text style={[styles.offlineText, { color: colors.textSecondary }]}>Map tiles unavailable - no internet</Text>
-        </View>
-      )}
-
       {showMap && activeZoneName && (
         <View
           style={[
@@ -259,23 +238,5 @@ const styles = StyleSheet.create({
     zIndex: 5
   },
   infoTitle: { fontSize: 16, ...fonts.bold, marginBottom: 2 },
-  infoSub: { fontSize: 13 },
-  offlineBanner: {
-    position: "absolute",
-    bottom: 90,
-    left: 14,
-    right: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    elevation: 8,
-    shadowOpacity: 0.2,
-    zIndex: 5
-  },
-  offlineText: {
-    fontSize: 13,
-    ...fonts.medium
-  }
+  infoSub: { fontSize: 13 }
 })

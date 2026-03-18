@@ -2,14 +2,6 @@ import React from "react"
 import { render, fireEvent } from "@testing-library/react-native"
 import { TRACKING_PRESETS } from "../../../../types/global"
 
-let mockSettings = { isOfflineMode: false }
-
-jest.mock("../../../../contexts/TrackingProvider", () => ({
-  useTracking: () => ({
-    settings: mockSettings
-  })
-}))
-
 jest.mock("../../../../hooks/useTheme", () => ({
   useTheme: () => ({
     colors: {
@@ -49,25 +41,29 @@ describe("PresetOption", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    mockSettings = { isOfflineMode: false }
   })
 
   it("renders preset label and description", () => {
-    const { getByText } = render(<PresetOption preset="balanced" isSelected={false} onSelect={mockOnSelect} />)
+    const { getByText } = render(
+      <PresetOption preset="balanced" isSelected={false} isOfflineMode={false} onSelect={mockOnSelect} />
+    )
 
     expect(getByText(TRACKING_PRESETS.balanced.label)).toBeTruthy()
     expect(getByText(TRACKING_PRESETS.balanced.description)).toBeTruthy()
   })
 
   it("shows offline description when isOfflineMode is true", () => {
-    mockSettings = { isOfflineMode: true }
-    const { getByText } = render(<PresetOption preset="balanced" isSelected={false} onSelect={mockOnSelect} />)
+    const { getByText } = render(
+      <PresetOption preset="balanced" isSelected={false} isOfflineMode={true} onSelect={mockOnSelect} />
+    )
 
     expect(getByText(TRACKING_PRESETS.balanced.description.split(" • ")[0])).toBeTruthy()
   })
 
   it("calls onSelect with preset when pressed", () => {
-    const { getByRole } = render(<PresetOption preset="instant" isSelected={false} onSelect={mockOnSelect} />)
+    const { getByRole } = render(
+      <PresetOption preset="instant" isSelected={false} isOfflineMode={false} onSelect={mockOnSelect} />
+    )
 
     fireEvent.press(getByRole("radio"))
 
@@ -75,25 +71,33 @@ describe("PresetOption", () => {
   })
 
   it("shows selected radio dot when isSelected", () => {
-    const { getByTestId } = render(<PresetOption preset="balanced" isSelected onSelect={mockOnSelect} />)
+    const { getByTestId } = render(
+      <PresetOption preset="balanced" isSelected isOfflineMode={false} onSelect={mockOnSelect} />
+    )
 
     expect(getByTestId("radio-selected")).toBeTruthy()
   })
 
   it("shows unselected radio dot when not selected", () => {
-    const { getByTestId } = render(<PresetOption preset="balanced" isSelected={false} onSelect={mockOnSelect} />)
+    const { getByTestId } = render(
+      <PresetOption preset="balanced" isSelected={false} isOfflineMode={false} onSelect={mockOnSelect} />
+    )
 
     expect(getByTestId("radio-unselected")).toBeTruthy()
   })
 
   it("shows Recommended badge for balanced preset", () => {
-    const { getByText } = render(<PresetOption preset="balanced" isSelected={false} onSelect={mockOnSelect} />)
+    const { getByText } = render(
+      <PresetOption preset="balanced" isSelected={false} isOfflineMode={false} onSelect={mockOnSelect} />
+    )
 
     expect(getByText("Recommended")).toBeTruthy()
   })
 
   it("shows High Battery Usage badge for instant preset", () => {
-    const { getByText } = render(<PresetOption preset="instant" isSelected={false} onSelect={mockOnSelect} />)
+    const { getByText } = render(
+      <PresetOption preset="instant" isSelected={false} isOfflineMode={false} onSelect={mockOnSelect} />
+    )
 
     expect(getByText("High Battery Usage")).toBeTruthy()
   })

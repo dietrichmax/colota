@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-**Last updated: March 14, 2026**
+**Last updated: March 18, 2026**
 
 Colota ("the App") is a self-hosted GPS tracking application for Android, developed by Max Dietrich. This privacy policy explains what data the App collects, how it is used, and your rights regarding that data.
 
@@ -66,9 +66,9 @@ Colota does not share your data with anyone. The only data transmission occurs t
 
 The App is distributed via Google Play, which may collect data according to [Google's Privacy Policy](https://policies.google.com/privacy). This is outside the App's control.
 
-### OpenFreeMap
+### Map Tiles (maps.mxd.codes)
 
-The App displays maps using [OpenFreeMap](https://openfreemap.org), which serves map tiles. When the map is visible, your device makes requests to OpenFreeMap's servers to download tiles for the visible area. OpenFreeMap does not log IP addresses by default and uses no cookies or tracking. OpenFreeMap is a free, open-source service. See [OpenFreeMap's privacy policy](https://openfreemap.org/privacy/) for details.
+The App displays maps using [maps.mxd.codes](https://maps.mxd.codes), a self-hosted tile server powered by [tileserver-gl](https://github.com/maptiler/tileserver-gl) and OpenStreetMap data. When the map is visible, your device makes requests to maps.mxd.codes to download tiles for the visible area. IP addresses are not logged under normal operation. Logging may be enabled temporarily for a specific reason such as investigating abuse or server issues, and disabled again afterwards. Users can configure a custom tile server URL in Settings - see the [tile server guide](/docs/guides/tile-server) for details.
 
 ### No Other Third Parties
 
