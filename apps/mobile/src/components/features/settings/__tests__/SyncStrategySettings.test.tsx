@@ -152,7 +152,7 @@ describe("SyncStrategySettings", () => {
 
       expect(queryByText("Tracking Parameters")).toBeNull()
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(getByText("Tracking Parameters")).toBeTruthy()
       expect(getByText("Network Settings")).toBeTruthy()
@@ -161,10 +161,10 @@ describe("SyncStrategySettings", () => {
     it("hides advanced settings when toggle is pressed again", () => {
       const { getByText, queryByText } = renderComponent()
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
       expect(getByText("Tracking Parameters")).toBeTruthy()
 
-      fireEvent.press(getByText("− Hide Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
       expect(queryByText("Tracking Parameters")).toBeNull()
     })
   })
@@ -173,7 +173,7 @@ describe("SyncStrategySettings", () => {
     it("shows custom configuration banner when preset is custom", () => {
       const { getByText } = renderComponent({ syncPreset: "custom" })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(getByText("Using custom configuration")).toBeTruthy()
     })
@@ -181,7 +181,7 @@ describe("SyncStrategySettings", () => {
     it("does not show custom banner when a named preset is selected", () => {
       const { getByText, queryByText } = renderComponent({ syncPreset: "instant" })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(queryByText("Using custom configuration")).toBeNull()
     })
@@ -191,7 +191,7 @@ describe("SyncStrategySettings", () => {
     it("renders all sync interval options inline", () => {
       const { getByText, getAllByText } = renderComponent()
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(getAllByText("Instant").length).toBeGreaterThan(0)
       expect(getByText("1 min")).toBeTruthy()
@@ -203,7 +203,7 @@ describe("SyncStrategySettings", () => {
     it("selecting a sync interval sets preset to custom", () => {
       const { getByText } = renderComponent()
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
       fireEvent.press(getByText("5 min"))
 
       expect(mockOnSettingsChange).toHaveBeenCalledWith(
@@ -225,7 +225,7 @@ describe("SyncStrategySettings", () => {
     it("shows delete hint when maxRetries is 5 (default)", () => {
       const { getByText } = renderComponent({ maxRetries: 5 })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(getByText("Failed uploads are permanently deleted after 5 failed send attempts")).toBeTruthy()
     })
@@ -233,7 +233,7 @@ describe("SyncStrategySettings", () => {
     it("shows keep hint when maxRetries is 0 (retry forever)", () => {
       const { getByText } = renderComponent({ maxRetries: 0 })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(getByText("Failed uploads stay in the queue until they succeed")).toBeTruthy()
     })
@@ -241,7 +241,7 @@ describe("SyncStrategySettings", () => {
     it("toggling retry on sets maxRetries to 0", () => {
       const { getByText, getAllByRole } = renderComponent({ maxRetries: 5 })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       // Retry Failed Uploads is the second switch (after Pause GPS when stationary)
       const retrySwitch = getAllByRole("switch")[1]
@@ -260,7 +260,7 @@ describe("SyncStrategySettings", () => {
     it("toggling retry off sets maxRetries to 5", () => {
       const { getByText, getAllByRole } = renderComponent({ maxRetries: 0 })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       // Retry Failed Uploads is the second switch (after Pause GPS when stationary)
       const retrySwitch = getAllByRole("switch")[1]
@@ -280,7 +280,7 @@ describe("SyncStrategySettings", () => {
     it("shows accuracy threshold input when filter is enabled", () => {
       const { getByText } = renderComponent({ filterInaccurateLocations: true })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(getByText("Accuracy Threshold")).toBeTruthy()
     })
@@ -288,7 +288,7 @@ describe("SyncStrategySettings", () => {
     it("hides accuracy threshold input when filter is disabled", () => {
       const { getByText, queryByText } = renderComponent({ filterInaccurateLocations: false })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(queryByText("Accuracy Threshold")).toBeNull()
     })
@@ -301,7 +301,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "0")
@@ -318,7 +318,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "-3")
@@ -334,7 +334,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "abc")
@@ -350,7 +350,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "10")
@@ -368,7 +368,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const distanceInput = getByDisplayValue("10")
       fireEvent.changeText(distanceInput, "-5")
@@ -385,7 +385,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const distanceInput = getByDisplayValue("10")
       fireEvent.changeText(distanceInput, "abc")
@@ -403,7 +403,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const thresholdInput = getByDisplayValue("100")
       fireEvent.changeText(thresholdInput, "0")
@@ -421,7 +421,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("+ Show Advanced Settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const thresholdInput = getByDisplayValue("100")
       fireEvent.changeText(thresholdInput, "200")

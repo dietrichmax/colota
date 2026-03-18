@@ -64,7 +64,8 @@ jest.mock("../../services/NativeLocationService", () => ({
       today: 10,
       databaseSizeMB: 1.2
     }),
-    saveSetting: (...args: any[]) => mockSaveSetting(...args)
+    saveSetting: (...args: any[]) => mockSaveSetting(...args),
+    getSetting: jest.fn().mockResolvedValue(null)
   }
 }))
 
