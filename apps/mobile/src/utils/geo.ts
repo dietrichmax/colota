@@ -5,7 +5,9 @@
 
 import NativeLocationService from "../services/NativeLocationService"
 
-const EARTH_RADIUS_METERS = 6371000.0
+const EARTH_RADIUS_METERS = 6_371_000
+const FEET_PER_METER = 3.28084
+const MPH_PER_MPS = 2.23694
 
 /** Haversine formula - mirrors GeofenceHelper.kt */
 export function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -49,16 +51,6 @@ function localeUses12h(): boolean {
   }
 }
 
-/** Resolve the effective unit system, using locale detection as fallback. */
-function resolveUnitSystem(): UnitSystem {
-  return cachedUnitSystem ?? (localeUsesMiles() ? "imperial" : "metric")
-}
-
-/** Resolve the effective time format, using locale detection as fallback. */
-function resolveTimeFormat(): TimeFormat {
-  return cachedTimeFormat ?? (localeUses12h() ? "12h" : "24h")
-}
-
 /** Load display preferences from native storage. Call on app start and after saving. */
 export async function loadDisplayPreferences(): Promise<void> {
   try {
@@ -73,29 +65,29 @@ export async function loadDisplayPreferences(): Promise<void> {
   }
 }
 
-export function getUnitSystem(): UnitSystem {
-  return resolveUnitSystem()
-}
-
-export function getTimeFormat(): TimeFormat {
-  return resolveTimeFormat()
-}
-
 // -- Unit detection --
 
 const MILE_LOCALES = new Set(["en-US", "en-GB", "en-MM", "en-LR"])
 
 function localeUsesMiles(): boolean {
   try {
-    const locale = Intl.NumberFormat().resolvedOptions().locale
+    const locale = Intl.NumberFormat().resolvedOptions().locale.split("-").slice(0, 2).join("-")
     return MILE_LOCALES.has(locale)
   } catch {
     return false
   }
 }
 
+export function getUnitSystem(): UnitSystem {
+  return cachedUnitSystem ?? (localeUsesMiles() ? "imperial" : "metric")
+}
+
+export function getTimeFormat(): TimeFormat {
+  return cachedTimeFormat ?? (localeUses12h() ? "12h" : "24h")
+}
+
 function usesMiles(): boolean {
-  return resolveUnitSystem() === "imperial"
+  return getUnitSystem() === "imperial"
 }
 
 // -- Formatting functions --
@@ -103,7 +95,7 @@ function usesMiles(): boolean {
 /** Format m/s into a human-readable speed string. */
 export function formatSpeed(metersPerSecond: number): string {
   if (usesMiles()) {
-    const mph = metersPerSecond * 2.23694
+    const mph = metersPerSecond * MPH_PER_MPS
     return `${mph.toFixed(1)} mph`
   }
   const kmh = metersPerSecond * 3.6
@@ -112,7 +104,7 @@ export function formatSpeed(metersPerSecond: number): string {
 
 /** Return the speed unit info (used by TrackMap). */
 export function getSpeedUnit(): { factor: number; unit: string } {
-  return usesMiles() ? { factor: 2.23694, unit: "mph" } : { factor: 3.6, unit: "km/h" }
+  return usesMiles() ? { factor: MPH_PER_MPS, unit: "mph" } : { factor: 3.6, unit: "km/h" }
 }
 
 /** Format seconds duration as "Xh Ym" or "Ym" */
@@ -152,7 +144,7 @@ export function formatDistance(meters: number): string {
 
 /** Format meters as a short distance string (e.g. "50m" / "164 ft"). */
 export function formatShortDistance(meters: number): string {
-  if (usesMiles()) return `${Math.round(meters * 3.28084)} ft`
+  if (usesMiles()) return `${Math.round(meters * FEET_PER_METER)} ft`
   return `${Math.round(meters)}m`
 }
 
@@ -163,10 +155,10 @@ export function shortDistanceUnit(): string {
 
 /** Convert a user-entered short distance to meters. */
 export function inputToMeters(value: number): number {
-  return usesMiles() ? value / 3.28084 : value
+  return usesMiles() ? value / FEET_PER_METER : value
 }
 
 /** Convert meters to the user's short distance unit for pre-filling inputs. */
 export function metersToInput(meters: number): number {
-  return usesMiles() ? Math.round(meters * 3.28084) : meters
+  return usesMiles() ? Math.round(meters * FEET_PER_METER) : meters
 }

@@ -109,6 +109,12 @@ describe("formatDistance", () => {
     expect(formatDistance(1609.344)).toBe("1.0 mi")
   })
 
+  it("normalizes extended locale tags - en-US-u-nu-latn treated as imperial", async () => {
+    await setPreferences("", "")
+    mockLocale("en-US-u-nu-latn")
+    expect(formatDistance(1609.344)).toBe("1.0 mi")
+  })
+
   it("formats 0 meters correctly", async () => {
     await setPreferences("metric", "")
     expect(formatDistance(0)).toBe("0.0 km")

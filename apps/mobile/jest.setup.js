@@ -38,6 +38,14 @@ jest.mock("lucide-react-native", () => {
   )
 })
 
+// AppState mock - RN exports AppState as .default from this path
+jest.mock("react-native/Libraries/AppState/AppState", () => ({
+  __esModule: true,
+  default: {
+    addEventListener: jest.fn(() => ({ remove: jest.fn() }))
+  }
+}))
+
 // Blob polyfill for getByteSize tests (RN test env doesn't have Blob)
 if (typeof global.Blob === "undefined") {
   global.Blob = class Blob {

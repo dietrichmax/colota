@@ -43,6 +43,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.os.Environment
+import android.os.StatFs
 import java.lang.ref.WeakReference
 
 /**
@@ -831,6 +833,23 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun isNetworkAvailable(promise: Promise) {
         promise.resolve(networkManager.isNetworkAvailable())
+    }
+
+    @ReactMethod
+    fun isUnmeteredConnection(promise: Promise) {
+        promise.resolve(networkManager.isUnmeteredConnection())
+    }
+
+    @ReactMethod
+    fun getAvailableStorageMB(promise: Promise) {
+        try {
+            val stat = StatFs(Environment.getDataDirectory().path)
+            val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
+            promise.resolve((availableBytes / (1024 * 1024)).toDouble())
+        } catch (e: Exception) {
+            AppLogger.e("LocationServiceModule", "getAvailableStorageMB failed", e)
+            promise.resolve(-1.0)
+        }
     }
 
     @ReactMethod

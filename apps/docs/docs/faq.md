@@ -32,6 +32,10 @@ To ensure modifications stay open source, especially server-side components.
 
 3-10 meters in open sky, 10-50 meters in urban areas. The [accuracy filter](/docs/configuration/gps-settings#accuracy-filter) helps remove poor fixes.
 
+### Can I use maps without internet?
+
+Yes. Go to **Settings > Offline Maps** to download map areas to your device. Pan and zoom the map to frame the area you want, give it a name, and tap **Download Area**. Downloaded tiles persist across app restarts and work without any network connection. See [Offline Maps](/docs/guides/offline-maps) for details.
+
 ### Can I export my location history?
 
 Yes. Tap **Export** on the Dashboard to export in CSV, GeoJSON, GPX, or KML. See [Data Export](/docs/guides/data-export) for details.

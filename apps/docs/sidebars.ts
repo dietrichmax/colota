@@ -48,6 +48,8 @@ const sidebars: SidebarsConfig = {
         "guides/data-management",
         "guides/deep-link-setup",
         "guides/battery-optimization",
+        "guides/offline-maps",
+        "guides/tile-server",
         "guides/troubleshooting"
       ]
     },

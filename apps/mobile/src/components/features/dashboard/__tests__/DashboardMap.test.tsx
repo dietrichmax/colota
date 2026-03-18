@@ -19,7 +19,8 @@ jest.mock("@maplibre/maplibre-react-native", () => {
 })
 
 jest.mock("@react-navigation/native", () => ({
-  useFocusEffect: jest.fn()
+  useFocusEffect: jest.fn(),
+  useIsFocused: () => true
 }))
 
 jest.mock("../../../../hooks/useTheme", () => ({
@@ -48,7 +49,8 @@ jest.mock("../../../../services/NativeLocationService", () => ({
   isNetworkAvailable: jest.fn().mockResolvedValue(true),
   getGeofences: jest.fn().mockResolvedValue([]),
   checkCurrentPauseZone: jest.fn().mockResolvedValue(null),
-  getMostRecentLocation: jest.fn().mockResolvedValue(null)
+  getMostRecentLocation: jest.fn().mockResolvedValue(null),
+  getSetting: jest.fn().mockResolvedValue(null)
 }))
 
 jest.mock("../../../../assets/icons/icon.png", () => "mock-icon")

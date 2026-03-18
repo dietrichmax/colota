@@ -74,7 +74,12 @@ export const SYNC_INTERVAL_LABELS: Record<number, string> = {
 export const HIGH_QUEUE_THRESHOLD = 50
 export const CRITICAL_QUEUE_THRESHOLD = 100
 
+// Map style
+export const MAP_STYLE_URL_LIGHT = "https://maps.mxd.codes/styles/bright/style.json"
+export const MAP_STYLE_URL_DARK = "https://maps.mxd.codes/styles/dark/style.json"
+
 // URLs
 export const REPO_URL = "https://github.com/dietrichmax/colota"
 export const ISSUES_URL = `${REPO_URL}/issues`
 export const PRIVACY_POLICY_URL = "https://colota.app/privacy-policy"
+export const TILE_SERVER_DOCS_URL = "https://colota.app/docs/guides/tile-server"

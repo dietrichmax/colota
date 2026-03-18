@@ -5,8 +5,8 @@
 
 import React, { useState, useCallback, useEffect } from "react"
 import { Text, StyleSheet, Switch, View, Pressable } from "react-native"
-import { Lightbulb } from "lucide-react-native"
-import { Settings, TRACKING_PRESETS, SyncPreset, SelectablePreset, ThemeColors } from "../../../types/global"
+import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react-native"
+import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
 import { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } from "../../../constants"
 import { SectionTitle, Card, Divider, NumericInput, SettingRow } from "../../index"
@@ -84,14 +84,7 @@ export function SyncStrategySettings({
   )
 
   const handlePresetSelect = useCallback(
-    (preset: SyncPreset) => {
-      if (preset === "custom") {
-        const next = { ...settings, syncPreset: "custom" as const }
-        onSettingsChange(next)
-        onImmediateSave(next)
-        return
-      }
-
+    (preset: SelectablePreset) => {
       const config = TRACKING_PRESETS[preset]
       const next: Settings = {
         ...settings,
@@ -128,22 +121,28 @@ export function SyncStrategySettings({
           {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map((preset, index) => (
             <View key={preset}>
               {index > 0 && <View style={styles.presetSpacer} />}
-              <PresetOption preset={preset} isSelected={settings.syncPreset === preset} onSelect={handlePresetSelect} />
+              <PresetOption
+                preset={preset}
+                isSelected={settings.syncPreset === preset}
+                isOfflineMode={settings.isOfflineMode}
+                onSelect={handlePresetSelect}
+              />
             </View>
           ))}
         </View>
 
+        <Divider />
+
         <Pressable
-          style={({ pressed }) => [
-            styles.advancedToggle,
-            { borderColor: showAdvanced ? colors.primary : colors.border },
-            pressed && { opacity: 0.7 }
-          ]}
+          style={({ pressed }) => [styles.advancedToggle, pressed && { opacity: 0.6 }]}
           onPress={() => setShowAdvanced(!showAdvanced)}
         >
-          <Text style={[styles.advancedText, { color: colors.primaryDark }]}>
-            {showAdvanced ? "− Hide" : "+ Show"} Advanced Settings
-          </Text>
+          <Text style={[styles.advancedText, { color: colors.text }]}>Advanced Settings</Text>
+          {showAdvanced ? (
+            <ChevronUp size={20} color={colors.textLight} />
+          ) : (
+            <ChevronDown size={20} color={colors.textLight} />
+          )}
         </Pressable>
 
         {showAdvanced && (
@@ -420,15 +419,13 @@ const styles = StyleSheet.create({
     height: 8
   },
   advancedToggle: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    marginTop: 16
+    paddingVertical: 12
   },
   advancedText: {
-    fontSize: 15,
+    fontSize: 16,
     ...fonts.semiBold
   },
   advancedPanel: {

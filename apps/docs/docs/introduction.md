@@ -12,6 +12,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Self-Hosted** - Send location data to your own server. Works with Dawarich, GeoPulse, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant or any custom backend.
 - **Privacy First** - No analytics, no telemetry, no third-party SDKs. Open source (AGPL-3.0).
 - **Works Offline** - Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
+- **Offline Maps** - Download map areas to your device for use without an internet connection.
 - **Scheduled Export** - Automatic daily, weekly or monthly exports to a local directory with file retention management.
 - **Location History** - View daily summaries, trip segmentation, calendar with activity dots and per-trip export.
 - **Reliable Tracking** - Foreground service, auto-start on boot, exponential backoff retry and automatic GPS pause when stationary.
@@ -25,7 +26,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## App Screens
 
-Colota has fifteen screens, each focused on a specific task:
+Colota has sixteen screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
@@ -34,6 +35,7 @@ Colota has fifteen screens, each focused on a specific task:
 | **API Config** | Endpoint field mapping with templates for Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or custom backends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | **Geofences** | Create, edit, and delete pause zones on an interactive map |
+| **Offline Maps** | Download map areas to the device for use without an internet connection |
 | **Tracking Profiles** | Create and manage condition-based profiles that automatically adjust tracking settings |
 | **Profile Editor** | Configure profile name, condition trigger, GPS interval, distance filter, sync interval, priority, and deactivation delay |
 | **Location History** | Browse recorded locations on a track map with calendar day picker and trip-colored segments, view segmented trips with per-trip stats |

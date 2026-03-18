@@ -27,7 +27,8 @@ import {
   TrackingProfilesScreen,
   ProfileEditorScreen,
   SetupImportScreen,
-  TripDetailScreen
+  TripDetailScreen,
+  OfflineMapsScreen
 } from "./src/screens/"
 import NativeLocationService from "./src/services/NativeLocationService"
 import { loadDisplayPreferences } from "./src/utils/geo"
@@ -118,6 +119,11 @@ const SCREEN_CONFIG = [
     name: "Trip Detail",
     component: TripDetailScreen,
     title: "Trip Detail"
+  },
+  {
+    name: "Offline Maps",
+    component: OfflineMapsScreen,
+    title: "Offline Maps"
   }
 ] as const
 

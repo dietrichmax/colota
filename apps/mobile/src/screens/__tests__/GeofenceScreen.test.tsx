@@ -77,7 +77,8 @@ jest.mock("../../services/NativeLocationService", () => ({
     checkCurrentPauseZone: (...args: any[]) => mockCheckCurrentPauseZone(...args),
     isNetworkAvailable: (...args: any[]) => mockIsNetworkAvailable(...args),
     recheckZoneSettings: (...args: any[]) => mockRecheckZoneSettings(...args),
-    getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args)
+    getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args),
+    getSetting: jest.fn().mockResolvedValue(null)
   }
 }))
 
@@ -236,7 +237,7 @@ describe("GeofenceScreen", () => {
       expect(getByText("Place Geofence")).toBeTruthy()
     })
 
-    fireEvent.changeText(getByPlaceholderText("Home, Office..."), "Test Zone")
+    fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
     fireEvent.changeText(getByDisplayValue("50"), "0")
     fireEvent.press(getByText("Place Geofence"))
 
@@ -250,7 +251,7 @@ describe("GeofenceScreen", () => {
       expect(getByText("Place Geofence")).toBeTruthy()
     })
 
-    fireEvent.changeText(getByPlaceholderText("Home, Office..."), "Test Zone")
+    fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
     fireEvent.changeText(getByDisplayValue("50"), "100")
     fireEvent.press(getByText("Place Geofence"))
 

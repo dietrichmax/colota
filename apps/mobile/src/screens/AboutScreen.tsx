@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback, useMemo } from "react"
 import { Text, StyleSheet, View, ScrollView, Linking, Pressable, Image, ActivityIndicator } from "react-native"
 import { ScreenProps, ThemeColors } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
@@ -13,7 +13,7 @@ import { Card, Container, Divider, SectionTitle, Footer } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
-import { REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL } from "../constants"
+import { REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL, TILE_SERVER_DOCS_URL } from "../constants"
 import { logger, getLogEntries, setLogCollecting } from "../utils/logger"
 
 // Helper function to map SDK to Android version
@@ -75,6 +75,23 @@ const LinkRow = ({
 
 const DEBUG_MODE_SETTING_KEY = "debug_mode_enabled"
 
+function InfoCard({ rows }: { rows: { label: string; value: string }[] }) {
+  const { colors } = useTheme()
+  return (
+    <Card>
+      {rows.map((row, i) => (
+        <React.Fragment key={row.label}>
+          <View style={styles.techRow}>
+            <Text style={[styles.techLabel, { color: colors.textSecondary }]}>{row.label}</Text>
+            <Text style={[styles.techValue, { color: colors.text }]}>{row.value}</Text>
+          </View>
+          {i < rows.length - 1 && <Divider />}
+        </React.Fragment>
+      ))}
+    </Card>
+  )
+}
+
 export function AboutScreen({}: ScreenProps) {
   const { colors } = useTheme()
   const [showDebugInfo, setShowDebugInfo] = useState(false)
@@ -90,7 +107,7 @@ export function AboutScreen({}: ScreenProps) {
     apiLevel: string
   } | null>(null)
 
-  const buildConfig = NativeLocationService.getBuildConfig()
+  const buildConfig = useMemo(() => NativeLocationService.getBuildConfig(), [])
 
   // Load persisted debug mode
   useEffect(() => {
@@ -134,7 +151,7 @@ export function AboutScreen({}: ScreenProps) {
     }
   }, [tapCount])
 
-  const handleVersionTap = () => {
+  const handleVersionTap = useCallback(() => {
     const newCount = tapCount + 1
     setTapCount(newCount)
 
@@ -142,11 +159,11 @@ export function AboutScreen({}: ScreenProps) {
       toggleDebugMode(true)
       setTapCount(0)
     }
-  }
+  }, [tapCount, toggleDebugMode])
 
-  const handleOpenURL = (url: string) => {
+  const handleOpenURL = useCallback((url: string) => {
     Linking.openURL(url).catch((err) => logger.error("Failed to open URL:", err))
-  }
+  }, [])
 
   const handleCopyDebugInfo = useCallback(async () => {
     if (!buildConfig) return
@@ -359,17 +376,17 @@ export function AboutScreen({}: ScreenProps) {
         </Card>
 
         {/* Map Data Attribution */}
-        <View style={styles.debugSection}>
+        <View style={styles.section}>
           <SectionTitle>Map Data</SectionTitle>
           <Card>
             <Pressable
               style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}
-              onPress={() => handleOpenURL("https://openfreemap.org")}
+              onPress={() => handleOpenURL(TILE_SERVER_DOCS_URL)}
             >
               <View style={styles.linkTextContainer}>
-                <Text style={[styles.linkTitle, { color: colors.text }]}>OpenFreeMap</Text>
+                <Text style={[styles.linkTitle, { color: colors.text }]}>Colota Tiles</Text>
                 <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>
-                  Free and open-source map tile hosting
+                  Self-hosted map tile server - configure your own
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.textLight} />
@@ -393,35 +410,15 @@ export function AboutScreen({}: ScreenProps) {
         {/* Debug Info - Only shown when enabled */}
         {showDebugInfo && (
           <>
-            <View style={styles.debugSection}>
+            <View style={styles.section}>
               <SectionTitle>BUILD</SectionTitle>
-              <Card>
-                {debugRows.map((row, i) => (
-                  <React.Fragment key={row.label}>
-                    <View style={styles.techRow}>
-                      <Text style={[styles.techLabel, { color: colors.textSecondary }]}>{row.label}</Text>
-                      <Text style={[styles.techValue, { color: colors.text }]}>{row.value}</Text>
-                    </View>
-                    {i < debugRows.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </Card>
+              <InfoCard rows={debugRows} />
             </View>
 
             {deviceRows.length > 0 && (
-              <View style={styles.debugSection}>
+              <View style={styles.section}>
                 <SectionTitle>DEVICE</SectionTitle>
-                <Card>
-                  {deviceRows.map((row, i) => (
-                    <React.Fragment key={row.label}>
-                      <View style={styles.techRow}>
-                        <Text style={[styles.techLabel, { color: colors.textSecondary }]}>{row.label}</Text>
-                        <Text style={[styles.techValue, { color: colors.text }]}>{row.value}</Text>
-                      </View>
-                      {i < deviceRows.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </Card>
+                <InfoCard rows={deviceRows} />
               </View>
             )}
 
@@ -538,7 +535,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     ...fonts.semiBold
   },
-  debugSection: {
+  section: {
     marginTop: 24
   },
   debugHint: {
