@@ -4,8 +4,7 @@
 
 # Colota - GPS Location Tracker
 
-[![Version](https://img.shields.io/github/v/release/dietrichmax/colota)](https://github.com/dietrichmax/colota/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Google Play](https://img.shields.io/badge/Google_Play-Download-green.svg?logo=google-play)](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US)
-[![IzzyOnDroid](https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/com.Colota&label=IzzyOnDroid)](https://apt.izzysoft.de/fdroid/index/apk/com.Colota)
+[![Version](https://img.shields.io/github/v/release/dietrichmax/colota)](https://github.com/dietrichmax/colota/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Google Play](https://img.shields.io/badge/Google_Play-Download-green.svg?logo=google-play)](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) [![IzzyOnDroid](https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/com.Colota&label=IzzyOnDroid)](https://apt.izzysoft.de/fdroid/index/apk/com.Colota)
 
 **Self-hosted GPS tracking app for Android.**
 

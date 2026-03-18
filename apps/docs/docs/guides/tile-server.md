@@ -39,21 +39,25 @@ If the default server is unavailable or you run into issues, you can either conf
 
 Any [MapLibre GL style](https://maplibre.org/maplibre-style-spec/) endpoint works. If you only have one style, use the same URL in both fields.
 
-:::note Attribution When using the default server, the map shows mxd.codes · OpenMapTiles · OpenStreetMap attribution. When a custom server is configured, attribution is read automatically from the style JSON served by your tile server. :::
+:::note attribution
 
-**Self-hosting options**
+when using the default server, the map shows mxd.codes · OpenMapTiles · OpenStreetMap attribution. when a custom server is configured, attribution is read automatically from the style JSON served by your tile server.
+
+:::
+
+**self-hosting options**
 
 - [tileserver-gl](https://tileserver.readthedocs.io) - serves MapLibre styles from `.mbtiles` files.
 - [PMTiles](https://docs.protomaps.com/pmtiles/) - a single static file format that can be served from any object storage (S3, Cloudflare R2, etc.) with no server process required.
 
-**Free hosted alternatives**
+**free hosted alternatives**
 
 [OpenFreeMap](https://openfreemap.org) is a good free alternative. Available styles:
 
-| Style           | URL                                            |
+| style           | URL                                            |
 | --------------- | ---------------------------------------------- |
-| Bright (light)  | `https://tiles.openfreemap.org/styles/bright`  |
-| Liberty (light) | `https://tiles.openfreemap.org/styles/liberty` |
-| Fiord (dark)    | `https://tiles.openfreemap.org/styles/fiord`   |
+| bright (light)  | `https://tiles.openfreemap.org/styles/bright`  |
+| liberty (light) | `https://tiles.openfreemap.org/styles/liberty` |
+| fiord (dark)    | `https://tiles.openfreemap.org/styles/fiord`   |
 
 For a light/dark pair, use `bright` or `liberty` for light mode and `fiord` for dark mode.
