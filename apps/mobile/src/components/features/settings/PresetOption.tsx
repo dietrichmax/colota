@@ -42,7 +42,7 @@ export function PresetOption({ preset, isSelected, isOfflineMode, onSelect }: Pr
 
   return (
     <Pressable
-      style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [pressed && { opacity: colors.pressedOpacity }]}
       onPress={() => onSelect(preset)}
       accessibilityRole="radio"
       accessibilityState={{ checked: isSelected }}
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12
+    paddingVertical: 12
   },
   leftContent: {
     flex: 1

@@ -150,8 +150,8 @@ const DownloadForm = memo(
                   onPress={onCancelDownload}
                   style={({ pressed }) => [
                     styles.cancelBtn,
-                    { borderColor: colors.error + "60" },
-                    pressed && { opacity: 0.7 }
+                    { borderColor: colors.error + "40" },
+                    pressed && { opacity: colors.pressedOpacity }
                   ]}
                 >
                   <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel Download</Text>
@@ -163,7 +163,7 @@ const DownloadForm = memo(
                 style={({ pressed }) => [
                   styles.downloadBtn,
                   { backgroundColor: estimatedSizeLabel ? colors.primary : colors.border },
-                  pressed && { opacity: 0.7 }
+                  pressed && { opacity: colors.pressedOpacity }
                 ]}
                 onPress={onDownload}
                 disabled={!estimatedSizeLabel}
@@ -656,7 +656,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
         <Card style={styles.card}>
           <View style={styles.row}>
             <Pressable
-              style={({ pressed }) => [styles.info, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [styles.info, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => fitToArea(item.name)}
               disabled={item.isActive}
             >
@@ -687,7 +687,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                 style={({ pressed }) => [
                   styles.cancelAreaBtn,
                   { backgroundColor: colors.error + "15", borderColor: colors.error + "40" },
-                  pressed && { opacity: 0.7 }
+                  pressed && { opacity: colors.pressedOpacity }
                 ]}
               >
                 {isCanceling ? (
@@ -706,7 +706,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                     style={({ pressed }) => [
                       styles.actionBtn,
                       { backgroundColor: colors.primary + "15" },
-                      pressed && { opacity: 0.7 }
+                      pressed && { opacity: colors.pressedOpacity }
                     ]}
                   >
                     {isRefreshing ? (
@@ -723,7 +723,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                   style={({ pressed }) => [
                     styles.actionBtn,
                     { backgroundColor: colors.error + "15" },
-                    pressed && { opacity: 0.7 }
+                    pressed && { opacity: colors.pressedOpacity }
                   ]}
                 >
                   {isDeleting ? (
@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
   input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: 15 },
   sizeEstimate: { fontSize: 12, ...fonts.regular, marginBottom: 12 },
   downloadBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
-  downloadBtnText: { fontSize: 15, ...fonts.semiBold },
+  downloadBtnText: { fontSize: 16, ...fonts.semiBold },
   progressContainer: { gap: 10 },
   progressHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   progressLabel: { fontSize: 14, ...fonts.semiBold },
@@ -876,7 +876,7 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: { fontSize: 14, ...fonts.semiBold },
   errorText: { fontSize: 13, ...fonts.regular, marginTop: 10 },
-  card: { marginBottom: 12, padding: 14 },
+  card: { marginBottom: 12 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   info: { flex: 1, marginRight: 12 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },

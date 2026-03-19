@@ -27,7 +27,7 @@ export function ChipGroup<T extends string>({ options, selected, onSelect, color
               styles.chip,
               { borderColor: colors.border, backgroundColor: colors.background },
               isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + "20" },
-              pressed && { opacity: 0.7 }
+              pressed && { opacity: colors.pressedOpacity }
             ]}
             onPress={() => onSelect(value)}
           >

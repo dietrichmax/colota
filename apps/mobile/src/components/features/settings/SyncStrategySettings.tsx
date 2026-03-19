@@ -134,7 +134,7 @@ export function SyncStrategySettings({
         <Divider />
 
         <Pressable
-          style={({ pressed }) => [styles.advancedToggle, pressed && { opacity: 0.6 }]}
+          style={({ pressed }) => [styles.advancedToggle, pressed && { opacity: colors.pressedOpacity }]}
           onPress={() => setShowAdvanced(!showAdvanced)}
         >
           <Text style={[styles.advancedText, { color: colors.text }]}>Advanced Settings</Text>
@@ -147,8 +147,6 @@ export function SyncStrategySettings({
 
         {showAdvanced && (
           <View style={styles.advancedPanel}>
-            <Divider />
-
             {settings.syncPreset === "custom" && (
               <View
                 style={[
@@ -239,7 +237,7 @@ export function SyncStrategySettings({
                                 borderColor: colors.primary,
                                 backgroundColor: colors.primary + "20"
                               },
-                              pressed && { opacity: 0.7 }
+                              pressed && { opacity: colors.pressedOpacity }
                             ]}
                             onPress={() => handleGridSelect("syncInterval", sec)}
                           >
@@ -260,7 +258,7 @@ export function SyncStrategySettings({
                             borderColor: colors.primary,
                             backgroundColor: colors.primary + "20"
                           },
-                          pressed && { opacity: 0.7 }
+                          pressed && { opacity: colors.pressedOpacity }
                         ]}
                         onPress={() => {
                           if (!isCustomSyncInterval) {

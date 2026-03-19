@@ -143,7 +143,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
           style={({ pressed }) => [
             styles.compassButton,
             { backgroundColor: colors.card, borderColor: colors.border },
-            pressed && { opacity: 0.7 }
+            pressed && { opacity: colors.pressedOpacity }
           ]}
           onPress={handleCompassPress}
         >
@@ -159,7 +159,10 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
           {DEFAULT_ATTRIBUTION_LINKS.map((link, i) => (
             <React.Fragment key={link.url}>
               {i > 0 && <Text style={[styles.attributionText, { color: colors.textLight }, fonts.regular]}> · </Text>}
-              <Pressable onPress={() => Linking.openURL(link.url)} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+              <Pressable
+                onPress={() => Linking.openURL(link.url)}
+                style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+              >
                 <Text style={[styles.attributionText, { color: colors.link }, fonts.regular]}>{link.label}</Text>
               </Pressable>
             </React.Fragment>

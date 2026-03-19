@@ -289,7 +289,7 @@ export function ConnectionSettings({
             <Divider />
 
             <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => navigation.navigate("Auth Settings")}
             >
               <View style={styles.linkContent}>

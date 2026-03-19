@@ -320,7 +320,7 @@ export function AutoExportScreen(_props: ScreenProps) {
           <SectionTitle>Export Directory</SectionTitle>
           <Card>
             <Pressable
-              style={({ pressed }) => [styles.directoryRow, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [styles.directoryRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={handlePickDirectory}
             >
               <FolderOpen size={22} color={colors.primary} />
@@ -363,7 +363,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <View key={option.key}>
                 {i > 0 && <Divider />}
                 <Pressable
-                  style={({ pressed }) => [styles.modeRow, pressed && { opacity: 0.6 }]}
+                  style={({ pressed }) => [styles.modeRow, pressed && { opacity: colors.pressedOpacity }]}
                   onPress={() => handleModeChange(option.key)}
                 >
                   <View style={styles.modeContent}>

@@ -58,9 +58,9 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
   const getBackgroundGradient = () => {
     switch (warningLevel) {
       case "critical":
-        return colors.error + "08"
+        return colors.error + "12"
       case "warning":
-        return colors.warning + "08"
+        return colors.warning + "12"
       default:
         return "transparent"
     }
@@ -135,7 +135,7 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
                   backgroundColor: accent + "15",
                   borderColor: accent + "40"
                 },
-                pressed && { opacity: 0.7 }
+                pressed && { opacity: colors.pressedOpacity }
               ]
             }}
             onPress={onManageClick}

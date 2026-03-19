@@ -265,7 +265,7 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
             <Pressable
               onPress={() => setPopup(null)}
               hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-              style={({ pressed }) => pressed && { opacity: 0.7 }}
+              style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
             >
               <X size={16} color={colors.textSecondary} />
             </Pressable>

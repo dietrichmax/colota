@@ -152,7 +152,7 @@ export function ExportDataScreen({ navigation }: ScreenProps) {
           <SectionTitle>Scheduled Export</SectionTitle>
           <Card>
             <Pressable
-              style={({ pressed }) => [styles.autoExportRow, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [styles.autoExportRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => navigation.navigate("Auto-Export")}
             >
               <Clock size={22} color={autoExportEnabled ? colors.primary : colors.textLight} />

@@ -392,7 +392,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
             {hasModifications && (
               <Pressable
                 onPress={handleResetAll}
-                style={({ pressed }) => [styles.resetAllButton, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [styles.resetAllButton, pressed && { opacity: colors.pressedOpacity }]}
               >
                 <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>RESET ALL</Text>
               </Pressable>
@@ -452,7 +452,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
                             style={({ pressed }) => [
                               styles.resetButton,
                               { backgroundColor: colors.border },
-                              pressed && { opacity: 0.7 }
+                              pressed && { opacity: colors.pressedOpacity }
                             ]}
                           >
                             <Text style={[styles.resetIcon, { color: colors.textSecondary }]}>↺</Text>
@@ -523,7 +523,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
                         style={({ pressed }) => [
                           styles.removeButton,
                           { backgroundColor: colors.error + "15" },
-                          pressed && { opacity: 0.7 }
+                          pressed && { opacity: colors.pressedOpacity }
                         ]}
                       >
                         <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
@@ -537,7 +537,11 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
             <Pressable
               onPress={handleAddCustomField}
-              style={({ pressed }) => [styles.addButton, { borderColor: colors.border }, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [
+                styles.addButton,
+                { borderColor: colors.border },
+                pressed && { opacity: colors.pressedOpacity }
+              ]}
             >
               <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Field</Text>
             </Pressable>
@@ -570,7 +574,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
             <Text style={[styles.exampleCode, { color: colors.textSecondary }]}>{examplePayload}</Text>
             <Pressable
               onPress={handleCopyPayload}
-              style={({ pressed }) => [styles.copyButton, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.copyButton, pressed && { opacity: colors.pressedOpacity }]}
             >
               <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
                 {copied ? "COPIED!" : "COPY"}

@@ -202,6 +202,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
           <Card>
             <SettingRow label="Dark Mode">
               <Switch
+                testID="dark-mode-switch"
                 value={mode === "dark"}
                 onValueChange={toggleTheme}
                 trackColor={{
@@ -221,6 +222,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                   return (
                     <Pressable
                       key={unit}
+                      testID={`unit-${unit}`}
                       style={[
                         styles.chip,
                         {
@@ -248,6 +250,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                   return (
                     <Pressable
                       key={fmt}
+                      testID={`time-format-${fmt}`}
                       style={[
                         styles.chip,
                         {
@@ -267,10 +270,16 @@ export function SettingsScreen({ navigation }: ScreenProps) {
             <Divider />
 
             <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+              testID="map-tile-server-toggle"
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => setShowMapTileServer(!showMapTileServer)}
             >
-              <Text style={[styles.linkLabel, { color: colors.text }]}>Map Tile Server</Text>
+              <View style={styles.linkContent}>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Map Tile Server</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
+                  Override the default map tile source
+                </Text>
+              </View>
               {showMapTileServer ? (
                 <ChevronUp size={20} color={colors.textLight} />
               ) : (
@@ -280,11 +289,11 @@ export function SettingsScreen({ navigation }: ScreenProps) {
 
             {showMapTileServer && (
               <View style={styles.mapTilePanel}>
-                <Divider />
                 <Text style={[styles.mapStyleSub, styles.mapStyleSubFirst, { color: colors.textSecondary }]}>
                   Light style URL
                 </Text>
                 <TextInput
+                  testID="map-style-url-light"
                   style={[
                     styles.mapStyleInput,
                     { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
@@ -302,6 +311,7 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                   Dark style URL
                 </Text>
                 <TextInput
+                  testID="map-style-url-dark"
                   style={[
                     styles.mapStyleInput,
                     { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
@@ -318,7 +328,10 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                 <View style={styles.mapStyleFooter}>
                   <Text style={[styles.mapStyleHint, { color: colors.textLight }]}>Leave empty to use the default</Text>
                   {mapStyleUrlLight.trim() || mapStyleUrlDark.trim() ? (
-                    <Pressable onPress={resetMapStyle} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+                    <Pressable
+                      onPress={resetMapStyle}
+                      style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+                    >
                       <Text style={[styles.mapStyleHint, { color: colors.primary }]}>Reset to default</Text>
                     </Pressable>
                   ) : null}
@@ -333,7 +346,8 @@ export function SettingsScreen({ navigation }: ScreenProps) {
           <SectionTitle>Advanced</SectionTitle>
           <Card>
             <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+              testID="nav-tracking-profiles"
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => navigation.navigate("Tracking Profiles")}
             >
               <View style={styles.linkContent}>
@@ -348,7 +362,8 @@ export function SettingsScreen({ navigation }: ScreenProps) {
             <Divider />
 
             <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+              testID="nav-offline-maps"
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => navigation.navigate("Offline Maps")}
             >
               <View style={styles.linkContent}>
@@ -363,7 +378,8 @@ export function SettingsScreen({ navigation }: ScreenProps) {
             <Divider />
 
             <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+              testID="nav-data-management"
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => navigation.navigate("Data Management")}
             >
               <View style={styles.linkContent}>
@@ -378,7 +394,8 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                 <Divider />
 
                 <Pressable
-                  style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}
+                  testID="nav-api-config"
+                  style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
                   onPress={() => navigation.navigate("API Config")}
                 >
                   <View style={styles.linkContent}>

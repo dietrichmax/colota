@@ -58,7 +58,7 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
 
   if (onPress && !completed) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+      <Pressable onPress={onPress} style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}>
         {content}
       </Pressable>
     )
@@ -101,17 +101,27 @@ export function WelcomeCard({
 
         <View style={styles.linkRow}>
           {!isOfflineMode && (
-            <Pressable onPress={onNavigateToApiConfig} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+            <Pressable
+              onPress={onNavigateToApiConfig}
+              style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+            >
               <Text style={[styles.link, { color: colors.primaryDark }]}>API field mapping</Text>
             </Pressable>
           )}
-          <Pressable onPress={onNavigateToSettings} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+          <Pressable
+            onPress={onNavigateToSettings}
+            style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+          >
             <Text style={[styles.link, { color: colors.primaryDark }]}>Tracking presets</Text>
           </Pressable>
         </View>
 
         <Pressable
-          style={({ pressed }) => [styles.dismissButton, { borderColor: colors.border }, pressed && { opacity: 0.6 }]}
+          style={({ pressed }) => [
+            styles.dismissButton,
+            { borderColor: colors.border },
+            pressed && { opacity: colors.pressedOpacity }
+          ]}
           onPress={onDismiss}
         >
           <Text style={[styles.dismissText, { color: colors.textSecondary }]}>Got it</Text>

@@ -60,6 +60,7 @@ export interface ThemeColors {
   overlay: string
   shadow: string
   transparent: string
+  pressedOpacity: number
   borderRadius: number
   textOnPrimary: string
 }
@@ -114,6 +115,7 @@ export const lightColors: ThemeColors = {
 
   // Special
   transparent: "transparent",
+  pressedOpacity: 0.7,
   borderRadius: 8,
   textOnPrimary: "#FFFFFF"
 }
@@ -168,6 +170,7 @@ export const darkColors: ThemeColors = {
 
   // Special
   transparent: "transparent",
+  pressedOpacity: 0.7,
   borderRadius: 8,
   textOnPrimary: "#121212"
 }

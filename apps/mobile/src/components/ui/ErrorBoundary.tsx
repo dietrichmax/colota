@@ -51,7 +51,7 @@ class ErrorBoundaryInternal extends Component<ErrorBoundaryInternalProps, ErrorB
             style={({ pressed }) => [
               styles.errorButton,
               { backgroundColor: colors.primary },
-              pressed && { opacity: 0.7 }
+              pressed && { opacity: colors.pressedOpacity }
             ]}
             onPress={this.handleReset}
           >

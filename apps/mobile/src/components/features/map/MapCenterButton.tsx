@@ -25,7 +25,7 @@ export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) =>
         styles.centerButton,
         { backgroundColor: colors.card, borderColor: colors.border },
         style,
-        pressed && { opacity: 0.7 }
+        pressed && { opacity: colors.pressedOpacity }
       ]}
       onPress={onPress}
     >
