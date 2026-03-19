@@ -81,7 +81,7 @@ export function AppModal() {
                     styles.button,
                     current.buttons.length > 2 && styles.buttonFullWidth,
                     btnStyles.container,
-                    pressed && { opacity: 0.7 }
+                    pressed && { opacity: colors.pressedOpacity }
                   ]}
                   onPress={() => handlePress(i)}
                 >

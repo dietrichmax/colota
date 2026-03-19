@@ -151,7 +151,10 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
 
   const renderDailyStat = useCallback(
     ({ item }: { item: DailyStat }) => (
-      <Pressable onPress={() => handleDayPress(item.day)} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+      <Pressable
+        onPress={() => handleDayPress(item.day)}
+        style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+      >
         <Card style={styles.dayCard}>
           <View style={styles.dayHeader}>
             <Text style={[styles.dayLabel, { color: colors.text }]}>{formatDayLabel(item.day)}</Text>
@@ -248,7 +251,9 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
           }
           ListHeaderComponent={summaryHeader}
           ListEmptyComponent={
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No data for this period</Text>
+            <View style={styles.empty}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No data for this period</Text>
+            </View>
           }
         />
       )}
@@ -326,10 +331,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     ...fonts.regular
   },
-  emptyText: {
-    textAlign: "center",
-    marginTop: 40,
-    fontSize: 14,
-    ...fonts.regular
-  }
+  empty: { alignItems: "center", paddingVertical: 40 },
+  emptyText: { fontSize: 15, ...fonts.semiBold }
 })

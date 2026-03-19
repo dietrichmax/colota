@@ -31,7 +31,7 @@ export const FormatOption = ({
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.formatOption, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [styles.formatOption, pressed && { opacity: colors.pressedOpacity }]}
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
@@ -54,7 +54,7 @@ export const FormatOption = ({
                   styles.extensionBadge,
                   {
                     backgroundColor: selected ? colors.primary + "20" : colors.primary + "15",
-                    borderColor: selected ? colors.primary + "60" : colors.primary + "30"
+                    borderColor: selected ? colors.primary + "40" : colors.primary + "30"
                   }
                 ]}
               >
@@ -74,8 +74,7 @@ export const FormatOption = ({
 
 const styles = StyleSheet.create({
   formatOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 12
+    paddingVertical: 8
   },
   formatContent: {
     flexDirection: "row",

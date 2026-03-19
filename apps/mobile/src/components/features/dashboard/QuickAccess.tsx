@@ -75,7 +75,7 @@ export function QuickAccess({ navigation }: QuickAccessProps) {
                 backgroundColor: colors.card,
                 borderColor: colors.border
               },
-              pressed && { opacity: 0.7 }
+              pressed && { opacity: colors.pressedOpacity }
             ]}
             onPress={item.onPress}
           >

@@ -66,7 +66,7 @@ export function TripList({ trips, colors, onTripSelect, selectedTripIndex, onExp
                 <Pressable
                   onPress={() => setExportingTripIndex((prev) => (prev === item.index ? null : item.index))}
                   hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-                  style={({ pressed }) => pressed && { opacity: 0.6 }}
+                  style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
                 >
                   <Share size={14} color={showTripExport ? colors.primary : colors.textSecondary} />
                 </Pressable>
@@ -86,7 +86,7 @@ export function TripList({ trips, colors, onTripSelect, selectedTripIndex, onExp
                   style={({ pressed }) => [
                     styles.exportChip,
                     { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" },
-                    pressed && { opacity: 0.7 }
+                    pressed && { opacity: colors.pressedOpacity }
                   ]}
                 >
                   <Text style={[styles.exportChipText, { color: colors.primary }]}>{EXPORT_FORMATS[fmt].label}</Text>
@@ -148,7 +148,7 @@ export function TripList({ trips, colors, onTripSelect, selectedTripIndex, onExp
         {onExport && (
           <Pressable
             onPress={() => setShowExport((prev) => !prev)}
-            style={({ pressed }) => [styles.exportAllBtn, pressed && { opacity: 0.6 }]}
+            style={({ pressed }) => [styles.exportAllBtn, pressed && { opacity: colors.pressedOpacity }]}
           >
             <Share size={14} color={showExport ? colors.primary : colors.textSecondary} />
             <Text style={[styles.exportAllLabel, { color: showExport ? colors.primary : colors.textSecondary }]}>
@@ -169,7 +169,7 @@ export function TripList({ trips, colors, onTripSelect, selectedTripIndex, onExp
               style={({ pressed }) => [
                 styles.exportChip,
                 { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" },
-                pressed && { opacity: 0.7 }
+                pressed && { opacity: colors.pressedOpacity }
               ]}
             >
               <Text style={[styles.exportChipText, { color: colors.primary }]}>{EXPORT_FORMATS[fmt].label}</Text>

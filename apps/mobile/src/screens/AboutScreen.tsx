@@ -63,7 +63,10 @@ const LinkRow = ({
   colors: ThemeColors
   onOpenURL: (url: string) => void
 }) => (
-  <Pressable style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]} onPress={() => onOpenURL(url)}>
+  <Pressable
+    style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+    onPress={() => onOpenURL(url)}
+  >
     <Icon size={20} color={colors.primaryDark} />
     <View style={styles.linkTextContainer}>
       <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
@@ -327,7 +330,7 @@ export function AboutScreen({}: ScreenProps) {
               style={({ pressed }) => [
                 styles.debugBadge,
                 { backgroundColor: colors.warning + "20" },
-                pressed && { opacity: 0.7 }
+                pressed && { opacity: colors.pressedOpacity }
               ]}
             >
               <Bug size={14} color={colors.warning} />
@@ -380,7 +383,7 @@ export function AboutScreen({}: ScreenProps) {
           <SectionTitle>Map Data</SectionTitle>
           <Card>
             <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => handleOpenURL(TILE_SERVER_DOCS_URL)}
             >
               <View style={styles.linkTextContainer}>
@@ -393,7 +396,7 @@ export function AboutScreen({}: ScreenProps) {
             </Pressable>
             <Divider />
             <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => handleOpenURL("https://www.openstreetmap.org/copyright")}
             >
               <View style={styles.linkTextContainer}>
@@ -427,7 +430,7 @@ export function AboutScreen({}: ScreenProps) {
                 style={({ pressed }) => [
                   styles.copyButton,
                   { borderColor: colors.border },
-                  pressed && { opacity: 0.7 }
+                  pressed && { opacity: colors.pressedOpacity }
                 ]}
                 onPress={handleCopyDebugInfo}
               >
@@ -441,7 +444,7 @@ export function AboutScreen({}: ScreenProps) {
                 style={({ pressed }) => [
                   styles.copyButton,
                   { borderColor: colors.border },
-                  pressed && { opacity: 0.7 },
+                  pressed && { opacity: colors.pressedOpacity },
                   exportingLogs && { opacity: 0.5 }
                 ]}
                 onPress={handleExportLogs}

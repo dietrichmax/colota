@@ -226,7 +226,7 @@ export function TripDetailScreen({ route }: { navigation: any; route: any }) {
                   style={({ pressed }) => [
                     styles.exportChip,
                     { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" },
-                    pressed && { opacity: 0.7 }
+                    pressed && { opacity: colors.pressedOpacity }
                   ]}
                 >
                   <Text style={[styles.exportChipText, { color: colors.primary }]}>{EXPORT_FORMATS[fmt].label}</Text>

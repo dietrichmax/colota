@@ -81,7 +81,7 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
                 styles.button,
                 styles.secondaryButton,
                 { borderColor: colors.border },
-                pressed && { opacity: 0.7 }
+                pressed && { opacity: colors.pressedOpacity }
               ]}
               onPress={handleNotNow}
             >
@@ -93,7 +93,7 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
                 styles.button,
                 styles.primaryButton,
                 { backgroundColor: colors.primary },
-                pressed && { opacity: 0.7 }
+                pressed && { opacity: colors.pressedOpacity }
               ]}
               onPress={handleConfirm}
             >

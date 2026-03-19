@@ -64,7 +64,7 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
     () => (
       <Pressable
         onPress={() => navigation.navigate("Location Summary")}
-        style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
+        style={({ pressed }) => [styles.headerBtn, pressed && { opacity: colors.pressedOpacity }]}
       >
         <BarChart2 size={20} color={colors.text} />
       </Pressable>
@@ -226,7 +226,7 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
               style={({ pressed }) => [
                 styles.floatingPill,
                 { backgroundColor: colors.primary, borderRadius: colors.borderRadius },
-                pressed && { opacity: 0.7 }
+                pressed && { opacity: colors.pressedOpacity }
               ]}
             >
               <Text style={[styles.floatingPillText, { color: colors.textOnPrimary }]}>
@@ -268,7 +268,7 @@ const Tab = ({ label, active, onPress, colors }: TabProps) => {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.tab, { borderBottomColor }, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [styles.tab, { borderBottomColor }, pressed && { opacity: colors.pressedOpacity }]}
     >
       <Text style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive, { color: textColor }]}>
         {label}

@@ -217,7 +217,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
                       backgroundColor: selected ? colors.primary + "15" : colors.background,
                       borderColor: selected ? colors.primary : colors.border
                     },
-                    pressed && { opacity: 0.7 }
+                    pressed && { opacity: colors.pressedOpacity }
                   ]}
                   onPress={() => setConditionType(opt.type)}
                 >
@@ -311,7 +311,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
                           backgroundColor: isSelected ? colors.primary + "15" : colors.background,
                           borderColor: isSelected ? colors.primary : colors.border
                         },
-                        pressed && { opacity: 0.7 }
+                        pressed && { opacity: colors.pressedOpacity }
                       ]}
                       onPress={() => setProfile((prev) => ({ ...prev, syncInterval: sec }))}
                     >
@@ -328,7 +328,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
                       backgroundColor: isCustomSyncInterval ? colors.primary + "15" : colors.background,
                       borderColor: isCustomSyncInterval ? colors.primary : colors.border
                     },
-                    pressed && { opacity: 0.7 }
+                    pressed && { opacity: colors.pressedOpacity }
                   ]}
                   onPress={() => {
                     if (!isCustomSyncInterval) {
@@ -403,7 +403,7 @@ export function ProfileEditorScreen({ navigation, route }: any) {
             styles.saveBtn,
             { backgroundColor: colors.primary },
             saving && styles.saveBtnDisabled,
-            pressed && { opacity: 0.7 }
+            pressed && { opacity: colors.pressedOpacity }
           ]}
           onPress={handleSave}
           disabled={saving}

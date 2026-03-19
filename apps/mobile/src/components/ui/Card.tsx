@@ -23,7 +23,7 @@ export function Card({ children, style, danger = false, variant = "default", onP
   const getVariantStyles = (): ViewStyle => {
     if (danger) {
       return {
-        backgroundColor: colors.error + "10",
+        backgroundColor: colors.error + "12",
         borderColor: colors.error,
         borderWidth: 2
       }
@@ -66,7 +66,7 @@ export function Card({ children, style, danger = false, variant = "default", onP
 
   if (variant === "interactive" && onPress) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+      <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? colors.pressedOpacity : 1 })}>
         {cardView}
       </Pressable>
     )

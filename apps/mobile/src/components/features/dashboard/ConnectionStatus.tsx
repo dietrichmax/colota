@@ -123,7 +123,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
       style={({ pressed }) => [
         styles.container,
         { backgroundColor: colors.card, borderColor: colors.border },
-        pressed && { opacity: 0.7 }
+        pressed && { opacity: colors.pressedOpacity }
       ]}
     >
       <View style={[styles.dot, { backgroundColor: config.color }]} />

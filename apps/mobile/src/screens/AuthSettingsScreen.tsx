@@ -296,7 +296,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
                         style={({ pressed }) => [
                           styles.removeButton,
                           { backgroundColor: colors.error + "15" },
-                          pressed && { opacity: 0.7 }
+                          pressed && { opacity: colors.pressedOpacity }
                         ]}
                       >
                         <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
@@ -310,7 +310,11 @@ export function AuthSettingsScreen({}: ScreenProps) {
             {localHeaders.length > 0 && <Divider />}
 
             <Pressable
-              style={({ pressed }) => [styles.addButton, { borderColor: colors.primary }, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [
+                styles.addButton,
+                { borderColor: colors.primary },
+                pressed && { opacity: colors.pressedOpacity }
+              ]}
               onPress={addHeader}
             >
               <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Header</Text>

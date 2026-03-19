@@ -22,13 +22,17 @@ Free to use. Normal usage means map tiles loading as you pan and zoom within the
 
 If the default server is unavailable or you run into issues, you can either configure a custom tile server (see below) or open an issue on [GitHub](https://github.com/dietrichmax/colota/issues).
 
-:::tip Support the server If you find Colota useful and want to help keep the default server running, contributions are welcome - the hosting runs at 17,94€/month. [mxd.codes/support](https://mxd.codes/support)
+:::tip Support the server
+
+If you find Colota useful and want to help keep the default server running, contributions are welcome - the hosting runs at 17,94€/month. [mxd.codes/support](https://mxd.codes/support)
 
 :::
 
 ## Using a Custom Server
 
-:::note Offline maps Offline map packs are downloaded from whichever tile server is configured at the time. Switching to a custom server won't affect packs you've already downloaded, but new downloads will come from the new server.
+:::note Offline maps
+
+Offline map packs are downloaded from whichever tile server is configured at the time. Switching to a custom server won't affect packs you've already downloaded, but new downloads will come from the new server.
 
 :::
 
@@ -39,18 +43,18 @@ If the default server is unavailable or you run into issues, you can either conf
 
 Any [MapLibre GL style](https://maplibre.org/maplibre-style-spec/) endpoint works. If you only have one style, use the same URL in both fields.
 
-:::note attribution
+:::note Attribution
 
-when using the default server, the map shows mxd.codes · OpenMapTiles · OpenStreetMap attribution. when a custom server is configured, attribution is read automatically from the style JSON served by your tile server.
+When using the default server, the map shows **© OpenMapTiles · © OpenStreetMap contributors · © maps.mxd.codes** attribution. When a custom server is configured, attribution is read automatically from the style JSON served by your tile server.
 
 :::
 
-**self-hosting options**
+**Self-hosting options**
 
 - [tileserver-gl](https://tileserver.readthedocs.io) - serves MapLibre styles from `.mbtiles` files.
 - [PMTiles](https://docs.protomaps.com/pmtiles/) - a single static file format that can be served from any object storage (S3, Cloudflare R2, etc.) with no server process required.
 
-**free hosted alternatives**
+**Free hosted alternatives**
 
 [OpenFreeMap](https://openfreemap.org) is a good free alternative. Available styles:
 

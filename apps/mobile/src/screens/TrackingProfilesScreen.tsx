@@ -103,7 +103,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
       return (
         <Card style={[styles.card, isActive && styles.activeCard, isActive && { borderColor: colors.primary }]}>
           <Pressable
-            style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.row, pressed && { opacity: colors.pressedOpacity }]}
             onPress={() => navigation.navigate("Profile Editor", { profileId: item.id })}
           >
             <View style={[styles.iconWrap, { backgroundColor: colors.primary + "15" }]}>
@@ -143,7 +143,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
                 style={({ pressed }) => [
                   styles.deleteBtn,
                   { backgroundColor: colors.error + "15" },
-                  pressed && { opacity: 0.7 }
+                  pressed && { opacity: colors.pressedOpacity }
                 ]}
               >
                 <X size={16} color={colors.error} />
@@ -176,7 +176,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
               style={({ pressed }) => [
                 styles.createBtn,
                 { backgroundColor: colors.primary },
-                pressed && { opacity: 0.7 }
+                pressed && { opacity: colors.pressedOpacity }
               ]}
               onPress={() => navigation.navigate("Profile Editor", {})}
             >
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     marginBottom: 24
   },
   createBtnText: { fontSize: 15, ...fonts.semiBold },
-  card: { marginBottom: 12, padding: 14 },
+  card: { marginBottom: 12 },
   activeCard: { borderWidth: 2 },
   row: { flexDirection: "row", alignItems: "center" },
   iconWrap: {

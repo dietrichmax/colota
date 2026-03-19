@@ -150,13 +150,16 @@ export function CalendarPicker({
     <View style={[styles.container, { borderBottomColor: colors.border }]}>
       {/* Compact header row */}
       <View style={styles.row}>
-        <Pressable onPress={goBack} style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.6 }]}>
+        <Pressable
+          onPress={goBack}
+          style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
+        >
           <ChevronLeft size={22} color={colors.primary} />
         </Pressable>
 
         <Pressable
           onPress={toggleExpanded}
-          style={({ pressed }) => [styles.dateContainer, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [styles.dateContainer, pressed && { opacity: colors.pressedOpacity }]}
         >
           <View style={styles.dateLabelRow}>
             <Text style={[styles.dateText, { color: colors.text }]}>{formatted}</Text>
@@ -175,7 +178,7 @@ export function CalendarPicker({
 
         <Pressable
           onPress={goForward}
-          style={({ pressed }) => [styles.navBtn, pressed && { opacity: 0.6 }]}
+          style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
           disabled={isToday}
         >
           <ChevronRight size={22} color={isToday ? colors.textDisabled : colors.primary} />
@@ -188,7 +191,7 @@ export function CalendarPicker({
           style={({ pressed }) => [
             styles.todayBtn,
             { backgroundColor: colors.primary + "15" },
-            pressed && { opacity: 0.7 }
+            pressed && { opacity: colors.pressedOpacity }
           ]}
         >
           <Text style={[styles.todayText, { color: colors.primary }]}>Today</Text>
@@ -202,14 +205,14 @@ export function CalendarPicker({
           <View style={styles.monthRow}>
             <Pressable
               onPress={() => navigateMonth(-1)}
-              style={({ pressed }) => [styles.monthNav, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
             >
               <ChevronLeft size={18} color={colors.primary} />
             </Pressable>
             <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
             <Pressable
               onPress={() => navigateMonth(1)}
-              style={({ pressed }) => [styles.monthNav, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
               disabled={isFutureMonth}
             >
               <ChevronRight size={18} color={isFutureMonth ? colors.textDisabled : colors.primary} />

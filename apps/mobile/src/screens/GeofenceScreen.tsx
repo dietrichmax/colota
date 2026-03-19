@@ -238,7 +238,8 @@ export function GeofenceScreen({}: ScreenProps) {
       <Card style={styles.card}>
         <View style={styles.row}>
           <Pressable
-            style={({ pressed }) => [styles.info, pressed && { opacity: 0.7 }]}
+            testID={`geofence-info-${item.id}`}
+            style={({ pressed }) => [styles.info, pressed && { opacity: colors.pressedOpacity }]}
             onPress={() => handleZoomToGeofence(item)}
           >
             <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
@@ -251,6 +252,7 @@ export function GeofenceScreen({}: ScreenProps) {
             <View style={styles.pauseSwitch}>
               <Text style={[styles.pauseLabel, { color: colors.textSecondary }]}>Pause</Text>
               <Switch
+                testID={`pause-geofence-${item.id}`}
                 value={item.pauseTracking}
                 onValueChange={(val) => togglePause(item.id!, val)}
                 trackColor={{
@@ -262,11 +264,12 @@ export function GeofenceScreen({}: ScreenProps) {
             </View>
 
             <Pressable
+              testID={`delete-geofence-${item.id}`}
               onPress={() => handleDelete(item)}
               style={({ pressed }) => [
                 styles.deleteBtn,
                 { backgroundColor: colors.error + "15" },
-                pressed && { opacity: 0.7 }
+                pressed && { opacity: colors.pressedOpacity }
               ]}
             >
               <X size={16} color={colors.error} />
@@ -319,6 +322,7 @@ export function GeofenceScreen({}: ScreenProps) {
                   <View style={[styles.inputGroup, styles.inputGroupName]}>
                     <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
                     <TextInput
+                      testID="geofence-name-input"
                       style={[
                         styles.input,
                         {
@@ -337,6 +341,7 @@ export function GeofenceScreen({}: ScreenProps) {
                   <View style={[styles.inputGroup, styles.inputGroupRadius]}>
                     <Text style={[styles.label, { color: colors.textSecondary }]}>Radius ({shortDistanceUnit()})</Text>
                     <TextInput
+                      testID="geofence-radius-input"
                       style={[
                         styles.input,
                         styles.inputCentered,
@@ -356,10 +361,11 @@ export function GeofenceScreen({}: ScreenProps) {
                 </View>
 
                 <Pressable
+                  testID="place-geofence-btn"
                   style={({ pressed }) => [
                     styles.placeBtn,
                     { backgroundColor: colors.primary },
-                    pressed && { opacity: 0.7 }
+                    pressed && { opacity: colors.pressedOpacity }
                   ]}
                   onPress={startPlacingGeofence}
                   disabled={placingGeofence}
@@ -417,7 +423,7 @@ const styles = StyleSheet.create({
   },
   placeBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
   placeBtnText: { fontSize: 15, ...fonts.semiBold },
-  card: { marginBottom: 12, padding: 14 },
+  card: { marginBottom: 12 },
   row: {
     flexDirection: "row",
     alignItems: "center",
