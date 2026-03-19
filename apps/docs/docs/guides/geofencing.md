@@ -26,19 +26,19 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 ## How It Works
 
 - Zone detection uses the Haversine formula (1-2ms per check)
-- When entering a pause zone, location recording and syncing stops
-- The notification shows "Paused: [Zone Name]"
+- When entering a pause zone, Colota keeps recording for 3.5× your tracking interval before pausing - this logs several real arrival points near the zone boundary, which backends like GeoPulse need to confirm a trip has ended
+- The notification shows "Paused: [Zone Name]" once the pause takes effect
 - GPS continues running inside the zone to detect when you leave
-- If you stay stationary inside a zone, GPS is paused after 60s (if stationary detection is enabled) - the hardware motion sensor then wakes GPS when you start moving
+- If you leave before the entry delay completes, the delay is cancelled and tracking continues uninterrupted
+- If you stay stationary inside a zone, GPS is paused after 60s (if stationary detection is enabled) - the hardware motion sensor then wakes GPS when you start moving. Stationary detection is suspended during the entry delay so arrival points keep being logged even if you stop moving on arrival
 - When exiting the zone, tracking automatically resumes
 - Zone checks happen every location update with minimal overhead
 - You can create unlimited geofence zones
 
 ## Anchor Points
 
-When you enter or exit a pause zone, Colota saves a synthetic location at the geofence center. This gives your tracks clean start and end points instead of starting or ending mid-road.
+When you exit a pause zone, Colota saves a synthetic location at the geofence center. This gives your new trip a clean start point at the zone center rather than somewhere mid-road where GPS first locks in.
 
-- **On enter:** An anchor point is logged at the zone center, then recording pauses
-- **On exit:** Recording resumes and an anchor point is logged at the zone center
+- **On exit:** An anchor point is logged at the zone center, then recording resumes
 
 Anchor points use the geofence center coordinates (not your actual GPS position) and set accuracy to the zone radius. They are saved to the database and synced to your server like regular locations.

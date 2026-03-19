@@ -53,4 +53,8 @@ The GeoPulse template uses Colota's default field names with no custom fields:
 | `tst`        | `tst`          | Unix timestamp        |
 | `bear`       | `bear`         | Bearing (degrees)     |
 
+## Geofence Compatibility
+
+GeoPulse needs multiple points clustered at your arrival location to confirm a trip has ended there - a single point is indistinguishable from a brief stop at a traffic light. Colota handles this automatically: when you enter a pause zone, it keeps logging real GPS points for 3.5× your tracking interval before pausing, producing several arrival points for GeoPulse to finalize trip arrival.
+
 Note: GeoPulse also supports OwnTracks as a location source. If you prefer, you can use the OwnTracks template with the endpoint `https://geopulse.yourdomain.com/api/owntracks` instead.

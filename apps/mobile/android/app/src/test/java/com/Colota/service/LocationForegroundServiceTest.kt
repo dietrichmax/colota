@@ -431,28 +431,20 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `handleLocationUpdate enters pause zone when location is in geofence`() = testScope.runTest {
+    fun `handleLocationUpdate starts entry delay when location enters geofence`() = testScope.runTest {
         every { geofenceHelper.getPauseZone(any()) } returns homeGeofence
         val location = mockLocation()
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
 
         invokeHandleLocationUpdate(location)
 
-        assertTrue(getField("insidePauseZone"))
-        assertEquals("Home", getField<String?>("currentZoneName"))
-        verify { LocationServiceModule.sendPauseZoneEvent(true, "Home") }
-        // Anchor point is saved at geofence center, but regular GPS location is not saved
-        verify(exactly = 1) { dbHelper.saveLocation(
-            latitude = homeGeofence.lat,
-            longitude = homeGeofence.lon,
-            accuracy = homeGeofence.radius,
-            altitude = null,
-            speed = null,
-            bearing = null,
-            battery = any(),
-            battery_status = any(),
-            timestamp = any(),
-            endpoint = any()
-        ) }
+        // Entry delay pending - not yet inside zone
+        assertFalse(getField("insidePauseZone"))
+        assertEquals(homeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        // GPS location is saved during the delay window
+        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        // Zone event not sent until delay completes
+        verify(exactly = 0) { LocationServiceModule.sendPauseZoneEvent(true, any()) }
     }
 
     @Test
@@ -469,20 +461,20 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `handleLocationUpdate updates zone when moving to different zone`() = testScope.runTest {
+    fun `handleLocationUpdate starts entry delay when moving between zones`() = testScope.runTest {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
         setField("currentZoneGeofence", homeGeofence)
         every { geofenceHelper.getPauseZone(any()) } returns officeGeofence
         val location = mockLocation()
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
 
         invokeHandleLocationUpdate(location)
 
+        // Still in Home until delay fires
         assertTrue(getField("insidePauseZone"))
-        assertEquals("Office", getField<String?>("currentZoneName"))
-        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("currentZoneGeofence"))
-        // No anchor saved for zone-to-zone transition
-        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        assertEquals("Home", getField<String?>("currentZoneName"))
+        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -555,7 +547,7 @@ class LocationForegroundServiceTest {
     // =========================================================================
 
     @Test
-    fun `ACTION_FORCE_EXIT_ZONE rechecks zone after forced exit`() {
+    fun `exitPauseZone followed by recheck clears zone when location outside`() {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Office")
         setField("currentZoneGeofence", officeGeofence)
@@ -570,7 +562,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `ACTION_FORCE_EXIT_ZONE re-enters if still in zone after recheck`() {
+    fun `exitPauseZone followed by recheck starts delay when still in zone`() {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Office")
         setField("currentZoneGeofence", officeGeofence)
@@ -581,12 +573,12 @@ class LocationForegroundServiceTest {
         invokeExitPauseZone()
         invokeRecheckZoneWithLocation(location)
 
-        assertTrue(getField("insidePauseZone"))
-        assertEquals("Office", getField<String?>("currentZoneName"))
+        assertFalse(getField("insidePauseZone"))
+        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
     }
 
     @Test
-    fun `ACTION_RECHECK_ZONE with fresh location rechecks immediately`() {
+    fun `ACTION_RECHECK_ZONE with fresh location starts entry delay`() {
         val freshLocation = mockLocation(time = System.currentTimeMillis())
         setField("lastKnownLocation", freshLocation)
         every { geofenceHelper.getPauseZone(freshLocation) } returns parkGeofence
@@ -594,8 +586,8 @@ class LocationForegroundServiceTest {
         invokeHandleZoneRecheckAction()
 
         verify { geofenceHelper.invalidateCache() }
-        assertTrue(getField("insidePauseZone"))
-        assertEquals("Park", getField<String?>("currentZoneName"))
+        assertFalse(getField("insidePauseZone"))
+        assertEquals(parkGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -686,35 +678,13 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `enterPauseZone saves anchor point at geofence center`() = testScope.runTest {
+    fun `enterPauseZone does not save anchor on entry`() = testScope.runTest {
         val location = mockLocation()
         setField("lastKnownLocation", location)
 
         invokeEnterPauseZone(homeGeofence)
 
-        verify { dbHelper.saveLocation(
-            latitude = homeGeofence.lat,
-            longitude = homeGeofence.lon,
-            accuracy = homeGeofence.radius,
-            altitude = null,
-            speed = null,
-            bearing = null,
-            battery = 80,
-            battery_status = 2,
-            timestamp = any(),
-            endpoint = "https://example.com"
-        ) }
-    }
-
-    @Test
-    fun `enterPauseZone anchor queues sync after DB save`() = testScope.runTest {
-        val location = mockLocation()
-        setField("lastKnownLocation", location)
-        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 42L
-
-        invokeEnterPauseZone(homeGeofence)
-
-        coVerify { syncManager.queueAndSend(42L, any()) }
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -856,17 +826,13 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `zone-to-zone transition skips anchor for second zone`() = testScope.runTest {
+    fun `enterPauseZone never saves anchor on zone entry`() = testScope.runTest {
         val location = mockLocation()
         setField("lastKnownLocation", location)
 
         invokeEnterPauseZone(homeGeofence)
-
-        clearMocks(dbHelper, answers = false)
-
         invokeEnterPauseZone(officeGeofence)
 
-        // No anchor saved when switching directly between zones (no trip in between)
         verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
@@ -875,15 +841,15 @@ class LocationForegroundServiceTest {
     // =========================================================================
 
     @Test
-    fun `recheckZone enters zone when not currently in zone`() {
+    fun `recheckZone starts entry delay when not currently in zone`() {
         setField("insidePauseZone", false)
         val location = mockLocation()
         every { geofenceHelper.getPauseZone(location) } returns parkGeofence
 
         invokeRecheckZoneWithLocation(location)
 
-        assertTrue(getField("insidePauseZone"))
-        assertEquals("Park", getField<String?>("currentZoneName"))
+        assertFalse(getField("insidePauseZone"))
+        assertEquals(parkGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -900,7 +866,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `recheckZone changes zone when moving between zones`() {
+    fun `recheckZone starts entry delay when moving between zones`() {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
         setField("currentZoneGeofence", homeGeofence)
@@ -909,12 +875,14 @@ class LocationForegroundServiceTest {
 
         invokeRecheckZoneWithLocation(location)
 
+        // Still in Home until delay fires
         assertTrue(getField("insidePauseZone"))
-        assertEquals("Office", getField<String?>("currentZoneName"))
+        assertEquals("Home", getField<String?>("currentZoneName"))
+        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
     }
 
     @Test
-    fun `recheckZone zone-to-zone transition skips anchor for new zone`() = testScope.runTest {
+    fun `recheckZone zone-to-zone transition starts delay for new zone`() = testScope.runTest {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
         setField("currentZoneGeofence", homeGeofence)
@@ -925,10 +893,10 @@ class LocationForegroundServiceTest {
 
         invokeRecheckZoneWithLocation(location)
 
-        // No anchor saved when switching directly between zones (no trip in between)
         verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
-        // State should still update
-        assertEquals("Office", getField<String?>("currentZoneName"))
+        // Still in Home - delay pending for Office
+        assertEquals("Home", getField<String?>("currentZoneName"))
+        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -971,6 +939,120 @@ class LocationForegroundServiceTest {
             activeProfileName = any(),
             forceUpdate = true
         ) }
+    }
+
+    // =========================================================================
+    // startEntryDelay / cancelEntryDelay
+    // =========================================================================
+
+    @Test
+    fun `startEntryDelay sets pendingPauseZone without entering zone`() {
+        invokeStartEntryDelay(homeGeofence)
+
+        assertFalse(getField("insidePauseZone"))
+        assertEquals(homeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertNotNull(getField<Job?>("entryDelayJob"))
+    }
+
+    @Test
+    fun `startEntryDelay enters zone after delay completes`() = testScope.runTest {
+        invokeStartEntryDelay(homeGeofence)
+
+        assertFalse(getField("insidePauseZone"))
+
+        advanceTimeBy((5000L * 3.5 + 1).toLong())
+
+        assertTrue(getField("insidePauseZone"))
+        assertEquals("Home", getField<String?>("currentZoneName"))
+        assertNull(getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        verify { LocationServiceModule.sendPauseZoneEvent(true, "Home") }
+    }
+
+    @Test
+    fun `startEntryDelay does not enter zone if pendingPauseZone cleared before timer fires`() = testScope.runTest {
+        invokeStartEntryDelay(homeGeofence)
+        setField("pendingPauseZone", null)
+
+        advanceTimeBy((5000L * 3.5 + 1).toLong())
+
+        assertFalse(getField("insidePauseZone"))
+        verify(exactly = 0) { LocationServiceModule.sendPauseZoneEvent(true, any()) }
+    }
+
+    @Test
+    fun `startEntryDelay cancels previous delay when called again`() {
+        invokeStartEntryDelay(homeGeofence)
+        val firstJob: Job? = getField("entryDelayJob")
+
+        invokeStartEntryDelay(officeGeofence)
+
+        assertTrue(firstJob?.isCancelled == true)
+        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+    }
+
+    @Test
+    fun `cancelEntryDelay clears pendingPauseZone and job`() {
+        invokeStartEntryDelay(homeGeofence)
+
+        invokeCancelEntryDelay()
+
+        assertNull(getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertNull(getField<Job?>("entryDelayJob"))
+    }
+
+    @Test
+    fun `cancelEntryDelay updates notification`() {
+        invokeStartEntryDelay(homeGeofence)
+        val loc = mockLocation(lat = 52.0, lon = 13.0)
+        setField("lastKnownLocation", loc)
+
+        invokeCancelEntryDelay()
+
+        verify { notificationHelper.update(
+            lat = 52.0,
+            lon = 13.0,
+            isPaused = false,
+            zoneName = null,
+            queuedCount = any(),
+            lastSyncTime = any(),
+            activeProfileName = any(),
+            forceUpdate = true
+        ) }
+    }
+
+    @Test
+    fun `handleLocationUpdate cancels delay when leaving zone mid-delay`() = testScope.runTest {
+        setField("pendingPauseZone", homeGeofence)
+        val mockJob = mockk<Job>(relaxed = true)
+        setField("entryDelayJob", mockJob)
+        every { geofenceHelper.getPauseZone(any()) } returns null
+        val location = mockLocation()
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify { mockJob.cancel() }
+        assertNull(getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+    }
+
+    @Test
+    fun `handleLocationUpdate bypasses distance filter during entry delay`() = testScope.runTest {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            minUpdateDistance = 50f,
+            filterInaccurateLocations = false
+        ))
+        val prev = mockLocation(distanceTo = 10f)
+        setField("lastKnownLocation", prev)
+        setField("pendingPauseZone", homeGeofence)
+        every { geofenceHelper.getPauseZone(any()) } returns homeGeofence
+        val location = mockLocation(distanceTo = 10f)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     // =========================================================================
@@ -1054,6 +1136,18 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `applyProfileConfig cancels pending entry delay`() {
+        val mockJob = mockk<Job>(relaxed = true)
+        setField("entryDelayJob", mockJob)
+        setField("pendingPauseZone", homeGeofence)
+
+        invokeApplyProfileConfig(interval = 2000L, distance = 5f, syncInterval = 30)
+
+        verify { mockJob.cancel() }
+        assertNull(getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+    }
+
+    @Test
     fun `applyProfileConfig cancels pending locationRestartJob`() {
         val mockJob = mockk<Job>(relaxed = true)
         setField("locationRestartJob", mockJob)
@@ -1100,6 +1194,18 @@ class LocationForegroundServiceTest {
         invokeOnDestroy()
 
         assertNull(getField<CoroutineScope?>("serviceScope"))
+    }
+
+    @Test
+    fun `onDestroy cancels entry delay job`() {
+        val mockJob = mockk<Job>(relaxed = true)
+        setField("entryDelayJob", mockJob)
+        setField("pendingPauseZone", homeGeofence)
+
+        invokeOnDestroy()
+
+        verify { mockJob.cancel() }
+        assertNull(getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -1288,6 +1394,26 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `evaluateStationaryState skips when entry delay is pending`() = testScope.runTest {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            pauseWhenStationary = true,
+            filterInaccurateLocations = true,
+            accuracyThreshold = 50.0f
+        ))
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        every { motionDetector.isAvailable } returns true
+        setField("motionDetector", motionDetector)
+        setField("pendingPauseZone", homeGeofence)
+
+        val location = mockLocation(speed = 0.1f)
+        invokeEvaluateStationaryState(location)
+
+        val stationaryJob: Job? = getField("stationaryJob")
+        assertNull("Should not start stationary timer during entry delay", stationaryJob)
+    }
+
+    @Test
     fun `evaluateStationaryState starts timer when inside pause zone`() = testScope.runTest {
         setField("config", ServiceConfig(
             endpoint = "https://example.com",
@@ -1437,6 +1563,20 @@ class LocationForegroundServiceTest {
     // =========================================================================
     // Reflection helpers
     // =========================================================================
+
+    private fun invokeStartEntryDelay(geofence: GeofenceHelper.CachedGeofence) {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "startEntryDelay", GeofenceHelper.CachedGeofence::class.java
+        )
+        method.isAccessible = true
+        method.invoke(service, geofence)
+    }
+
+    private fun invokeCancelEntryDelay() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("cancelEntryDelay")
+        method.isAccessible = true
+        method.invoke(service)
+    }
 
     private fun invokeEvaluateStationaryState(location: Location) {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
