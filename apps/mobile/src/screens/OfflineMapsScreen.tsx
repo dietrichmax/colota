@@ -332,46 +332,66 @@ export function OfflineMapsScreen({}: ScreenProps) {
 
   const beginDownload = useCallback(
     (name: string, ne: [number, number], sw: [number, number], onComplete?: () => void) => {
+      const MAX_RETRIES = 3
+      const RETRY_DELAY_MS = 5000
+
       setDownloading(true)
       setDownloadBounds([ne, sw])
       setDownloadProgress(null)
       setDownloadError(null)
       activePackNameRef.current = name
 
-      const onFailure = (message: string) => {
-        activePackNameRef.current = null
-        setDownloading(false)
-        setDownloadBounds(null)
-        setDownloadError(message)
-        removeOfflineAreaBounds(name)
-        setAreaBounds((prev) => prev.filter((b) => b.name !== name))
-      }
-
-      createOfflinePack(
-        name,
-        ne,
-        sw,
-        (status: OfflinePackStatus) => {
-          setDownloadProgress(status)
-          if (status.state === DOWNLOAD_STATE.COMPLETE) {
+      const attempt = (retriesLeft: number) => {
+        const onFailure = (message: string) => {
+          if (retriesLeft > 0) {
+            const attempt_num = MAX_RETRIES - retriesLeft + 1
+            logger.warn(`[OfflineMapsScreen] Download failed, retrying (${attempt_num}/${MAX_RETRIES})...`)
+            setDownloadError(`Retrying... (${attempt_num}/${MAX_RETRIES})`)
+            setDownloadProgress(null)
+            setTimeout(async () => {
+              try {
+                await deleteOfflineArea(name)
+              } catch {}
+              attempt(retriesLeft - 1)
+            }, RETRY_DELAY_MS)
+          } else {
             activePackNameRef.current = null
             setDownloading(false)
             setDownloadBounds(null)
-            onComplete?.()
-            loadAreas()
-          } else if (status.state === DOWNLOAD_STATE.FAILED) {
-            logger.error("[OfflineMapsScreen] Download failed via progress callback")
-            onFailure("Download failed. Please try again.")
+            setDownloadError(message)
+            removeOfflineAreaBounds(name)
+            setAreaBounds((prev) => prev.filter((b) => b.name !== name))
           }
-        },
-        (err: unknown) => {
-          logger.error("[OfflineMapsScreen] Download error:", err)
-          onFailure("Download failed. Please try again.")
         }
-      ).catch(() => {
-        onFailure("Failed to start download. Please try again.")
-        deleteOfflineArea(name).catch(() => {})
-      })
+
+        createOfflinePack(
+          name,
+          ne,
+          sw,
+          (status: OfflinePackStatus) => {
+            setDownloadProgress(status)
+            setDownloadError(null)
+            if (status.state === DOWNLOAD_STATE.COMPLETE) {
+              activePackNameRef.current = null
+              setDownloading(false)
+              setDownloadBounds(null)
+              onComplete?.()
+              loadAreas()
+            } else if (status.state === DOWNLOAD_STATE.FAILED) {
+              logger.error("[OfflineMapsScreen] Download failed via progress callback")
+              onFailure("Download failed. Please try again.")
+            }
+          },
+          (err: unknown) => {
+            logger.warn("[OfflineMapsScreen] Tile error (may retry):", err)
+          }
+        ).catch(() => {
+          onFailure("Failed to start download. Please try again.")
+          deleteOfflineArea(name).catch(() => {})
+        })
+      }
+
+      attempt(MAX_RETRIES)
     },
     [loadAreas]
   )
