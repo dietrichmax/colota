@@ -53,6 +53,8 @@ class LocationForegroundService : Service() {
     @Volatile private var currentZoneName: String? = null
     @Volatile private var currentZoneGeofence: GeofenceHelper.CachedGeofence? = null
     @Volatile private var lastKnownLocation: android.location.Location? = null
+    @Volatile private var entryDelayJob: Job? = null
+    @Volatile private var pendingPauseZone: GeofenceHelper.CachedGeofence? = null
 
     @Volatile private lateinit var config: ServiceConfig
     @Volatile private var fieldMap: Map<String, String>? = null
@@ -64,9 +66,10 @@ class LocationForegroundService : Service() {
         private const val STATIONARY_SPEED_THRESHOLD = 0.3f
         /** How long speed must stay below threshold before pausing GPS (ms). */
         private const val STATIONARY_TIMEOUT_MS = 60_000L
+        /** Multiplier applied to the tracking interval for the geofence entry delay. */
+        private const val ENTRY_DELAY_MULTIPLIER = 3.5
         const val ACTION_MANUAL_FLUSH = "com.Colota.ACTION_MANUAL_FLUSH"
         const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
-        const val ACTION_FORCE_EXIT_ZONE = "com.Colota.FORCE_EXIT_ZONE"
         const val ACTION_REFRESH_NOTIFICATION = "com.Colota.REFRESH_NOTIFICATION"
         const val ACTION_RECHECK_PROFILES = "com.Colota.RECHECK_PROFILES"
 
@@ -74,7 +77,6 @@ class LocationForegroundService : Service() {
         private val LIGHTWEIGHT_ACTIONS = setOf(
             ACTION_MANUAL_FLUSH,
             ACTION_RECHECK_ZONE,
-            ACTION_FORCE_EXIT_ZONE,
             ACTION_REFRESH_NOTIFICATION,
             ACTION_RECHECK_PROFILES
         )
@@ -137,7 +139,7 @@ class LocationForegroundService : Service() {
             loadConfigFromIntent(null)
         }
 
-        // Restore pause zone state so restarts don't trigger duplicate anchor points
+        // Restore pause zone state so a restart without a cached location fix doesn't incorrectly resume tracking
         if (!insidePauseZone) {
             val savedZone = savedSettings["pause_zone_name"]
             if (!savedZone.isNullOrBlank()) {
@@ -180,14 +182,6 @@ class LocationForegroundService : Service() {
                     lon = loc?.longitude,
                     forceUpdate = true
                 )
-                return START_STICKY
-            }
-            ACTION_FORCE_EXIT_ZONE -> {
-                if (insidePauseZone) {
-                    AppLogger.d(TAG, "Force exit from zone: $currentZoneName")
-                    exitPauseZone()
-                    lastKnownLocation?.let { recheckZoneWithLocation(it) }
-                }
                 return START_STICKY
             }
             ACTION_RECHECK_ZONE -> {
@@ -237,6 +231,9 @@ class LocationForegroundService : Service() {
 
         motionDetector?.disarm()
         stationaryJob?.cancel()
+        entryDelayJob?.cancel()
+        entryDelayJob = null
+        pendingPauseZone = null
         conditionMonitor.stop()
         stopLocationUpdates()
         syncManager.stopPeriodicSync()
@@ -336,32 +333,39 @@ class LocationForegroundService : Service() {
 
     private fun recheckZoneWithLocation(location: android.location.Location) {
         val zone = geofenceHelper.getPauseZone(location)
+        applyZoneTransition(zone)
 
-        when {
+        // Same zone - refresh notification coords
+        if (zone != null && insidePauseZone && zone.name == currentZoneName) {
+            updateNotification(
+                lat = location.latitude,
+                lon = location.longitude,
+                pausedInZone = true,
+                zoneName = currentZoneName,
+                forceUpdate = true
+            )
+        } else if (zone == null && !insidePauseZone && pendingPauseZone == null) {
+            updateNotification(
+                location.latitude,
+                location.longitude,
+                forceUpdate = true
+            )
+        }
+    }
+
+    /**
+     * Applies zone entry/exit state transitions common to both live location updates
+     * and manual zone rechecks. Returns the anchor [Job] if a zone exit was triggered.
+     */
+    private fun applyZoneTransition(zone: GeofenceHelper.CachedGeofence?): Job? {
+        return when {
             zone != null && (!insidePauseZone || zone.name != currentZoneName) -> {
-                enterPauseZone(zone)
+                if (pendingPauseZone?.name != zone.name) startEntryDelay(zone)
+                null
             }
-            zone == null && insidePauseZone -> {
-                exitPauseZone()
-            }
-            // Same zone - refresh notification coords
-            zone != null && insidePauseZone && zone.name == currentZoneName -> {
-                updateNotification(
-                    lat = location.latitude,
-                    lon = location.longitude,
-                    pausedInZone = true,
-                    zoneName = currentZoneName,
-                    forceUpdate = true
-                )
-            }
-
-            else -> {
-                updateNotification(
-                    location.latitude,
-                    location.longitude,
-                    forceUpdate = true
-                )
-            }
+            zone == null && pendingPauseZone != null -> { cancelEntryDelay(); null }
+            zone == null && insidePauseZone -> exitPauseZone()
+            else -> null
         }
     }
 
@@ -405,7 +409,8 @@ class LocationForegroundService : Service() {
         evaluateStationaryState(location)
 
         // Software-side distance filter (FLP bypasses the OS-level distance filter for some fixes)
-        if (config.minUpdateDistance > 0f && prev != null) {
+        // Bypassed during geofence entry delay so stationary arrival points are logged
+        if (pendingPauseZone == null && config.minUpdateDistance > 0f && prev != null) {
             val distance = prev.distanceTo(location)
             if (distance < config.minUpdateDistance) {
                 AppLogger.d(TAG, "Location filtered: distance ${String.format(Locale.US, "%.1f", distance)}m < threshold ${config.minUpdateDistance}m")
@@ -421,15 +426,8 @@ class LocationForegroundService : Service() {
         lastKnownLocation = location
 
         val zone = geofenceHelper.getPauseZone(location)
-        var anchorJob: Job? = null
-        when {
-            zone != null && (!insidePauseZone || zone.name != currentZoneName) -> {
-                enterPauseZone(zone)
-                return
-            }
-            zone == null && insidePauseZone -> anchorJob = exitPauseZone()
-            zone != null && insidePauseZone -> return
-        }
+        if (zone != null && insidePauseZone && zone.name == currentZoneName) return
+        val anchorJob = applyZoneTransition(zone)
 
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
 
@@ -476,11 +474,50 @@ class LocationForegroundService : Service() {
         }
     }
 
-    private fun enterPauseZone(geofence: GeofenceHelper.CachedGeofence) {
-        if (!insidePauseZone) {
-            saveAnchorPoint(geofence)
+    /**
+     * Starts a delay of 3.5 tracking intervals before pausing GPS on geofence entry.
+     * Real GPS locations continue to be logged during the delay, giving backends
+     * like GeoPulse enough arrival points for reliable trip detection.
+     * If the device exits the zone before the delay completes, the delay is cancelled.
+     */
+    private fun startEntryDelay(geofence: GeofenceHelper.CachedGeofence) {
+        entryDelayJob?.cancel()
+        stationaryJob?.cancel()
+        stationaryJob = null
+        pendingPauseZone = geofence
+
+        val scope = serviceScope ?: run {
+            AppLogger.w(TAG, "Cannot start entry delay for '${geofence.name}' - service scope is null")
+            pendingPauseZone = null
+            return
         }
 
+        val delayMs = (config.interval * ENTRY_DELAY_MULTIPLIER).toLong()
+        AppLogger.d(TAG, "Geofence entry delay started for '${geofence.name}': ${delayMs}ms (${delayMs / 1000.0}s)")
+
+        entryDelayJob = scope.launch {
+            delay(delayMs)
+            withContext(Dispatchers.Main) {
+                if (pendingPauseZone?.name == geofence.name) {
+                    pendingPauseZone = null
+                    enterPauseZone(geofence)
+                }
+            }
+        }
+    }
+
+    private fun cancelEntryDelay() {
+        entryDelayJob?.cancel()
+        entryDelayJob = null
+        val zone = pendingPauseZone
+        pendingPauseZone = null
+        AppLogger.d(TAG, "Entry delay cancelled - left zone '${zone?.name}' before delay completed")
+
+        val loc = lastKnownLocation
+        updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
+    }
+
+    private fun enterPauseZone(geofence: GeofenceHelper.CachedGeofence) {
         insidePauseZone = true
         currentZoneName = geofence.name
         currentZoneGeofence = geofence
@@ -521,7 +558,7 @@ class LocationForegroundService : Service() {
         return anchorJob
     }
 
-    /** Logs a synthetic location at the geofence center for clean track start/end points. */
+    /** Logs a synthetic location at the geofence center on zone exit to give the departing trip a clean start point. */
     private fun saveAnchorPoint(geofence: GeofenceHelper.CachedGeofence): Job? {
         if (!::config.isInitialized) {
             AppLogger.w(TAG, "Config not yet initialized, skipping anchor point for '${geofence.name}'")
@@ -627,6 +664,7 @@ class LocationForegroundService : Service() {
      */
     private fun evaluateStationaryState(location: android.location.Location) {
         if (!config.pauseWhenStationary || motionDetector?.isAvailable != true) return
+        if (pendingPauseZone != null) return  // keep GPS running until arrival points are logged
 
         // Treat missing speed as 0 (stationary) - network/fused providers often omit speed
         val speed = if (location.hasSpeed()) location.speed else 0f
@@ -718,6 +756,7 @@ class LocationForegroundService : Service() {
         // the old listener firing during an async coroutine window.
         locationRestartJob?.cancel()
         locationRestartJob = null
+        if (pendingPauseZone != null) cancelEntryDelay()
         stopLocationUpdates()
         setupLocationUpdates()
 
@@ -762,52 +801,11 @@ class LocationForegroundService : Service() {
             if (it.isNotBlank()) customFields = payloadBuilder.parseCustomFields(it)
         }
 
-        if (AppLogger.enabled) {
-            val batteryStatusStr = deviceInfoHelper.getBatteryStatusString()
-
-            AppLogger.d(TAG, """
-                ╔════════════════════════════════════════════════════════════════╗
-                ║              COLOTA LOCATION SERVICE CONFIGURATION              ║
-                ╠════════════════════════════════════════════════════════════════╣
-                ║ GPS TRACKING                                                    ║
-                ╟────────────────────────────────────────────────────────────────╢
-                ║  Update Interval:        ${config.interval}ms (${config.interval/1000.0}s)
-                ║  Min Update Distance:    ${config.minUpdateDistance}m
-                ║  Accuracy Threshold:     ${config.accuracyThreshold}m
-                ║  Filter Inaccurate:      ${config.filterInaccurateLocations}
-                ╟────────────────────────────────────────────────────────────────╢
-                ║ NETWORK & SYNC                                                  ║
-                ╟────────────────────────────────────────────────────────────────╢
-                ║  Endpoint:               ${if(config.endpoint.isBlank()) "⚠️  NOT CONFIGURED" else "✓ ${config.endpoint}"}
-                ║  Offline Mode:           ${if(config.isOfflineMode) "✓ ENABLED" else "✗ Disabled"}
-                ║  Sync Mode:              ${if(config.syncIntervalSeconds == 0) "⚡ INSTANT SEND" else "🕐 PERIODIC (${config.syncIntervalSeconds}s)"}
-                ║  Retry Interval:         ${config.retryIntervalSeconds}s
-                ║  Max Retry Attempts:     ${config.maxRetries}
-                ╟────────────────────────────────────────────────────────────────╢
-                ║ PERFORMANCE OPTIMIZATION                                        ║
-                ╟────────────────────────────────────────────────────────────────╢
-                ║  Battery Check Cache:    60s (managed by DeviceInfoHelper)
-                ║  Notification Throttle:  ${NotificationHelper.THROTTLE_MS/1000}s
-                ╟────────────────────────────────────────────────────────────────╢
-                ║ FIELD MAPPING                                                   ║
-                ╟────────────────────────────────────────────────────────────────╢
-                ║  Custom Fields:          ${if(fieldMap != null && fieldMap!!.isNotEmpty()) "✓ YES (${fieldMap!!.size} mappings)" else "✗ Using Defaults"}
-                ${if(fieldMap != null && fieldMap!!.isNotEmpty()) {
-                    fieldMap!!.entries.joinToString("\n") {
-                        "║    ${it.key.padEnd(20)} → ${it.value}"
-                    }
-                } else ""}
-                ╟────────────────────────────────────────────────────────────────╢
-                ║ CURRENT SERVICE STATE                                           ║
-                ╟────────────────────────────────────────────────────────────────╢
-                ║  Tracking Status:        ✓ ACTIVE
-                ║  Pause Zone:            ${if(insidePauseZone) "⏸️  PAUSED in '$currentZoneName'" else "✓ Not in zone"}
-                ║  Battery Level:          $batteryStatusStr
-                ║  Queued Locations:       ${syncManager.getCachedQueuedCount()} items
-                ║  Last Sync:              ${notificationHelper.formatTimeSinceSync(syncManager.lastSuccessfulSyncTime)}
-                ║  Last Location:          ${if(lastKnownLocation != null) String.format(Locale.US, "%.5f, %.5f", lastKnownLocation!!.latitude, lastKnownLocation!!.longitude) else "N/A"}
-                ╚════════════════════════════════════════════════════════════════╝
-            """.trimIndent())
-        }
+        AppLogger.d(TAG, buildString {
+            append("Config loaded: interval=${config.interval}ms, distance=${config.minUpdateDistance}m, accuracy=${config.accuracyThreshold}m")
+            append(", endpoint=${if (config.endpoint.isBlank()) "NOT CONFIGURED" else config.endpoint}")
+            append(", offline=${config.isOfflineMode}, sync=${if (config.syncIntervalSeconds == 0) "instant" else "${config.syncIntervalSeconds}s"}")
+            if (!fieldMap.isNullOrEmpty()) append(", fieldMap=${fieldMap!!.size} mappings")
+        })
     }
 }
