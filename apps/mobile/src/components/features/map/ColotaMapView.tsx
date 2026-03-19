@@ -16,9 +16,9 @@ import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 
 const DEFAULT_ATTRIBUTION_LINKS = [
-  { url: "https://mxd.codes", label: "mxd.codes" },
   { url: "https://openmaptiles.org/", label: "© OpenMapTiles" },
-  { url: "https://www.openstreetmap.org/copyright", label: "© OpenStreetMap contributors" }
+  { url: "https://www.openstreetmap.org/copyright", label: "© OpenStreetMap contributors" },
+  { url: "https://maps.mxd.codes/", label: "© maps.mxd.codes" }
 ]
 
 export interface ColotaMapRef {
