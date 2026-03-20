@@ -22,6 +22,10 @@ On **Android 17+**, connecting to another device on the local network (everythin
 
 Use the **Test Connection** button in settings to verify your server is reachable.
 
+### Multiple Backends
+
+Colota sends to a single endpoint. To forward locations to multiple services simultaneously (e.g. Dawarich + Home Assistant), use [colota-forwarder](https://github.com/dietrichmax/colota-forwarder) - point Colota at the forwarder and configure each target in the forwarder's environment variables.
+
 ## Sync Modes
 
 - **Instant (0s)**: Each location is sent immediately after recording
