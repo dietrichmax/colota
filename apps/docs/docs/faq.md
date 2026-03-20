@@ -42,7 +42,7 @@ Yes. Tap **Export** on the Dashboard to export in CSV, GeoJSON, GPX, or KML. See
 
 ### What happens when the phone restarts?
 
-If auto-start on boot is enabled, Colota automatically resumes tracking after a device restart.
+If auto-start on boot is enabled, Colota automatically resumes tracking after a device restart when tracking was active before.
 
 ### How much battery does it use?
 

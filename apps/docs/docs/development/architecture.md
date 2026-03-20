@@ -209,7 +209,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 
 ### Map Components
 
-The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-native) (`@maplibre/maplibre-react-native`) for GPU-accelerated map rendering with [OpenFreeMap](https://openfreemap.org) vector tiles. No API tokens required. Fully FOSS-compatible.
+The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-native) (`@maplibre/maplibre-react-native`) for GPU-accelerated map rendering. The default tile server is a self-hosted instance at `maps.mxd.codes` serving OpenMapTiles-compatible vector tiles. A custom tile server URL can be configured in Settings - see the [tile server guide](../guides/tile-server.md). No API tokens required. Fully FOSS-compatible.
 
 | Component | Purpose |
 | --- | --- |
