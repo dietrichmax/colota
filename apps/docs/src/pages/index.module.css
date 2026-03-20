@@ -49,6 +49,30 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+.downloadLinks {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.downloadLabel {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.downloadLink {
+  color: white;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.downloadLink:hover {
+  color: white;
+  opacity: 1;
+}
+
 /* Features */
 
 .features {
@@ -78,6 +102,45 @@
   margin-bottom: 0;
   font-size: 0.95rem;
   color: var(--ifm-font-color-secondary);
+}
+
+/* Integrations */
+
+.integrations {
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.integrationsLabel {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ifm-font-color-secondary);
+  margin-bottom: 1rem;
+}
+
+.integrationsList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.integrationBadge {
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--colota-border);
+  font-size: 0.875rem;
+  color: var(--ifm-font-color-base);
+  background: var(--colota-card-bg);
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.integrationBadge:hover {
+  border-color: var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
+  text-decoration: none;
 }
 
 /* Screenshots */

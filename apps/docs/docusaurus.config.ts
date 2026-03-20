@@ -64,11 +64,6 @@ const config: Config = {
           position: "left"
         },
         {
-          href: "https://play.google.com/store/apps/details?id=com.Colota&hl=en-US",
-          label: "Google Play",
-          position: "right"
-        },
-        {
           href: "https://github.com/dietrichmax/colota",
           label: "GitHub",
           position: "right"

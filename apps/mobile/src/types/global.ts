@@ -164,7 +164,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   phonetrack: {
     name: "phonetrack",
-    label: "Nextcloud PhoneTrack",
+    label: "PhoneTrack",
     description: "Nextcloud PhoneTrack logging format",
     fieldMap: {
       lat: "lat",
