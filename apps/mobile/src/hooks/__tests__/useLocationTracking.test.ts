@@ -11,11 +11,13 @@ jest.mock("../../services/modalService", () => ({
 const mockStart = jest.fn().mockResolvedValue(undefined)
 const mockStop = jest.fn()
 const mockGetMostRecentLocation = jest.fn().mockResolvedValue(null)
+const mockIsTrackingActive = jest.fn().mockResolvedValue(false)
 
 jest.mock("../../services/NativeLocationService", () => ({
   start: (...args: any[]) => mockStart(...args),
   stop: (...args: any[]) => mockStop(...args),
-  getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args)
+  getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args),
+  isTrackingActive: (...args: any[]) => mockIsTrackingActive(...args)
 }))
 
 // Mock permissions
@@ -238,6 +240,90 @@ describe("useLocationTracking", () => {
       })
 
       expect(result.current.tracking).toBe(true)
+    })
+  })
+
+  describe("AppState foreground sync", () => {
+    let appStateCallback: (state: string) => void
+
+    beforeEach(() => {
+      const { AppState } = require("react-native")
+      ;(AppState.addEventListener as jest.Mock).mockImplementation((_event: string, cb: (state: string) => void) => {
+        appStateCallback = cb
+        return { remove: jest.fn() }
+      })
+    })
+
+    it("reconnects when service was started externally while app was backgrounded", async () => {
+      mockIsTrackingActive.mockResolvedValue(true)
+      mockGetMostRecentLocation.mockResolvedValue(null)
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      // App is not tracking in UI, but service is active
+      await act(async () => {
+        await appStateCallback("active")
+      })
+
+      expect(mockIsTrackingActive).toHaveBeenCalled()
+      expect(result.current.tracking).toBe(true)
+    })
+
+    it("updates UI to stopped when service was stopped externally", async () => {
+      mockIsTrackingActive.mockResolvedValue(false)
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      // Start tracking in UI first
+      await act(async () => {
+        await result.current.startTracking(DEFAULT_SETTINGS)
+      })
+      expect(result.current.tracking).toBe(true)
+
+      // Service was stopped externally
+      await act(async () => {
+        await appStateCallback("active")
+      })
+
+      expect(result.current.tracking).toBe(false)
+    })
+
+    it("refreshes coords when already in sync on foreground", async () => {
+      mockIsTrackingActive.mockResolvedValue(true)
+      mockGetMostRecentLocation.mockResolvedValue({
+        latitude: 48.1,
+        longitude: 11.5,
+        accuracy: 10,
+        altitude: 500,
+        speed: 0,
+        bearing: 0,
+        timestamp: 1700000000,
+        battery: 80,
+        batteryStatus: 2
+      })
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      await act(async () => {
+        await result.current.startTracking(DEFAULT_SETTINGS)
+      })
+
+      await act(async () => {
+        await appStateCallback("active")
+      })
+
+      expect(result.current.coords?.latitude).toBe(48.1)
+    })
+
+    it("does nothing when transitioning to background", async () => {
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      await act(async () => {
+        await appStateCallback("background")
+      })
+
+      expect(mockIsTrackingActive).not.toHaveBeenCalled()
+      expect(result.current.tracking).toBe(false)
     })
   })
 

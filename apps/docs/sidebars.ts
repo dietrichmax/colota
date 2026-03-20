@@ -44,6 +44,7 @@ const sidebars: SidebarsConfig = {
       items: [
         "guides/geofencing",
         "guides/tracking-profiles",
+        "guides/app-shortcuts",
         "guides/data-export",
         "guides/data-management",
         "guides/deep-link-setup",

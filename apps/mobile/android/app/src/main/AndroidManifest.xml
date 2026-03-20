@@ -60,7 +60,17 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="colota" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- Handles app shortcut intents without showing UI -->
+        <activity
+            android:name=".service.ShortcutHandlerActivity"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:exported="true"
+            android:excludeFromRecents="true" />
 
         <!-- Foreground location service -->
         <service
