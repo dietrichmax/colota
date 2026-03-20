@@ -152,7 +152,7 @@ By default, failed items are permanently deleted from the sync queue after 5 fai
 - **HTTPS required** for all public endpoints
 - **HTTP allowed** for private/local addresses - enforced at the native layer via DNS resolution at request time
 - Non-standard ports are supported (e.g., `https://my-server.com:8443/api`)
-- Self-signed certificates are supported - install your CA certificate on the device via Settings → Security → Encryption & credentials → Install a certificate
+- Self-signed certificates are supported - see [Server Settings](/docs/configuration/server-settings#endpoint-url) for setup instructions
 
 ## Connectivity Check
 
