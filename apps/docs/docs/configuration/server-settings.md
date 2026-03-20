@@ -6,7 +6,7 @@ sidebar_position: 3
 
 | Setting              | Description                               | Default         | Range       |
 | -------------------- | ----------------------------------------- | --------------- | ----------- |
-| Endpoint             | HTTPS URL of your server                  | Empty (offline) | --          |
+| Endpoint             | HTTP(S) URL of your server                | Empty (offline) | --          |
 | HTTP Method          | POST (JSON body) or GET (query params)    | POST            | POST / GET  |
 | Sync Interval        | Batch mode interval                       | Instant (0)     | 0s - Custom |
 | Retry Failed Uploads | Keep retrying failed uploads indefinitely | Off             | On/Off      |
@@ -14,14 +14,9 @@ sidebar_position: 3
 
 ## Endpoint URL
 
-Your server endpoint must accept HTTPS requests (POST or GET depending on your HTTP Method setting). HTTP is only allowed for private/local addresses:
+Your server endpoint must accept HTTP or HTTPS requests (POST or GET depending on your HTTP Method setting). HTTPS is required for public endpoints. HTTP is restricted to private/local addresses at the network level - public HTTP endpoints will be blocked at request time.
 
-- `127.0.0.1` / `localhost`
-- `192.168.x.x`
-- `10.x.x.x`
-- `172.16.x.x – 172.31.x.x`
-- `100.64.x.x – 100.127.x.x` (CGNAT)
-- `169.254.x.x` (link-local)
+Self-signed certificates are supported - install your CA certificate on the device via Settings → Security → Encryption & credentials → Install a certificate.
 
 On **Android 17+**, connecting to another device on the local network (everything above except `localhost`) requires the **ACCESS_LOCAL_NETWORK** permission. Colota requests this when you use **Test Connection**. See [Permissions](/docs/development/permissions#local-network-access) for details.
 

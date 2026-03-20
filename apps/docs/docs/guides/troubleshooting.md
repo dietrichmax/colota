@@ -19,13 +19,13 @@ sidebar_position: 4
 
 ## Server sync not working
 
-1. Check endpoint URL format - must be `https://` or `http://localhost`
+1. Check endpoint URL format - must be `https://` for public endpoints, or `http://` for private/local addresses
 2. Use the **Test Connection** button in settings
 3. Check server logs for incoming requests
 4. Verify network connectivity
 5. Check the queue count in **Data Management**
 
-**Common causes**: Wrong URL, HTTPS required for non-localhost, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed certificate (not supported), **Wi-Fi Only Sync** enabled while on cellular data, missing local network permission on Android 16+.
+**Common causes**: Wrong URL, HTTPS required for public endpoints, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed certificate (install your CA via Settings → Security → Encryption & credentials), **Wi-Fi Only Sync** enabled while on cellular data, missing local network permission on Android 16+.
 
 ## Exporting app logs
 
