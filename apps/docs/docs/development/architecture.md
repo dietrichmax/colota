@@ -172,6 +172,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `AutoExportScheduler` | Schedules a daily (24h) check worker via WorkManager with battery-not-low constraint - frequency logic (daily/weekly/monthly) is handled at runtime by the worker |
 | `AutoExportConfig` | Typed data class wrapping auto-export settings from the SQLite settings table with validation, `isExportDue()`, and `nextExportTimestamp()` |
 | `ExportConverters` | Native Kotlin export converters (CSV, GeoJSON, GPX, KML) with in-memory, streaming, and file-based (`exportToFile`) interfaces |
+| `ShortcutHandlerActivity` | Handles app shortcut intents (start/stop tracking) without showing UI - reads config from DB via `ServiceConfig.fromDatabase()` and dispatches to `LocationForegroundService` |
 
 ## React Native Layer
 

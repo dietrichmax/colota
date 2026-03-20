@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Background circle -->
+    <path
+        android:pathData="M24,24m-24,0a24,24 0,1,0 48,0a24,24 0,1,0 -48,0"
+        android:fillColor="#FFFFFF"/>
+    <!-- Play triangle pointing right -->
+    <path
+        android:pathData="M14,14L14,34L34,24Z"
+        android:fillColor="#0D9387"/>
+</vector>

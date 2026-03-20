@@ -83,38 +83,6 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
   }, [tracking, isRestarting, coords])
 
   /**
-   * Fetches latest location from DB when app returns to foreground.
-   * Native events are suppressed while backgrounded, so coords go stale.
-   */
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active" && isTrackingRef.current) {
-        NativeLocationService.getMostRecentLocation()
-          .then((latest) => {
-            if (latest) {
-              setCoords({
-                latitude: latest.latitude,
-                longitude: latest.longitude,
-                accuracy: latest.accuracy,
-                altitude: latest.altitude ?? 0,
-                speed: latest.speed ?? 0,
-                bearing: latest.bearing ?? 0,
-                timestamp: latest.timestamp ?? Date.now(),
-                battery: latest.battery,
-                battery_status: latest.batteryStatus
-              })
-            }
-          })
-          .catch((err) => {
-            logger.error("[useLocationTracking] Failed to fetch location on resume:", err)
-          })
-      }
-    })
-
-    return () => subscription.remove()
-  }, [])
-
-  /**
    * Subscribes to real-time location updates from native service
    */
   useEffect(() => {
@@ -301,6 +269,57 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
       logger.error("[useLocationTracking] Failed to fetch location on reconnect:", err)
     }
   }, [])
+
+  /**
+   * Syncs tracking state and coords when app returns to foreground.
+   * Detects external start/stop (e.g. app shortcuts) by comparing UI state
+   * against the DB's tracking_enabled flag.
+   */
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", async (nextState) => {
+      if (nextState !== "active") return
+
+      const serviceActive = await NativeLocationService.isTrackingActive().catch(() => null)
+      if (serviceActive === null) return
+
+      if (!isTrackingRef.current && serviceActive) {
+        // Service was started externally (e.g. start shortcut) - reconnect UI
+        logger.debug("[useLocationTracking] External start detected, reconnecting")
+        reconnect()
+      } else if (isTrackingRef.current && !serviceActive) {
+        // Service was stopped externally (e.g. stop shortcut) - update UI
+        logger.debug("[useLocationTracking] External stop detected, updating UI")
+        if (listenerRef.current) {
+          listenerRef.current.remove()
+          listenerRef.current = null
+        }
+        setTracking(false)
+      } else if (isTrackingRef.current && serviceActive) {
+        // Already in sync - refresh coords since events are suppressed while backgrounded
+        NativeLocationService.getMostRecentLocation()
+          .then((latest) => {
+            if (latest) {
+              setCoords({
+                latitude: latest.latitude,
+                longitude: latest.longitude,
+                accuracy: latest.accuracy,
+                altitude: latest.altitude ?? 0,
+                speed: latest.speed ?? 0,
+                bearing: latest.bearing ?? 0,
+                timestamp: latest.timestamp ?? Date.now(),
+                battery: latest.battery,
+                battery_status: latest.batteryStatus
+              })
+            }
+          })
+          .catch((err) => {
+            logger.error("[useLocationTracking] Failed to fetch location on resume:", err)
+          })
+      }
+    })
+
+    return () => subscription.remove()
+  }, [reconnect])
 
   /**
    * Cleanup on unmount

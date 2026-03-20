@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="start_tracking"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_start"
+        android:shortcutShortLabel="@string/shortcut_start_short"
+        android:shortcutLongLabel="@string/shortcut_start_long">
+        <intent
+            android:action="com.Colota.ACTION_SHORTCUT_START"
+            android:targetPackage="com.Colota"
+            android:targetClass="com.Colota.service.ShortcutHandlerActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="stop_tracking"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_stop"
+        android:shortcutShortLabel="@string/shortcut_stop_short"
+        android:shortcutLongLabel="@string/shortcut_stop_long">
+        <intent
+            android:action="com.Colota.ACTION_SHORTCUT_STOP"
+            android:targetPackage="com.Colota"
+            android:targetClass="com.Colota.service.ShortcutHandlerActivity" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+</shortcuts>
