@@ -150,13 +150,9 @@ By default, failed items are permanently deleted from the sync queue after 5 fai
 ## Network Requirements
 
 - **HTTPS required** for all public endpoints
-- **HTTP allowed** only for private/local addresses:
-  - `127.0.0.1` / `localhost`
-  - `192.168.x.x`
-  - `10.x.x.x`
-  - `172.16–31.x.x`
+- **HTTP allowed** for private/local addresses - enforced at the native layer via DNS resolution at request time
 - Non-standard ports are supported (e.g., `https://my-server.com:8443/api`)
-- Colota uses Android's default SSL trust store - custom CA certificates and self-signed certificates are not supported
+- Self-signed certificates are supported - install your CA certificate on the device via Settings → Security → Encryption & credentials → Install a certificate
 
 ## Connectivity Check
 

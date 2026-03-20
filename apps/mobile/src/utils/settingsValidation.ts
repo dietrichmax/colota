@@ -49,10 +49,13 @@ export function isEndpointAllowed(url: string) {
   if (!match) return false
 
   const protocol = match[1] // http or https
-  const host = match[2]
 
   if (protocol === "https") return true
-  if (protocol === "http" && isPrivateHost(host)) return true
+
+  // For HTTP, allow any hostname - the native layer (NetworkManager.isValidProtocol) resolves
+  // DNS and enforces the private-IP restriction at request time. UI-level hostname guessing
+  // would block valid setups like split-horizon DNS or custom TLDs on private networks.
+  if (protocol === "http") return true
 
   return false
 }

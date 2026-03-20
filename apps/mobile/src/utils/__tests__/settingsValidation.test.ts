@@ -77,15 +77,26 @@ describe("isEndpointAllowed", () => {
   })
 
   describe("HTTP endpoints", () => {
-    it("allows HTTP to private hosts", () => {
+    it("allows HTTP to private IPs", () => {
       expect(isEndpointAllowed("http://192.168.1.1/api")).toBe(true)
       expect(isEndpointAllowed("http://localhost:3000/locations")).toBe(true)
       expect(isEndpointAllowed("http://10.0.0.1:8080")).toBe(true)
     })
 
-    it("rejects HTTP to public hosts", () => {
-      expect(isEndpointAllowed("http://google.com")).toBe(false)
-      expect(isEndpointAllowed("http://api.example.com/v1")).toBe(false)
+    it("allows HTTP to private hostnames (.local, .internal, .lan)", () => {
+      expect(isEndpointAllowed("http://geopulse.internal/api")).toBe(true)
+      expect(isEndpointAllowed("http://homeserver.local:8080")).toBe(true)
+      expect(isEndpointAllowed("http://nas.lan/owntracks")).toBe(true)
+    })
+
+    it("allows HTTP to single-label hostnames (no dots)", () => {
+      expect(isEndpointAllowed("http://homeserver/api")).toBe(true)
+    })
+
+    it("allows HTTP to any hostname - native layer enforces private-IP restriction at request time", () => {
+      expect(isEndpointAllowed("http://google.com")).toBe(true)
+      expect(isEndpointAllowed("http://myserver.company/api")).toBe(true)
+      expect(isEndpointAllowed("http://colota.test/api")).toBe(true)
     })
   })
 
