@@ -42,20 +42,8 @@ export function isPrivateHost(url: string) {
   }
 }
 
+// Validates that a URL has a valid http(s):// scheme and hostname.
+// HTTP enforcement (private-IP restriction) happens at the native layer via DNS resolution.
 export function isEndpointAllowed(url: string) {
-  if (!url) return false
-
-  const match = url.match(/^(https?):\/\/([^/:]+)(:\d+)?/)
-  if (!match) return false
-
-  const protocol = match[1] // http or https
-
-  if (protocol === "https") return true
-
-  // For HTTP, allow any hostname - the native layer (NetworkManager.isValidProtocol) resolves
-  // DNS and enforces the private-IP restriction at request time. UI-level hostname guessing
-  // would block valid setups like split-horizon DNS or custom TLDs on private networks.
-  if (protocol === "http") return true
-
-  return false
+  return /^https?:\/\/[^/:]+/.test(url)
 }

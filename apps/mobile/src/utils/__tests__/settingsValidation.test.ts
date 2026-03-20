@@ -69,49 +69,21 @@ describe("isPrivateHost", () => {
 })
 
 describe("isEndpointAllowed", () => {
-  describe("HTTPS endpoints", () => {
-    it("allows any HTTPS endpoint", () => {
-      expect(isEndpointAllowed("https://example.com/api")).toBe(true)
-      expect(isEndpointAllowed("https://api.server.io:443/v1")).toBe(true)
-    })
+  it("allows valid http and https URLs", () => {
+    expect(isEndpointAllowed("https://example.com/api")).toBe(true)
+    expect(isEndpointAllowed("http://192.168.1.1/api")).toBe(true)
   })
 
-  describe("HTTP endpoints", () => {
-    it("allows HTTP to private IPs", () => {
-      expect(isEndpointAllowed("http://192.168.1.1/api")).toBe(true)
-      expect(isEndpointAllowed("http://localhost:3000/locations")).toBe(true)
-      expect(isEndpointAllowed("http://10.0.0.1:8080")).toBe(true)
-    })
-
-    it("allows HTTP to private hostnames (.local, .internal, .lan)", () => {
-      expect(isEndpointAllowed("http://geopulse.internal/api")).toBe(true)
-      expect(isEndpointAllowed("http://homeserver.local:8080")).toBe(true)
-      expect(isEndpointAllowed("http://nas.lan/owntracks")).toBe(true)
-    })
-
-    it("allows HTTP to single-label hostnames (no dots)", () => {
-      expect(isEndpointAllowed("http://homeserver/api")).toBe(true)
-    })
-
-    it("allows HTTP to any hostname - native layer enforces private-IP restriction at request time", () => {
-      expect(isEndpointAllowed("http://google.com")).toBe(true)
-      expect(isEndpointAllowed("http://myserver.company/api")).toBe(true)
-      expect(isEndpointAllowed("http://colota.test/api")).toBe(true)
-    })
+  it("rejects empty string", () => {
+    expect(isEndpointAllowed("")).toBe(false)
   })
 
-  describe("invalid inputs", () => {
-    it("rejects empty string", () => {
-      expect(isEndpointAllowed("")).toBe(false)
-    })
+  it("rejects URLs without protocol", () => {
+    expect(isEndpointAllowed("example.com/api")).toBe(false)
+  })
 
-    it("rejects URLs without protocol", () => {
-      expect(isEndpointAllowed("example.com/api")).toBe(false)
-    })
-
-    it("rejects non-HTTP protocols", () => {
-      expect(isEndpointAllowed("ftp://example.com")).toBe(false)
-      expect(isEndpointAllowed("ws://example.com")).toBe(false)
-    })
+  it("rejects non-HTTP protocols", () => {
+    expect(isEndpointAllowed("ftp://example.com")).toBe(false)
+    expect(isEndpointAllowed("ws://example.com")).toBe(false)
   })
 })
