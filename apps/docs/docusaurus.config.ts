@@ -119,8 +119,8 @@ const config: Config = {
               href: "https://play.google.com/store/apps/details?id=com.Colota&hl=en-US"
             },
             {
-              label: "F-Droid",
-              href: "https://f-droid.org/packages/com.Colota/"
+              label: "IzzyOnDroid",
+              href: "https://apt.izzysoft.de/packages/com.Colota/"
             },
             {
               label: "Releases",

@@ -64,7 +64,7 @@ Colota does not share your data with anyone. The only data transmission occurs t
 
 ### Google Play
 
-The App is distributed via Google Play, which may collect data according to [Google's Privacy Policy](https://policies.google.com/privacy). This is outside the App's control.
+The GMS variant of the App is distributed via Google Play, which may collect data according to [Google's Privacy Policy](https://policies.google.com/privacy). This is outside the App's control. The FOSS variant is available on IzzyOnDroid and GitHub Releases with no Google dependency.
 
 ### OpenFreeMap
 
