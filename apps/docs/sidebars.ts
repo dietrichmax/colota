@@ -56,11 +56,6 @@ const sidebars: SidebarsConfig = {
       ]
     },
     {
-      type: "doc",
-      id: "alternatives",
-      label: "Alternatives"
-    },
-    {
       type: "category",
       label: "Development",
       items: ["development/architecture", "development/local-setup", "development/permissions"]
@@ -69,6 +64,11 @@ const sidebars: SidebarsConfig = {
       type: "doc",
       id: "api-reference",
       label: "API Reference"
+    },
+    {
+      type: "doc",
+      id: "alternatives",
+      label: "Alternatives"
     },
     {
       type: "doc",
