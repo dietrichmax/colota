@@ -4,11 +4,11 @@ sidebar_position: 4
 
 # Reitti
 
-[Reitti](https://github.com/Moo-Ack-Productions/reitti) is a self-hosted location tracking service.
+[Reitti](https://github.com/dedicatedcode/reitti) is a self-hosted location tracking service.
 
 ## Setup
 
-1. **Install Reitti** - follow the [Reitti documentation](https://github.com/Moo-Ack-Productions/reitti)
+1. **Install Reitti** - follow the [Reitti documentation](https://www.dedicatedcode.com/projects/reitti/)
 2. **Configure Colota**:
    - Go to **Settings > API Settings**
    - Select the **Reitti** template

@@ -48,6 +48,18 @@ If auto-start on boot is enabled, Colota automatically resumes tracking after a 
 
 Depends on your settings. With the **Balanced** preset (30s interval, batch sync), typical usage is moderate. See [Battery Optimization](/docs/guides/battery-optimization) for tips.
 
+### How do I update the app?
+
+- **Google Play** - updates automatically, or open the Play Store and tap Update
+- **IzzyOnDroid** - open the IzzyOnDroid client and update from there, or use [Obtainium](https://github.com/ImranR98/Obtainium) to track releases automatically
+- **GitHub Releases** - download the latest APK from [GitHub Releases](https://github.com/dietrichmax/colota/releases) and install it - Android will update the existing app in place
+
+### Is there an iOS version?
+
+No, and none is currently planned. The UI is React Native, but the core of the app - background location tracking, the foreground service, geofencing, and sync scheduling - is all native Android Kotlin code that would need to be rewritten from scratch for iOS. Beyond the technical effort, Apple's developer account costs 100 EUR/year, maintaining two platforms would significantly increase the ongoing work, and testing without a real iPhone would be impractical.
+
+If an iOS version were ever built, it would realistically need to be a paid app to offset the cost and effort - which would shift this from a hobby project into something with different expectations. It's not off the table forever, but there are no concrete plans.
+
 ### What Android versions are supported?
 
 Colota requires Android 8.0 (API 26) or higher.

@@ -8,7 +8,7 @@ Minimal setup to start tracking:
 
 1. Install the app ([Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US), [IzzyOnDroid](https://apt.izzysoft.de/packages/com.Colota/), or [APK](https://github.com/dietrichmax/colota/releases))
 2. Grant location permissions - select **Precise location** and **Allow all the time**
-3. Disable battery optimization for Colota in Android settings
+3. Disable battery optimization for Colota in Android settings (otherwise background tracking won't work reliable)
 4. Press **Start Tracking**
 5. View live coordinates on the dashboard
 
@@ -23,3 +23,4 @@ The app works completely offline. Server setup is optional.
 - [Configure GPS settings](/docs/configuration/gps-settings) to adjust tracking intervals
 - [Set up a server](/docs/configuration/server-settings) to sync location data
 - [Create geofences](/docs/guides/geofencing) to save battery at home or work
+- [Battery optimization tips](/docs/guides/battery-optimization) to reduce power usage

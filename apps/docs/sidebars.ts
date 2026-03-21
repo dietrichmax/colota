@@ -27,6 +27,7 @@ const sidebars: SidebarsConfig = {
       type: "category",
       label: "Integrations",
       items: [
+        "integrations/overview",
         "integrations/api-templates",
         "integrations/dawarich",
         "integrations/home-assistant",
@@ -53,6 +54,11 @@ const sidebars: SidebarsConfig = {
         "guides/tile-server",
         "guides/troubleshooting"
       ]
+    },
+    {
+      type: "doc",
+      id: "alternatives",
+      label: "Alternatives"
     },
     {
       type: "category",
