@@ -23,6 +23,7 @@ class NetworkManager(private val context: Context) {
         private const val CONNECTION_TIMEOUT = 10000
         private const val READ_TIMEOUT = 10000
         private const val NETWORK_CHECK_CACHE_MS = 5000L
+        const val FORMAT_TRACCAR_JSON = "traccar_json"
     }
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -48,7 +49,8 @@ class NetworkManager(private val context: Context) {
         payload: JSONObject,
         endpoint: String,
         extraHeaders: Map<String, String> = emptyMap(),
-        httpMethod: String = "POST"
+        httpMethod: String = "POST",
+        apiFormat: String = ""
     ): Boolean = withContext(Dispatchers.IO) {
         if (endpoint.isBlank()) {
             AppLogger.d(TAG, "Empty endpoint provided")
@@ -72,10 +74,15 @@ class NetworkManager(private val context: Context) {
             return@withContext false
         }
 
+        val transformedPayload = when (apiFormat) {
+            FORMAT_TRACCAR_JSON -> buildTraccarJsonPayload(payload)
+            else -> payload
+        }
+
         val isGet = httpMethod.equals("GET", ignoreCase = true)
 
         val targetUrl = if (isGet) {
-            val query = buildQueryString(payload)
+            val query = buildQueryString(transformedPayload)
             val separator = if (url.query != null) "&" else "?"
             URL("$endpoint$separator$query")
         } else {
@@ -110,13 +117,13 @@ class NetworkManager(private val context: Context) {
                     AppLogger.d(TAG, "$key: ${masked.joinToString()}")
                 }
                 if (!isGet) {
-                    AppLogger.d(TAG, "Body: ${payload.toString(2)}")
+                    AppLogger.d(TAG, "Body: ${transformedPayload.toString(2)}")
                 }
                 AppLogger.d(TAG, "===================")
             }
 
             if (!isGet) {
-                val bodyBytes = payload.toString().toByteArray(StandardCharsets.UTF_8)
+                val bodyBytes = transformedPayload.toString().toByteArray(StandardCharsets.UTF_8)
                 connection.setFixedLengthStreamingMode(bodyBytes.size)
                 connection.outputStream.use { it.write(bodyBytes) }
             }
@@ -213,6 +220,44 @@ class NetworkManager(private val context: Context) {
             "${headerValue.substring(0, 4)}***"
         } else {
             "***"
+        }
+    }
+
+    /**
+     * Transforms a flat Colota payload to the Traccar JSON format (Traccar 6.7.0+).
+     * https://www.traccar.org/osmand/
+     */
+    private fun buildTraccarJsonPayload(flat: JSONObject): JSONObject {
+        val coords = JSONObject().apply {
+            put("latitude", flat.optDouble("lat", 0.0))
+            put("longitude", flat.optDouble("lon", 0.0))
+            if (flat.has("acc")) put("accuracy", flat.optDouble("acc"))
+            if (flat.has("alt")) put("altitude", flat.optDouble("alt"))
+            if (flat.has("vel")) put("speed", flat.optDouble("vel"))
+            if (flat.has("bear")) put("heading", flat.optDouble("bear"))
+        }
+
+        val tst = flat.optLong("tst", System.currentTimeMillis() / 1000)
+        val timestamp = java.time.Instant.ofEpochSecond(tst).toString()
+
+        val location = JSONObject().apply {
+            put("timestamp", timestamp)
+            put("coords", coords)
+            val batt = flat.optInt("batt", -1)
+            if (batt >= 0) {
+                val bs = flat.optInt("bs", 0)
+                put("battery", JSONObject().apply {
+                    put("level", batt / 100.0)
+                    put("is_charging", bs == 2 || bs == 3) // 2=charging, 3=full (both plugged in)
+                })
+            }
+        }
+
+        return JSONObject().apply {
+            put("location", location)
+            // Prefer "id" (Traccar OsmAnd GET custom field) so both modes share the same identifier
+            val deviceId = flat.optString("id", "").ifBlank { flat.optString("device_id", "colota") }
+            put("device_id", deviceId)
         }
     }
 

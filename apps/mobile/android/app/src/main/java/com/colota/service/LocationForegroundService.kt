@@ -461,7 +461,8 @@ class LocationForegroundService : Service() {
                 location,
                 battery,
                 batteryStatus,
-                currentFieldMap,
+                // emptyMap() keeps internal field names (lat/lon/vel/bear/...) so buildTraccarJsonPayload can read them directly
+                if (config.apiFormat == NetworkManager.FORMAT_TRACCAR_JSON) emptyMap() else currentFieldMap,
                 timestampSec,
                 customFields
             )
@@ -595,7 +596,8 @@ class LocationForegroundService : Service() {
                 syntheticLocation,
                 battery,
                 batteryStatus,
-                currentFieldMap,
+                // emptyMap() keeps internal field names (lat/lon/vel/bear/...) so buildTraccarJsonPayload can read them directly
+                if (config.apiFormat == NetworkManager.FORMAT_TRACCAR_JSON) emptyMap() else currentFieldMap,
                 timestampSec,
                 customFields
             )
@@ -775,7 +777,8 @@ class LocationForegroundService : Service() {
             isOfflineMode = config.isOfflineMode,
             isWifiOnlySync = config.isWifiOnlySync,
             authHeaders = secureStorage.getAuthHeaders(),
-            httpMethod = config.httpMethod
+            httpMethod = config.httpMethod,
+            apiFormat = config.apiFormat
         )
     }
 

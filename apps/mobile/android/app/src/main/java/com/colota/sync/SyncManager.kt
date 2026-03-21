@@ -34,6 +34,7 @@ class SyncManager(
     @Volatile private var isWifiOnlySync: Boolean = false
     @Volatile private var authHeaders: Map<String, String> = emptyMap()
     @Volatile private var httpMethod: String = "POST"
+    @Volatile private var apiFormat: String = ""
 
     private var syncJob: Job? = null
     @Volatile private var lastSyncTime: Long = 0
@@ -52,7 +53,8 @@ class SyncManager(
         isOfflineMode: Boolean,
         isWifiOnlySync: Boolean,
         authHeaders: Map<String, String>,
-        httpMethod: String = "POST"
+        httpMethod: String = "POST",
+        apiFormat: String = ""
     ) {
         this.endpoint = endpoint
         this.syncIntervalSeconds = syncIntervalSeconds
@@ -62,6 +64,7 @@ class SyncManager(
         this.isWifiOnlySync = isWifiOnlySync
         this.authHeaders = authHeaders
         this.httpMethod = httpMethod
+        this.apiFormat = apiFormat
     }
 
     fun startPeriodicSync() {
@@ -142,7 +145,7 @@ class SyncManager(
         if (syncIntervalSeconds == 0 && networkManager.isNetworkAvailable() &&
             !(isWifiOnlySync && !networkManager.isUnmeteredConnection())) {
             AppLogger.d(TAG, "Instant send")
-            val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod)
+            val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod, apiFormat)
 
             if (success) {
                 dbHelper.markLocationSent(locationId)
@@ -194,6 +197,7 @@ class SyncManager(
         val currentEndpoint = endpoint
         val currentAuthHeaders = authHeaders
         val currentHttpMethod = httpMethod
+        val currentApiFormat = apiFormat
         val currentMaxRetries = maxRetries  // 0 = retry forever, >0 = give up after N attempts
 
         var totalProcessed = 0
@@ -236,7 +240,8 @@ class SyncManager(
                             JSONObject(item.payload),
                             currentEndpoint,
                             currentAuthHeaders,
-                            currentHttpMethod
+                            currentHttpMethod,
+                            currentApiFormat
                         )
                         item.queueId to success
                     }

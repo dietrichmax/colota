@@ -9,6 +9,7 @@ import { CheckCircle, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isPrivateHost, isEndpointAllowed } from "../../../utils/settingsValidation"
+import { buildTraccarJsonPayload, isTraccarJsonFormat } from "../../../utils/apiPayload"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
 import { fonts } from "../../../styles/typography"
 import { SettingRow } from "../../ui/SettingRow"
@@ -138,6 +139,20 @@ export function ConnectionSettings({
       }
 
       const method = settings.httpMethod ?? "POST"
+      const isTraccarJson = isTraccarJsonFormat(settings.apiTemplate, method)
+      const body = isTraccarJson
+        ? buildTraccarJsonPayload({
+            latitude: recentLocation.latitude,
+            longitude: recentLocation.longitude,
+            accuracy: recentLocation.accuracy,
+            altitude: recentLocation.altitude ?? 0,
+            speed: recentLocation.speed ?? 0,
+            heading: recentLocation.bearing ?? 0,
+            batteryLevel: (recentLocation.battery ?? 0) / 100,
+            isCharging: false,
+            deviceId: settings.customFields.find((f) => f.key === "device_id")?.value ?? "colota"
+          })
+        : payload
       const params = new URLSearchParams(Object.entries(payload).map(([k, v]) => [k, String(v)]))
       const url =
         method === "GET" ? `${endpointInput}${endpointInput.includes("?") ? "&" : "?"}${params}` : endpointInput
@@ -146,7 +161,7 @@ export function ConnectionSettings({
       const response = await fetch(url, {
         method,
         headers: method === "GET" ? authHeaders : { "Content-Type": "application/json", ...authHeaders },
-        ...(method === "GET" ? {} : { body: JSON.stringify(payload) }),
+        ...(method === "GET" ? {} : { body: JSON.stringify(body) }),
         signal: controller.signal
       })
       timeout.clear()

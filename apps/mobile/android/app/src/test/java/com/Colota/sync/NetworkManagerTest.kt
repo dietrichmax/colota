@@ -179,6 +179,113 @@ class NetworkManagerTest {
         assertEquals("Bear***", result)
     }
 
+    // --- buildTraccarJsonPayload ---
+
+    @Test
+    fun `buildTraccarJsonPayload maps lat and lon to coords`() {
+        val flat = JSONObject().apply {
+            put("lat", 52.12345)
+            put("lon", -2.12345)
+            put("tst", 1739362800L)
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        val coords = result.getJSONObject("location").getJSONObject("coords")
+        assertEquals(52.12345, coords.getDouble("latitude"), 0.0001)
+        assertEquals(-2.12345, coords.getDouble("longitude"), 0.0001)
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload uses id field as device_id`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+            put("id", "my-phone")
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        assertEquals("my-phone", result.getString("device_id"))
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload falls back to device_id field when id absent`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+            put("device_id", "my-device")
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        assertEquals("my-device", result.getString("device_id"))
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload defaults device_id to colota`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        assertEquals("colota", result.getString("device_id"))
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload includes optional coords fields when present`() {
+        val flat = JSONObject().apply {
+            put("lat", 52.0); put("lon", 13.0); put("tst", 1000L)
+            put("acc", 15.0)
+            put("alt", 380.0)
+            put("vel", 5.5)
+            put("bear", 90.0)
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        val coords = result.getJSONObject("location").getJSONObject("coords")
+        assertEquals(15.0, coords.getDouble("accuracy"), 0.001)
+        assertEquals(380.0, coords.getDouble("altitude"), 0.001)
+        assertEquals(5.5, coords.getDouble("speed"), 0.001)
+        assertEquals(90.0, coords.getDouble("heading"), 0.001)
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload omits optional coords fields when absent`() {
+        val flat = JSONObject().apply {
+            put("lat", 52.0); put("lon", 13.0); put("tst", 1000L)
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        val coords = result.getJSONObject("location").getJSONObject("coords")
+        assertFalse(coords.has("accuracy"))
+        assertFalse(coords.has("altitude"))
+        assertFalse(coords.has("speed"))
+        assertFalse(coords.has("heading"))
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload includes battery when batt present`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+            put("batt", 85)
+            put("bs", 2) // charging
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        val battery = result.getJSONObject("location").getJSONObject("battery")
+        assertEquals(0.85, battery.getDouble("level"), 0.001)
+        assertTrue(battery.getBoolean("is_charging"))
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload omits battery when batt absent`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        assertFalse(result.getJSONObject("location").has("battery"))
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload formats timestamp as ISO 8601`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0)
+            put("tst", 1739362800L)
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        val timestamp = result.getJSONObject("location").getString("timestamp")
+        assertTrue("Expected ISO 8601 format, got: $timestamp", timestamp.contains("T") && timestamp.endsWith("Z"))
+    }
+
     // --- buildQueryString ---
 
     @Test
@@ -239,6 +346,13 @@ class NetworkManagerTest {
         method.isAccessible = true
         val manager = createNetworkManagerViaReflection()
         return method.invoke(manager, headerName, headerValue) as String
+    }
+
+    private fun invokeBuildTraccarJsonPayload(flat: JSONObject): JSONObject {
+        val method = NetworkManager::class.java.getDeclaredMethod("buildTraccarJsonPayload", JSONObject::class.java)
+        method.isAccessible = true
+        val manager = createNetworkManagerViaReflection()
+        return method.invoke(manager, flat) as JSONObject
     }
 
     private fun invokeBuildQueryString(payload: JSONObject): String {

@@ -13,6 +13,7 @@ import { ServerStatus, ConnectionStatusProps } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { SERVER_TIMEOUT, SERVER_CHECK_INTERVAL } from "../../../constants"
+import { resolveHealthUrls } from "../../../utils/healthCheck"
 
 export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps) {
   const { colors } = useTheme()
@@ -54,31 +55,15 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
         // proceed without auth headers
       }
 
-      const healthUrl = endpoint.replace(/\/api\/locations$/, "/health")
-
-      let response = await fetch(healthUrl, {
-        method: "HEAD",
-        signal: controller.signal,
-        headers: authHeaders
-      })
-
-      if (response.status === 404 || response.status === 405) {
-        response = await fetch(endpoint, {
+      const healthUrls = resolveHealthUrls(endpoint, settings.apiTemplate)
+      let response!: Response
+      for (const url of healthUrls) {
+        response = await fetch(url, {
           method: "HEAD",
           signal: controller.signal,
           headers: authHeaders
         })
-      }
-
-      if (!response.ok) {
-        const match = endpoint.match(/^(https?:\/\/[^/]+)/)
-        if (match) {
-          response = await fetch(match[1], {
-            method: "GET",
-            signal: controller.signal,
-            headers: authHeaders
-          })
-        }
+        if (response.ok || (response.status !== 404 && response.status !== 405)) break
       }
 
       setServerStatus(response.ok ? "connected" : "error")
@@ -89,7 +74,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
     } finally {
       clearTimeout(timeoutId)
     }
-  }, [endpoint, isOffline])
+  }, [endpoint, isOffline, settings.apiTemplate])
 
   useFocusEffect(
     useCallback(() => {

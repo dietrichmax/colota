@@ -73,6 +73,7 @@ class NativeLocationService {
       isOfflineMode: settings.isOfflineMode,
       isWifiOnlySync: settings.isWifiOnlySync,
       httpMethod: settings.httpMethod,
+      apiTemplate: settings.apiTemplate,
       customFields: Object.fromEntries(settings.customFields.filter((f) => f.key).map((f) => [f.key, f.value]))
     }
 

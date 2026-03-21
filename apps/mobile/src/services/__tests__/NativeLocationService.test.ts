@@ -128,12 +128,13 @@ describe("NativeLocationService", () => {
         expect.objectContaining({
           interval: 5000,
           minUpdateDistance: 10,
-          httpMethod: "POST"
+          httpMethod: "POST",
+          apiTemplate: "custom"
         })
       )
     })
 
-    it("passes httpMethod GET to native", async () => {
+    it("passes apiTemplate and httpMethod GET to native for traccar template", async () => {
       const settings = {
         interval: 5,
         distance: 10,
@@ -158,7 +159,39 @@ describe("NativeLocationService", () => {
 
       expect(nativeMock.startService).toHaveBeenCalledWith(
         expect.objectContaining({
-          httpMethod: "GET"
+          httpMethod: "GET",
+          apiTemplate: "traccar"
+        })
+      )
+    })
+
+    it("passes apiTemplate and httpMethod POST to native for traccar JSON format", async () => {
+      const settings = {
+        interval: 5,
+        distance: 10,
+        endpoint: "http://192.168.1.1:5055/",
+        fieldMap: { lat: "lat", lon: "lon", acc: "acc" },
+        syncInterval: 0,
+        retryInterval: 30,
+        maxRetries: 5,
+        filterInaccurateLocations: false,
+        accuracyThreshold: 50,
+        isOfflineMode: false,
+        isWifiOnlySync: false,
+        customFields: [],
+        apiTemplate: "traccar" as const,
+        syncPreset: "instant" as const,
+        httpMethod: "POST" as const,
+        hasCompletedSetup: false,
+        pauseWhenStationary: true
+      }
+
+      await NativeLocationService.start(settings)
+
+      expect(nativeMock.startService).toHaveBeenCalledWith(
+        expect.objectContaining({
+          httpMethod: "POST",
+          apiTemplate: "traccar"
         })
       )
     })
