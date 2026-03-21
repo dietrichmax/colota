@@ -17,7 +17,8 @@ jest.mock("../../../../hooks/useTheme", () => ({
 }))
 
 const mockSettings = {
-  isOfflineMode: false
+  isOfflineMode: false,
+  apiTemplate: "custom" as const
 }
 jest.mock("../../../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
@@ -152,11 +153,10 @@ describe("ConnectionStatus", () => {
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
-  it("falls back to base URL when endpoint also fails", async () => {
+  it("falls back to origin when /health returns 404", async () => {
     mockFetch
-      .mockResolvedValueOnce({ ok: false, status: 404 }) // /health
-      .mockResolvedValueOnce({ ok: false, status: 500 }) // endpoint
-      .mockResolvedValueOnce({ ok: true, status: 200 }) // base URL
+      .mockResolvedValueOnce({ ok: false, status: 404 }) // origin/health
+      .mockResolvedValueOnce({ ok: true, status: 200 }) // origin
 
     const { getByText } = render(
       <ConnectionStatus endpoint="https://example.com/api/locations" navigation={mockNavigation} />
@@ -166,7 +166,7 @@ describe("ConnectionStatus", () => {
       expect(getByText("Connected")).toBeTruthy()
     })
 
-    expect(mockFetch).toHaveBeenCalledTimes(3)
+    expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
   it("displays the host portion of the endpoint URL", async () => {

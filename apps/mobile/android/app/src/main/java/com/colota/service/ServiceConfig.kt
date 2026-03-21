@@ -6,8 +6,9 @@
 package com.Colota.service
 
 import android.content.Intent
-import com.Colota.data.DatabaseHelper
 import android.os.Bundle
+import com.Colota.data.DatabaseHelper
+import com.Colota.sync.NetworkManager
 import com.facebook.react.bridge.ReadableMap
 import org.json.JSONObject
 
@@ -28,12 +29,16 @@ data class ServiceConfig(
     val pauseWhenStationary: Boolean = true,
     val fieldMap: String? = null,
     val customFields: String? = null,
-    val httpMethod: String = "POST"
+    val httpMethod: String = "POST",
+    val apiFormat: String = ""
 ) {
     companion object {
         fun fromDatabase(dbHelper: DatabaseHelper): ServiceConfig {
             val saved = dbHelper.getAllSettings()
-            
+            val httpMethod = saved["httpMethod"] ?: "POST"
+            val apiTemplate = saved["apiTemplate"] ?: ""
+            val apiFormat = if (apiTemplate == "traccar" && httpMethod == "POST") NetworkManager.FORMAT_TRACCAR_JSON else ""
+
             return ServiceConfig(
                 endpoint = saved["endpoint"] ?: "",
                 interval = saved["interval"]?.toLongOrNull() ?: 5000L,
@@ -48,7 +53,8 @@ data class ServiceConfig(
                 pauseWhenStationary = saved["pauseWhenStationary"]?.toBoolean() ?: true,
                 fieldMap = saved["fieldMap"],
                 customFields = saved["customFields"],
-                httpMethod = saved["httpMethod"] ?: "POST"
+                httpMethod = httpMethod,
+                apiFormat = apiFormat
             )
         }
 
@@ -75,6 +81,10 @@ data class ServiceConfig(
                 json.toString()
             }
 
+            val httpMethod = config.getStringOrNull("httpMethod") ?: dbConfig.httpMethod
+            val apiTemplate = config.getStringOrNull("apiTemplate") ?: ""
+            val apiFormat = if (apiTemplate == "traccar" && httpMethod == "POST") NetworkManager.FORMAT_TRACCAR_JSON else ""
+
             return ServiceConfig(
                 endpoint = config.getStringOrNull("endpoint") ?: dbConfig.endpoint,
                 interval = config.getDoubleOrNull("interval")?.toLong() ?: dbConfig.interval,
@@ -89,7 +99,8 @@ data class ServiceConfig(
                 pauseWhenStationary = config.getBooleanOrNull("pauseWhenStationary") ?: dbConfig.pauseWhenStationary,
                 fieldMap = fieldMapJson ?: dbConfig.fieldMap,
                 customFields = customFieldsJson ?: dbConfig.customFields,
-                httpMethod = config.getStringOrNull("httpMethod") ?: dbConfig.httpMethod
+                httpMethod = httpMethod,
+                apiFormat = apiFormat
             )
         }
 
@@ -111,7 +122,8 @@ data class ServiceConfig(
                 pauseWhenStationary = extras.getBooleanOrDefault("pauseWhenStationary", dbConfig.pauseWhenStationary),
                 fieldMap = extras.getStringOrDefault("fieldMap", dbConfig.fieldMap),
                 customFields = extras.getStringOrDefault("customFields", dbConfig.customFields),
-                httpMethod = extras.getStringOrDefault("httpMethod", dbConfig.httpMethod) ?: "POST"
+                httpMethod = extras.getStringOrDefault("httpMethod", dbConfig.httpMethod) ?: "POST",
+                apiFormat = extras.getStringOrDefault("apiFormat", dbConfig.apiFormat) ?: ""
             )
         }
     }
@@ -132,6 +144,7 @@ data class ServiceConfig(
             fieldMap?.let { putExtra("fieldMap", it) }
             customFields?.let { putExtra("customFields", it) }
             putExtra("httpMethod", httpMethod)
+            putExtra("apiFormat", apiFormat)
         }
     }
 }

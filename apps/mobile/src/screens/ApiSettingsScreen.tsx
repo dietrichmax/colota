@@ -22,6 +22,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import { fonts } from "../styles/typography"
 import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
+import { buildTraccarJsonPayload, isTraccarJsonFormat } from "../utils/apiPayload"
 
 type LocalCustomField = CustomField & { id: number }
 
@@ -113,6 +114,28 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
   /** Example payload string showing all fields */
   const examplePayload = useMemo(() => {
+    const isTraccarJson = isTraccarJsonFormat(localTemplate, localHttpMethod)
+
+    if (isTraccarJson) {
+      const deviceId = localCustomFields.find((f) => f.key === "device_id")?.value ?? "colota"
+      return JSON.stringify(
+        buildTraccarJsonPayload({
+          latitude: 52.12345,
+          longitude: -2.12345,
+          accuracy: 15,
+          altitude: 380,
+          speed: 5,
+          heading: 180,
+          batteryLevel: 0.85,
+          isCharging: false,
+          deviceId,
+          timestamp: "2025-02-12T13:00:00Z"
+        }),
+        null,
+        2
+      )
+    }
+
     const params: { key: string; value: string }[] = []
 
     // Custom static fields first
@@ -138,7 +161,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
     const entries = params.map((p) => `  "${p.key}": ${isNaN(Number(p.value)) ? `"${p.value}"` : p.value}`)
     return "{\n" + entries.join(",\n") + "\n}"
-  }, [localFieldMap, localCustomFields, localHttpMethod])
+  }, [localFieldMap, localCustomFields, localHttpMethod, localTemplate])
 
   /**
    * Build sanitized settings from current field map, custom fields, and template.
@@ -323,11 +346,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
   const handleHttpMethodChange = useCallback(
     (method: HttpMethod) => {
       setLocalHttpMethod(method)
-
-      const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
-      if (newTemplate !== localTemplate) setLocalTemplate(newTemplate)
-
-      saveImmediately(localFieldMap, localCustomFields, newTemplate, method)
+      saveImmediately(localFieldMap, localCustomFields, localTemplate, method)
     },
     [localFieldMap, localCustomFields, localTemplate, saveImmediately]
   )

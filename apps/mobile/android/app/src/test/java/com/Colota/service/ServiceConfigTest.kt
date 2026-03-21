@@ -125,6 +125,27 @@ class ServiceConfigTest {
         assertEquals("""[{"key":"_type","value":"location"}]""", config.customFields)
     }
 
+    @Test
+    fun `fromDatabase derives apiFormat traccar_json for traccar template with POST`() {
+        val db = mockDbHelper(baseSettings + mapOf("apiTemplate" to "traccar", "httpMethod" to "POST"))
+        val config = ServiceConfig.fromDatabase(db)
+        assertEquals("traccar_json", config.apiFormat)
+    }
+
+    @Test
+    fun `fromDatabase returns empty apiFormat for traccar template with GET`() {
+        val db = mockDbHelper(baseSettings + mapOf("apiTemplate" to "traccar", "httpMethod" to "GET"))
+        val config = ServiceConfig.fromDatabase(db)
+        assertEquals("", config.apiFormat)
+    }
+
+    @Test
+    fun `fromDatabase returns empty apiFormat for non-traccar template`() {
+        val db = mockDbHelper(baseSettings + mapOf("apiTemplate" to "dawarich", "httpMethod" to "POST"))
+        val config = ServiceConfig.fromDatabase(db)
+        assertEquals("", config.apiFormat)
+    }
+
     // --- data class defaults ---
 
     @Test
@@ -221,6 +242,7 @@ class ServiceConfigTest {
             every { getString("fieldMap") } returns """{"lat":"latitude"}"""
             every { getString("customFields") } returns """{"_type":"location"}"""
             every { getString("httpMethod") } returns "GET"
+            every { getString("apiFormat") } returns "traccar_json"
         }
         val intent = mockk<Intent> {
             every { extras } returns bundle
@@ -241,6 +263,7 @@ class ServiceConfigTest {
         assertFalse(config.pauseWhenStationary)
         assertEquals("""{"lat":"latitude"}""", config.fieldMap)
         assertEquals("GET", config.httpMethod)
+        assertEquals("traccar_json", config.apiFormat)
     }
 
     // --- toIntent ---
@@ -342,6 +365,39 @@ class ServiceConfigTest {
 
         val config = ServiceConfig.fromReadableMap(map, db)
         assertEquals("GET", config.httpMethod)
+    }
+
+    @Test
+    fun `fromReadableMap derives apiFormat traccar_json for traccar template with POST`() {
+        val db = mockDbHelper(baseSettings)
+        val map = JavaOnlyMap().apply {
+            putString("apiTemplate", "traccar")
+            putString("httpMethod", "POST")
+        }
+        val config = ServiceConfig.fromReadableMap(map, db)
+        assertEquals("traccar_json", config.apiFormat)
+    }
+
+    @Test
+    fun `fromReadableMap derives empty apiFormat for traccar template with GET`() {
+        val db = mockDbHelper(baseSettings)
+        val map = JavaOnlyMap().apply {
+            putString("apiTemplate", "traccar")
+            putString("httpMethod", "GET")
+        }
+        val config = ServiceConfig.fromReadableMap(map, db)
+        assertEquals("", config.apiFormat)
+    }
+
+    @Test
+    fun `fromReadableMap derives empty apiFormat for non-traccar template`() {
+        val db = mockDbHelper(baseSettings)
+        val map = JavaOnlyMap().apply {
+            putString("apiTemplate", "dawarich")
+            putString("httpMethod", "POST")
+        }
+        val config = ServiceConfig.fromReadableMap(map, db)
+        assertEquals("", config.apiFormat)
     }
 
     @Test
