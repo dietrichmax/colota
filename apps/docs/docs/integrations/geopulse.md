@@ -8,7 +8,7 @@ sidebar_position: 2
 
 ## Setup
 
-1. **Install GeoPulse** - follow the [GeoPulse documentation](https://github.com/tess1o/geopulse)
+1. **Install GeoPulse** - follow the [GeoPulse documentation](https://tess1o.github.io/geopulse/docs/getting-started/introduction)
 2. **Add a Colota location source** in GeoPulse under **Location Sources**
 3. **Set a username and password** for the Colota source
 4. **Configure Colota**:
