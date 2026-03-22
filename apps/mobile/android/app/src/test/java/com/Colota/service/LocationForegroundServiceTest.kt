@@ -1414,7 +1414,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `evaluateStationaryState starts timer when inside pause zone`() = testScope.runTest {
+    fun `evaluateStationaryState skips timer when inside pause zone`() = testScope.runTest {
         setField("config", ServiceConfig(
             endpoint = "https://example.com",
             pauseWhenStationary = true,
@@ -1430,7 +1430,7 @@ class LocationForegroundServiceTest {
         invokeEvaluateStationaryState(location)
 
         val stationaryJob: Job? = getField("stationaryJob")
-        assertNotNull("Should start timer inside pause zone - GPS still running there", stationaryJob)
+        assertNull("Should not start stationary timer inside pause zone - GPS must stay running for exit detection", stationaryJob)
     }
 
     @Test

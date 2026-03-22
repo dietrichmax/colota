@@ -91,7 +91,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Anchor points - a synthetic location saved on zone exit as a clean start point for the departing trip
 - Battery critical shutdown (below 5% while discharging)
 - Location accuracy filtering
-- Stationary detection - pauses GPS after 60s without movement and arms `MotionDetector` to resume on motion (suspended during entry delay)
+- Stationary detection - pauses GPS after 60s without movement and arms `MotionDetector` to resume on motion (suspended during entry delay and inside geofence pause zones)
 - Queuing data for server sync
 
 ### NotificationHelper

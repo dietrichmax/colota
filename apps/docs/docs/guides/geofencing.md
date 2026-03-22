@@ -30,7 +30,7 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 - The notification shows "Paused: [Zone Name]" once the pause takes effect
 - GPS continues running inside the zone to detect when you leave
 - If you leave before the entry delay completes, the delay is cancelled and tracking continues uninterrupted
-- If you stay stationary inside a zone, GPS is paused after 60s (if stationary detection is enabled) - the hardware motion sensor then wakes GPS when you start moving. Stationary detection is suspended during the entry delay so arrival points keep being logged even if you stop moving on arrival
+- GPS stays active inside the zone to reliably detect when you leave - stationary detection is suspended inside zones so exit is never missed
 - When exiting the zone, tracking automatically resumes
 - Zone checks happen every location update with minimal overhead
 - You can create unlimited geofence zones
