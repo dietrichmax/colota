@@ -311,7 +311,7 @@ export const DEFAULT_SETTINGS: Settings = {
   maxRetries: 5,
   isOfflineMode: false,
   isWifiOnlySync: false,
-  pauseWhenStationary: true,
+  pauseWhenStationary: false,
   hasCompletedSetup: false,
   httpMethod: "POST"
 } as const
