@@ -667,6 +667,7 @@ class LocationForegroundService : Service() {
     private fun evaluateStationaryState(location: android.location.Location) {
         if (!config.pauseWhenStationary || motionDetector?.isAvailable != true) return
         if (pendingPauseZone != null) return  // keep GPS running until arrival points are logged
+        if (insidePauseZone) return           // keep GPS running so zone exit can be detected
 
         // Treat missing speed as 0 (stationary) - network/fused providers often omit speed
         val speed = if (location.hasSpeed()) location.speed else 0f
