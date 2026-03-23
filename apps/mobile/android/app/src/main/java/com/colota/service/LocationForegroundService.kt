@@ -6,6 +6,10 @@
 package com.Colota.service
 
 import android.app.*
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.util.AppLogger
 import com.Colota.data.DatabaseHelper
@@ -50,6 +54,13 @@ class LocationForegroundService : Service() {
     @Volatile private var isStationary = false
     @Volatile private var motionDetector: MotionDetector? = null
     @Volatile private var insidePauseZone = false
+    @Volatile private var isWifiPaused = false
+    // Accessed exclusively on the main thread - @Volatile not needed and would be misleading
+    private var unmeteredNetworkCount = 0
+    @Volatile private var wifiCallback: ConnectivityManager.NetworkCallback? = null
+    @Volatile private var wifiResumeJob: Job? = null
+    @Volatile private var isMotionlessPaused = false
+    @Volatile private var motionlessJob: Job? = null
     @Volatile private var currentZoneName: String? = null
     @Volatile private var currentZoneGeofence: GeofenceHelper.CachedGeofence? = null
     @Volatile private var lastKnownLocation: android.location.Location? = null
@@ -68,6 +79,8 @@ class LocationForegroundService : Service() {
         private const val STATIONARY_TIMEOUT_MS = 60_000L
         /** Multiplier applied to the tracking interval for the geofence entry delay. */
         private const val ENTRY_DELAY_MULTIPLIER = 3.5
+        /** Debounce before resuming GPS after unmetered network is lost (ms). */
+        private const val WIFI_RESUME_DEBOUNCE_MS = 15_000L
         const val ACTION_MANUAL_FLUSH = "com.Colota.ACTION_MANUAL_FLUSH"
         const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
         const val ACTION_REFRESH_NOTIFICATION = "com.Colota.REFRESH_NOTIFICATION"
@@ -145,7 +158,19 @@ class LocationForegroundService : Service() {
             if (!savedZone.isNullOrBlank()) {
                 insidePauseZone = true
                 currentZoneName = savedZone
+                val restoredGeofence = geofenceHelper.getGeofenceByName(savedZone)
+                currentZoneGeofence = restoredGeofence
                 AppLogger.d(TAG, "Restored pause zone state: $savedZone")
+                if (restoredGeofence?.pauseOnWifi == true) {
+                    // registerWifiPause() also sets isWifiPaused if currently on unmetered network,
+                    // which prevents setupLocationUpdates() from starting GPS unnecessarily.
+                    registerWifiPause()
+                }
+                if (savedSettings["pause_zone_motionless_active"]?.toBoolean() == true) {
+                    isMotionlessPaused = true
+                    motionDetector?.arm()
+                    AppLogger.d(TAG, "Restored motionless pause state")
+                }
             }
         }
 
@@ -234,6 +259,8 @@ class LocationForegroundService : Service() {
         entryDelayJob?.cancel()
         entryDelayJob = null
         pendingPauseZone = null
+        unregisterWifiPause()
+        cancelMotionlessCountdown()
         conditionMonitor.stop()
         stopLocationUpdates()
         syncManager.stopPeriodicSync()
@@ -248,6 +275,8 @@ class LocationForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun setupLocationUpdates() {
+        if (isWifiPaused || isMotionlessPaused) return  // GPS intentionally stopped by a zone pause hold
+
         val callback = object : LocationUpdateCallback {
             override fun onLocationUpdate(location: android.location.Location) {
                 handleLocationUpdate(location)
@@ -333,10 +362,10 @@ class LocationForegroundService : Service() {
 
     private fun recheckZoneWithLocation(location: android.location.Location) {
         val zone = geofenceHelper.getPauseZone(location)
-        applyZoneTransition(zone)
 
-        // Same zone - refresh notification coords
+        // Already inside this zone - refresh settings in case they changed via editor
         if (zone != null && insidePauseZone && zone.name == currentZoneName) {
+            applyZoneSettingsIfChanged(zone)
             updateNotification(
                 lat = location.latitude,
                 lon = location.longitude,
@@ -344,12 +373,49 @@ class LocationForegroundService : Service() {
                 zoneName = currentZoneName,
                 forceUpdate = true
             )
-        } else if (zone == null && !insidePauseZone && pendingPauseZone == null) {
+            return
+        }
+
+        applyZoneTransition(zone)
+
+        if (zone == null && !insidePauseZone && pendingPauseZone == null) {
             updateNotification(
                 location.latitude,
                 location.longitude,
                 forceUpdate = true
             )
+        }
+    }
+
+    /**
+     * Re-applies WiFi/motionless pause settings from a freshly loaded zone object.
+     * Called on RECHECK when already inside the zone so editor changes take effect immediately.
+     */
+    private fun applyZoneSettingsIfChanged(zone: GeofenceHelper.CachedGeofence) {
+        val timeoutChanged = currentZoneGeofence?.motionlessTimeoutMinutes != zone.motionlessTimeoutMinutes
+        currentZoneGeofence = zone
+
+        if (zone.pauseOnWifi && wifiCallback == null) {
+            registerWifiPause()
+        } else if (!zone.pauseOnWifi) {
+            if (isWifiPaused) {
+                isWifiPaused = false
+                maybeResumeGps()
+            }
+            unregisterWifiPause()
+        }
+
+        if (zone.pauseOnMotionless && !isMotionlessPaused && (motionlessJob == null || timeoutChanged)) {
+            if (timeoutChanged) cancelMotionlessCountdown()
+            startMotionlessCountdown(zone.motionlessTimeoutMinutes)
+        } else if (!zone.pauseOnMotionless) {
+            cancelMotionlessCountdown()
+            if (isMotionlessPaused) {
+                isMotionlessPaused = false
+                dbHelper.saveSetting("pause_zone_motionless_active", "false")
+                motionDetector?.disarm()
+                maybeResumeGps()
+            }
         }
     }
 
@@ -400,7 +466,6 @@ class LocationForegroundService : Service() {
             AppLogger.d(TAG, "Duplicate location skipped (same timestamp and coords)")
             return
         }
-
 
         applySpeedFallback(location)
 
@@ -535,6 +600,9 @@ class LocationForegroundService : Service() {
 
         LocationServiceModule.sendPauseZoneEvent(true, geofence.name)
 
+        if (geofence.pauseOnWifi) registerWifiPause()
+        if (geofence.pauseOnMotionless) startMotionlessCountdown(geofence.motionlessTimeoutMinutes)
+
         AppLogger.d(TAG, "Entered pause zone: ${geofence.name}")
     }
 
@@ -547,8 +615,20 @@ class LocationForegroundService : Service() {
         currentZoneName = null
         currentZoneGeofence = null
         dbHelper.saveSetting("pause_zone_name", "")
+        dbHelper.saveSetting("pause_zone_motionless_active", "false")
+
+        val wasWifiPaused = isWifiPaused
+        val wasMotionlessPaused = isMotionlessPaused
+        isWifiPaused = false
+        isMotionlessPaused = false
+        unregisterWifiPause()
+        cancelMotionlessCountdown()
+        motionDetector?.disarm()
 
         val anchorJob = exitedGeofence?.let { saveAnchorPoint(it) }
+
+        // Resume GPS if it was stopped by any zone pause hold
+        if (wasWifiPaused || wasMotionlessPaused) setupLocationUpdates()
 
         val loc = lastKnownLocation
         updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
@@ -557,6 +637,140 @@ class LocationForegroundService : Service() {
         AppLogger.d(TAG, "Exited pause zone: $exitedName")
 
         return anchorJob
+    }
+
+    // ── WiFi pause ────────────────────────────────────────────────────────
+
+    /**
+     * Registers a [ConnectivityManager.NetworkCallback] to monitor unmetered network
+     * availability (WiFi/Ethernet) while inside a pause zone with [pauseOnWifi] enabled.
+     * GPS is stopped immediately if already on an unmetered network, and resumed
+     * (after a [WIFI_RESUME_DEBOUNCE_MS] debounce) when the network is lost.
+     *
+     * Must only be called from the main thread. Callbacks are delivered on the main thread.
+     */
+    private fun registerWifiPause() {
+        unregisterWifiPause() // clean up any stale callback
+
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+            .build()
+
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                wifiResumeJob?.cancel()
+                wifiResumeJob = null
+                unmeteredNetworkCount++
+                if (!isWifiPaused) {
+                    isWifiPaused = true
+                    stopLocationUpdates()
+                    updateNotification(forceUpdate = true)
+                    AppLogger.i(TAG, "Unmetered network available - WiFi pause active (networks=$unmeteredNetworkCount)")
+                }
+            }
+
+            override fun onLost(network: Network) {
+                unmeteredNetworkCount = maxOf(0, unmeteredNetworkCount - 1)
+                if (!isWifiPaused || unmeteredNetworkCount > 0) return
+                AppLogger.i(TAG, "Unmetered network lost - resuming GPS in ${WIFI_RESUME_DEBOUNCE_MS / 1000}s")
+                wifiResumeJob?.cancel()
+                wifiResumeJob = serviceScope?.launch {
+                    delay(WIFI_RESUME_DEBOUNCE_MS)
+                    withContext(Dispatchers.Main) {
+                        if (isWifiPaused && unmeteredNetworkCount == 0) {
+                            isWifiPaused = false
+                            maybeResumeGps()
+                            AppLogger.i(TAG, "GPS resumed after unmetered network lost")
+                        }
+                    }
+                }
+            }
+        }
+
+        try {
+            cm.registerNetworkCallback(request, callback, Handler(Looper.getMainLooper()))
+            wifiCallback = callback
+            // onAvailable fires immediately for already-active networks, so no manual initial check needed
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Failed to register network callback", e)
+        }
+    }
+
+    private fun unregisterWifiPause() {
+        wifiResumeJob?.cancel()
+        wifiResumeJob = null
+        unmeteredNetworkCount = 0
+        val cb = wifiCallback ?: return
+        wifiCallback = null
+        try {
+            val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+            cm.unregisterNetworkCallback(cb)
+        } catch (_: Exception) {}
+    }
+
+    // ── Motionless pause ──────────────────────────────────────────────────
+
+    /**
+     * Starts the motionless timeout countdown for a zone with [pauseOnMotionless] enabled.
+     * When the countdown completes without significant motion, GPS is stopped and the
+     * motion sensor is armed to resume it when the device moves again.
+     */
+    private fun startMotionlessCountdown(timeoutMinutes: Int) {
+        motionlessJob?.cancel()
+        motionlessJob = serviceScope?.launch {
+            delay(timeoutMinutes * 60_000L)
+            withContext(Dispatchers.Main) {
+                motionlessJob = null
+                if (insidePauseZone && !isMotionlessPaused) {
+                    isMotionlessPaused = true
+                    dbHelper.saveSetting("pause_zone_motionless_active", "true")
+                    stopLocationUpdates()
+                    motionDetector?.arm()
+                    updateNotification(forceUpdate = true)
+                    AppLogger.i(TAG, "Motionless timeout reached - GPS paused, motion sensor armed")
+                }
+            }
+        }
+    }
+
+    private fun cancelMotionlessCountdown() {
+        motionlessJob?.cancel()
+        motionlessJob = null
+    }
+
+    /**
+     * Resumes GPS after motion is detected in a motionless-paused zone.
+     * Re-arms the countdown so the zone can pause again if device becomes stationary again.
+     */
+    private fun resumeFromMotionlessPause() {
+        isMotionlessPaused = false
+        dbHelper.saveSetting("pause_zone_motionless_active", "false")
+        motionDetector?.disarm()
+        val geofence = currentZoneGeofence
+        maybeResumeGps()
+        // Restart countdown so the zone can pause again if device becomes stationary
+        if (geofence?.pauseOnMotionless == true) {
+            startMotionlessCountdown(geofence.motionlessTimeoutMinutes)
+        }
+        AppLogger.i(TAG, "Motion detected in pause zone - motionless hold cleared")
+    }
+
+    /**
+     * Resumes GPS only if no pause holds are active.
+     * Use this instead of calling [setupLocationUpdates] directly in WiFi/motionless resume paths.
+     */
+    private fun maybeResumeGps() {
+        val geofence = currentZoneGeofence ?: run { setupLocationUpdates(); updateNotification(forceUpdate = true); return }
+        val wifiHold = geofence.pauseOnWifi && isWifiPaused
+        val motionHold = geofence.pauseOnMotionless && isMotionlessPaused
+        if (!wifiHold && !motionHold) {
+            AppLogger.i(TAG, "GPS resumed - all pause holds cleared")
+            setupLocationUpdates()
+            updateNotification(forceUpdate = true)
+        } else {
+            AppLogger.i(TAG, "GPS still held: wifi=$wifiHold motionless=$motionHold")
+        }
     }
 
     /** Logs a synthetic location at the geofence center on zone exit to give the departing trip a clean start point. */
@@ -629,7 +843,9 @@ class LocationForegroundService : Service() {
             activeProfileName = profileManager.getActiveProfileName(),
             forceUpdate = forceUpdate,
             isOfflineMode = offline,
-            isStationary = isStationary
+            isStationary = isStationary,
+            isWifiPaused = isWifiPaused,
+            isMotionlessPaused = isMotionlessPaused
         )
     }
 
@@ -644,6 +860,7 @@ class LocationForegroundService : Service() {
         LocationServiceModule.sendTrackingStoppedEvent(reason)
         dbHelper.saveSetting("tracking_enabled", "false")
         dbHelper.saveSetting("pause_zone_name", "")
+        dbHelper.saveSetting("pause_zone_motionless_active", "false")
 
         stopForeground(Service.STOP_FOREGROUND_DETACH)
 
@@ -700,8 +917,7 @@ class LocationForegroundService : Service() {
         AppLogger.i(TAG, "Device stationary - pausing active GPS, arming motion sensor")
 
         // Stop active GPS but keep the service running
-        locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
-        locationUpdateCallback = null
+        stopLocationUpdates()
 
         motionDetector?.arm()
 
@@ -715,6 +931,10 @@ class LocationForegroundService : Service() {
 
     /** Called by MotionDetector when the device starts moving again. */
     private fun onMotionDetected() {
+        if (isMotionlessPaused) {
+            resumeFromMotionlessPause()
+            return
+        }
         if (!isStationary) return
         AppLogger.i(TAG, "Motion detected - resuming active GPS")
         resumeFromStationary()

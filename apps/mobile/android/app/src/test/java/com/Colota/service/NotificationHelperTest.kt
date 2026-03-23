@@ -83,6 +83,30 @@ class NotificationHelperTest {
     }
 
     @Test
+    fun `status text shows WiFi suffix when wifi paused`() {
+        assertEquals(
+            "Paused: Home \u00b7 WiFi",
+            helper.buildStatusText(true, "Home", 52.0, 13.0, 0, 0L, isWifiPaused = true)
+        )
+    }
+
+    @Test
+    fun `status text shows Motionless suffix when motionless paused`() {
+        assertEquals(
+            "Paused: Home \u00b7 Motionless",
+            helper.buildStatusText(true, "Home", 52.0, 13.0, 0, 0L, isMotionlessPaused = true)
+        )
+    }
+
+    @Test
+    fun `status text WiFi takes priority over motionless when both active`() {
+        assertEquals(
+            "Paused: Home \u00b7 WiFi",
+            helper.buildStatusText(true, "Home", 52.0, 13.0, 0, 0L, isWifiPaused = true, isMotionlessPaused = true)
+        )
+    }
+
+    @Test
     fun `status text shows coordinates when tracking normally`() {
         assertEquals("52.51630, 13.37770", helper.buildStatusText(false, null, 52.51630, 13.37770, 0, 0L))
     }
@@ -185,9 +209,15 @@ class NotificationHelperTest {
     // --- Deduplication (via update()) ---
 
     @Test
-    fun `same state is deduplicated on second update`() {
+    fun `same state is deduplicated on second non-forced update`() {
         assertTrue(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
-        assertFalse(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
+        assertFalse(helper.update(lat = 52.52, lon = 13.405, forceUpdate = false))
+    }
+
+    @Test
+    fun `forceUpdate bypasses dedup`() {
+        assertTrue(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
+        assertTrue(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
     }
 
     @Test
@@ -247,6 +277,17 @@ class NotificationHelperTest {
             isStationary = true
         )
         assertEquals("Paused: Home", text)
+    }
+
+    @Test
+    fun `buildStatusText WiFi suffix shown with stationary also active`() {
+        val text = helper.buildStatusText(
+            isPaused = true, zoneName = "Home",
+            lat = 52.52, lon = 13.405,
+            queuedCount = 0, lastSyncTime = 0L,
+            isStationary = true, isWifiPaused = true
+        )
+        assertEquals("Paused: Home \u00b7 WiFi", text)
     }
 
     // --- Reflection helper ---

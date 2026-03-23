@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { View, Text, StyleSheet, TextInput, Pressable, FlatList, Switch, DeviceEventEmitter } from "react-native"
+import { View, Text, StyleSheet, TextInput, Pressable, FlatList, DeviceEventEmitter } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
-import { showAlert, showConfirm } from "../services/modalService"
+import { showAlert } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { fonts } from "../styles/typography"
-import { X } from "lucide-react-native"
+import { ChevronRight, Wifi, PersonStanding } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
 import {
   DEFAULT_MAP_ZOOM,
@@ -28,7 +28,7 @@ import { UserLocationOverlay } from "../components/features/map/UserLocationOver
 import { logger } from "../utils/logger"
 import { formatShortDistance, shortDistanceUnit, inputToMeters } from "../utils/geo"
 
-export function GeofenceScreen({}: ScreenProps) {
+export function GeofenceScreen({ navigation }: ScreenProps) {
   const { tracking } = useTracking()
   const coords = useCoords()
   const { colors } = useTheme()
@@ -101,9 +101,12 @@ export function GeofenceScreen({}: ScreenProps) {
     }
 
     checkPauseZone()
-    const listener = DeviceEventEmitter.addListener("geofenceUpdated", checkPauseZone)
+    const listener = DeviceEventEmitter.addListener("geofenceUpdated", () => {
+      checkPauseZone()
+      loadGeofences()
+    })
     return () => listener.remove()
-  }, [])
+  }, [loadGeofences])
 
   // Auto-center camera when position changes (ref avoids overriding setCamera zoom)
   useEffect(() => {
@@ -115,25 +118,27 @@ export function GeofenceScreen({}: ScreenProps) {
   const handleMapPress = useCallback(
     async (pressCoords: { latitude: number; longitude: number }) => {
       if (!placingGeofence) return
-
+      setPlacingGeofence(false)
       try {
         await NativeLocationService.createGeofence({
-          name: newName,
+          name: newName.trim(),
           lat: pressCoords.latitude,
           lon: pressCoords.longitude,
           radius: inputToMeters(Number(newRadius)),
           enabled: true,
-          pauseTracking: true
+          pauseTracking: true,
+          pauseOnWifi: false,
+          pauseOnMotionless: false,
+          motionlessTimeoutMinutes: 10
         })
-
-        setNewName("")
-        setNewRadius("50")
-        setPlacingGeofence(false)
         await loadGeofences()
         DeviceEventEmitter.emit("geofenceUpdated")
-      } catch {
+      } catch (err) {
+        logger.error("[GeofenceScreen] Failed to create geofence:", err)
         showAlert("Error", "Failed to create geofence.", "error")
       }
+      setNewName("")
+      setNewRadius("50")
     },
     [placingGeofence, newName, newRadius, loadGeofences]
   )
@@ -173,23 +178,6 @@ export function GeofenceScreen({}: ScreenProps) {
     }
   }, [])
 
-  const togglePause = useCallback(
-    async (id: number, value: boolean) => {
-      try {
-        await NativeLocationService.updateGeofence({
-          id,
-          pauseTracking: value
-        })
-        await loadGeofences()
-        DeviceEventEmitter.emit("geofenceUpdated")
-        await NativeLocationService.recheckZoneSettings()
-      } catch {
-        showAlert("Error", "Failed to update geofence.", "error")
-      }
-    },
-    [loadGeofences]
-  )
-
   const handleZoomToGeofence = useCallback((item: Geofence) => {
     if (!mapRef.current?.camera) return
 
@@ -203,28 +191,6 @@ export function GeofenceScreen({}: ScreenProps) {
       600
     )
   }, [])
-
-  const handleDelete = useCallback(
-    async (item: Geofence) => {
-      const confirmed = await showConfirm({
-        title: "Delete Geofence",
-        message: `Delete "${item.name}"?`,
-        confirmText: "Delete",
-        destructive: true
-      })
-
-      if (!confirmed) return
-
-      try {
-        await NativeLocationService.deleteGeofence(item.id!)
-        await loadGeofences()
-        DeviceEventEmitter.emit("geofenceUpdated")
-      } catch {
-        showAlert("Error", "Failed to delete geofence.", "error")
-      }
-    },
-    [loadGeofences]
-  )
 
   // Geofence GeoJSON
   const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences, colors), [geofences, colors])
@@ -243,42 +209,26 @@ export function GeofenceScreen({}: ScreenProps) {
             onPress={() => handleZoomToGeofence(item)}
           >
             <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
-            <Text style={[styles.radius, { color: colors.textSecondary }]}>
-              {formatShortDistance(item.radius)} radius
-            </Text>
+            <View style={styles.radiusRow}>
+              <Text style={[styles.radius, { color: colors.textSecondary }]}>
+                {formatShortDistance(item.radius)} radius
+              </Text>
+              {item.pauseOnWifi && <Wifi size={12} color={colors.textSecondary} />}
+              {item.pauseOnMotionless && <PersonStanding size={12} color={colors.textSecondary} />}
+            </View>
           </Pressable>
 
-          <View style={styles.actions}>
-            <View style={styles.pauseSwitch}>
-              <Text style={[styles.pauseLabel, { color: colors.textSecondary }]}>Pause</Text>
-              <Switch
-                testID={`pause-geofence-${item.id}`}
-                value={item.pauseTracking}
-                onValueChange={(val) => togglePause(item.id!, val)}
-                trackColor={{
-                  false: colors.border,
-                  true: colors.warning + "80"
-                }}
-                thumbColor={item.pauseTracking ? colors.warning : colors.border}
-              />
-            </View>
-
-            <Pressable
-              testID={`delete-geofence-${item.id}`}
-              onPress={() => handleDelete(item)}
-              style={({ pressed }) => [
-                styles.deleteBtn,
-                { backgroundColor: colors.error + "15" },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-            >
-              <X size={16} color={colors.error} />
-            </Pressable>
-          </View>
+          <Pressable
+            testID={`edit-geofence-${item.id}`}
+            onPress={() => navigation.navigate("Geofence Editor", { geofenceId: item.id })}
+            style={({ pressed }) => [pressed && { opacity: colors.pressedOpacity }]}
+          >
+            <ChevronRight size={20} color={colors.textSecondary} />
+          </Pressable>
         </View>
       </Card>
     ),
-    [colors, handleDelete, togglePause, handleZoomToGeofence]
+    [colors, handleZoomToGeofence, navigation]
   )
 
   return (
@@ -431,22 +381,8 @@ const styles = StyleSheet.create({
   },
   info: { flex: 1, marginRight: 12 },
   name: { fontSize: 15, ...fonts.semiBold, marginBottom: 2 },
+  radiusRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   radius: { fontSize: 12 },
-  actions: { flexDirection: "row", alignItems: "center", gap: 12 },
-  pauseSwitch: { flexDirection: "row", alignItems: "center", gap: 6 },
-  pauseLabel: {
-    fontSize: 11,
-    ...fonts.semiBold,
-    textTransform: "uppercase",
-    letterSpacing: 0.3
-  },
-  deleteBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center"
-  },
   empty: { alignItems: "center", paddingVertical: 40 },
   emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
   emptyHint: {

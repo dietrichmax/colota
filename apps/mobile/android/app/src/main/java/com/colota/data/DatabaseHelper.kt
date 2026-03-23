@@ -32,7 +32,7 @@ class DatabaseHelper private constructor(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "Colota.db"
-        private const val DATABASE_VERSION = 3
+        private const val DATABASE_VERSION = 4
 
         const val TABLE_LOCATIONS = "locations"
         const val TABLE_QUEUE = "queue"
@@ -115,6 +115,9 @@ class DatabaseHelper private constructor(context: Context) :
                 radius REAL NOT NULL,
                 enabled INTEGER DEFAULT 1,
                 pause_tracking INTEGER DEFAULT 1,
+                pause_on_wifi INTEGER DEFAULT 0,
+                pause_on_motionless INTEGER DEFAULT 0,
+                motionless_timeout_minutes INTEGER DEFAULT 10,
                 notify_enter INTEGER DEFAULT 0,
                 notify_exit INTEGER DEFAULT 0,
                 created_at INTEGER NOT NULL
@@ -217,6 +220,11 @@ class DatabaseHelper private constructor(context: Context) :
             db.execSQL("ALTER TABLE $TABLE_LOCATIONS ADD COLUMN sent INTEGER NOT NULL DEFAULT 0")
             // Mark existing locations not in queue as sent (accurate for pre-offline-mode users)
             db.execSQL("UPDATE $TABLE_LOCATIONS SET sent = 1 WHERE id NOT IN (SELECT location_id FROM $TABLE_QUEUE)")
+        }
+        if (oldVersion < 4) {
+            db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN pause_on_wifi INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN pause_on_motionless INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN motionless_timeout_minutes INTEGER NOT NULL DEFAULT 10")
         }
     }
 

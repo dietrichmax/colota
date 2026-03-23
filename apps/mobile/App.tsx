@@ -19,6 +19,7 @@ import {
   AuthSettingsScreen,
   AutoExportScreen,
   GeofenceScreen,
+  GeofenceEditorScreen,
   DataManagementScreen,
   LocationHistoryScreen,
   LocationSummaryScreen,
@@ -69,6 +70,11 @@ const SCREEN_CONFIG = [
     name: "Geofences",
     component: GeofenceScreen,
     title: "Geofences"
+  },
+  {
+    name: "Geofence Editor",
+    component: GeofenceEditorScreen,
+    title: "Geofence Editor"
   },
   {
     name: "Location History",

@@ -38,6 +38,9 @@ export interface Geofence {
   radius: number
   enabled: boolean
   pauseTracking: boolean
+  pauseOnWifi: boolean
+  pauseOnMotionless: boolean
+  motionlessTimeoutMinutes: number
   createdAt?: number
 }
 

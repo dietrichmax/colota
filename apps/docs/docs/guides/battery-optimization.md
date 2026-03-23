@@ -19,7 +19,7 @@ Settings and tips to reduce battery usage without losing GPS fixes.
 1. **Increase GPS interval** - 5s to 30s saves significant battery
 2. **Enable accuracy filtering** - Reject poor GPS fixes to avoid unnecessary processing
 3. **Use batch sync** instead of instant - Reduces network usage and wake-ups
-4. **Create geofences** for home/work - Stops recording locations in known zones. GPS stays active inside the zone to reliably detect when you leave
+4. **Create geofences** for home/work - Stops recording locations in known zones. Enable **Pause when on WiFi** to also stop GPS entirely when connected to your home network, or **Pause when motionless** to stop GPS after sitting still for a set time
 5. **Enable movement threshold** - 10-50m, skip stationary updates
 6. **Disable battery optimization** for Colota in Android settings to prevent the OS from killing the service
 

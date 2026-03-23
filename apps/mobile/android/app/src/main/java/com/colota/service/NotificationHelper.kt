@@ -106,9 +106,18 @@ class NotificationHelper(
         queuedCount: Int,
         lastSyncTime: Long,
         isOfflineMode: Boolean = false,
-        isStationary: Boolean = false
+        isStationary: Boolean = false,
+        isWifiPaused: Boolean = false,
+        isMotionlessPaused: Boolean = false
     ): String = when {
-        isPaused -> "Paused: ${zoneName ?: "Unknown"}"
+        isPaused -> {
+            val zone = zoneName ?: "Unknown"
+            when {
+                isWifiPaused -> "Paused: $zone \u00b7 WiFi"
+                isMotionlessPaused -> "Paused: $zone \u00b7 Motionless"
+                else -> "Paused: $zone"
+            }
+        }
         isStationary -> {
             val coords = if (lat != null && lon != null) String.format(Locale.US, "%.5f, %.5f", lat, lon) else ""
             if (coords.isNotEmpty()) "Stationary - $coords" else "Stationary - GPS paused"
@@ -168,7 +177,9 @@ class NotificationHelper(
         activeProfileName: String? = null,
         forceUpdate: Boolean = false,
         isOfflineMode: Boolean = false,
-        isStationary: Boolean = false
+        isStationary: Boolean = false,
+        isWifiPaused: Boolean = false,
+        isMotionlessPaused: Boolean = false
     ): Boolean {
         val now = System.currentTimeMillis()
 
@@ -194,11 +205,12 @@ class NotificationHelper(
             lastCoords = Pair(lat, lon)
         }
 
-        val statusText = buildStatusText(isPaused, zoneName, lat, lon, queuedCount, lastSyncTime, isOfflineMode, isStationary)
+        val statusText = buildStatusText(isPaused, zoneName, lat, lon, queuedCount, lastSyncTime, isOfflineMode, isStationary, isWifiPaused, isMotionlessPaused)
 
-        // Dedup: skip if notification text hasn't changed
+        // Dedup: skip if notification text hasn't changed (bypass on forceUpdate so state-change
+        // notifications always reach Android even if text appears identical)
         val cacheKey = "$statusText-$queuedCount-$activeProfileName"
-        if (cacheKey == lastText) return false
+        if (!forceUpdate && cacheKey == lastText) return false
 
         lastText = cacheKey
         lastQueuedCount = queuedCount

@@ -1282,6 +1282,361 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // enterPauseZone - pause flag registration
+    // =========================================================================
+
+    @Test
+    fun `enterPauseZone with pauseOnWifi registers wifi callback`() {
+        val wifiGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true)
+        coEvery { service["registerWifiPause"]() } returns Unit
+
+        invokeEnterPauseZone(wifiGeofence)
+
+        verify { service["registerWifiPause"]() }
+    }
+
+    @Test
+    fun `enterPauseZone without pauseOnWifi skips wifi callback`() {
+        coEvery { service["registerWifiPause"]() } returns Unit
+
+        invokeEnterPauseZone(homeGeofence)
+
+        verify(exactly = 0) { service["registerWifiPause"]() }
+    }
+
+    @Test
+    fun `enterPauseZone with pauseOnMotionless starts countdown`() {
+        val motionlessGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true, motionlessTimeoutMinutes = 5)
+        coEvery { service["startMotionlessCountdown"](any<Int>()) } returns Unit
+
+        invokeEnterPauseZone(motionlessGeofence)
+
+        verify { service["startMotionlessCountdown"](5) }
+    }
+
+    @Test
+    fun `enterPauseZone without pauseOnMotionless skips countdown`() {
+        coEvery { service["startMotionlessCountdown"](any<Int>()) } returns Unit
+
+        invokeEnterPauseZone(homeGeofence)
+
+        verify(exactly = 0) { service["startMotionlessCountdown"](any<Int>()) }
+    }
+
+    // =========================================================================
+    // exitPauseZone - pause state cleanup
+    // =========================================================================
+
+    @Test
+    fun `exitPauseZone saves pause_zone_motionless_active false`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeExitPauseZone()
+
+        verify { dbHelper.saveSetting("pause_zone_motionless_active", "false") }
+    }
+
+    @Test
+    fun `exitPauseZone with isWifiPaused resumes GPS`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", homeGeofence)
+        setField("isWifiPaused", true)
+
+        invokeExitPauseZone()
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `exitPauseZone with isMotionlessPaused resumes GPS`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", homeGeofence)
+        setField("isMotionlessPaused", true)
+
+        invokeExitPauseZone()
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `exitPauseZone without pause holds does not resume GPS`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", homeGeofence)
+        setField("isWifiPaused", false)
+        setField("isMotionlessPaused", false)
+
+        invokeExitPauseZone()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    // =========================================================================
+    // startMotionlessCountdown
+    // =========================================================================
+
+    @Test
+    fun `startMotionlessCountdown pauses GPS after timeout`() = testScope.runTest {
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        setField("motionDetector", motionDetector)
+        setField("insidePauseZone", true)
+
+        invokeStartMotionlessCountdown(1)
+        advanceTimeBy(60_001L)
+
+        assertTrue(getField<Boolean>("isMotionlessPaused"))
+        verify { dbHelper.saveSetting("pause_zone_motionless_active", "true") }
+        verify { motionDetector.arm() }
+    }
+
+    @Test
+    fun `startMotionlessCountdown does not pause when zone exited before timeout`() = testScope.runTest {
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        setField("motionDetector", motionDetector)
+        setField("insidePauseZone", false)
+
+        invokeStartMotionlessCountdown(1)
+        advanceTimeBy(60_001L)
+
+        assertFalse(getField<Boolean>("isMotionlessPaused"))
+        verify(exactly = 0) { motionDetector.arm() }
+    }
+
+    @Test
+    fun `startMotionlessCountdown does not pause when already motionless paused`() = testScope.runTest {
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        setField("motionDetector", motionDetector)
+        setField("insidePauseZone", true)
+        setField("isMotionlessPaused", true)
+
+        invokeStartMotionlessCountdown(1)
+        advanceTimeBy(60_001L)
+
+        // arm should not be called a second time
+        verify(exactly = 0) { motionDetector.arm() }
+    }
+
+    // =========================================================================
+    // resumeFromMotionlessPause
+    // =========================================================================
+
+    @Test
+    fun `resumeFromMotionlessPause clears state and saves to DB`() = testScope.runTest {
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        setField("motionDetector", motionDetector)
+        setField("isMotionlessPaused", true)
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeResumeFromMotionlessPause()
+
+        assertFalse(getField<Boolean>("isMotionlessPaused"))
+        verify { dbHelper.saveSetting("pause_zone_motionless_active", "false") }
+        verify { motionDetector.disarm() }
+    }
+
+    @Test
+    fun `resumeFromMotionlessPause resumes GPS when no wifi hold active`() = testScope.runTest {
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        setField("motionDetector", motionDetector)
+        setField("isMotionlessPaused", true)
+        setField("isWifiPaused", false)
+        setField("currentZoneGeofence", geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true))
+
+        invokeResumeFromMotionlessPause()
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `resumeFromMotionlessPause does not resume GPS when wifi hold still active`() = testScope.runTest {
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        setField("motionDetector", motionDetector)
+        setField("isMotionlessPaused", true)
+        setField("isWifiPaused", true)
+        setField("currentZoneGeofence", geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true, pauseOnMotionless = true))
+
+        invokeResumeFromMotionlessPause()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `resumeFromMotionlessPause restarts countdown when zone has pauseOnMotionless`() = testScope.runTest {
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        setField("motionDetector", motionDetector)
+        setField("isMotionlessPaused", true)
+        val motionlessGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true, motionlessTimeoutMinutes = 3)
+        setField("currentZoneGeofence", motionlessGeofence)
+        coEvery { service["startMotionlessCountdown"](any<Int>()) } returns Unit
+
+        invokeResumeFromMotionlessPause()
+
+        verify { service["startMotionlessCountdown"](3) }
+    }
+
+    // =========================================================================
+    // onMotionDetected - motionless pause path
+    // =========================================================================
+
+    @Test
+    fun `onMotionDetected resumes from motionless pause when isMotionlessPaused`() = testScope.runTest {
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        setField("motionDetector", motionDetector)
+        setField("isMotionlessPaused", true)
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeOnMotionDetected()
+
+        assertFalse(getField<Boolean>("isMotionlessPaused"))
+        verify { dbHelper.saveSetting("pause_zone_motionless_active", "false") }
+    }
+
+    @Test
+    fun `onMotionDetected motionless path takes priority over stationary`() = testScope.runTest {
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        setField("motionDetector", motionDetector)
+        setField("isMotionlessPaused", true)
+        setField("isStationary", true)
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeOnMotionDetected()
+
+        // Motionless path fires, not stationary path
+        assertFalse(getField<Boolean>("isMotionlessPaused"))
+        assertTrue(getField<Boolean>("isStationary")) // stationary unchanged
+    }
+
+    // =========================================================================
+    // maybeResumeGps - dual hold logic
+    // =========================================================================
+
+    @Test
+    fun `maybeResumeGps resumes GPS when no holds active`() = testScope.runTest {
+        setField("currentZoneGeofence", geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true, pauseOnMotionless = true))
+        setField("isWifiPaused", false)
+        setField("isMotionlessPaused", false)
+
+        invokeMaybeResumeGps()
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `maybeResumeGps blocked when wifi hold active`() = testScope.runTest {
+        setField("currentZoneGeofence", geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true))
+        setField("isWifiPaused", true)
+        setField("isMotionlessPaused", false)
+
+        invokeMaybeResumeGps()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `maybeResumeGps blocked when motionless hold active`() = testScope.runTest {
+        setField("currentZoneGeofence", geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true))
+        setField("isWifiPaused", false)
+        setField("isMotionlessPaused", true)
+
+        invokeMaybeResumeGps()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `maybeResumeGps resumes when currentZoneGeofence is null`() = testScope.runTest {
+        setField("currentZoneGeofence", null)
+
+        invokeMaybeResumeGps()
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    // =========================================================================
+    // applyZoneSettingsIfChanged
+    // =========================================================================
+
+    @Test
+    fun `applyZoneSettingsIfChanged enables wifi callback when pauseOnWifi toggled on`() {
+        setField("currentZoneGeofence", homeGeofence) // pauseOnWifi=false
+        coEvery { service["registerWifiPause"]() } returns Unit
+        val updatedGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true)
+
+        invokeApplyZoneSettingsIfChanged(updatedGeofence)
+
+        verify { service["registerWifiPause"]() }
+    }
+
+    @Test
+    fun `applyZoneSettingsIfChanged disables wifi hold and resumes GPS`() {
+        val wifiGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true)
+        setField("currentZoneGeofence", wifiGeofence)
+        setField("isWifiPaused", true)
+
+        invokeApplyZoneSettingsIfChanged(homeGeofence) // pauseOnWifi=false
+
+        assertFalse(getField<Boolean>("isWifiPaused"))
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `applyZoneSettingsIfChanged disables motionless hold and resumes GPS`() {
+        val motionlessGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true)
+        val motionDetector = mockk<MotionDetector>(relaxed = true)
+        setField("motionDetector", motionDetector)
+        setField("currentZoneGeofence", motionlessGeofence)
+        setField("isMotionlessPaused", true)
+
+        invokeApplyZoneSettingsIfChanged(homeGeofence) // pauseOnMotionless=false
+
+        assertFalse(getField<Boolean>("isMotionlessPaused"))
+        verify { dbHelper.saveSetting("pause_zone_motionless_active", "false") }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `applyZoneSettingsIfChanged starts countdown when pauseOnMotionless toggled on`() {
+        setField("currentZoneGeofence", homeGeofence) // pauseOnMotionless=false
+        coEvery { service["startMotionlessCountdown"](any<Int>()) } returns Unit
+        val updatedGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true, motionlessTimeoutMinutes = 7)
+
+        invokeApplyZoneSettingsIfChanged(updatedGeofence)
+
+        verify { service["startMotionlessCountdown"](7) }
+    }
+
+    @Test
+    fun `applyZoneSettingsIfChanged restarts countdown when timeout changes`() {
+        val originalGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true, motionlessTimeoutMinutes = 10)
+        setField("currentZoneGeofence", originalGeofence)
+        setField("motionlessJob", mockk<Job>(relaxed = true))
+        coEvery { service["cancelMotionlessCountdown"]() } returns Unit
+        coEvery { service["startMotionlessCountdown"](any<Int>()) } returns Unit
+        val updatedGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true, motionlessTimeoutMinutes = 3)
+
+        invokeApplyZoneSettingsIfChanged(updatedGeofence)
+
+        verifyOrder {
+            service["cancelMotionlessCountdown"]()
+            service["startMotionlessCountdown"](3)
+        }
+    }
+
+    @Test
+    fun `applyZoneSettingsIfChanged does not restart countdown when timeout unchanged`() {
+        val originalGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true, motionlessTimeoutMinutes = 10)
+        setField("currentZoneGeofence", originalGeofence)
+        setField("motionlessJob", mockk<Job>(relaxed = true))
+        coEvery { service["startMotionlessCountdown"](any<Int>()) } returns Unit
+        val updatedGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true, motionlessTimeoutMinutes = 10)
+
+        invokeApplyZoneSettingsIfChanged(updatedGeofence)
+
+        verify(exactly = 0) { service["startMotionlessCountdown"](any<Int>()) }
+    }
+
+    // =========================================================================
     // Helpers - invoke private methods via reflection
     // =========================================================================
 
@@ -1598,8 +1953,41 @@ class LocationForegroundServiceTest {
         method.invoke(service)
     }
 
-    private fun geofence(name: String, lat: Double = 52.52, lon: Double = 13.405, radius: Double = 100.0) =
-        GeofenceHelper.CachedGeofence(name, lat, lon, radius)
+    private fun invokeStartMotionlessCountdown(timeoutMinutes: Int) {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("startMotionlessCountdown", Int::class.java)
+        method.isAccessible = true
+        method.invoke(service, timeoutMinutes)
+    }
+
+    private fun invokeResumeFromMotionlessPause() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("resumeFromMotionlessPause")
+        method.isAccessible = true
+        method.invoke(service)
+    }
+
+    private fun invokeMaybeResumeGps() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("maybeResumeGps")
+        method.isAccessible = true
+        method.invoke(service)
+    }
+
+    private fun invokeApplyZoneSettingsIfChanged(zone: GeofenceHelper.CachedGeofence) {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "applyZoneSettingsIfChanged", GeofenceHelper.CachedGeofence::class.java
+        )
+        method.isAccessible = true
+        method.invoke(service, zone)
+    }
+
+    private fun geofence(
+        name: String,
+        lat: Double = 52.52,
+        lon: Double = 13.405,
+        radius: Double = 100.0,
+        pauseOnWifi: Boolean = false,
+        pauseOnMotionless: Boolean = false,
+        motionlessTimeoutMinutes: Int = 10
+    ) = GeofenceHelper.CachedGeofence(name, lat, lon, radius, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes)
 
     private val homeGeofence = geofence("Home", 52.50, 13.40, 150.0)
     private val officeGeofence = geofence("Office", 48.14, 11.58, 200.0)

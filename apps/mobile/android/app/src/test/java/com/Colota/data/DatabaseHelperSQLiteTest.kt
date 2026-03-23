@@ -98,12 +98,28 @@ class DatabaseHelperSQLiteTest {
     fun `onUpgrade from v1 creates profiles table and adds sent column`() {
         val rawDb = db.writableDatabase
 
-        // Simulate v1 state: no profiles table, no sent column
+        // Simulate v1 state: no profiles table, no sent column, no pause_on_wifi on geofences
         rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_PROFILES}")
         rawDb.execSQL("DROP INDEX IF EXISTS idx_profiles_enabled")
         // Recreate locations table without sent column to simulate v1 schema
         rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_QUEUE}")
         rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_LOCATIONS}")
+        // Recreate geofences table without pause_on_wifi to simulate v1 schema
+        rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_GEOFENCES}")
+        rawDb.execSQL("""
+            CREATE TABLE ${DatabaseHelper.TABLE_GEOFENCES} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                radius REAL NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                pause_tracking INTEGER DEFAULT 1,
+                notify_enter INTEGER DEFAULT 0,
+                notify_exit INTEGER DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+        """)
         rawDb.execSQL("""
             CREATE TABLE ${DatabaseHelper.TABLE_LOCATIONS} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,7 +149,7 @@ class DatabaseHelperSQLiteTest {
         """)
 
         // Run full upgrade from v1
-        db.onUpgrade(rawDb, 1, 3)
+        db.onUpgrade(rawDb, 1, 4)
 
         // Verify profiles table was created
         val tables = queryTableNames()
@@ -163,10 +179,39 @@ class DatabaseHelperSQLiteTest {
         val rawDb = db.writableDatabase
 
         // Running upgrade on current version should be safe (no-op)
-        db.onUpgrade(rawDb, 3, 3)
+        db.onUpgrade(rawDb, 4, 4)
 
         val tables = queryTableNames()
         assertTrue(tables.contains("tracking_profiles"))
+    }
+
+    @Test
+    fun `onUpgrade from v3 adds pause_on_wifi column to geofences`() {
+        val rawDb = db.writableDatabase
+
+        // Simulate v3 state: geofences table without pause_on_wifi
+        rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_GEOFENCES}")
+        rawDb.execSQL("""
+            CREATE TABLE ${DatabaseHelper.TABLE_GEOFENCES} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                radius REAL NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                pause_tracking INTEGER DEFAULT 1,
+                notify_enter INTEGER DEFAULT 0,
+                notify_exit INTEGER DEFAULT 0,
+                created_at INTEGER NOT NULL
+            )
+        """)
+
+        db.onUpgrade(rawDb, 3, 4)
+
+        val columns = queryColumnNames(DatabaseHelper.TABLE_GEOFENCES)
+        assertTrue(columns.contains("pause_on_wifi"))
+        assertTrue(columns.contains("pause_on_motionless"))
+        assertTrue(columns.contains("motionless_timeout_minutes"))
     }
 
     // ========================================================================

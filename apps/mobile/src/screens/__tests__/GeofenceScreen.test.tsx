@@ -83,11 +83,9 @@ jest.mock("../../services/NativeLocationService", () => ({
 }))
 
 const mockShowAlert = jest.fn()
-const mockShowConfirm = jest.fn().mockResolvedValue(true)
 
 jest.mock("../../services/modalService", () => ({
-  showAlert: (...args: any[]) => mockShowAlert(...args),
-  showConfirm: (...args: any[]) => mockShowConfirm(...args)
+  showAlert: (...args: any[]) => mockShowAlert(...args)
 }))
 
 jest.mock("../../components/features/map/ColotaMapView", () => {
@@ -144,8 +142,9 @@ jest.mock("lucide-react-native", () => {
   const R = require("react")
   const { Text } = require("react-native")
   return {
-    X: (props: any) => R.createElement(Text, props, "X"),
-    WifiOff: (props: any) => R.createElement(Text, props, "WifiOff")
+    ChevronRight: (props: any) => R.createElement(Text, props, "ChevronRight"),
+    Wifi: (props: any) => R.createElement(Text, props, "Wifi"),
+    PersonStanding: (props: any) => R.createElement(Text, props, "PersonStanding")
   }
 })
 
@@ -171,7 +170,10 @@ const mockGeofences: Geofence[] = [
     lon: 11.5,
     radius: 100,
     enabled: true,
-    pauseTracking: true
+    pauseTracking: true,
+    pauseOnWifi: false,
+    pauseOnMotionless: false,
+    motionlessTimeoutMinutes: 10
   },
   {
     id: 2,
@@ -180,7 +182,10 @@ const mockGeofences: Geofence[] = [
     lon: 11.6,
     radius: 200,
     enabled: true,
-    pauseTracking: false
+    pauseTracking: false,
+    pauseOnWifi: false,
+    pauseOnMotionless: false,
+    motionlessTimeoutMinutes: 10
   }
 ]
 
@@ -190,7 +195,6 @@ describe("GeofenceScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetGeofences.mockResolvedValue([])
-    mockShowConfirm.mockResolvedValue(true)
   })
 
   function renderScreen() {
@@ -259,72 +263,18 @@ describe("GeofenceScreen", () => {
     expect(getByText("Tap Map to Place...")).toBeTruthy()
   })
 
-  it("toggles pause tracking on a geofence", async () => {
+  it("tapping ChevronRight navigates to editor with geofence id", async () => {
     mockGetGeofences.mockResolvedValue(mockGeofences)
+    const mockNavigate = jest.fn()
 
-    const { getAllByRole } = renderScreen()
-
-    await waitFor(() => {
-      expect(getAllByRole("switch").length).toBeGreaterThanOrEqual(2)
-    })
-
-    const switches = getAllByRole("switch")
-    // The second geofence (Office) has pauseTracking: false, toggle it on
-    fireEvent(switches[1], "onValueChange", true)
+    const { getAllByText } = render(<GeofenceScreen navigation={{ navigate: mockNavigate } as any} />)
 
     await waitFor(() => {
-      expect(mockUpdateGeofence).toHaveBeenCalledWith({ id: 2, pauseTracking: true })
+      expect(getAllByText("ChevronRight").length).toBeGreaterThanOrEqual(1)
     })
 
-    await waitFor(() => {
-      expect(mockRecheckZoneSettings).toHaveBeenCalled()
-    })
-  })
+    fireEvent.press(getAllByText("ChevronRight")[0])
 
-  it("shows delete confirmation dialog", async () => {
-    mockGetGeofences.mockResolvedValue(mockGeofences)
-    mockShowConfirm.mockResolvedValue(false)
-
-    const { getAllByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getAllByText("X").length).toBeGreaterThanOrEqual(1)
-    })
-
-    // Press the first delete button (X icon)
-    fireEvent.press(getAllByText("X")[0])
-
-    await waitFor(() => {
-      expect(mockShowConfirm).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: "Delete Geofence",
-          message: 'Delete "Home"?',
-          confirmText: "Delete",
-          destructive: true
-        })
-      )
-    })
-  })
-
-  it("deletes geofence after confirmation", async () => {
-    mockGetGeofences.mockResolvedValue(mockGeofences)
-    mockShowConfirm.mockResolvedValue(true)
-
-    const { getAllByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getAllByText("X").length).toBeGreaterThanOrEqual(1)
-    })
-
-    // Press the first delete button (X icon)
-    fireEvent.press(getAllByText("X")[0])
-
-    await waitFor(() => {
-      expect(mockShowConfirm).toHaveBeenCalled()
-    })
-
-    await waitFor(() => {
-      expect(mockDeleteGeofence).toHaveBeenCalledWith(1)
-    })
+    expect(mockNavigate).toHaveBeenCalledWith("Geofence Editor", { geofenceId: 1 })
   })
 })

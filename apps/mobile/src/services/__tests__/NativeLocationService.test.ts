@@ -297,10 +297,13 @@ describe("NativeLocationService", () => {
         lon: 11.5,
         radius: 100,
         enabled: true,
-        pauseTracking: true
+        pauseTracking: true,
+        pauseOnWifi: false,
+        pauseOnMotionless: false,
+        motionlessTimeoutMinutes: 10
       })
 
-      expect(nativeMock.createGeofence).toHaveBeenCalledWith("Home", 48.1, 11.5, 100, true)
+      expect(nativeMock.createGeofence).toHaveBeenCalledWith("Home", 48.1, 11.5, 100, true, false, false, 10)
     })
 
     it("deleteGeofence passes id", async () => {
