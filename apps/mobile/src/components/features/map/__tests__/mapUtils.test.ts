@@ -251,7 +251,10 @@ describe("buildGeofencesGeoJSON", () => {
     lon: 13.405,
     radius: 200,
     enabled: true,
-    pauseTracking: true
+    pauseTracking: true,
+    pauseOnWifi: false,
+    pauseOnMotionless: false,
+    motionlessTimeoutMinutes: 10
   }
 
   it("returns empty collections for no geofences", () => {

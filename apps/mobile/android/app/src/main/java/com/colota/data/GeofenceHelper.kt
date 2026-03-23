@@ -24,7 +24,10 @@ class GeofenceHelper(private val context: Context) {
         val name: String,
         val lat: Double,
         val lon: Double,
-        val radius: Double
+        val radius: Double,
+        val pauseOnWifi: Boolean = false,
+        val pauseOnMotionless: Boolean = false,
+        val motionlessTimeoutMinutes: Int = 10
     )
 
     companion object {
@@ -48,6 +51,9 @@ class GeofenceHelper(private val context: Context) {
             return calculateDistance(lat1, lon1, lat2, lon2) <= radius
         }
     }
+
+    fun getGeofenceByName(name: String): CachedGeofence? =
+        geofenceCache.get().find { it.name == name }
 
     fun getPauseZone(location: Location): CachedGeofence? {
         val fences = getGeofences()
@@ -73,7 +79,7 @@ class GeofenceHelper(private val context: Context) {
             val fences = mutableListOf<CachedGeofence>()
             dbHelper.readableDatabase.query(
                 DatabaseHelper.TABLE_GEOFENCES,
-                arrayOf("name", "latitude", "longitude", "radius"),
+                arrayOf("name", "latitude", "longitude", "radius", "pause_on_wifi", "pause_on_motionless", "motionless_timeout_minutes"),
                 "enabled = 1 AND pause_tracking = 1",
                 null, null, null, null
             ).use { cursor ->
@@ -81,13 +87,19 @@ class GeofenceHelper(private val context: Context) {
                 val latIdx = cursor.getColumnIndexOrThrow("latitude")
                 val lonIdx = cursor.getColumnIndexOrThrow("longitude")
                 val radIdx = cursor.getColumnIndexOrThrow("radius")
+                val wifiIdx = cursor.getColumnIndexOrThrow("pause_on_wifi")
+                val motionlessIdx = cursor.getColumnIndexOrThrow("pause_on_motionless")
+                val timeoutIdx = cursor.getColumnIndexOrThrow("motionless_timeout_minutes")
 
                 while (cursor.moveToNext()) {
                     fences.add(CachedGeofence(
                         cursor.getString(nameIdx),
                         cursor.getDouble(latIdx),
                         cursor.getDouble(lonIdx),
-                        cursor.getDouble(radIdx)
+                        cursor.getDouble(radIdx),
+                        cursor.getInt(wifiIdx) == 1,
+                        cursor.getInt(motionlessIdx) == 1,
+                        cursor.getInt(timeoutIdx)
                     ))
                 }
             }
@@ -126,6 +138,9 @@ class GeofenceHelper(private val context: Context) {
                         putDouble("radius", cursor.getDouble(radiusIdx))
                         putBoolean("enabled", cursor.getInt(enabledIdx) == 1)
                         putBoolean("pauseTracking", cursor.getInt(pauseIdx) == 1)
+                        putBoolean("pauseOnWifi", cursor.getInt(cursor.getColumnIndexOrThrow("pause_on_wifi")) == 1)
+                        putBoolean("pauseOnMotionless", cursor.getInt(cursor.getColumnIndexOrThrow("pause_on_motionless")) == 1)
+                        putInt("motionlessTimeoutMinutes", cursor.getInt(cursor.getColumnIndexOrThrow("motionless_timeout_minutes")))
                         putDouble("createdAt", cursor.getLong(createdIdx).toDouble())
                     })
                 }
@@ -141,11 +156,14 @@ class GeofenceHelper(private val context: Context) {
      * Inserts a new geofence into the database.
      */
     fun insertGeofence(
-        name: String, 
-        lat: Double, 
-        lon: Double, 
-        rad: Double, 
-        pause: Boolean
+        name: String,
+        lat: Double,
+        lon: Double,
+        rad: Double,
+        pause: Boolean,
+        pauseOnWifi: Boolean = false,
+        pauseOnMotionless: Boolean = false,
+        motionlessTimeoutMinutes: Int = 10
     ): Int {
         val values = ContentValues().apply {
             put("name", name)
@@ -154,6 +172,9 @@ class GeofenceHelper(private val context: Context) {
             put("radius", rad)
             put("enabled", 1)
             put("pause_tracking", if (pause) 1 else 0)
+            put("pause_on_wifi", if (pauseOnWifi) 1 else 0)
+            put("pause_on_motionless", if (pauseOnMotionless) 1 else 0)
+            put("motionless_timeout_minutes", motionlessTimeoutMinutes)
             put("created_at", System.currentTimeMillis() / 1000)
         }
         
@@ -166,13 +187,16 @@ class GeofenceHelper(private val context: Context) {
      * Updates geofence with only provided fields.
      */
     fun updateGeofence(
-        id: Int, 
-        name: String?, 
-        lat: Double?, 
-        lon: Double?, 
-        rad: Double?, 
-        en: Boolean?, 
-        pause: Boolean?
+        id: Int,
+        name: String?,
+        lat: Double?,
+        lon: Double?,
+        rad: Double?,
+        en: Boolean?,
+        pause: Boolean?,
+        pauseOnWifi: Boolean? = null,
+        pauseOnMotionless: Boolean? = null,
+        motionlessTimeoutMinutes: Int? = null
     ): Boolean {
         val values = ContentValues().apply {
             name?.let { put("name", it) }
@@ -181,6 +205,9 @@ class GeofenceHelper(private val context: Context) {
             rad?.let { put("radius", it) }
             en?.let { put("enabled", if (it) 1 else 0) }
             pause?.let { put("pause_tracking", if (it) 1 else 0) }
+            pauseOnWifi?.let { put("pause_on_wifi", if (it) 1 else 0) }
+            pauseOnMotionless?.let { put("pause_on_motionless", if (it) 1 else 0) }
+            motionlessTimeoutMinutes?.let { put("motionless_timeout_minutes", it) }
         }
         
         if (values.size() == 0) return false

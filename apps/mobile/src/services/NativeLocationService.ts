@@ -292,7 +292,10 @@ class NativeLocationService {
       geofence.lat,
       geofence.lon,
       geofence.radius,
-      geofence.pauseTracking
+      geofence.pauseTracking,
+      geofence.pauseOnWifi ?? false,
+      geofence.pauseOnMotionless ?? false,
+      geofence.motionlessTimeoutMinutes ?? 10
     )
   }
 
@@ -314,7 +317,10 @@ class NativeLocationService {
       update.lon ?? null,
       update.radius ?? null,
       update.enabled ?? null,
-      update.pauseTracking ?? null
+      update.pauseTracking ?? null,
+      update.pauseOnWifi ?? null,
+      update.pauseOnMotionless ?? null,
+      update.motionlessTimeoutMinutes ?? null
     )
   }
 

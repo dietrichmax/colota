@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Geofencing
 
-Create zones where location recording stops automatically. These "pause zones" stop saving and syncing locations at places you visit often. GPS stays active to detect when you leave the zone.
+Create zones where location recording stops automatically. These "pause zones" stop saving and syncing locations at places you visit often. Each zone can also be configured to stop GPS entirely when on WiFi or when the device is motionless.
 
 ## Use Cases
 
@@ -16,29 +16,47 @@ Create zones where location recording stops automatically. These "pause zones" s
 
 1. Go to the **Geofences** tab
 2. Enter a name and radius
-3. Tap the map to place the geofence
-4. Enable **Pause Tracking**
+3. Tap **Place Geofence**, then tap the map to place it
+4. Tap the **›** arrow on any geofence to open the editor and configure pause options
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Geofences.png", label: "Geofence setup" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Geofences.png", label: "Geofences" }, { src: "/img/screenshots/GeofenceEditor.png", label: "Geofence Editor" }, ]} />
+
+## GPS Pause Options
+
+Each geofence has independent pause settings, configured in the editor (tap **›**):
+
+### Don't record in zone
+
+Locations are not saved or synced while inside the zone. GPS continues running to detect when you leave. This is the default behavior.
+
+### Pause when on WiFi or Ethernet
+
+Stops GPS entirely when connected to an unmetered network (home WiFi, Ethernet). GPS resumes automatically when the connection is lost. Useful if you want to completely stop GPS while at home on WiFi, saving additional battery.
+
+### Pause when motionless
+
+Stops GPS after no device motion is detected for a configurable time (default 10 minutes). GPS resumes automatically when the device moves again. Useful for users who put their phone in airplane mode at night or sit still for long periods.
+
+### Combined behavior
+
+When both **WiFi** and **motionless** pause are enabled, GPS only resumes when **both** conditions clear - WiFi must be disconnected **and** motion must be detected. Either condition alone is not enough to resume.
+
+:::tip Changes made in the editor take effect immediately, even when you are already inside the zone. :::
 
 ## How It Works
 
 - Zone detection uses the Haversine formula (1-2ms per check)
 - When entering a pause zone, Colota keeps recording for 3.5× your tracking interval before pausing - this logs several real arrival points near the zone boundary, which backends like GeoPulse need to confirm a trip has ended
 - The notification shows "Paused: [Zone Name]" once the pause takes effect
-- GPS continues running inside the zone to detect when you leave
+- By default, GPS continues running inside the zone to detect when you leave. If **WiFi pause** or **motionless pause** is enabled, GPS stops entirely inside the zone and zone exit is detected when GPS resumes
 - If you leave before the entry delay completes, the delay is cancelled and tracking continues uninterrupted
-- GPS stays active inside the zone to reliably detect when you leave - stationary detection is suspended inside zones so exit is never missed
+- Stationary detection is suspended inside zones so GPS is never stopped by the stationary timer while zone exit needs to be detected
 - When exiting the zone, tracking automatically resumes
 - Zone checks happen every location update with minimal overhead
 - You can create unlimited geofence zones
 
 ## Anchor Points
 
-When you exit a pause zone, Colota saves a synthetic location at the geofence center. This gives your new trip a clean start point at the zone center rather than somewhere mid-road where GPS first locks in.
-
-- **On exit:** An anchor point is logged at the zone center, then recording resumes
-
-Anchor points use the geofence center coordinates (not your actual GPS position) and set accuracy to the zone radius. They are saved to the database and synced to your server like regular locations.
+When you exit a pause zone, Colota saves a synthetic location at the geofence center. This gives your new trip a clean start point rather than somewhere mid-road where GPS first locks in. Anchor points use the zone radius as their accuracy value and are saved and synced like regular locations.

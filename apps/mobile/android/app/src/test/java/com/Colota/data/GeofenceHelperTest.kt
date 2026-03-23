@@ -1,9 +1,45 @@
 package com.Colota.data
 
+import androidx.test.core.app.ApplicationProvider
+import com.Colota.util.AppLogger
+import io.mockk.*
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class GeofenceHelperTest {
+
+    private lateinit var helper: GeofenceHelper
+    private lateinit var db: DatabaseHelper
+
+    @Before
+    fun setUp() {
+        resetSingleton()
+        db = DatabaseHelper.getInstance(ApplicationProvider.getApplicationContext())
+        helper = GeofenceHelper(ApplicationProvider.getApplicationContext())
+        mockkObject(AppLogger)
+        every { AppLogger.d(any(), any()) } just Runs
+        every { AppLogger.i(any(), any()) } just Runs
+        every { AppLogger.w(any(), any()) } just Runs
+        every { AppLogger.e(any(), any(), any()) } just Runs
+    }
+
+    @After
+    fun tearDown() {
+        db.close()
+        resetSingleton()
+        unmockkObject(AppLogger)
+    }
+
+    private fun resetSingleton() {
+        val field = DatabaseHelper::class.java.getDeclaredField("INSTANCE")
+        field.isAccessible = true
+        field.set(null, null)
+    }
 
     // Known reference distances (verified against online Haversine calculators):
     // Berlin (52.52, 13.405) → Munich (48.1351, 11.582) ≈ 504 km
@@ -96,5 +132,78 @@ class GeofenceHelperTest {
     fun `bounding box rejects distant points quickly`() {
         // Berlin to Munich (~504 km) with 1 km radius — should be rejected by bounding box
         assertFalse(GeofenceHelper.isWithinRadius(52.52, 13.405, 48.1351, 11.582, 1000.0))
+    }
+
+    // =========================================================================
+    // getGeofenceByName
+    // =========================================================================
+
+    @Test
+    fun `getGeofenceByName returns matching geofence`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true)
+
+        val result = helper.getGeofenceByName("Home")
+
+        assertNotNull(result)
+        assertEquals("Home", result!!.name)
+        assertEquals(52.5, result.lat, 0.001)
+        assertEquals(13.4, result.lon, 0.001)
+        assertEquals(150.0, result.radius, 0.001)
+    }
+
+    @Test
+    fun `getGeofenceByName returns null for unknown name`() {
+        assertNull(helper.getGeofenceByName("Unknown"))
+    }
+
+    @Test
+    fun `getGeofenceByName returns correct pauseOnWifi value`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true, pauseOnWifi = true)
+
+        val result = helper.getGeofenceByName("Home")
+
+        assertNotNull(result)
+        assertTrue(result!!.pauseOnWifi)
+    }
+
+    @Test
+    fun `getGeofenceByName returns correct pauseOnMotionless and timeout`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true, pauseOnMotionless = true, motionlessTimeoutMinutes = 5)
+
+        val result = helper.getGeofenceByName("Home")
+
+        assertNotNull(result)
+        assertTrue(result!!.pauseOnMotionless)
+        assertEquals(5, result.motionlessTimeoutMinutes)
+    }
+
+    @Test
+    fun `getGeofenceByName returns null when zone is disabled`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true)
+        val id = db.readableDatabase.query("geofences", arrayOf("id"), "name = ?", arrayOf("Home"), null, null, null).use {
+            it.moveToFirst(); it.getInt(0)
+        }
+        helper.updateGeofence(id, en = false, name = null, lat = null, lon = null, rad = null, pause = null)
+        helper.invalidateCache()
+
+        assertNull(helper.getGeofenceByName("Home"))
+    }
+
+    @Test
+    fun `getGeofenceByName returns null when pause_tracking is off`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = false)
+
+        assertNull(helper.getGeofenceByName("Home"))
+    }
+
+    @Test
+    fun `getGeofenceByName returns first match when multiple zones exist`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true)
+        helper.insertGeofence("Office", 48.1, 11.5, 200.0, pause = true)
+
+        val result = helper.getGeofenceByName("Office")
+
+        assertNotNull(result)
+        assertEquals("Office", result!!.name)
     }
 }

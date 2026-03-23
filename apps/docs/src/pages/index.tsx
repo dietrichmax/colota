@@ -99,14 +99,9 @@ function HomepageFeatures(): ReactNode {
 
 const homepageScreenshots = [
   { src: "/img/screenshots/Dashboard.png", label: "Dashboard" },
+  { src: "/img/screenshots/Geofences.png", label: "Geofences" },
   { src: "/img/screenshots/LocationHistory.png", label: "Location History" },
-  { src: "/img/screenshots/TripDetails.png", label: "Trip Detail" },
-  { src: "/img/screenshots/Trips.png", label: "Trips" },
-  { src: "/img/screenshots/Settings.png", label: "Settings" },
-  { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking Profiles" },
-  { src: "/img/screenshots/DataManagement.png", label: "Data Management" },
-  { src: "/img/screenshots/ApiFieldMapping.png", label: "API Field Mapping" },
-  { src: "/img/screenshots/Authentication.png", label: "Authentication" },
+  { src: "/img/screenshots/TrackingProfiles.png", label: "Profile Editor" },
   { src: "/img/screenshots/DarkMode.png", label: "Dark Mode" }
 ]
 
