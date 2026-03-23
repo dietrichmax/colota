@@ -25,6 +25,21 @@ import io.mockk.*
 @RunWith(RobolectricTestRunner::class)
 class DatabaseHelperSQLiteTest {
 
+    private val V3_GEOFENCES_SCHEMA = """
+        CREATE TABLE ${DatabaseHelper.TABLE_GEOFENCES} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            radius REAL NOT NULL,
+            enabled INTEGER DEFAULT 1,
+            pause_tracking INTEGER DEFAULT 1,
+            notify_enter INTEGER DEFAULT 0,
+            notify_exit INTEGER DEFAULT 0,
+            created_at INTEGER NOT NULL
+        )
+    """
+
     private lateinit var db: DatabaseHelper
 
     @Before
@@ -106,20 +121,7 @@ class DatabaseHelperSQLiteTest {
         rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_LOCATIONS}")
         // Recreate geofences table without pause_on_wifi to simulate v1 schema
         rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_GEOFENCES}")
-        rawDb.execSQL("""
-            CREATE TABLE ${DatabaseHelper.TABLE_GEOFENCES} (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                latitude REAL NOT NULL,
-                longitude REAL NOT NULL,
-                radius REAL NOT NULL,
-                enabled INTEGER DEFAULT 1,
-                pause_tracking INTEGER DEFAULT 1,
-                notify_enter INTEGER DEFAULT 0,
-                notify_exit INTEGER DEFAULT 0,
-                created_at INTEGER NOT NULL
-            )
-        """)
+        rawDb.execSQL(V3_GEOFENCES_SCHEMA)
         rawDb.execSQL("""
             CREATE TABLE ${DatabaseHelper.TABLE_LOCATIONS} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -191,20 +193,7 @@ class DatabaseHelperSQLiteTest {
 
         // Simulate v3 state: geofences table without pause_on_wifi
         rawDb.execSQL("DROP TABLE IF EXISTS ${DatabaseHelper.TABLE_GEOFENCES}")
-        rawDb.execSQL("""
-            CREATE TABLE ${DatabaseHelper.TABLE_GEOFENCES} (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                latitude REAL NOT NULL,
-                longitude REAL NOT NULL,
-                radius REAL NOT NULL,
-                enabled INTEGER DEFAULT 1,
-                pause_tracking INTEGER DEFAULT 1,
-                notify_enter INTEGER DEFAULT 0,
-                notify_exit INTEGER DEFAULT 0,
-                created_at INTEGER NOT NULL
-            )
-        """)
+        rawDb.execSQL(V3_GEOFENCES_SCHEMA)
 
         db.onUpgrade(rawDb, 3, 4)
 

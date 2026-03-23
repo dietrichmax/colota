@@ -411,9 +411,7 @@ class LocationForegroundService : Service() {
         } else if (!zone.pauseOnMotionless) {
             cancelMotionlessCountdown()
             if (isMotionlessPaused) {
-                isMotionlessPaused = false
-                dbHelper.saveSetting("pause_zone_motionless_active", "false")
-                motionDetector?.disarm()
+                clearMotionlessPauseState()
                 maybeResumeGps()
             }
         }
@@ -615,15 +613,12 @@ class LocationForegroundService : Service() {
         currentZoneName = null
         currentZoneGeofence = null
         dbHelper.saveSetting("pause_zone_name", "")
-        dbHelper.saveSetting("pause_zone_motionless_active", "false")
-
         val wasWifiPaused = isWifiPaused
         val wasMotionlessPaused = isMotionlessPaused
         isWifiPaused = false
-        isMotionlessPaused = false
         unregisterWifiPause()
         cancelMotionlessCountdown()
-        motionDetector?.disarm()
+        clearMotionlessPauseState()
 
         val anchorJob = exitedGeofence?.let { saveAnchorPoint(it) }
 
@@ -739,14 +734,18 @@ class LocationForegroundService : Service() {
         motionlessJob = null
     }
 
+    private fun clearMotionlessPauseState() {
+        isMotionlessPaused = false
+        dbHelper.saveSetting("pause_zone_motionless_active", "false")
+        motionDetector?.disarm()
+    }
+
     /**
      * Resumes GPS after motion is detected in a motionless-paused zone.
      * Re-arms the countdown so the zone can pause again if device becomes stationary again.
      */
     private fun resumeFromMotionlessPause() {
-        isMotionlessPaused = false
-        dbHelper.saveSetting("pause_zone_motionless_active", "false")
-        motionDetector?.disarm()
+        clearMotionlessPauseState()
         val geofence = currentZoneGeofence
         maybeResumeGps()
         // Restart countdown so the zone can pause again if device becomes stationary

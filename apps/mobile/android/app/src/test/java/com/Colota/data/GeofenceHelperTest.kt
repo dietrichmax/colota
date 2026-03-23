@@ -35,7 +35,7 @@ class GeofenceHelperTest {
         unmockkObject(AppLogger)
     }
 
-    private fun resetSingleton() { // mirrors DatabaseHelperSQLiteTest.resetSingleton()
+    private fun resetSingleton() {
         val field = DatabaseHelper::class.java.getDeclaredField("INSTANCE")
         field.isAccessible = true
         field.set(null, null)
