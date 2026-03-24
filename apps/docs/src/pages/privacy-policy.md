@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-**Last updated: March 18, 2026**
+**Last updated: March 24, 2026**
 
 Colota ("the App") is a self-hosted GPS tracking application for Android, developed by Max Dietrich. This privacy policy explains what data the App collects, how it is used, and your rights regarding that data.
 
@@ -30,17 +30,25 @@ The App also collects:
 
 ### Geofence Data
 
-If you create pause zones (geofences), the App stores zone names, coordinates, and radii in the local database. This data is used only on-device to determine when to pause tracking and is never transmitted to any server.
+If you create pause zones (geofences), the App stores zone names, coordinates, radii and per-zone settings (enabled state, tracking pause, WiFi pause, motionless pause, motionless timeout and entry/exit notifications) in the local database.
 
 ### Condition Monitoring
 
-When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto), and GPS speed to automatically switch tracking configurations. These condition states are transient and are not stored in the database.
+When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto) and GPS speed derived from location updates to automatically switch tracking configurations. These condition states are transient and are not stored in the database.
+
+### Sensor Data
+
+When motionless pause is enabled for a geofence zone, the App uses the device's significant motion sensor to detect motion. This data is processed in real time and is never stored or transmitted.
+
+### Network State
+
+When WiFi pause is enabled for a geofence zone, the App monitors whether the device is connected to an unmetered network (WiFi or Ethernet). Only the connection type is checked - no network names, SSIDs or IP addresses are collected or stored.
 
 All data is stored **locally on your device** and is never sent anywhere unless you configure a server. The App does not collect personal identifiers, advertising IDs, device identifiers (IMEI, serial number), usage analytics, telemetry, or crash reports.
 
 ## Data Storage
 
-Collected data is stored in a local SQLite database on your device. The data is not accessible to other apps.
+Collected data is stored in a local SQLite database on your device. The data is not accessible to other apps. The App checks available device storage before downloading offline map packs.
 
 If you configure auto-export, the App will write export files (CSV, GeoJSON, GPX, or KML) to a directory you select on your device. No data leaves your device as part of this process.
 
@@ -52,7 +60,8 @@ The App supports configuration via `colota://setup` deep links. These links can 
 
 The App **only transmits data to a server endpoint that you configure**. No data is sent anywhere by default.
 
-- Data is sent via HTTPS (HTTP is only allowed for local/private network addresses)
+- Data is sent via HTTPS (HTTP is only allowed for local/private network addresses). Self-signed TLS certificates can be configured for self-hosted servers
+- When a server is configured, the App may send health check requests to backend-specific endpoints to verify connectivity. These requests go only to your own server
 - No analytics, tracking pixels, or advertising networks are used
 - No data is shared with the developer, advertisers or analytics providers
 
@@ -66,9 +75,9 @@ Colota does not share your data with anyone. The only data transmission occurs t
 
 The GMS variant of the App is distributed via Google Play, which may collect data according to [Google's Privacy Policy](https://policies.google.com/privacy). This is outside the App's control. The FOSS variant is available on IzzyOnDroid and GitHub Releases with no Google dependency.
 
-### OpenFreeMap
+### Map Tiles (maps.mxd.codes)
 
-The App displays maps using [OpenFreeMap](https://openfreemap.org), which serves map tiles. When the map is visible, your device makes requests to OpenFreeMap's servers to download tiles for the visible area. OpenFreeMap does not log IP addresses by default and uses no cookies or tracking. OpenFreeMap is a free, open-source service. See [OpenFreeMap's privacy policy](https://openfreemap.org/privacy/) for details.
+The App displays maps using a self-hosted tile server at [maps.mxd.codes](https://maps.mxd.codes), operated by the developer on a VPS provided by [netcup](https://www.netcup.de). No CDN, proxy or other external service (e.g. Cloudflare) sits in front of the server. When the map is visible or offline map packs are downloaded, your device makes requests to this server to fetch vector tiles. Downloaded tiles are cached in the app's local database for offline use. Access logging is disabled for all requests by default. Logging may be enabled temporarily to investigate abuse or operational issues. No cookies or tracking are used. A custom tile server URL can be configured in Settings. See the [tile server guide](/docs/guides/tile-server) for more details.
 
 ### No Other Third Parties
 
@@ -100,10 +109,12 @@ Since all data is stored locally on your device, you have full control:
 | Location (Approximate)            | Required alongside precise location on Android     |
 | Background Location (Android 10+) | Tracking while the app is not in the foreground    |
 | Foreground Service                | Background tracking with notification              |
+| Foreground Service (Location)     | Location access while tracking in the background   |
+| Foreground Service (Data Sync)    | Auto-export background processing                  |
 | Notification (Android 13+)        | Foreground service notification                    |
 | Boot Completed                    | Auto-start tracking after device reboot            |
-| Internet                          | Server sync (not needed for offline use)           |
-| Network State                     | Wi-Fi only sync detection                          |
+| Internet                          | Server sync and map tile loading                   |
+| Network State                     | Wi-Fi only sync and WiFi pause in geofence zones   |
 | Battery Optimization Exemption    | Optional, prevents system from restricting the app |
 
 ## Children's Privacy
