@@ -40,6 +40,8 @@ Speed conditions use a rolling average of the last 5 GPS readings to avoid trigg
 
 :::tip Stationary profile When the device becomes stationary, the hardware significant motion sensor is armed. Even with a long GPS interval (e.g. 30 min), the profile deactivates the moment the device moves without waiting for the next GPS fix. The deactivation delay setting is not shown for stationary profiles since the motion sensor handles instant resume. Set the distance filter to **0m** so points are recorded at every interval regardless of GPS drift. :::
 
+:::caution Accuracy filtering matters for stationary detection The stationary condition triggers when GPS speed stays below 0.3 m/s for 60 seconds. If your default settings allow inaccurate locations (e.g. 40m+ accuracy) with a low distance filter (0m), GPS drift from noisy fixes can produce phantom speeds above the threshold - preventing the stationary profile from ever activating. To fix this, tighten your accuracy filter (e.g. 15m or less) so only clean fixes reach the speed check. :::
+
 ## Profile Settings
 
 Each profile overrides the default tracking configuration with:
