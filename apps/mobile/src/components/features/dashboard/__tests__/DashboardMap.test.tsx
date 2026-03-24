@@ -73,47 +73,43 @@ describe("DashboardMap info cards", () => {
     activeProfileName: null as string | null
   }
 
-  it("shows profile card when activeProfileName is set and no pause zone", () => {
+  it("shows profile name when activeProfileName is set and no pause zone", () => {
     const { getByText } = render(<DashboardMap {...baseProps} activeProfileName="Charging" />)
 
-    expect(getByText("Profile: Charging")).toBeTruthy()
-    expect(getByText("Tracking settings adjusted")).toBeTruthy()
+    expect(getByText("Charging")).toBeTruthy()
   })
 
-  it("hides profile card when no profile is active", () => {
+  it("hides profile indicator when no profile is active", () => {
     const { queryByText } = render(<DashboardMap {...baseProps} activeProfileName={null} />)
 
-    expect(queryByText(/^Profile:/)).toBeNull()
+    expect(queryByText("Charging")).toBeNull()
   })
 
-  it("shows pause zone card when inside a pause zone", () => {
+  it("shows pause zone indicator when inside a pause zone", () => {
     const { getByText } = render(<DashboardMap {...baseProps} activeZoneName="Home" />)
 
-    expect(getByText("Paused in Home")).toBeTruthy()
-    expect(getByText("Location not being recorded")).toBeTruthy()
+    expect(getByText(/Paused in Home/)).toBeTruthy()
   })
 
-  it("shows combined card when both pause zone and profile are active", () => {
+  it("shows pause zone indicator when both pause zone and profile are active", () => {
     const { getByText, queryByText } = render(
       <DashboardMap {...baseProps} activeZoneName="Home" activeProfileName="Charging" />
     )
 
-    expect(getByText("Paused in Home")).toBeTruthy()
-    expect(getByText('Profile "Charging" resumes on exit')).toBeTruthy()
-    expect(queryByText("Tracking settings adjusted")).toBeNull()
+    expect(getByText(/Paused in Home/)).toBeTruthy()
+    expect(queryByText("Charging")).toBeNull()
   })
 
-  it("hides standalone profile card when pause zone is active", () => {
+  it("hides standalone profile indicator when pause zone is active", () => {
     const { queryByText } = render(<DashboardMap {...baseProps} activeZoneName="Office" activeProfileName="Charging" />)
 
-    expect(queryByText("Profile: Charging")).toBeNull()
-    expect(queryByText('Profile "Charging" resumes on exit')).toBeTruthy()
+    expect(queryByText("Charging")).toBeNull()
   })
 
-  it("shows default pause message when no profile active in pause zone", () => {
+  it("shows pause zone indicator without profile in pause zone", () => {
     const { getByText } = render(<DashboardMap {...baseProps} activeZoneName="Home" activeProfileName={null} />)
 
-    expect(getByText("Location not being recorded")).toBeTruthy()
+    expect(getByText(/Paused in Home/)).toBeTruthy()
   })
 
   it("shows Tracking Disabled when not tracking", () => {
