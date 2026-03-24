@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
+import React, { useRef, useEffect, useMemo, useCallback, useState } from "react"
 import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image } from "react-native"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
@@ -37,8 +37,6 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
   const isCenteredRef = useRef(true)
   const initialCoords = useRef<LocationCoords | null>(null)
   const [hasInitialCoords, setHasInitialCoords] = useState(false)
-  const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
-
   useEffect(() => {
     if (!initialCoords.current && coords) {
       initialCoords.current = coords
@@ -60,20 +58,7 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
   }, [loadGeofences])
 
   useEffect(() => {
-    const checkPauseZone = async () => {
-      try {
-        const zoneName = await NativeLocationService.checkCurrentPauseZone()
-        setCurrentPauseZone(zoneName)
-      } catch (err) {
-        logger.error("[DashboardMap] Failed to check pause zone:", err)
-      }
-    }
-
-    checkPauseZone()
-    const listener = DeviceEventEmitter.addListener("geofenceUpdated", () => {
-      checkPauseZone()
-      loadGeofences()
-    })
+    const listener = DeviceEventEmitter.addListener("geofenceUpdated", loadGeofences)
     return () => listener.remove()
   }, [loadGeofences])
 
@@ -125,7 +110,7 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
             <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
 
             {/* Always keep overlay mounted to avoid MapLibre/Fabric unmount race condition */}
-            {coords && <UserLocationOverlay coords={coords} isPaused={!!currentPauseZone} colors={colors} />}
+            {coords && <UserLocationOverlay coords={coords} isPaused={!!activeZoneName} colors={colors} />}
           </ColotaMapView>
         </View>
       ) : null}
