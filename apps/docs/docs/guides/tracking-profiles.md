@@ -15,7 +15,7 @@ Tracking profiles automatically adjust GPS interval, distance filter, and sync s
 - **Charging** - Increase tracking frequency while plugged in (battery isn't a concern)
 - **Driving** - Switch to frequent updates when Android Auto connects or speed exceeds a threshold
 - **Walking** - Use longer intervals at low speeds to conserve battery
-- **Parked** - Reduce updates when stationary with a speed-below profile
+- **Stationary** - Record a periodic heartbeat point (e.g. every 30 min) as proof-of-presence while not moving
 
 ## Setup
 
@@ -34,8 +34,11 @@ Tracking profiles automatically adjust GPS interval, distance filter, and sync s
 | **Car Mode**    | Android Auto is connected                                 |
 | **Speed Above** | Average speed exceeds the configured threshold (km/h)     |
 | **Speed Below** | Average speed drops below the configured threshold (km/h) |
+| **Stationary**  | Device not moving for approximately 60 seconds            |
 
-Speed conditions use a rolling average of the last 5 GPS readings to avoid triggering on momentary speed spikes.
+Speed conditions use a rolling average of the last 5 GPS readings to avoid triggering on momentary speed spikes. The stationary condition uses a fixed speed threshold (0.3 m/s) with a 60-second timeout for reliable detection - unlike speed-below, it does not flap on GPS noise near zero.
+
+:::tip Stationary profile When the device becomes stationary, the hardware significant motion sensor is armed. Even with a long GPS interval (e.g. 30 min), the profile deactivates the moment the device moves without waiting for the next GPS fix. The deactivation delay setting is not shown for stationary profiles since the motion sensor handles instant resume. Set the distance filter to **0m** so points are recorded at every interval regardless of GPS drift. :::
 
 ## Profile Settings
 

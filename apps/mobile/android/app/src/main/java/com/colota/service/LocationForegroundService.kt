@@ -50,8 +50,6 @@ class LocationForegroundService : Service() {
     @Volatile private var serviceScope: CoroutineScope? = null
     @Volatile private var locationUpdateCallback: LocationUpdateCallback? = null
     @Volatile private var locationRestartJob: Job? = null
-    @Volatile private var stationaryJob: Job? = null
-    @Volatile private var isStationary = false
     @Volatile private var motionDetector: MotionDetector? = null
     @Volatile private var insidePauseZone = false
     @Volatile private var isWifiPaused = false
@@ -73,10 +71,6 @@ class LocationForegroundService : Service() {
 
     companion object {
         private const val TAG = "LocationService"
-        /** Speed threshold below which the device is considered stationary (m/s). ~1 km/h */
-        private const val STATIONARY_SPEED_THRESHOLD = 0.3f
-        /** How long speed must stay below threshold before pausing GPS (ms). */
-        private const val STATIONARY_TIMEOUT_MS = 60_000L
         /** Multiplier applied to the tracking interval for the geofence entry delay. */
         private const val ENTRY_DELAY_MULTIPLIER = 3.5
         /** Debounce before resuming GPS after unmetered network is lost (ms). */
@@ -110,9 +104,13 @@ class LocationForegroundService : Service() {
         secureStorage = SecureStorageHelper.getInstance(this)
         syncManager = SyncManager(dbHelper, networkManager, serviceScope!!)
         profileHelper = ProfileHelper(this)
-        profileManager = ProfileManager(profileHelper, serviceScope!!) { interval, distance, syncInterval, _, _ ->
-            applyProfileConfig(interval, distance, syncInterval)
-        }
+        profileManager = ProfileManager(
+            profileHelper, serviceScope!!,
+            onConfigSwitch = { interval, distance, syncInterval, _, _ ->
+                applyProfileConfig(interval, distance, syncInterval)
+            },
+            onStationaryChanged = ::handleStationaryChanged
+        )
         conditionMonitor = ConditionMonitor(this, profileManager)
 
         notificationHelper = NotificationHelper(this, notificationManager)
@@ -255,7 +253,6 @@ class LocationForegroundService : Service() {
         AppLogger.d(TAG, "Service destroyed")
 
         motionDetector?.disarm()
-        stationaryJob?.cancel()
         entryDelayJob?.cancel()
         entryDelayJob = null
         pendingPauseZone = null
@@ -467,10 +464,6 @@ class LocationForegroundService : Service() {
 
         applySpeedFallback(location)
 
-        // Evaluated before the distance filter so stationary detection works regardless
-        // of movement threshold - the distance filter is for recording quality, not motion state.
-        evaluateStationaryState(location)
-
         // Software-side distance filter (FLP bypasses the OS-level distance filter for some fixes)
         // Bypassed during geofence entry delay so stationary arrival points are logged
         if (pendingPauseZone == null && config.minUpdateDistance > 0f && prev != null) {
@@ -546,8 +539,6 @@ class LocationForegroundService : Service() {
      */
     private fun startEntryDelay(geofence: GeofenceHelper.CachedGeofence) {
         entryDelayJob?.cancel()
-        stationaryJob?.cancel()
-        stationaryJob = null
         pendingPauseZone = geofence
 
         val scope = serviceScope ?: run {
@@ -737,7 +728,7 @@ class LocationForegroundService : Service() {
     private fun clearMotionlessPauseState() {
         isMotionlessPaused = false
         dbHelper.saveSetting("pause_zone_motionless_active", "false")
-        motionDetector?.disarm()
+        if (!profileManager.isStationary) motionDetector?.disarm()
     }
 
     /**
@@ -842,7 +833,7 @@ class LocationForegroundService : Service() {
             activeProfileName = profileManager.getActiveProfileName(),
             forceUpdate = forceUpdate,
             isOfflineMode = offline,
-            isStationary = isStationary,
+            isStationary = profileManager.isStationary,
             isWifiPaused = isWifiPaused,
             isMotionlessPaused = isMotionlessPaused
         )
@@ -872,88 +863,21 @@ class LocationForegroundService : Service() {
         stopSelf()
     }
 
-    // ── Stationary detection ──────────────────────────────────────────────
-
-    /**
-     * Called from handleLocationUpdate to evaluate whether the device has
-     * become stationary. If speed stays below [STATIONARY_SPEED_THRESHOLD]
-     * for [STATIONARY_TIMEOUT_MS], active GPS is paused and the significant
-     * motion sensor is armed to wake it back up.
-     */
-    private fun evaluateStationaryState(location: android.location.Location) {
-        if (!config.pauseWhenStationary || motionDetector?.isAvailable != true) return
-        if (pendingPauseZone != null) return  // keep GPS running until arrival points are logged
-        if (insidePauseZone) return           // keep GPS running so zone exit can be detected
-
-        // Treat missing speed as 0 (stationary) - network/fused providers often omit speed
-        val speed = if (location.hasSpeed()) location.speed else 0f
-
-        if (speed >= STATIONARY_SPEED_THRESHOLD) {
-            // Moving - cancel any pending stationary timer
-            stationaryJob?.cancel()
-            stationaryJob = null
-            if (isStationary) {
-                resumeFromStationary()
-            }
-            return
-        }
-
-        // Speed below threshold - start countdown if not already running
-        if (!isStationary && stationaryJob?.isActive != true) {
-            stationaryJob = serviceScope?.launch {
-                delay(STATIONARY_TIMEOUT_MS)
-                withContext(Dispatchers.Main) {
-                    enterStationary()
-                }
-            }
-        }
-    }
-
-    private fun enterStationary() {
-        if (isStationary) return
-        isStationary = true
-
-        AppLogger.i(TAG, "Device stationary - pausing active GPS, arming motion sensor")
-
-        // Stop active GPS but keep the service running
-        stopLocationUpdates()
-
-        motionDetector?.arm()
-
-        val loc = lastKnownLocation
-        updateNotification(
-            lat = loc?.latitude,
-            lon = loc?.longitude,
-            forceUpdate = true
-        )
-    }
-
     /** Called by MotionDetector when the device starts moving again. */
     private fun onMotionDetected() {
         if (isMotionlessPaused) {
             resumeFromMotionlessPause()
-            return
         }
-        if (!isStationary) return
-        AppLogger.i(TAG, "Motion detected - resuming active GPS")
-        resumeFromStationary()
+        profileManager.onMotionDetected()
     }
 
-    private fun resumeFromStationary() {
-        isStationary = false
-        stationaryJob?.cancel()
-        stationaryJob = null
-        motionDetector?.disarm()
-
-        // Restart active GPS with current config
-        setupLocationUpdates()
-
-        val loc = lastKnownLocation
-        updateNotification(
-            lat = loc?.latitude,
-            lon = loc?.longitude,
-            forceUpdate = true
-        )
+    /** Arms or disarms the motion sensor when the stationary profile state changes. */
+    private fun handleStationaryChanged(stationary: Boolean) {
+        if (stationary) {
+            motionDetector?.arm()
+        } else if (!isMotionlessPaused) {
+            motionDetector?.disarm()
+        }
     }
 
     // ── Profile hot-swap ────────────────────────────────────────────────
@@ -967,12 +891,6 @@ class LocationForegroundService : Service() {
         )
 
         pushConfigToSyncManager()
-
-        // Resume from stationary if a profile switch happens (e.g. charging)
-        if (isStationary) {
-            resumeFromStationary()
-            return
-        }
 
         // Synchronous restart on Main thread to avoid duplicate locations from
         // the old listener firing during an async coroutine window.

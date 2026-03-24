@@ -243,8 +243,7 @@ describe("SyncStrategySettings", () => {
 
       fireEvent.press(getByText("Advanced Settings"))
 
-      // Retry Failed Uploads is the second switch (after Pause GPS when stationary)
-      const retrySwitch = getAllByRole("switch")[1]
+      const retrySwitch = getAllByRole("switch")[0]
 
       fireEvent(retrySwitch, "valueChange", true)
 
@@ -262,8 +261,7 @@ describe("SyncStrategySettings", () => {
 
       fireEvent.press(getByText("Advanced Settings"))
 
-      // Retry Failed Uploads is the second switch (after Pause GPS when stationary)
-      const retrySwitch = getAllByRole("switch")[1]
+      const retrySwitch = getAllByRole("switch")[0]
 
       fireEvent(retrySwitch, "valueChange", false)
 

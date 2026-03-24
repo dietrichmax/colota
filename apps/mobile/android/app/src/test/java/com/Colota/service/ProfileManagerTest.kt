@@ -29,16 +29,23 @@ class ProfileManagerTest {
     private var switchedProfileName: String? = null
     private var switchedProfileId: Int? = null
     private var switchCount = 0
+    private var lastStationaryCallback: Boolean? = null
 
     private fun createManager(): ProfileManager {
-        return ProfileManager(profileHelper, testScope) { interval, distance, sync, name, id ->
-            switchedInterval = interval
-            switchedDistance = distance
-            switchedSyncInterval = sync
-            switchedProfileName = name
-            switchedProfileId = id
-            switchCount++
-        }
+        return ProfileManager(
+            profileHelper, testScope,
+            onConfigSwitch = { interval, distance, sync, name, id ->
+                switchedInterval = interval
+                switchedDistance = distance
+                switchedSyncInterval = sync
+                switchedProfileName = name
+                switchedProfileId = id
+                switchCount++
+            },
+            onStationaryChanged = { stationary ->
+                lastStationaryCallback = stationary
+            }
+        )
     }
 
     private fun chargingProfile(
@@ -127,6 +134,7 @@ class ProfileManagerTest {
         switchedSyncInterval = 0
         switchedProfileName = null
         switchedProfileId = null
+        lastStationaryCallback = null
 
         mockkObject(com.Colota.bridge.LocationServiceModule)
         every { com.Colota.bridge.LocationServiceModule.sendProfileSwitchEvent(any(), any()) } returns true
@@ -495,6 +503,180 @@ class ProfileManagerTest {
         // Should deactivate immediately to defaults
         assertNull(switchedProfileName)
         assertEquals(5000L, switchedInterval)
+    }
+
+    // --- Stationary condition ---
+
+    private fun stationaryProfile(
+        id: Int = 5,
+        name: String = "Stationary",
+        intervalMs: Long = 30000,
+        priority: Int = 10,
+        deactivationDelay: Int = 30
+    ) = ProfileHelper.CachedProfile(
+        id = id,
+        name = name,
+        intervalMs = intervalMs,
+        minUpdateDistance = 0f,
+        syncIntervalSeconds = 0,
+        priority = priority,
+        conditionType = ProfileConstants.CONDITION_STATIONARY,
+        speedThreshold = null,
+        deactivationDelaySeconds = deactivationDelay
+    )
+
+    @Test
+    fun `activates stationary profile after timeout`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // Feed slow locations - should not activate immediately
+        manager.onLocationUpdate(mockLocation(0.1f))
+        assertEquals(0, switchCount)
+
+        // Advance past stationary timeout
+        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+
+        assertEquals("Stationary", switchedProfileName)
+        assertEquals(30000L, switchedInterval)
+    }
+
+    @Test
+    fun `does not activate stationary profile when speed above threshold`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        repeat(5) { manager.onLocationUpdate(mockLocation(5f)) }
+        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+
+        assertNull(switchedProfileName)
+    }
+
+    @Test
+    fun `deactivates stationary profile when device starts moving`() = testScope.runTest {
+        val profile = stationaryProfile(deactivationDelay = 10)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.defaultDistance = 0f
+        manager.defaultSyncInterval = 0
+
+        // Become stationary
+        manager.onLocationUpdate(mockLocation(0.1f))
+        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        assertEquals("Stationary", switchedProfileName)
+
+        // Start moving
+        manager.onLocationUpdate(mockLocation(5f))
+
+        // Wait past deactivation delay
+        advanceTimeBy(11_000)
+        assertNull(switchedProfileName)
+        assertEquals(5000L, switchedInterval)
+    }
+
+    @Test
+    fun `stationary timer resets when speed goes above threshold`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // Start countdown
+        manager.onLocationUpdate(mockLocation(0.1f))
+        advanceTimeBy(30_000)
+
+        // Speed goes above threshold - should cancel timer
+        manager.onLocationUpdate(mockLocation(5f))
+        advanceTimeBy(40_000)
+
+        // Should not have activated
+        assertNull(switchedProfileName)
+    }
+
+    @Test
+    fun `treats missing speed as stationary`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // Location without speed data
+        manager.onLocationUpdate(mockLocation(0f, hasSpeed = false))
+        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+
+        assertEquals("Stationary", switchedProfileName)
+    }
+
+    @Test
+    fun `isStationary reflects current state`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        assertFalse(manager.isStationary)
+
+        manager.onLocationUpdate(mockLocation(0.1f))
+        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        assertTrue(manager.isStationary)
+
+        manager.onLocationUpdate(mockLocation(5f))
+        assertFalse(manager.isStationary)
+    }
+
+    @Test
+    fun `onStationaryChanged callback fires on state transitions`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        manager.onLocationUpdate(mockLocation(0.1f))
+        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        assertEquals(true, lastStationaryCallback)
+
+        manager.onLocationUpdate(mockLocation(5f))
+        assertEquals(false, lastStationaryCallback)
+    }
+
+    @Test
+    fun `onMotionDetected deactivates stationary profile immediately`() = testScope.runTest {
+        val profile = stationaryProfile(deactivationDelay = 0)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.defaultDistance = 0f
+        manager.defaultSyncInterval = 0
+
+        // Become stationary
+        manager.onLocationUpdate(mockLocation(0.1f))
+        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        assertEquals("Stationary", switchedProfileName)
+        assertTrue(manager.isStationary)
+
+        // Motion sensor fires
+        manager.onMotionDetected()
+
+        assertFalse(manager.isStationary)
+        assertEquals(false, lastStationaryCallback)
+        assertNull(switchedProfileName)
+        assertEquals(5000L, switchedInterval)
+    }
+
+    @Test
+    fun `onMotionDetected ignores when not stationary`() = testScope.runTest {
+        every { profileHelper.getEnabledProfiles() } returns emptyList()
+
+        val manager = createManager()
+        manager.onMotionDetected()
+
+        assertNull(lastStationaryCallback)
     }
 
     // --- Unknown condition type ---

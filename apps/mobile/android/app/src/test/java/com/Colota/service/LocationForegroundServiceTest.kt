@@ -1493,18 +1493,15 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `onMotionDetected motionless path takes priority over stationary`() = testScope.runTest {
+    fun `onMotionDetected triggers motionless resume`() = testScope.runTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
-        setField("isStationary", true)
         setField("currentZoneGeofence", homeGeofence)
 
         invokeOnMotionDetected()
 
-        // Motionless path fires, not stationary path
         assertFalse(getField<Boolean>("isMotionlessPaused"))
-        assertTrue(getField<Boolean>("isStationary")) // stationary unchanged
     }
 
     // =========================================================================
@@ -1707,215 +1704,6 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
-    // evaluateStationaryState - motion detection
-    // =========================================================================
-
-    @Test
-    fun `evaluateStationaryState skips when pauseWhenStationary is disabled`() = testScope.runTest {
-        setField("config", ServiceConfig(
-            endpoint = "https://example.com",
-            pauseWhenStationary = false,
-            filterInaccurateLocations = true,
-            accuracyThreshold = 50.0f
-        ))
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        every { motionDetector.isAvailable } returns true
-        setField("motionDetector", motionDetector)
-
-        val location = mockLocation(speed = 0.1f)
-        invokeEvaluateStationaryState(location)
-
-        val stationaryJob: Job? = getField("stationaryJob")
-        assertNull("Should not start stationary timer when disabled", stationaryJob)
-    }
-
-    @Test
-    fun `evaluateStationaryState skips when motion sensor unavailable`() = testScope.runTest {
-        setField("config", ServiceConfig(
-            endpoint = "https://example.com",
-            pauseWhenStationary = true,
-            filterInaccurateLocations = true,
-            accuracyThreshold = 50.0f
-        ))
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        every { motionDetector.isAvailable } returns false
-        setField("motionDetector", motionDetector)
-
-        val location = mockLocation(speed = 0.1f)
-        invokeEvaluateStationaryState(location)
-
-        val stationaryJob: Job? = getField("stationaryJob")
-        assertNull("Should not start timer when sensor unavailable", stationaryJob)
-    }
-
-    @Test
-    fun `evaluateStationaryState skips when entry delay is pending`() = testScope.runTest {
-        setField("config", ServiceConfig(
-            endpoint = "https://example.com",
-            pauseWhenStationary = true,
-            filterInaccurateLocations = true,
-            accuracyThreshold = 50.0f
-        ))
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        every { motionDetector.isAvailable } returns true
-        setField("motionDetector", motionDetector)
-        setField("pendingPauseZone", homeGeofence)
-
-        val location = mockLocation(speed = 0.1f)
-        invokeEvaluateStationaryState(location)
-
-        val stationaryJob: Job? = getField("stationaryJob")
-        assertNull("Should not start stationary timer during entry delay", stationaryJob)
-    }
-
-    @Test
-    fun `evaluateStationaryState skips timer when inside pause zone`() = testScope.runTest {
-        setField("config", ServiceConfig(
-            endpoint = "https://example.com",
-            pauseWhenStationary = true,
-            filterInaccurateLocations = true,
-            accuracyThreshold = 50.0f
-        ))
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        every { motionDetector.isAvailable } returns true
-        setField("motionDetector", motionDetector)
-        setField("insidePauseZone", true)
-
-        val location = mockLocation(speed = 0.1f)
-        invokeEvaluateStationaryState(location)
-
-        val stationaryJob: Job? = getField("stationaryJob")
-        assertNull("Should not start stationary timer inside pause zone - GPS must stay running for exit detection", stationaryJob)
-    }
-
-    @Test
-    fun `evaluateStationaryState starts timer when speed below threshold`() = testScope.runTest {
-        setField("config", ServiceConfig(
-            endpoint = "https://example.com",
-            pauseWhenStationary = true,
-            filterInaccurateLocations = true,
-            accuracyThreshold = 50.0f
-        ))
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        every { motionDetector.isAvailable } returns true
-        setField("motionDetector", motionDetector)
-
-        val location = mockLocation(speed = 0.1f) // below 0.3 m/s threshold
-        invokeEvaluateStationaryState(location)
-
-        val stationaryJob: Job? = getField("stationaryJob")
-        assertNotNull("Should start stationary timer", stationaryJob)
-        assertTrue("Timer should be active", stationaryJob!!.isActive)
-    }
-
-    @Test
-    fun `evaluateStationaryState cancels timer when speed above threshold`() = testScope.runTest {
-        setField("config", ServiceConfig(
-            endpoint = "https://example.com",
-            pauseWhenStationary = true,
-            filterInaccurateLocations = true,
-            accuracyThreshold = 50.0f
-        ))
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        every { motionDetector.isAvailable } returns true
-        setField("motionDetector", motionDetector)
-
-        // First: trigger timer with low speed
-        val slowLocation = mockLocation(speed = 0.1f)
-        invokeEvaluateStationaryState(slowLocation)
-        val job: Job? = getField("stationaryJob")
-        assertNotNull("Timer should exist", job)
-
-        // Then: cancel with movement
-        val fastLocation = mockLocation(speed = 5.0f)
-        invokeEvaluateStationaryState(fastLocation)
-        val cancelledJob: Job? = getField("stationaryJob")
-        assertNull("Timer should be cancelled", cancelledJob)
-    }
-
-    @Test
-    fun `evaluateStationaryState treats missing speed as stationary`() = testScope.runTest {
-        setField("config", ServiceConfig(
-            endpoint = "https://example.com",
-            pauseWhenStationary = true,
-            filterInaccurateLocations = true,
-            accuracyThreshold = 50.0f
-        ))
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        every { motionDetector.isAvailable } returns true
-        setField("motionDetector", motionDetector)
-
-        val location = mockLocation(hasSpeed = false)
-        invokeEvaluateStationaryState(location)
-
-        val stationaryJob: Job? = getField("stationaryJob")
-        assertNotNull("Should start stationary timer when speed is missing", stationaryJob)
-    }
-
-    @Test
-    fun `enterStationary stops location updates and arms motion sensor`() = testScope.runTest {
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        setField("motionDetector", motionDetector)
-
-        val callback = mockk<LocationUpdateCallback>(relaxed = true)
-        setField("locationUpdateCallback", callback)
-
-        invokeEnterStationary()
-
-        assertTrue(getField<Boolean>("isStationary"))
-        verify { locationProvider.removeLocationUpdates(callback) }
-        verify { motionDetector.arm() }
-        assertNull(getField<LocationUpdateCallback?>("locationUpdateCallback"))
-    }
-
-    @Test
-    fun `enterStationary arms sensor when inside pause zone`() = testScope.runTest {
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        setField("motionDetector", motionDetector)
-        setField("insidePauseZone", true)
-
-        invokeEnterStationary()
-
-        assertTrue(getField<Boolean>("isStationary"))
-        verify { motionDetector.arm() }
-    }
-
-    @Test
-    fun `onMotionDetected resumes GPS when stationary`() = testScope.runTest {
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        setField("motionDetector", motionDetector)
-        setField("isStationary", true)
-
-        invokeOnMotionDetected()
-
-        assertFalse(getField<Boolean>("isStationary"))
-        verify { motionDetector.disarm() }
-    }
-
-    @Test
-    fun `onMotionDetected ignores when not stationary`() = testScope.runTest {
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        setField("motionDetector", motionDetector)
-        setField("isStationary", false)
-
-        invokeOnMotionDetected()
-
-        verify(exactly = 0) { motionDetector.disarm() }
-    }
-
-    @Test
-    fun `applyProfileConfig resumes from stationary`() = testScope.runTest {
-        val motionDetector = mockk<MotionDetector>(relaxed = true)
-        setField("motionDetector", motionDetector)
-        setField("isStationary", true)
-
-        invokeApplyProfileConfig(10000L, 5.0f, 300)
-
-        assertFalse(getField<Boolean>("isStationary"))
-        verify { motionDetector.disarm() }
-    }
-
-    // =========================================================================
     // Reflection helpers
     // =========================================================================
 
@@ -1929,20 +1717,6 @@ class LocationForegroundServiceTest {
 
     private fun invokeCancelEntryDelay() {
         val method = LocationForegroundService::class.java.getDeclaredMethod("cancelEntryDelay")
-        method.isAccessible = true
-        method.invoke(service)
-    }
-
-    private fun invokeEvaluateStationaryState(location: Location) {
-        val method = LocationForegroundService::class.java.getDeclaredMethod(
-            "evaluateStationaryState", Location::class.java
-        )
-        method.isAccessible = true
-        method.invoke(service, location)
-    }
-
-    private fun invokeEnterStationary() {
-        val method = LocationForegroundService::class.java.getDeclaredMethod("enterStationary")
         method.isAccessible = true
         method.invoke(service)
     }

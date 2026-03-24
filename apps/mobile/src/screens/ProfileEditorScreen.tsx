@@ -98,13 +98,16 @@ export function ProfileEditorScreen({ navigation, route }: any) {
   const setConditionType = useCallback(
     (type: ProfileConditionType) => {
       const isSpeed = type === "speed_above" || type === "speed_below"
+      const newDelay = type === "stationary" ? 0 : 60
       setProfile((prev) => ({
         ...prev,
+        deactivationDelay: prev.condition.type !== type ? newDelay : prev.deactivationDelay,
         condition: {
           type,
           ...(isSpeed ? { speedThreshold: Number(speedKmh) / MS_TO_KMH } : {})
         }
       }))
+      if (type === "stationary") setDelayStr("0")
     },
     [speedKmh]
   )
@@ -376,26 +379,39 @@ export function ProfileEditorScreen({ navigation, route }: any) {
           )}
         </Card>
 
-        {/* Deactivation Delay */}
-        <SectionTitle style={styles.sectionGap}>Deactivation</SectionTitle>
-        <Card>
-          <SettingRow
-            label="Deactivation Delay"
-            hint="Wait before reverting to default settings after the condition stops matching. Prevents rapid switching."
-          >
-            <View style={styles.inputWithUnit}>
-              <TextInput
-                style={inputStyle}
-                keyboardType="numeric"
-                value={delayStr}
-                onChangeText={(val) => handleNumericChange(setDelayStr, "deactivationDelay", val, 0)}
-                placeholder="60"
-                placeholderTextColor={colors.placeholder}
-              />
-              <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
-            </View>
-          </SettingRow>
-        </Card>
+        {profile.condition.type === "stationary" ? (
+          <>
+            <SectionTitle style={styles.sectionGap}>Deactivation</SectionTitle>
+            <Card>
+              <Text style={[styles.conditionHint, { color: colors.textLight }]}>
+                Activates after ~60s without movement. Resumes instantly via the hardware motion sensor when the device
+                moves.
+              </Text>
+            </Card>
+          </>
+        ) : (
+          <>
+            <SectionTitle style={styles.sectionGap}>Deactivation</SectionTitle>
+            <Card>
+              <SettingRow
+                label="Deactivation Delay"
+                hint="Wait before reverting to default settings after the condition stops matching. Prevents rapid switching."
+              >
+                <View style={styles.inputWithUnit}>
+                  <TextInput
+                    style={inputStyle}
+                    keyboardType="numeric"
+                    value={delayStr}
+                    onChangeText={(val) => handleNumericChange(setDelayStr, "deactivationDelay", val, 0)}
+                    placeholder="60"
+                    placeholderTextColor={colors.placeholder}
+                  />
+                  <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
+                </View>
+              </SettingRow>
+            </Card>
+          </>
+        )}
 
         {/* Save Button */}
         <Pressable
@@ -457,6 +473,7 @@ const styles = StyleSheet.create({
   },
   conditionLabel: { fontSize: 13, ...fonts.semiBold },
   conditionDesc: { fontSize: 11, ...fonts.regular, textAlign: "center" },
+  conditionHint: { fontSize: 13, ...fonts.regular, paddingHorizontal: 16, paddingVertical: 12 },
   syncLabelRow: { marginBottom: 8 },
   settingLabel: { fontSize: 16, ...fonts.semiBold, marginBottom: 2 },
   settingHint: { fontSize: 13, ...fonts.regular, lineHeight: 18 },

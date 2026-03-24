@@ -64,7 +64,8 @@ const features = [
   },
   {
     title: "Tracking Profiles",
-    description: "Multiple GPS configs that switch automatically based on charging state, Android Auto, or speed."
+    description:
+      "Multiple GPS configs that switch automatically based on charging state, Android Auto, speed or stationary detection."
   },
   {
     title: "Maps & Geofencing",

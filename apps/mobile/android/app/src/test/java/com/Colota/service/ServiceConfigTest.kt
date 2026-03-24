@@ -238,7 +238,6 @@ class ServiceConfigTest {
             every { getInt("retryInterval") } returns 60
             every { getBoolean("isOfflineMode") } returns true
             every { getBoolean("isWifiOnlySync") } returns true
-            every { getBoolean("pauseWhenStationary") } returns false
             every { getString("fieldMap") } returns """{"lat":"latitude"}"""
             every { getString("customFields") } returns """{"_type":"location"}"""
             every { getString("httpMethod") } returns "GET"
@@ -260,7 +259,6 @@ class ServiceConfigTest {
         assertEquals(60, config.retryIntervalSeconds)
         assertTrue(config.isOfflineMode)
         assertTrue(config.isWifiOnlySync)
-        assertFalse(config.pauseWhenStationary)
         assertEquals("""{"lat":"latitude"}""", config.fieldMap)
         assertEquals("GET", config.httpMethod)
         assertEquals("traccar_json", config.apiFormat)

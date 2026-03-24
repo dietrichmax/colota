@@ -50,7 +50,6 @@ export const SettingsService = {
       case "filterInaccurateLocations":
       case "isOfflineMode":
       case "isWifiOnlySync":
-      case "pauseWhenStationary":
         // Boolean → "true"/"false"
         stringValue = String(value)
         break

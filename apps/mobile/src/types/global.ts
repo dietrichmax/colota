@@ -292,8 +292,6 @@ export interface Settings {
   maxRetries: number
   isOfflineMode: boolean
   isWifiOnlySync: boolean
-  pauseWhenStationary: boolean
-
   // UI State
   syncPreset: SyncPreset
   hasCompletedSetup: boolean
@@ -314,7 +312,6 @@ export const DEFAULT_SETTINGS: Settings = {
   maxRetries: 5,
   isOfflineMode: false,
   isWifiOnlySync: false,
-  pauseWhenStationary: false,
   hasCompletedSetup: false,
   httpMethod: "POST"
 } as const
@@ -345,7 +342,7 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
 // TRACKING PROFILES
 // ============================================================================
 
-export type ProfileConditionType = "charging" | "android_auto" | "speed_above" | "speed_below"
+export type ProfileConditionType = "charging" | "android_auto" | "speed_above" | "speed_below" | "stationary"
 
 export interface ProfileCondition {
   type: ProfileConditionType

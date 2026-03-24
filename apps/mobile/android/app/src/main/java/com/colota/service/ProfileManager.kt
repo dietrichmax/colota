@@ -24,7 +24,8 @@ import kotlinx.coroutines.*
 class ProfileManager(
     private val profileHelper: ProfileHelper,
     private val scope: CoroutineScope,
-    private val onConfigSwitch: (interval: Long, distance: Float, syncInterval: Int, profileName: String?, profileId: Int?) -> Unit
+    private val onConfigSwitch: (interval: Long, distance: Float, syncInterval: Int, profileName: String?, profileId: Int?) -> Unit,
+    private val onStationaryChanged: ((stationary: Boolean) -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "ProfileManager"
@@ -42,6 +43,9 @@ class ProfileManager(
     // Condition states
     @Volatile private var isCharging = false
     @Volatile private var isCarMode = false
+    @Volatile var isStationary = false
+        private set
+    @Volatile private var stationaryJob: Job? = null
 
     // Speed rolling average buffer
     private val speedBuffer = ArrayDeque<Float>()
@@ -58,6 +62,17 @@ class ProfileManager(
         evaluate()
     }
 
+    /** Called by the motion sensor when the device starts moving while stationary. */
+    fun onMotionDetected() {
+        if (!isStationary) return
+        stationaryJob?.cancel()
+        stationaryJob = null
+        isStationary = false
+        onStationaryChanged?.invoke(false)
+        AppLogger.d(TAG, "Motion detected - device no longer stationary")
+        evaluate()
+    }
+
     fun onLocationUpdate(location: android.location.Location) {
         if (location.hasSpeed()) {
             synchronized(speedLock) {
@@ -67,6 +82,7 @@ class ProfileManager(
                 speedBuffer.addLast(location.speed)
             }
         }
+        evaluateStationaryState(location)
         evaluate()
     }
 
@@ -141,6 +157,7 @@ class ProfileManager(
                 val threshold = profile.speedThreshold
                 avgSpeed != null && threshold != null && avgSpeed < threshold
             }
+            ProfileConstants.CONDITION_STATIONARY -> isStationary
             else -> false
         }
 
@@ -209,6 +226,33 @@ class ProfileManager(
     private fun cancelDeactivation() {
         deactivationJob?.cancel()
         deactivationJob = null
+    }
+
+    private fun evaluateStationaryState(location: android.location.Location) {
+        if (ProfileConstants.CONDITION_STATIONARY !in getNeededConditionTypes()) return
+
+        val speed = if (location.hasSpeed()) location.speed else 0f
+
+        if (speed >= ProfileConstants.STATIONARY_SPEED_THRESHOLD) {
+            stationaryJob?.cancel()
+            stationaryJob = null
+            if (isStationary) {
+                isStationary = false
+                onStationaryChanged?.invoke(false)
+                AppLogger.d(TAG, "Device no longer stationary (speed=${String.format("%.1f", speed)}m/s)")
+            }
+            return
+        }
+
+        if (!isStationary && stationaryJob?.isActive != true) {
+            stationaryJob = scope.launch {
+                delay(ProfileConstants.STATIONARY_TIMEOUT_MS)
+                isStationary = true
+                onStationaryChanged?.invoke(true)
+                AppLogger.d(TAG, "Device stationary (speed below threshold for ${ProfileConstants.STATIONARY_TIMEOUT_MS / 1000}s)")
+                evaluate()
+            }
+        }
     }
 
     private fun deactivateToDefault() {

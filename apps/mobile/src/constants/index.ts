@@ -4,7 +4,7 @@
  */
 
 import type { ProfileConditionType } from "../types/global"
-import { Zap, Car, ArrowUp, ArrowDown } from "lucide-react-native"
+import { Zap, Car, ArrowUp, ArrowDown, Pause } from "lucide-react-native"
 
 // Timing
 export const AUTOSAVE_DEBOUNCE_MS = 1500
@@ -57,6 +57,13 @@ export const PROFILE_CONDITIONS: {
     listLabel: "Speed below",
     icon: ArrowDown,
     description: "Moving slower than threshold"
+  },
+  {
+    type: "stationary",
+    label: "Stationary",
+    listLabel: "When stationary",
+    icon: Pause,
+    description: "Not moving for ~60 seconds"
   }
 ]
 

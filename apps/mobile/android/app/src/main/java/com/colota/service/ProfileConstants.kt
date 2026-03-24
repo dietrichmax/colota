@@ -10,8 +10,11 @@ object ProfileConstants {
     const val CONDITION_ANDROID_AUTO = "android_auto"
     const val CONDITION_SPEED_ABOVE = "speed_above"
     const val CONDITION_SPEED_BELOW = "speed_below"
+    const val CONDITION_STATIONARY = "stationary"
 
     const val CACHE_TTL_MS = 30_000L
     const val SPEED_BUFFER_SIZE = 5
     const val MIN_INTERVAL_MS = 1000L
+    const val STATIONARY_SPEED_THRESHOLD = 0.3f
+    const val STATIONARY_TIMEOUT_MS = 60_000L
 }

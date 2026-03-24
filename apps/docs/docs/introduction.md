@@ -15,9 +15,9 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Offline Maps** - Download map areas to your device for use without an internet connection.
 - **Scheduled Export** - Automatic daily, weekly or monthly exports to a local directory with file retention management.
 - **Location History** - View daily summaries, trip segmentation, calendar with activity dots and per-trip export.
-- **Reliable Tracking** - Foreground service, auto-start on boot, exponential backoff retry and automatic GPS pause when stationary.
+- **Reliable Tracking** - Foreground service, auto-start on boot and exponential backoff retry.
 - **Geofencing** - Pause zones that stop recording locations. Optionally stop GPS entirely when on WiFi or when the device is motionless.
-- **Tracking Profiles** - Automatically adjust GPS interval, distance filter and sync settings based on conditions like charging, car mode or speed.
+- **Tracking Profiles** - Automatically adjust GPS interval, distance filter and sync settings based on conditions like charging, car mode, speed or stationary detection.
 - **Flexible Sync** - Instant, batch, Wi-Fi only or offline modes.
 - **Display Settings** - Choose between metric and imperial units, 12h or 24h time format. Auto-detected from device locale on first use.
 - **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
