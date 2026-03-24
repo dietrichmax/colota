@@ -71,13 +71,6 @@ jobs:
       - name: Build shared package
         run: npm run build -w @colota/shared
 
-      - name: Patch node_modules for reproducible builds
-        run: |
-          sed -i 's/getHostIpAddress(),/project.properties["reactNativeDevServerIp"]?.toString() ?: "localhost",/' \
-            node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
-          sed -i '/^project(rnscreens)/a add_link_options(-Wl,--build-id=none)' \
-            node_modules/react-native-screens/android/CMakeLists.txt
-
       - name: Append signing config to gradle.properties
         run: |
           cat <<EOF >> apps/mobile/android/gradle.properties
@@ -173,11 +166,23 @@ jobs:
           test -n "${{ secrets.KEY_ALIAS }}" || exit 1
           test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
 
-      - name: Build FOSS Release APKs
+      - name: Build FOSS per-arch APKs
         run: |
           cd apps/mobile/android
           chmod +x gradlew
           ./gradlew assembleFossRelease --no-daemon
+
+      - name: Save per-arch APKs
+        run: mkdir -p /tmp/foss-apks && cp apps/mobile/android/app/build/outputs/apk/foss/release/*.apk /tmp/foss-apks/
+
+      - name: Build FOSS universal APK (for F-Droid reproducible builds)
+        run: |
+          sed -i 's/enable !gradle.*/enable false/' apps/mobile/android/app/build.gradle
+          cd apps/mobile/android
+          ./gradlew assembleFossRelease --no-daemon
+
+      - name: Collect all FOSS APKs
+        run: cp /tmp/foss-apks/*.apk apps/mobile/android/app/build/outputs/apk/foss/release/
 
       - name: Upload FOSS APKs
         uses: actions/upload-artifact@v4
