@@ -94,8 +94,8 @@ android {
         applicationId "com.Colota"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 28
-        versionName "1.4.0"
+        versionCode 29
+        versionName "1.5.0"
 
         // Strip Build IDs for reproducible builds (IzzyOnDroid/F-Droid)
         externalNativeBuild {
