@@ -148,15 +148,7 @@ export function SyncStrategySettings({
         {showAdvanced && (
           <View style={styles.advancedPanel}>
             {settings.syncPreset === "custom" && (
-              <View
-                style={[
-                  styles.customBanner,
-                  {
-                    backgroundColor: colors.info + "15",
-                    borderLeftColor: colors.info
-                  }
-                ]}
-              >
+              <View style={[styles.customBanner, { backgroundColor: colors.info + "15" }]}>
                 <View style={styles.bannerRow}>
                   <Lightbulb size={14} color={colors.info} />
                   <Text style={[styles.customBannerText, { color: colors.info }]}>Using custom configuration</Text>
@@ -417,8 +409,7 @@ const styles = StyleSheet.create({
   customBanner: {
     padding: 14,
     borderRadius: 10,
-    marginBottom: 20,
-    borderLeftWidth: 4
+    marginBottom: 20
   },
   bannerRow: {
     flexDirection: "row",

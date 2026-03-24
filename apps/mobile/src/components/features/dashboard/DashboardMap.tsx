@@ -148,34 +148,14 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
       {showMap && <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />}
 
       {showMap && activeZoneName && (
-        <View
-          style={[
-            styles.topInfoCard,
-            {
-              backgroundColor: colors.card,
-              borderLeftColor: colors.warning
-            }
-          ]}
-        >
-          <Text style={[styles.infoTitle, { color: colors.text }]}>Paused in {activeZoneName}</Text>
-          <Text style={[styles.infoSub, { color: colors.textSecondary }]}>
-            {activeProfileName ? `Profile "${activeProfileName}" resumes on exit` : "Location not being recorded"}
-          </Text>
+        <View style={[styles.statusBar, { backgroundColor: colors.warning + "DD" }]}>
+          <Text style={styles.barText}>Paused in {activeZoneName}</Text>
         </View>
       )}
 
       {showMap && !activeZoneName && activeProfileName && (
-        <View
-          style={[
-            styles.topInfoCard,
-            {
-              backgroundColor: colors.card,
-              borderLeftColor: colors.primary
-            }
-          ]}
-        >
-          <Text style={[styles.infoTitle, { color: colors.text }]}>Profile: {activeProfileName}</Text>
-          <Text style={[styles.infoSub, { color: colors.textSecondary }]}>Tracking settings adjusted</Text>
+        <View style={[styles.statusBar, { backgroundColor: colors.primary + "DD" }]}>
+          <Text style={styles.barText}>{activeProfileName}</Text>
         </View>
       )}
     </View>
@@ -210,18 +190,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20
   },
-  topInfoCard: {
+  statusBar: {
     position: "absolute",
-    top: 20,
-    left: 20,
-    right: 20,
-    padding: 16,
-    borderRadius: 16,
-    elevation: 8,
-    shadowOpacity: 0.2,
-    borderLeftWidth: 5,
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 6,
+    alignItems: "center",
     zIndex: 5
   },
-  infoTitle: { fontSize: 16, ...fonts.bold, marginBottom: 2 },
-  infoSub: { fontSize: 13 }
+  barText: { fontSize: 13, ...fonts.semiBold, color: "#fff" }
 })

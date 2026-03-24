@@ -41,7 +41,7 @@ export function Card({ children, style, danger = false, variant = "default", onP
           backgroundColor: colors.cardElevated,
           borderColor: "transparent",
           borderWidth: 0,
-          elevation: 4,
+          elevation: 1,
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.15,

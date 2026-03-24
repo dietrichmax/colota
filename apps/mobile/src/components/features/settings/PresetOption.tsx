@@ -109,8 +109,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1
+    borderRadius: 6
   },
   badgeContent: {
     flexDirection: "row",

@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 2
+    elevation: 1
   },
   navIconBox: {
     width: 48,
@@ -130,8 +130,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
-    borderWidth: 1
+    marginBottom: 8
   },
   navLabel: {
     fontSize: 12,

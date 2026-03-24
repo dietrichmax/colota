@@ -47,11 +47,7 @@ export function TripList({ trips, colors, onTripSelect, selectedTripIndex, onExp
         <Card
           variant="interactive"
           onPress={() => onTripSelect(item)}
-          style={[
-            styles.tripCard,
-            { borderLeftColor: tripColor },
-            isSelected && [styles.tripCardSelected, { borderColor: tripColor }]
-          ]}
+          style={[styles.tripCard, isSelected && [styles.tripCardSelected, { borderColor: tripColor }]]}
         >
           <View style={styles.tripHeader}>
             <View style={styles.tripTitleRow}>
@@ -240,8 +236,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16
   },
   tripCard: {
-    marginBottom: 8,
-    borderLeftWidth: 3
+    marginBottom: 8
   },
   tripCardSelected: {
     borderWidth: 1.5
