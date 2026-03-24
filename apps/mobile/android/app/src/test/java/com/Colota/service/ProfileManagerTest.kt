@@ -662,6 +662,7 @@ class ProfileManagerTest {
 
         // Motion sensor fires
         manager.onMotionDetected()
+        advanceTimeBy(100) // let 0s deactivation delay coroutine run
 
         assertFalse(manager.isStationary)
         assertEquals(false, lastStationaryCallback)
