@@ -3,7 +3,7 @@ name: Build Latest Release
 on:
   push:
     branches:
-      - main
+      - dev
     paths-ignore:
       - '**.md'
       - 'apps/docs/**'
