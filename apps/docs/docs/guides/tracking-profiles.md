@@ -52,6 +52,23 @@ Each profile overrides the default tracking configuration with:
 
 When creating a new profile, GPS interval, distance filter, and sync interval are pre-filled with your current values from main Settings. Each field also shows a hint with the default value for reference.
 
+## Priority
+
+When multiple conditions match at the same time, the profile with the highest priority wins.
+
+:::tip If you use both a Speed Below and a Stationary profile, give Stationary the higher priority. Otherwise the speed profile keeps GPS running at its interval and the stationary heartbeat never kicks in. :::
+
+## Example Configurations
+
+| Profile    | Condition          | Interval | Distance | Priority | Use case                       |
+| ---------- | ------------------ | -------- | -------- | -------- | ------------------------------ |
+| Stationary | Stationary         | 1800s    | 0m       | 40       | Heartbeat while not moving     |
+| Driving    | Car Mode           | 10s      | 1m       | 30       | Detailed route while driving   |
+| Walking    | Speed Below 8 km/h | 60s      | 2m       | 20       | Battery-friendly on foot       |
+| Charging   | Charging           | 15s      | 0m       | 10       | High accuracy while plugged in |
+
+Note that Stationary has the highest priority so it takes over from Walking when you stop. Charging has the lowest priority so a more specific profile (e.g. Driving) wins when both match.
+
 ## How It Works
 
 - When tracking starts, all enabled profiles are evaluated against current conditions
