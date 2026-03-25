@@ -11,6 +11,7 @@ import { fonts } from "../styles/typography"
 import { Card } from "../components/ui/Card"
 import { Container } from "../components/ui/Container"
 import { TrackMap } from "../components/features/inspector/TrackMap"
+import { InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
 import { getTripColor, computeTripStats } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
@@ -46,6 +47,7 @@ export function TripDetailScreen({ route }: { navigation: any; route: any }) {
   const displayName = `Trip ${trip.index}`
 
   const [showExport, setShowExport] = useState(false)
+  const [chartActiveIndex, setChartActiveIndex] = useState<number | null>(null)
 
   const handleExport = useCallback(
     async (format: ExportFormat) => {
@@ -140,26 +142,21 @@ export function TripDetailScreen({ route }: { navigation: any; route: any }) {
                 <Text style={[styles.chartTitle, { color: colors.text }]}>Speed</Text>
                 <Text style={[styles.chartRange, { color: colors.textSecondary }]}>max {formatSpeed(maxSpeed)}</Text>
               </View>
-              <View style={styles.chartBody}>
-                <View style={styles.yAxis}>
-                  <Text style={[styles.yLabel, { color: colors.textSecondary }]}>{formatSpeed(maxSpeed)}</Text>
-                  <Text style={[styles.yLabel, { color: colors.textSecondary }]}>0</Text>
-                </View>
-                <View style={styles.chartContainer}>
-                  {speedProfile.map((speed, i) => {
-                    const height = maxSpeed > 0 ? (speed / maxSpeed) * 100 : 0
-                    return (
-                      <View
-                        key={i}
-                        style={[styles.bar, { height: `${Math.max(height, 2)}%`, backgroundColor: tripColor }]}
-                      />
-                    )
-                  })}
-                </View>
-              </View>
+              <InteractiveLineChart
+                data={speedProfile}
+                color={colors.info}
+                textColor={colors.text}
+                backgroundColor={colors.card}
+                formatValue={(v) => formatSpeed(v).replace(/\.\d+/, "")}
+                activeIndex={chartActiveIndex}
+                onActiveIndexChange={setChartActiveIndex}
+              />
               <View style={styles.chartLabels}>
-                <Text style={[styles.chartLabel, { color: colors.textSecondary }]}>{formatTime(trip.startTime)}</Text>
-                <Text style={[styles.chartLabel, { color: colors.textSecondary }]}>{formatTime(trip.endTime)}</Text>
+                {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
+                  <Text key={frac} style={[styles.chartLabel, { color: colors.textSecondary }]}>
+                    {formatTime(Math.round(trip.startTime + frac * duration))}
+                  </Text>
+                ))}
               </View>
             </Card>
           </View>
@@ -175,29 +172,21 @@ export function TripDetailScreen({ route }: { navigation: any; route: any }) {
                   {Math.round(minElevation)}m - {Math.round(maxElevation)}m
                 </Text>
               </View>
-              <View style={styles.chartBody}>
-                <View style={styles.yAxis}>
-                  <Text style={[styles.yLabel, { color: colors.textSecondary }]}>{Math.round(maxElevation)}m</Text>
-                  <Text style={[styles.yLabel, { color: colors.textSecondary }]}>{Math.round(minElevation)}m</Text>
-                </View>
-                <View style={styles.chartContainer}>
-                  {elevationProfile.map((alt, i) => {
-                    const height = elevationRange > 0 ? ((alt - minElevation) / elevationRange) * 100 : 0
-                    return (
-                      <View
-                        key={i}
-                        style={[
-                          styles.bar,
-                          { height: `${Math.max(height, 2)}%`, backgroundColor: colors.primary + "80" }
-                        ]}
-                      />
-                    )
-                  })}
-                </View>
-              </View>
+              <InteractiveLineChart
+                data={elevationProfile}
+                color={colors.primary}
+                textColor={colors.text}
+                backgroundColor={colors.card}
+                formatValue={(v) => `${Math.round(v)}m`}
+                activeIndex={chartActiveIndex}
+                onActiveIndexChange={setChartActiveIndex}
+              />
               <View style={styles.chartLabels}>
-                <Text style={[styles.chartLabel, { color: colors.textSecondary }]}>{formatTime(trip.startTime)}</Text>
-                <Text style={[styles.chartLabel, { color: colors.textSecondary }]}>{formatTime(trip.endTime)}</Text>
+                {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
+                  <Text key={frac} style={[styles.chartLabel, { color: colors.textSecondary }]}>
+                    {formatDistance(trip.distance * frac)}
+                  </Text>
+                ))}
               </View>
             </Card>
           </View>
@@ -330,34 +319,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     ...fonts.regular
   },
-  chartBody: {
-    flexDirection: "row"
-  },
-  yAxis: {
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginRight: 6,
-    width: 52
-  },
-  yLabel: {
-    fontSize: 9,
-    ...fonts.regular
-  },
-  chartContainer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    height: 80,
-    flex: 1,
-    gap: 1
-  },
-  bar: {
-    borderRadius: 2,
-    flex: 1
-  },
   chartLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 4
+    marginTop: 4,
+    paddingLeft: 40
   },
   chartLabel: {
     fontSize: 10,
