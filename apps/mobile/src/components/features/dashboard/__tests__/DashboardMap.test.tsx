@@ -70,6 +70,7 @@ describe("DashboardMap info cards", () => {
     coords: validCoords,
     tracking: true,
     activeZoneName: null as string | null,
+    pauseReason: null as string | null,
     activeProfileName: null as string | null
   }
 

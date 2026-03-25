@@ -652,6 +652,7 @@ class LocationForegroundService : Service() {
                     isWifiPaused = true
                     stopLocationUpdates()
                     updateNotification(forceUpdate = true)
+                    LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, "wifi")
                     AppLogger.i(TAG, "Unmetered network available - WiFi pause active (networks=$unmeteredNetworkCount)")
                 }
             }
@@ -667,6 +668,7 @@ class LocationForegroundService : Service() {
                         if (isWifiPaused && unmeteredNetworkCount == 0) {
                             isWifiPaused = false
                             maybeResumeGps()
+                            LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, if (isMotionlessPaused) "motionless" else null)
                             AppLogger.i(TAG, "GPS resumed after unmetered network lost")
                         }
                     }
@@ -714,6 +716,7 @@ class LocationForegroundService : Service() {
                     stopLocationUpdates()
                     motionDetector?.arm()
                     updateNotification(forceUpdate = true)
+                    LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, "motionless")
                     AppLogger.i(TAG, "Motionless timeout reached - GPS paused, motion sensor armed")
                 }
             }
@@ -739,6 +742,7 @@ class LocationForegroundService : Service() {
         clearMotionlessPauseState()
         val geofence = currentZoneGeofence
         maybeResumeGps()
+        LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, if (isWifiPaused) "wifi" else null)
         // Restart countdown so the zone can pause again if device becomes stationary
         if (geofence?.pauseOnMotionless == true) {
             startMotionlessCountdown(geofence.motionlessTimeoutMinutes)

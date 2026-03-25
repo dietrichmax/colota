@@ -22,6 +22,7 @@ type Props = {
   coords: LocationCoords | null
   tracking: boolean
   activeZoneName: string | null
+  pauseReason: string | null
   activeProfileName: string | null
 }
 
@@ -29,7 +30,7 @@ const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
   return c !== null && c.latitude !== 0 && c.longitude !== 0
 }
 
-export function DashboardMap({ coords, tracking, activeZoneName, activeProfileName }: Props) {
+export function DashboardMap({ coords, tracking, activeZoneName, pauseReason, activeProfileName }: Props) {
   const mapRef = useRef<ColotaMapRef>(null)
   const { colors } = useTheme()
   const [geofences, setGeofences] = useState<any[]>([])
@@ -149,7 +150,10 @@ export function DashboardMap({ coords, tracking, activeZoneName, activeProfileNa
 
       {showMap && activeZoneName && (
         <View style={[styles.statusBar, { backgroundColor: colors.warning + "DD" }]}>
-          <Text style={styles.barText}>Paused in {activeZoneName}</Text>
+          <Text style={styles.barText}>
+            Paused in {activeZoneName}
+            {pauseReason === "wifi" ? " - WiFi" : pauseReason === "motionless" ? " - Motionless" : ""}
+          </Text>
         </View>
       )}
 

@@ -260,14 +260,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
         /** Emits pause zone entry/exit events for the JS geofence UI. */
         @JvmStatic
-        fun sendPauseZoneEvent(entered: Boolean, zoneName: String?): Boolean {
+        fun sendPauseZoneEvent(entered: Boolean, zoneName: String?, pauseReason: String? = null): Boolean {
             val context = reactContextRef.get() ?: return false
             if (!context.hasActiveCatalystInstance()) return false
-            
+
             return try {
                 val params = Arguments.createMap().apply {
                     putBoolean("entered", entered)
                     putString("zoneName", zoneName)
+                    putString("pauseReason", pauseReason)
                 }
                 context
                     .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)

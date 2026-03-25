@@ -39,6 +39,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
   const prevStats = useRef(stats)
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
+  const [pauseReason, setPauseReason] = useState<string | null>(null)
   const [scrollEnabled, setScrollEnabled] = useState(true)
 
   // Animation for button
@@ -130,11 +131,13 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   useEffect(() => {
     const pauseZoneListener = DeviceEventEmitter.addListener(
       "onPauseZoneChange",
-      (data: { entered: boolean; zoneName: string | null }) => {
+      (data: { entered: boolean; zoneName: string | null; pauseReason: string | null }) => {
         if (data.entered) {
           setCurrentPauseZone(data.zoneName)
+          setPauseReason(data.pauseReason)
         } else {
           setCurrentPauseZone(null)
+          setPauseReason(null)
         }
       }
     )
@@ -161,6 +164,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
               coords={coords}
               tracking={tracking}
               activeZoneName={currentPauseZone}
+              pauseReason={pauseReason}
               activeProfileName={activeProfileName}
             />
           </View>
