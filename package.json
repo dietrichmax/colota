@@ -16,11 +16,13 @@
     "generate:icons": "node packages/shared/logo/generate-icons.mjs"
   },
   "devDependencies": {
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "react-test-renderer": "19.2.3"
   },
   "overrides": {
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-test-renderer": "19.2.3"
   },
   "engines": {
     "node": ">=20"
