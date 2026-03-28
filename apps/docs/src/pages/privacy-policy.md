@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-**Last updated: March 24, 2026**
+**Last updated: March 28, 2026**
 
 Colota ("the App") is a self-hosted GPS tracking application for Android, developed by Max Dietrich. This privacy policy explains what data the App collects, how it is used, and your rights regarding that data.
 
@@ -34,7 +34,7 @@ If you create pause zones (geofences), the App stores zone names, coordinates, r
 
 ### Condition Monitoring
 
-When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto) and GPS speed derived from location updates to automatically switch tracking configurations. These condition states are transient and are not stored in the database.
+When tracking profiles are enabled, the App monitors charging state, car mode (Android Auto) and GPS speed derived from location updates to automatically switch tracking configurations. These condition states are transient and are not stored in the database. The name of the currently active pause zone is persisted across service restarts to maintain continuity but is cleared when the zone is exited.
 
 ### Sensor Data
 
@@ -60,7 +60,7 @@ The App supports configuration via `colota://setup` deep links. These links can 
 
 The App **only transmits data to a server endpoint that you configure**. No data is sent anywhere by default.
 
-- Data is sent via HTTPS (HTTP is only allowed for local/private network addresses). Self-signed TLS certificates can be configured for self-hosted servers
+- Data is sent via HTTPS (HTTP is only allowed for local/private network addresses). Self-signed TLS certificates are supported by installing your CA certificate on the device via Android system settings
 - When a server is configured, the App may send health check requests to backend-specific endpoints to verify connectivity. These requests go only to your own server
 - No analytics, tracking pixels, or advertising networks are used
 - No data is shared with the developer, advertisers or analytics providers
