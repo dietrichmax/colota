@@ -58,27 +58,27 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 
 ### Parameter Reference
 
-| Parameter                   | Type    | Description                                                             |
-| --------------------------- | ------- | ----------------------------------------------------------------------- |
-| `endpoint`                  | string  | Server URL to send location data to                                     |
-| `interval`                  | number  | GPS polling interval in seconds (must be > 0)                           |
-| `distance`                  | number  | Minimum movement in meters before recording a new location              |
-| `syncInterval`              | number  | Batch sync interval in seconds (0 = instant)                            |
-| `maxRetries`                | number  | Max retry attempts for failed uploads                                   |
-| `retryInterval`             | number  | Seconds between retry attempts                                          |
-| `accuracyThreshold`         | number  | Discard locations less accurate than this (meters)                      |
-| `filterInaccurateLocations` | boolean | Enable accuracy filtering                                               |
-| `isOfflineMode`             | boolean | Store locally only, never sync                                          |
-| `isWifiOnlySync`            | boolean | Only sync on Wi-Fi                                                      |
-| `apiTemplate`               | string  | `custom`, `dawarich`, `owntracks`, `phonetrack`, `reitti`, or `traccar` |
-| `httpMethod`                | string  | `POST` or `GET`                                                         |
-| `fieldMap`                  | object  | Custom field name mapping for the JSON payload                          |
-| `customFields`              | array   | Static key-value pairs added to every payload                           |
-| `auth.type`                 | string  | `none`, `basic`, or `bearer`                                            |
-| `auth.username`             | string  | Username for Basic Auth                                                 |
-| `auth.password`             | string  | Password for Basic Auth                                                 |
-| `auth.bearerToken`          | string  | Token for Bearer Auth                                                   |
-| `customHeaders`             | object  | Custom HTTP headers (e.g. Cloudflare Access)                            |
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `endpoint` | string | Server URL to send location data to |
+| `interval` | number | GPS polling interval in seconds (must be > 0) |
+| `distance` | number | Minimum movement in meters before recording a new location |
+| `syncInterval` | number | Batch sync interval in seconds (0 = instant) |
+| `maxRetries` | number | Max retry attempts for failed uploads |
+| `retryInterval` | number | Seconds between retry attempts |
+| `accuracyThreshold` | number | Discard locations less accurate than this (meters) |
+| `filterInaccurateLocations` | boolean | Enable accuracy filtering |
+| `isOfflineMode` | boolean | Store locally only, never sync |
+| `isWifiOnlySync` | boolean | Only sync on Wi-Fi |
+| `apiTemplate` | string | `custom`, `dawarich`, `geopulse`, `owntracks`, `phonetrack`, `reitti`, or `traccar` |
+| `httpMethod` | string | `POST` or `GET` |
+| `fieldMap` | object | Custom field name mapping for the JSON payload |
+| `customFields` | array | Static key-value pairs added to every payload |
+| `auth.type` | string | `none`, `basic`, or `bearer` |
+| `auth.username` | string | Username for Basic Auth |
+| `auth.password` | string | Password for Basic Auth |
+| `auth.bearerToken` | string | Token for Bearer Auth |
+| `customHeaders` | object | Custom HTTP headers (e.g. Cloudflare Access) |
 
 ## Generating a Setup Link
 

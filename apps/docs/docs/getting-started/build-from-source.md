@@ -6,7 +6,7 @@ sidebar_position: 3
 
 ## Requirements
 
-- Node.js >= 22
+- Node.js >= 20
 - Android SDK
 - JDK 17+
 

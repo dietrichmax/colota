@@ -14,6 +14,7 @@ These are the permissions Colota uses and why. None are related to analytics, ad
 | Coarse Location                | Yes         | Network-based location fallback                   |
 | Background Location            | Yes         | Track while app is in the background              |
 | Foreground Service             | Yes         | Required by Android for background services       |
+| Foreground Service (Data Sync) | Yes         | Auto-export background processing                 |
 | Internet                       | Yes         | Send locations to your server                     |
 | Network State                  | Yes         | Check connectivity before syncing                 |
 | Boot Completed                 | Yes         | Auto-restart tracking after device reboot         |
@@ -51,9 +52,10 @@ android.permission.ACCESS_BACKGROUND_LOCATION
 ```
 android.permission.FOREGROUND_SERVICE
 android.permission.FOREGROUND_SERVICE_LOCATION
+android.permission.FOREGROUND_SERVICE_DATA_SYNC
 ```
 
-Android requires apps to declare a foreground service with a persistent notification to run in the background. The `FOREGROUND_SERVICE_LOCATION` type specifically indicates the service accesses location data. This is what keeps the "Colota is tracking" notification visible.
+Android requires apps to declare a foreground service with a persistent notification to run in the background. The `FOREGROUND_SERVICE_LOCATION` type specifically indicates the service accesses location data. This is what keeps the "Colota is tracking" notification visible. The `FOREGROUND_SERVICE_DATA_SYNC` type is used by the auto-export WorkManager service for scheduled background exports.
 
 ### Network
 

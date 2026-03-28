@@ -6,7 +6,7 @@ sidebar_position: 2
 
 ## Prerequisites
 
-- **Node.js** ≥ 22
+- **Node.js** ≥ 20
 - **npm** ≥ 9 (ships with Node.js)
 - **Java Development Kit** (JDK) 17
 - **Android SDK** (API level 36)
@@ -118,7 +118,7 @@ colota/
 │   │   │       ├── gms/java/com/colota/location/   # GMS implementation
 │   │   │       └── foss/java/com/colota/location/  # Native implementation
 │   │   ├── src/
-│   │   │   ├── screens/             # 14 app screens
+│   │   │   ├── screens/             # 17 app screens
 │   │   │   ├── components/          # UI and feature components
 │   │   │   ├── hooks/               # Custom React hooks
 │   │   │   ├── services/            # Native bridge services

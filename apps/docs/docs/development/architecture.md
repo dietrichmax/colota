@@ -145,7 +145,7 @@ When both WiFi and motionless pause are enabled, GPS only resumes when both cond
 
 ### ProfileManager
 
-Evaluates tracking profile conditions and switches GPS settings automatically. Supports four condition types: charging, Android Auto / car mode, speed above threshold, and speed below threshold. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match.
+Evaluates tracking profile conditions and switches GPS settings automatically. Supports five condition types: charging, Android Auto / car mode, speed above threshold, speed below threshold, and stationary. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match.
 
 ### ProfileHelper
 
@@ -157,7 +157,7 @@ Monitors charging state via `BroadcastReceiver` and Android Auto connection via 
 
 ### ProfileConstants
 
-Centralized constants for condition type strings (`charging`, `android_auto`, `speed_above`, `speed_below`), event types (`activated`, `deactivated`), cache TTL, speed buffer size, and minimum interval.
+Centralized constants for condition type strings (`charging`, `android_auto`, `speed_above`, `speed_below`, `stationary`), event types (`activated`, `deactivated`), cache TTL, speed buffer size, and minimum interval.
 
 ### SecureStorageHelper
 
@@ -167,7 +167,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 
 | Module | Purpose |
 | --- | --- |
-| `BootReceiver` | Auto-restarts tracking after device reboot |
+| `LocationBootReceiver` | Auto-restarts tracking after device reboot |
 | `MotionDetector` | Wraps `TYPE_SIGNIFICANT_MOTION` sensor - arms a one-shot hardware trigger that fires when the device starts moving, used to resume GPS after a stationary pause |
 | `DeviceInfoHelper` | Device metadata and battery status with caching |
 | `FileOperations` | File I/O, sharing via FileProvider, and clipboard access |
