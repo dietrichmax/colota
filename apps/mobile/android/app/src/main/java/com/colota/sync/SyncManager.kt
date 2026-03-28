@@ -236,14 +236,19 @@ class SyncManager(
 
                 val results = retriable.map { item ->
                     async {
-                        val success = networkManager.sendToEndpoint(
-                            JSONObject(item.payload),
-                            currentEndpoint,
-                            currentAuthHeaders,
-                            currentHttpMethod,
-                            currentApiFormat
-                        )
-                        item.queueId to success
+                        try {
+                            val success = networkManager.sendToEndpoint(
+                                JSONObject(item.payload),
+                                currentEndpoint,
+                                currentAuthHeaders,
+                                currentHttpMethod,
+                                currentApiFormat
+                            )
+                            item.queueId to success
+                        } catch (e: Exception) {
+                            AppLogger.e(TAG, "Failed to send item ${item.queueId}", e)
+                            item.queueId to false
+                        }
                     }
                 }.awaitAll()
 
@@ -265,6 +270,14 @@ class SyncManager(
                 if (successfulIds.isNotEmpty()) {
                     val sentLocationIds = retriable.filter { it.queueId in successfulIds }.map { it.locationId }
                     dbHelper.markLocationsSent(sentLocationIds)
+                }
+                if (permanentlyFailedIds.isNotEmpty()) {
+                    val failedLocationIds = (retriable + exceeded).filter { it.queueId in permanentlyFailedIds }.map { it.locationId }
+                    AppLogger.e(TAG, "Permanently dropping ${failedLocationIds.size} locations after $currentMaxRetries retries: $failedLocationIds")
+                    LocationServiceModule.sendSyncErrorEvent(
+                        "${failedLocationIds.size} locations dropped after $currentMaxRetries failed retries",
+                        getCachedQueuedCount()
+                    )
                 }
                 if (toRemove.isNotEmpty()) {
                     dbHelper.removeBatchFromQueue(toRemove)
