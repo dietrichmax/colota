@@ -1,7 +1,6 @@
 - Added Traccar JSON POST support and per-backend health checks
 - Added per-zone WiFi pause and geofence editor screen
 - Added stationary tracking profile condition
-- Added passive location listener for free GPS fixes between active intervals
 - Added offline maps download and management with custom tile server support
 - Added home screen shortcuts for start/stop tracking
 - Added entry delay on geofence entry for reliable arrival detection
