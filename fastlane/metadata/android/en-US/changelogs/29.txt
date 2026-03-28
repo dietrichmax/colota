@@ -1,0 +1,14 @@
+- Added Traccar JSON POST support and per-backend health checks
+- Added per-zone WiFi pause and geofence editor screen
+- Added stationary tracking profile condition
+- Added passive location listener for free GPS fixes between active intervals
+- Added offline maps download and management with custom tile server support
+- Added home screen shortcuts for start/stop tracking
+- Added entry delay on geofence entry for reliable arrival detection
+- Added monochrome adaptive icon for themed icons
+- Added interactive line charts on trip detail
+- Redesigned status indicators and trip list cards
+- Support self-signed certificates and HTTP for local network servers
+- Fixed async failures in batch sync silently cancelling chunks
+- Fixed marker icon staying gray after exiting pause zone
+- Fixed retry on offline map download failure
