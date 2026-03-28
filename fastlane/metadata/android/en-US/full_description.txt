@@ -3,17 +3,21 @@ Colota is an open-source GPS tracking application that sends your location to yo
 <b>Features</b>
 
 <ul>
-<li><b>Self-Hosted</b> - Works with Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant, or any custom backend that accepts JSON over HTTP</li>
+<li><b>Self-Hosted</b> - Works with Dawarich, GeoPulse, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant, or any custom backend that accepts JSON over HTTP</li>
 <li><b>Privacy First</b> - No analytics, no telemetry, no third-party SDKs. Licensed under AGPL-3.0</li>
-<li><b>Tracking Profiles</b> - Create multiple GPS configurations that switch automatically based on charging, Android Auto, or speed</li>
-<li><b>Native Maps</b> - Smooth map rendering with MapLibre GL, speed-colored tracks, and tappable point details</li>
-<li><b>Works Offline</b> - Locations are queued locally and synced when connectivity returns. Export as CSV, GeoJSON, GPX, or KML</li>
-<li><b>Reliable Tracking</b> - Foreground service with auto-start on boot, exponential backoff for failed syncs</li>
-<li><b>Geofencing</b> - Define pause zones to automatically stop recording locations in specific areas</li>
-<li><b>Flexible Sync</b> - Instant send, periodic batch sync, or fully offline mode</li>
+<li><b>Tracking Profiles</b> - Create multiple GPS configurations that switch automatically based on charging, Android Auto, speed or stationary detection</li>
+<li><b>Native Maps</b> - Smooth map rendering with MapLibre GL, speed-colored tracks, tappable point details and downloadable offline map packs</li>
+<li><b>Location Inspector</b> - Browse recorded trips on an interactive map with per-point details, stats and elevation charts</li>
+<li><b>Works Offline</b> - Locations are queued locally and synced when connectivity returns. Export as CSV, GeoJSON, GPX or KML</li>
+<li><b>Reliable Tracking</b> - Foreground service with auto-start on boot, passive location listener and exponential backoff for failed syncs</li>
+<li><b>Geofencing</b> - Define pause zones with per-zone WiFi pause, motionless detection, entry delay and notification settings</li>
+<li><b>Flexible Sync</b> - Instant send, periodic batch sync, Wi-Fi only or fully offline mode</li>
+<li><b>Auto-Export</b> - Schedule automatic background exports on a daily, weekly or monthly basis</li>
 <li><b>Authentication</b> - Basic Auth, Bearer Token, or custom headers with AES-256-GCM encryption</li>
-<li><b>Quick Setup</b> - Configure devices instantly via colota:// deep links or QR codes</li>
-<li><b>Configurable</b> - Custom field mapping, update intervals, distance filters, and accuracy thresholds</li>
+<li><b>Quick Setup</b> - Configure devices instantly via colota:// deep links, QR codes or home screen shortcuts</li>
+<li><b>Configurable</b> - Custom field mapping, update intervals, distance filters, accuracy thresholds, unit system and time format</li>
+<li><b>Data Management</b> - Database statistics, scheduled cleanup and full data export</li>
+<li><b>Dark Mode</b> - Full dark and light theme support</li>
 </ul>
 
 The FOSS variant uses Android's native LocationManager and has no Google Play Services dependency.
