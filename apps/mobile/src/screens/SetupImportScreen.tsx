@@ -55,7 +55,15 @@ interface ValidationResult {
 // VALIDATION
 // ============================================================================
 
-const VALID_API_TEMPLATES: ApiTemplateName[] = ["custom", "dawarich", "owntracks", "phonetrack", "reitti", "traccar"]
+const VALID_API_TEMPLATES: ApiTemplateName[] = [
+  "custom",
+  "dawarich",
+  "geopulse",
+  "owntracks",
+  "phonetrack",
+  "reitti",
+  "traccar"
+]
 const VALID_HTTP_METHODS: HttpMethod[] = ["POST", "GET"]
 const VALID_AUTH_TYPES: AuthType[] = ["none", "basic", "bearer"]
 
