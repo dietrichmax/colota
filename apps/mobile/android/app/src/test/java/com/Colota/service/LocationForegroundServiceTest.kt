@@ -1704,6 +1704,96 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // Entry delay calculation
+    // =========================================================================
+
+    @Test
+    fun `entry delay uses 3_5x tracking interval`() = testScope.runTest {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 10000L,
+            filterInaccurateLocations = false
+        ))
+
+        invokeStartEntryDelay(homeGeofence)
+
+        // At 3.5x 10000ms = 35000ms, zone should not be entered yet
+        advanceTimeBy(34999L)
+        assertFalse(getField("insidePauseZone"))
+
+        // At 35001ms, zone should be entered
+        advanceTimeBy(2L)
+        assertTrue(getField("insidePauseZone"))
+    }
+
+    // =========================================================================
+    // WiFi pause event reason
+    // =========================================================================
+
+    @Test
+    fun `enterPauseZone with both WiFi and motionless registers both`() {
+        val dualGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true, pauseOnMotionless = true, motionlessTimeoutMinutes = 5)
+        coEvery { service["registerWifiPause"]() } returns Unit
+        coEvery { service["startMotionlessCountdown"](any<Int>()) } returns Unit
+
+        invokeEnterPauseZone(dualGeofence)
+
+        verify { service["registerWifiPause"]() }
+        verify { service["startMotionlessCountdown"](5) }
+    }
+
+    @Test
+    fun `exitPauseZone clears both WiFi and motionless state`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true, pauseOnMotionless = true))
+        setField("isWifiPaused", true)
+        setField("isMotionlessPaused", true)
+
+        invokeExitPauseZone()
+
+        assertFalse(getField<Boolean>("isWifiPaused"))
+        assertFalse(getField<Boolean>("isMotionlessPaused"))
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    // =========================================================================
+    // maybeResumeGps - both holds active
+    // =========================================================================
+
+    @Test
+    fun `maybeResumeGps blocked when both wifi and motionless holds active`() = testScope.runTest {
+        setField("currentZoneGeofence", geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true, pauseOnMotionless = true))
+        setField("isWifiPaused", true)
+        setField("isMotionlessPaused", true)
+
+        invokeMaybeResumeGps()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    // =========================================================================
+    // handleLocationUpdate - Traccar format uses empty field map
+    // =========================================================================
+
+    @Test
+    fun `handleLocationUpdate uses empty field map when apiFormat is traccar_json`() = testScope.runTest {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            filterInaccurateLocations = false,
+            apiFormat = "traccar_json"
+        ))
+        setField("fieldMap", mapOf("lat" to "latitude", "lon" to "longitude"))
+        val location = mockLocation()
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(location)
+
+        verify { payloadBuilder.buildPayload(any(), any(), any(), emptyMap(), any(), any()) }
+    }
+
+    // =========================================================================
     // Reflection helpers
     // =========================================================================
 

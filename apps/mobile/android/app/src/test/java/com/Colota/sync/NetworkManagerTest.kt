@@ -286,6 +286,111 @@ class NetworkManagerTest {
         assertTrue("Expected ISO 8601 format, got: $timestamp", timestamp.contains("T") && timestamp.endsWith("Z"))
     }
 
+    // --- buildTraccarJsonPayload: battery status codes ---
+
+    @Test
+    fun `buildTraccarJsonPayload marks bs=3 full as charging`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+            put("batt", 100); put("bs", 3) // full
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        val battery = result.getJSONObject("location").getJSONObject("battery")
+        assertTrue(battery.getBoolean("is_charging"))
+        assertEquals(1.0, battery.getDouble("level"), 0.001)
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload marks bs=1 not charging as not charging`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+            put("batt", 50); put("bs", 1) // not charging
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        val battery = result.getJSONObject("location").getJSONObject("battery")
+        assertFalse(battery.getBoolean("is_charging"))
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload marks bs=0 unknown as not charging`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+            put("batt", 50); put("bs", 0)
+        }
+        val result = invokeBuildTraccarJsonPayload(flat)
+        val battery = result.getJSONObject("location").getJSONObject("battery")
+        assertFalse(battery.getBoolean("is_charging"))
+    }
+
+    // --- buildTraccarJsonPayload: JSON roundtrip (simulates batch sync path) ---
+
+    @Test
+    fun `buildTraccarJsonPayload produces identical output after JSON string roundtrip`() {
+        val flat = JSONObject().apply {
+            put("id", "my-tracker")
+            put("lat", 52.12345)
+            put("lon", -2.12345)
+            put("acc", 15)
+            put("alt", 380)
+            put("vel", 5.5)
+            put("bear", 90.0)
+            put("batt", 85)
+            put("bs", 2)
+            put("tst", 1739362800L)
+        }
+
+        // Direct path (instant sync)
+        val directResult = invokeBuildTraccarJsonPayload(flat)
+
+        // Roundtrip path (batch sync: toString -> DB -> JSONObject parse)
+        val serialized = flat.toString()
+        val roundtripped = JSONObject(serialized)
+        val roundtripResult = invokeBuildTraccarJsonPayload(roundtripped)
+
+        // All fields must match
+        assertEquals(
+            directResult.getString("device_id"),
+            roundtripResult.getString("device_id")
+        )
+        val directCoords = directResult.getJSONObject("location").getJSONObject("coords")
+        val roundtripCoords = roundtripResult.getJSONObject("location").getJSONObject("coords")
+        assertEquals(directCoords.getDouble("latitude"), roundtripCoords.getDouble("latitude"), 0.00001)
+        assertEquals(directCoords.getDouble("longitude"), roundtripCoords.getDouble("longitude"), 0.00001)
+        assertEquals(directCoords.getDouble("accuracy"), roundtripCoords.getDouble("accuracy"), 0.001)
+        assertEquals(directCoords.getDouble("altitude"), roundtripCoords.getDouble("altitude"), 0.001)
+        assertEquals(directCoords.getDouble("speed"), roundtripCoords.getDouble("speed"), 0.001)
+        assertEquals(directCoords.getDouble("heading"), roundtripCoords.getDouble("heading"), 0.001)
+
+        val directBatt = directResult.getJSONObject("location").getJSONObject("battery")
+        val roundtripBatt = roundtripResult.getJSONObject("location").getJSONObject("battery")
+        assertEquals(directBatt.getDouble("level"), roundtripBatt.getDouble("level"), 0.001)
+        assertEquals(directBatt.getBoolean("is_charging"), roundtripBatt.getBoolean("is_charging"))
+
+        assertEquals(
+            directResult.getJSONObject("location").getString("timestamp"),
+            roundtripResult.getJSONObject("location").getString("timestamp")
+        )
+    }
+
+    @Test
+    fun `buildTraccarJsonPayload handles minimal payload after roundtrip`() {
+        val flat = JSONObject().apply {
+            put("lat", 0.0)
+            put("lon", 0.0)
+            put("tst", 1000L)
+        }
+
+        val roundtripped = JSONObject(flat.toString())
+        val result = invokeBuildTraccarJsonPayload(roundtripped)
+
+        assertEquals("colota", result.getString("device_id"))
+        val coords = result.getJSONObject("location").getJSONObject("coords")
+        assertEquals(0.0, coords.getDouble("latitude"), 0.001)
+        assertFalse(coords.has("speed"))
+        assertFalse(coords.has("heading"))
+        assertFalse(result.getJSONObject("location").has("battery"))
+    }
+
     // --- buildQueryString ---
 
     @Test

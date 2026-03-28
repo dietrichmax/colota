@@ -206,4 +206,119 @@ class GeofenceHelperTest {
         assertNotNull(result)
         assertEquals("Office", result!!.name)
     }
+
+    // =========================================================================
+    // getPauseZone
+    // =========================================================================
+
+    @Test
+    fun `getPauseZone returns zone when location inside radius`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true)
+
+        val location = mockLocation(52.5001, 13.4001)
+        val result = helper.getPauseZone(location)
+
+        assertNotNull(result)
+        assertEquals("Home", result!!.name)
+    }
+
+    @Test
+    fun `getPauseZone returns null when location outside all zones`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true)
+
+        val location = mockLocation(48.0, 11.0)
+        assertNull(helper.getPauseZone(location))
+    }
+
+    @Test
+    fun `getPauseZone returns zone with correct WiFi and motionless settings`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 500.0, pause = true, pauseOnWifi = true, pauseOnMotionless = true, motionlessTimeoutMinutes = 3)
+
+        val location = mockLocation(52.5, 13.4)
+        val result = helper.getPauseZone(location)
+
+        assertNotNull(result)
+        assertTrue(result!!.pauseOnWifi)
+        assertTrue(result.pauseOnMotionless)
+        assertEquals(3, result.motionlessTimeoutMinutes)
+    }
+
+    @Test
+    fun `getPauseZone ignores disabled zones`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 500.0, pause = true)
+        val id = db.readableDatabase.query("geofences", arrayOf("id"), "name = ?", arrayOf("Home"), null, null, null).use {
+            it.moveToFirst(); it.getInt(0)
+        }
+        helper.updateGeofence(id, en = false, name = null, lat = null, lon = null, rad = null, pause = null)
+        helper.invalidateCache()
+
+        val location = mockLocation(52.5, 13.4)
+        assertNull(helper.getPauseZone(location))
+    }
+
+    @Test
+    fun `getPauseZone ignores zones with pause_tracking off`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 500.0, pause = false)
+
+        val location = mockLocation(52.5, 13.4)
+        assertNull(helper.getPauseZone(location))
+    }
+
+    @Test
+    fun `getPauseZone returns first matching zone when overlapping`() {
+        helper.insertGeofence("Inner", 52.5, 13.4, 100.0, pause = true)
+        helper.insertGeofence("Outer", 52.5, 13.4, 500.0, pause = true)
+
+        val location = mockLocation(52.5, 13.4)
+        val result = helper.getPauseZone(location)
+
+        assertNotNull(result)
+        // Returns whichever loads first from DB
+        assertTrue(result!!.name == "Inner" || result.name == "Outer")
+    }
+
+    // =========================================================================
+    // WiFi/motionless field defaults
+    // =========================================================================
+
+    @Test
+    fun `geofence defaults pauseOnWifi to false`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true)
+
+        val result = helper.getGeofenceByName("Home")
+
+        assertNotNull(result)
+        assertFalse(result!!.pauseOnWifi)
+    }
+
+    @Test
+    fun `geofence defaults pauseOnMotionless to false`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true)
+
+        val result = helper.getGeofenceByName("Home")
+
+        assertNotNull(result)
+        assertFalse(result!!.pauseOnMotionless)
+    }
+
+    @Test
+    fun `geofence defaults motionlessTimeoutMinutes to 10`() {
+        helper.insertGeofence("Home", 52.5, 13.4, 150.0, pause = true)
+
+        val result = helper.getGeofenceByName("Home")
+
+        assertNotNull(result)
+        assertEquals(10, result!!.motionlessTimeoutMinutes)
+    }
+
+    // =========================================================================
+    // Helpers
+    // =========================================================================
+
+    private fun mockLocation(lat: Double, lon: Double): android.location.Location {
+        return io.mockk.mockk {
+            io.mockk.every { latitude } returns lat
+            io.mockk.every { longitude } returns lon
+        }
+    }
 }

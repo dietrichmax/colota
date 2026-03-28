@@ -680,6 +680,83 @@ class ProfileManagerTest {
         assertNull(lastStationaryCallback)
     }
 
+    // --- Stationary + other conditions: priority interactions ---
+
+    @Test
+    fun `charging profile overrides stationary when charging starts`() = testScope.runTest {
+        val stationary = stationaryProfile(id = 5, priority = 5)
+        val charging = chargingProfile(id = 1, priority = 10)
+        every { profileHelper.getEnabledProfiles() } returns listOf(charging, stationary)
+
+        val manager = createManager()
+
+        // Become stationary first
+        manager.onLocationUpdate(mockLocation(0.1f))
+        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        assertEquals("Stationary", switchedProfileName)
+
+        // Start charging - higher priority should take over
+        manager.onChargingStateChanged(true)
+        assertEquals("Charging", switchedProfileName)
+    }
+
+    @Test
+    fun `falls back to stationary profile when charging stops`() = testScope.runTest {
+        val stationary = stationaryProfile(id = 5, priority = 5, deactivationDelay = 0)
+        val charging = chargingProfile(id = 1, priority = 10, deactivationDelay = 0)
+        every { profileHelper.getEnabledProfiles() } returns listOf(charging, stationary)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.defaultDistance = 0f
+        manager.defaultSyncInterval = 0
+
+        // Become stationary
+        manager.onLocationUpdate(mockLocation(0.1f))
+        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        assertTrue(manager.isStationary)
+
+        // Start charging - charging wins
+        manager.onChargingStateChanged(true)
+        assertEquals("Charging", switchedProfileName)
+
+        // Stop charging - stationary still true, should fall back to stationary profile
+        manager.onChargingStateChanged(false)
+        advanceTimeBy(100) // let 0s deactivation fire
+        assertEquals("Stationary", switchedProfileName)
+    }
+
+    @Test
+    fun `stationary does not evaluate when no stationary profile configured`() = testScope.runTest {
+        val charging = chargingProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(charging)
+
+        val manager = createManager()
+
+        // Feed slow locations - should not start stationary timer
+        manager.onLocationUpdate(mockLocation(0.1f))
+        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+
+        assertFalse(manager.isStationary)
+    }
+
+    @Test
+    fun `speed above profile activates over stationary when moving fast`() = testScope.runTest {
+        val stationary = stationaryProfile(id = 5, priority = 5)
+        val fast = speedAboveProfile(id = 3, threshold = 10f, priority = 15)
+        every { profileHelper.getEnabledProfiles() } returns listOf(fast, stationary)
+
+        val manager = createManager()
+
+        // Feed fast speeds
+        repeat(ProfileConstants.SPEED_BUFFER_SIZE) {
+            manager.onLocationUpdate(mockLocation(15f))
+        }
+
+        assertEquals("Fast", switchedProfileName)
+        assertFalse(manager.isStationary)
+    }
+
     // --- Unknown condition type ---
 
     @Test

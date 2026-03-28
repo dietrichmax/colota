@@ -835,6 +835,122 @@ class SyncManagerTest {
     }
 
     // ========================================================================
+    // Async exception isolation (fix: one bad item must not kill the chunk)
+    // ========================================================================
+
+    @Test
+    fun `syncQueue isolates exception in single item without cancelling chunk`() = scope.runTest {
+        mockkObject(LocationServiceModule.Companion)
+        every { LocationServiceModule.sendSyncErrorEvent(any(), any()) } returns true
+
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            maxRetries = 5,
+            isOfflineMode = false,
+            isWifiOnlySync = false,
+            authHeaders = emptyMap()
+        )
+
+        // Item 1 has corrupted payload that will throw JSONException
+        val corrupted = QueuedLocation(1L, 100L, "NOT_VALID_JSON", 0)
+        val valid = QueuedLocation(2L, 101L, """{"lat":52.0}""", 0)
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(
+            listOf(corrupted, valid),
+            emptyList()
+        )
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
+
+        syncManager.manualFlush()
+
+        // Valid item should still be sent despite corrupted sibling
+        coVerify(atLeast = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        // Corrupted item gets retry increment, valid item gets removed
+        verify { dbHelper.incrementRetryCount(1L, "Send failed") }
+        verify { dbHelper.markLocationsSent(listOf(101L)) }
+
+        unmockkObject(LocationServiceModule.Companion)
+    }
+
+    @Test
+    fun `syncQueue emits error event when items permanently dropped`() = scope.runTest {
+        mockkObject(LocationServiceModule.Companion)
+        every { LocationServiceModule.sendSyncErrorEvent(any(), any()) } returns true
+
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            maxRetries = 3,
+            isOfflineMode = false,
+            isWifiOnlySync = false,
+            authHeaders = emptyMap()
+        )
+
+        val exceeded = QueuedLocation(1L, 100L, """{"lat":52.0}""", 3)
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(exceeded), emptyList())
+
+        syncManager.manualFlush()
+
+        verify { LocationServiceModule.sendSyncErrorEvent(
+            match { it.contains("dropped") && it.contains("3") },
+            any()
+        ) }
+
+        unmockkObject(LocationServiceModule.Companion)
+    }
+
+    // ========================================================================
+    // apiFormat passthrough
+    // ========================================================================
+
+    @Test
+    fun `queueAndSend passes apiFormat to sendToEndpoint`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            maxRetries = 5,
+            isOfflineMode = false,
+            isWifiOnlySync = false,
+            authHeaders = emptyMap(),
+            httpMethod = "POST",
+            apiFormat = "traccar_json"
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
+
+        syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
+
+        coVerify { networkManager.sendToEndpoint(any(), any(), any(), "POST", "traccar_json") }
+    }
+
+    @Test
+    fun `syncQueue passes apiFormat to sendToEndpoint during batch sync`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            maxRetries = 5,
+            isOfflineMode = false,
+            isWifiOnlySync = false,
+            authHeaders = emptyMap(),
+            httpMethod = "POST",
+            apiFormat = "traccar_json"
+        )
+
+        val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(item), emptyList())
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
+
+        syncManager.manualFlush()
+
+        coVerify { networkManager.sendToEndpoint(any(), any(), any(), "POST", "traccar_json") }
+    }
+
+    // ========================================================================
     // Helpers
     // ========================================================================
 
