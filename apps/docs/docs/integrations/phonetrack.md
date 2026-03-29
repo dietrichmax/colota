@@ -9,46 +9,34 @@ sidebar_position: 5
 ## Setup
 
 1. **Install PhoneTrack** from the Nextcloud app store
-2. **Create a session** in PhoneTrack and get the logging URL
-3. **Configure Colota**:
+2. **Create a session** in PhoneTrack
+3. **Get the logging URL**: Click the sharing icon next to your session to reveal the logging URLs. Copy the **OwnTracks** URL and remove everything from the `?` onward (Colota sends data as a JSON body, so the query parameters are not needed). Your URL should look like this:
+   ```
+   https://nextcloud.yourdomain.com/apps/phonetrack/log/owntracks/SESSION_TOKEN/DEVICE_NAME
+   ```
+4. **Configure Colota**:
    - Go to **Settings > API Settings**
-   - Select the **PhoneTrack** template
-   - Set your endpoint to the PhoneTrack logging URL:
-     ```
-     https://nextcloud.yourdomain.com/apps/phonetrack/log/gps/SESSION_TOKEN/DEVICE_NAME
-     ```
+   - Select the **OwnTracks** template
+   - Paste the URL as your endpoint
+
+:::tip Which PhoneTrack URL to use? PhoneTrack offers several logging URLs (OwnTracks, GPS Logger, OpenGTS, etc.). Use the **OwnTracks** URL since Colota sends location data as a JSON POST body, which matches the OwnTracks protocol. The other URLs (like GPS Logger) expect query parameters and may not work correctly. :::
 
 ## Payload Format
 
-The PhoneTrack template auto-configures the following payload:
+The OwnTracks template auto-configures the following payload:
 
 ```json
 {
-  "useragent": "Colota",
+  "_type": "location",
+  "tid": "AA",
   "lat": 51.495065,
   "lon": -0.043945,
   "acc": 12,
   "alt": 519,
-  "speed": 0,
-  "bat": 85,
+  "vel": 0,
+  "batt": 85,
   "bs": 2,
-  "timestamp": 1704067200,
-  "bearing": 180.5
+  "tst": 1704067200,
+  "cog": 180.5
 }
 ```
-
-## Field Mapping
-
-| Colota Field | PhoneTrack Field | Description           |
-| ------------ | ---------------- | --------------------- |
-| `lat`        | `lat`            | Latitude              |
-| `lon`        | `lon`            | Longitude             |
-| `acc`        | `acc`            | GPS accuracy (meters) |
-| `alt`        | `alt`            | Altitude (meters)     |
-| `vel`        | `speed`          | Speed (m/s)           |
-| `batt`       | `bat`            | Battery level (0-100) |
-| `bs`         | `bs`             | Battery status        |
-| `tst`        | `timestamp`      | Unix timestamp        |
-| `bear`       | `bearing`        | Bearing (degrees)     |
-
-Note: PhoneTrack uses `speed`, `bat`, `timestamp`, and `bearing` instead of the default `vel`, `batt`, `tst`, and `bear` field names.
