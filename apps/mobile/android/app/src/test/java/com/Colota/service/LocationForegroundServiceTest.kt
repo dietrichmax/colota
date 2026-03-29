@@ -448,7 +448,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `handleLocationUpdate skips saving when already inside pause zone`() = testScope.runTest {
+    fun `handleLocationUpdate skips saving but sends UI event when already inside pause zone`() = testScope.runTest {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
         setField("currentZoneGeofence", homeGeofence)
@@ -458,6 +458,7 @@ class LocationForegroundServiceTest {
         invokeHandleLocationUpdate(location)
 
         verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify { LocationServiceModule.sendLocationEvent(location, any(), any()) }
     }
 
     @Test

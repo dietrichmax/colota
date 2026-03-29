@@ -482,7 +482,12 @@ class LocationForegroundService : Service() {
         lastKnownLocation = location
 
         val zone = geofenceHelper.getPauseZone(location)
-        if (zone != null && insidePauseZone && zone.name == currentZoneName) return
+        if (zone != null && insidePauseZone && zone.name == currentZoneName) {
+            // Send position to UI so the map stays current while paused
+            val (bat, batStatus) = deviceInfoHelper.getCachedBatteryStatus()
+            LocationServiceModule.sendLocationEvent(location, bat, batStatus)
+            return
+        }
         val anchorJob = applyZoneTransition(zone)
 
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
