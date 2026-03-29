@@ -474,7 +474,7 @@ class LocationForegroundService : Service() {
             }
         }
 
-        AppLogger.d(TAG, "Location received: ${String.format(Locale.US, "%.5f, %.5f", location.latitude, location.longitude)} acc=${location.accuracy}m provider=${location.provider}")
+        AppLogger.d(TAG, "Location received: acc=${location.accuracy}m provider=${location.provider}")
 
         // After accuracy filter so bad GPS doesn't pollute speed average
         profileManager.onLocationUpdate(location)
@@ -812,7 +812,7 @@ class LocationForegroundService : Service() {
 
             syncManager.queueAndSend(locationId, payload)
 
-            AppLogger.d(TAG, "Anchor point saved at geofence '${geofence.name}' center (${geofence.lat}, ${geofence.lon})")
+            AppLogger.d(TAG, "Anchor point saved at geofence '${geofence.name}' center")
         }
     }
 
