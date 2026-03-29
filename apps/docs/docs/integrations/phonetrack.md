@@ -10,7 +10,7 @@ sidebar_position: 5
 
 1. **Install PhoneTrack** from the Nextcloud app store
 2. **Create a session** in PhoneTrack
-3. **Get the logging URL**: Click the sharing icon next to your session to reveal the logging URLs. Copy the **OwnTracks** URL and remove everything from the `?` onward (Colota sends data as a JSON body, so the query parameters are not needed). Your URL should look like this:
+3. **Get the logging URL**: Click the sharing icon next to your session to reveal the logging URLs. Copy the **OwnTracks** URL:
    ```
    https://nextcloud.yourdomain.com/apps/phonetrack/log/owntracks/SESSION_TOKEN/DEVICE_NAME
    ```
@@ -19,7 +19,9 @@ sidebar_position: 5
    - Select the **OwnTracks** template
    - Paste the URL as your endpoint
 
-:::tip Which PhoneTrack URL to use? PhoneTrack offers several logging URLs (OwnTracks, GPS Logger, OpenGTS, etc.). Use the **OwnTracks** URL since Colota sends location data as a JSON POST body, which matches the OwnTracks protocol. The other URLs (like GPS Logger) expect query parameters and may not work correctly. :::
+:::tip Which PhoneTrack URL to use? PhoneTrack offers several logging URLs (OwnTracks, GPS Logger, OpenGTS, etc.). Use the **OwnTracks** URL since Colota sends location data as a JSON POST body, which matches the OwnTracks protocol. The other URLs (like GPS Logger) expect query parameters and may not work correctly.
+
+:::
 
 ## Payload Format
 
