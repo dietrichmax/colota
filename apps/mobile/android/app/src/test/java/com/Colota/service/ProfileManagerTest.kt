@@ -757,6 +757,62 @@ class ProfileManagerTest {
         assertFalse(manager.isStationary)
     }
 
+    // --- Clear speed buffer ---
+
+    @Test
+    fun `clearSpeedBuffer causes speed profile to deactivate`() = testScope.runTest {
+        val profile = speedAboveProfile(threshold = 10f, priority = 10)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.defaultDistance = 0f
+        manager.defaultSyncInterval = 0
+
+        // Fill buffer with fast speeds - profile activates
+        repeat(ProfileConstants.SPEED_BUFFER_SIZE) {
+            manager.onLocationUpdate(mockLocation(15f))
+        }
+        assertEquals("Fast", switchedProfileName)
+
+        // Clear buffer (e.g. entering geofence pause zone)
+        manager.clearSpeedBuffer()
+
+        // Wait past deactivation delay
+        advanceTimeBy(31_000)
+
+        // Should have reverted to defaults
+        assertNull(switchedProfileName)
+        assertEquals(5000L, switchedInterval)
+    }
+
+    @Test
+    fun `clearSpeedBuffer allows speed below profile to stop matching`() = testScope.runTest {
+        val profile = speedBelowProfile(threshold = 10f, priority = 5)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.defaultDistance = 0f
+        manager.defaultSyncInterval = 0
+
+        // Fill buffer with slow speeds - profile activates
+        repeat(ProfileConstants.SPEED_BUFFER_SIZE) {
+            manager.onLocationUpdate(mockLocation(5f))
+        }
+        assertEquals("Slow", switchedProfileName)
+
+        // Clear buffer
+        manager.clearSpeedBuffer()
+
+        // Wait past deactivation delay
+        advanceTimeBy(61_000)
+
+        // Should have reverted to defaults (avgSpeed is null, condition doesn't match)
+        assertNull(switchedProfileName)
+        assertEquals(5000L, switchedInterval)
+    }
+
     // --- Unknown condition type ---
 
     @Test

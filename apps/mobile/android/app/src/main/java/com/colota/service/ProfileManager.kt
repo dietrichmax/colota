@@ -173,6 +173,15 @@ class ProfileManager(
         return result
     }
 
+    /** Clears stale speed readings (e.g. when entering a geofence pause zone). */
+    fun clearSpeedBuffer() {
+        synchronized(speedLock) {
+            speedBuffer.clear()
+        }
+        AppLogger.d(TAG, "Speed buffer cleared")
+        evaluate()
+    }
+
     private fun getAverageSpeed(): Float? {
         synchronized(speedLock) {
             if (speedBuffer.isEmpty()) return null

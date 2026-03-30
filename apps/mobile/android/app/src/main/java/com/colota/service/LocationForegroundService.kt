@@ -464,6 +464,9 @@ class LocationForegroundService : Service() {
 
         applySpeedFallback(location)
 
+        // Before distance filter so stationary locations still update the speed buffer
+        profileManager.onLocationUpdate(location)
+
         // Software-side distance filter (FLP bypasses the OS-level distance filter for some fixes)
         // Bypassed during geofence entry delay so stationary arrival points are logged
         if (pendingPauseZone == null && config.minUpdateDistance > 0f && prev != null) {
@@ -475,9 +478,6 @@ class LocationForegroundService : Service() {
         }
 
         AppLogger.d(TAG, "Location received: acc=${location.accuracy}m provider=${location.provider}")
-
-        // After accuracy filter so bad GPS doesn't pollute speed average
-        profileManager.onLocationUpdate(location)
 
         lastKnownLocation = location
 
@@ -596,6 +596,8 @@ class LocationForegroundService : Service() {
 
         if (geofence.pauseOnWifi) registerWifiPause()
         if (geofence.pauseOnMotionless) startMotionlessCountdown(geofence.motionlessTimeoutMinutes)
+
+        profileManager.clearSpeedBuffer()
 
         AppLogger.d(TAG, "Entered pause zone: ${geofence.name}")
     }
