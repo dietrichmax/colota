@@ -8,7 +8,7 @@ Settings and tips to reduce battery usage without losing GPS fixes.
 
 ## Built-in Optimizations
 
-- **Stationary detection**: Automatically pauses GPS after 60s without movement, resumes on motion via hardware sensor (enabled by default)
+- **Stationary detection**: Pauses GPS after 60s without movement via [tracking profiles](/docs/guides/tracking-profiles) or [geofence motionless detection](/docs/guides/geofencing), resumes on motion via hardware sensor
 - **Notification throttling**: Max 1 update per 10 seconds, plus 2-meter movement filter
 - **Batch processing**: 50 items per batch, 10 concurrent network requests
 - **Smart sync**: Only syncs when queue has items and network is available

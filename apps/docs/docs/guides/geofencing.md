@@ -43,7 +43,9 @@ Stops GPS after no device motion is detected for a configurable time (default 10
 
 When both **WiFi** and **motionless** pause are enabled, GPS only resumes when **both** conditions clear - WiFi must be disconnected **and** motion must be detected. Either condition alone is not enough to resume.
 
-:::tip Changes made in the editor take effect immediately, even when you are already inside the zone. :::
+:::tip Changes made in the editor take effect immediately, even when you are already inside the zone.
+
+:::
 
 ## How It Works
 

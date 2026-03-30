@@ -38,9 +38,13 @@ Tracking profiles automatically adjust GPS interval, distance filter, and sync s
 
 Speed conditions use a rolling average of the last 5 GPS readings to avoid triggering on momentary speed spikes. The stationary condition uses a fixed speed threshold (0.3 m/s) with a 60-second timeout for reliable detection - unlike speed-below, it does not flap on GPS noise near zero.
 
-:::tip Stationary profile When the device becomes stationary, the hardware significant motion sensor is armed. Even with a long GPS interval (e.g. 30 min), the profile deactivates the moment the device moves without waiting for the next GPS fix. The deactivation delay setting is not shown for stationary profiles since the motion sensor handles instant resume. Set the distance filter to **0m** so points are recorded at every interval regardless of GPS drift. :::
+:::tip Stationary profile When the device becomes stationary, the hardware significant motion sensor is armed. Even with a long GPS interval (e.g. 30 min), the profile deactivates the moment the device moves without waiting for the next GPS fix. The deactivation delay setting is not shown for stationary profiles since the motion sensor handles instant resume. Set the distance filter to **0m** so points are recorded at every interval regardless of GPS drift.
 
-:::caution Accuracy filtering matters for stationary detection The stationary condition triggers when GPS speed stays below 0.3 m/s for 60 seconds. If your default settings allow inaccurate locations (e.g. 40m+ accuracy) with a low distance filter (0m), GPS drift from noisy fixes can produce phantom speeds above the threshold - preventing the stationary profile from ever activating. To fix this, tighten your accuracy filter (e.g. 15m or less) so only clean fixes reach the speed check. :::
+:::
+
+:::caution Accuracy filtering matters for stationary detection The stationary condition triggers when GPS speed stays below 0.3 m/s for 60 seconds. If your default settings allow inaccurate locations (e.g. 40m+ accuracy) with a low distance filter (0m), GPS drift from noisy fixes can produce phantom speeds above the threshold - preventing the stationary profile from ever activating. To fix this, tighten your accuracy filter (e.g. 15m or less) so only clean fixes reach the speed check.
+
+:::
 
 ## Profile Settings
 
@@ -58,7 +62,9 @@ When creating a new profile, GPS interval, distance filter, and sync interval ar
 
 When multiple conditions match at the same time, the profile with the highest priority wins.
 
-:::tip If you use both a Speed Below and a Stationary profile, give Stationary the higher priority. Otherwise the speed profile keeps GPS running at its interval and the stationary heartbeat never kicks in. :::
+:::tip If you use both a Speed Below and a Stationary profile, give Stationary the higher priority. Otherwise the speed profile keeps GPS running at its interval and the stationary heartbeat never kicks in.
+
+:::
 
 ## Example Configurations
 
