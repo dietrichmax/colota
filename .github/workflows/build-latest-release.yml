@@ -1,20 +1,10 @@
 name: Build Latest Release
 
 on:
-  push:
-    branches:
-      - dev
-    paths-ignore:
-      - '**.md'
-      - 'apps/docs/**'
-      - 'screenshots/**'
-      - 'fastlane/**'
-      - 'LICENSE'
-      - '.github/workflows/docs-*'
-      - '.github/workflows/build-release.yml'
-      - '**/__tests__/**'
-      - '.github/workflows/pr-labeler.yml'
-      - '.github/workflows/dependency-updates.yml'
+  workflow_run:
+    workflows: ["Android Build Check"]
+    types: [completed]
+    branches: [dev]
   workflow_dispatch:
 
 permissions:
@@ -25,34 +15,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Lint & Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
-      - run: npm ci
-      - run: npm run build -w @colota/shared
-      - run: npm run lint -w @colota/mobile
-      - run: npx -w @colota/mobile tsc --noEmit
-      - run: npm test -w @colota/mobile
-      - name: Run Kotlin unit tests
-        run: |
-          cd apps/mobile/android
-          chmod +x gradlew
-          ./gradlew testGmsDebugUnitTest testFossDebugUnitTest --no-daemon
-
   build-gms:
     name: Build GMS Release APK
-    needs: test
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -126,7 +91,7 @@ jobs:
 
   build-foss:
     name: Build FOSS Release APK
-    needs: test
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
