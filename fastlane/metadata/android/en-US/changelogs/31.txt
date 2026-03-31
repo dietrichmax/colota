@@ -1,0 +1,7 @@
+- Added Activity Log screen with level filtering, search and export
+- Always-on log collection (no debug mode needed)
+- Fixed speed profiles staying stuck when stationary
+- Fixed map not updating position inside geofence pause zone
+- Fixed phantom location jump on zone exit
+- Stripped coordinates from debug logs for privacy
+- Clarified notification permission requirement for foreground service
