@@ -771,6 +771,33 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `anchor point timestamp is 1s before lastKnownLocation`() = testScope.runTest {
+        val location = mockLocation(lat = 52.1, lon = 13.1)
+        every { location.time } returns 1774863384000L // 09:36:24
+
+        setField("lastKnownLocation", location)
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeExitPauseZone()
+
+        val expectedTimestamp = (1774863384000L - 1000L) / 1000L
+        verify { dbHelper.saveLocation(
+            latitude = homeGeofence.lat,
+            longitude = homeGeofence.lon,
+            accuracy = homeGeofence.radius,
+            altitude = null,
+            speed = null,
+            bearing = null,
+            battery = 80,
+            battery_status = 2,
+            timestamp = expectedTimestamp,
+            endpoint = "https://example.com"
+        ) }
+    }
+
+    @Test
     fun `exitPauseZone skips anchor when no stored geofence`() = testScope.runTest {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")

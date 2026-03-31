@@ -780,16 +780,18 @@ class LocationForegroundService : Service() {
             return null
         }
 
+        val lastFix = lastKnownLocation
+        val anchorTimeMs = if (lastFix != null) lastFix.time - 1000 else System.currentTimeMillis()
+        val anchorTimeSec = anchorTimeMs / 1000
+
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
-        val nowMs = System.currentTimeMillis()
-        val timestampSec = nowMs / 1000
         val currentFieldMap = fieldMap ?: emptyMap()
 
         val syntheticLocation = android.location.Location("geofence").apply {
             latitude = geofence.lat
             longitude = geofence.lon
             accuracy = geofence.radius.toFloat()
-            time = nowMs
+            time = anchorTimeMs
         }
 
         return serviceScope?.launch {
@@ -802,7 +804,7 @@ class LocationForegroundService : Service() {
                 bearing = null,
                 battery = battery,
                 battery_status = batteryStatus,
-                timestamp = timestampSec,
+                timestamp = anchorTimeSec,
                 endpoint = config.endpoint
             )
 
@@ -812,7 +814,7 @@ class LocationForegroundService : Service() {
                 batteryStatus,
                 // emptyMap() keeps internal field names (lat/lon/vel/bear/...) so buildTraccarJsonPayload can read them directly
                 if (config.apiFormat == NetworkManager.FORMAT_TRACCAR_JSON) emptyMap() else currentFieldMap,
-                timestampSec,
+                anchorTimeSec,
                 customFields
             )
 

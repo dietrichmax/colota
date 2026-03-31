@@ -88,7 +88,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - GPS location capture via the `LocationProvider` abstraction
 - Pause zone detection (geofencing)
 - Geofence entry delay - keeps recording for 3.5× the tracking interval before pausing on zone entry, logging real arrival points for backends like GeoPulse
-- Anchor points - a synthetic location saved on zone exit as a clean start point for the departing trip
+- Anchor points - a synthetic location saved on zone exit as a clean start point for the departing trip, timestamped 1s before the first real GPS fix
 - Battery critical shutdown (below 5% while discharging)
 - Location accuracy filtering
 - Stationary detection - pauses GPS after 60s without movement and arms `MotionDetector` to resume on motion (suspended during entry delay and inside geofence pause zones)

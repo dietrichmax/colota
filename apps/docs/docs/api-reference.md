@@ -69,10 +69,11 @@ All field names are [customizable](/docs/configuration/field-mapping).
 
 ### Anchor Points
 
-When entering or exiting a [pause zone](/docs/guides/geofencing#anchor-points), Colota sends a synthetic location at the geofence center. These payloads look like regular locations but have specific characteristics:
+When exiting a [pause zone](/docs/guides/geofencing#anchor-points), Colota sends a synthetic location at the geofence center. These payloads look like regular locations but have specific characteristics:
 
 - `lat`/`lon` are the geofence center coordinates (not the actual GPS position)
 - `acc` is set to the geofence radius in meters
+- `tst` is set to 1 second before the first real GPS fix after leaving the zone
 - `alt`, `vel`, and `bear` are not included
 - `batt` and `bs` reflect the current battery state
 
