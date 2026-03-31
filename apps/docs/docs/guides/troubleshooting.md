@@ -15,6 +15,7 @@ sidebar_position: 4
 - Make sure tracking was active before the reboot
 - Notification permission must be granted - without it the foreground service cannot start on boot
 - Disable battery optimization for Colota (**Settings > Apps > Colota > Battery > Unrestricted**)
+- **Samsung**: Make sure "Pause app activity if unused" is turned off for Colota (**Settings > Apps > Colota > Battery**)
 
 ## GPS accuracy is poor
 
