@@ -92,11 +92,23 @@ jobs:
           test -n "${{ secrets.KEY_ALIAS }}" || exit 1
           test -n "${{ secrets.KEY_PASSWORD }}" || exit 1
 
-      - name: Build GMS Release APKs
+      - name: Build GMS per-arch APKs
         run: |
           cd apps/mobile/android
           chmod +x gradlew
           ./gradlew assembleGmsRelease --no-daemon
+
+      - name: Save per-arch APKs
+        run: mkdir -p /tmp/gms-apks && cp apps/mobile/android/app/build/outputs/apk/gms/release/*.apk /tmp/gms-apks/
+
+      - name: Build GMS universal APK
+        run: |
+          sed -i 's/enable !gradle.*/enable false/' apps/mobile/android/app/build.gradle
+          cd apps/mobile/android
+          ./gradlew assembleGmsRelease --no-daemon
+
+      - name: Collect all GMS APKs
+        run: cp /tmp/gms-apks/*.apk apps/mobile/android/app/build/outputs/apk/gms/release/
 
       - name: Upload GMS APKs
         uses: actions/upload-artifact@v4
