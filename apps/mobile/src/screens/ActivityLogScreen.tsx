@@ -205,7 +205,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
                 ]}
               >
                 <Text style={[styles.chipText, { color: active ? color : colors.textLight }]}>
-                  {level.slice(0, 3)}
+                  {level}
                   {count > 0 ? ` ${count}` : ""}
                 </Text>
               </Pressable>
@@ -228,7 +228,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
             <Text style={[styles.logText, { color: colors.text }]} selectable>
               {filteredLogs
                 .map((item) => {
-                  const tag = item.level === "NATIVE" ? "NAT" : item.level.slice(0, 3)
+                  const level = item.level === "NATIVE" ? "NATIVE" : item.level
                   const time =
                     item.time > 0
                       ? new Date(item.time).toLocaleTimeString([], {
@@ -237,7 +237,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
                           second: "2-digit"
                         })
                       : "        "
-                  return `${time} ${tag.padEnd(4)} ${item.message}`
+                  return `[${time}] [${level}] ${item.message}`
                 })
                 .join("\n")}
             </Text>
