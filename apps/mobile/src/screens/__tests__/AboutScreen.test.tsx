@@ -71,9 +71,11 @@ jest.mock("../../services/NativeLocationService", () => ({
 }))
 
 jest.mock("../../utils/logger", () => ({
-  logger: { error: jest.fn() },
-  getLogEntries: jest.fn().mockReturnValue([]),
-  setLogCollecting: jest.fn()
+  logger: { error: jest.fn() }
+}))
+
+jest.mock("../../utils/logExport", () => ({
+  exportLogs: jest.fn().mockResolvedValue(undefined)
 }))
 
 jest.mock("../../assets/icons/icon.png", () => "mock-icon")
@@ -107,7 +109,6 @@ jest.mock("lucide-react-native", () => {
 })
 
 import { AboutScreen } from "../AboutScreen"
-import { setLogCollecting } from "../../utils/logger"
 
 describe("AboutScreen", () => {
   beforeEach(() => {
@@ -149,7 +150,6 @@ describe("AboutScreen", () => {
     })
 
     expect(mockSaveSetting).toHaveBeenCalledWith("debug_mode_enabled", "true")
-    expect(setLogCollecting).toHaveBeenCalledWith(true)
   })
 
   it("shows debug badge when debug mode is enabled", async () => {
@@ -198,7 +198,6 @@ describe("AboutScreen", () => {
     })
 
     mockSaveSetting.mockClear()
-    ;(setLogCollecting as jest.Mock).mockClear()
 
     fireEvent.press(getByText("Debug Mode (tap to hide)"))
 
@@ -207,7 +206,6 @@ describe("AboutScreen", () => {
     })
 
     expect(mockSaveSetting).toHaveBeenCalledWith("debug_mode_enabled", "false")
-    expect(setLogCollecting).toHaveBeenCalledWith(false)
   })
 
   it("loads persisted debug mode on mount", async () => {
@@ -220,7 +218,6 @@ describe("AboutScreen", () => {
     })
 
     expect(mockGetSetting).toHaveBeenCalledWith("debug_mode_enabled", "false")
-    expect(setLogCollecting).toHaveBeenCalledWith(true)
   })
 
   it("opens Privacy Policy URL when link pressed", async () => {

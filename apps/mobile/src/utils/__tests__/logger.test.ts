@@ -92,17 +92,15 @@ describe("logger", () => {
 
     function loadBuffer() {
       const mod = require("../logger")
-      mod.setLogCollecting(true)
       mod.clearLogBuffer()
       return {
         logger: mod.logger,
         getLogEntries: mod.getLogEntries,
-        clearLogBuffer: mod.clearLogBuffer,
-        setLogCollecting: mod.setLogCollecting
+        clearLogBuffer: mod.clearLogBuffer
       }
     }
 
-    it("captures log entries", () => {
+    it("always captures log entries", () => {
       const { logger, getLogEntries } = loadBuffer()
       logger.info("test message")
 
@@ -125,16 +123,15 @@ describe("logger", () => {
       expect(entries.map((e: any) => e.level)).toEqual(["DEBUG", "INFO", "WARN", "ERROR"])
     })
 
-    it("collects all entries without limit", () => {
+    it("caps buffer at MAX_BUFFER_SIZE", () => {
       const { logger, getLogEntries } = loadBuffer()
-      for (let i = 0; i < 600; i++) {
+      for (let i = 0; i < 2100; i++) {
         logger.info(`msg ${i}`)
       }
 
       const entries = getLogEntries()
-      expect(entries).toHaveLength(600)
-      expect(entries[0].message).toBe("msg 0")
-      expect(entries[entries.length - 1].message).toBe("msg 599")
+      expect(entries.length).toBeLessThanOrEqual(2000)
+      expect(entries[entries.length - 1].message).toBe("msg 2099")
     })
 
     it("clearLogBuffer empties the buffer", () => {
@@ -158,23 +155,6 @@ describe("logger", () => {
       logger.info("data:", { key: "value" })
 
       expect(getLogEntries()[0].message).toBe('data: {"key":"value"}')
-    })
-
-    it("does not collect when collecting is disabled", () => {
-      const { logger, getLogEntries, setLogCollecting } = loadBuffer()
-      setLogCollecting(false)
-      logger.info("should not be captured")
-
-      expect(getLogEntries()).toHaveLength(0)
-    })
-
-    it("clears buffer when collecting is disabled", () => {
-      const { logger, getLogEntries, setLogCollecting } = loadBuffer()
-      logger.info("captured")
-      expect(getLogEntries()).toHaveLength(1)
-
-      setLogCollecting(false)
-      expect(getLogEntries()).toHaveLength(0)
     })
   })
 })

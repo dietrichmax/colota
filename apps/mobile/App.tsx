@@ -13,6 +13,7 @@ import { fonts } from "./src/styles/typography"
 import { TrackingProvider } from "./src/contexts/TrackingProvider"
 import { ErrorBoundary } from "./src/components/ui/ErrorBoundary"
 import {
+  ActivityLogScreen,
   DashboardScreen,
   SettingsScreen,
   ApiSettingsScreen,
@@ -31,17 +32,11 @@ import {
   TripDetailScreen,
   OfflineMapsScreen
 } from "./src/screens/"
-import NativeLocationService from "./src/services/NativeLocationService"
 import { loadDisplayPreferences } from "./src/utils/geo"
-import { setLogCollecting } from "./src/utils/logger"
-
 MapLibreGL.setAccessToken(null)
 
-// Load display preferences and enable log collection early
+// Load display preferences early
 loadDisplayPreferences()
-NativeLocationService.getSetting("debug_mode_enabled", "false").then((v) => {
-  if (v === "true") setLogCollecting(true)
-})
 
 const Stack = createNativeStackNavigator()
 
@@ -130,6 +125,11 @@ const SCREEN_CONFIG = [
     name: "Offline Maps",
     component: OfflineMapsScreen,
     title: "Offline Maps"
+  },
+  {
+    name: "Activity Log",
+    component: ActivityLogScreen,
+    title: "Activity Log"
   }
 ] as const
 

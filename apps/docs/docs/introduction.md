@@ -26,7 +26,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## App Screens
 
-Colota has seventeen screens, each focused on a specific task:
+Colota has eighteen screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
@@ -46,6 +46,7 @@ Colota has seventeen screens, each focused on a specific task:
 | **Auto-Export** | Configure scheduled exports: format, directory, frequency, export range, and file retention |
 | **Data Management** | Clear sent history, delete old data, vacuum the database |
 | **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
+| **Activity Log** | In-app log viewer with level filtering, search, and export for bug reports |
 | **About** | App version, device info, links to repository and privacy policy |
 
 ## Screenshots

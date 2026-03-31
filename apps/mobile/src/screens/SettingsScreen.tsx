@@ -408,6 +408,20 @@ export function SettingsScreen({ navigation }: ScreenProps) {
                 </Pressable>
               </>
             )}
+
+            <Divider />
+
+            <Pressable
+              testID="nav-activity-log"
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+              onPress={() => navigation.navigate("Activity Log")}
+            >
+              <View style={styles.linkContent}>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Activity Log</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>View and export debug logs</Text>
+              </View>
+              <ChevronRight size={20} color={colors.textLight} />
+            </Pressable>
           </Card>
         </View>
       </ScrollView>

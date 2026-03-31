@@ -29,14 +29,14 @@ sidebar_position: 4
 
 ## Exporting app logs
 
-You can export app logs directly from the device for bug reports:
+You can view and export app logs directly from the device for bug reports:
 
-1. Go to **About** and tap the version number 7 times to enable debug mode
-2. Log collection starts automatically - reproduce the issue you want to report
-3. Tap **Export Logs** to share a text file with the collected log entries
-4. The export includes app version, device info, and all collected log messages
+1. Go to **Settings > Activity Log**
+2. Browse logs in the viewer - filter by level or search for keywords
+3. Tap the share button to export a text file with all log entries
+4. The export includes app version, device info and all collected log messages
 
-Log collection is only active while debug mode is enabled and uses minimal memory.
+Logs are always collected in the background using a fixed-size ring buffer.
 
 ## Debugging with adb logcat
 

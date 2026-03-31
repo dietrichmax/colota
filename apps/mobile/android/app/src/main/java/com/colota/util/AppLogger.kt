@@ -9,16 +9,7 @@ import android.util.Log
 import com.Colota.BuildConfig
 
 /**
- * App-level logger controlled by the user's debug mode toggle.
- *
- * Logs are emitted when either:
- * - The user has enabled debug mode via the About screen (works in release builds)
- * - The app is running as a debug build (BuildConfig.DEBUG)
- *
- * This ensures developers always see logs during local development without
- * needing to toggle debug mode, while release users can opt in via the setting.
- *
- * Errors (Log.e) are always logged regardless of debug mode.
+ * App-level logger. Always active so logs are available for the Activity Log screen.
  *
  * All tags are prefixed with "Colota." so native log export can filter on that prefix.
  */
@@ -26,22 +17,16 @@ object AppLogger {
 
     private const val PREFIX = "Colota."
 
-    @Volatile
-    var enabled: Boolean = false
-
-    private val active: Boolean
-        get() = enabled || BuildConfig.DEBUG
-
     fun d(tag: String, msg: String) {
-        if (active) Log.d(PREFIX + tag, msg)
+        Log.d(PREFIX + tag, msg)
     }
 
     fun i(tag: String, msg: String) {
-        if (active) Log.i(PREFIX + tag, msg)
+        Log.i(PREFIX + tag, msg)
     }
 
     fun w(tag: String, msg: String) {
-        if (active) Log.w(PREFIX + tag, msg)
+        Log.w(PREFIX + tag, msg)
     }
 
     fun e(tag: String, msg: String, throwable: Throwable? = null) {

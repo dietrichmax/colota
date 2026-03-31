@@ -118,7 +118,6 @@ class LocationForegroundService : Service() {
 
         motionDetector = MotionDetector(this) { onMotionDetected() }
 
-        AppLogger.enabled = dbHelper.getSetting("debug_mode_enabled")?.toBoolean() ?: false
         AppLogger.d(TAG, "Service created - provider: ${locationProvider.javaClass.simpleName}, motionSensor=${motionDetector?.isAvailable}")
     }
 

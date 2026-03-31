@@ -1,6 +1,7 @@
 package com.Colota.sync
 
 import android.content.Context
+import com.Colota.BuildConfig
 import com.Colota.util.AppLogger
 import com.Colota.util.TimedCache
 import android.net.ConnectivityManager
@@ -107,7 +108,7 @@ class NetworkManager(private val context: Context) {
                 useCaches = false
             }
 
-            if (AppLogger.enabled) {
+            if (BuildConfig.DEBUG) {
                 AppLogger.d(TAG, "=== HTTP REQUEST ===")
                 AppLogger.d(TAG, "Endpoint: ${if (isGet) targetUrl else endpoint}")
                 AppLogger.d(TAG, "Method: ${connection.requestMethod}")

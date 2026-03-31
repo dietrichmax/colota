@@ -44,8 +44,6 @@ class LocationServiceModuleTest {
         }
 
         mockkObject(AppLogger)
-        every { AppLogger.enabled } returns false
-        every { AppLogger.enabled = any() } just Runs
         every { AppLogger.d(any(), any()) } just Runs
         every { AppLogger.i(any(), any()) } just Runs
         every { AppLogger.w(any(), any()) } just Runs

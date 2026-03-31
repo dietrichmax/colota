@@ -175,7 +175,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `ServiceConfig` | Centralized configuration data class |
 | `TimedCache` | Generic TTL cache used for queue count, device info, geofences, profiles, and network state |
 | `BuildConfigModule` | Exposes build constants (SDK versions, app version) to JS |
-| `AppLogger` | Centralized logger - logs when debug mode is enabled or in debug builds, errors always log |
+| `AppLogger` | Centralized logger - always active, all tags prefixed with `Colota.` for logcat filtering |
 | `AutoExportWorker` | WorkManager `CoroutineWorker` for scheduled exports - checks `AutoExportConfig.isExportDue()` on each run, streams chunked writes, verifies output, and cleans up old files beyond retention limit |
 | `AutoExportScheduler` | Schedules a daily (24h) check worker via WorkManager with battery-not-low constraint - frequency logic (daily/weekly/monthly) is handled at runtime by the worker |
 | `AutoExportConfig` | Typed data class wrapping auto-export settings from the SQLite settings table with validation, `isExportDue()`, and `nextExportTimestamp()` |
@@ -203,6 +203,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `OfflineMapsScreen` | Download and manage offline map areas - interactive bounding box picker, size estimate, progress tracking, and area deletion |
 | `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
+| `ActivityLogScreen` | In-app log viewer with level filtering, search, and export |
 | `AboutScreen` | App version, device info, links to repository and privacy policy |
 
 ### Services
@@ -258,7 +259,7 @@ Supporting utilities in `mapUtils.ts`:
 
 | Utility | Purpose |
 | --- | --- |
-| `logger` | Environment-aware logging - suppresses debug/info in production via `__DEV__`, always logs warn/error |
+| `logger` | Environment-aware logging - suppresses debug/info console output in production via `__DEV__`, always logs warn/error to console. All levels are always captured in a ring buffer (2000 entries) for the Activity Log screen |
 | `geo` | Haversine distance, speed/distance/duration/time formatting with configurable unit system (metric/imperial) and time format (12h/24h), auto-detected from locale on first use |
 | `exportConverters` | Converts location data to CSV, GeoJSON, GPX, and KML export formats (flat and trip-aware variants) |
 | `trips` | Trip segmentation via time-gap detection (15-min threshold) with distance computation, trip stats (avg speed, elevation gain/loss), and trip color assignment |

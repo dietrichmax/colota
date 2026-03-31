@@ -817,9 +817,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     fun saveSetting(key: String, value: String, promise: Promise) =
         executeAsync(promise) {
             dbHelper.saveSetting(key, value)
-            if (key == "debug_mode_enabled") {
-                AppLogger.enabled = value.toBoolean()
-            }
             true
         }
 

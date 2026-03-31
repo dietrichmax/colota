@@ -20,7 +20,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 - **Offline Maps** - Download map areas to your device for use without an internet connection.
 - **Scheduled Export** - Automatic daily, weekly or monthly exports to a local directory with file retention management.
 - **Location History** - View daily summaries, trip segmentation, calendar with activity dots and per-trip export.
-- **Reliable Tracking** - Foreground service, auto-start on boot, exponential backoff retry and automatic GPS pause when stationary.
+- **Reliable Tracking** - Foreground service, auto-start on boot and exponential backoff retry.
 - **Geofencing** - Pause zones that automatically stop recording locations.
 - **Tracking Profiles** - Automatically adjust GPS interval, distance filter and sync settings based on conditions like charging, car mode or speed.
 - **Flexible Sync** - Instant, batch, Wi-Fi only or offline modes.
