@@ -8,7 +8,13 @@ sidebar_position: 4
 
 - Go to **Settings > Apps > Colota > Battery** and select **Unrestricted**
 - Verify location permissions are set to **Allow all the time**
-- Ensure the foreground notification is visible
+- Ensure notification permission is granted - Colota uses a foreground service which requires a persistent notification. Without it, the service cannot start.
+
+## Tracking doesn't start after reboot
+
+- Make sure tracking was active before the reboot
+- Notification permission must be granted - without it the foreground service cannot start on boot
+- Disable battery optimization for Colota (**Settings > Apps > Colota > Battery > Unrestricted**)
 
 ## GPS accuracy is poor
 

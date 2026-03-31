@@ -80,7 +80,7 @@ If tracking was active when the device was powered off, Colota automatically res
 android.permission.POST_NOTIFICATIONS
 ```
 
-Starting with Android 13, apps must request notification permission explicitly. Colota needs this for the foreground service notification. If denied, the service may still run but with reduced reliability depending on the Android version.
+Starting with Android 13, apps must request notification permission explicitly. Colota uses a foreground service for GPS tracking, which requires a persistent notification. Without this permission, the service cannot start - including after a device reboot.
 
 ### Local Network Access
 

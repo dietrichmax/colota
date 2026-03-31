@@ -8,9 +8,10 @@ Minimal setup to start tracking:
 
 1. Install the app ([Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US), [IzzyOnDroid](https://apt.izzysoft.de/packages/com.Colota/), or [APK](https://github.com/dietrichmax/colota/releases))
 2. Grant location permissions - select **Precise location** and **Allow all the time**
-3. Disable battery optimization for Colota in Android settings (otherwise background tracking won't work reliable)
-4. Press **Start Tracking**
-5. View live coordinates on the dashboard
+3. Grant notification permission - required for the foreground service that keeps GPS tracking alive
+4. Disable battery optimization for Colota in Android settings (otherwise background tracking won't work reliably)
+5. Press **Start Tracking**
+6. View live coordinates on the dashboard
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
