@@ -6,55 +6,79 @@ sidebar_position: 3
 
 [Home Assistant](https://www.home-assistant.io/) is an open-source home automation platform.
 
-Colota integrates with Home Assistant via the built-in [OwnTracks integration](https://www.home-assistant.io/integrations/owntracks/), which accepts location updates over HTTP.
+Colota has a dedicated Home Assistant integration that receives location updates via webhook and creates `device_tracker` entities. The integration source code is available on [GitHub](https://github.com/dietrichmax/colota-home-assistant).
 
 ## Setup
 
-1. **Add the OwnTracks integration** in Home Assistant:
-   - Go to **Settings > Devices & Services > Add Integration**
-   - Search for **OwnTracks** and add it
-   - Note the webhook URL shown after setup (e.g. `https://your-ha-instance/api/webhook/abc123`)
-2. **Configure Colota**:
-   - Go to **Settings > API Settings**
-   - Select the **OwnTracks** template
-   - Set the endpoint to your Home Assistant webhook URL:
-     ```
-     https://your-ha-instance/api/webhook/abc123
-     ```
-   - No authentication is needed - the webhook ID acts as the secret
-   - Add the following **custom headers** - these are required for Home Assistant to create the `device_tracker` entity:
+### 1. Install the Colota integration
 
-     | Header      | Value        | Description                                    |
-     | ----------- | ------------ | ---------------------------------------------- |
-     | `X-Limit-U` | e.g. `john`  | Your username - used as part of the entity ID  |
-     | `X-Limit-D` | e.g. `phone` | Your device ID - used as part of the entity ID |
+**Via HACS (recommended):**
 
-   Without these headers, Home Assistant will accept the webhook but will not create a device tracker entity. The entity will appear as `device_tracker.<username>_<device>`.
+1. Open HACS in Home Assistant
+2. Go to **Integrations**
+3. Click the three dots menu and select **Custom repositories**
+4. Add `https://github.com/dietrichmax/colota-home-assistant` as an **Integration**
+5. Search for **Colota** and install it
+6. Restart Home Assistant
 
-Your device will appear as a `device_tracker` entity in Home Assistant that you can use for automations, zones, and the map.
+**Manual:**
 
-## Payload Format
+1. Copy the `custom_components/colota` folder to your Home Assistant `config/custom_components/` directory
+2. Restart Home Assistant
 
-The OwnTracks template auto-configures the following payload:
+### 2. Add the integration
+
+1. Go to **Settings > Devices & Services > Add Integration**
+2. Search for **Colota** and add it
+3. Copy the webhook URL shown after setup
+
+### 3. Configure the Colota app
+
+1. Go to **Settings > API Settings**
+2. Paste the webhook URL as the endpoint
+3. No authentication is needed - the webhook URL acts as the secret
+
+The integration works with the default/custom API template out of the box. For the best experience, select the **Home Assistant** template which adds a device identifier (`tid`) and enables the connection status check.
+
+Your device will appear as a `device_tracker` entity in Home Assistant that you can use for automations, zones and the map.
+
+## Payload
+
+The Home Assistant template sends the following payload:
 
 ```json
 {
-  "_type": "location",
-  "tid": "AA",
-  "lat": 51.495065,
-  "lon": -0.043945,
-  "acc": 12,
-  "alt": 519,
-  "vel": 0,
+  "lat": 51.5074,
+  "lon": -0.1278,
+  "acc": 15,
+  "alt": 20,
+  "vel": 1.5,
   "batt": 85,
   "bs": 2,
-  "tst": 1704067200,
-  "cog": 180.5
+  "bear": 180,
+  "tid": "colota",
+  "tst": 1704067200
 }
 ```
 
+The `tid` field is used as the device identifier in Home Assistant. You can customize it in the custom fields settings to distinguish multiple devices.
+
 ## Notes
 
-- You can customize the tracker ID (`tid`) in the custom fields settings to distinguish multiple devices
-- If you use Nabu Casa, use the `cloudhook_url` or `remote_ui_url` provided during setup for external access
-- Home Assistant does not require a Bearer token or Basic Auth for webhook endpoints
+- If you use Nabu Casa, the integration will automatically generate a cloud webhook URL for external access
+- The integration supports multiple devices - each unique `tid` value creates a separate `device_tracker` entity
+
+## Alternative: OwnTracks integration
+
+If you prefer not to install a custom integration, you can use Home Assistant's built-in [OwnTracks integration](https://www.home-assistant.io/integrations/owntracks/) instead:
+
+1. Add the **OwnTracks** integration in Home Assistant and note the webhook URL
+2. In the Colota app, select the **OwnTracks** template and set the endpoint to the webhook URL
+3. Add the following custom headers:
+
+   | Header      | Value        | Description                                    |
+   | ----------- | ------------ | ---------------------------------------------- |
+   | `X-Limit-U` | e.g. `john`  | Your username - used as part of the entity ID  |
+   | `X-Limit-D` | e.g. `phone` | Your device ID - used as part of the entity ID |
+
+   Without these headers, Home Assistant will not create a device tracker entity.

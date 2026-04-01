@@ -130,7 +130,15 @@ describe("TRACKING_PRESETS", () => {
 })
 
 describe("API_TEMPLATES", () => {
-  const templateNames = ["dawarich", "owntracks", "phonetrack", "reitti", "traccar"] as const
+  const templateNames = [
+    "dawarich",
+    "geopulse",
+    "homeassistant",
+    "owntracks",
+    "phonetrack",
+    "reitti",
+    "traccar"
+  ] as const
 
   it.each(templateNames)("%s has valid fieldMap with required keys", (name) => {
     const template = API_TEMPLATES[name]
@@ -139,7 +147,16 @@ describe("API_TEMPLATES", () => {
     expect(template.fieldMap).toHaveProperty("acc")
   })
 
-  it.each(templateNames)("%s has non-empty customFields", (name) => {
+  const templatesWithCustomFields = [
+    "dawarich",
+    "homeassistant",
+    "owntracks",
+    "phonetrack",
+    "reitti",
+    "traccar"
+  ] as const
+
+  it.each(templatesWithCustomFields)("%s has non-empty customFields", (name) => {
     expect(API_TEMPLATES[name].customFields.length).toBeGreaterThan(0)
   })
 
@@ -173,6 +190,12 @@ describe("API_TEMPLATES", () => {
 
   it("traccar uses GET method", () => {
     expect(API_TEMPLATES.traccar.httpMethod).toBe("GET")
+  })
+
+  it("homeassistant uses default field names and includes tid", () => {
+    expect(API_TEMPLATES.homeassistant.fieldMap.lat).toBe("lat")
+    expect(API_TEMPLATES.homeassistant.fieldMap.lon).toBe("lon")
+    expect(API_TEMPLATES.homeassistant.customFields).toEqual([{ key: "tid", value: "colota" }])
   })
 
   it("traccar maps fields for OsmAnd protocol", () => {

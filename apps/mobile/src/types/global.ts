@@ -99,7 +99,15 @@ export interface CustomField {
 
 export type HttpMethod = "POST" | "GET"
 
-export type ApiTemplateName = "custom" | "dawarich" | "geopulse" | "owntracks" | "phonetrack" | "reitti" | "traccar"
+export type ApiTemplateName =
+  | "custom"
+  | "dawarich"
+  | "geopulse"
+  | "homeassistant"
+  | "owntracks"
+  | "phonetrack"
+  | "reitti"
+  | "traccar"
 
 export interface ApiTemplate {
   name: ApiTemplateName
@@ -127,6 +135,23 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
       bear: "bear"
     },
     customFields: []
+  },
+  homeassistant: {
+    name: "homeassistant",
+    label: "Home Assistant",
+    description: "Colota webhook for Home Assistant",
+    fieldMap: {
+      lat: "lat",
+      lon: "lon",
+      acc: "acc",
+      alt: "alt",
+      vel: "vel",
+      batt: "batt",
+      bs: "bs",
+      tst: "tst",
+      bear: "bear"
+    },
+    customFields: [{ key: "tid", value: "colota" }]
   },
   dawarich: {
     name: "dawarich",

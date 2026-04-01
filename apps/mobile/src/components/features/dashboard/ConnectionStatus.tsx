@@ -66,7 +66,8 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
         if (response.ok || (response.status !== 404 && response.status !== 405)) break
       }
 
-      setServerStatus(response.ok ? "connected" : "error")
+      const reachable = response.ok || response.status === 405
+      setServerStatus(reachable ? "connected" : "error")
       hasChecked.current = true
     } catch {
       setServerStatus("error")

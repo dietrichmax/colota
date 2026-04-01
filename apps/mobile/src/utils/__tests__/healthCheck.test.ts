@@ -43,6 +43,12 @@ describe("resolveHealthUrls", () => {
     ])
   })
 
+  it("homeassistant: uses webhook URL directly (server returns 405 which counts as reachable)", () => {
+    expect(resolveHealthUrls("http://192.168.50.186:8123/api/webhook/abc123", "homeassistant")).toEqual([
+      "http://192.168.50.186:8123/api/webhook/abc123"
+    ])
+  })
+
   it("custom: tries /health then origin regardless of endpoint path", () => {
     expect(resolveHealthUrls("https://custom.example.com/track", "custom")).toEqual([
       "https://custom.example.com/health",
