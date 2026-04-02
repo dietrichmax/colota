@@ -117,7 +117,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
     const isTraccarJson = isTraccarJsonFormat(localTemplate, localHttpMethod)
 
     if (isTraccarJson) {
-      const deviceId = localCustomFields.find((f) => f.key === "device_id")?.value ?? "colota"
+      const deviceId = localCustomFields.find((f) => f.key === "id" || f.key === "device_id")?.value ?? "colota"
       return JSON.stringify(
         buildTraccarJsonPayload({
           latitude: 52.12345,
@@ -322,8 +322,12 @@ export function ApiSettingsScreen({}: ScreenProps) {
       const newFields = localCustomFields.map((f) => (f.id === id ? { ...f, [field]: text } : f))
       setLocalCustomFields(newFields)
 
-      const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
-      if (newTemplate !== localTemplate) setLocalTemplate(newTemplate)
+      // Only reset template when changing a key, not a value
+      let newTemplate = localTemplate
+      if (field === "key" && localTemplate !== "custom") {
+        newTemplate = "custom"
+        setLocalTemplate(newTemplate)
+      }
 
       debouncedSave(localFieldMap, newFields, newTemplate, localHttpMethod)
     },
