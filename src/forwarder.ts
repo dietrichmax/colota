@@ -18,7 +18,7 @@ export async function forwardToAll(targets: Target[], payload: ColotaPayload): P
         if (target.auth) headers["Authorization"] = target.auth
         if (target.type === "owntracks") {
           headers["X-Limit-U"] = target.user ?? "colota"
-          headers["X-Limit-D"] = target.device ?? "phone"
+          headers["X-Limit-D"] = payload.tid ?? target.device ?? "phone"
         }
 
         let url = target.url
