@@ -24,13 +24,21 @@ type Props = {
   activeZoneName: string | null
   pauseReason: string | null
   activeProfileName: string | null
+  isBatteryCritical: boolean
 }
 
 const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
   return c !== null && c.latitude !== 0 && c.longitude !== 0
 }
 
-export function DashboardMap({ coords, tracking, activeZoneName, pauseReason, activeProfileName }: Props) {
+export function DashboardMap({
+  coords,
+  tracking,
+  activeZoneName,
+  pauseReason,
+  activeProfileName,
+  isBatteryCritical
+}: Props) {
   const mapRef = useRef<ColotaMapRef>(null)
   const { colors } = useTheme()
   const [geofences, setGeofences] = useState<any[]>([])
@@ -127,8 +135,14 @@ export function DashboardMap({ coords, tracking, activeZoneName, pauseReason, ac
           <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
             <Image source={icon} style={styles.icon} />
           </View>
-          <Text style={[styles.stateTitle, { color: colors.text }]}>Tracking Disabled</Text>
-          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Start tracking to see the map.</Text>
+          <Text style={[styles.stateTitle, { color: isBatteryCritical ? colors.error : colors.text }]}>
+            {isBatteryCritical ? "Tracking Stopped" : "Tracking Disabled"}
+          </Text>
+          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
+            {isBatteryCritical
+              ? "Battery critically low. Charge your device to resume."
+              : "Start tracking to see the map."}
+          </Text>
         </View>
       )}
 

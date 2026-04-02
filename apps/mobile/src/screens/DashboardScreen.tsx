@@ -41,6 +41,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
   const [pauseReason, setPauseReason] = useState<string | null>(null)
   const [scrollEnabled, setScrollEnabled] = useState(true)
+  const [isBatteryCritical, setIsBatteryCritical] = useState(false)
 
   // Animation for button
   const buttonScale = useRef(new Animated.Value(1)).current
@@ -112,6 +113,11 @@ export function DashboardScreen({ navigation }: ScreenProps) {
     useCallback(() => {
       updateStats()
       if (tracking) updatePauseZone()
+      if (!tracking) {
+        NativeLocationService.isBatteryCritical().then(setIsBatteryCritical)
+      } else {
+        setIsBatteryCritical(false)
+      }
 
       const interval = tracking ? Math.max(settings.interval * 1000, MIN_STATS_INTERVAL_MS) : STATS_REFRESH_IDLE
 
@@ -166,6 +172,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
               activeZoneName={currentPauseZone}
               pauseReason={pauseReason}
               activeProfileName={activeProfileName}
+              isBatteryCritical={isBatteryCritical}
             />
           </View>
 
@@ -180,6 +187,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
               icon={tracking ? Square : Play}
               onPress={tracking ? handleStop : handleStart}
               activeOpacity={0.9}
+              disabled={!tracking && isBatteryCritical}
               title={tracking ? "Stop Tracking" : "Start Tracking"}
             />
           </Animated.View>

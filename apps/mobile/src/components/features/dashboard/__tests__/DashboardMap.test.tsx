@@ -71,7 +71,8 @@ describe("DashboardMap info cards", () => {
     tracking: true,
     activeZoneName: null as string | null,
     pauseReason: null as string | null,
-    activeProfileName: null as string | null
+    activeProfileName: null as string | null,
+    isBatteryCritical: false
   }
 
   it("shows profile name when activeProfileName is set and no pause zone", () => {
@@ -117,5 +118,19 @@ describe("DashboardMap info cards", () => {
     const { getByText } = render(<DashboardMap {...baseProps} tracking={false} coords={null} />)
 
     expect(getByText("Tracking Disabled")).toBeTruthy()
+  })
+
+  it("shows battery critical message when not tracking and battery is critical", () => {
+    const { getByText } = render(<DashboardMap {...baseProps} tracking={false} isBatteryCritical={true} />)
+
+    expect(getByText("Tracking Stopped")).toBeTruthy()
+    expect(getByText("Battery critically low. Charge your device to resume.")).toBeTruthy()
+  })
+
+  it("shows normal disabled message when not tracking and battery is fine", () => {
+    const { getByText } = render(<DashboardMap {...baseProps} tracking={false} isBatteryCritical={false} />)
+
+    expect(getByText("Tracking Disabled")).toBeTruthy()
+    expect(getByText("Start tracking to see the map.")).toBeTruthy()
   })
 })

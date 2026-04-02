@@ -178,6 +178,7 @@ class LocationForegroundService : Service() {
         val initialTitle = notificationHelper.buildTitle(
             if (::profileManager.isInitialized) profileManager.getActiveProfileName() else null
         )
+        notificationManager.cancel(NotificationHelper.STOPPED_NOTIFICATION_ID)
         try {
             ServiceCompat.startForeground(
                 this,
@@ -283,7 +284,7 @@ class LocationForegroundService : Service() {
         if (deviceInfoHelper.isBatteryCritical(threshold = 5)) {
             val (level, _) = deviceInfoHelper.getCachedBatteryStatus()
             AppLogger.d(TAG, "Battery critical ($level%) and unplugged - stopping service")
-            stopForegroundServiceWithReason("Battery critical")
+            stopForegroundServiceWithReason("Battery below 5% - tracking paused")
             return
         }
 
@@ -493,7 +494,7 @@ class LocationForegroundService : Service() {
 
         if (deviceInfoHelper.isBatteryCritical()) {
             AppLogger.d(TAG, "Battery critical ($battery%) during tracking - stopping")
-            stopForegroundServiceWithReason("Battery critical")
+            stopForegroundServiceWithReason("Battery below 5% - tracking paused")
             return
         }
 
@@ -867,7 +868,7 @@ class LocationForegroundService : Service() {
         stopForeground(Service.STOP_FOREGROUND_DETACH)
 
         notificationManager.notify(
-            NotificationHelper.NOTIFICATION_ID,
+            NotificationHelper.STOPPED_NOTIFICATION_ID,
             notificationHelper.buildStoppedNotification(reason)
         )
 

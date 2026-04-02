@@ -869,6 +869,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun isBatteryCritical(promise: Promise) {
+        promise.resolve(deviceInfo.isBatteryCritical())
+    }
+
+    @ReactMethod
     fun requestIgnoreBatteryOptimizations(promise: Promise) {
         try {
             val result = deviceInfo.requestIgnoreBatteryOptimizations()

@@ -30,6 +30,7 @@ class NotificationHelper(
     companion object {
         const val CHANNEL_ID = "location_service_channel"
         const val NOTIFICATION_ID = 1
+        const val STOPPED_NOTIFICATION_ID = 2
         const val THROTTLE_MS = 10000L
         const val MIN_MOVEMENT_METERS = 2f
     }

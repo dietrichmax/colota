@@ -5,11 +5,13 @@
  
 package com.Colota.service
 
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
-import com.Colota.data.DatabaseHelper
 import android.content.Context
 import android.content.Intent
+import com.Colota.data.DatabaseHelper
 import com.Colota.util.AppLogger
+import com.Colota.util.DeviceInfoHelper
 import kotlinx.coroutines.*
 
 /**
@@ -84,6 +86,19 @@ class LocationBootReceiver : BroadcastReceiver() {
             
             if (!isEnabled) {
                 AppLogger.d(TAG, "Boot detected but tracking disabled")
+
+                // Re-show notification if battery is still critically low
+                val deviceInfo = DeviceInfoHelper(context)
+                if (deviceInfo.isBatteryCritical()) {
+                    AppLogger.d(TAG, "Battery still critical - showing stopped notification")
+                    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    val notificationHelper = NotificationHelper(context, notificationManager)
+                    notificationHelper.createChannel()
+                    notificationManager.notify(
+                        NotificationHelper.STOPPED_NOTIFICATION_ID,
+                        notificationHelper.buildStoppedNotification("Battery below 5% - tracking paused")
+                    )
+                }
                 return
             }
             

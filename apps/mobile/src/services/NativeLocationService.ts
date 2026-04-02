@@ -527,6 +527,14 @@ class NativeLocationService {
   }
 
   /**
+   * Checks if battery is critically low (below 5% and discharging)
+   */
+  static async isBatteryCritical(): Promise<boolean> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.isBatteryCritical(), false, "isBatteryCritical failed")
+  }
+
+  /**
    * Requests battery optimization exemption
    * Opens system dialog for user approval
    */

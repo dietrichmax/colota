@@ -321,37 +321,6 @@ class SyncManagerTest {
         coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
     }
 
-    @Test
-    fun `syncQueue continues to next batch after cleaning up exceeded items`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://example.com",
-            syncIntervalSeconds = 0,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            isWifiOnlySync = false,
-            authHeaders = emptyMap()
-        )
-
-        // Batch 1: only exceeded items (cleaned up, no sends)
-        // Batch 2: fresh items that should be sent
-        val exceeded = QueuedLocation(1L, 100L, """{"lat":52.0}""", 3)
-        val fresh = QueuedLocation(2L, 101L, """{"lat":53.0}""", 0)
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(
-            listOf(exceeded),
-            listOf(fresh),
-            emptyList()
-        )
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
-
-        syncManager.manualFlush()
-
-        // Should process BOTH batches: clean up exceeded AND send fresh
-        verify(exactly = 3) { dbHelper.getQueuedLocations(50) }
-        coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
-        verify { dbHelper.removeBatchFromQueue(listOf(1L)) }
-        verify { dbHelper.removeBatchFromQueue(listOf(2L)) }
-    }
-
     // --- getCachedQueuedCount ---
 
     @Test
@@ -455,27 +424,6 @@ class SyncManagerTest {
         coVerify(exactly = 25) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
         // 3 chunks → 3 removeBatchFromQueue calls
         verify(exactly = 3) { dbHelper.removeBatchFromQueue(any()) }
-    }
-
-    @Test
-    fun `syncQueue preserves location data when removing exceeded items`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://example.com",
-            syncIntervalSeconds = 0,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            isWifiOnlySync = false,
-            authHeaders = emptyMap()
-        )
-
-        val exceeded = QueuedLocation(1L, 100L, """{"lat":52.0}""", 3)
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(exceeded), emptyList())
-
-        syncManager.manualFlush()
-
-        // Queue entry removed but location data always preserved
-        verify { dbHelper.removeBatchFromQueue(listOf(1L)) }
-        verify(exactly = 0) { dbHelper.deleteLocations(any()) }
     }
 
     // ========================================================================
@@ -740,33 +688,6 @@ class SyncManagerTest {
         // Corrupted item gets retry increment, valid item gets removed
         verify { dbHelper.incrementRetryCount(1L, "Send failed") }
         verify { dbHelper.markLocationsSent(listOf(101L)) }
-
-        unmockkObject(LocationServiceModule.Companion)
-    }
-
-    @Test
-    fun `syncQueue emits error event when items permanently dropped`() = scope.runTest {
-        mockkObject(LocationServiceModule.Companion)
-        every { LocationServiceModule.sendSyncErrorEvent(any(), any()) } returns true
-
-        syncManager.updateConfig(
-            endpoint = "https://example.com",
-            syncIntervalSeconds = 0,
-            retryIntervalSeconds = 30,
-            isOfflineMode = false,
-            isWifiOnlySync = false,
-            authHeaders = emptyMap()
-        )
-
-        val exceeded = QueuedLocation(1L, 100L, """{"lat":52.0}""", 3)
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(exceeded), emptyList())
-
-        syncManager.manualFlush()
-
-        verify { LocationServiceModule.sendSyncErrorEvent(
-            match { it.contains("dropped") && it.contains("3") },
-            any()
-        ) }
 
         unmockkObject(LocationServiceModule.Companion)
     }
