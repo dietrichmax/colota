@@ -12,7 +12,7 @@ Settings and tips to reduce battery usage without losing GPS fixes.
 - **Notification throttling**: Max 1 update per 10 seconds, plus 2-meter movement filter
 - **Batch processing**: 50 items per batch, 10 concurrent network requests
 - **Smart sync**: Only syncs when queue has items and network is available
-- **Battery critical shutdown**: Stops tracking below 5% (when unplugged)
+- **Battery critical shutdown**: Stops tracking below 5% (when unplugged). The dashboard shows a "Tracking Stopped" message and a notification is displayed
 
 ## Tips
 
