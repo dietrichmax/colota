@@ -22,7 +22,6 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
   "interval": 10,
   "distance": 5,
   "syncInterval": 300,
-  "maxRetries": 5,
   "retryInterval": 30,
   "accuracyThreshold": 50,
   "filterInaccurateLocations": true,
@@ -64,7 +63,6 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 | `interval` | number | GPS polling interval in seconds (must be > 0) |
 | `distance` | number | Minimum movement in meters before recording a new location |
 | `syncInterval` | number | Batch sync interval in seconds (0 = instant) |
-| `maxRetries` | number | Max retry attempts for failed uploads |
 | `retryInterval` | number | Seconds between retry attempts |
 | `accuracyThreshold` | number | Discard locations less accurate than this (meters) |
 | `filterInaccurateLocations` | boolean | Enable accuracy filtering |

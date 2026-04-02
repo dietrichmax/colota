@@ -4,13 +4,12 @@ sidebar_position: 3
 
 # Server Settings
 
-| Setting              | Description                               | Default         | Range       |
-| -------------------- | ----------------------------------------- | --------------- | ----------- |
-| Endpoint             | HTTP(S) URL of your server                | Empty (offline) | --          |
-| HTTP Method          | POST (JSON body) or GET (query params)    | POST            | POST / GET  |
-| Sync Interval        | Batch mode interval                       | Instant (0)     | 0s - Custom |
-| Retry Failed Uploads | Keep retrying failed uploads indefinitely | Off             | On/Off      |
-| Offline Mode         | Disable all network activity              | Disabled        | On/Off      |
+| Setting       | Description                            | Default         | Range       |
+| ------------- | -------------------------------------- | --------------- | ----------- |
+| Endpoint      | HTTP(S) URL of your server             | Empty (offline) | --          |
+| HTTP Method   | POST (JSON body) or GET (query params) | POST            | POST / GET  |
+| Sync Interval | Batch mode interval                    | Instant (0)     | 0s - Custom |
+| Offline Mode  | Disable all network activity           | Disabled        | On/Off      |
 
 ## Endpoint URL
 
@@ -56,7 +55,7 @@ The UI simplifies to remove sync-related elements that don't apply:
 - Server Endpoint and Test Connection
 - Authentication & Headers
 - API Field Mapping
-- Sync Interval, Retry Failed Uploads, Wi-Fi Only Sync
+- Sync Interval, Wi-Fi Only Sync
 - Queue statistics (Queued / Sent counts)
 - Queue actions (Sync Now, Clear Sent History, Clear Queue)
 - Queue info in the tracking notification
@@ -75,16 +74,16 @@ Toggle offline mode off in Settings to return to online mode. If you had an endp
 
 ## Retry Behavior
 
-When a sync attempt fails, Colota retries with exponential backoff:
+When sync attempts fail, Colota uses exponential backoff:
 
 ```
 Attempt 1: Immediate
-Attempt 2: +30s
-Attempt 3: +60s (1 minute)
-Attempt 4: +300s (5 minutes)
-Attempt 5+: +900s (15 minutes)
+Attempt 2: +30s delay
+Attempt 3: +60s delay (1 minute)
+Attempt 4: +300s delay (5 minutes)
+Attempt 5+: +900s delay (15 minutes)
 ```
 
-By default, failed uploads are **permanently deleted after 5 failed send attempts**. Enable **Retry Failed Uploads** in advanced settings to keep retrying indefinitely - failed uploads stay in the queue until they succeed. Note that this may cause queue buildup if your server is unreachable for extended periods.
+Failed uploads stay in the queue and are retried indefinitely until they succeed. No data is ever dropped due to failed sync attempts. You can clear the queue manually in Settings > Data Management if needed.
 
 The app also auto-syncs when network connectivity is restored.

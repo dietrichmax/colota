@@ -1103,7 +1103,6 @@ class LocationForegroundServiceTest {
             minUpdateDistance = 0f,
             accuracyThreshold = 100f,
             filterInaccurateLocations = true,
-            maxRetries = 10,
             httpMethod = "GET"
         ))
 
@@ -1113,7 +1112,6 @@ class LocationForegroundServiceTest {
         assertEquals("https://my-server.com", config.endpoint)
         assertEquals(100f, config.accuracyThreshold)
         assertTrue(config.filterInaccurateLocations)
-        assertEquals(10, config.maxRetries)
         assertEquals("GET", config.httpMethod)
     }
 
@@ -1123,7 +1121,6 @@ class LocationForegroundServiceTest {
         setField("config", ServiceConfig(
             endpoint = "https://example.com",
             retryIntervalSeconds = 60,
-            maxRetries = 3,
             isOfflineMode = true,
             isWifiOnlySync = true,
             httpMethod = "GET"
@@ -1135,7 +1132,6 @@ class LocationForegroundServiceTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 30,
             retryIntervalSeconds = 60,
-            maxRetries = 3,
             isOfflineMode = true,
             isWifiOnlySync = true,
             authHeaders = mapOf("Authorization" to "Bearer token"),

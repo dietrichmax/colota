@@ -923,7 +923,6 @@ class LocationForegroundService : Service() {
             endpoint = config.endpoint,
             syncIntervalSeconds = config.syncIntervalSeconds,
             retryIntervalSeconds = config.retryIntervalSeconds,
-            maxRetries = config.maxRetries,
             isOfflineMode = config.isOfflineMode,
             isWifiOnlySync = config.isWifiOnlySync,
             authHeaders = secureStorage.getAuthHeaders(),

@@ -128,15 +128,16 @@ Your server only needs to return a 2xx status code. The response body is not rea
 
 ## Error Handling
 
-| Error Type | Behavior |
-| --- | --- |
-| **Any non-2xx response** | Queued for retry with exponential backoff |
-| **Network timeout** | Retried with backoff (10s connection, 10s read timeout) |
-| **Max retries exceeded** | Item permanently deleted from queue (location data remains in the database and can still be exported). Enable "Retry Failed Uploads" to retry indefinitely instead. |
+| Error Type               | Behavior                                   |
+| ------------------------ | ------------------------------------------ |
+| **Any non-2xx response** | Queued for retry                           |
+| **Network timeout**      | Retried (10s connection, 10s read timeout) |
 
-There is no distinction between 4xx and 5xx in retry behavior - all failures are retried.
+There is no distinction between 4xx and 5xx in retry behavior - all failures are retried indefinitely. Failed items stay in the queue until they succeed or you clear the queue manually. Location data is never deleted.
 
 ## Retry Strategy
+
+When consecutive sync attempts fail, Colota uses exponential backoff:
 
 ```
 Attempt 1: Immediate
@@ -146,7 +147,7 @@ Attempt 4: +300s delay (5 minutes)
 Attempt 5+: +900s delay (15 minutes)
 ```
 
-By default, failed items are permanently deleted from the sync queue after 5 failed send attempts. Enable **Retry Failed Uploads** in advanced settings to keep retrying indefinitely. Either way, the location data itself is never deleted - it stays in the `locations` table and can still be exported.
+Failed items stay in the queue indefinitely until they succeed. The queue can be cleared manually in Settings > Data Management if needed.
 
 ## Network Requirements
 

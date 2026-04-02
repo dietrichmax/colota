@@ -46,8 +46,6 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
 
     retryInterval: allRaw.retryInterval ? parseInt(allRaw.retryInterval, 10) : DEFAULT_SETTINGS.retryInterval,
 
-    maxRetries: allRaw.maxRetries ? parseInt(allRaw.maxRetries, 10) : DEFAULT_SETTINGS.maxRetries,
-
     accuracyThreshold: allRaw.accuracyThreshold
       ? parseFloat(allRaw.accuracyThreshold)
       : DEFAULT_SETTINGS.accuracyThreshold,

@@ -161,7 +161,6 @@ class DatabaseHelper private constructor(context: Context) :
             "syncInterval" to "0",
             "accuracyThreshold" to "50.0",
             "filterInaccurateLocations" to "false",
-            "maxRetries" to "5",
             "retryInterval" to "30",
             "isOfflineMode" to "false",
             "isWifiOnlySync" to "false",

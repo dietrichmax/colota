@@ -28,7 +28,6 @@ class ServiceConfigTest {
         "interval" to "5000",
         "minUpdateDistance" to "0",
         "syncInterval" to "0",
-        "maxRetries" to "5",
         "accuracyThreshold" to "50.0",
         "filterInaccurateLocations" to "false",
         "retryInterval" to "30",
@@ -69,7 +68,6 @@ class ServiceConfigTest {
         assertEquals(5000L, config.interval)
         assertEquals(0f, config.minUpdateDistance, 0.001f)
         assertEquals(0, config.syncIntervalSeconds)
-        assertEquals(5, config.maxRetries)
         assertEquals(50.0f, config.accuracyThreshold, 0.001f)
         assertFalse(config.filterInaccurateLocations)
         assertEquals(30, config.retryIntervalSeconds)
@@ -86,7 +84,6 @@ class ServiceConfigTest {
         assertEquals(5000L, config.interval)
         assertEquals(0f, config.minUpdateDistance, 0.001f)
         assertEquals(0, config.syncIntervalSeconds)
-        assertEquals(5, config.maxRetries)
         assertEquals(50.0f, config.accuracyThreshold, 0.001f)
         assertFalse(config.filterInaccurateLocations)
         assertEquals(30, config.retryIntervalSeconds)
@@ -100,7 +97,6 @@ class ServiceConfigTest {
         val db = mockDbHelper(mapOf(
             "interval" to "not_a_number",
             "syncInterval" to "abc",
-            "maxRetries" to "",
             "accuracyThreshold" to "xyz",
             "retryInterval" to "---"
         ))
@@ -108,7 +104,6 @@ class ServiceConfigTest {
 
         assertEquals(5000L, config.interval)
         assertEquals(0, config.syncIntervalSeconds)
-        assertEquals(5, config.maxRetries)
         assertEquals(50.0f, config.accuracyThreshold, 0.001f)
         assertEquals(30, config.retryIntervalSeconds)
     }
@@ -168,7 +163,6 @@ class ServiceConfigTest {
         assertEquals(5000L, config.interval)
         assertEquals(0f, config.minUpdateDistance, 0.001f)
         assertEquals(0, config.syncIntervalSeconds)
-        assertEquals(5, config.maxRetries)
         assertEquals(50.0f, config.accuracyThreshold, 0.001f)
         assertFalse(config.filterInaccurateLocations)
         assertEquals(30, config.retryIntervalSeconds)
@@ -232,7 +226,6 @@ class ServiceConfigTest {
             every { getLong("interval") } returns 10000L
             every { getFloat("minUpdateDistance") } returns 5.0f
             every { getInt("syncInterval") } returns 300
-            every { getInt("maxRetries") } returns 10
             every { getFloat("accuracyThreshold") } returns 25.0f
             every { getBoolean("filterInaccurateLocations") } returns true
             every { getInt("retryInterval") } returns 60
@@ -253,7 +246,6 @@ class ServiceConfigTest {
         assertEquals(10000L, config.interval)
         assertEquals(5.0f, config.minUpdateDistance, 0.001f)
         assertEquals(300, config.syncIntervalSeconds)
-        assertEquals(10, config.maxRetries)
         assertEquals(25.0f, config.accuracyThreshold, 0.001f)
         assertTrue(config.filterInaccurateLocations)
         assertEquals(60, config.retryIntervalSeconds)
@@ -302,7 +294,6 @@ class ServiceConfigTest {
         assertEquals(120, config.syncIntervalSeconds)
         assertTrue(config.isOfflineMode)
         // Unset values fall back to DB
-        assertEquals(5, config.maxRetries)
         assertFalse(config.isWifiOnlySync)
     }
 

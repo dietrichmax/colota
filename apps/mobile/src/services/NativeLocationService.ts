@@ -67,7 +67,6 @@ class NativeLocationService {
       fieldMap: settings.fieldMap,
       syncInterval: settings.syncInterval,
       retryInterval: settings.retryInterval,
-      maxRetries: settings.maxRetries,
       filterInaccurateLocations: settings.filterInaccurateLocations,
       accuracyThreshold: settings.accuracyThreshold,
       isOfflineMode: settings.isOfflineMode,

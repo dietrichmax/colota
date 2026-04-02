@@ -29,7 +29,6 @@ class SyncManager(
     @Volatile private var endpoint: String = ""
     @Volatile private var syncIntervalSeconds: Int = 0
     @Volatile private var retryIntervalSeconds: Int = 300
-    @Volatile private var maxRetries: Int = 5
     @Volatile private var isOfflineMode: Boolean = false
     @Volatile private var isWifiOnlySync: Boolean = false
     @Volatile private var authHeaders: Map<String, String> = emptyMap()
@@ -49,7 +48,6 @@ class SyncManager(
         endpoint: String,
         syncIntervalSeconds: Int,
         retryIntervalSeconds: Int,
-        maxRetries: Int,
         isOfflineMode: Boolean,
         isWifiOnlySync: Boolean,
         authHeaders: Map<String, String>,
@@ -59,7 +57,6 @@ class SyncManager(
         this.endpoint = endpoint
         this.syncIntervalSeconds = syncIntervalSeconds
         this.retryIntervalSeconds = retryIntervalSeconds
-        this.maxRetries = maxRetries
         this.isOfflineMode = isOfflineMode
         this.isWifiOnlySync = isWifiOnlySync
         this.authHeaders = authHeaders
@@ -198,8 +195,6 @@ class SyncManager(
         val currentAuthHeaders = authHeaders
         val currentHttpMethod = httpMethod
         val currentApiFormat = apiFormat
-        val currentMaxRetries = maxRetries  // 0 = retry forever, >0 = give up after N attempts
-
         var totalProcessed = 0
         var totalSucceeded = 0
         var totalFailed = 0
@@ -221,20 +216,8 @@ class SyncManager(
 
             for (chunk in queued.chunked(10)) {
                 val successfulIds = mutableListOf<Long>()
-                val permanentlyFailedIds = mutableListOf<Long>()
 
-                val (retriable, exceeded) = if (currentMaxRetries <= 0) {
-                    chunk to emptyList()
-                } else {
-                    chunk.partition { it.retryCount < currentMaxRetries }
-                }
-
-                permanentlyFailedIds.addAll(exceeded.map { it.queueId })
-                if (exceeded.isNotEmpty()) {
-                    AppLogger.w(TAG, "Removing ${exceeded.size} items that exceeded $currentMaxRetries retries")
-                }
-
-                val results = retriable.map { item ->
+                val results = chunk.map { item ->
                     async {
                         try {
                             val success = networkManager.sendToEndpoint(
@@ -256,35 +239,17 @@ class SyncManager(
                     if (success) {
                         successfulIds.add(queueId)
                     } else {
-                        val item = retriable.first { it.queueId == queueId }
                         dbHelper.incrementRetryCount(queueId, "Send failed")
-
-                        if (currentMaxRetries > 0 && item.retryCount + 1 >= currentMaxRetries) {
-                            permanentlyFailedIds.add(queueId)
-                            AppLogger.w(TAG, "Item $queueId reached max retries")
-                        }
                     }
                 }
 
-                val toRemove = successfulIds + permanentlyFailedIds
                 if (successfulIds.isNotEmpty()) {
-                    val sentLocationIds = retriable.filter { it.queueId in successfulIds }.map { it.locationId }
+                    val sentLocationIds = chunk.filter { it.queueId in successfulIds }.map { it.locationId }
                     dbHelper.markLocationsSent(sentLocationIds)
-                }
-                if (permanentlyFailedIds.isNotEmpty()) {
-                    val failedLocationIds = (retriable + exceeded).filter { it.queueId in permanentlyFailedIds }.map { it.locationId }
-                    AppLogger.e(TAG, "Permanently dropping ${failedLocationIds.size} locations after $currentMaxRetries retries: $failedLocationIds")
-                    LocationServiceModule.sendSyncErrorEvent(
-                        "${failedLocationIds.size} locations dropped after $currentMaxRetries failed retries",
-                        getCachedQueuedCount()
-                    )
-                }
-                if (toRemove.isNotEmpty()) {
-                    dbHelper.removeBatchFromQueue(toRemove)
+                    dbHelper.removeBatchFromQueue(successfulIds)
 
-                    totalProcessed += toRemove.size
+                    totalProcessed += successfulIds.size
                     totalSucceeded += successfulIds.size
-                    totalFailed += permanentlyFailedIds.size
                     onProgress?.invoke(totalSucceeded, totalFailed)
                 }
 

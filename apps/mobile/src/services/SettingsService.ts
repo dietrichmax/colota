@@ -41,7 +41,6 @@ export const SettingsService = {
 
       case "syncInterval":
       case "retryInterval":
-      case "maxRetries":
       case "accuracyThreshold":
         // Already in correct format (numbers)
         stringValue = String(value)

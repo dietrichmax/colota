@@ -20,7 +20,6 @@ data class ServiceConfig(
     val interval: Long = 5000L,
     val minUpdateDistance: Float = 0f,
     val syncIntervalSeconds: Int = 0,
-    val maxRetries: Int = 5,
     val accuracyThreshold: Float = 50.0f,
     val filterInaccurateLocations: Boolean = false,
     val retryIntervalSeconds: Int = 30,
@@ -43,7 +42,6 @@ data class ServiceConfig(
                 interval = saved["interval"]?.toLongOrNull() ?: 5000L,
                 minUpdateDistance = saved["minUpdateDistance"]?.toFloatOrNull() ?: 0f,
                 syncIntervalSeconds = saved["syncInterval"]?.toIntOrNull() ?: 0,
-                maxRetries = saved["maxRetries"]?.toIntOrNull() ?: 5,
                 accuracyThreshold = saved["accuracyThreshold"]?.toFloatOrNull() ?: 50.0f,
                 filterInaccurateLocations = saved["filterInaccurateLocations"]?.toBoolean() ?: false,
                 retryIntervalSeconds = saved["retryInterval"]?.toIntOrNull() ?: 30,
@@ -88,7 +86,6 @@ data class ServiceConfig(
                 interval = config.getDoubleOrNull("interval")?.toLong() ?: dbConfig.interval,
                 minUpdateDistance = config.getDoubleOrNull("minUpdateDistance")?.toFloat() ?: dbConfig.minUpdateDistance,
                 syncIntervalSeconds = config.getIntOrNull("syncInterval") ?: dbConfig.syncIntervalSeconds,
-                maxRetries = config.getIntOrNull("maxRetries") ?: dbConfig.maxRetries,
                 accuracyThreshold = config.getDoubleOrNull("accuracyThreshold")?.toFloat() ?: dbConfig.accuracyThreshold,
                 filterInaccurateLocations = config.getBooleanOrNull("filterInaccurateLocations") ?: dbConfig.filterInaccurateLocations,
                 retryIntervalSeconds = config.getIntOrNull("retryInterval") ?: dbConfig.retryIntervalSeconds,
@@ -110,7 +107,6 @@ data class ServiceConfig(
                 interval = extras.getLongOrDefault("interval", dbConfig.interval),
                 minUpdateDistance = extras.getFloatOrDefault("minUpdateDistance", dbConfig.minUpdateDistance),
                 syncIntervalSeconds = extras.getIntOrDefault("syncInterval", dbConfig.syncIntervalSeconds),
-                maxRetries = extras.getIntOrDefault("maxRetries", dbConfig.maxRetries),
                 accuracyThreshold = extras.getFloatOrDefault("accuracyThreshold", dbConfig.accuracyThreshold),
                 filterInaccurateLocations = extras.getBooleanOrDefault("filterInaccurateLocations", dbConfig.filterInaccurateLocations),
                 retryIntervalSeconds = extras.getIntOrDefault("retryInterval", dbConfig.retryIntervalSeconds),
@@ -132,7 +128,6 @@ data class ServiceConfig(
             putExtra("syncInterval", syncIntervalSeconds)
             putExtra("accuracyThreshold", accuracyThreshold)
             putExtra("filterInaccurateLocations", filterInaccurateLocations)
-            putExtra("maxRetries", maxRetries)
             putExtra("retryInterval", retryIntervalSeconds)
             putExtra("isOfflineMode", isOfflineMode)
             putExtra("isWifiOnlySync", isWifiOnlySync)

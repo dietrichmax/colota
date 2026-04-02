@@ -47,10 +47,6 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.apiTemplate).toBe("custom")
   })
 
-  it("has positive maxRetries", () => {
-    expect(DEFAULT_SETTINGS.maxRetries).toBeGreaterThan(0)
-  })
-
   it("has offline mode disabled", () => {
     expect(DEFAULT_SETTINGS.isOfflineMode).toBe(false)
   })
@@ -69,7 +65,6 @@ describe("DEFAULT_SETTINGS", () => {
       "apiTemplate",
       "syncInterval",
       "retryInterval",
-      "maxRetries",
       "isOfflineMode",
       "syncPreset",
       "filterInaccurateLocations",

@@ -285,34 +285,6 @@ export function SyncStrategySettings({
                     </View>
                   )}
 
-                  {/* Retry Forever Toggle */}
-                  <SettingRow
-                    label="Retry Failed Uploads"
-                    hint={
-                      settings.maxRetries === 0
-                        ? "Failed uploads stay in the queue until they succeed"
-                        : "Failed uploads are permanently deleted after 5 failed send attempts"
-                    }
-                  >
-                    <Switch
-                      value={settings.maxRetries === 0}
-                      onValueChange={(retryForever) => {
-                        const next = {
-                          ...settings,
-                          maxRetries: retryForever ? 0 : 5,
-                          syncPreset: "custom" as const
-                        }
-                        onSettingsChange(next)
-                        onImmediateSave(next)
-                      }}
-                      trackColor={{
-                        false: colors.border,
-                        true: colors.primary + "80"
-                      }}
-                      thumbColor={settings.maxRetries === 0 ? colors.primary : colors.border}
-                    />
-                  </SettingRow>
-
                   {/* Wi-Fi Only Sync Toggle */}
                   <SettingRow
                     label="Wi-Fi Only Sync"

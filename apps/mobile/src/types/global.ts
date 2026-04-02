@@ -314,7 +314,6 @@ export interface Settings {
   // Sync & Upload
   syncInterval: number
   retryInterval: number
-  maxRetries: number
   isOfflineMode: boolean
   isWifiOnlySync: boolean
   // UI State
@@ -334,7 +333,6 @@ export const DEFAULT_SETTINGS: Settings = {
   filterInaccurateLocations: false,
   accuracyThreshold: 50,
   syncPreset: "instant",
-  maxRetries: 5,
   isOfflineMode: false,
   isWifiOnlySync: false,
   hasCompletedSetup: false,

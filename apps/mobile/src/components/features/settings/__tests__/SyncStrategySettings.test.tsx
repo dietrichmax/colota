@@ -221,59 +221,6 @@ describe("SyncStrategySettings", () => {
     })
   })
 
-  describe("retry failed uploads toggle", () => {
-    it("shows delete hint when maxRetries is 5 (default)", () => {
-      const { getByText } = renderComponent({ maxRetries: 5 })
-
-      fireEvent.press(getByText("Advanced Settings"))
-
-      expect(getByText("Failed uploads are permanently deleted after 5 failed send attempts")).toBeTruthy()
-    })
-
-    it("shows keep hint when maxRetries is 0 (retry forever)", () => {
-      const { getByText } = renderComponent({ maxRetries: 0 })
-
-      fireEvent.press(getByText("Advanced Settings"))
-
-      expect(getByText("Failed uploads stay in the queue until they succeed")).toBeTruthy()
-    })
-
-    it("toggling retry on sets maxRetries to 0", () => {
-      const { getByText, getAllByRole } = renderComponent({ maxRetries: 5 })
-
-      fireEvent.press(getByText("Advanced Settings"))
-
-      const retrySwitch = getAllByRole("switch")[0]
-
-      fireEvent(retrySwitch, "valueChange", true)
-
-      expect(mockOnSettingsChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          maxRetries: 0,
-          syncPreset: "custom"
-        })
-      )
-      expect(mockOnImmediateSave).toHaveBeenCalled()
-    })
-
-    it("toggling retry off sets maxRetries to 5", () => {
-      const { getByText, getAllByRole } = renderComponent({ maxRetries: 0 })
-
-      fireEvent.press(getByText("Advanced Settings"))
-
-      const retrySwitch = getAllByRole("switch")[0]
-
-      fireEvent(retrySwitch, "valueChange", false)
-
-      expect(mockOnSettingsChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          maxRetries: 5,
-          syncPreset: "custom"
-        })
-      )
-    })
-  })
-
   describe("filter inaccurate locations", () => {
     it("shows accuracy threshold input when filter is enabled", () => {
       const { getByText } = renderComponent({ filterInaccurateLocations: true })

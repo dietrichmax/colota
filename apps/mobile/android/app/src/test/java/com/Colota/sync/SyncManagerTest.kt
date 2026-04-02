@@ -50,7 +50,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = true,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -69,7 +68,6 @@ class SyncManagerTest {
             endpoint = "",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -90,7 +88,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -114,7 +111,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -136,7 +132,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -159,7 +154,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = true,
             authHeaders = emptyMap()
@@ -180,7 +174,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = true,
             authHeaders = emptyMap()
@@ -204,7 +197,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 300,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -228,7 +220,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = headers,
@@ -251,7 +242,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -275,7 +265,6 @@ class SyncManagerTest {
             endpoint = "",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -292,7 +281,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -310,116 +298,12 @@ class SyncManagerTest {
         verify { dbHelper.removeBatchFromQueue(listOf(1L)) }
     }
 
-    // --- syncQueue: retry exhaustion ---
-
-    @Test
-    fun `syncQueue removes items exceeding maxRetries`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://example.com",
-            syncIntervalSeconds = 0,
-            retryIntervalSeconds = 30,
-            maxRetries = 3,
-            isOfflineMode = false,
-            isWifiOnlySync = false,
-            authHeaders = emptyMap()
-        )
-
-        val exceededItem = QueuedLocation(1L, 100L, """{"lat":52.0}""", 3)
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(exceededItem), emptyList())
-
-        syncManager.manualFlush()
-
-        // Item exceeded retries, should be removed without sending
-        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
-        verify { dbHelper.removeBatchFromQueue(listOf(1L)) }
-    }
-
-    @Test
-    fun `syncQueue sends retriable items and removes exceeded ones in same batch`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://example.com",
-            syncIntervalSeconds = 0,
-            retryIntervalSeconds = 30,
-            maxRetries = 5,
-            isOfflineMode = false,
-            isWifiOnlySync = false,
-            authHeaders = emptyMap()
-        )
-
-        val retriable = QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
-        val exceeded = QueuedLocation(2L, 101L, """{"lat":53.0}""", 5)
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(
-            listOf(retriable, exceeded),
-            emptyList()
-        )
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
-
-        syncManager.manualFlush()
-
-        // Only the retriable item should be sent
-        coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
-        // Both should be removed (one succeeded, one exceeded)
-        verify { dbHelper.removeBatchFromQueue(match { it.containsAll(listOf(1L, 2L)) }) }
-    }
-
-    // --- syncQueue: maxRetries=0 (retry forever) ---
-
-    @Test
-    fun `syncQueue retries all items when maxRetries is 0`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://example.com",
-            syncIntervalSeconds = 0,
-            retryIntervalSeconds = 30,
-            maxRetries = 0,
-            isOfflineMode = false,
-            isWifiOnlySync = false,
-            authHeaders = emptyMap()
-        )
-
-        // Item with high retry count should still be sent, not treated as exceeded
-        val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 99)
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(item), emptyList())
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
-
-        syncManager.manualFlush()
-
-        coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
-        verify { dbHelper.removeBatchFromQueue(listOf(1L)) }
-        // Location should NOT be deleted (it was successfully sent)
-        verify(exactly = 0) { dbHelper.deleteLocations(any()) }
-    }
-
-    @Test
-    fun `syncQueue does not permanently fail items when maxRetries is 0`() = scope.runTest {
-        syncManager.updateConfig(
-            endpoint = "https://example.com",
-            syncIntervalSeconds = 0,
-            retryIntervalSeconds = 30,
-            maxRetries = 0,
-            isOfflineMode = false,
-            isWifiOnlySync = false,
-            authHeaders = emptyMap()
-        )
-
-        val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 50)
-        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(item), emptyList())
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns false
-
-        syncManager.manualFlush()
-
-        // Should increment retry count but NOT remove from queue or delete location
-        verify { dbHelper.incrementRetryCount(1L, "Send failed") }
-        verify(exactly = 0) { dbHelper.removeBatchFromQueue(any()) }
-        verify(exactly = 0) { dbHelper.deleteLocations(any()) }
-    }
-
     @Test
     fun `syncQueue stops fetching batches when all sends fail`() = scope.runTest {
         syncManager.updateConfig(
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -443,7 +327,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 3,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -536,7 +419,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -558,7 +440,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -582,7 +463,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 3,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -608,7 +488,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -641,7 +520,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -676,7 +554,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -704,7 +581,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -738,7 +614,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 60,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -772,7 +647,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
-            maxRetries = 5,
             isOfflineMode = true,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -793,7 +667,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -815,7 +688,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -847,7 +719,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -882,7 +753,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 3,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap()
@@ -911,7 +781,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap(),
@@ -933,7 +802,6 @@ class SyncManagerTest {
             endpoint = "https://example.com",
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
-            maxRetries = 5,
             isOfflineMode = false,
             isWifiOnlySync = false,
             authHeaders = emptyMap(),

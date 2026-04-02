@@ -123,11 +123,6 @@ function validateConfig(raw: unknown): ValidationResult {
     })
   }
 
-  if ("maxRetries" in obj && typeof obj.maxRetries === "number" && obj.maxRetries >= 0) {
-    settings.maxRetries = obj.maxRetries
-    entries.push({ label: "Max retries", value: `${obj.maxRetries}`, category: "tracking" })
-  }
-
   if ("retryInterval" in obj && typeof obj.retryInterval === "number" && obj.retryInterval >= 0) {
     settings.retryInterval = obj.retryInterval
     entries.push({ label: "Retry interval", value: `${obj.retryInterval}s`, category: "tracking" })
