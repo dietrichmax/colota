@@ -1279,7 +1279,7 @@ class LocationForegroundServiceTest {
 
         invokeHandleLocationUpdate(location)
 
-        verify { LocationServiceModule.sendTrackingStoppedEvent("Battery critical") }
+        verify { LocationServiceModule.sendTrackingStoppedEvent("Battery below 5% - tracking paused") }
     }
 
     @Test
