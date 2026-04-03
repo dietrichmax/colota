@@ -599,6 +599,9 @@ class LocationForegroundService : Service() {
 
         profileManager.clearSpeedBuffer()
 
+        // Flush any queued points so the backend shows the arrival position
+        serviceScope?.launch { syncManager.manualFlush() }
+
         AppLogger.d(TAG, "Entered pause zone: ${geofence.name}")
     }
 
