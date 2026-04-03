@@ -111,6 +111,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
   useFocusEffect(
     useCallback(() => {
+      setScrollEnabled(true)
       updateStats()
       if (tracking) updatePauseZone()
       if (!tracking) {
