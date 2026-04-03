@@ -70,7 +70,8 @@ class NativeLocationService {
       filterInaccurateLocations: settings.filterInaccurateLocations,
       accuracyThreshold: settings.accuracyThreshold,
       isOfflineMode: settings.isOfflineMode,
-      isWifiOnlySync: settings.isWifiOnlySync,
+      syncCondition: settings.syncCondition,
+      syncSsid: settings.syncSsid,
       httpMethod: settings.httpMethod,
       apiTemplate: settings.apiTemplate,
       customFields: Object.fromEntries(settings.customFields.filter((f) => f.key).map((f) => [f.key, f.value]))
@@ -500,6 +501,14 @@ class NativeLocationService {
   static async isUnmeteredConnection(): Promise<boolean> {
     this.ensureModule()
     return this.safeExecute(() => LocationServiceModule.isUnmeteredConnection(), false, "isUnmeteredConnection failed")
+  }
+
+  /**
+   * Returns the SSID of the currently connected Wi-Fi network, or empty string if unavailable.
+   */
+  static async getCurrentSsid(): Promise<string> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.getCurrentSsid(), "", "getCurrentSsid failed")
   }
 
   /**

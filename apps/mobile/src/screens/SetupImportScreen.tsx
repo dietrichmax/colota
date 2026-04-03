@@ -147,9 +147,14 @@ function validateConfig(raw: unknown): ValidationResult {
     entries.push({ label: "Offline mode", value: obj.isOfflineMode ? "Yes" : "No", category: "tracking" })
   }
 
-  if ("isWifiOnlySync" in obj && typeof obj.isWifiOnlySync === "boolean") {
-    settings.isWifiOnlySync = obj.isWifiOnlySync
-    entries.push({ label: "Wi-Fi only sync", value: obj.isWifiOnlySync ? "Yes" : "No", category: "tracking" })
+  if ("syncCondition" in obj && typeof obj.syncCondition === "string") {
+    settings.syncCondition = obj.syncCondition as any
+    entries.push({ label: "Sync condition", value: obj.syncCondition, category: "tracking" })
+  }
+
+  if ("syncSsid" in obj && typeof obj.syncSsid === "string") {
+    settings.syncSsid = obj.syncSsid
+    entries.push({ label: "Sync SSID", value: obj.syncSsid, category: "tracking" })
   }
 
   // --- API settings ---

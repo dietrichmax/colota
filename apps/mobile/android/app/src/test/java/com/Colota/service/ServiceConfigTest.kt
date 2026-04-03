@@ -32,31 +32,32 @@ class ServiceConfigTest {
         "filterInaccurateLocations" to "false",
         "retryInterval" to "30",
         "isOfflineMode" to "false",
-        "isWifiOnlySync" to "false",
+        "syncCondition" to "any",
+        "syncSsid" to "",
         "httpMethod" to "POST"
     )
 
     // --- fromDatabase ---
 
     @Test
-    fun `fromDatabase defaults isWifiOnlySync to false`() {
-        val db = mockDbHelper(baseSettings - "isWifiOnlySync")
+    fun `fromDatabase defaults syncCondition to any`() {
+        val db = mockDbHelper(baseSettings - "syncCondition")
         val config = ServiceConfig.fromDatabase(db)
-        assertFalse(config.isWifiOnlySync)
+        assertEquals("any", config.syncCondition)
     }
 
     @Test
-    fun `fromDatabase reads isWifiOnlySync true`() {
-        val db = mockDbHelper(baseSettings + ("isWifiOnlySync" to "true"))
+    fun `fromDatabase reads syncCondition wifi_any`() {
+        val db = mockDbHelper(baseSettings + ("syncCondition" to "wifi_any"))
         val config = ServiceConfig.fromDatabase(db)
-        assertTrue(config.isWifiOnlySync)
+        assertEquals("wifi_any", config.syncCondition)
     }
 
     @Test
-    fun `fromDatabase reads isWifiOnlySync false`() {
-        val db = mockDbHelper(baseSettings + ("isWifiOnlySync" to "false"))
+    fun `fromDatabase migrates isWifiOnlySync true to wifi_any`() {
+        val db = mockDbHelper(baseSettings - "syncCondition" + ("isWifiOnlySync" to "true"))
         val config = ServiceConfig.fromDatabase(db)
-        assertFalse(config.isWifiOnlySync)
+        assertEquals("wifi_any", config.syncCondition)
     }
 
     @Test
@@ -88,7 +89,7 @@ class ServiceConfigTest {
         assertFalse(config.filterInaccurateLocations)
         assertEquals(30, config.retryIntervalSeconds)
         assertFalse(config.isOfflineMode)
-        assertFalse(config.isWifiOnlySync)
+        assertEquals("any", config.syncCondition)
         assertEquals("POST", config.httpMethod)
     }
 
@@ -144,15 +145,17 @@ class ServiceConfigTest {
     // --- data class defaults ---
 
     @Test
-    fun `default constructor sets isWifiOnlySync to false`() {
+    fun `default constructor sets syncCondition to any`() {
         val config = ServiceConfig()
-        assertFalse(config.isWifiOnlySync)
+        assertEquals("any", config.syncCondition)
+        assertEquals("", config.syncSsid)
     }
 
     @Test
-    fun `constructor accepts isWifiOnlySync true`() {
-        val config = ServiceConfig(isWifiOnlySync = true)
-        assertTrue(config.isWifiOnlySync)
+    fun `constructor accepts syncCondition wifi_ssid`() {
+        val config = ServiceConfig(syncCondition = "wifi_ssid", syncSsid = "MyNetwork")
+        assertEquals("wifi_ssid", config.syncCondition)
+        assertEquals("MyNetwork", config.syncSsid)
     }
 
     @Test
@@ -167,22 +170,22 @@ class ServiceConfigTest {
         assertFalse(config.filterInaccurateLocations)
         assertEquals(30, config.retryIntervalSeconds)
         assertFalse(config.isOfflineMode)
-        assertFalse(config.isWifiOnlySync)
+        assertEquals("any", config.syncCondition)
         assertNull(config.fieldMap)
         assertNull(config.customFields)
         assertEquals("POST", config.httpMethod)
     }
 
-    // --- isOfflineMode and isWifiOnlySync are independent ---
+    // --- isOfflineMode and syncCondition are independent ---
 
     @Test
-    fun `isOfflineMode and isWifiOnlySync are independent`() {
+    fun `isOfflineMode and syncCondition are independent`() {
         val db = mockDbHelper(
-            baseSettings + ("isOfflineMode" to "true") + ("isWifiOnlySync" to "false")
+            baseSettings + ("isOfflineMode" to "true") + ("syncCondition" to "vpn")
         )
         val config = ServiceConfig.fromDatabase(db)
         assertTrue(config.isOfflineMode)
-        assertFalse(config.isWifiOnlySync)
+        assertEquals("vpn", config.syncCondition)
     }
 
     // --- fromIntent with mocked Bundle ---
@@ -230,7 +233,8 @@ class ServiceConfigTest {
             every { getBoolean("filterInaccurateLocations") } returns true
             every { getInt("retryInterval") } returns 60
             every { getBoolean("isOfflineMode") } returns true
-            every { getBoolean("isWifiOnlySync") } returns true
+            every { getString("syncCondition") } returns "wifi_any"
+            every { getString("syncSsid") } returns ""
             every { getString("fieldMap") } returns """{"lat":"latitude"}"""
             every { getString("customFields") } returns """{"_type":"location"}"""
             every { getString("httpMethod") } returns "GET"
@@ -250,7 +254,7 @@ class ServiceConfigTest {
         assertTrue(config.filterInaccurateLocations)
         assertEquals(60, config.retryIntervalSeconds)
         assertTrue(config.isOfflineMode)
-        assertTrue(config.isWifiOnlySync)
+        assertEquals("wifi_any", config.syncCondition)
         assertEquals("""{"lat":"latitude"}""", config.fieldMap)
         assertEquals("GET", config.httpMethod)
         assertEquals("traccar_json", config.apiFormat)
@@ -294,7 +298,7 @@ class ServiceConfigTest {
         assertEquals(120, config.syncIntervalSeconds)
         assertTrue(config.isOfflineMode)
         // Unset values fall back to DB
-        assertFalse(config.isWifiOnlySync)
+        assertEquals("any", config.syncCondition)
     }
 
     @Test

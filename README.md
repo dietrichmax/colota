@@ -23,7 +23,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 - **Reliable Tracking** - Foreground service, auto-start on boot and exponential backoff retry.
 - **Geofencing** - Pause zones that automatically stop recording locations.
 - **Tracking Profiles** - Automatically adjust GPS interval, distance filter and sync settings based on conditions like charging, car mode or speed.
-- **Flexible Sync** - Instant, batch, Wi-Fi only or offline modes.
+- **Flexible Sync** - Instant, batch or offline modes. Restrict sync to Wi-Fi, a specific SSID or VPN.
 - **Display Settings** - Choose between metric and imperial units, 12h or 24h time format. Auto-detected from device locale on first use.
 - **App Shortcuts** - Long-press the app icon to start or stop tracking directly from the home screen, compatible with automation apps like Tasker and Samsung Routines.
 - **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.

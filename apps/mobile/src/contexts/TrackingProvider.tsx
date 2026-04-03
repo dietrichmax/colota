@@ -51,7 +51,9 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
       : DEFAULT_SETTINGS.accuracyThreshold,
 
     isOfflineMode: allRaw.isOfflineMode === "true",
-    isWifiOnlySync: allRaw.isWifiOnlySync === "true",
+    syncCondition:
+      (allRaw.syncCondition as any) ?? (allRaw.isWifiOnlySync === "true" ? "wifi_any" : DEFAULT_SETTINGS.syncCondition),
+    syncSsid: allRaw.syncSsid ?? DEFAULT_SETTINGS.syncSsid,
     endpoint: allRaw.endpoint ?? DEFAULT_SETTINGS.endpoint,
     syncPreset: (allRaw.syncPreset as any) ?? DEFAULT_SETTINGS.syncPreset,
     filterInaccurateLocations: allRaw.filterInaccurateLocations === "true",

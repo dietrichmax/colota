@@ -32,7 +32,7 @@ sidebar_position: 4
 4. Verify network connectivity
 5. Check the queue count in **Data Management**
 
-**Common causes**: Wrong URL, HTTPS required for public endpoints, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed certificate (install your CA via Settings → Security → Encryption & credentials), **Wi-Fi Only Sync** enabled while on cellular data, missing local network permission on Android 16+.
+**Common causes**: Wrong URL, HTTPS required for public endpoints, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed certificate (install your CA via Settings → Security → Encryption & credentials), **Sync Condition** restricting uploads to a specific network (Wi-Fi, SSID or VPN), missing local network permission on Android 16+.
 
 ## Exporting app logs
 
@@ -81,11 +81,11 @@ If sync to a local server stopped working after an Android update:
 
 If you denied the permission and the system no longer shows the dialog, reset it from Android Settings.
 
-## Locations not syncing on mobile data
+## Locations not syncing on certain networks
 
-If **Wi-Fi Only Sync** is enabled, uploads are skipped while on cellular data. Locations continue to be recorded and queued locally - they sync automatically when you connect to Wi-Fi.
+If **Sync Only On** is set to Wi-Fi, a specific SSID or VPN, uploads are skipped when the condition is not met. Locations continue to be recorded and queued locally - they sync automatically when the condition is satisfied.
 
-To disable: **Settings > Advanced Settings > Network Settings > Wi-Fi Only Sync**.
+To change: **Settings > Advanced Settings > Network Settings > Sync Only On**.
 
 ## Auto-export not working
 

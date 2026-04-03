@@ -1,10 +1,12 @@
 package com.Colota.sync
 
 import android.content.Context
+import android.net.wifi.WifiInfo
 import com.Colota.BuildConfig
 import com.Colota.util.AppLogger
 import com.Colota.util.TimedCache
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,6 +30,30 @@ class NetworkManager(private val context: Context) {
     }
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+    @Volatile private var currentSsid: String = ""
+    @Volatile private var isVpn: Boolean = false
+
+    private val networkCallback = object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
+        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+            val wifiInfo = caps.transportInfo as? WifiInfo
+            currentSsid = wifiInfo?.ssid?.removeSurrounding("\"") ?: ""
+            isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+        }
+
+        override fun onLost(network: Network) {
+            currentSsid = ""
+            isVpn = false
+        }
+    }
+
+    init {
+        try {
+            connectivityManager.registerDefaultNetworkCallback(networkCallback)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Failed to register network callback", e)
+        }
+    }
 
     private val networkCache = TimedCache(NETWORK_CHECK_CACHE_MS) {
         try {
@@ -295,4 +321,27 @@ class NetworkManager(private val context: Context) {
      * Cached for [NETWORK_CHECK_CACHE_MS] to avoid repeated IPC calls.
      */
     fun isUnmeteredConnection(): Boolean = unmeteredCache.get()
+
+    /**
+     * Returns true when connected to a WiFi network matching the given SSID.
+     * SSID is updated via NetworkCallback with FLAG_INCLUDE_LOCATION_INFO.
+     */
+    fun isConnectedToSsid(ssid: String): Boolean {
+        if (ssid.isBlank()) return false
+        return currentSsid.equals(ssid, ignoreCase = true)
+    }
+
+    /**
+     * Returns true when the active network uses a VPN transport.
+     * Updated via NetworkCallback.
+     */
+    fun isVpnConnected(): Boolean = isVpn
+
+    fun getCurrentSsid(): String = currentSsid
+
+    fun destroy() {
+        try {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+        } catch (_: Exception) {}
+    }
 }

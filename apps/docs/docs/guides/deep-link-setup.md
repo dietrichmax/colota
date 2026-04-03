@@ -26,7 +26,8 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
   "accuracyThreshold": 50,
   "filterInaccurateLocations": true,
   "isOfflineMode": false,
-  "isWifiOnlySync": false,
+  "syncCondition": "any",
+  "syncSsid": "",
   "apiTemplate": "owntracks",
   "httpMethod": "POST",
   "fieldMap": {
@@ -67,7 +68,8 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 | `accuracyThreshold` | number | Discard locations less accurate than this (meters) |
 | `filterInaccurateLocations` | boolean | Enable accuracy filtering |
 | `isOfflineMode` | boolean | Store locally only, never sync |
-| `isWifiOnlySync` | boolean | Only sync on Wi-Fi |
+| `syncCondition` | string | `any`, `wifi_any`, `wifi_ssid`, or `vpn` |
+| `syncSsid` | string | Wi-Fi SSID to sync on (only used with `wifi_ssid`) |
 | `apiTemplate` | string | `custom`, `dawarich`, `geopulse`, `owntracks`, `phonetrack`, `reitti`, or `traccar` |
 | `httpMethod` | string | `POST` or `GET` |
 | `fieldMap` | object | Custom field name mapping for the JSON payload |

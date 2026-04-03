@@ -4,14 +4,15 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, Switch, View, Pressable } from "react-native"
+import { Text, StyleSheet, Switch, View, Pressable, TextInput, AppState } from "react-native"
 import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react-native"
-import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors } from "../../../types/global"
+import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
 import { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } from "../../../constants"
 import { SectionTitle, Card, Divider, NumericInput, SettingRow } from "../../index"
 import { PresetOption } from "./PresetOption"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
+import NativeLocationService from "../../../services/NativeLocationService"
 
 interface SyncStrategySettingsProps {
   settings: Settings
@@ -35,6 +36,19 @@ export function SyncStrategySettings({
   )
   const [syncIntervalInput, setSyncIntervalInput] = useState(settings.syncInterval.toString())
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [currentSsid, setCurrentSsid] = useState("")
+
+  useEffect(() => {
+    if (settings.syncCondition !== "wifi_ssid") return
+
+    const fetchSsid = () => NativeLocationService.getCurrentSsid().then(setCurrentSsid)
+    fetchSsid()
+
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") fetchSsid()
+    })
+    return () => sub.remove()
+  }, [settings.syncCondition])
 
   const isCustomSyncInterval = !SYNC_INTERVAL_PRESETS.includes(settings.syncInterval)
 
@@ -285,30 +299,92 @@ export function SyncStrategySettings({
                     </View>
                   )}
 
-                  {/* Wi-Fi Only Sync Toggle */}
-                  <SettingRow
-                    label="Wi-Fi Only Sync"
-                    hint="Only upload when connected to Wi-Fi"
-                    style={styles.settingRowSpaced}
-                  >
-                    <Switch
-                      value={settings.isWifiOnlySync}
-                      onValueChange={(value) => {
-                        const next = {
-                          ...settings,
-                          isWifiOnlySync: value,
-                          syncPreset: "custom" as const
-                        }
-                        onSettingsChange(next)
-                        onImmediateSave(next)
-                      }}
-                      trackColor={{
-                        false: colors.border,
-                        true: colors.primary + "80"
-                      }}
-                      thumbColor={settings.isWifiOnlySync ? colors.primary : colors.border}
-                    />
-                  </SettingRow>
+                  {/* Sync Condition */}
+                  <View style={styles.settingRowSpaced}>
+                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync Only On</Text>
+                    <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
+                      {settings.syncCondition === "any" && "Upload on any network connection"}
+                      {settings.syncCondition === "wifi_any" && "Upload only when connected to Wi-Fi"}
+                      {settings.syncCondition === "wifi_ssid" && "Upload only on a specific Wi-Fi network"}
+                      {settings.syncCondition === "vpn" && "Upload only when VPN is active"}
+                    </Text>
+                    <View style={styles.syncConditionChips}>
+                      {(
+                        [
+                          { value: "any", label: "Any" },
+                          { value: "wifi_any", label: "Wi-Fi" },
+                          { value: "wifi_ssid", label: "SSID" },
+                          { value: "vpn", label: "VPN" }
+                        ] as { value: SyncCondition; label: string }[]
+                      ).map((option) => (
+                        <Pressable
+                          key={option.value}
+                          onPress={() => {
+                            const next = {
+                              ...settings,
+                              syncCondition: option.value,
+                              syncPreset: "custom" as const
+                            }
+                            onSettingsChange(next)
+                            onImmediateSave(next)
+                          }}
+                          style={[
+                            styles.syncConditionChip,
+                            {
+                              backgroundColor:
+                                settings.syncCondition === option.value ? colors.primary + "20" : colors.background,
+                              borderColor: settings.syncCondition === option.value ? colors.primary : colors.border
+                            }
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.syncConditionChipText,
+                              { color: settings.syncCondition === option.value ? colors.primary : colors.textSecondary }
+                            ]}
+                          >
+                            {option.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    {settings.syncCondition === "wifi_ssid" && (
+                      <View style={styles.ssidRow}>
+                        <TextInput
+                          style={[
+                            styles.ssidInput,
+                            { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
+                          ]}
+                          value={settings.syncSsid}
+                          onChangeText={(text) => {
+                            const next = { ...settings, syncSsid: text }
+                            onSettingsChange(next)
+                            onDebouncedSave(next)
+                          }}
+                          placeholder="Enter Wi-Fi SSID"
+                          placeholderTextColor={colors.placeholder}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                        {currentSsid !== "" && currentSsid.toLowerCase() !== settings.syncSsid.toLowerCase() && (
+                          <Pressable
+                            style={({ pressed }) => [
+                              styles.ssidFillButton,
+                              { borderColor: colors.primary, backgroundColor: colors.primary + "15" },
+                              pressed && { opacity: colors.pressedOpacity }
+                            ]}
+                            onPress={() => {
+                              const next = { ...settings, syncSsid: currentSsid }
+                              onSettingsChange(next)
+                              onImmediateSave(next)
+                            }}
+                          >
+                            <Text style={[styles.ssidFillText, { color: colors.primary }]}>Use current</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 <Divider />
@@ -443,5 +519,46 @@ const styles = StyleSheet.create({
   },
   customSyncInput: {
     marginTop: 12
+  },
+  syncConditionChips: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 8
+  },
+  syncConditionChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1
+  },
+  syncConditionChipText: {
+    ...fonts.medium,
+    fontSize: 12
+  },
+  ssidRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 8
+  },
+  ssidInput: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 13,
+    fontFamily: "monospace"
+  },
+  ssidFillButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1
+  },
+  ssidFillText: {
+    ...fonts.medium,
+    fontSize: 12
   }
 })

@@ -55,7 +55,7 @@ The UI simplifies to remove sync-related elements that don't apply:
 - Server Endpoint and Test Connection
 - Authentication & Headers
 - API Field Mapping
-- Sync Interval, Wi-Fi Only Sync
+- Sync Interval, Sync Condition (Any / Wi-Fi / SSID / VPN)
 - Queue statistics (Queued / Sent counts)
 - Queue actions (Sync Now, Clear Sent History, Clear Queue)
 - Queue info in the tracking notification

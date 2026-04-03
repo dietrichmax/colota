@@ -8,6 +8,7 @@ import com.Colota.data.GeofenceHelper
 import com.Colota.location.LocationProvider
 import com.Colota.location.LocationUpdateCallback
 import com.Colota.sync.PayloadBuilder
+import com.Colota.sync.NetworkManager
 import com.Colota.sync.SyncManager
 import com.Colota.util.AppLogger
 import com.Colota.util.DeviceInfoHelper
@@ -44,6 +45,7 @@ class LocationForegroundServiceTest {
     private lateinit var profileManager: ProfileManager
     private lateinit var conditionMonitor: ConditionMonitor
     private lateinit var secureStorage: SecureStorageHelper
+    private lateinit var networkManager: NetworkManager
     private lateinit var androidNotificationManager: NotificationManager
 
     private lateinit var testDispatcher: TestDispatcher
@@ -62,6 +64,7 @@ class LocationForegroundServiceTest {
         profileManager = mockk(relaxed = true)
         conditionMonitor = mockk(relaxed = true)
         secureStorage = mockk(relaxed = true)
+        networkManager = mockk(relaxed = true)
         androidNotificationManager = mockk(relaxed = true)
 
         testDispatcher = UnconfinedTestDispatcher()
@@ -121,6 +124,7 @@ class LocationForegroundServiceTest {
         setField("profileManager", profileManager)
         setField("conditionMonitor", conditionMonitor)
         setField("secureStorage", secureStorage)
+        setField("networkManager", networkManager)
         setField("notificationManager", androidNotificationManager)
         setField("serviceScope", testScope as CoroutineScope)
         setField("config", ServiceConfig(
@@ -1122,7 +1126,8 @@ class LocationForegroundServiceTest {
             endpoint = "https://example.com",
             retryIntervalSeconds = 60,
             isOfflineMode = true,
-            isWifiOnlySync = true,
+            syncCondition = "wifi_any",
+            syncSsid = "",
             httpMethod = "GET"
         ))
 
@@ -1133,7 +1138,8 @@ class LocationForegroundServiceTest {
             syncIntervalSeconds = 30,
             retryIntervalSeconds = 60,
             isOfflineMode = true,
-            isWifiOnlySync = true,
+            syncCondition = "wifi_any",
+            syncSsid = "",
             authHeaders = mapOf("Authorization" to "Bearer token"),
             httpMethod = "GET"
         ) }

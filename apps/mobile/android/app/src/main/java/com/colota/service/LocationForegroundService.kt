@@ -239,7 +239,7 @@ class LocationForegroundService : Service() {
                     }
 
                     if (!config.isOfflineMode && config.syncIntervalSeconds == 0 && config.endpoint.isNotBlank() &&
-                        !(config.isWifiOnlySync && !networkManager.isUnmeteredConnection())) {
+                        syncManager.isSyncAllowed()) {
                         syncManager.manualFlush()
                     }
                 }
@@ -261,6 +261,7 @@ class LocationForegroundService : Service() {
         conditionMonitor.stop()
         stopLocationUpdates()
         syncManager.stopPeriodicSync()
+        networkManager.destroy()
 
         serviceScope?.cancel()
         serviceScope = null
@@ -928,7 +929,8 @@ class LocationForegroundService : Service() {
             syncIntervalSeconds = config.syncIntervalSeconds,
             retryIntervalSeconds = config.retryIntervalSeconds,
             isOfflineMode = config.isOfflineMode,
-            isWifiOnlySync = config.isWifiOnlySync,
+            syncCondition = config.syncCondition,
+            syncSsid = config.syncSsid,
             authHeaders = secureStorage.getAuthHeaders(),
             httpMethod = config.httpMethod,
             apiFormat = config.apiFormat

@@ -845,6 +845,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun getCurrentSsid(promise: Promise) {
+        promise.resolve(networkManager.getCurrentSsid())
+    }
+
+    @ReactMethod
     fun getAvailableStorageMB(promise: Promise) {
         try {
             val stat = StatFs(Environment.getDataDirectory().path)

@@ -15,18 +15,25 @@ Colota includes built-in presets that configure tracking interval, movement thre
 
 Select a preset in **Settings** or choose **Custom** to configure each parameter individually.
 
-## Wi-Fi Only Sync
+## Sync Condition
 
-When enabled, Colota queues locations locally and only uploads when connected to an unmetered network (Wi-Fi, Ethernet). Uploads are skipped on cellular data.
+Controls when Colota uploads locations. Locations are always recorded and queued locally regardless of this setting.
+
+| Option            | Behavior                                               |
+| ----------------- | ------------------------------------------------------ |
+| **Any Network**   | Upload on any connection (default)                     |
+| **Wi-Fi Only**    | Upload only on unmetered networks (Wi-Fi, Ethernet)    |
+| **Specific SSID** | Upload only when connected to a specific Wi-Fi network |
+| **VPN**           | Upload only when a VPN connection is active            |
 
 This is useful for:
 
 - **Limited mobile data** - Avoid using cellular bandwidth for location uploads
+- **Private backends** - Only sync when on your home network or VPN
 - **Roaming** - Prevent expensive data charges while traveling abroad
-- **Battery savings** - Reduce radio usage on metered connections
 
-Toggle this in **Settings > Advanced Settings > Network Settings > Wi-Fi Only Sync**. Locations continue to be recorded and queued regardless of this setting - they sync automatically once Wi-Fi is available.
+Configure this in **Settings > Advanced Settings > Network Settings > Sync Only On**.
 
 ## Offline Mode
 
-In [offline mode](/docs/configuration/server-settings#offline-mode), network settings (sync interval, retry behavior, Wi-Fi only sync) are hidden since no syncing occurs. Preset descriptions adjust to show only tracking parameters.
+In [offline mode](/docs/configuration/server-settings#offline-mode), network settings (sync interval, retry behavior, sync condition) are hidden since no syncing occurs. Preset descriptions adjust to show only tracking parameters.

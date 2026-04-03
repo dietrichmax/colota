@@ -129,7 +129,7 @@ Orchestrates batch location uploads with:
 
 ### NetworkManager
 
-HTTP client. Validates endpoints, enforces HTTPS for public hosts, injects auth headers, caches connectivity checks, and detects unmetered connections for Wi-Fi only sync.
+HTTP client. Validates endpoints, enforces HTTPS for public hosts, injects auth headers, caches connectivity checks, and detects unmetered connections, specific SSIDs and VPN status for sync condition filtering.
 
 ### GeofenceHelper
 

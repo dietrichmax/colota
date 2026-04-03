@@ -99,6 +99,8 @@ export interface CustomField {
 
 export type HttpMethod = "POST" | "GET"
 
+export type SyncCondition = "any" | "wifi_any" | "wifi_ssid" | "vpn"
+
 export type ApiTemplateName =
   | "custom"
   | "dawarich"
@@ -315,7 +317,8 @@ export interface Settings {
   syncInterval: number
   retryInterval: number
   isOfflineMode: boolean
-  isWifiOnlySync: boolean
+  syncCondition: SyncCondition
+  syncSsid: string
   // UI State
   syncPreset: SyncPreset
   hasCompletedSetup: boolean
@@ -334,7 +337,8 @@ export const DEFAULT_SETTINGS: Settings = {
   accuracyThreshold: 50,
   syncPreset: "instant",
   isOfflineMode: false,
-  isWifiOnlySync: false,
+  syncCondition: "any",
+  syncSsid: "",
   hasCompletedSetup: false,
   httpMethod: "POST"
 } as const

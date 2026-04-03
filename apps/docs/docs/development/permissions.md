@@ -17,6 +17,7 @@ These are the permissions Colota uses and why. None are related to analytics, ad
 | Foreground Service (Data Sync) | Yes         | Auto-export background processing                 |
 | Internet                       | Yes         | Send locations to your server                     |
 | Network State                  | Yes         | Check connectivity before syncing                 |
+| Wi-Fi State                    | Yes         | Detect current SSID for sync condition filtering  |
 | Boot Completed                 | Yes         | Auto-restart tracking after device reboot         |
 | Notifications                  | Android 13+ | Display the foreground service notification       |
 | Local Network Access           | Android 17+ | Access local network servers (self-hosted)        |
@@ -62,9 +63,10 @@ Android requires apps to declare a foreground service with a persistent notifica
 ```
 android.permission.INTERNET
 android.permission.ACCESS_NETWORK_STATE
+android.permission.ACCESS_WIFI_STATE
 ```
 
-**Internet** is needed to POST location data to your configured server endpoint. **Network State** lets the app check for connectivity before attempting to sync, avoiding unnecessary failures.
+**Internet** is needed to POST location data to your configured server endpoint. **Network State** lets the app check for connectivity before attempting to sync, avoiding unnecessary failures. **Wi-Fi State** is used to read the current Wi-Fi SSID when the sync condition is set to a specific network.
 
 ### Boot Completed
 

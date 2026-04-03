@@ -103,19 +103,20 @@ Since all data is stored locally on your device, you have full control:
 
 ## Permissions
 
-| Permission                        | Purpose                                            |
-| --------------------------------- | -------------------------------------------------- |
-| Location (Precise)                | GPS tracking                                       |
-| Location (Approximate)            | Required alongside precise location on Android     |
-| Background Location (Android 10+) | Tracking while the app is not in the foreground    |
-| Foreground Service                | Background tracking with notification              |
-| Foreground Service (Location)     | Location access while tracking in the background   |
-| Foreground Service (Data Sync)    | Auto-export background processing                  |
-| Notification (Android 13+)        | Foreground service notification                    |
-| Boot Completed                    | Auto-start tracking after device reboot            |
-| Internet                          | Server sync and map tile loading                   |
-| Network State                     | Wi-Fi only sync and WiFi pause in geofence zones   |
-| Battery Optimization Exemption    | Optional, prevents system from restricting the app |
+| Permission                        | Purpose                                                |
+| --------------------------------- | ------------------------------------------------------ |
+| Location (Precise)                | GPS tracking                                           |
+| Location (Approximate)            | Required alongside precise location on Android         |
+| Background Location (Android 10+) | Tracking while the app is not in the foreground        |
+| Foreground Service                | Background tracking with notification                  |
+| Foreground Service (Location)     | Location access while tracking in the background       |
+| Foreground Service (Data Sync)    | Auto-export background processing                      |
+| Notification (Android 13+)        | Foreground service notification                        |
+| Boot Completed                    | Auto-start tracking after device reboot                |
+| Internet                          | Server sync and map tile loading                       |
+| Network State                     | Sync condition checks and WiFi pause in geofence zones |
+| Wi-Fi State                       | SSID detection for sync condition filtering            |
+| Battery Optimization Exemption    | Optional, prevents system from restricting the app     |
 
 ## Children's Privacy
 

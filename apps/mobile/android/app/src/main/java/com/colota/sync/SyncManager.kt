@@ -30,7 +30,8 @@ class SyncManager(
     @Volatile private var syncIntervalSeconds: Int = 0
     @Volatile private var retryIntervalSeconds: Int = 300
     @Volatile private var isOfflineMode: Boolean = false
-    @Volatile private var isWifiOnlySync: Boolean = false
+    @Volatile private var syncCondition: String = "any"
+    @Volatile private var syncSsid: String = ""
     @Volatile private var authHeaders: Map<String, String> = emptyMap()
     @Volatile private var httpMethod: String = "POST"
     @Volatile private var apiFormat: String = ""
@@ -49,7 +50,8 @@ class SyncManager(
         syncIntervalSeconds: Int,
         retryIntervalSeconds: Int,
         isOfflineMode: Boolean,
-        isWifiOnlySync: Boolean,
+        syncCondition: String,
+        syncSsid: String,
         authHeaders: Map<String, String>,
         httpMethod: String = "POST",
         apiFormat: String = ""
@@ -58,7 +60,8 @@ class SyncManager(
         this.syncIntervalSeconds = syncIntervalSeconds
         this.retryIntervalSeconds = retryIntervalSeconds
         this.isOfflineMode = isOfflineMode
-        this.isWifiOnlySync = isWifiOnlySync
+        this.syncCondition = syncCondition
+        this.syncSsid = syncSsid
         this.authHeaders = authHeaders
         this.httpMethod = httpMethod
         this.apiFormat = apiFormat
@@ -71,8 +74,7 @@ class SyncManager(
                 val baseDelay = calculateNextSyncDelay()
                 delay(baseDelay * 1000L)
 
-                if (isOfflineMode || !networkManager.isNetworkAvailable() ||
-                    (isWifiOnlySync && !networkManager.isUnmeteredConnection())) {
+                if (!isSyncAllowed()) {
                     continue
                 }
 
@@ -139,8 +141,7 @@ class SyncManager(
         }
 
         // Immediate send mode (syncInterval = 0)
-        if (syncIntervalSeconds == 0 && networkManager.isNetworkAvailable() &&
-            !(isWifiOnlySync && !networkManager.isUnmeteredConnection())) {
+        if (syncIntervalSeconds == 0 && isSyncAllowed()) {
             AppLogger.d(TAG, "Instant send")
             val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod, apiFormat)
 
@@ -154,6 +155,20 @@ class SyncManager(
             }
         }
         // If syncInterval > 0, the periodic sync job will handle it
+    }
+
+    fun isSyncAllowed(): Boolean {
+        if (isOfflineMode || !networkManager.isNetworkAvailable()) return false
+        val allowed = when (syncCondition) {
+            "wifi_any" -> networkManager.isUnmeteredConnection()
+            "wifi_ssid" -> networkManager.isConnectedToSsid(syncSsid)
+            "vpn" -> networkManager.isVpnConnected()
+            else -> true // "any"
+        }
+        if (!allowed && syncCondition != "any") {
+            AppLogger.d(TAG, "Sync skipped: condition=$syncCondition not met")
+        }
+        return allowed
     }
 
     fun getCachedQueuedCount(): Int = queueCountCache.get()

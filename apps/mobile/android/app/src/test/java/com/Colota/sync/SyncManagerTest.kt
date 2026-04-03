@@ -51,7 +51,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = true,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -69,7 +70,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -89,7 +91,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -112,7 +115,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -133,7 +137,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -155,7 +160,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = true,
+            syncCondition = "wifi_any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -175,12 +181,103 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = true,
+            syncCondition = "wifi_any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
         coEvery { networkManager.isNetworkAvailable() } returns true
         every { networkManager.isUnmeteredConnection() } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+
+        val payload = JSONObject().put("lat", 52.0)
+        syncManager.queueAndSend(1L, payload)
+
+        coVerify { networkManager.sendToEndpoint(any(), "https://example.com", any(), any()) }
+    }
+
+    // --- queueAndSend: Wi-Fi SSID ---
+
+    @Test
+    fun `queueAndSend skips send when wifi_ssid and wrong SSID`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "wifi_ssid",
+            syncSsid = "HomeNetwork",
+            authHeaders = emptyMap()
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        every { networkManager.isConnectedToSsid("HomeNetwork") } returns false
+
+        val payload = JSONObject().put("lat", 52.0)
+        syncManager.queueAndSend(1L, payload)
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `queueAndSend sends when wifi_ssid and matching SSID`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "wifi_ssid",
+            syncSsid = "HomeNetwork",
+            authHeaders = emptyMap()
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        every { networkManager.isConnectedToSsid("HomeNetwork") } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+
+        val payload = JSONObject().put("lat", 52.0)
+        syncManager.queueAndSend(1L, payload)
+
+        coVerify { networkManager.sendToEndpoint(any(), "https://example.com", any(), any()) }
+    }
+
+    // --- queueAndSend: VPN ---
+
+    @Test
+    fun `queueAndSend skips send when vpn condition and no VPN`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "vpn",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        every { networkManager.isVpnConnected() } returns false
+
+        val payload = JSONObject().put("lat", 52.0)
+        syncManager.queueAndSend(1L, payload)
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `queueAndSend sends when vpn condition and VPN connected`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "vpn",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        every { networkManager.isVpnConnected() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
 
         val payload = JSONObject().put("lat", 52.0)
@@ -198,7 +295,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 300,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -221,7 +319,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = headers,
             httpMethod = "GET"
         )
@@ -243,7 +342,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -266,7 +366,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -282,7 +383,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -305,7 +407,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -389,7 +492,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -410,7 +514,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -437,7 +542,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -469,7 +575,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -503,7 +610,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -530,7 +638,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -563,7 +672,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 60,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -596,7 +706,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
             isOfflineMode = true,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -616,7 +727,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -637,7 +749,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 1,
             retryIntervalSeconds = 1,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -668,7 +781,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap()
         )
 
@@ -703,7 +817,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap(),
             httpMethod = "POST",
             apiFormat = "traccar_json"
@@ -724,7 +839,8 @@ class SyncManagerTest {
             syncIntervalSeconds = 0,
             retryIntervalSeconds = 30,
             isOfflineMode = false,
-            isWifiOnlySync = false,
+            syncCondition = "any",
+            syncSsid = "",
             authHeaders = emptyMap(),
             httpMethod = "POST",
             apiFormat = "traccar_json"

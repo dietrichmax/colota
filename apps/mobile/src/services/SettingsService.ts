@@ -48,8 +48,12 @@ export const SettingsService = {
 
       case "filterInaccurateLocations":
       case "isOfflineMode":
-      case "isWifiOnlySync":
         // Boolean → "true"/"false"
+        stringValue = String(value)
+        break
+
+      case "syncCondition":
+      case "syncSsid":
         stringValue = String(value)
         break
 
