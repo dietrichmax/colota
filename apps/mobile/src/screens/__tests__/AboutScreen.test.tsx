@@ -97,7 +97,7 @@ jest.mock("lucide-react-native", () => {
   const { Text } = require("react-native")
   const stub = (name: string) => (_props: any) => R.createElement(Text, null, name)
   return {
-    ChevronRight: stub("ChevronRight"),
+    ExternalLink: stub("ExternalLink"),
     Bug: stub("Bug"),
     FileText: stub("FileText"),
     Code: stub("Code"),
