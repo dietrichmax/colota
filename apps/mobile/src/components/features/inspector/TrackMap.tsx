@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   legend: {
     position: "absolute",
-    bottom: 10,
+    bottom: 30,
     left: 10,
     borderRadius: 12,
     borderWidth: 1,

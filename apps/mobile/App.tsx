@@ -2,11 +2,11 @@
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
-import React, { useMemo } from "react"
-import { NavigationContainer } from "@react-navigation/native"
+import React, { useMemo, useState, useCallback } from "react"
+import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { SafeAreaProvider } from "react-native-safe-area-context"
-import { StatusBar, Platform } from "react-native"
+import { View, StatusBar, Platform } from "react-native"
 import MapLibreGL from "@maplibre/maplibre-react-native"
 import { ThemeProvider, useTheme } from "./src/hooks/useTheme"
 import { fonts } from "./src/styles/typography"
@@ -32,6 +32,7 @@ import {
   TripDetailScreen,
   OfflineMapsScreen
 } from "./src/screens/"
+import { BottomTabBar } from "./src/components"
 import { loadDisplayPreferences } from "./src/utils/geo"
 MapLibreGL.setAccessToken(null)
 
@@ -135,6 +136,7 @@ const SCREEN_CONFIG = [
 
 function AppNavigator() {
   const { colors, isDark } = useTheme()
+  const [currentRoute, setCurrentRoute] = useState<string | undefined>("Dashboard")
   const screenOptions = useMemo(
     () => ({
       headerStyle: {
@@ -177,20 +179,34 @@ function AppNavigator() {
     []
   )
 
+  const navigationRef = React.useRef<NavigationContainerRef<Record<string, undefined>>>(null)
+
+  const handleStateChange = useCallback(() => {
+    const route = navigationRef.current?.getCurrentRoute()
+    if (route) setCurrentRoute(route.name)
+  }, [])
+
+  const handleTabNavigate = useCallback((route: string) => {
+    navigationRef.current?.reset({ index: 0, routes: [{ name: route }] })
+  }, [])
+
   return (
     <SafeAreaProvider>
       <StatusBar {...statusBarConfig} />
-      <NavigationContainer linking={linking}>
-        <Stack.Navigator initialRouteName="Dashboard" screenOptions={screenOptions}>
-          {SCREEN_CONFIG.map((screen) => (
-            <Stack.Screen
-              key={screen.name}
-              name={screen.name}
-              component={screen.component}
-              options={{ headerTitle: screen.title }}
-            />
-          ))}
-        </Stack.Navigator>
+      <NavigationContainer linking={linking} ref={navigationRef} onStateChange={handleStateChange}>
+        <View style={{ flex: 1 }}>
+          <Stack.Navigator initialRouteName="Dashboard" screenOptions={screenOptions}>
+            {SCREEN_CONFIG.map((screen) => (
+              <Stack.Screen
+                key={screen.name}
+                name={screen.name}
+                component={screen.component}
+                options={{ headerTitle: screen.title }}
+              />
+            ))}
+          </Stack.Navigator>
+          <BottomTabBar currentRoute={currentRoute} onNavigate={handleTabNavigate} />
+        </View>
       </NavigationContainer>
     </SafeAreaProvider>
   )

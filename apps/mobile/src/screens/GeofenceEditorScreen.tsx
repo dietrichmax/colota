@@ -240,7 +240,7 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
 
         <SectionTitle>GPS Pause Options</SectionTitle>
         <Card style={styles.card}>
-          <SettingRow label="Don't record in zone" hint="Locations are not saved while inside this zone">
+          <SettingRow label="Don't record in zone" hint="Pause saving and syncing" style={styles.toggleRow}>
             <Switch
               testID="pause-tracking-toggle"
               value={pauseTracking}
@@ -250,7 +250,7 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
             />
           </SettingRow>
 
-          <SettingRow label="Pause when on WiFi or Ethernet" hint="Stop GPS when connected to an unmetered network">
+          <SettingRow label="WiFi/Ethernet pause" hint="Stop GPS on unmetered networks" style={styles.toggleRow}>
             <Switch
               testID="pause-wifi-toggle"
               value={pauseOnWifi}
@@ -260,7 +260,7 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
             />
           </SettingRow>
 
-          <SettingRow label="Pause when motionless" hint="Stop GPS after no device motion is detected for a set time">
+          <SettingRow label="Motionless pause" hint="Stop GPS after no motion for a set time" style={styles.toggleRow}>
             <Switch
               testID="pause-motionless-toggle"
               value={pauseOnMotionless}
@@ -272,10 +272,7 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
 
           {pauseOnMotionless && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
-              <SettingRow
-                label="Motionless timeout (min)"
-                hint="GPS pauses after this many minutes without motion. Resumes automatically when the device moves again."
-              >
+              <SettingRow label="Timeout (min)" hint="Minutes without motion before GPS stops">
                 <TextInput
                   testID="motionless-timeout-input"
                   style={[inputStyle, styles.numInput]}
@@ -289,10 +286,7 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
             </View>
           )}
 
-          <SettingRow
-            label="Stationary heartbeat"
-            hint="Send periodic location updates to the server while paused in this zone"
-          >
+          <SettingRow label="Stationary heartbeat" hint="Periodic server update while paused" style={styles.toggleRow}>
             <Switch
               testID="heartbeat-toggle"
               value={heartbeatEnabled}
@@ -304,7 +298,7 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
 
           {heartbeatEnabled && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
-              <SettingRow label="Heartbeat interval (min)" hint="How often to send a location update to the server">
+              <SettingRow label="Interval (min)" hint="How often to send a location update">
                 <TextInput
                   testID="heartbeat-interval-input"
                   style={[inputStyle, styles.numInput]}
@@ -350,7 +344,8 @@ const styles = StyleSheet.create({
   },
   nameInput: { flex: 1 },
   numInput: { width: 80, textAlign: "center" },
-  nestedSetting: { marginLeft: 16, paddingLeft: 12, borderLeftWidth: 3 },
+  toggleRow: { paddingVertical: 10 },
+  nestedSetting: { marginLeft: 16, paddingLeft: 12, borderLeftWidth: 3, marginTop: 4, marginBottom: 4 },
   combinedNote: {
     marginTop: 8,
     paddingTop: 12,

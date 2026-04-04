@@ -30,13 +30,13 @@ export { FormatOption } from "./ui/FormatOption"
 export { FormatSelector } from "./ui/FormatSelector"
 export { RadioDot } from "./ui/RadioDot"
 export { SettingRow } from "./ui/SettingRow"
+export { BottomTabBar } from "./ui/BottomTabBar"
 
 // ============================================================================
 // Feature Components - Dashboard
 // ============================================================================
 export { DashboardMap } from "./features/dashboard/DashboardMap"
 export { CoordinateDisplay } from "./features/dashboard/CoordinateDisplay"
-export { QuickAccess } from "./features/dashboard/QuickAccess"
 export { ConnectionStatus } from "./features/dashboard/ConnectionStatus"
 export { WelcomeCard } from "./features/dashboard/WelcomeCard"
 export { DatabaseStatistics } from "./features/dashboard/DatabaseStatistics"

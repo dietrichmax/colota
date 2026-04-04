@@ -25,7 +25,6 @@ export function Container({ children, style }: ContainerProps) {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   container: {
-    flex: 1,
-    marginBottom: 24
+    flex: 1
   }
 })

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, Switch, View, ScrollView, Pressable, TextInput } from "react-native"
+import { Text, StyleSheet, Switch, View, ScrollView, Pressable, TextInput, Linking } from "react-native"
 import { ScreenProps, Settings } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
@@ -14,7 +14,7 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
 import { fonts } from "../styles/typography"
 import { SectionTitle, Card, Container, Divider, SettingRow, StatsCard } from "../components"
-import { ChevronRight, ChevronDown, ChevronUp } from "lucide-react-native"
+import { ChevronRight, ChevronDown, ChevronUp, ExternalLink } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { ConnectionSettings } from "../components/features/settings/ConnectionSettings"
 import { SyncStrategySettings } from "../components/features/settings/SyncStrategySettings"
@@ -422,6 +422,53 @@ export function SettingsScreen({ navigation }: ScreenProps) {
               </View>
               <ChevronRight size={20} color={colors.textLight} />
             </Pressable>
+
+            <Divider />
+
+            <Pressable
+              testID="nav-export-data"
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+              onPress={() => navigation.navigate("Export Data")}
+            >
+              <View style={styles.linkContent}>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Export Data</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
+                  Export locations as CSV, GeoJSON, GPX or KML
+                </Text>
+              </View>
+              <ChevronRight size={20} color={colors.textLight} />
+            </Pressable>
+          </Card>
+        </View>
+
+        {/* About & Support */}
+        <View style={styles.section}>
+          <Card>
+            <Pressable
+              testID="nav-about"
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+              onPress={() => navigation.navigate("About Colota")}
+            >
+              <View style={styles.linkContent}>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>About Colota</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>Version, licenses and links</Text>
+              </View>
+              <ChevronRight size={20} color={colors.textLight} />
+            </Pressable>
+
+            <Divider />
+
+            <Pressable
+              testID="nav-support"
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+              onPress={() => Linking.openURL("https://mxd.codes/support")}
+            >
+              <View style={styles.linkContent}>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Support</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>Support development of the app</Text>
+              </View>
+              <ExternalLink size={18} color={colors.textLight} />
+            </Pressable>
           </Card>
         </View>
       </ScrollView>
@@ -435,7 +482,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 40
+    paddingBottom: 16
   },
   header: {
     marginBottom: 20

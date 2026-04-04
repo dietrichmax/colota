@@ -16,7 +16,6 @@ import {
   DashboardMap,
   CoordinateDisplay,
   Container,
-  QuickAccess,
   DatabaseStatistics,
   WelcomeCard
 } from "../components"
@@ -221,9 +220,6 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
           {/* Server Connection */}
           {!settings.isOfflineMode && <ConnectionStatus endpoint={settings.endpoint} navigation={navigation} />}
-
-          {/* Quick Access */}
-          <QuickAccess navigation={navigation} />
         </View>
       </ScrollView>
     </Container>
@@ -262,7 +258,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 20,
     paddingHorizontal: 16,
-    paddingBottom: 24
+    paddingBottom: 8
   },
   metricsSection: {
     marginBottom: 20
