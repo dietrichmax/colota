@@ -39,6 +39,10 @@ Stops GPS entirely when connected to an unmetered network (home WiFi, Ethernet).
 
 Stops GPS after no device motion is detected for a configurable time (default 10 minutes). GPS resumes automatically when the device moves again. Useful for users who put their phone in airplane mode at night or sit still for long periods.
 
+### Stationary heartbeat
+
+Sends a periodic location update to your server while paused inside the zone. Useful as a proof-of-presence signal so your backend knows the device is still there. The heartbeat requests a fresh GPS fix, sends it immediately (bypassing normal sync conditions like Wi-Fi only) and then powers GPS back down. Configure the interval in minutes (default 15).
+
 ### Combined behavior
 
 When both **WiFi** and **motionless** pause are enabled, GPS only resumes when **both** conditions clear - WiFi must be disconnected **and** motion must be detected. Either condition alone is not enough to resume.

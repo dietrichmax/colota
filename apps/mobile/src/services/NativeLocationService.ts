@@ -295,7 +295,9 @@ class NativeLocationService {
       geofence.pauseTracking,
       geofence.pauseOnWifi ?? false,
       geofence.pauseOnMotionless ?? false,
-      geofence.motionlessTimeoutMinutes ?? 10
+      geofence.motionlessTimeoutMinutes ?? 10,
+      geofence.heartbeatEnabled ?? false,
+      geofence.heartbeatIntervalMinutes ?? 15
     )
   }
 
@@ -320,7 +322,9 @@ class NativeLocationService {
       update.pauseTracking ?? null,
       update.pauseOnWifi ?? null,
       update.pauseOnMotionless ?? null,
-      update.motionlessTimeoutMinutes ?? null
+      update.motionlessTimeoutMinutes ?? null,
+      update.heartbeatEnabled ?? null,
+      update.heartbeatIntervalMinutes ?? null
     )
   }
 

@@ -27,7 +27,9 @@ class GeofenceHelper(private val context: Context) {
         val radius: Double,
         val pauseOnWifi: Boolean = false,
         val pauseOnMotionless: Boolean = false,
-        val motionlessTimeoutMinutes: Int = 10
+        val motionlessTimeoutMinutes: Int = 10,
+        val heartbeatEnabled: Boolean = false,
+        val heartbeatIntervalMinutes: Int = 15
     )
 
     companion object {
@@ -79,7 +81,7 @@ class GeofenceHelper(private val context: Context) {
             val fences = mutableListOf<CachedGeofence>()
             dbHelper.readableDatabase.query(
                 DatabaseHelper.TABLE_GEOFENCES,
-                arrayOf("name", "latitude", "longitude", "radius", "pause_on_wifi", "pause_on_motionless", "motionless_timeout_minutes"),
+                arrayOf("name", "latitude", "longitude", "radius", "pause_on_wifi", "pause_on_motionless", "motionless_timeout_minutes", "heartbeat_enabled", "heartbeat_interval_minutes"),
                 "enabled = 1 AND pause_tracking = 1",
                 null, null, null, null
             ).use { cursor ->
@@ -90,6 +92,8 @@ class GeofenceHelper(private val context: Context) {
                 val wifiIdx = cursor.getColumnIndexOrThrow("pause_on_wifi")
                 val motionlessIdx = cursor.getColumnIndexOrThrow("pause_on_motionless")
                 val timeoutIdx = cursor.getColumnIndexOrThrow("motionless_timeout_minutes")
+                val heartbeatIdx = cursor.getColumnIndexOrThrow("heartbeat_enabled")
+                val heartbeatIntervalIdx = cursor.getColumnIndexOrThrow("heartbeat_interval_minutes")
 
                 while (cursor.moveToNext()) {
                     fences.add(CachedGeofence(
@@ -99,7 +103,9 @@ class GeofenceHelper(private val context: Context) {
                         cursor.getDouble(radIdx),
                         cursor.getInt(wifiIdx) == 1,
                         cursor.getInt(motionlessIdx) == 1,
-                        cursor.getInt(timeoutIdx)
+                        cursor.getInt(timeoutIdx),
+                        cursor.getInt(heartbeatIdx) == 1,
+                        cursor.getInt(heartbeatIntervalIdx)
                     ))
                 }
             }
@@ -141,6 +147,8 @@ class GeofenceHelper(private val context: Context) {
                         putBoolean("pauseOnWifi", cursor.getInt(cursor.getColumnIndexOrThrow("pause_on_wifi")) == 1)
                         putBoolean("pauseOnMotionless", cursor.getInt(cursor.getColumnIndexOrThrow("pause_on_motionless")) == 1)
                         putInt("motionlessTimeoutMinutes", cursor.getInt(cursor.getColumnIndexOrThrow("motionless_timeout_minutes")))
+                        putBoolean("heartbeatEnabled", cursor.getInt(cursor.getColumnIndexOrThrow("heartbeat_enabled")) == 1)
+                        putInt("heartbeatIntervalMinutes", cursor.getInt(cursor.getColumnIndexOrThrow("heartbeat_interval_minutes")))
                         putDouble("createdAt", cursor.getLong(createdIdx).toDouble())
                     })
                 }
@@ -163,7 +171,9 @@ class GeofenceHelper(private val context: Context) {
         pause: Boolean,
         pauseOnWifi: Boolean = false,
         pauseOnMotionless: Boolean = false,
-        motionlessTimeoutMinutes: Int = 10
+        motionlessTimeoutMinutes: Int = 10,
+        heartbeatEnabled: Boolean = false,
+        heartbeatIntervalMinutes: Int = 15
     ): Int {
         val values = ContentValues().apply {
             put("name", name)
@@ -175,6 +185,8 @@ class GeofenceHelper(private val context: Context) {
             put("pause_on_wifi", if (pauseOnWifi) 1 else 0)
             put("pause_on_motionless", if (pauseOnMotionless) 1 else 0)
             put("motionless_timeout_minutes", motionlessTimeoutMinutes)
+            put("heartbeat_enabled", if (heartbeatEnabled) 1 else 0)
+            put("heartbeat_interval_minutes", heartbeatIntervalMinutes)
             put("created_at", System.currentTimeMillis() / 1000)
         }
         
@@ -196,7 +208,9 @@ class GeofenceHelper(private val context: Context) {
         pause: Boolean?,
         pauseOnWifi: Boolean? = null,
         pauseOnMotionless: Boolean? = null,
-        motionlessTimeoutMinutes: Int? = null
+        motionlessTimeoutMinutes: Int? = null,
+        heartbeatEnabled: Boolean? = null,
+        heartbeatIntervalMinutes: Int? = null
     ): Boolean {
         val values = ContentValues().apply {
             name?.let { put("name", it) }
@@ -208,6 +222,8 @@ class GeofenceHelper(private val context: Context) {
             pauseOnWifi?.let { put("pause_on_wifi", if (it) 1 else 0) }
             pauseOnMotionless?.let { put("pause_on_motionless", if (it) 1 else 0) }
             motionlessTimeoutMinutes?.let { put("motionless_timeout_minutes", it) }
+            heartbeatEnabled?.let { put("heartbeat_enabled", if (it) 1 else 0) }
+            heartbeatIntervalMinutes?.let { put("heartbeat_interval_minutes", it) }
         }
         
         if (values.size() == 0) return false

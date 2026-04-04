@@ -629,9 +629,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         pauseOnWifi: Boolean,
         pauseOnMotionless: Boolean,
         motionlessTimeoutMinutes: Int,
+        heartbeatEnabled: Boolean,
+        heartbeatIntervalMinutes: Int,
         promise: Promise
     ) = executeAsync(promise) {
-        val result = geofenceHelper.insertGeofence(name, lat, lon, radius, pause, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes)
+        val result = geofenceHelper.insertGeofence(name, lat, lon, radius, pause, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes, heartbeatEnabled, heartbeatIntervalMinutes)
         if (result > 0) {
             geofenceHelper.invalidateCache()
             triggerZoneRecheck()
@@ -660,9 +662,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         pauseOnWifi: Boolean?,
         pauseOnMotionless: Boolean?,
         motionlessTimeoutMinutes: Int?,
+        heartbeatEnabled: Boolean?,
+        heartbeatIntervalMinutes: Int?,
         promise: Promise
     ) = executeAsync(promise) {
-        val result = geofenceHelper.updateGeofence(id, name, lat, lon, radius, enabled, pause, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes)
+        val result = geofenceHelper.updateGeofence(id, name, lat, lon, radius, enabled, pause, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes, heartbeatEnabled, heartbeatIntervalMinutes)
         if (result) {
             geofenceHelper.invalidateCache()
             triggerZoneRecheck()

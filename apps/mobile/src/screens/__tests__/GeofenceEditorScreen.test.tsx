@@ -108,7 +108,9 @@ const mockExistingGeofence: Geofence = {
   pauseTracking: true,
   pauseOnWifi: false,
   pauseOnMotionless: false,
-  motionlessTimeoutMinutes: 10
+  motionlessTimeoutMinutes: 10,
+  heartbeatEnabled: false,
+  heartbeatIntervalMinutes: 15
 }
 
 import { GeofenceEditorScreen } from "../GeofenceEditorScreen"

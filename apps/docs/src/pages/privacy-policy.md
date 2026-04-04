@@ -30,7 +30,7 @@ The App also collects:
 
 ### Geofence Data
 
-If you create pause zones (geofences), the App stores zone names, coordinates, radii and per-zone settings (enabled state, tracking pause, WiFi pause, motionless pause, motionless timeout and entry/exit notifications) in the local database.
+If you create pause zones (geofences), the App stores zone names, coordinates, radii and per-zone settings (enabled state, tracking pause, WiFi pause, motionless pause, motionless timeout, heartbeat enabled, heartbeat interval and entry/exit notifications) in the local database.
 
 ### Condition Monitoring
 

@@ -173,7 +173,9 @@ const mockGeofences: Geofence[] = [
     pauseTracking: true,
     pauseOnWifi: false,
     pauseOnMotionless: false,
-    motionlessTimeoutMinutes: 10
+    motionlessTimeoutMinutes: 10,
+    heartbeatEnabled: false,
+    heartbeatIntervalMinutes: 15
   },
   {
     id: 2,
@@ -185,7 +187,9 @@ const mockGeofences: Geofence[] = [
     pauseTracking: false,
     pauseOnWifi: false,
     pauseOnMotionless: false,
-    motionlessTimeoutMinutes: 10
+    motionlessTimeoutMinutes: 10,
+    heartbeatEnabled: false,
+    heartbeatIntervalMinutes: 15
   }
 ]
 

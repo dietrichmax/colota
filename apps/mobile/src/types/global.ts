@@ -41,6 +41,8 @@ export interface Geofence {
   pauseOnWifi: boolean
   pauseOnMotionless: boolean
   motionlessTimeoutMinutes: number
+  heartbeatEnabled: boolean
+  heartbeatIntervalMinutes: number
   createdAt?: number
 }
 

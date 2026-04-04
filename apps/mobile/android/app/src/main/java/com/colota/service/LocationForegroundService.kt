@@ -28,6 +28,7 @@ import com.Colota.location.LocationProvider
 import com.Colota.location.LocationProviderFactory
 import com.Colota.location.LocationUpdateCallback
 import kotlinx.coroutines.*
+import kotlin.coroutines.resume
 import java.util.Locale
 
 /** Foreground service for continuous GPS tracking and location syncing. */
@@ -64,6 +65,7 @@ class LocationForegroundService : Service() {
     @Volatile private var lastKnownLocation: android.location.Location? = null
     @Volatile private var entryDelayJob: Job? = null
     @Volatile private var pendingPauseZone: GeofenceHelper.CachedGeofence? = null
+    @Volatile private var heartbeatJob: Job? = null
 
     @Volatile private lateinit var config: ServiceConfig
     @Volatile private var fieldMap: Map<String, String>? = null
@@ -168,6 +170,10 @@ class LocationForegroundService : Service() {
                     motionDetector?.arm()
                     AppLogger.d(TAG, "Restored motionless pause state")
                 }
+                if (restoredGeofence?.heartbeatEnabled == true) {
+                    startHeartbeat(restoredGeofence.heartbeatIntervalMinutes)
+                    AppLogger.d(TAG, "Restored heartbeat: ${restoredGeofence.heartbeatIntervalMinutes}min")
+                }
             }
         }
 
@@ -258,6 +264,7 @@ class LocationForegroundService : Service() {
         pendingPauseZone = null
         unregisterWifiPause()
         cancelMotionlessCountdown()
+        cancelHeartbeat()
         conditionMonitor.stop()
         stopLocationUpdates()
         syncManager.stopPeriodicSync()
@@ -371,6 +378,12 @@ class LocationForegroundService : Service() {
                 zoneName = currentZoneName,
                 forceUpdate = true
             )
+            val reason = when {
+                isWifiPaused -> "wifi"
+                isMotionlessPaused -> "motionless"
+                else -> null
+            }
+            LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, reason)
             return
         }
 
@@ -391,6 +404,7 @@ class LocationForegroundService : Service() {
      */
     private fun applyZoneSettingsIfChanged(zone: GeofenceHelper.CachedGeofence) {
         val timeoutChanged = currentZoneGeofence?.motionlessTimeoutMinutes != zone.motionlessTimeoutMinutes
+        val heartbeatChanged = currentZoneGeofence?.heartbeatIntervalMinutes != zone.heartbeatIntervalMinutes
         currentZoneGeofence = zone
 
         if (zone.pauseOnWifi && wifiCallback == null) {
@@ -412,6 +426,12 @@ class LocationForegroundService : Service() {
                 clearMotionlessPauseState()
                 maybeResumeGps()
             }
+        }
+
+        if (zone.heartbeatEnabled && (heartbeatJob == null || heartbeatChanged)) {
+            startHeartbeat(zone.heartbeatIntervalMinutes)
+        } else if (!zone.heartbeatEnabled) {
+            cancelHeartbeat()
         }
     }
 
@@ -597,6 +617,7 @@ class LocationForegroundService : Service() {
 
         if (geofence.pauseOnWifi) registerWifiPause()
         if (geofence.pauseOnMotionless) startMotionlessCountdown(geofence.motionlessTimeoutMinutes)
+        if (geofence.heartbeatEnabled) startHeartbeat(geofence.heartbeatIntervalMinutes)
 
         profileManager.clearSpeedBuffer()
 
@@ -621,6 +642,7 @@ class LocationForegroundService : Service() {
         unregisterWifiPause()
         cancelMotionlessCountdown()
         clearMotionlessPauseState()
+        cancelHeartbeat()
 
         val anchorJob = exitedGeofence?.let { saveAnchorPoint(it) }
 
@@ -743,6 +765,107 @@ class LocationForegroundService : Service() {
         isMotionlessPaused = false
         dbHelper.saveSetting("pause_zone_motionless_active", "false")
         if (!profileManager.isStationary) motionDetector?.disarm()
+    }
+
+    /**
+     * Starts a periodic heartbeat that sends a location update to the server
+     * at a relaxed interval while paused in a geofence zone.
+     */
+    private fun startHeartbeat(intervalMinutes: Int) {
+        heartbeatJob?.cancel()
+        AppLogger.d(TAG, "Heartbeat started: ${intervalMinutes}min interval")
+        heartbeatJob = serviceScope?.launch {
+            while (isActive && insidePauseZone) {
+                delay(intervalMinutes * 60_000L)
+                if (!insidePauseZone) break
+                sendHeartbeatLocation()
+            }
+        }
+    }
+
+    private fun cancelHeartbeat() {
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+    }
+
+    /**
+     * Requests a single fresh GPS fix with a 30-second timeout.
+     * Falls back to [lastKnownLocation] if no fix arrives in time.
+     */
+    private suspend fun requestFreshLocation(): android.location.Location? =
+        withTimeoutOrNull(30_000L) {
+            suspendCancellableCoroutine { cont ->
+                val callback = object : LocationUpdateCallback {
+                    override fun onLocationUpdate(location: android.location.Location) {
+                        locationProvider.removeLocationUpdates(this)
+                        if (cont.isActive) cont.resume(location)
+                    }
+                }
+                cont.invokeOnCancellation { locationProvider.removeLocationUpdates(callback) }
+                locationProvider.requestLocationUpdates(
+                    intervalMs = 1000L,
+                    minDistanceMeters = 0f,
+                    looper = android.os.Looper.getMainLooper(),
+                    callback = callback
+                )
+            }
+        }
+
+    private suspend fun sendHeartbeatLocation() {
+        if (config.endpoint.isBlank() || !networkManager.isNetworkAvailable()) {
+            AppLogger.d(TAG, "Heartbeat skipped: no endpoint or no network")
+            return
+        }
+
+        val location = withContext(Dispatchers.Main) { requestFreshLocation() } ?: lastKnownLocation
+
+        if (location == null) {
+            AppLogger.d(TAG, "Heartbeat skipped: no location available")
+            return
+        }
+
+        lastKnownLocation = location
+
+        val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
+        val timestampSec = System.currentTimeMillis() / 1000
+        val currentFieldMap = fieldMap ?: emptyMap()
+
+        val payload = payloadBuilder.buildPayload(
+            location,
+            battery,
+            batteryStatus,
+            if (config.apiFormat == NetworkManager.FORMAT_TRACCAR_JSON) emptyMap() else currentFieldMap,
+            timestampSec,
+            customFields
+        )
+
+        // Send immediately regardless of sync condition - the whole point of
+        // a heartbeat is keeping the device visible on the server.
+        val sent = networkManager.sendToEndpoint(
+            payload, config.endpoint, secureStorage.getAuthHeaders(),
+            config.httpMethod, config.apiFormat
+        )
+
+        if (sent) {
+            // Only persist to DB on successful send
+            val locationId = dbHelper.saveLocation(
+                latitude = location.latitude,
+                longitude = location.longitude,
+                accuracy = location.accuracy.toDouble(),
+                altitude = if (location.hasAltitude()) location.altitude.toInt() else null,
+                speed = 0.0,
+                bearing = 0.0,
+                battery = battery,
+                battery_status = batteryStatus,
+                timestamp = timestampSec,
+                endpoint = config.endpoint
+            )
+            dbHelper.markLocationSent(locationId)
+            LocationServiceModule.sendLocationEvent(location, battery, batteryStatus)
+            AppLogger.d(TAG, "Heartbeat sent: lat=${location.latitude}, lon=${location.longitude}")
+        } else {
+            AppLogger.d(TAG, "Heartbeat failed: server unreachable, will retry next cycle")
+        }
     }
 
     /**

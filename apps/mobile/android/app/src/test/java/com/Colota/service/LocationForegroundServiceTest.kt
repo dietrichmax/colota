@@ -90,6 +90,7 @@ class LocationForegroundServiceTest {
         mockkObject(LocationServiceModule)
         every { LocationServiceModule.sendLocationEvent(any(), any(), any()) } returns true
         every { LocationServiceModule.sendPauseZoneEvent(any(), any()) } returns true
+        every { LocationServiceModule.sendPauseZoneEvent(any(), any(), any()) } returns true
         every { LocationServiceModule.sendTrackingStoppedEvent(any()) } returns true
         every { LocationServiceModule.sendProfileSwitchEvent(any(), any()) } returns true
 
@@ -949,6 +950,56 @@ class LocationForegroundServiceTest {
             activeProfileName = any(),
             forceUpdate = true
         ) }
+        verify { LocationServiceModule.sendPauseZoneEvent(true, "Home", null) }
+    }
+
+    @Test
+    fun `recheckZone sends wifi pause reason when wifi paused in same zone`() {
+        val wifiGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true)
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", wifiGeofence)
+        setField("isWifiPaused", true)
+        setField("wifiCallback", mockk<android.net.ConnectivityManager.NetworkCallback>(relaxed = true))
+        val location = mockLocation(lat = 52.0, lon = 13.0)
+        every { geofenceHelper.getPauseZone(location) } returns wifiGeofence
+
+        invokeRecheckZoneWithLocation(location)
+
+        verify { LocationServiceModule.sendPauseZoneEvent(true, "Home", "wifi") }
+    }
+
+    @Test
+    fun `recheckZone sends motionless pause reason when motionless paused in same zone`() {
+        val motionlessGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true)
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", motionlessGeofence)
+        setField("isMotionlessPaused", true)
+        val location = mockLocation(lat = 52.0, lon = 13.0)
+        every { geofenceHelper.getPauseZone(location) } returns motionlessGeofence
+
+        invokeRecheckZoneWithLocation(location)
+
+        verify { LocationServiceModule.sendPauseZoneEvent(true, "Home", "motionless") }
+    }
+
+    @Test
+    fun `recheckZone sends wifi reason when both wifi and motionless paused`() {
+        val bothGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true, pauseOnMotionless = true)
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", bothGeofence)
+        setField("isWifiPaused", true)
+        setField("isMotionlessPaused", true)
+        setField("wifiCallback", mockk<android.net.ConnectivityManager.NetworkCallback>(relaxed = true))
+        setField("motionlessJob", mockk<Job>(relaxed = true))
+        val location = mockLocation(lat = 52.0, lon = 13.0)
+        every { geofenceHelper.getPauseZone(location) } returns bothGeofence
+
+        invokeRecheckZoneWithLocation(location)
+
+        verify { LocationServiceModule.sendPauseZoneEvent(true, "Home", "wifi") }
     }
 
     @Test

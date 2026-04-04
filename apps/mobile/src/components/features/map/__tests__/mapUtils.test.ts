@@ -254,7 +254,9 @@ describe("buildGeofencesGeoJSON", () => {
     pauseTracking: true,
     pauseOnWifi: false,
     pauseOnMotionless: false,
-    motionlessTimeoutMinutes: 10
+    motionlessTimeoutMinutes: 10,
+    heartbeatEnabled: false,
+    heartbeatIntervalMinutes: 15
   }
 
   it("returns empty collections for no geofences", () => {
