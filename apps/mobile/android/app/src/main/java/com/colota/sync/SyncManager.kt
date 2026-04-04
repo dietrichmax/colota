@@ -235,8 +235,9 @@ class SyncManager(
                 val results = chunk.map { item ->
                     async {
                         try {
+                            val itemPayload = JSONObject(item.payload)
                             val success = networkManager.sendToEndpoint(
-                                JSONObject(item.payload),
+                                itemPayload,
                                 currentEndpoint,
                                 currentAuthHeaders,
                                 currentHttpMethod,

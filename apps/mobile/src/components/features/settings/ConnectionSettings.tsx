@@ -270,6 +270,12 @@ export function ConnectionSettings({
                   HTTP only allowed for private IPs / localhost
                 </Text>
               )}
+
+              {endpointInput.includes("%") && (
+                <Text style={[styles.endpointHint, { color: colors.textSecondary }]}>
+                  Variables: %DATE, %YEAR, %MONTH, %DAY, %TIMESTAMP
+                </Text>
+              )}
             </View>
 
             <Button

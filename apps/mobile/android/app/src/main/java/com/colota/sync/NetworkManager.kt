@@ -15,6 +15,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * Handles all outgoing network communication for the tracking engine.
@@ -84,10 +87,12 @@ class NetworkManager(private val context: Context) {
             return@withContext false
         }
 
+        val resolvedEndpoint = resolveUrlVariables(endpoint, payload)
+
         val url = try {
-            URL(endpoint)
+            URL(resolvedEndpoint)
         } catch (e: Exception) {
-            AppLogger.e(TAG, "Invalid URL: $endpoint")
+            AppLogger.e(TAG, "Invalid URL: $resolvedEndpoint")
             return@withContext false
         }
 
@@ -111,7 +116,7 @@ class NetworkManager(private val context: Context) {
         val targetUrl = if (isGet) {
             val query = buildQueryString(transformedPayload)
             val separator = if (url.query != null) "&" else "?"
-            URL("$endpoint$separator$query")
+            URL("$resolvedEndpoint$separator$query")
         } else {
             url
         }
@@ -136,7 +141,7 @@ class NetworkManager(private val context: Context) {
 
             if (BuildConfig.DEBUG) {
                 AppLogger.d(TAG, "=== HTTP REQUEST ===")
-                AppLogger.d(TAG, "Endpoint: ${if (isGet) targetUrl else endpoint}")
+                AppLogger.d(TAG, "Endpoint: ${if (isGet) targetUrl else resolvedEndpoint}")
                 AppLogger.d(TAG, "Method: ${connection.requestMethod}")
                 AppLogger.d(TAG, "Headers:")
                 connection.requestProperties.forEach { (key, values) ->
@@ -286,6 +291,27 @@ class NetworkManager(private val context: Context) {
             val deviceId = flat.optString("id", "").ifBlank { flat.optString("device_id", "colota") }
             put("device_id", deviceId)
         }
+    }
+
+    /**
+     * Resolves template variables in the endpoint URL.
+     * Uses the location's timestamp, not wall clock time,
+     * so queued sends get the correct date.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal fun resolveUrlVariables(endpoint: String, payload: JSONObject): String {
+        if (!endpoint.contains('%')) return endpoint
+
+        val tst = payload.optLong("tst", 0L)
+        val timestamp = if (tst > 0) tst else System.currentTimeMillis() / 1000
+        val zoned = Instant.ofEpochSecond(timestamp).atZone(ZoneId.systemDefault())
+
+        return endpoint
+            .replace("%DATE", zoned.format(DateTimeFormatter.ISO_LOCAL_DATE))
+            .replace("%YEAR", zoned.year.toString())
+            .replace("%MONTH", String.format(java.util.Locale.ROOT, "%02d", zoned.monthValue))
+            .replace("%DAY", String.format(java.util.Locale.ROOT, "%02d", zoned.dayOfMonth))
+            .replace("%TIMESTAMP", timestamp.toString())
     }
 
     private fun buildQueryString(payload: JSONObject): String {
