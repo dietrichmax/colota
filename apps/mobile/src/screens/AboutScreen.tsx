@@ -7,7 +7,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react"
 import { Text, StyleSheet, View, ScrollView, Linking, Pressable, Image } from "react-native"
 import { ScreenProps, ThemeColors } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
-import { ChevronRight, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check } from "lucide-react-native"
+import { ExternalLink, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check } from "lucide-react-native"
 import { fonts } from "../styles/typography"
 import { Card, Container, Divider, SectionTitle, Footer } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
@@ -72,7 +72,7 @@ const LinkRow = ({
       <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
       <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>{subtitle}</Text>
     </View>
-    <ChevronRight size={18} color={colors.textLight} />
+    <ExternalLink size={18} color={colors.textLight} />
   </Pressable>
 )
 
@@ -327,7 +327,7 @@ export function AboutScreen({}: ScreenProps) {
                   Self-hosted map tile server - configure your own
                 </Text>
               </View>
-              <ChevronRight size={18} color={colors.textLight} />
+              <ExternalLink size={18} color={colors.textLight} />
             </Pressable>
             <Divider />
             <Pressable
@@ -340,7 +340,7 @@ export function AboutScreen({}: ScreenProps) {
                   Map data by OpenStreetMap contributors
                 </Text>
               </View>
-              <ChevronRight size={18} color={colors.textLight} />
+              <ExternalLink size={18} color={colors.textLight} />
             </Pressable>
           </Card>
         </View>
