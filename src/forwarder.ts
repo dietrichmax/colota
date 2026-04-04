@@ -5,8 +5,9 @@ import { maskUrl } from "./utils"
 const FORWARD_TIMEOUT = Number(process.env.FORWARD_TIMEOUT_MS) || 30_000
 
 export async function forwardToAll(targets: Target[], payload: ColotaPayload): Promise<void> {
+  const filtered = targets.filter((t) => !t.filter_tid || payload.tid === t.filter_tid)
   await Promise.allSettled(
-    targets.map(async (target) => {
+    filtered.map(async (target) => {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), FORWARD_TIMEOUT)
       try {
@@ -39,8 +40,6 @@ export async function forwardToAll(targets: Target[], payload: ColotaPayload): P
         if (!res.ok) {
           const text = (await res.text()).slice(0, 200)
           console.warn(`[forwarder] ${maskUrl(target.url)} responded ${res.status}: ${text}`)
-        } else {
-          console.log(`[forwarder] ${maskUrl(target.url)} responded ${res.status}`)
         }
       } catch (err) {
         console.error(`[forwarder] Failed to reach ${maskUrl(target.url)}:`, err)

@@ -118,9 +118,12 @@ app.post("/locations", authenticate, async (req: Request, res: Response): Promis
     return
   }
 
+  const payload = body as unknown as ColotaPayload
+  const forwarded = targets.filter((t) => !t.filter_tid || payload.tid === t.filter_tid).length
+
   // Fire-and-forget: respond immediately, forward in background
-  res.status(200).json({ message: "Accepted", forwarded: targets.length })
-  forwardToAll(targets, body as unknown as ColotaPayload)
+  res.status(200).json({ message: "Accepted", forwarded })
+  forwardToAll(targets, payload)
 })
 
 

@@ -10,6 +10,7 @@ export interface Target {
   tid?: string   // tracker ID for owntracks type (default: "CL")
   user?: string  // X-Limit-U header for owntracks type (default: "colota")
   device?: string // X-Limit-D header for owntracks type (default: "phone")
+  filter_tid?: string // only forward to this target when payload tid matches
 }
 
 export function loadTargets(): Target[] {
@@ -37,7 +38,8 @@ export function loadTargets(): Target[] {
     const tid = process.env[`TARGET_${i}_TID`]
     const user = process.env[`TARGET_${i}_USER`]
     const device = process.env[`TARGET_${i}_DEVICE`]
-    targets.push({ url, type, ...(auth ? { auth } : {}), ...(method ? { method } : {}), ...(tid ? { tid } : {}), ...(user ? { user } : {}), ...(device ? { device } : {}) })
+    const filter_tid = process.env[`TARGET_${i}_FILTER_TID`]
+    targets.push({ url, type, ...(auth ? { auth } : {}), ...(method ? { method } : {}), ...(tid ? { tid } : {}), ...(user ? { user } : {}), ...(device ? { device } : {}), ...(filter_tid ? { filter_tid } : {}) })
   }
   return targets
 }

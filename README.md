@@ -144,6 +144,29 @@ TARGET_6_TYPE=owntracks
 | `TARGET_n_TID` | `CL` | Tracker ID for `owntracks` / device ID for `traccar` |
 | `TARGET_n_USER` | `colota` | `X-Limit-U` header for `owntracks` targets |
 | `TARGET_n_DEVICE` | `phone` | `X-Limit-D` header for `owntracks` targets |
+| `TARGET_n_FILTER_TID` | - | Only forward to this target when payload `tid` matches this value |
+
+## Multi-user / TID routing
+
+When multiple phones share one forwarder instance, use `FILTER_TID` to route each phone's data to the correct target. Set a unique `tid` custom field in each phone's Colota app (Settings → API Settings → Custom Fields → add key `tid`), then configure targets with `FILTER_TID` to match:
+
+```env
+# Phone 1 → Dawarich user 1
+TARGET_1_URL=https://dawarich.example.com/api/v1/owntracks/points?api_key=user1-key
+TARGET_1_TYPE=owntracks
+TARGET_1_FILTER_TID=phone1
+
+# Phone 2 → Dawarich user 2
+TARGET_2_URL=https://dawarich.example.com/api/v1/owntracks/points?api_key=user2-key
+TARGET_2_TYPE=owntracks
+TARGET_2_FILTER_TID=phone2
+
+# Home Assistant — receives all phones (no FILTER_TID set)
+TARGET_3_URL=http://homeassistant:8123/api/webhook/your-webhook-id
+TARGET_3_TYPE=owntracks
+```
+
+Targets without `FILTER_TID` receive data from all phones. Targets with `FILTER_TID` only receive data when the payload's `tid` matches.
 
 ## Security
 
