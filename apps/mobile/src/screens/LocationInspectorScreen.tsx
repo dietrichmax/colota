@@ -46,6 +46,7 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
   // Calendar state
   const [daysWithData, setDaysWithData] = useState<Set<string>>(new Set())
   const daysCache = useRef<Map<string, Set<string>>>(new Map())
+  const distanceCache = useRef<Map<string, Map<string, number>>>(new Map())
 
   // Trip segmentation from already-fetched day data
   const trips = useMemo(() => segmentTrips(trackLocations), [trackLocations])
@@ -76,7 +77,7 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
     navigation.setOptions({ headerRight })
   }, [navigation, headerRight])
 
-  /** Fetch days-with-data for a month into cache; returns the Set. */
+  /** Fetch days-with-data and daily distances for a month into cache. */
   const prefetchMonth = useCallback(async (year: number, month: number): Promise<Set<string>> => {
     const key = `${year}-${String(month + 1).padStart(2, "0")}`
     if (daysCache.current.has(key)) return daysCache.current.get(key)!
@@ -85,9 +86,17 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
       const end = new Date(year, month + 1, 0, 23, 59, 59)
       const startTs = Math.floor(start.getTime() / 1000)
       const endTs = Math.floor(end.getTime() / 1000)
-      const days = await NativeLocationService.getDaysWithData(startTs, endTs)
+      const [days, stats] = await Promise.all([
+        NativeLocationService.getDaysWithData(startTs, endTs),
+        NativeLocationService.getDailyStats(startTs, endTs)
+      ])
       const daySet = new Set(days)
       daysCache.current.set(key, daySet)
+      const distances = new Map<string, number>()
+      for (const stat of stats) {
+        if (stat.distanceMeters > 0) distances.set(stat.day, stat.distanceMeters)
+      }
+      distanceCache.current.set(key, distances)
       return daySet
     } catch (err) {
       logger.error("[LocationHistory] Failed to fetch days with data:", err)
@@ -194,6 +203,9 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
         distance={dailyDistance}
         colors={colors}
         daysWithData={daysWithData}
+        dayDistances={distanceCache.current.get(
+          `${mapDate.getFullYear()}-${String(mapDate.getMonth() + 1).padStart(2, "0")}`
+        )}
         onMonthChange={fetchDaysWithData}
         onPrefetchMonth={prefetchMonth}
       />

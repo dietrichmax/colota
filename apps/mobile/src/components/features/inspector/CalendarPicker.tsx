@@ -8,6 +8,7 @@ import { View, Text, Pressable, StyleSheet, LayoutAnimation } from "react-native
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
+import { formatDistance } from "../../../utils/geo"
 
 interface CalendarPickerProps {
   date: Date
@@ -16,6 +17,7 @@ interface CalendarPickerProps {
   distance?: string
   colors: ThemeColors
   daysWithData: Set<string>
+  dayDistances?: Map<string, number>
   onMonthChange: (year: number, month: number) => void
   onPrefetchMonth?: (year: number, month: number) => void
 }
@@ -37,6 +39,7 @@ export function CalendarPicker({
   distance,
   colors,
   daysWithData,
+  dayDistances,
   onMonthChange,
   onPrefetchMonth
 }: CalendarPickerProps) {
@@ -237,6 +240,7 @@ export function CalendarPicker({
 
               const dateKey = formatDateKey(viewYear, viewMonth, cell.day)
               const hasData = daysWithData.has(dateKey)
+              const dist = dayDistances?.get(dateKey)
               const cellDate = new Date(viewYear, viewMonth, cell.day)
               const isSelected = isSameDay(cellDate, date)
               const isCellToday = isSameDay(cellDate, today)
@@ -259,15 +263,19 @@ export function CalendarPicker({
                     >
                       {cell.day}
                     </Text>
-                    {hasData && (
-                      <View
-                        style={[
-                          styles.dataDot,
-                          { backgroundColor: isSelected ? colors.textOnPrimary : colors.primary }
-                        ]}
-                      />
-                    )}
                   </View>
+                  {dist != null && dist > 0 ? (
+                    <Text
+                      style={[styles.dayDist, { color: isSelected ? colors.primary : colors.textLight }]}
+                      numberOfLines={1}
+                    >
+                      {formatDistance(dist)}
+                    </Text>
+                  ) : hasData ? (
+                    <View
+                      style={[styles.dataDot, { backgroundColor: isSelected ? colors.primary : colors.textLight }]}
+                    />
+                  ) : null}
                 </Pressable>
               )
             })}
@@ -365,7 +373,7 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width: "14.28%",
-    aspectRatio: 1,
+    paddingVertical: 4,
     alignItems: "center",
     justifyContent: "center"
   },
@@ -380,10 +388,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     ...fonts.regular
   },
+  dayDist: {
+    fontSize: 9,
+    ...fonts.medium,
+    marginTop: 1
+  },
   dataDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    marginTop: 1
+    marginTop: 2
   }
 })
