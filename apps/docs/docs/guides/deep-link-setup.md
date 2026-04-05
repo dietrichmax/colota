@@ -2,9 +2,25 @@
 sidebar_position: 7
 ---
 
+import DeepLinkGenerator from '@site/src/components/DeepLinkGenerator'
+
 # Deep Link Setup
 
 Configure Colota instantly using a `colota://setup` URL. Generate a link or QR code with your server settings and share it with users - no manual typing required.
+
+## Link Generator
+
+Fill in the settings you want to configure. Only the fields you set will be included - everything else keeps its current value on the device. All processing happens in your browser - no data is sent to any server.
+
+<DeepLinkGenerator />
+
+## How It Works
+
+1. User taps the link or scans a QR code
+2. Colota opens and shows a confirmation screen listing all settings that will be applied
+3. Sensitive values (passwords, tokens) are masked in the preview
+4. User taps **Apply Configuration** to save or **Cancel** to discard
+5. Settings are persisted and the app navigates to the Dashboard
 
 ## URL Format
 
@@ -14,49 +30,7 @@ colota://setup?config=BASE64_ENCODED_JSON
 
 The `config` parameter is a base64-encoded JSON object. Only include the settings you want to change - everything else keeps its current value.
 
-## Supported Parameters
-
-```json
-{
-  "endpoint": "https://my-server.com/api/locations",
-  "interval": 10,
-  "distance": 5,
-  "syncInterval": 300,
-  "retryInterval": 30,
-  "accuracyThreshold": 50,
-  "filterInaccurateLocations": true,
-  "isOfflineMode": false,
-  "syncCondition": "any",
-  "syncSsid": "",
-  "apiTemplate": "owntracks",
-  "httpMethod": "POST",
-  "fieldMap": {
-    "lat": "lat",
-    "lon": "lon",
-    "acc": "acc",
-    "alt": "alt",
-    "vel": "vel",
-    "batt": "batt",
-    "bs": "bs",
-    "tst": "tst",
-    "bear": "cog"
-  },
-  "customFields": [
-    { "key": "_type", "value": "location" },
-    { "key": "tid", "value": "AA" }
-  ],
-  "auth": {
-    "type": "bearer",
-    "bearerToken": "my-secret-token-123"
-  },
-  "customHeaders": {
-    "X-Api-Key": "abc123",
-    "CF-Access-Client-Id": "my-cf-id"
-  }
-}
-```
-
-### Parameter Reference
+## Parameter Reference
 
 | Parameter | Type | Description |
 | --- | --- | --- |
@@ -64,7 +38,6 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 | `interval` | number | GPS polling interval in seconds (must be > 0) |
 | `distance` | number | Minimum movement in meters before recording a new location |
 | `syncInterval` | number | Batch sync interval in seconds (0 = instant) |
-| `retryInterval` | number | Seconds between retry attempts |
 | `accuracyThreshold` | number | Discard locations less accurate than this (meters) |
 | `filterInaccurateLocations` | boolean | Enable accuracy filtering |
 | `isOfflineMode` | boolean | Store locally only, never sync |
@@ -80,7 +53,7 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 | `auth.bearerToken` | string | Token for Bearer Auth |
 | `customHeaders` | object | Custom HTTP headers (e.g. Cloudflare Access) |
 
-## Generating a Setup Link
+## Generating Links Programmatically
 
 ### Using Node.js
 
@@ -106,25 +79,6 @@ config = {'endpoint': 'https://my-server.com/api/locations', 'interval': 10}
 encoded = base64.b64encode(json.dumps(config).encode()).decode()
 print(f'colota://setup?config={encoded}')
 "
-```
-
-### QR Code
-
-Generate a QR code from the `colota://setup?config=...` URL using any QR generator. When scanned, Android opens Colota and navigates directly to the confirmation screen.
-
-## How It Works
-
-1. User taps the link or scans a QR code
-2. Colota opens and shows a confirmation screen listing all settings that will be applied
-3. Sensitive values (passwords, tokens) are masked in the preview
-4. User taps **Apply Configuration** to save or **Cancel** to discard
-5. Settings are persisted and the app navigates to the Dashboard
-
-## Testing with ADB
-
-```bash
-adb shell am start -a android.intent.action.VIEW \
-  -d "colota://setup?config=BASE64_HERE" com.Colota
 ```
 
 ## Security Notes
