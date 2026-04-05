@@ -7,6 +7,9 @@ import React, { useState, useEffect, useContext, createContext, ReactNode, useMe
 import { Appearance, ColorSchemeName } from "react-native"
 import { ThemeColors, ThemeMode } from "../types/global"
 import { darkColors, lightColors } from "../styles/colors"
+import NativeLocationService from "../services/NativeLocationService"
+
+const THEME_MODE_KEY = "themeMode"
 
 /**
  * Extended theme context with additional utilities
@@ -46,6 +49,16 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [hasManualOverride, setHasManualOverride] = useState(false)
   const [mode, setMode] = useState<ThemeMode>(() => normalizeScheme(Appearance.getColorScheme()))
 
+  // Restore persisted theme preference on mount
+  useEffect(() => {
+    NativeLocationService.getSetting(THEME_MODE_KEY).then((saved) => {
+      if (saved === "light" || saved === "dark") {
+        setHasManualOverride(true)
+        setMode(saved)
+      }
+    })
+  }, [])
+
   // Listen to system theme changes
   useEffect(() => {
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
@@ -62,7 +75,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
    */
   const toggleTheme = useCallback(() => {
     setHasManualOverride(true)
-    setMode((prev: string) => (prev === "light" ? "dark" : "light"))
+    setMode((prev: string) => {
+      const next = prev === "light" ? "dark" : "light"
+      NativeLocationService.saveSetting(THEME_MODE_KEY, next)
+      return next
+    })
   }, [])
 
   const colors = useMemo(() => (mode === "dark" ? darkColors : lightColors), [mode])

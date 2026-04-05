@@ -1,8 +1,17 @@
 import React from "react"
-import { renderHook, act } from "@testing-library/react-native"
+import { renderHook, act, waitFor } from "@testing-library/react-native"
 import { Appearance } from "react-native"
 
+import NativeLocationService from "../../services/NativeLocationService"
 import { ThemeProvider, useTheme } from "../useTheme"
+
+jest.mock("../../services/NativeLocationService", () => ({
+  __esModule: true,
+  default: {
+    getSetting: jest.fn().mockResolvedValue(null),
+    saveSetting: jest.fn().mockResolvedValue(undefined)
+  }
+}))
 
 let appearanceListener: ((prefs: { colorScheme: string | null }) => void) | null = null
 
@@ -17,6 +26,8 @@ const wrapper = ({ children }: { children: React.ReactNode }) => <ThemeProvider>
 beforeEach(() => {
   appearanceListener = null
   ;(Appearance.getColorScheme as jest.Mock).mockReturnValue("light")
+  ;(NativeLocationService.getSetting as jest.Mock).mockResolvedValue(null)
+  ;(NativeLocationService.saveSetting as jest.Mock).mockClear()
 })
 
 describe("useTheme", () => {
@@ -105,6 +116,38 @@ describe("useTheme", () => {
     })
 
     expect(result.current.mode).toBe("dark")
+  })
+
+  it("persists theme mode when toggled", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper })
+
+    act(() => {
+      result.current.toggleTheme()
+    })
+
+    expect(NativeLocationService.saveSetting).toHaveBeenCalledWith("themeMode", "dark")
+  })
+
+  it("restores persisted dark theme on mount", async () => {
+    ;(NativeLocationService.getSetting as jest.Mock).mockResolvedValue("dark")
+
+    const { result } = renderHook(() => useTheme(), { wrapper })
+
+    await waitFor(() => {
+      expect(result.current.mode).toBe("dark")
+    })
+    expect(result.current.isDark).toBe(true)
+  })
+
+  it("restores persisted light theme on mount", async () => {
+    ;(Appearance.getColorScheme as jest.Mock).mockReturnValue("dark")
+    ;(NativeLocationService.getSetting as jest.Mock).mockResolvedValue("light")
+
+    const { result } = renderHook(() => useTheme(), { wrapper })
+
+    await waitFor(() => {
+      expect(result.current.mode).toBe("light")
+    })
   })
 
   it("provides different color objects for light and dark modes", () => {
