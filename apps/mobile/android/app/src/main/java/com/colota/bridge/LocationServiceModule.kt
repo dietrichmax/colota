@@ -105,7 +105,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
         @Volatile
         private var activeProfileName: String? = null
-        
+
         /** Skips when app is backgrounded to avoid unnecessary bridge overhead. */
         @JvmStatic
         fun sendLocationEvent(location: android.location.Location, battery: Int, batteryStatus: Int): Boolean {

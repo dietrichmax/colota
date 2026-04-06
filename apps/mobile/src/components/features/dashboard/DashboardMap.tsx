@@ -7,6 +7,7 @@ import React, { useRef, useEffect, useMemo, useCallback, useState } from "react"
 import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image } from "react-native"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
+import { useCoords } from "../../../contexts/TrackingProvider"
 import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
@@ -19,7 +20,6 @@ import icon from "../../../assets/icons/icon.png"
 import { logger } from "../../../utils/logger"
 
 type Props = {
-  coords: LocationCoords | null
   tracking: boolean
   activeZoneName: string | null
   pauseReason: string | null
@@ -31,14 +31,8 @@ const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
   return c !== null && c.latitude !== 0 && c.longitude !== 0
 }
 
-export function DashboardMap({
-  coords,
-  tracking,
-  activeZoneName,
-  pauseReason,
-  activeProfileName,
-  isBatteryCritical
-}: Props) {
+export function DashboardMap({ tracking, activeZoneName, pauseReason, activeProfileName, isBatteryCritical }: Props) {
+  const coords = useCoords()
   const mapRef = useRef<ColotaMapRef>(null)
   const { colors } = useTheme()
   const [geofences, setGeofences] = useState<any[]>([])
@@ -75,9 +69,8 @@ export function DashboardMap({
   // Uses ref to avoid re-triggering when isCentered flips (which would
   // override the setCamera zoom from handleCenterMe with a pan-only moveTo).
   useEffect(() => {
-    if (coords && isCenteredRef.current && mapRef.current?.camera) {
-      mapRef.current.camera.moveTo([coords.longitude, coords.latitude], MAP_ANIMATION_DURATION_MS)
-    }
+    if (!coords || !isCenteredRef.current || !mapRef.current?.camera) return
+    mapRef.current.camera.moveTo([coords.longitude, coords.latitude], MAP_ANIMATION_DURATION_MS)
   }, [coords])
 
   const handleCenterMe = useCallback(() => {

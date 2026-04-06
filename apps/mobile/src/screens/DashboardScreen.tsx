@@ -8,7 +8,7 @@ import { StyleSheet, View, ScrollView, DeviceEventEmitter, Animated } from "reac
 import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
-import { useTracking, useCoords } from "../contexts/TrackingProvider"
+import { useTracking } from "../contexts/TrackingProvider"
 import { useFocusEffect } from "@react-navigation/native"
 import {
   Button,
@@ -25,7 +25,6 @@ import { logger } from "../utils/logger"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
   const { settings, tracking, startTracking, stopTracking, setSettings, activeProfileName } = useTracking()
-  const coords = useCoords()
   const { colors } = useTheme()
 
   const [stats, setStats] = useState<DatabaseStats>({
@@ -167,7 +166,6 @@ export function DashboardScreen({ navigation }: ScreenProps) {
             onTouchEnd={() => setScrollEnabled(true)}
           >
             <DashboardMap
-              coords={coords}
               tracking={tracking}
               activeZoneName={currentPauseZone}
               pauseReason={pauseReason}
@@ -209,9 +207,9 @@ export function DashboardScreen({ navigation }: ScreenProps) {
           )}
 
           {/* Coordinates */}
-          {tracking && coords && (
+          {tracking && (
             <View style={styles.metricsSection}>
-              <CoordinateDisplay coords={coords} />
+              <CoordinateDisplay />
             </View>
           )}
 

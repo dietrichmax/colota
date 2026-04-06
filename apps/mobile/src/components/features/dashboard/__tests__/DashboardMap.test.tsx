@@ -53,6 +53,11 @@ jest.mock("../../../../services/NativeLocationService", () => ({
   getSetting: jest.fn().mockResolvedValue(null)
 }))
 
+const mockCoords = { latitude: 48.1, longitude: 11.5, accuracy: 10 }
+jest.mock("../../../../contexts/TrackingProvider", () => ({
+  useCoords: () => mockCoords
+}))
+
 jest.mock("../../../../assets/icons/icon.png", () => "mock-icon")
 
 jest.mock("../../map/MapCenterButton", () => {
@@ -64,10 +69,7 @@ jest.mock("../../map/MapCenterButton", () => {
 import { DashboardMap } from "../DashboardMap"
 
 describe("DashboardMap info cards", () => {
-  const validCoords = { latitude: 48.1, longitude: 11.5, accuracy: 10 }
-
   const baseProps = {
-    coords: validCoords,
     tracking: true,
     activeZoneName: null as string | null,
     pauseReason: null as string | null,
@@ -115,7 +117,7 @@ describe("DashboardMap info cards", () => {
   })
 
   it("shows Tracking Disabled when not tracking", () => {
-    const { getByText } = render(<DashboardMap {...baseProps} tracking={false} coords={null} />)
+    const { getByText } = render(<DashboardMap {...baseProps} tracking={false} />)
 
     expect(getByText("Tracking Disabled")).toBeTruthy()
   })

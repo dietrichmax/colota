@@ -108,11 +108,10 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
     return () => listener.remove()
   }, [loadGeofences])
 
-  // Auto-center camera when position changes (ref avoids overriding setCamera zoom)
+  // Auto-center camera when position changes (ref avoids overriding setCamera zoom).
   useEffect(() => {
-    if (coords && isCenteredRef.current && tracking && mapRef.current?.camera) {
-      mapRef.current.camera.moveTo([coords.longitude, coords.latitude], MAP_ANIMATION_DURATION_MS)
-    }
+    if (!coords || !isCenteredRef.current || !tracking || !mapRef.current?.camera) return
+    mapRef.current.camera.moveTo([coords.longitude, coords.latitude], MAP_ANIMATION_DURATION_MS)
   }, [coords, tracking])
 
   const handleMapPress = useCallback(

@@ -15,7 +15,7 @@ type DatabaseStatisticsProps = {
   stats: DatabaseStats
 }
 
-export function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
+export const DatabaseStatistics = React.memo(function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
   const { settings } = useTracking()
   const isOfflineMode = settings.isOfflineMode
   const { colors } = useTheme()
@@ -63,7 +63,7 @@ export function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
       </View>
     </>
   )
-}
+})
 
 const styles = StyleSheet.create({
   metricsSection: {

@@ -139,12 +139,16 @@ export function CalendarPicker({
     return new Date(viewYear, viewMonth, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" })
   }, [viewYear, viewMonth])
 
-  const formatted = date.toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  })
+  const formatted = useMemo(
+    () =>
+      date.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      }),
+    [date]
+  )
 
   const isFutureMonth =
     viewYear > today.getFullYear() || (viewYear === today.getFullYear() && viewMonth >= today.getMonth())
