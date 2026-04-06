@@ -64,8 +64,12 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
   useEffect(() => {
     if (!bounds || !mapReady || !mapRef.current?.camera) return
     if (fitVersion === fittedVersionRef.current) return
-    fittedVersionRef.current = fitVersion ?? 0
-    mapRef.current.camera.fitBounds(bounds.ne, bounds.sw, [60, 60, 60, 60], MAP_ANIMATION_DURATION_MS)
+    // Defer to next frame so the map's GL context is fully ready after onDidFinishLoadingMap
+    requestAnimationFrame(() => {
+      if (!mapRef.current?.camera) return
+      fittedVersionRef.current = fitVersion ?? 0
+      mapRef.current.camera.fitBounds(bounds.ne, bounds.sw, [60, 60, 60, 60], MAP_ANIMATION_DURATION_MS)
+    })
   }, [bounds, mapReady, fitVersion])
 
   const handleMapReady = useCallback(() => setMapReady(true), [])
