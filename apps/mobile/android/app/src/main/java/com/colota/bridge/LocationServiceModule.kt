@@ -707,11 +707,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                                     promise.resolve(null)
                                 } else {
                                     val db = DatabaseHelper.getInstance(reactApplicationContext)
-                                    val settings = withContext(Dispatchers.IO) { db.loadSettings() }
-                                    val reason = when {
-                                        settings["pause_zone_wifi_active"]?.toBoolean() == true -> "wifi"
-                                        settings["pause_zone_motionless_active"]?.toBoolean() == true -> "motionless"
-                                        else -> null
+                                    val reason = withContext(Dispatchers.IO) {
+                                        when {
+                                            db.getSetting("pause_zone_wifi_active") == "true" -> "wifi"
+                                            db.getSetting("pause_zone_motionless_active") == "true" -> "motionless"
+                                            else -> null
+                                        }
                                     }
                                     val result = Arguments.createMap().apply {
                                         putString("zoneName", zone.name)
