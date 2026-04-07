@@ -99,11 +99,13 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
   const updatePauseZone = useCallback(async () => {
     try {
-      const zoneName = await NativeLocationService.checkCurrentPauseZone()
-      setCurrentPauseZone(zoneName)
+      const result = await NativeLocationService.checkCurrentPauseZone()
+      setCurrentPauseZone(result?.zoneName ?? null)
+      setPauseReason(result?.pauseReason ?? null)
     } catch (err) {
       logger.error("[Dashboard] Failed to update pause zone:", err)
       setCurrentPauseZone(null)
+      setPauseReason(null)
     }
   }, [])
 

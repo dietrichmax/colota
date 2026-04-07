@@ -638,7 +638,6 @@ class LocationForegroundService : Service() {
         dbHelper.saveSetting("pause_zone_name", "")
         val wasWifiPaused = isWifiPaused
         val wasMotionlessPaused = isMotionlessPaused
-        isWifiPaused = false
         unregisterWifiPause()
         cancelMotionlessCountdown()
         clearMotionlessPauseState()
@@ -683,6 +682,7 @@ class LocationForegroundService : Service() {
                 unmeteredNetworkCount++
                 if (!isWifiPaused) {
                     isWifiPaused = true
+                    dbHelper.saveSetting("pause_zone_wifi_active", "true")
                     stopLocationUpdates()
                     updateNotification(forceUpdate = true)
                     LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, "wifi")
@@ -700,6 +700,7 @@ class LocationForegroundService : Service() {
                     withContext(Dispatchers.Main) {
                         if (isWifiPaused && unmeteredNetworkCount == 0) {
                             isWifiPaused = false
+                            dbHelper.saveSetting("pause_zone_wifi_active", "false")
                             maybeResumeGps()
                             LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, if (isMotionlessPaused) "motionless" else null)
                             AppLogger.i(TAG, "GPS resumed after unmetered network lost")
@@ -722,6 +723,8 @@ class LocationForegroundService : Service() {
         wifiResumeJob?.cancel()
         wifiResumeJob = null
         unmeteredNetworkCount = 0
+        isWifiPaused = false
+        dbHelper.saveSetting("pause_zone_wifi_active", "false")
         val cb = wifiCallback ?: return
         wifiCallback = null
         try {
@@ -990,6 +993,7 @@ class LocationForegroundService : Service() {
         LocationServiceModule.sendTrackingStoppedEvent(reason)
         dbHelper.saveSetting("tracking_enabled", "false")
         dbHelper.saveSetting("pause_zone_name", "")
+        dbHelper.saveSetting("pause_zone_wifi_active", "false")
         dbHelper.saveSetting("pause_zone_motionless_active", "false")
 
         stopForeground(Service.STOP_FOREGROUND_DETACH)

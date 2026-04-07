@@ -703,7 +703,22 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                                 val zone = withContext(Dispatchers.IO) {
                                     geofenceHelper.getPauseZone(loc)
                                 }
-                                promise.resolve(zone?.name)
+                                if (zone == null) {
+                                    promise.resolve(null)
+                                } else {
+                                    val db = DatabaseHelper.getInstance(reactApplicationContext)
+                                    val settings = withContext(Dispatchers.IO) { db.loadSettings() }
+                                    val reason = when {
+                                        settings["pause_zone_wifi_active"]?.toBoolean() == true -> "wifi"
+                                        settings["pause_zone_motionless_active"]?.toBoolean() == true -> "motionless"
+                                        else -> null
+                                    }
+                                    val result = Arguments.createMap().apply {
+                                        putString("zoneName", zone.name)
+                                        putString("pauseReason", reason)
+                                    }
+                                    promise.resolve(result)
+                                }
                             } catch (e: Exception) {
                                 AppLogger.e(TAG, "Pause zone check failed", e)
                                 promise.resolve(null)

@@ -93,8 +93,8 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
   useEffect(() => {
     const checkPauseZone = async () => {
       try {
-        const zoneName = await NativeLocationService.checkCurrentPauseZone()
-        setCurrentPauseZone(zoneName)
+        const result = await NativeLocationService.checkCurrentPauseZone()
+        setCurrentPauseZone(result?.zoneName ?? null)
       } catch (err) {
         logger.error("[GeofenceScreen] Failed to check pause zone:", err)
       }

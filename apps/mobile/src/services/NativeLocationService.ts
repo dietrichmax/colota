@@ -339,9 +339,9 @@ class NativeLocationService {
 
   /**
    * Checks if device is currently inside a pause zone
-   * @returns Pause zone name or null
+   * @returns Pause zone info with name and reason, or null
    */
-  static async checkCurrentPauseZone(): Promise<string | null> {
+  static async checkCurrentPauseZone(): Promise<{ zoneName: string; pauseReason: string | null } | null> {
     this.ensureModule()
     return this.safeExecute(() => LocationServiceModule.checkCurrentPauseZone(), null, "checkCurrentPauseZone failed")
   }
