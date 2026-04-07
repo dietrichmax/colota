@@ -6,7 +6,7 @@
 import React from "react"
 import { Route } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
-import { MapActionButton } from "./MapActionButton"
+import { MapActionButton, mapActionStyles } from "./MapActionButton"
 
 interface Props {
   onPress: () => void
@@ -17,7 +17,7 @@ export function TrackToggleButton({ onPress, active }: Props) {
   const { colors } = useTheme()
 
   return (
-    <MapActionButton onPress={onPress} style={{ left: 16 }}>
+    <MapActionButton onPress={onPress} style={mapActionStyles.left}>
       <Route size={24} color={active ? colors.primary : colors.text} />
     </MapActionButton>
   )
