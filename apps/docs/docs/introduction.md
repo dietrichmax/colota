@@ -30,7 +30,7 @@ Colota has eighteen screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
-| **Dashboard** | Live map with current coordinates, tracking controls, database stats, and geofence status |
+| **Dashboard** | Live map with current coordinates, today's track overlay, tracking controls, database stats, and geofence status |
 | **Settings** | GPS polling interval, distance filter, sync strategy, offline mode, accuracy threshold, unit system, time format |
 | **API Config** | Endpoint field mapping with templates for Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or custom backends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |

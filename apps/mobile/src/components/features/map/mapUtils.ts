@@ -83,21 +83,29 @@ export interface TrackLocation {
   altitude?: number
 }
 
+interface TrackSegmentOptions {
+  skipIndices?: Set<number>
+  locationColors?: string[]
+  defaultColor?: string
+}
+
 /** Build per-segment LineString features with a pre-computed `color` property.
  *  Pass `skipIndices` to leave gaps between trips (indices where a new trip starts).
  *  Pass `locationColors` to override speed-based coloring with per-location colors. */
 export function buildTrackSegmentsGeoJSON(
   locations: TrackLocation[],
   colors: ThemeColors,
-  skipIndices?: Set<number>,
-  locationColors?: string[]
+  options?: TrackSegmentOptions
 ): GeoJSON.FeatureCollection {
+  const { skipIndices, locationColors, defaultColor } = options ?? {}
   const features: GeoJSON.Feature[] = []
   for (let i = 1; i < locations.length; i++) {
     if (skipIndices?.has(i)) continue
-    const color = locationColors
-      ? locationColors[i]
-      : getSpeedColor(((locations[i - 1].speed ?? 0) + (locations[i].speed ?? 0)) / 2, colors)
+    const color = defaultColor
+      ? defaultColor
+      : locationColors
+        ? locationColors[i]
+        : getSpeedColor(((locations[i - 1].speed ?? 0) + (locations[i].speed ?? 0)) / 2, colors)
     features.push({
       type: "Feature",
       properties: { color },

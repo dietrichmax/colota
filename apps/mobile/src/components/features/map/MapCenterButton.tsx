@@ -4,9 +4,10 @@
  */
 
 import React from "react"
-import { Pressable, StyleSheet, ViewStyle, StyleProp } from "react-native"
+import { ViewStyle, StyleProp } from "react-native"
 import { LocateFixed } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
+import { MapActionButton } from "./MapActionButton"
 
 interface Props {
   onPress: () => void
@@ -20,36 +21,8 @@ export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) =>
   if (!visible) return null
 
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.centerButton,
-        { backgroundColor: colors.card, borderColor: colors.border },
-        style,
-        pressed && { opacity: colors.pressedOpacity }
-      ]}
-      onPress={onPress}
-    >
+    <MapActionButton onPress={onPress} style={[{ right: 16 }, style]}>
       <LocateFixed size={24} color={colors.text} />
-    </Pressable>
+    </MapActionButton>
   )
 }
-
-const styles = StyleSheet.create({
-  centerButton: {
-    position: "absolute",
-    bottom: 30,
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    borderWidth: 1,
-    zIndex: 10
-  }
-})

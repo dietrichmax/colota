@@ -137,7 +137,7 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
 
   // GeoJSON data
   const segmentsGeoJSON = useMemo(
-    () => buildTrackSegmentsGeoJSON(locations, colors, skipIndices, locationColors),
+    () => buildTrackSegmentsGeoJSON(locations, colors, { skipIndices, locationColors }),
     [locations, colors, skipIndices, locationColors]
   )
   const pointsGeoJSON = useMemo(

@@ -225,7 +225,7 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 | Component | Purpose |
 | --- | --- |
 | `ColotaMapView` | Shared base map component wrapping MapLibre's `MapView` with OpenFreeMap vector tiles, dark mode style transformation, custom compass, and attribution |
-| `DashboardMap` | Live tracking map with user marker, accuracy circle, geofence polygons with labels, auto-center, and center button |
+| `DashboardMap` | Live tracking map with user marker, accuracy circle, today's track overlay with toggle button, geofence polygons with labels, auto-center, and center button |
 | `TrackMap` | Location history map with trip-colored track segments, tappable point markers with detail popups, fit-to-track bounds, and trip legend |
 | `CalendarPicker` | Day picker with month navigation, dot indicators for days with data, and daily distance/count display |
 | `TripList` | Segmented trip cards with distance, duration, avg speed, elevation gain/loss, and per-trip or bulk export |

@@ -58,6 +58,10 @@ jest.mock("../../../../contexts/TrackingProvider", () => ({
   useCoords: () => mockCoords
 }))
 
+jest.mock("../../../../hooks/useTodayTrack", () => ({
+  useTodayTrack: () => ({ locations: [], version: 0 })
+}))
+
 jest.mock("../../../../assets/icons/icon.png", () => "mock-icon")
 
 jest.mock("../../map/MapCenterButton", () => {

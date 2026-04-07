@@ -172,7 +172,7 @@ describe("buildTrackSegmentsGeoJSON", () => {
       { latitude: 52.55, longitude: 13.408, speed: 1 }
     ]
     // Skip index 2 → no segment from point 1 to point 2
-    const result = buildTrackSegmentsGeoJSON(locs, colors, new Set([2]))
+    const result = buildTrackSegmentsGeoJSON(locs, colors, { skipIndices: new Set([2]) })
     expect(result.features).toHaveLength(2) // segments 0→1 and 2→3, not 1→2
   })
 
@@ -181,7 +181,7 @@ describe("buildTrackSegmentsGeoJSON", () => {
       { latitude: 52.52, longitude: 13.405, speed: 0 },
       { latitude: 52.53, longitude: 13.406, speed: 0 }
     ]
-    const result = buildTrackSegmentsGeoJSON(locs, colors, undefined, ["#FF0000", "#00FF00"])
+    const result = buildTrackSegmentsGeoJSON(locs, colors, { locationColors: ["#FF0000", "#00FF00"] })
     expect(result.features[0].properties?.color).toBe("#00FF00")
   })
 })

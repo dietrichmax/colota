@@ -12,10 +12,13 @@ import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
+import { TrackToggleButton } from "../map/TrackToggleButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
 import { buildGeofencesGeoJSON } from "../map/mapUtils"
 import { GeofenceLayers } from "../map/GeofenceLayers"
+import { CurrentTrackLayers } from "../map/CurrentTrackLayers"
 import { UserLocationOverlay } from "../map/UserLocationOverlay"
+import { useTodayTrack } from "../../../hooks/useTodayTrack"
 import icon from "../../../assets/icons/icon.png"
 import { logger } from "../../../utils/logger"
 
@@ -37,6 +40,18 @@ export function DashboardMap({ tracking, activeZoneName, pauseReason, activeProf
   const { colors } = useTheme()
   const [geofences, setGeofences] = useState<any[]>([])
   const [isCentered, setIsCentered] = useState(true)
+  const [showTrack, setShowTrack] = useState<boolean | null>(null)
+  const { locations: trackLocations, version: trackVersion } = useTodayTrack(tracking, coords)
+
+  // Restore persisted track toggle
+  useEffect(() => {
+    NativeLocationService.getSetting("showTrack")
+      .then((val) => setShowTrack(val === "true"))
+      .catch((err) => {
+        logger.error("[DashboardMap] Failed to load showTrack setting:", err)
+        setShowTrack(false)
+      })
+  }, [])
   const isCenteredRef = useRef(true)
   const initialCoords = useRef<LocationCoords | null>(null)
   const [hasInitialCoords, setHasInitialCoords] = useState(false)
@@ -109,6 +124,13 @@ export function DashboardMap({ tracking, activeZoneName, pauseReason, activeProf
             initialCenter={[initialCoords.current.longitude, initialCoords.current.latitude]}
             onRegionDidChange={handleRegionChange}
           >
+            <CurrentTrackLayers
+              locations={trackLocations}
+              version={trackVersion}
+              visible={!!showTrack}
+              colors={colors}
+            />
+
             <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
 
             {/* Always keep overlay mounted to avoid MapLibre/Fabric unmount race condition */}
@@ -154,6 +176,18 @@ export function DashboardMap({ tracking, activeZoneName, pauseReason, activeProf
       )}
 
       {showMap && <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />}
+      {showMap && showTrack !== null && (
+        <TrackToggleButton
+          active={!!showTrack}
+          onPress={() => {
+            const next = !showTrack
+            setShowTrack(next)
+            NativeLocationService.saveSetting("showTrack", String(next)).catch((err) =>
+              logger.error("[DashboardMap] Failed to save showTrack setting:", err)
+            )
+          }}
+        />
+      )}
 
       {showMap && activeZoneName && (
         <View style={[styles.statusBar, { backgroundColor: colors.warning + "DD" }]}>
