@@ -25,6 +25,22 @@ Use the **Test Connection** button in settings to verify your server is reachabl
 
 Colota sends to a single endpoint. To forward locations to multiple services simultaneously (e.g. Dawarich + Home Assistant), use [colota-forwarder](https://github.com/dietrichmax/colota-forwarder) - point Colota at the forwarder and configure each target in the forwarder's environment variables.
 
+### URL Variables
+
+You can use template variables in your endpoint URL for hive-style partitioning or date-based routing. Variables are resolved per location using the location's timestamp, not the current wall clock time, so queued or delayed sends use the correct date.
+
+| Variable     | Description              | Example      |
+| ------------ | ------------------------ | ------------ |
+| `%DATE`      | ISO date (YYYY-MM-DD)    | `2026-04-07` |
+| `%YEAR`      | Four-digit year          | `2026`       |
+| `%MONTH`     | Zero-padded month        | `04`         |
+| `%DAY`       | Zero-padded day          | `07`         |
+| `%TIMESTAMP` | Unix timestamp (seconds) | `1775692800` |
+
+**Example:** `https://example.com/locations/%YEAR/%MONTH/%DAY` resolves to `https://example.com/locations/2026/04/07`.
+
+This is useful for backends that organize data by date (e.g. S3 with hive partitioning).
+
 ## Sync Modes
 
 - **Instant (0s)**: Each location is sent immediately after recording
