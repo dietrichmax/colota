@@ -232,7 +232,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
             hitSlop={HIT_SLOP_MD}
             style={({ pressed }) => [styles.zoomBtn, pressed && { opacity: colors.pressedOpacity }]}
           >
-            <MapPin size={18} color={colors.textSecondary} />
+            <MapPin size={20} color={colors.textSecondary} />
           </Pressable>
           <Pressable
             testID={`edit-geofence-${item.id}`}
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between"
   },
-  zoomBtn: { padding: 4, marginRight: 8 },
+  zoomBtn: { padding: 4, marginRight: 16 },
   editBtn: { flex: 1, flexDirection: "row", alignItems: "center" },
   info: { flex: 1, marginRight: 12 },
   name: { fontSize: 15, ...fonts.semiBold, marginBottom: 2 },
