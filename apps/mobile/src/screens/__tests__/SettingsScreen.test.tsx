@@ -4,6 +4,10 @@ import { DEFAULT_SETTINGS, Settings } from "../../types/global"
 
 // --- Mocks ---
 
+jest.mock("@react-navigation/native", () => ({
+  useFocusEffect: (cb: () => (() => void) | void) => require("react").useEffect(() => cb(), [])
+}))
+
 let mockSettings: Settings = { ...DEFAULT_SETTINGS }
 const mockSetSettings = jest.fn()
 const mockUpdateSettingsLocal = jest.fn()

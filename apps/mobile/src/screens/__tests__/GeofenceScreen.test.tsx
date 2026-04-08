@@ -144,7 +144,8 @@ jest.mock("lucide-react-native", () => {
   return {
     ChevronRight: (props: any) => R.createElement(Text, props, "ChevronRight"),
     Wifi: (props: any) => R.createElement(Text, props, "Wifi"),
-    PersonStanding: (props: any) => R.createElement(Text, props, "PersonStanding")
+    PersonStanding: (props: any) => R.createElement(Text, props, "PersonStanding"),
+    MapPin: (props: any) => R.createElement(Text, props, "MapPin")
   }
 })
 

@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
+import { useFocusEffect } from "@react-navigation/native"
 import { Text, StyleSheet, Switch, View, ScrollView, Pressable, TextInput, Linking } from "react-native"
 import { ScreenProps, Settings } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
@@ -122,12 +123,14 @@ export function SettingsScreen({ navigation }: ScreenProps) {
     }
   }, [])
 
-  // Poll stats: 3s when tracking, 30s when idle
-  useEffect(() => {
-    updateStats()
-    const interval = setInterval(updateStats, tracking ? STATS_REFRESH_FAST : STATS_REFRESH_IDLE)
-    return () => clearInterval(interval)
-  }, [updateStats, tracking])
+  // Poll stats: 3s when tracking, 30s when idle (only while screen is focused)
+  useFocusEffect(
+    useCallback(() => {
+      updateStats()
+      const interval = setInterval(updateStats, tracking ? STATS_REFRESH_FAST : STATS_REFRESH_IDLE)
+      return () => clearInterval(interval)
+    }, [updateStats, tracking])
+  )
 
   /** Debounced save + restart for continuous changes (text input, sliders) */
   const handleDebouncedSave = useCallback(

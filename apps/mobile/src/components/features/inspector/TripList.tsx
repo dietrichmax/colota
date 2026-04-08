@@ -12,6 +12,7 @@ import { formatDistance, formatDuration, formatSpeed, formatTime } from "../../.
 import type { Trip, ThemeColors } from "../../../types/global"
 import { getTripColor, computeTripStats, type TripStats } from "../../../utils/trips"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../../../utils/exportConverters"
+import { HIT_SLOP_SM } from "../../../constants"
 
 interface TripListProps {
   trips: Trip[]
@@ -61,7 +62,7 @@ export function TripList({ trips, colors, onTripSelect, selectedTripIndex, onExp
               {onExportTrip && (
                 <Pressable
                   onPress={() => setExportingTripIndex((prev) => (prev === item.index ? null : item.index))}
-                  hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+                  hitSlop={HIT_SLOP_SM}
                   style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
                 >
                   <Share size={14} color={showTripExport ? colors.primary : colors.textSecondary} />

@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight, Calendar } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
 import { formatDistance } from "../../../utils/geo"
+import { HIT_SLOP_LG } from "../../../constants"
 
 interface CalendarPickerProps {
   date: Date
@@ -159,6 +160,7 @@ export function CalendarPicker({
       <View style={styles.row}>
         <Pressable
           onPress={goBack}
+          hitSlop={HIT_SLOP_LG}
           style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
         >
           <ChevronLeft size={22} color={colors.primary} />
@@ -185,6 +187,7 @@ export function CalendarPicker({
 
         <Pressable
           onPress={goForward}
+          hitSlop={HIT_SLOP_LG}
           style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
           disabled={isToday}
         >
@@ -212,6 +215,7 @@ export function CalendarPicker({
           <View style={styles.monthRow}>
             <Pressable
               onPress={() => navigateMonth(-1)}
+              hitSlop={HIT_SLOP_LG}
               style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
             >
               <ChevronLeft size={18} color={colors.primary} />
@@ -219,6 +223,7 @@ export function CalendarPicker({
             <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
             <Pressable
               onPress={() => navigateMonth(1)}
+              hitSlop={HIT_SLOP_LG}
               style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
               disabled={isFutureMonth}
             >
@@ -355,7 +360,7 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   monthNav: {
-    padding: 4
+    padding: 8
   },
   monthLabel: {
     fontSize: 14,

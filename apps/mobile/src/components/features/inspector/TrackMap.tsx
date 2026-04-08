@@ -19,7 +19,7 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
-import { MAP_ANIMATION_DURATION_MS } from "../../../constants"
+import { HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
 
 const trackLineStyle = {
   lineColor: ["get", "color"] as const,
@@ -268,7 +268,7 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
             </Text>
             <Pressable
               onPress={() => setPopup(null)}
-              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              hitSlop={HIT_SLOP_MD}
               style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
             >
               <X size={16} color={colors.textSecondary} />

@@ -11,14 +11,15 @@ import { showAlert } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { fonts } from "../styles/typography"
-import { ChevronRight, Wifi, PersonStanding } from "lucide-react-native"
+import { ChevronRight, Wifi, PersonStanding, MapPin } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
 import {
   DEFAULT_MAP_ZOOM,
   WORLD_MAP_ZOOM,
   GEOFENCE_ZOOM_PADDING,
   MAP_ANIMATION_DURATION_MS,
-  MAX_MAP_ZOOM
+  MAX_MAP_ZOOM,
+  HIT_SLOP_MD
 } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
@@ -28,54 +29,116 @@ import { UserLocationOverlay } from "../components/features/map/UserLocationOver
 import { logger } from "../utils/logger"
 import { formatShortDistance, shortDistanceUnit, inputToMeters } from "../utils/geo"
 
+const GeofenceMap = React.memo(function GeofenceMap({
+  tracking,
+  geofenceData,
+  currentPauseZone,
+  onMapPress,
+  focusRequest
+}: {
+  tracking: boolean
+  geofenceData: ReturnType<typeof buildGeofencesGeoJSON>
+  currentPauseZone: string | null
+  onMapPress: (coords: { latitude: number; longitude: number }) => void
+  focusRequest: { geofence: Geofence; key: number } | null
+}) {
+  const coords = useCoords()
+  const { colors } = useTheme()
+
+  const mapRef = useRef<ColotaMapRef>(null)
+  const isCenteredRef = useRef(true)
+  const [isCentered, setIsCentered] = useState(true)
+  const [hasInitialCoords, setHasInitialCoords] = useState(false)
+  const initialCenter = useRef<{ latitude: number; longitude: number; accuracy: number } | null>(null)
+
+  useEffect(() => {
+    if (hasInitialCoords) return
+    if (coords) {
+      initialCenter.current = { latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy ?? 0 }
+      setHasInitialCoords(true)
+      return
+    }
+    NativeLocationService.getMostRecentLocation().then((latest) => {
+      if (initialCenter.current) return
+      initialCenter.current = latest
+        ? { latitude: latest.latitude, longitude: latest.longitude, accuracy: latest.accuracy ?? 0 }
+        : { latitude: 0, longitude: 0, accuracy: 0 }
+      setHasInitialCoords(true)
+    })
+  }, [coords, hasInitialCoords])
+
+  useEffect(() => {
+    if (!coords || !isCenteredRef.current || !tracking || !mapRef.current?.camera) return
+    mapRef.current.camera.moveTo([coords.longitude, coords.latitude], MAP_ANIMATION_DURATION_MS)
+  }, [coords, tracking])
+
+  useEffect(() => {
+    if (!focusRequest || !mapRef.current?.camera) return
+    const { geofence } = focusRequest
+    const latDelta = (geofence.radius / 111320) * 1.5
+    const lonDelta = (geofence.radius / (111320 * Math.cos((geofence.lat * Math.PI) / 180))) * 1.5
+    mapRef.current.camera.fitBounds(
+      [geofence.lon + lonDelta, geofence.lat + latDelta],
+      [geofence.lon - lonDelta, geofence.lat - latDelta],
+      [...GEOFENCE_ZOOM_PADDING],
+      600
+    )
+  }, [focusRequest])
+
+  const handleCenterMe = useCallback(() => {
+    if (coords && mapRef.current?.camera) {
+      mapRef.current.camera.setCamera({
+        centerCoordinate: [coords.longitude, coords.latitude],
+        zoomLevel: MAX_MAP_ZOOM,
+        animationDuration: MAP_ANIMATION_DURATION_MS,
+        animationMode: "flyTo"
+      })
+      isCenteredRef.current = true
+      setIsCentered(true)
+    }
+  }, [coords])
+
+  const handleRegionChange = useCallback((payload: { isUserInteraction: boolean }) => {
+    if (payload.isUserInteraction) {
+      isCenteredRef.current = false
+      setIsCentered(false)
+    }
+  }, [])
+
+  const hasRealCoords =
+    initialCenter.current && (initialCenter.current.latitude !== 0 || initialCenter.current.longitude !== 0)
+  const initialZoom = hasRealCoords ? DEFAULT_MAP_ZOOM : WORLD_MAP_ZOOM
+
+  return (
+    <View style={[styles.map, { borderRadius: colors.borderRadius }]}>
+      {hasInitialCoords && initialCenter.current ? (
+        <ColotaMapView
+          ref={mapRef}
+          initialCenter={[initialCenter.current.longitude, initialCenter.current.latitude]}
+          initialZoom={initialZoom}
+          onPress={onMapPress}
+          onRegionDidChange={handleRegionChange}
+        >
+          <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
+          {coords && tracking && <UserLocationOverlay coords={coords} isPaused={!!currentPauseZone} colors={colors} />}
+        </ColotaMapView>
+      ) : null}
+      <MapCenterButton visible={!isCentered && tracking} onPress={handleCenterMe} />
+    </View>
+  )
+})
+
 export function GeofenceScreen({ navigation }: ScreenProps) {
   const { tracking } = useTracking()
-  const coords = useCoords()
   const { colors } = useTheme()
 
   const [geofences, setGeofences] = useState<Geofence[]>([])
   const [newName, setNewName] = useState("")
   const [newRadius, setNewRadius] = useState("50")
   const [placingGeofence, setPlacingGeofence] = useState(false)
-  const [isCentered, setIsCentered] = useState(true)
-  const isCenteredRef = useRef(true)
-  const [hasInitialCoords, setHasInitialCoords] = useState(false)
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
 
-  const mapRef = useRef<ColotaMapRef>(null)
-  const initialCenter = useRef<{
-    latitude: number
-    longitude: number
-    accuracy: number
-  } | null>(null)
-
-  // Set initial map center
-  useEffect(() => {
-    if (hasInitialCoords) return
-
-    if (coords) {
-      initialCenter.current = {
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        accuracy: coords.accuracy ?? 0
-      }
-      setHasInitialCoords(true)
-      return
-    }
-
-    NativeLocationService.getMostRecentLocation().then((latest) => {
-      if (initialCenter.current) return
-
-      initialCenter.current = latest
-        ? {
-            latitude: latest.latitude,
-            longitude: latest.longitude,
-            accuracy: latest.accuracy ?? 0
-          }
-        : { latitude: 0, longitude: 0, accuracy: 0 }
-      setHasInitialCoords(true)
-    })
-  }, [coords, hasInitialCoords])
+  const [focusRequest, setFocusRequest] = useState<{ geofence: Geofence; key: number } | null>(null)
 
   const loadGeofences = useCallback(async () => {
     try {
@@ -107,12 +170,6 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
     })
     return () => listener.remove()
   }, [loadGeofences])
-
-  // Auto-center camera when position changes (ref avoids overriding setCamera zoom).
-  useEffect(() => {
-    if (!coords || !isCenteredRef.current || !tracking || !mapRef.current?.camera) return
-    mapRef.current.camera.moveTo([coords.longitude, coords.latitude], MAP_ANIMATION_DURATION_MS)
-  }, [coords, tracking])
 
   const handleMapPress = useCallback(
     async (pressCoords: { latitude: number; longitude: number }) => {
@@ -159,71 +216,39 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
     setPlacingGeofence(true)
   }, [newName, newRadius])
 
-  const handleCenterMe = useCallback(() => {
-    if (coords && mapRef.current?.camera) {
-      mapRef.current.camera.setCamera({
-        centerCoordinate: [coords.longitude, coords.latitude],
-        zoomLevel: MAX_MAP_ZOOM,
-        animationDuration: MAP_ANIMATION_DURATION_MS,
-        animationMode: "flyTo"
-      })
-      isCenteredRef.current = true
-      setIsCentered(true)
-    }
-  }, [coords])
-
-  const handleRegionChange = useCallback((payload: { isUserInteraction: boolean }) => {
-    if (payload.isUserInteraction) {
-      isCenteredRef.current = false
-      setIsCentered(false)
-    }
-  }, [])
-
+  const focusKeyRef = useRef(0)
   const handleZoomToGeofence = useCallback((item: Geofence) => {
-    if (!mapRef.current?.camera) return
-
-    // Compute bounds from circle center + radius
-    const latDelta = (item.radius / 111320) * 1.5
-    const lonDelta = (item.radius / (111320 * Math.cos((item.lat * Math.PI) / 180))) * 1.5
-    mapRef.current.camera.fitBounds(
-      [item.lon + lonDelta, item.lat + latDelta],
-      [item.lon - lonDelta, item.lat - latDelta],
-      [...GEOFENCE_ZOOM_PADDING],
-      600
-    )
+    setFocusRequest({ geofence: item, key: ++focusKeyRef.current })
   }, [])
 
-  // Geofence GeoJSON
   const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences, colors), [geofences, colors])
-
-  const hasRealCoords =
-    initialCenter.current && (initialCenter.current.latitude !== 0 || initialCenter.current.longitude !== 0)
-  const initialZoom = hasRealCoords ? DEFAULT_MAP_ZOOM : WORLD_MAP_ZOOM
 
   const renderItem = useCallback(
     ({ item }: { item: Geofence }) => (
       <Card style={styles.card}>
         <View style={styles.row}>
           <Pressable
-            testID={`geofence-info-${item.id}`}
-            style={({ pressed }) => [styles.info, pressed && { opacity: colors.pressedOpacity }]}
             onPress={() => handleZoomToGeofence(item)}
+            hitSlop={HIT_SLOP_MD}
+            style={({ pressed }) => [styles.zoomBtn, pressed && { opacity: colors.pressedOpacity }]}
           >
-            <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
-            <View style={styles.radiusRow}>
-              <Text style={[styles.radius, { color: colors.textSecondary }]}>
-                {formatShortDistance(item.radius)} radius
-              </Text>
-              {item.pauseOnWifi && <Wifi size={12} color={colors.textSecondary} />}
-              {item.pauseOnMotionless && <PersonStanding size={12} color={colors.textSecondary} />}
-            </View>
+            <MapPin size={18} color={colors.textSecondary} />
           </Pressable>
-
           <Pressable
             testID={`edit-geofence-${item.id}`}
+            style={({ pressed }) => [styles.editBtn, pressed && { opacity: colors.pressedOpacity }]}
             onPress={() => navigation.navigate("Geofence Editor", { geofenceId: item.id })}
-            style={({ pressed }) => [pressed && { opacity: colors.pressedOpacity }]}
           >
+            <View style={styles.info}>
+              <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
+              <View style={styles.radiusRow}>
+                <Text style={[styles.radius, { color: colors.textSecondary }]}>
+                  {formatShortDistance(item.radius)} radius
+                </Text>
+                {item.pauseOnWifi && <Wifi size={12} color={colors.textSecondary} />}
+                {item.pauseOnMotionless && <PersonStanding size={12} color={colors.textSecondary} />}
+              </View>
+            </View>
             <ChevronRight size={20} color={colors.textSecondary} />
           </Pressable>
         </View>
@@ -234,26 +259,13 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
 
   return (
     <Container>
-      <View style={[styles.map, { borderRadius: colors.borderRadius }]}>
-        {hasInitialCoords && initialCenter.current ? (
-          <ColotaMapView
-            ref={mapRef}
-            initialCenter={[initialCenter.current.longitude, initialCenter.current.latitude]}
-            initialZoom={initialZoom}
-            onPress={handleMapPress}
-            onRegionDidChange={handleRegionChange}
-          >
-            <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
-
-            {/* Accuracy circle + user marker */}
-            {coords && tracking && (
-              <UserLocationOverlay coords={coords} isPaused={!!currentPauseZone} colors={colors} />
-            )}
-          </ColotaMapView>
-        ) : null}
-
-        <MapCenterButton visible={!isCentered && tracking} onPress={handleCenterMe} />
-      </View>
+      <GeofenceMap
+        tracking={tracking}
+        geofenceData={geofenceData}
+        currentPauseZone={currentPauseZone}
+        onMapPress={handleMapPress}
+        focusRequest={focusRequest}
+      />
 
       <FlatList
         data={geofences}
@@ -380,6 +392,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between"
   },
+  zoomBtn: { padding: 4, marginRight: 8 },
+  editBtn: { flex: 1, flexDirection: "row", alignItems: "center" },
   info: { flex: 1, marginRight: 12 },
   name: { fontSize: 15, ...fonts.semiBold, marginBottom: 2 },
   radiusRow: { flexDirection: "row", alignItems: "center", gap: 4 },

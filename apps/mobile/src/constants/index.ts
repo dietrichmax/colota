@@ -18,6 +18,11 @@ export const TEST_RESULT_DISPLAY_MS = 5_000
 export const SERVICE_RESTART_DELAY_MS = 500
 export const RESTART_DEBOUNCE_MS = 100
 
+// Touch targets
+export const HIT_SLOP_SM = { top: 6, right: 6, bottom: 6, left: 6 } as const
+export const HIT_SLOP_MD = { top: 8, right: 8, bottom: 8, left: 8 } as const
+export const HIT_SLOP_LG = { top: 12, right: 12, bottom: 12, left: 12 } as const
+
 // Map
 export const DEFAULT_MAP_ZOOM = 17
 export const WORLD_MAP_ZOOM = 2

@@ -4,7 +4,16 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { View, Text, StyleSheet, ScrollView, Switch, TextInput, DeviceEventEmitter } from "react-native"
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Switch,
+  TextInput,
+  DeviceEventEmitter,
+  InteractionManager
+} from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
@@ -70,38 +79,42 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
   useEffect(() => {
     if (!geofenceId) return
 
-    NativeLocationService.getGeofences()
-      .then((geofences) => {
-        const existing = geofences.find((g) => g.id === geofenceId)
-        if (existing) {
-          setName(existing.name)
-          setRadiusStr(String(metersToInput(existing.radius)))
-          setRadius(existing.radius)
-          setPauseTracking(existing.pauseTracking)
-          setPauseOnWifi(existing.pauseOnWifi)
-          setPauseOnMotionless(existing.pauseOnMotionless)
-          setMotionlessTimeoutMinutes(existing.motionlessTimeoutMinutes)
-          setMotionlessTimeoutStr(String(existing.motionlessTimeoutMinutes))
-          setHeartbeatEnabled(existing.heartbeatEnabled ?? false)
-          setHeartbeatIntervalMinutes(existing.heartbeatIntervalMinutes ?? 15)
-          setHeartbeatIntervalStr(String(existing.heartbeatIntervalMinutes ?? 15))
-          savedState.current = {
-            name: existing.name,
-            radius: existing.radius,
-            pauseTracking: existing.pauseTracking,
-            pauseOnWifi: existing.pauseOnWifi,
-            pauseOnMotionless: existing.pauseOnMotionless,
-            motionlessTimeoutMinutes: existing.motionlessTimeoutMinutes,
-            heartbeatEnabled: existing.heartbeatEnabled ?? false,
-            heartbeatIntervalMinutes: existing.heartbeatIntervalMinutes ?? 15
+    const task = InteractionManager.runAfterInteractions(() => {
+      NativeLocationService.getGeofences()
+        .then((geofences) => {
+          const existing = geofences.find((g) => g.id === geofenceId)
+          if (existing) {
+            setName(existing.name)
+            setRadiusStr(String(metersToInput(existing.radius)))
+            setRadius(existing.radius)
+            setPauseTracking(existing.pauseTracking)
+            setPauseOnWifi(existing.pauseOnWifi)
+            setPauseOnMotionless(existing.pauseOnMotionless)
+            setMotionlessTimeoutMinutes(existing.motionlessTimeoutMinutes)
+            setMotionlessTimeoutStr(String(existing.motionlessTimeoutMinutes))
+            setHeartbeatEnabled(existing.heartbeatEnabled ?? false)
+            setHeartbeatIntervalMinutes(existing.heartbeatIntervalMinutes ?? 15)
+            setHeartbeatIntervalStr(String(existing.heartbeatIntervalMinutes ?? 15))
+            savedState.current = {
+              name: existing.name,
+              radius: existing.radius,
+              pauseTracking: existing.pauseTracking,
+              pauseOnWifi: existing.pauseOnWifi,
+              pauseOnMotionless: existing.pauseOnMotionless,
+              motionlessTimeoutMinutes: existing.motionlessTimeoutMinutes,
+              heartbeatEnabled: existing.heartbeatEnabled ?? false,
+              heartbeatIntervalMinutes: existing.heartbeatIntervalMinutes ?? 15
+            }
           }
-        }
-      })
-      .catch((err) => {
-        logger.error("[GeofenceEditor] Failed to load geofence:", err)
-        showAlert("Error", "Failed to load geofence data.", "error")
-        navigation.goBack()
-      })
+        })
+        .catch((err) => {
+          logger.error("[GeofenceEditor] Failed to load geofence:", err)
+          showAlert("Error", "Failed to load geofence data.", "error")
+          navigation.goBack()
+        })
+    })
+
+    return () => task.cancel()
   }, [geofenceId, navigation])
 
   const handleRadiusChange = useCallback((val: string) => {

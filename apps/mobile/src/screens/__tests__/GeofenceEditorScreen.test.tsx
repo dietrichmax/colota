@@ -32,6 +32,12 @@ jest.mock("../../services/modalService", () => ({
 
 jest.mock("react-native/Libraries/EventEmitter/NativeEventEmitter")
 
+jest.spyOn(require("react-native").InteractionManager, "runAfterInteractions").mockImplementation((task: any) => {
+  if (typeof task === "function") task()
+  else if (task?.run) task.run()
+  return { cancel: jest.fn(), done: Promise.resolve() }
+})
+
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
     colors: {

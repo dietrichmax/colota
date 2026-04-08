@@ -187,7 +187,11 @@ function AppNavigator() {
   }, [])
 
   const handleTabNavigate = useCallback((route: string) => {
-    navigationRef.current?.reset({ index: 0, routes: [{ name: route }] })
+    const nav = navigationRef.current
+    if (!nav) return
+    const current = nav.getCurrentRoute()?.name
+    if (current === route) return
+    nav.navigate(route as never)
   }, [])
 
   return (
