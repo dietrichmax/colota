@@ -18,9 +18,6 @@ export function resolveHealthUrls(endpoint: string, apiTemplate: ApiTemplateName
       }
       case "dawarich":
         return [`${origin}/api/v1/health`, origin]
-      case "homeassistant":
-        // HEAD request to the webhook URL itself to confirm reachability
-        return [endpoint]
       case "owntracks":
         // /api/0/version for OwnTracks Recorder; Home Assistant responds at root if that 404s
         return [`${origin}/api/0/version`, origin]
