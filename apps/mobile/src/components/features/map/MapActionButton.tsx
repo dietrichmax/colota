@@ -13,8 +13,6 @@ interface Props {
   children: React.ReactNode
 }
 
-export { styles as mapActionStyles }
-
 export function MapActionButton({ onPress, style, children }: Props) {
   const { colors } = useTheme()
 
@@ -53,3 +51,5 @@ const styles = StyleSheet.create({
   right: { right: 16 },
   left: { left: 16 }
 })
+
+export { styles as mapActionStyles }
