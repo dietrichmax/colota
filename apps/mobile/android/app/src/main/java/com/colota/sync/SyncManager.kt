@@ -256,6 +256,7 @@ class SyncManager(
                         successfulIds.add(queueId)
                     } else {
                         dbHelper.incrementRetryCount(queueId, "Send failed")
+                        totalFailed++
                     }
                 }
 

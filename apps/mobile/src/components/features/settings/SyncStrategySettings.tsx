@@ -41,7 +41,10 @@ export function SyncStrategySettings({
   useEffect(() => {
     if (settings.syncCondition !== "wifi_ssid") return
 
-    const fetchSsid = () => NativeLocationService.getCurrentSsid().then(setCurrentSsid)
+    const fetchSsid = () =>
+      NativeLocationService.getCurrentSsid()
+        .then(setCurrentSsid)
+        .catch(() => {})
     fetchSsid()
 
     const sub = AppState.addEventListener("change", (state) => {

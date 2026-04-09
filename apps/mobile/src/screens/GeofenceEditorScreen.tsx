@@ -144,6 +144,10 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
       showAlert("Invalid Radius", "Please enter a valid radius.", "warning")
       return
     }
+    if (heartbeatEnabled && heartbeatIntervalMinutes < 1) {
+      showAlert("Invalid Heartbeat", "Heartbeat interval must be at least 1 minute.", "warning")
+      return
+    }
 
     setSaving(true)
     try {
