@@ -1,0 +1,9 @@
+- Bottom tab bar navigation replaces quick access grid
+- Today's tracked route shown on dashboard map with toggle
+- Daily distance displayed in calendar day cells
+- Stationary heartbeat for geofence pause zones
+- Flexible sync conditions (Any, Wi-Fi, SSID, VPN)
+- URL template variables for date-based endpoint paths
+- Battery critical status on dashboard and notification
+- Fixed dark mode not persisting across restarts
+- Fixed intermittent map auto-zoom failure
