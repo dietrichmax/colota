@@ -116,6 +116,7 @@ Since all data is stored locally on your device, you have full control:
 | Internet                          | Server sync and map tile loading                       |
 | Network State                     | Sync condition checks and WiFi pause in geofence zones |
 | Wi-Fi State                       | SSID detection for sync condition filtering            |
+| Local Network (Android 17+)       | Required for sync to servers on the local network      |
 | Battery Optimization Exemption    | Optional, prevents system from restricting the app     |
 
 ## Children's Privacy
