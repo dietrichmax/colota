@@ -4,7 +4,6 @@
  */
 import React from "react"
 import { View, Pressable, Text, StyleSheet } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Map, Clock, Fence, Settings, LucideIcon } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fonts } from "../../styles/typography"
@@ -33,7 +32,6 @@ interface BottomTabBarProps {
 
 export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
   const { colors } = useTheme()
-  const insets = useSafeAreaInsets()
 
   if (!currentRoute || !TAB_ROUTES.has(currentRoute)) return null
 
@@ -43,8 +41,7 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
         styles.container,
         {
           backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          paddingBottom: Math.max(insets.bottom, 6)
+          borderTopColor: colors.border
         }
       ]}
     >
@@ -72,7 +69,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     borderTopWidth: 1,
-    paddingTop: 8
+    paddingTop: 8,
+    paddingBottom: 6
   },
   tab: {
     flex: 1,

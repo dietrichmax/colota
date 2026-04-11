@@ -5,8 +5,8 @@
 import React, { useMemo, useState, useCallback } from "react"
 import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
-import { SafeAreaProvider } from "react-native-safe-area-context"
-import { View, StatusBar, Platform, StyleSheet } from "react-native"
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context"
+import { StatusBar, Platform, StyleSheet } from "react-native"
 import MapLibreGL from "@maplibre/maplibre-react-native"
 import { ThemeProvider, useTheme } from "./src/hooks/useTheme"
 import { fonts } from "./src/styles/typography"
@@ -198,7 +198,7 @@ function AppNavigator() {
     <SafeAreaProvider>
       <StatusBar {...statusBarConfig} />
       <NavigationContainer linking={linking} ref={navigationRef} onStateChange={handleStateChange}>
-        <View style={styles.flex}>
+        <SafeAreaView style={styles.flex} edges={["left", "right", "bottom"]}>
           <Stack.Navigator initialRouteName="Dashboard" screenOptions={screenOptions}>
             {SCREEN_CONFIG.map((screen) => (
               <Stack.Screen
@@ -210,7 +210,7 @@ function AppNavigator() {
             ))}
           </Stack.Navigator>
           <BottomTabBar currentRoute={currentRoute} onNavigate={handleTabNavigate} />
-        </View>
+        </SafeAreaView>
       </NavigationContainer>
     </SafeAreaProvider>
   )
