@@ -4,7 +4,7 @@
  */
 import React from "react"
 import { View, Pressable, Text, StyleSheet } from "react-native"
-import { Map, Clock, Fence, Settings, LucideIcon } from "lucide-react-native"
+import { Settings, LucideIcon, MapPinned, MapPinHouse, Route } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fonts } from "../../styles/typography"
 
@@ -16,9 +16,9 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { name: "dashboard", label: "Dashboard", icon: Map, route: "Dashboard" },
-  { name: "history", label: "History", icon: Clock, route: "Location History" },
-  { name: "geofences", label: "Geofences", icon: Fence, route: "Geofences" },
+  { name: "dashboard", label: "Dashboard", icon: MapPinned, route: "Dashboard" },
+  { name: "history", label: "History", icon: Route, route: "Location History" },
+  { name: "geofences", label: "Geofences", icon: MapPinHouse, route: "Geofences" },
   { name: "settings", label: "Settings", icon: Settings, route: "Settings" }
 ]
 
