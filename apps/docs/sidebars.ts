@@ -72,6 +72,11 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: "doc",
+      id: "security",
+      label: "Security"
+    },
+    {
+      type: "doc",
       id: "faq",
       label: "FAQ"
     },
