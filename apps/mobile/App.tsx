@@ -134,6 +134,8 @@ const SCREEN_CONFIG = [
   }
 ] as const
 
+const TAB_SCREEN_NAMES = new Set(["Dashboard", "Location History", "Geofences", "Settings"])
+
 function AppNavigator() {
   const { colors, isDark } = useTheme()
   const [currentRoute, setCurrentRoute] = useState<string | undefined>("Dashboard")
@@ -205,7 +207,10 @@ function AppNavigator() {
                 key={screen.name}
                 name={screen.name}
                 component={screen.component}
-                options={{ headerTitle: screen.title }}
+                options={{
+                  headerTitle: screen.title,
+                  ...(TAB_SCREEN_NAMES.has(screen.name) && { headerBackVisible: false })
+                }}
               />
             ))}
           </Stack.Navigator>
