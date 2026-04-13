@@ -90,7 +90,7 @@ Starting with Android 13, apps must request notification permission explicitly. 
 android.permission.ACCESS_LOCAL_NETWORK
 ```
 
-Starting with Android 17, apps need this permission to connect to devices on the local network. Colota requests it when you use **Test Connection** with a private/local IP endpoint (e.g. `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`, or `100.64.x.x`). Loopback addresses (`localhost` / `127.0.0.1`) do not require this permission. If your server is a public HTTPS endpoint, this permission is never requested.
+Starting with Android 17, apps need this permission to connect to devices on the local network. Colota requests it when you use **Test Connection** with a private/local endpoint - this includes IP addresses (e.g. `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`, `100.64.x.x`) and hostnames that resolve to private IPs via DNS (e.g. `server.local`). Loopback addresses (`localhost` / `127.0.0.1`) do not require this permission. If your server is a public HTTPS endpoint, this permission is never requested.
 
 :::note[Android 16]
 

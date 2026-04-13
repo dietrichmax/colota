@@ -96,7 +96,7 @@ class NetworkManager(private val context: Context) {
             return@withContext false
         }
 
-        if (!isValidProtocol(url)) {
+        if (!isValidProtocol(resolvedEndpoint)) {
             AppLogger.e(TAG, "Protocol blocked or invalid: $endpoint")
             return@withContext false
         }
@@ -187,15 +187,28 @@ class NetworkManager(private val context: Context) {
     }
 
     /**
-     * Validates protocol and enforces HTTPS for public hosts.
+     * Returns true if the endpoint's host resolves to a private/local address.
+     * Performs DNS resolution and caches the result.
      */
-    private fun isValidProtocol(url: URL): Boolean {
+    fun isPrivateEndpoint(endpoint: String): Boolean {
+        val host = try {
+            URL(endpoint).host ?: return false
+        } catch (_: Exception) { return false }
+        return isPrivateHost(host)
+    }
+
+    /**
+     * Validates that the endpoint uses an allowed protocol.
+     * HTTPS is required for public hosts; HTTP is only allowed for private/local addresses.
+     * Performs DNS resolution to detect hostnames that resolve to private IPs.
+     */
+    fun isValidProtocol(endpoint: String): Boolean {
+        val url = try { URL(endpoint) } catch (_: Exception) { return false }
         val protocol = url.protocol.lowercase()
         val host = url.host ?: return false
 
         if (protocol != "http" && protocol != "https") return false
 
-        // HTTP only allowed for local dev (localhost, 192.168.x.x, 10.x.x.x)
         if (protocol == "http" && !isPrivateHost(host)) {
             return false
         }

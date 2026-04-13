@@ -16,34 +16,7 @@ export function findDuplicates(values: string[]): Set<string> {
   return dupes
 }
 
-function isPrivateIP(host: string): boolean {
-  const parts = host.split(".")
-  if (parts.length !== 4) return false
-  const octets = parts.map(Number)
-  if (octets.some((o) => isNaN(o) || o < 0 || o > 255)) return false
-  const [a, b] = octets
-  return (
-    a === 127 || // Loopback (127.0.0.0/8)
-    a === 10 || // RFC 1918 (10.0.0.0/8)
-    (a === 192 && b === 168) || // RFC 1918 (192.168.0.0/16)
-    (a === 172 && b >= 16 && b <= 31) || // RFC 1918 (172.16.0.0/12)
-    (a === 100 && b >= 64 && b <= 127) || // CGNAT (100.64.0.0/10)
-    (a === 169 && b === 254) // Link-local (169.254.0.0/16)
-  )
-}
-
-export function isPrivateHost(url: string) {
-  try {
-    const stripped = url.replace(/^https?:\/\//, "").split(/[/?#]/)[0]
-    const host = stripped.split(":")[0]
-    return isPrivateIP(host) || host === "localhost"
-  } catch {
-    return false
-  }
-}
-
 // Validates that a URL has a valid http(s):// scheme and hostname.
-// HTTP enforcement (private-IP restriction) happens at the native layer via DNS resolution.
 export function isEndpointAllowed(url: string) {
   return /^https?:\/\/[^/:]+/.test(url)
 }

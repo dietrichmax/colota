@@ -855,6 +855,16 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun isValidEndpointProtocol(endpoint: String, promise: Promise) = executeAsync(promise) {
+        networkManager.isValidProtocol(endpoint)
+    }
+
+    @ReactMethod
+    fun isPrivateEndpoint(endpoint: String, promise: Promise) = executeAsync(promise) {
+        networkManager.isPrivateEndpoint(endpoint)
+    }
+
+    @ReactMethod
     fun isNetworkAvailable(promise: Promise) {
         promise.resolve(networkManager.isNetworkAvailable())
     }

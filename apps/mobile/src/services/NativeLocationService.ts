@@ -491,6 +491,29 @@ class NativeLocationService {
   // ============================================================================
 
   /**
+   * Validates that the endpoint uses an allowed protocol.
+   * HTTPS is required for public hosts; HTTP is only allowed for private/local addresses.
+   * Uses DNS resolution on the native side to detect hostnames that resolve to private IPs.
+   */
+  static async isValidEndpointProtocol(endpoint: string): Promise<boolean> {
+    this.ensureModule()
+    return this.safeExecute(
+      () => LocationServiceModule.isValidEndpointProtocol(endpoint),
+      false,
+      "isValidEndpointProtocol failed"
+    )
+  }
+
+  /**
+   * Returns true if the endpoint's host resolves to a private/local address via native DNS.
+   * Used to decide whether to prompt for local network permission (Android 15+).
+   */
+  static async isPrivateEndpoint(endpoint: string): Promise<boolean> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.isPrivateEndpoint(endpoint), false, "isPrivateEndpoint failed")
+  }
+
+  /**
    * Checks if the device has an active internet connection
    */
   static async isNetworkAvailable(): Promise<boolean> {
