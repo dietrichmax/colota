@@ -38,13 +38,13 @@ Colota has a dedicated Home Assistant integration that receives location updates
 2. Paste the webhook URL as the endpoint
 3. No authentication is needed - the webhook URL acts as the secret
 
-The integration works with the default/custom API template out of the box. For the best experience, select the **Home Assistant** template which adds a device identifier (`tid`) and enables the connection status check.
+The integration works with the default API format out of the box. To distinguish multiple devices, add a custom field `tid` with a unique value per device (e.g. `colota-phone`, `colota-tablet`).
 
 Your device will appear as a `device_tracker` entity in Home Assistant that you can use for automations, zones and the map.
 
 ## Payload
 
-The Home Assistant template sends the following payload:
+Colota sends the following payload:
 
 ```json
 {
