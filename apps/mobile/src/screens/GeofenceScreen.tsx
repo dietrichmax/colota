@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 15, ...fonts.semiBold, marginBottom: 2 },
   radiusRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   radius: { fontSize: 12 },
-  empty: { alignItems: "center", paddingVertical: 40 },
+  empty: { alignItems: "center", paddingVertical: 20 },
   emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
   emptyHint: {
     fontSize: 13,

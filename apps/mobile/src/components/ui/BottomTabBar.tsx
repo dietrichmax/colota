@@ -4,6 +4,7 @@
  */
 import React from "react"
 import { View, Pressable, Text, StyleSheet } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Settings, LucideIcon, MapPinned, MapPinHouse, Route } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fonts } from "../../styles/typography"
@@ -32,6 +33,7 @@ interface BottomTabBarProps {
 
 export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
   const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
 
   if (!currentRoute || !TAB_ROUTES.has(currentRoute)) return null
 
@@ -40,8 +42,8 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
       style={[
         styles.container,
         {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border
+          backgroundColor: colors.background,
+          paddingBottom: insets.bottom + 8
         }
       ]}
     >
@@ -68,9 +70,11 @@ export { TAB_ROUTES }
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    borderTopWidth: 1,
     paddingTop: 8,
-    paddingBottom: 6
+    paddingBottom: 6,
+    elevation: 0,
+    shadowOpacity: 0,
+    shadowRadius: 0
   },
   tab: {
     flex: 1,
