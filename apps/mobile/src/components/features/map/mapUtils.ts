@@ -89,7 +89,9 @@ interface TrackSegmentOptions {
   defaultColor?: string
 }
 
-/** Build per-segment LineString features with a pre-computed `color` property.
+/** Build LineString features with a pre-computed `color` property.
+ *  Consecutive segments of the same color are merged into a single multi-point LineString
+ *  to keep feature count low on long trips (O(color changes) instead of O(points)).
  *  Pass `skipIndices` to leave gaps between trips (indices where a new trip starts).
  *  Pass `locationColors` to override speed-based coloring with per-location colors. */
 export function buildTrackSegmentsGeoJSON(
@@ -99,25 +101,49 @@ export function buildTrackSegmentsGeoJSON(
 ): GeoJSON.FeatureCollection {
   const { skipIndices, locationColors, defaultColor } = options ?? {}
   const features: GeoJSON.Feature[] = []
+
+  let currentColor: string | null = null
+  let currentCoords: [number, number][] = []
+
+  const flush = () => {
+    if (currentCoords.length >= 2 && currentColor !== null) {
+      features.push({
+        type: "Feature",
+        properties: { color: currentColor },
+        geometry: { type: "LineString", coordinates: currentCoords }
+      })
+    }
+    currentCoords = []
+    currentColor = null
+  }
+
   for (let i = 1; i < locations.length; i++) {
-    if (skipIndices?.has(i)) continue
+    if (skipIndices?.has(i)) {
+      flush()
+      continue
+    }
+
     const color = defaultColor
       ? defaultColor
       : locationColors
         ? locationColors[i]
         : getSpeedColor(((locations[i - 1].speed ?? 0) + (locations[i].speed ?? 0)) / 2, colors)
-    features.push({
-      type: "Feature",
-      properties: { color },
-      geometry: {
-        type: "LineString",
-        coordinates: [
-          [locations[i - 1].longitude, locations[i - 1].latitude],
-          [locations[i].longitude, locations[i].latitude]
-        ]
-      }
-    })
+
+    if (currentColor === null) {
+      currentCoords.push([locations[i - 1].longitude, locations[i - 1].latitude])
+      currentCoords.push([locations[i].longitude, locations[i].latitude])
+      currentColor = color
+    } else if (color === currentColor) {
+      currentCoords.push([locations[i].longitude, locations[i].latitude])
+    } else {
+      flush()
+      currentCoords.push([locations[i - 1].longitude, locations[i - 1].latitude])
+      currentCoords.push([locations[i].longitude, locations[i].latitude])
+      currentColor = color
+    }
   }
+  flush()
+
   return { type: "FeatureCollection", features }
 }
 
