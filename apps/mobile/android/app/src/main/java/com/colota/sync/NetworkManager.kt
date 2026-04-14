@@ -2,9 +2,11 @@ package com.Colota.sync
 
 import android.content.Context
 import android.net.wifi.WifiInfo
+import android.net.wifi.WifiManager
 import com.Colota.BuildConfig
 import com.Colota.util.AppLogger
 import com.Colota.util.TimedCache
+import android.os.Build
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -36,17 +38,35 @@ class NetworkManager(private val context: Context) {
 
     @Volatile private var currentSsid: String = ""
     @Volatile private var isVpn: Boolean = false
+    private val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as? WifiManager
 
-    private val networkCallback = object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
-        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-            val wifiInfo = caps.transportInfo as? WifiInfo
-            currentSsid = wifiInfo?.ssid?.removeSurrounding("\"") ?: ""
-            isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-        }
+    private val networkCallback = createNetworkCallback()
 
-        override fun onLost(network: Network) {
-            currentSsid = ""
-            isVpn = false
+    private fun createNetworkCallback(): ConnectivityManager.NetworkCallback {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
+                override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+                    val wifiInfo = caps.transportInfo as? WifiInfo
+                    currentSsid = wifiInfo?.ssid?.removeSurrounding("\"") ?: ""
+                    isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+                }
+                override fun onLost(network: Network) {
+                    currentSsid = ""
+                    isVpn = false
+                }
+            }
+        } else {
+            object : ConnectivityManager.NetworkCallback() {
+                @Suppress("DEPRECATION")
+                override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+                    currentSsid = wifiManager?.connectionInfo?.ssid?.removeSurrounding("\"") ?: ""
+                    isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+                }
+                override fun onLost(network: Network) {
+                    currentSsid = ""
+                    isVpn = false
+                }
+            }
         }
     }
 
