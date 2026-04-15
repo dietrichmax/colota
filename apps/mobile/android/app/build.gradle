@@ -187,6 +187,10 @@ android {
 
     testOptions {
         unitTests.returnDefaultValues = true
+        unitTests.all {
+            // Bump heap to avoid OOM when running the full test suite.
+            maxHeapSize = "4g"
+        }
     }
 }
 
