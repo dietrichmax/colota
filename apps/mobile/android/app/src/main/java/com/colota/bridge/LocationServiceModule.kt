@@ -1011,8 +1011,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getNativeLogs(promise: Promise) = executeAsync(promise) {
-        val pid = android.os.Process.myPid()
-        val process = Runtime.getRuntime().exec(arrayOf("/system/bin/logcat", "-d", "-v", "threadtime", "--pid=$pid"))
+        val process = Runtime.getRuntime().exec(arrayOf("/system/bin/logcat", "-d", "-v", "threadtime"))
         try {
             val lines = process.inputStream.bufferedReader().readLines()
             process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
