@@ -50,6 +50,7 @@ class LocationForegroundServiceTest {
 
     private lateinit var testDispatcher: TestDispatcher
     private lateinit var testScope: TestScope
+    private lateinit var defaultServiceScope: CoroutineScope
     private lateinit var service: LocationForegroundService
 
     @Before
@@ -70,6 +71,7 @@ class LocationForegroundServiceTest {
         testDispatcher = UnconfinedTestDispatcher()
         Dispatchers.setMain(testDispatcher)
         testScope = TestScope(testDispatcher)
+        defaultServiceScope = CoroutineScope(testDispatcher + SupervisorJob())
 
         every { deviceInfoHelper.getCachedBatteryStatus() } returns Pair(80, 2)
         every { deviceInfoHelper.isBatteryCritical(any()) } returns false
@@ -107,14 +109,7 @@ class LocationForegroundServiceTest {
 
     @After
     fun tearDown() {
-        // Cancel long-running coroutines started by setupLocationUpdates so runTest doesn't
-        // fail with UncompletedCoroutinesError. The tracking heartbeat logger is an infinite
-        // loop scoped to serviceScope; explicitly cancel it before tearing down testScope.
-        try {
-            getField<Job?>("trackingHeartbeatJob")?.cancel()
-        } catch (_: Exception) {
-            // field may not exist if the test injected a different state - ignore
-        }
+        defaultServiceScope.cancel()
         testScope.cancel()
         Dispatchers.resetMain()
         unmockkObject(LocationServiceModule)
@@ -135,7 +130,7 @@ class LocationForegroundServiceTest {
         setField("secureStorage", secureStorage)
         setField("networkManager", networkManager)
         setField("notificationManager", androidNotificationManager)
-        setField("serviceScope", testScope as CoroutineScope)
+        setField("serviceScope", defaultServiceScope)
         setField("config", ServiceConfig(
             endpoint = "https://example.com",
             interval = 5000L,
@@ -146,17 +141,14 @@ class LocationForegroundServiceTest {
     }
 
     /**
-     * Runs a test body on [testScope] and cancels the tracking heartbeat coroutine inside
-     * the same [runTest] scope so it doesn't count as a leaked coroutine. Must be used
-     * instead of `testScope.runTest` for any test that triggers `setupLocationUpdates`,
-     * which starts an infinite `serviceScope.launch` loop.
+     * Runs a test body on [testScope] with `serviceScope` pointed at `runTest`'s
+     * [backgroundScope], which auto-cancels at the end of the test body. Use this for any
+     * test that exercises code launching long-running jobs on `serviceScope` (eg the
+     * tracking heartbeat started by `setupLocationUpdates`).
      */
     private fun runServiceTest(block: suspend TestScope.() -> Unit): TestResult = testScope.runTest {
-        try {
-            block()
-        } finally {
-            getField<Job?>("trackingHeartbeatJob")?.cancel()
-        }
+        setField("serviceScope", backgroundScope)
+        block()
     }
 
     private fun setField(name: String, value: Any?) {
