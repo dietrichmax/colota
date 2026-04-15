@@ -145,6 +145,20 @@ class LocationForegroundServiceTest {
         ))
     }
 
+    /**
+     * Runs a test body on [testScope] and cancels the tracking heartbeat coroutine inside
+     * the same [runTest] scope so it doesn't count as a leaked coroutine. Must be used
+     * instead of `testScope.runTest` for any test that triggers `setupLocationUpdates`,
+     * which starts an infinite `serviceScope.launch` loop.
+     */
+    private fun runServiceTest(block: suspend TestScope.() -> Unit): TestResult = testScope.runTest {
+        try {
+            block()
+        } finally {
+            getField<Job?>("trackingHeartbeatJob")?.cancel()
+        }
+    }
+
     private fun setField(name: String, value: Any?) {
         val field = LocationForegroundService::class.java.getDeclaredField(name)
         field.isAccessible = true
@@ -1205,7 +1219,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `applyProfileConfig restarts location updates`() = testScope.runTest {
+    fun `applyProfileConfig restarts location updates`() = runServiceTest {
         val oldCallback = mockk<LocationUpdateCallback>(relaxed = true)
         setField("locationUpdateCallback", oldCallback)
 
@@ -1508,7 +1522,7 @@ class LocationForegroundServiceTest {
     // =========================================================================
 
     @Test
-    fun `resumeFromMotionlessPause clears state and saves to DB`() = testScope.runTest {
+    fun `resumeFromMotionlessPause clears state and saves to DB`() = runServiceTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
@@ -1522,7 +1536,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `resumeFromMotionlessPause resumes GPS when no wifi hold active`() = testScope.runTest {
+    fun `resumeFromMotionlessPause resumes GPS when no wifi hold active`() = runServiceTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
@@ -1548,7 +1562,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `resumeFromMotionlessPause restarts countdown when zone has pauseOnMotionless`() = testScope.runTest {
+    fun `resumeFromMotionlessPause restarts countdown when zone has pauseOnMotionless`() = runServiceTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
@@ -1566,7 +1580,7 @@ class LocationForegroundServiceTest {
     // =========================================================================
 
     @Test
-    fun `onMotionDetected resumes from motionless pause when isMotionlessPaused`() = testScope.runTest {
+    fun `onMotionDetected resumes from motionless pause when isMotionlessPaused`() = runServiceTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
@@ -1580,7 +1594,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `onMotionDetected triggers motionless resume`() = testScope.runTest {
+    fun `onMotionDetected triggers motionless resume`() = runServiceTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
@@ -1596,7 +1610,7 @@ class LocationForegroundServiceTest {
     // =========================================================================
 
     @Test
-    fun `maybeResumeGps resumes GPS when no holds active`() = testScope.runTest {
+    fun `maybeResumeGps resumes GPS when no holds active`() = runServiceTest {
         setField("currentZoneGeofence", geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true, pauseOnMotionless = true))
         setField("isWifiPaused", false)
         setField("isMotionlessPaused", false)
@@ -1629,7 +1643,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `maybeResumeGps resumes when currentZoneGeofence is null`() = testScope.runTest {
+    fun `maybeResumeGps resumes when currentZoneGeofence is null`() = runServiceTest {
         setField("currentZoneGeofence", null)
 
         invokeMaybeResumeGps()
