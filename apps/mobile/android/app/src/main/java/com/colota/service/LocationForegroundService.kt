@@ -824,46 +824,28 @@ class LocationForegroundService : Service() {
         heartbeatJob = null
     }
 
-    /**
-     * Requests a single fresh GPS fix with a 30-second timeout.
-     * Falls back to [lastKnownLocation] if no fix arrives in time.
-     */
-    private suspend fun requestFreshLocation(): android.location.Location? =
-        withTimeoutOrNull(30_000L) {
-            suspendCancellableCoroutine { cont ->
-                val callback = object : LocationUpdateCallback {
-                    override fun onLocationUpdate(location: android.location.Location) {
-                        locationProvider.removeLocationUpdates(this)
-                        if (cont.isActive) cont.resume(location)
-                    }
-                }
-                cont.invokeOnCancellation { locationProvider.removeLocationUpdates(callback) }
-                locationProvider.requestLocationUpdates(
-                    intervalMs = 1000L,
-                    minDistanceMeters = 0f,
-                    looper = android.os.Looper.getMainLooper(),
-                    callback = callback
-                )
-            }
-        }
-
     private suspend fun sendHeartbeatLocation() {
         if (config.endpoint.isBlank() || !networkManager.isNetworkAvailable()) {
             AppLogger.d(TAG, "Heartbeat skipped: no endpoint or no network")
             return
         }
 
-        val location = withContext(Dispatchers.Main) { requestFreshLocation() } ?: lastKnownLocation
-
-        if (location == null) {
-            AppLogger.d(TAG, "Heartbeat skipped: no location available")
+        val zone = currentZoneGeofence
+        if (zone == null) {
+            AppLogger.d(TAG, "Heartbeat skipped: no current zone")
             return
         }
 
+        val location = android.location.Location("geofence").apply {
+            latitude = zone.lat
+            longitude = zone.lon
+            accuracy = zone.radius.toFloat()
+            time = System.currentTimeMillis()
+        }
         lastKnownLocation = location
 
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
-        val timestampSec = System.currentTimeMillis() / 1000
+        val timestampSec = location.time / 1000
         val currentFieldMap = fieldMap ?: emptyMap()
 
         val payload = payloadBuilder.buildPayload(
