@@ -107,6 +107,14 @@ class LocationForegroundServiceTest {
 
     @After
     fun tearDown() {
+        // Cancel long-running coroutines started by setupLocationUpdates so runTest doesn't
+        // fail with UncompletedCoroutinesError. The tracking heartbeat logger is an infinite
+        // loop scoped to serviceScope; explicitly cancel it before tearing down testScope.
+        try {
+            getField<Job?>("trackingHeartbeatJob")?.cancel()
+        } catch (_: Exception) {
+            // field may not exist if the test injected a different state - ignore
+        }
         testScope.cancel()
         Dispatchers.resetMain()
         unmockkObject(LocationServiceModule)
