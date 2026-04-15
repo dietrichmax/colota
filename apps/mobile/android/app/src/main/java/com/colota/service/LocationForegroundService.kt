@@ -76,7 +76,7 @@ class LocationForegroundService : Service() {
         /** Multiplier applied to the tracking interval for the geofence entry delay. */
         private const val ENTRY_DELAY_MULTIPLIER = 3.5
         /** Debounce before resuming GPS after unmetered network is lost (ms). */
-        private const val WIFI_RESUME_DEBOUNCE_MS = 15_000L
+        private const val WIFI_RESUME_DEBOUNCE_MS = 2_000L
         const val ACTION_MANUAL_FLUSH = "com.Colota.ACTION_MANUAL_FLUSH"
         const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
         const val ACTION_REFRESH_NOTIFICATION = "com.Colota.REFRESH_NOTIFICATION"
