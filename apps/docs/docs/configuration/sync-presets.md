@@ -36,4 +36,4 @@ Configure this in **Settings > Advanced Settings > Network Settings > Sync Only 
 
 ## Offline Mode
 
-In [offline mode](/docs/configuration/server-settings#offline-mode), network settings (sync interval, retry behavior, sync condition) are hidden since no syncing occurs. Preset descriptions adjust to show only tracking parameters.
+In [offline mode](/docs/configuration/server-settings#offline-mode), network settings (sync interval, retry behavior, sync condition) are hidden since no syncing occurs. Preset descriptions adjust to show only tracking parameters. For displaying the maps network requests are still made to maps.mxd.codes. See [Offline Maps](/docs/guides/offline-maps) for predownloading maps.
