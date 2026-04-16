@@ -198,6 +198,7 @@ export function CalendarPicker({
       {!isToday && !isExpanded && (
         <Pressable
           onPress={goToToday}
+          hitSlop={HIT_SLOP_LG}
           style={({ pressed }) => [
             styles.todayBtn,
             { backgroundColor: colors.primary + "15" },
