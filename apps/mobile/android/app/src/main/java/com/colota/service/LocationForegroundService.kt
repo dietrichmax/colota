@@ -165,7 +165,11 @@ class LocationForegroundService : Service() {
                 currentZoneName = savedZone
                 val restoredGeofence = geofenceHelper.getGeofenceByName(savedZone)
                 currentZoneGeofence = restoredGeofence
-                AppLogger.d(TAG, "Restored pause zone state: $savedZone")
+                if (restoredGeofence == null) {
+                    AppLogger.w(TAG, "Restored pause zone state: $savedZone (geofence not found in DB - heartbeat/wifi/motionless settings unavailable)")
+                } else {
+                    AppLogger.d(TAG, "Restored pause zone state: $savedZone (heartbeat=${restoredGeofence.heartbeatEnabled}, wifi=${restoredGeofence.pauseOnWifi}, motionless=${restoredGeofence.pauseOnMotionless})")
+                }
                 if (restoredGeofence?.pauseOnWifi == true) {
                     // registerWifiPause() also sets isWifiPaused if currently on unmetered network,
                     // which prevents setupLocationUpdates() from starting GPS unnecessarily.
@@ -665,14 +669,16 @@ class LocationForegroundService : Service() {
 
         if (geofence.pauseOnWifi) registerWifiPause()
         if (geofence.pauseOnMotionless) startMotionlessCountdown(geofence.motionlessTimeoutMinutes)
-        if (geofence.heartbeatEnabled) startHeartbeat(geofence.heartbeatIntervalMinutes)
+        if (geofence.heartbeatEnabled) {
+            startHeartbeat(geofence.heartbeatIntervalMinutes)
+        }
 
         profileManager.clearSpeedBuffer()
 
         // Flush any queued points so the backend shows the arrival position
         serviceScope?.launch { syncManager.manualFlush() }
 
-        AppLogger.d(TAG, "Entered pause zone: ${geofence.name}")
+        AppLogger.d(TAG, "Entered pause zone: ${geofence.name} (heartbeat=${geofence.heartbeatEnabled}, wifi=${geofence.pauseOnWifi}, motionless=${geofence.pauseOnMotionless})")
     }
 
 
