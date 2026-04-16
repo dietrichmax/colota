@@ -1820,6 +1820,30 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // WiFi pause restore on service restart
+    // =========================================================================
+
+    @Test
+    fun `setupLocationUpdates skips GPS when isWifiPaused is true`() {
+        setField("isWifiPaused", true)
+
+        invokeSetupLocationUpdates()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `setupLocationUpdates starts GPS when inside zone but neither wifi nor motionless paused`() {
+        setField("insidePauseZone", true)
+        setField("isWifiPaused", false)
+        setField("isMotionlessPaused", false)
+
+        invokeSetupLocationUpdates()
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    // =========================================================================
     // WiFi pause event reason
     // =========================================================================
 

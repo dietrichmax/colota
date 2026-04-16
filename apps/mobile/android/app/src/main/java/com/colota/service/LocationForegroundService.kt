@@ -169,14 +169,17 @@ class LocationForegroundService : Service() {
                     AppLogger.d(TAG, "Restored pause zone state: $savedZone (heartbeat=${restoredGeofence.heartbeatEnabled}, wifi=${restoredGeofence.pauseOnWifi}, motionless=${restoredGeofence.pauseOnMotionless})")
                 }
                 if (restoredGeofence?.pauseOnWifi == true) {
-                    // registerWifiPause() also sets isWifiPaused if currently on unmetered network,
-                    // which prevents setupLocationUpdates() from starting GPS unnecessarily.
+                    // Also sets isWifiPaused synchronously if currently on unmetered network,
+                    // so setupLocationUpdates() won't start GPS before onAvailable fires.
                     registerWifiPause()
                 }
                 if (savedSettings["pause_zone_motionless_active"]?.toBoolean() == true) {
                     isMotionlessPaused = true
                     motionDetector?.arm()
                     AppLogger.d(TAG, "Restored motionless pause state")
+                } else if (restoredGeofence?.pauseOnMotionless == true) {
+                    startMotionlessCountdown(restoredGeofence.motionlessTimeoutMinutes)
+                    AppLogger.d(TAG, "Restored motionless countdown: ${restoredGeofence.motionlessTimeoutMinutes}min")
                 }
                 if (restoredGeofence?.heartbeatEnabled == true) {
                     startHeartbeat(restoredGeofence.heartbeatIntervalMinutes)
@@ -698,18 +701,32 @@ class LocationForegroundService : Service() {
 
     // ── WiFi pause ────────────────────────────────────────────────────────
 
+    /** Stops GPS and updates state when an unmetered network becomes active. */
+    private fun activateWifiPause() {
+        isWifiPaused = true
+        dbHelper.saveSetting("pause_zone_wifi_active", "true")
+        stopLocationUpdates()
+        updateNotification(forceUpdate = true)
+        LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, "wifi")
+        AppLogger.i(TAG, "Unmetered network available - WiFi pause active")
+    }
+
     /**
-     * Registers a [ConnectivityManager.NetworkCallback] to monitor unmetered network
-     * availability (WiFi/Ethernet) while inside a pause zone with [pauseOnWifi] enabled.
-     * GPS is stopped immediately if already on an unmetered network, and resumed
-     * (after a [WIFI_RESUME_DEBOUNCE_MS] debounce) when the network is lost.
-     *
-     * Must only be called from the main thread. Callbacks are delivered on the main thread.
+     * Starts monitoring unmetered network availability for a [pauseOnWifi] zone.
+     * Checks current connectivity synchronously on registration since [NetworkCallback.onAvailable]
+     * is posted to the main looper and fires too late to block [setupLocationUpdates].
      */
     private fun registerWifiPause() {
         unregisterWifiPause() // clean up any stale callback
 
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        // Check current connectivity synchronously - onAvailable fires after this call stack.
+        val caps = cm.activeNetwork?.let { cm.getNetworkCapabilities(it) }
+        if (caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) == true) {
+            activateWifiPause()
+        }
+
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
             .build()
@@ -720,12 +737,7 @@ class LocationForegroundService : Service() {
                 wifiResumeJob = null
                 unmeteredNetworkCount++
                 if (!isWifiPaused) {
-                    isWifiPaused = true
-                    dbHelper.saveSetting("pause_zone_wifi_active", "true")
-                    stopLocationUpdates()
-                    updateNotification(forceUpdate = true)
-                    LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, "wifi")
-                    AppLogger.i(TAG, "Unmetered network available - WiFi pause active (networks=$unmeteredNetworkCount)")
+                    activateWifiPause()
                 }
             }
 
@@ -752,7 +764,6 @@ class LocationForegroundService : Service() {
         try {
             cm.registerNetworkCallback(request, callback, Handler(Looper.getMainLooper()))
             wifiCallback = callback
-            // onAvailable fires immediately for already-active networks, so no manual initial check needed
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to register network callback", e)
         }
