@@ -2046,10 +2046,17 @@ class LocationForegroundServiceTest {
         motionlessTimeoutMinutes: Int = 10
     ) = GeofenceHelper.CachedGeofence(name, lat, lon, radius, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes)
 
-    private fun invokeSendHeartbeatLocation() {
-        val method = LocationForegroundService::class.java.getDeclaredMethod("sendHeartbeatLocation")
+    private fun invokeSendHeartbeatLocation() = runBlocking {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "sendHeartbeatLocation", kotlin.coroutines.Continuation::class.java
+        )
         method.isAccessible = true
-        kotlinx.coroutines.runBlocking { method.invoke(service) }
+        suspendCancellableCoroutine<Unit> { cont ->
+            val result = method.invoke(service, cont)
+            if (result !== kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED) {
+                cont.resumeWith(Result.success(Unit))
+            }
+        }
     }
 
     private val homeGeofence = geofence("Home", 52.50, 13.40, 150.0)
