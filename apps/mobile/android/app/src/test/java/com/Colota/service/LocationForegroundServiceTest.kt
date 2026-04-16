@@ -1911,6 +1911,82 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // enterPauseZone - flush respects sync condition
+    // =========================================================================
+
+    @Test
+    fun `enterPauseZone flushes queue when sync is allowed`() = testScope.runTest {
+        every { syncManager.isSyncAllowed() } returns true
+        val location = mockLocation()
+        setField("lastKnownLocation", location)
+
+        invokeEnterPauseZone(homeGeofence)
+
+        coVerify { syncManager.manualFlush() }
+    }
+
+    @Test
+    fun `enterPauseZone skips flush when sync condition not met`() = testScope.runTest {
+        every { syncManager.isSyncAllowed() } returns false
+        val location = mockLocation()
+        setField("lastKnownLocation", location)
+
+        invokeEnterPauseZone(homeGeofence)
+
+        coVerify(exactly = 0) { syncManager.manualFlush() }
+    }
+
+    // =========================================================================
+    // sendHeartbeatLocation - sync condition check
+    // =========================================================================
+
+    @Test
+    fun `sendHeartbeatLocation skips send when sync condition not met`() = testScope.runTest {
+        every { networkManager.isNetworkAvailable() } returns true
+        every { syncManager.isSyncAllowed() } returns false
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeSendHeartbeatLocation()
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify { AppLogger.d("LocationService", "Heartbeat skipped: sync condition not met") }
+    }
+
+    @Test
+    fun `sendHeartbeatLocation sends when sync condition is met`() = testScope.runTest {
+        every { networkManager.isNetworkAvailable() } returns true
+        every { syncManager.isSyncAllowed() } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeSendHeartbeatLocation()
+
+        coVerify { networkManager.sendToEndpoint(any(), "https://example.com", any(), any(), any()) }
+    }
+
+    @Test
+    fun `sendHeartbeatLocation skips when no network available`() = testScope.runTest {
+        every { networkManager.isNetworkAvailable() } returns false
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeSendHeartbeatLocation()
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `sendHeartbeatLocation skips when no current zone`() = testScope.runTest {
+        every { networkManager.isNetworkAvailable() } returns true
+        every { syncManager.isSyncAllowed() } returns true
+        setField("currentZoneGeofence", null)
+
+        invokeSendHeartbeatLocation()
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    // =========================================================================
     // Reflection helpers
     // =========================================================================
 
@@ -1969,6 +2045,12 @@ class LocationForegroundServiceTest {
         pauseOnMotionless: Boolean = false,
         motionlessTimeoutMinutes: Int = 10
     ) = GeofenceHelper.CachedGeofence(name, lat, lon, radius, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes)
+
+    private fun invokeSendHeartbeatLocation() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("sendHeartbeatLocation")
+        method.isAccessible = true
+        kotlinx.coroutines.runBlocking { method.invoke(service) }
+    }
 
     private val homeGeofence = geofence("Home", 52.50, 13.40, 150.0)
     private val officeGeofence = geofence("Office", 48.14, 11.58, 200.0)

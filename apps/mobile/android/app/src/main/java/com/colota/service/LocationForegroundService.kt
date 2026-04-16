@@ -664,7 +664,9 @@ class LocationForegroundService : Service() {
         profileManager.clearSpeedBuffer()
 
         // Flush any queued points so the backend shows the arrival position
-        serviceScope?.launch { syncManager.manualFlush() }
+        if (syncManager.isSyncAllowed()) {
+            serviceScope?.launch { syncManager.manualFlush() }
+        }
 
         AppLogger.d(TAG, "Entered pause zone: ${geofence.name} (heartbeat=${geofence.heartbeatEnabled}, wifi=${geofence.pauseOnWifi}, motionless=${geofence.pauseOnMotionless})")
     }
@@ -874,8 +876,11 @@ class LocationForegroundService : Service() {
             customFields
         )
 
-        // Send immediately regardless of sync condition - the whole point of
-        // a heartbeat is keeping the device visible on the server.
+        if (!syncManager.isSyncAllowed()) {
+            AppLogger.d(TAG, "Heartbeat skipped: sync condition not met")
+            return
+        }
+
         val sent = networkManager.sendToEndpoint(
             payload, config.endpoint, secureStorage.getAuthHeaders(),
             config.httpMethod, config.apiFormat
