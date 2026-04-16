@@ -79,10 +79,8 @@ class LocationForegroundService : Service() {
         private const val ENTRY_DELAY_MULTIPLIER = 3.5
         /** Debounce before resuming GPS after unmetered network is lost (ms). */
         private const val WIFI_RESUME_DEBOUNCE_MS = 2_000L
-        /** Floor for the heartbeat check interval so it never polls too aggressively. */
-        private const val MIN_HEARTBEAT_INTERVAL_MS = 60_000L
-        /** Floor for the stall threshold so short tracking intervals don't trigger false recoveries. */
-        private const val MIN_STALL_THRESHOLD_MS = 2 * 60_000L
+        /** Cadence at which the tracking heartbeat logs time-since-last-fix for diagnostics. */
+        private const val TRACKING_HEARTBEAT_INTERVAL_MS = 5 * 60_000L
         const val ACTION_MANUAL_FLUSH = "com.Colota.ACTION_MANUAL_FLUSH"
         const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
         const val ACTION_REFRESH_NOTIFICATION = "com.Colota.REFRESH_NOTIFICATION"
@@ -349,33 +347,20 @@ class LocationForegroundService : Service() {
     }
 
     /**
-     * Periodic watchdog that detects silent GPS stalls and auto-recovers by tearing down
-     * and re-registering the location listener. Also logs time-since-last-fix for diagnostics.
+     * Diagnostic-only periodic logger. Records "time since last GPS fix" every 5 minutes
+     * to the activity log so silent stalls (eg stale FLP binding after long uptime) become
+     * visible in user-exported logs. Does not take any recovery action - data only.
      */
     private fun startTrackingHeartbeatLogger() {
         trackingHeartbeatJob?.cancel()
         val scope = serviceScope ?: return
-        val heartbeatInterval = maxOf(config.interval * 5, MIN_HEARTBEAT_INTERVAL_MS)
-        val stallThreshold = maxOf(config.interval * 10, MIN_STALL_THRESHOLD_MS)
         trackingHeartbeatJob = scope.launch {
             while (isActive) {
-                delay(heartbeatInterval)
+                delay(TRACKING_HEARTBEAT_INTERVAL_MS)
                 if (isWifiPaused || isMotionlessPaused) continue
                 if (locationUpdateCallback == null) continue
                 val sinceLastFix = SystemClock.elapsedRealtime() - lastFixAtMs
-                if (sinceLastFix > stallThreshold) {
-                    AppLogger.w(TAG, "GPS stall detected (${sinceLastFix / 1000}s since last fix), restarting location updates")
-                    // Tear down the listener directly instead of calling stopLocationUpdates(),
-                    // which would cancel this coroutine via cancelTrackingHeartbeatLogger().
-                    // setupLocationUpdates() starts a fresh heartbeat that replaces this one.
-                    withContext(Dispatchers.Main) {
-                        locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
-                        locationUpdateCallback = null
-                        setupLocationUpdates()
-                    }
-                } else {
-                    AppLogger.i(TAG, "Tracking alive: ${sinceLastFix / 1000}s since last fix")
-                }
+                AppLogger.i(TAG, "Tracking alive: ${sinceLastFix / 1000}s since last fix")
             }
         }
     }
