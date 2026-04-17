@@ -844,14 +844,19 @@ class LocationForegroundService : Service() {
     }
 
     private suspend fun sendHeartbeatLocation() {
-        if (config.endpoint.isBlank() || !networkManager.isNetworkAvailable()) {
-            AppLogger.d(TAG, "Heartbeat skipped: no endpoint or no network")
+        if (config.endpoint.isBlank()) {
+            AppLogger.d(TAG, "Heartbeat skipped: no endpoint")
             return
         }
 
         val zone = currentZoneGeofence
         if (zone == null) {
             AppLogger.d(TAG, "Heartbeat skipped: no current zone")
+            return
+        }
+
+        if (!syncManager.isSyncAllowed()) {
+            AppLogger.d(TAG, "Heartbeat skipped: sync condition not met")
             return
         }
 
@@ -875,11 +880,6 @@ class LocationForegroundService : Service() {
             timestampSec,
             customFields
         )
-
-        if (!syncManager.isSyncAllowed()) {
-            AppLogger.d(TAG, "Heartbeat skipped: sync condition not met")
-            return
-        }
 
         val sent = networkManager.sendToEndpoint(
             payload, config.endpoint, secureStorage.getAuthHeaders(),

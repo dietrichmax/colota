@@ -1942,7 +1942,6 @@ class LocationForegroundServiceTest {
 
     @Test
     fun `sendHeartbeatLocation skips send when sync condition not met`() = testScope.runTest {
-        every { networkManager.isNetworkAvailable() } returns true
         every { syncManager.isSyncAllowed() } returns false
         setField("currentZoneGeofence", homeGeofence)
 
@@ -1954,7 +1953,6 @@ class LocationForegroundServiceTest {
 
     @Test
     fun `sendHeartbeatLocation sends when sync condition is met`() = testScope.runTest {
-        every { networkManager.isNetworkAvailable() } returns true
         every { syncManager.isSyncAllowed() } returns true
         coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
         every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
@@ -1966,18 +1964,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `sendHeartbeatLocation skips when no network available`() = testScope.runTest {
-        every { networkManager.isNetworkAvailable() } returns false
-        setField("currentZoneGeofence", homeGeofence)
-
-        invokeSendHeartbeatLocation()
-
-        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
-    }
-
-    @Test
     fun `sendHeartbeatLocation skips when no current zone`() = testScope.runTest {
-        every { networkManager.isNetworkAvailable() } returns true
         every { syncManager.isSyncAllowed() } returns true
         setField("currentZoneGeofence", null)
 
