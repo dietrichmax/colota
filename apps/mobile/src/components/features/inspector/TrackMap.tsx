@@ -243,24 +243,23 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
     ]
   )
 
-  if (locations.length === 0) {
-    return (
-      <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
-        <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
-          <MapPinOff size={32} color={colors.textSecondary} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
-        <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>No tracked locations for this day.</Text>
-      </View>
-    )
-  }
+  const isEmpty = locations.length === 0
 
   return (
     <View style={styles.container}>
       {mapView}
 
-      {/* Point detail popup */}
-      {popup && (
+      {isEmpty && (
+        <View style={[styles.emptyOverlay, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
+          <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
+            <MapPinOff size={32} color={colors.textSecondary} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>No tracked locations for this day.</Text>
+        </View>
+      )}
+
+      {!isEmpty && popup && (
         <View style={[styles.popupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.popupHeader}>
             <Text style={[styles.popupTime, { color: colors.text }]}>
@@ -294,10 +293,9 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
         </View>
       )}
 
-      <MapCenterButton visible={!isCentered} onPress={handleFitTrack} />
+      {!isEmpty && <MapCenterButton visible={!isCentered} onPress={handleFitTrack} />}
 
-      {/* Trip legend */}
-      {trips && trips.length > 1 && (
+      {!isEmpty && trips && trips.length > 1 && (
         <View style={[styles.legend, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {trips.map((trip) => (
             <View key={trip.index} style={styles.legendItem}>
@@ -316,11 +314,16 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: "hidden"
   },
-  emptyContainer: {
-    flex: 1,
+  emptyOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24
+    padding: 24,
+    zIndex: 20
   },
   iconCircle: {
     width: 64,
