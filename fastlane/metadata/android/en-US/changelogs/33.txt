@@ -1,0 +1,7 @@
+- Heartbeat now sends zone center instead of waking GPS
+- Sync condition (Wi-Fi/SSID/VPN) now respected in heartbeat
+- Fixed WiFi and motionless pause not restoring correctly after restart
+- Fixed crash on Android 11 from NetworkCallback API mismatch
+- Fixed duplicate safe-area inset above tab bar on Android 14
+- Fixed back arrow showing on tab root screens
+- WiFi resume after zone exit reduced from 15s to 2s
