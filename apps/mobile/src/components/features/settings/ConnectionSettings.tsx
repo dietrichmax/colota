@@ -3,12 +3,12 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useEffect, useRef } from "react"
 import { Text, StyleSheet, TextInput, Switch, View, Pressable } from "react-native"
 import { CheckCircle, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { isPrivateHost, isEndpointAllowed } from "../../../utils/settingsValidation"
+import { isEndpointAllowed } from "../../../utils/settingsValidation"
 import { buildTraccarJsonPayload, isTraccarJsonFormat } from "../../../utils/apiPayload"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
 import { fonts } from "../../../styles/typography"
@@ -39,7 +39,20 @@ export function ConnectionSettings({
   const [testing, setTesting] = useState(false)
   const [testResponse, setTestResponse] = useState<string | null>(null)
   const [testError, setTestError] = useState(false)
+  const [endpointPrivate, setEndpointPrivate] = useState(false)
   const timeout = useTimeout()
+  const pendingCheck = useRef(0)
+
+  useEffect(() => {
+    if (!endpointInput || !endpointInput.startsWith("http://")) {
+      setEndpointPrivate(false)
+      return
+    }
+    const id = ++pendingCheck.current
+    NativeLocationService.isPrivateEndpoint(endpointInput).then((isPrivate) => {
+      if (id === pendingCheck.current) setEndpointPrivate(isPrivate)
+    })
+  }, [endpointInput])
 
   const handleOfflineModeChange = useCallback(
     async (enabled: boolean) => {
@@ -122,7 +135,15 @@ export function ConnectionSettings({
       if (fieldMap.bear) payload[fieldMap.bear] = recentLocation.bearing ?? 0
       if (fieldMap.tst) payload[fieldMap.tst] = Math.floor(Date.now() / 1000)
 
-      if (isPrivateHost(endpointInput)) {
+      const protocolAllowed = await NativeLocationService.isValidEndpointProtocol(endpointInput)
+      if (!protocolAllowed) {
+        setTestResponse("HTTPS is required for public endpoints. HTTP is only allowed for private/local addresses.")
+        setTestError(true)
+        return
+      }
+
+      const isPrivate = await NativeLocationService.isPrivateEndpoint(endpointInput)
+      if (isPrivate) {
         const granted = await ensureLocalNetworkPermission()
         if (!granted) {
           setTestResponse("Local network permission required to reach this server")
@@ -265,7 +286,7 @@ export function ConnectionSettings({
                 </Text>
               )}
 
-              {endpointInput.startsWith("http://") && !isPrivateHost(endpointInput) && (
+              {endpointInput.startsWith("http://") && !endpointPrivate && (
                 <Text style={[styles.httpWarning, { color: colors.warning }]}>
                   HTTP only allowed for private IPs / localhost
                 </Text>

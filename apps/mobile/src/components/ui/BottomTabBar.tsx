@@ -5,7 +5,7 @@
 import React from "react"
 import { View, Pressable, Text, StyleSheet } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Map, Clock, Fence, Settings, LucideIcon } from "lucide-react-native"
+import { Settings, LucideIcon, House, MapPinHouse, Waypoints } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fonts } from "../../styles/typography"
 
@@ -17,9 +17,9 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { name: "dashboard", label: "Dashboard", icon: Map, route: "Dashboard" },
-  { name: "history", label: "History", icon: Clock, route: "Location History" },
-  { name: "geofences", label: "Geofences", icon: Fence, route: "Geofences" },
+  { name: "dashboard", label: "Dashboard", icon: House, route: "Dashboard" },
+  { name: "history", label: "History", icon: Waypoints, route: "Location History" },
+  { name: "geofences", label: "Geofences", icon: MapPinHouse, route: "Geofences" },
   { name: "settings", label: "Settings", icon: Settings, route: "Settings" }
 ]
 
@@ -42,9 +42,8 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
       style={[
         styles.container,
         {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          paddingBottom: Math.max(insets.bottom, 6)
+          backgroundColor: colors.background,
+          paddingBottom: insets.bottom + 8
         }
       ]}
     >
@@ -71,8 +70,11 @@ export { TAB_ROUTES }
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    borderTopWidth: 1,
-    paddingTop: 8
+    paddingTop: 8,
+    paddingBottom: 6,
+    elevation: 0,
+    shadowOpacity: 0,
+    shadowRadius: 0
   },
   tab: {
     flex: 1,

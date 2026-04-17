@@ -11,7 +11,7 @@ import { showAlert } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { fonts } from "../styles/typography"
-import { ChevronRight, Wifi, PersonStanding, MapPin } from "lucide-react-native"
+import { ChevronRight, Wifi, PersonStanding, MapPinHouse } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
 import {
   DEFAULT_MAP_ZOOM,
@@ -232,7 +232,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
             hitSlop={HIT_SLOP_MD}
             style={({ pressed }) => [styles.zoomBtn, pressed && { opacity: colors.pressedOpacity }]}
           >
-            <MapPin size={20} color={colors.textSecondary} />
+            <MapPinHouse size={20} color={colors.textSecondary} />
           </Pressable>
           <Pressable
             testID={`edit-geofence-${item.id}`}
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 15, ...fonts.semiBold, marginBottom: 2 },
   radiusRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   radius: { fontSize: 12 },
-  empty: { alignItems: "center", paddingVertical: 40 },
+  empty: { alignItems: "center", paddingVertical: 20 },
   emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
   emptyHint: {
     fontSize: 13,

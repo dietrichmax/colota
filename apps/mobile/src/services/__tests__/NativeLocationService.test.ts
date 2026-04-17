@@ -74,6 +74,8 @@ jest.mock("react-native", () => ({
       saveAuthConfig: jest.fn().mockResolvedValue(true),
       getAuthHeaders: jest.fn().mockResolvedValue({}),
       isNetworkAvailable: jest.fn().mockResolvedValue(true),
+      isValidEndpointProtocol: jest.fn().mockResolvedValue(true),
+      isPrivateEndpoint: jest.fn().mockResolvedValue(false),
       getActiveProfile: jest.fn().mockResolvedValue(null)
     },
     BuildConfigModule: {

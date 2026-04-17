@@ -50,6 +50,7 @@ class LocationForegroundServiceTest {
 
     private lateinit var testDispatcher: TestDispatcher
     private lateinit var testScope: TestScope
+    private lateinit var defaultServiceScope: CoroutineScope
     private lateinit var service: LocationForegroundService
 
     @Before
@@ -70,6 +71,7 @@ class LocationForegroundServiceTest {
         testDispatcher = UnconfinedTestDispatcher()
         Dispatchers.setMain(testDispatcher)
         testScope = TestScope(testDispatcher)
+        defaultServiceScope = CoroutineScope(testDispatcher + SupervisorJob())
 
         every { deviceInfoHelper.getCachedBatteryStatus() } returns Pair(80, 2)
         every { deviceInfoHelper.isBatteryCritical(any()) } returns false
@@ -107,6 +109,7 @@ class LocationForegroundServiceTest {
 
     @After
     fun tearDown() {
+        defaultServiceScope.cancel()
         testScope.cancel()
         Dispatchers.resetMain()
         unmockkObject(LocationServiceModule)
@@ -127,7 +130,7 @@ class LocationForegroundServiceTest {
         setField("secureStorage", secureStorage)
         setField("networkManager", networkManager)
         setField("notificationManager", androidNotificationManager)
-        setField("serviceScope", testScope as CoroutineScope)
+        setField("serviceScope", defaultServiceScope)
         setField("config", ServiceConfig(
             endpoint = "https://example.com",
             interval = 5000L,
@@ -135,6 +138,17 @@ class LocationForegroundServiceTest {
             accuracyThreshold = 50.0f,
             syncIntervalSeconds = 0
         ))
+    }
+
+    /**
+     * Runs a test body on [testScope] with `serviceScope` pointed at `runTest`'s
+     * [backgroundScope], which auto-cancels at the end of the test body. Use this for any
+     * test that exercises code launching long-running jobs on `serviceScope` (eg the
+     * tracking heartbeat started by `setupLocationUpdates`).
+     */
+    private fun runServiceTest(block: suspend TestScope.() -> Unit): TestResult = testScope.runTest {
+        setField("serviceScope", backgroundScope)
+        block()
     }
 
     private fun setField(name: String, value: Any?) {
@@ -1197,7 +1211,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `applyProfileConfig restarts location updates`() = testScope.runTest {
+    fun `applyProfileConfig restarts location updates`() = runServiceTest {
         val oldCallback = mockk<LocationUpdateCallback>(relaxed = true)
         setField("locationUpdateCallback", oldCallback)
 
@@ -1500,7 +1514,7 @@ class LocationForegroundServiceTest {
     // =========================================================================
 
     @Test
-    fun `resumeFromMotionlessPause clears state and saves to DB`() = testScope.runTest {
+    fun `resumeFromMotionlessPause clears state and saves to DB`() = runServiceTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
@@ -1514,7 +1528,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `resumeFromMotionlessPause resumes GPS when no wifi hold active`() = testScope.runTest {
+    fun `resumeFromMotionlessPause resumes GPS when no wifi hold active`() = runServiceTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
@@ -1540,7 +1554,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `resumeFromMotionlessPause restarts countdown when zone has pauseOnMotionless`() = testScope.runTest {
+    fun `resumeFromMotionlessPause restarts countdown when zone has pauseOnMotionless`() = runServiceTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
@@ -1558,7 +1572,7 @@ class LocationForegroundServiceTest {
     // =========================================================================
 
     @Test
-    fun `onMotionDetected resumes from motionless pause when isMotionlessPaused`() = testScope.runTest {
+    fun `onMotionDetected resumes from motionless pause when isMotionlessPaused`() = runServiceTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
@@ -1572,7 +1586,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `onMotionDetected triggers motionless resume`() = testScope.runTest {
+    fun `onMotionDetected triggers motionless resume`() = runServiceTest {
         val motionDetector = mockk<MotionDetector>(relaxed = true)
         setField("motionDetector", motionDetector)
         setField("isMotionlessPaused", true)
@@ -1588,7 +1602,7 @@ class LocationForegroundServiceTest {
     // =========================================================================
 
     @Test
-    fun `maybeResumeGps resumes GPS when no holds active`() = testScope.runTest {
+    fun `maybeResumeGps resumes GPS when no holds active`() = runServiceTest {
         setField("currentZoneGeofence", geofence("Home", 52.50, 13.40, 150.0, pauseOnWifi = true, pauseOnMotionless = true))
         setField("isWifiPaused", false)
         setField("isMotionlessPaused", false)
@@ -1621,7 +1635,7 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `maybeResumeGps resumes when currentZoneGeofence is null`() = testScope.runTest {
+    fun `maybeResumeGps resumes when currentZoneGeofence is null`() = runServiceTest {
         setField("currentZoneGeofence", null)
 
         invokeMaybeResumeGps()
@@ -1806,6 +1820,30 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // WiFi pause restore on service restart
+    // =========================================================================
+
+    @Test
+    fun `setupLocationUpdates skips GPS when isWifiPaused is true`() {
+        setField("isWifiPaused", true)
+
+        invokeSetupLocationUpdates()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `setupLocationUpdates starts GPS when inside zone but neither wifi nor motionless paused`() {
+        setField("insidePauseZone", true)
+        setField("isWifiPaused", false)
+        setField("isMotionlessPaused", false)
+
+        invokeSetupLocationUpdates()
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    // =========================================================================
     // WiFi pause event reason
     // =========================================================================
 
@@ -1873,6 +1911,82 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // enterPauseZone - flush respects sync condition
+    // =========================================================================
+
+    @Test
+    fun `enterPauseZone flushes queue when sync is allowed`() = testScope.runTest {
+        every { syncManager.isSyncAllowed() } returns true
+        val location = mockLocation()
+        setField("lastKnownLocation", location)
+
+        invokeEnterPauseZone(homeGeofence)
+
+        coVerify { syncManager.manualFlush() }
+    }
+
+    @Test
+    fun `enterPauseZone skips flush when sync condition not met`() = testScope.runTest {
+        every { syncManager.isSyncAllowed() } returns false
+        val location = mockLocation()
+        setField("lastKnownLocation", location)
+
+        invokeEnterPauseZone(homeGeofence)
+
+        coVerify(exactly = 0) { syncManager.manualFlush() }
+    }
+
+    // =========================================================================
+    // sendHeartbeatLocation - sync condition check
+    // =========================================================================
+
+    @Test
+    fun `sendHeartbeatLocation skips send when sync condition not met`() = testScope.runTest {
+        every { networkManager.isNetworkAvailable() } returns true
+        every { syncManager.isSyncAllowed() } returns false
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeSendHeartbeatLocation()
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify { AppLogger.d("LocationService", "Heartbeat skipped: sync condition not met") }
+    }
+
+    @Test
+    fun `sendHeartbeatLocation sends when sync condition is met`() = testScope.runTest {
+        every { networkManager.isNetworkAvailable() } returns true
+        every { syncManager.isSyncAllowed() } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeSendHeartbeatLocation()
+
+        coVerify { networkManager.sendToEndpoint(any(), "https://example.com", any(), any(), any()) }
+    }
+
+    @Test
+    fun `sendHeartbeatLocation skips when no network available`() = testScope.runTest {
+        every { networkManager.isNetworkAvailable() } returns false
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeSendHeartbeatLocation()
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `sendHeartbeatLocation skips when no current zone`() = testScope.runTest {
+        every { networkManager.isNetworkAvailable() } returns true
+        every { syncManager.isSyncAllowed() } returns true
+        setField("currentZoneGeofence", null)
+
+        invokeSendHeartbeatLocation()
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    // =========================================================================
     // Reflection helpers
     // =========================================================================
 
@@ -1931,6 +2045,19 @@ class LocationForegroundServiceTest {
         pauseOnMotionless: Boolean = false,
         motionlessTimeoutMinutes: Int = 10
     ) = GeofenceHelper.CachedGeofence(name, lat, lon, radius, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes)
+
+    private fun invokeSendHeartbeatLocation() = runBlocking {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "sendHeartbeatLocation", kotlin.coroutines.Continuation::class.java
+        )
+        method.isAccessible = true
+        suspendCancellableCoroutine<Unit> { cont ->
+            val result = method.invoke(service, cont)
+            if (result !== kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED) {
+                cont.resumeWith(Result.success(Unit))
+            }
+        }
+    }
 
     private val homeGeofence = geofence("Home", 52.50, 13.40, 150.0)
     private val officeGeofence = geofence("Office", 48.14, 11.58, 200.0)

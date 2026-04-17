@@ -5,6 +5,7 @@
 
 package com.Colota.service
 
+import android.os.Build
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -92,7 +93,11 @@ class ConditionMonitor(
             addAction(Intent.ACTION_POWER_CONNECTED)
             addAction(Intent.ACTION_POWER_DISCONNECTED)
         }
-        context.registerReceiver(chargingReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(chargingReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(chargingReceiver, filter)
+        }
     }
 
     private fun startCarConnectionMonitor() {

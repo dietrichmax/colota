@@ -130,7 +130,7 @@ class ConditionMonitorTest {
     fun `start registers charging broadcast receiver`() {
         mockBatteryStatus(BatteryManager.BATTERY_STATUS_DISCHARGING)
         monitor.start()
-        verify { mockContext.registerReceiver(any(), any<IntentFilter>(), any<Int>()) }
+        verify { mockContext.registerReceiver(any(), any<IntentFilter>()) }
     }
 
     @Test

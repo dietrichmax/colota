@@ -130,7 +130,7 @@ describe("buildTrackSegmentsGeoJSON", () => {
     expect(result.features).toHaveLength(0)
   })
 
-  it("creates one LineString per segment", () => {
+  it("creates one LineString per distinct color run", () => {
     const locs = [
       { latitude: 52.52, longitude: 13.405, speed: 1 },
       { latitude: 52.53, longitude: 13.406, speed: 3 },
@@ -140,6 +140,19 @@ describe("buildTrackSegmentsGeoJSON", () => {
     expect(result.features).toHaveLength(2)
     expect(result.features[0].geometry.type).toBe("LineString")
     expect(result.features[1].geometry.type).toBe("LineString")
+  })
+
+  it("merges consecutive same-color segments into one LineString", () => {
+    const locs = [
+      { latitude: 52.52, longitude: 13.405 },
+      { latitude: 52.53, longitude: 13.406 },
+      { latitude: 52.54, longitude: 13.407 },
+      { latitude: 52.55, longitude: 13.408 }
+    ]
+    const result = buildTrackSegmentsGeoJSON(locs, colors, { defaultColor: "#FF0000" })
+    expect(result.features).toHaveLength(1)
+    // @ts-ignore - LineString coordinates
+    expect(result.features[0].geometry.coordinates).toHaveLength(4)
   })
 
   it("each segment has a color property", () => {

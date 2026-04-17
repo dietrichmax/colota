@@ -141,7 +141,7 @@ Each geofence supports three independent GPS pause modes, configured per zone:
 - **WiFi pause** - Stops GPS entirely when connected to an unmetered network (WiFi/Ethernet). Implemented via `ConnectivityManager.NetworkCallback`, which fires immediately on network availability changes. An active network counter handles devices with multiple simultaneous unmetered networks - GPS only resumes once all of them are gone, after a short debounce.
 - **Motionless pause** - Stops GPS after no device motion is detected for a configurable timeout. Uses the hardware motion sensor (via `MotionDetector`) to resume GPS when movement is detected again.
 
-A per-zone **stationary heartbeat** can send periodic location updates while paused. It requests a fresh GPS fix, sends it immediately (bypassing sync conditions) and powers GPS back down. Configured via `heartbeatEnabled` and `heartbeatIntervalMinutes` per geofence.
+A per-zone **stationary heartbeat** can send periodic location updates while paused. It sends the geofence center as a synthetic anchor point - no GPS wake required - bypassing sync conditions. Configured via `heartbeatEnabled` and `heartbeatIntervalMinutes` per geofence.
 
 When both WiFi and motionless pause are enabled, GPS only resumes when both conditions clear - WiFi disconnected **and** motion detected. Changes made in the editor take effect immediately even when already inside the zone, via `applyZoneSettingsIfChanged` on the next zone recheck.
 

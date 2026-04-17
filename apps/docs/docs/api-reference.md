@@ -152,7 +152,7 @@ Failed items stay in the queue indefinitely until they succeed. The queue can be
 ## Network Requirements
 
 - **HTTPS required** for all public endpoints
-- **HTTP allowed** for private/local addresses - enforced at the native layer via DNS resolution at request time
+- **HTTP allowed** for private/local addresses - enforced via DNS resolution at both sync time and Test Connection
 - Non-standard ports are supported (e.g., `https://my-server.com:8443/api`)
 - Self-signed certificates are supported - see [Server Settings](/docs/configuration/server-settings#endpoint-url) for setup instructions
 

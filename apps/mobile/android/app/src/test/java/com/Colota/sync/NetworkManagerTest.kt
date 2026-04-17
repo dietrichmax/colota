@@ -33,94 +33,168 @@ class NetworkManagerTest {
 
     @Test
     fun `isValidProtocol accepts https for public host`() {
-        assertTrue(invokeIsValidProtocol("https://example.com/api"))
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isValidProtocol("https://example.com/api"))
     }
 
     @Test
     fun `isValidProtocol rejects http for public host`() {
-        assertFalse(invokeIsValidProtocol("http://example.com/api"))
+        val manager = createNetworkManagerViaReflection()
+        assertFalse(manager.isValidProtocol("http://example.com/api"))
     }
 
     @Test
     fun `isValidProtocol accepts http for localhost`() {
-        assertTrue(invokeIsValidProtocol("http://localhost:8080/api"))
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isValidProtocol("http://localhost:8080/api"))
     }
 
     @Test
     fun `isValidProtocol accepts http for 127_0_0_1`() {
-        assertTrue(invokeIsValidProtocol("http://127.0.0.1:3000/api"))
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isValidProtocol("http://127.0.0.1:3000/api"))
     }
 
     @Test
     fun `isValidProtocol accepts http for 192_168 address`() {
-        assertTrue(invokeIsValidProtocol("http://192.168.1.100/api"))
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isValidProtocol("http://192.168.1.100/api"))
     }
 
     @Test
     fun `isValidProtocol accepts http for 10_x address`() {
-        assertTrue(invokeIsValidProtocol("http://10.0.0.1/api"))
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isValidProtocol("http://10.0.0.1/api"))
+    }
+
+    @Test
+    fun `isValidProtocol accepts http for 172_16 range`() {
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isValidProtocol("http://172.16.0.1/api"))
+        assertTrue(manager.isValidProtocol("http://172.31.255.255/api"))
+    }
+
+    @Test
+    fun `isValidProtocol rejects http for 172_32 (outside private range)`() {
+        val manager = createNetworkManagerViaReflection()
+        assertFalse(manager.isValidProtocol("http://172.32.0.1/api"))
+    }
+
+    @Test
+    fun `isValidProtocol accepts http for CGNAT range`() {
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isValidProtocol("http://100.64.0.1/api"))
+        assertTrue(manager.isValidProtocol("http://100.127.255.255/api"))
     }
 
     @Test
     fun `isValidProtocol rejects ftp protocol`() {
-        assertFalse(invokeIsValidProtocol("ftp://example.com/file"))
+        val manager = createNetworkManagerViaReflection()
+        assertFalse(manager.isValidProtocol("ftp://example.com/file"))
     }
 
-    @Test(expected = java.net.MalformedURLException::class)
-    fun `isValidProtocol rejects javascript protocol via URL parsing`() {
-        // javascript:// is not a valid URL, so URL() throws before we even get to validation
-        invokeIsValidProtocol("javascript://example.com")
+    @Test
+    fun `isValidProtocol returns false for malformed URL`() {
+        val manager = createNetworkManagerViaReflection()
+        assertFalse(manager.isValidProtocol("not-a-url"))
+    }
+
+    @Test
+    fun `isValidProtocol returns false for empty string`() {
+        val manager = createNetworkManagerViaReflection()
+        assertFalse(manager.isValidProtocol(""))
     }
 
     @Test
     fun `isValidProtocol accepts https for any host`() {
-        assertTrue(invokeIsValidProtocol("https://192.168.1.1/api"))
-        assertTrue(invokeIsValidProtocol("https://localhost/api"))
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isValidProtocol("https://192.168.1.1/api"))
+        assertTrue(manager.isValidProtocol("https://localhost/api"))
     }
 
-    // --- isPrivateHost ---
+    // --- isPrivateEndpoint (public wrapper) ---
 
     @Test
-    fun `isPrivateHost returns true for localhost`() {
-        assertTrue(invokeIsPrivateHost("localhost"))
-    }
-
-    @Test
-    fun `isPrivateHost returns true for 127_0_0_1`() {
-        assertTrue(invokeIsPrivateHost("127.0.0.1"))
+    fun `isPrivateEndpoint returns true for private IP endpoint`() {
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isPrivateEndpoint("http://192.168.1.1/api"))
     }
 
     @Test
-    fun `isPrivateHost returns true for 192_168 address`() {
-        assertTrue(invokeIsPrivateHost("192.168.0.1"))
-        assertTrue(invokeIsPrivateHost("192.168.255.255"))
+    fun `isPrivateEndpoint returns true for localhost`() {
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isPrivateEndpoint("http://localhost:8080/api"))
     }
 
     @Test
-    fun `isPrivateHost returns true for 10_x address`() {
-        assertTrue(invokeIsPrivateHost("10.0.0.1"))
-        assertTrue(invokeIsPrivateHost("10.255.255.255"))
+    fun `isPrivateEndpoint returns false for public host`() {
+        val manager = createNetworkManagerViaReflection()
+        assertFalse(manager.isPrivateEndpoint("https://example.com/api"))
     }
 
     @Test
-    fun `isPrivateHost returns true for 172_16 range`() {
-        assertTrue(invokeIsPrivateHost("172.16.0.1"))
-        assertTrue(invokeIsPrivateHost("172.31.255.255"))
+    fun `isPrivateEndpoint returns true for 127_0_0_1`() {
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isPrivateEndpoint("http://127.0.0.1/api"))
     }
 
     @Test
-    fun `isPrivateHost returns false for public IP`() {
-        assertFalse(invokeIsPrivateHost("8.8.8.8"))
+    fun `isPrivateEndpoint returns true for 10_x address`() {
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isPrivateEndpoint("http://10.0.0.1/api"))
+        assertTrue(manager.isPrivateEndpoint("http://10.255.255.255/api"))
     }
 
     @Test
-    fun `isPrivateHost returns false for public domain`() {
-        assertFalse(invokeIsPrivateHost("example.com"))
+    fun `isPrivateEndpoint returns true for 172_16 range`() {
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isPrivateEndpoint("http://172.16.0.1/api"))
+        assertTrue(manager.isPrivateEndpoint("http://172.31.255.255/api"))
     }
 
     @Test
-    fun `isPrivateHost returns false for unresolvable host`() {
-        assertFalse(invokeIsPrivateHost("this-host-does-not-exist-xyz.invalid"))
+    fun `isPrivateEndpoint returns true for CGNAT range`() {
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isPrivateEndpoint("http://100.64.0.1/api"))
+        assertTrue(manager.isPrivateEndpoint("http://100.127.255.255/api"))
+    }
+
+    @Test
+    fun `isPrivateEndpoint returns true regardless of protocol`() {
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isPrivateEndpoint("http://192.168.1.1/api"))
+        assertTrue(manager.isPrivateEndpoint("https://192.168.1.1/api"))
+        assertTrue(manager.isPrivateEndpoint("http://localhost/api"))
+        assertTrue(manager.isPrivateEndpoint("https://localhost/api"))
+    }
+
+    @Test
+    fun `isPrivateEndpoint returns false for public domain`() {
+        val manager = createNetworkManagerViaReflection()
+        assertFalse(manager.isPrivateEndpoint("http://example.com/api"))
+        assertFalse(manager.isPrivateEndpoint("https://example.com/api"))
+    }
+
+    @Test
+    fun `isPrivateEndpoint resolves hostname via DNS`() {
+        // localhost resolves to 127.0.0.1 via InetAddress - proves the DNS path works.
+        // Testing hostnames like "server.local" -> 192.168.x.x requires mDNS which
+        // is not available in unit tests, but the code path is the same: InetAddress.getByName()
+        // -> isSiteLocalAddress. The example.com test below proves public DNS resolution works.
+        val manager = createNetworkManagerViaReflection()
+        assertTrue(manager.isPrivateEndpoint("http://localhost:8080/api"))
+    }
+
+    @Test
+    fun `isPrivateEndpoint returns false for unresolvable host`() {
+        val manager = createNetworkManagerViaReflection()
+        assertFalse(manager.isPrivateEndpoint("http://this-host-does-not-exist-xyz.invalid/api"))
+    }
+
+    @Test
+    fun `isPrivateEndpoint returns false for malformed URL`() {
+        val manager = createNetworkManagerViaReflection()
+        assertFalse(manager.isPrivateEndpoint("not-a-url"))
     }
 
     // --- maskSensitiveHeaderValue ---
@@ -453,22 +527,6 @@ class NetworkManagerTest {
     }
 
     // --- Reflection helpers to access private methods ---
-
-    private fun invokeIsValidProtocol(urlStr: String): Boolean {
-        val url = java.net.URL(urlStr)
-        val method = NetworkManager::class.java.getDeclaredMethod("isValidProtocol", java.net.URL::class.java)
-        method.isAccessible = true
-        // Need an instance — create with mocked context
-        val manager = createNetworkManagerViaReflection()
-        return method.invoke(manager, url) as Boolean
-    }
-
-    private fun invokeIsPrivateHost(host: String): Boolean {
-        val method = NetworkManager::class.java.getDeclaredMethod("isPrivateHost", String::class.java)
-        method.isAccessible = true
-        val manager = createNetworkManagerViaReflection()
-        return method.invoke(manager, host) as Boolean
-    }
 
     private fun invokeMask(headerName: String, headerValue: String): String {
         val method = NetworkManager::class.java.getDeclaredMethod(

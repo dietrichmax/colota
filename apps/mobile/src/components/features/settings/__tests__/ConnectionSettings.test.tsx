@@ -52,6 +52,8 @@ const mockClearQueue = jest.fn().mockResolvedValue(5)
 const mockGetMostRecentLocation = jest.fn().mockResolvedValue(null)
 const mockGetAuthHeaders = jest.fn().mockResolvedValue({})
 const mockIsNetworkAvailable = jest.fn().mockResolvedValue(true)
+const mockIsValidEndpointProtocol = jest.fn().mockResolvedValue(true)
+const mockIsEndpointPrivate = jest.fn().mockResolvedValue(false)
 
 jest.mock("../../../../services/NativeLocationService", () => ({
   __esModule: true,
@@ -61,7 +63,9 @@ jest.mock("../../../../services/NativeLocationService", () => ({
     clearQueue: (...args: any[]) => mockClearQueue(...args),
     getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args),
     getAuthHeaders: (...args: any[]) => mockGetAuthHeaders(...args),
-    isNetworkAvailable: (...args: any[]) => mockIsNetworkAvailable(...args)
+    isNetworkAvailable: (...args: any[]) => mockIsNetworkAvailable(...args),
+    isValidEndpointProtocol: (...args: any[]) => mockIsValidEndpointProtocol(...args),
+    isPrivateEndpoint: (...args: any[]) => mockIsEndpointPrivate(...args)
   }
 }))
 
@@ -71,7 +75,6 @@ jest.mock("../../../../services/modalService", () => ({
 }))
 
 jest.mock("../../../../utils/settingsValidation", () => ({
-  isPrivateHost: () => false,
   isEndpointAllowed: () => true
 }))
 
@@ -307,6 +310,43 @@ describe("ConnectionSettings", () => {
             buttons: expect.not.arrayContaining([expect.objectContaining({ text: "Sync First" })])
           })
         )
+      })
+    })
+  })
+
+  describe("test connection HTTPS enforcement", () => {
+    const location = {
+      latitude: 52.5,
+      longitude: 13.4,
+      accuracy: 10,
+      altitude: 50,
+      speed: 0,
+      battery: 80,
+      batteryStatus: 2,
+      bearing: 0
+    }
+
+    it("blocks when native protocol check rejects endpoint", async () => {
+      mockGetMostRecentLocation.mockResolvedValue(location)
+      mockIsValidEndpointProtocol.mockResolvedValue(false)
+      const { getByText } = renderComponent({}, "http://example.com/api")
+
+      fireEvent.press(getByText("Test Connection"))
+
+      await waitFor(() => {
+        expect(getByText(/HTTPS is required for public endpoints/)).toBeTruthy()
+      })
+    })
+
+    it("allows when native protocol check accepts endpoint", async () => {
+      mockGetMostRecentLocation.mockResolvedValue(location)
+      mockIsValidEndpointProtocol.mockResolvedValue(true)
+      const { queryByText, getByText } = renderComponent({}, "https://example.com/api")
+
+      fireEvent.press(getByText("Test Connection"))
+
+      await waitFor(() => {
+        expect(queryByText(/HTTPS is required/)).toBeNull()
       })
     })
   })
