@@ -13,9 +13,9 @@ import com.Colota.MainActivity
 import java.util.Locale
 
 /**
- * Handles all notification-related logic for the location tracking service:
- * channel creation, notification building, status text generation,
- * throttling, movement filtering, and deduplication.
+ * Main-thread only. All callers run on Main (onStartCommand, FLP callback,
+ * or `withContext(Dispatchers.Main)` inside serviceScope), so state fields
+ * do not need @Volatile.
  */
 class NotificationHelper(
     private val context: Context,
@@ -66,7 +66,6 @@ class NotificationHelper(
             .build()
     }
 
-    /** Returns the notification title, including the active profile name if one is set. */
     fun buildTitle(activeProfileName: String?): String =
         if (activeProfileName != null) "Colota \u00b7 $activeProfileName" else "Colota Tracking"
 
@@ -80,25 +79,20 @@ class NotificationHelper(
             .build()
     }
 
-    /**
-     * Returns the best status text for the initial startForeground notification.
-     */
+    /** Status text for the initial startForeground notification, before any location arrives. */
     fun getInitialStatus(
         insidePauseZone: Boolean,
         currentZoneName: String?,
         lastKnownLocation: android.location.Location?
     ): String = when {
         insidePauseZone -> "Paused: ${currentZoneName ?: "Unknown"}"
-        lastKnownLocation != null -> String.format(
-            Locale.US, "%.5f, %.5f",
-            lastKnownLocation.latitude, lastKnownLocation.longitude
-        )
+        lastKnownLocation != null -> formatCoords(lastKnownLocation.latitude, lastKnownLocation.longitude)
         else -> "Searching GPS..."
     }
 
-    /**
-     * Builds the notification status text from current tracking state.
-     */
+    private fun formatCoords(lat: Double, lon: Double): String =
+        String.format(Locale.US, "%.5f, %.5f", lat, lon)
+
     fun buildStatusText(
         isPaused: Boolean,
         zoneName: String?,
@@ -120,11 +114,11 @@ class NotificationHelper(
             }
         }
         isStationary -> {
-            val coords = if (lat != null && lon != null) String.format(Locale.US, "%.5f, %.5f", lat, lon) else ""
+            val coords = if (lat != null && lon != null) formatCoords(lat, lon) else ""
             if (coords.isNotEmpty()) "Stationary - $coords" else "Stationary - GPS paused"
         }
         lat != null && lon != null -> {
-            val coords = String.format(Locale.US, "%.5f, %.5f", lat, lon)
+            val coords = formatCoords(lat, lon)
             if (isOfflineMode) {
                 coords
             } else if (queuedCount > 0 && lastSyncTime > 0) {
@@ -140,9 +134,6 @@ class NotificationHelper(
         else -> "Searching GPS..."
     }
 
-    /**
-     * Formats elapsed time since last successful sync.
-     */
     fun formatTimeSinceSync(lastSyncTime: Long, now: Long = System.currentTimeMillis()): String {
         if (lastSyncTime == 0L) return "Never"
 
@@ -158,16 +149,11 @@ class NotificationHelper(
         }
     }
 
-    /** Returns true if the update should be suppressed (too soon since last update). */
     fun shouldThrottle(now: Long): Boolean = (now - lastUpdateTime) < THROTTLE_MS
 
-    /** Returns true if movement is below the minimum threshold. */
     fun shouldFilterByMovement(distanceMeters: Float): Boolean = distanceMeters < MIN_MOVEMENT_METERS
 
-    /**
-     * Full notification update with throttle, movement filter, and dedup.
-     * Returns true if the notification was actually posted.
-     */
+    /** Runs throttle + movement filter + dedup. Returns true if the notification was posted. */
     fun update(
         lat: Double? = null,
         lon: Double? = null,
@@ -186,8 +172,7 @@ class NotificationHelper(
 
         val queueCountChanged = queuedCount != lastQueuedCount
 
-        // Throttle + movement filter (zone changes always pass forceUpdate=true)
-        // Bypass movement filter when queue count changed so status text stays current
+        // Bypass throttle/movement filter when queue count changed, so queue status stays current.
         if (!forceUpdate && !queueCountChanged && lat != null && lon != null) {
             if (shouldThrottle(now)) return false
 
@@ -208,8 +193,7 @@ class NotificationHelper(
 
         val statusText = buildStatusText(isPaused, zoneName, lat, lon, queuedCount, lastSyncTime, isOfflineMode, isStationary, isWifiPaused, isMotionlessPaused)
 
-        // Dedup: skip if notification text hasn't changed (bypass on forceUpdate so state-change
-        // notifications always reach Android even if text appears identical)
+        // forceUpdate bypasses dedup so state-change posts land even when the text is unchanged.
         val cacheKey = "$statusText-$queuedCount-$activeProfileName"
         if (!forceUpdate && cacheKey == lastText) return false
 

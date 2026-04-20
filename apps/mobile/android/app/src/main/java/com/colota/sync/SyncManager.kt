@@ -34,7 +34,7 @@ class SyncManager(
     @Volatile private var syncSsid: String = ""
     @Volatile private var authHeaders: Map<String, String> = emptyMap()
     @Volatile private var httpMethod: String = "POST"
-    @Volatile private var apiFormat: String = ""
+    @Volatile private var apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED
 
     private var syncJob: Job? = null
     @Volatile private var lastSyncTime: Long = 0
@@ -54,7 +54,7 @@ class SyncManager(
         syncSsid: String,
         authHeaders: Map<String, String>,
         httpMethod: String = "POST",
-        apiFormat: String = ""
+        apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED,
     ) {
         this.endpoint = endpoint
         this.syncIntervalSeconds = syncIntervalSeconds
@@ -146,7 +146,7 @@ class SyncManager(
             val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod, apiFormat)
 
             if (success) {
-                dbHelper.markLocationSent(locationId)
+                dbHelper.markLocationsSent(listOf(locationId))
                 dbHelper.removeFromQueueByLocationId(locationId)
                 invalidateQueueCache()
                 lastSuccessfulSyncTime = System.currentTimeMillis()

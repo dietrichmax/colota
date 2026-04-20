@@ -3,6 +3,7 @@ package com.Colota.sync
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.QueuedLocation
+import com.Colota.sync.ApiFormat
 import com.Colota.util.AppLogger
 import io.mockk.*
 import kotlinx.coroutines.*
@@ -821,7 +822,7 @@ class SyncManagerTest {
             syncSsid = "",
             authHeaders = emptyMap(),
             httpMethod = "POST",
-            apiFormat = "traccar_json"
+            apiFormat = ApiFormat.TRACCAR_JSON
         )
 
         coEvery { networkManager.isNetworkAvailable() } returns true
@@ -829,7 +830,7 @@ class SyncManagerTest {
 
         syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
 
-        coVerify { networkManager.sendToEndpoint(any(), any(), any(), "POST", "traccar_json") }
+        coVerify { networkManager.sendToEndpoint(any(), any(), any(), "POST", ApiFormat.TRACCAR_JSON) }
     }
 
     @Test
@@ -843,7 +844,7 @@ class SyncManagerTest {
             syncSsid = "",
             authHeaders = emptyMap(),
             httpMethod = "POST",
-            apiFormat = "traccar_json"
+            apiFormat = ApiFormat.TRACCAR_JSON
         )
 
         val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
@@ -852,7 +853,7 @@ class SyncManagerTest {
 
         syncManager.manualFlush()
 
-        coVerify { networkManager.sendToEndpoint(any(), any(), any(), "POST", "traccar_json") }
+        coVerify { networkManager.sendToEndpoint(any(), any(), any(), "POST", ApiFormat.TRACCAR_JSON) }
     }
 
     // ========================================================================

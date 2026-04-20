@@ -8,13 +8,12 @@ package com.Colota.data
 import android.content.ContentValues
 import android.database.Cursor
 import com.Colota.util.AppLogger
+import com.Colota.util.geo.haversineDistance
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import android.database.sqlite.SQLiteStatement
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.util.*
+import java.time.LocalDate
+import java.time.ZoneId
 import org.json.JSONObject
 
 /**
@@ -48,6 +47,24 @@ class DatabaseHelper private constructor(context: Context) :
         private const val TAG = "LocationDB"
         private const val TRIP_GAP_SECONDS = 900L // 15 min, matches JS segmentTrips
 
+        private const val CREATE_PROFILES_TABLE = """
+            CREATE TABLE IF NOT EXISTS $TABLE_PROFILES (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                interval_ms INTEGER NOT NULL,
+                min_update_distance REAL NOT NULL,
+                sync_interval_seconds INTEGER NOT NULL,
+                priority INTEGER NOT NULL DEFAULT 0,
+                condition_type TEXT NOT NULL,
+                speed_threshold REAL,
+                deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                created_at INTEGER NOT NULL
+            )
+        """
+        private const val CREATE_PROFILES_INDEX =
+            "CREATE INDEX IF NOT EXISTS idx_profiles_enabled ON $TABLE_PROFILES(enabled, priority DESC)"
+
         @Volatile
         private var INSTANCE: DatabaseHelper? = null
 
@@ -64,8 +81,6 @@ class DatabaseHelper private constructor(context: Context) :
             }
         }
     }
-
-    private var incrementRetryStmt: SQLiteStatement? = null
 
     override fun onCreate(db: SQLiteDatabase) {
         AppLogger.i(TAG, "Creating database v$DATABASE_VERSION")
@@ -126,28 +141,14 @@ class DatabaseHelper private constructor(context: Context) :
             )
         """)
 
-        db.execSQL("""
-            CREATE TABLE $TABLE_PROFILES (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                interval_ms INTEGER NOT NULL,
-                min_update_distance REAL NOT NULL,
-                sync_interval_seconds INTEGER NOT NULL,
-                priority INTEGER NOT NULL DEFAULT 0,
-                condition_type TEXT NOT NULL,
-                speed_threshold REAL,
-                deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
-                enabled INTEGER NOT NULL DEFAULT 1,
-                created_at INTEGER NOT NULL
-            )
-        """)
+        db.execSQL(CREATE_PROFILES_TABLE)
 
         db.execSQL("CREATE INDEX idx_queue_created ON $TABLE_QUEUE(created_at)")
         db.execSQL("CREATE INDEX idx_queue_location ON $TABLE_QUEUE(location_id)")
         db.execSQL("CREATE INDEX idx_locations_timestamp ON $TABLE_LOCATIONS(timestamp DESC)")
         db.execSQL("CREATE INDEX idx_locations_created ON $TABLE_LOCATIONS(created_at DESC)")
         db.execSQL("CREATE INDEX idx_geofences_enabled ON $TABLE_GEOFENCES(enabled, pause_tracking)")
-        db.execSQL("CREATE INDEX idx_profiles_enabled ON $TABLE_PROFILES(enabled, priority DESC)")
+        db.execSQL(CREATE_PROFILES_INDEX)
         db.execSQL("CREATE INDEX idx_queue_retry ON $TABLE_QUEUE(retry_count)")
 
         prepopulateSettings(db)
@@ -169,7 +170,7 @@ class DatabaseHelper private constructor(context: Context) :
             "syncSsid" to "",
             "customFields" to "[]",
             "hasCompletedSetup" to "false",
-            "tracking_enabled" to "false",
+            SettingsKeys.TRACKING_ENABLED to "false",
             "apiTemplate" to "custom",
             "syncPreset" to "instant",
             "httpMethod" to "POST"
@@ -201,22 +202,8 @@ class DatabaseHelper private constructor(context: Context) :
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         AppLogger.i(TAG, "Upgrading database from v$oldVersion to v$newVersion")
         if (oldVersion < 2) {
-            db.execSQL("""
-                CREATE TABLE IF NOT EXISTS $TABLE_PROFILES (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    interval_ms INTEGER NOT NULL,
-                    min_update_distance REAL NOT NULL,
-                    sync_interval_seconds INTEGER NOT NULL,
-                    priority INTEGER NOT NULL DEFAULT 0,
-                    condition_type TEXT NOT NULL,
-                    speed_threshold REAL,
-                    deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
-                    enabled INTEGER NOT NULL DEFAULT 1,
-                    created_at INTEGER NOT NULL
-                )
-            """)
-            db.execSQL("CREATE INDEX IF NOT EXISTS idx_profiles_enabled ON $TABLE_PROFILES(enabled, priority DESC)")
+            db.execSQL(CREATE_PROFILES_TABLE)
+            db.execSQL(CREATE_PROFILES_INDEX)
         }
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE $TABLE_LOCATIONS ADD COLUMN sent INTEGER NOT NULL DEFAULT 0")
@@ -240,16 +227,6 @@ class DatabaseHelper private constructor(context: Context) :
             db.execSQL("PRAGMA synchronous = NORMAL") // faster writes, safe with WAL
             db.execSQL("PRAGMA foreign_keys = ON")
         }
-        
-        incrementRetryStmt = db.compileStatement(
-            "UPDATE $TABLE_QUEUE SET retry_count = retry_count + 1, last_error = ? WHERE id = ?"
-        )
-    }
-
-    override fun close() {
-        incrementRetryStmt?.close()
-        incrementRetryStmt = null
-        super.close()
     }
 
 
@@ -466,14 +443,11 @@ class DatabaseHelper private constructor(context: Context) :
         writableDatabase.delete(TABLE_LOCATIONS, "id IN ($placeholders)", args)
     }
 
-    @Synchronized
     fun incrementRetryCount(queueId: Long, error: String? = null) {
-        val stmt = incrementRetryStmt ?: return // Exit if statement is null
-        
-        stmt.clearBindings()
-        stmt.bindString(1, error ?: "")
-        stmt.bindLong(2, queueId)
-        stmt.executeUpdateDelete()
+        writableDatabase.execSQL(
+            "UPDATE $TABLE_QUEUE SET retry_count = retry_count + 1, last_error = ? WHERE id = ?",
+            arrayOf<Any>(error ?: "", queueId)
+        )
     }
 
 
@@ -502,13 +476,6 @@ class DatabaseHelper private constructor(context: Context) :
                 Stats(0, 0, 0, 0)
             }
         }
-    }
-
-    fun markLocationSent(locationId: Long) {
-        writableDatabase.execSQL(
-            "UPDATE $TABLE_LOCATIONS SET sent = 1 WHERE id = ?",
-            arrayOf(locationId)
-        )
     }
 
     fun markLocationsSent(locationIds: List<Long>) {
@@ -738,24 +705,8 @@ class DatabaseHelper private constructor(context: Context) :
         return stats
     }
 
-    internal fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val r = 6371000.0
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
-        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2)
-        return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    }
-
-    private fun getTodayStartTimestamp(): Long {
-        return Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis / 1000 // convert to seconds
-    }
+    private fun getTodayStartTimestamp(): Long =
+        LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
 
 }
 

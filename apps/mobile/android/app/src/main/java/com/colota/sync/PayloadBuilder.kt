@@ -10,48 +10,43 @@ import com.Colota.util.AppLogger
 import org.json.JSONObject
 import kotlin.math.roundToInt
 
-/**
- * Builds and parses location payloads with dynamic field mapping.
- */
-class PayloadBuilder {
+/** Stateless builder for outgoing location payloads. */
+object PayloadBuilder {
 
-    companion object {
-        private const val TAG = "PayloadBuilder"
-    }
+    private const val TAG = "PayloadBuilder"
 
-    /**
-     * Builds a JSON payload from location data, applying field name mapping and custom fields.
-     */
-    fun buildPayload(
+    fun buildLocationPayload(
         location: Location,
+        timestamp: Long,
         batteryLevel: Int,
         batteryStatus: Int,
         fieldMap: Map<String, String>,
-        timestamp: Long,
-        customFields: Map<String, String>? = null
+        customFields: Map<String, String>,
+        apiFormat: ApiFormat,
     ): JSONObject {
+        val effectiveFieldMap = if (apiFormat.usesFixedFieldNames) emptyMap() else fieldMap
         return JSONObject().apply {
-            customFields?.forEach { (key, value) ->
+            customFields.forEach { (key, value) ->
                 put(key, value)
             }
 
-            put(fieldMap["lat"] ?: "lat", location.latitude)
-            put(fieldMap["lon"] ?: "lon", location.longitude)
-            put(fieldMap["acc"] ?: "acc", location.accuracy.roundToInt())
+            put(effectiveFieldMap["lat"] ?: "lat", location.latitude)
+            put(effectiveFieldMap["lon"] ?: "lon", location.longitude)
+            put(effectiveFieldMap["acc"] ?: "acc", location.accuracy.roundToInt())
 
             if (location.hasAltitude()) {
-                put(fieldMap["alt"] ?: "alt", location.altitude.roundToInt())
+                put(effectiveFieldMap["alt"] ?: "alt", location.altitude.roundToInt())
             }
 
             if (location.hasSpeed()) {
-                put(fieldMap["vel"] ?: "vel", Math.round(location.speed * 10.0f) / 10.0)
+                put(effectiveFieldMap["vel"] ?: "vel", Math.round(location.speed * 10.0f) / 10.0)
             }
-            put(fieldMap["batt"] ?: "batt", batteryLevel)
-            put(fieldMap["bs"] ?: "bs", batteryStatus)
-            put(fieldMap["tst"] ?: "tst", timestamp)
+            put(effectiveFieldMap["batt"] ?: "batt", batteryLevel)
+            put(effectiveFieldMap["bs"] ?: "bs", batteryStatus)
+            put(effectiveFieldMap["tst"] ?: "tst", timestamp)
 
             if (location.hasBearing()) {
-                put(fieldMap["bear"] ?: "bear", location.bearing.toDouble())
+                put(effectiveFieldMap["bear"] ?: "bear", location.bearing.toDouble())
             }
         }
     }

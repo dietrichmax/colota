@@ -400,7 +400,7 @@ class DatabaseHelperSQLiteTest {
         val queued = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L)
         val sent = db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 2000L)
         db.addToQueue(queued, """{"lat":52.0}""")
-        db.markLocationSent(sent)
+        db.markLocationsSent(listOf(sent))
 
         val deleted = db.clearSentHistory()
         assertEquals(1, deleted)
@@ -764,23 +764,6 @@ class DatabaseHelperSQLiteTest {
         // Distance should be roughly 25-30 km (haversine)
         assertTrue("Distance should be > 20km, was $distance", distance > 20000)
         assertTrue("Distance should be < 40km, was $distance", distance < 40000)
-    }
-
-    // ========================================================================
-    // haversineDistance
-    // ========================================================================
-
-    @Test
-    fun `haversineDistance Berlin to Munich is approximately 504 km`() {
-        val distance = db.haversineDistance(52.52, 13.405, 48.1351, 11.582)
-        assertTrue("Expected ~504km, got ${distance / 1000}km", distance > 500000)
-        assertTrue("Expected ~504km, got ${distance / 1000}km", distance < 510000)
-    }
-
-    @Test
-    fun `haversineDistance same point returns zero`() {
-        val distance = db.haversineDistance(52.52, 13.405, 52.52, 13.405)
-        assertEquals(0.0, distance, 0.001)
     }
 
     // ========================================================================

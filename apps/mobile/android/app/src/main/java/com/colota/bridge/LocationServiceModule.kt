@@ -12,6 +12,7 @@ import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
 import com.Colota.data.ProfileHelper
 import com.Colota.service.LocationForegroundService
+import com.Colota.data.SettingsKeys
 import com.Colota.service.ProfileConstants
 import com.Colota.service.ServiceConfig
 import com.Colota.service.getDoubleOrNull
@@ -19,7 +20,6 @@ import com.Colota.service.getIntOrNull
 import com.Colota.service.getStringOrNull
 import com.Colota.service.getBooleanOrNull
 import com.Colota.sync.NetworkManager
-import com.Colota.sync.PayloadBuilder
 import com.Colota.util.DeviceInfoHelper
 import com.Colota.export.AutoExportConfig
 import com.Colota.export.AutoExportScheduler
@@ -35,8 +35,8 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
-import com.Colota.location.LocationProviderFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -55,7 +55,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext), 
     LifecycleEventListener { 
 
-    private val payloadBuilder = PayloadBuilder()
     private val dbHelper = DatabaseHelper.getInstance(reactContext)
     private val fileOps = FileOperations(reactContext)
     private val deviceInfo = DeviceInfoHelper(reactContext)
@@ -98,6 +97,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     companion object {
         private const val TAG = "LocationServiceModule"
 
+        /** JS config key -> secure storage key mapping for saveAuthConfig. */
+        private val AUTH_CONFIG_KEYS = listOf(
+            "authType" to SecureStorageHelper.KEY_AUTH_TYPE,
+            "username" to SecureStorageHelper.KEY_USERNAME,
+            "password" to SecureStorageHelper.KEY_PASSWORD,
+            "bearerToken" to SecureStorageHelper.KEY_BEARER_TOKEN,
+            "customHeaders" to SecureStorageHelper.KEY_CUSTOM_HEADERS,
+        )
+
         private var reactContextRef: WeakReference<ReactApplicationContext> = WeakReference(null)
         
         @Volatile
@@ -106,179 +114,84 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         @Volatile
         private var activeProfileName: String? = null
 
+        private inline fun emit(event: String, build: WritableMap.() -> Unit): Boolean {
+            val context = reactContextRef.get() ?: return false
+            if (!context.hasActiveCatalystInstance()) return false
+            return try {
+                val params = Arguments.createMap().apply(build)
+                context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                    .emit(event, params)
+                true
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to send $event", e)
+                false
+            }
+        }
+
         /** Skips when app is backgrounded to avoid unnecessary bridge overhead. */
         @JvmStatic
         fun sendLocationEvent(location: android.location.Location, battery: Int, batteryStatus: Int): Boolean {
             if (!isAppInForeground) return false
-            
-            val context = reactContextRef.get() ?: return false
-            if (!context.hasActiveCatalystInstance()) return false
-
-            return try {
-                val params = Arguments.createMap().apply {
-                    putDouble("latitude", location.latitude)
-                    putDouble("longitude", location.longitude)
-                    putDouble("accuracy", location.accuracy.toDouble())
-                    
-                    if (location.hasAltitude()) {
-                        putDouble("altitude", location.altitude)
-                    } else {
-                        putNull("altitude")
-                    }
-                    
-                    if (location.hasSpeed()) {
-                        putDouble("speed", location.speed.toDouble())
-                    } else {
-                        putNull("speed")
-                    }
-                    putDouble("bearing", if (location.hasBearing()) location.bearing.toDouble() else 0.0)
-                    putDouble("timestamp", location.time.toDouble())
-                    putInt("battery", battery) 
-                    putInt("batteryStatus", batteryStatus)
-                }
-                
-                context
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    .emit("onLocationUpdate", params)
-                true
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Failed to send location event", e)
-                false
+            return emit("onLocationUpdate") {
+                putDouble("latitude", location.latitude)
+                putDouble("longitude", location.longitude)
+                putDouble("accuracy", location.accuracy.toDouble())
+                if (location.hasAltitude()) putDouble("altitude", location.altitude) else putNull("altitude")
+                if (location.hasSpeed()) putDouble("speed", location.speed.toDouble()) else putNull("speed")
+                putDouble("bearing", if (location.hasBearing()) location.bearing.toDouble() else 0.0)
+                putDouble("timestamp", location.time.toDouble())
+                putInt("battery", battery)
+                putInt("batteryStatus", batteryStatus)
             }
         }
 
         /** Fires when service stops for non-user reasons (OOM kill, system cleanup). */
         @JvmStatic
-        fun sendTrackingStoppedEvent(reason: String): Boolean {
-            val context = reactContextRef.get() ?: return false
-            if (!context.hasActiveCatalystInstance()) return false
+        fun sendTrackingStoppedEvent(reason: String): Boolean =
+            emit("onTrackingStopped") { putString("reason", reason) }
 
-            return try {
-                val params = Arguments.createMap().apply {
-                    putString("reason", reason)
-                }
-                context
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    .emit("onTrackingStopped", params)
-                true
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Failed to send tracking stopped event", e)
-                false
-            }
-        }
-
-        /** Only fires after 3+ consecutive sync failures — see SyncManager.startPeriodicSync(). */
+        /** Only fires after 3+ consecutive sync failures, see SyncManager.startPeriodicSync(). */
         @JvmStatic
-        fun sendSyncErrorEvent(message: String, queuedCount: Int): Boolean {
-            val context = reactContextRef.get() ?: return false
-            if (!context.hasActiveCatalystInstance()) return false
-
-            return try {
-                val params = Arguments.createMap().apply {
-                    putString("message", message)
-                    putInt("queuedCount", queuedCount)
-                }
-                context
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    .emit("onSyncError", params)
-                true
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Failed to send sync error event", e)
-                false
+        fun sendSyncErrorEvent(message: String, queuedCount: Int): Boolean =
+            emit("onSyncError") {
+                putString("message", message)
+                putInt("queuedCount", queuedCount)
             }
-        }
 
-        /** Emits profile switch events to JS when a tracking profile activates/deactivates. */
         @JvmStatic
         fun sendProfileSwitchEvent(profileName: String?, profileId: Int?): Boolean {
             activeProfileName = profileName
-            val context = reactContextRef.get() ?: return false
-            if (!context.hasActiveCatalystInstance()) return false
-
-            return try {
-                val params = Arguments.createMap().apply {
-                    if (profileName != null) putString("profileName", profileName)
-                    else putNull("profileName")
-                    if (profileId != null) putInt("profileId", profileId)
-                    else putNull("profileId")
-                    putBoolean("isDefault", profileName == null)
-                }
-                context
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    .emit("onProfileSwitch", params)
-                true
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Failed to send profile switch event", e)
-                false
+            return emit("onProfileSwitch") {
+                if (profileName != null) putString("profileName", profileName) else putNull("profileName")
+                if (profileId != null) putInt("profileId", profileId) else putNull("profileId")
+                putBoolean("isDefault", profileName == null)
             }
         }
 
-        /** Emits sync progress during manual flush so JS can show "5/127 synced". */
         @JvmStatic
-        fun sendSyncProgressEvent(sent: Int, failed: Int, total: Int): Boolean {
-            val context = reactContextRef.get() ?: return false
-            if (!context.hasActiveCatalystInstance()) return false
-
-            return try {
-                val params = Arguments.createMap().apply {
-                    putInt("sent", sent)
-                    putInt("failed", failed)
-                    putInt("total", total)
-                }
-                context
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    .emit("onSyncProgress", params)
-                true
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Failed to send sync progress event", e)
-                false
+        fun sendSyncProgressEvent(sent: Int, failed: Int, total: Int): Boolean =
+            emit("onSyncProgress") {
+                putInt("sent", sent)
+                putInt("failed", failed)
+                putInt("total", total)
             }
-        }
 
-        /** Emits auto-export completion events to JS for real-time status updates. */
         @JvmStatic
-        fun sendAutoExportEvent(success: Boolean, fileName: String?, rowCount: Int, error: String?): Boolean {
-            val context = reactContextRef.get() ?: return false
-            if (!context.hasActiveCatalystInstance()) return false
-
-            return try {
-                val params = Arguments.createMap().apply {
-                    putBoolean("success", success)
-                    if (fileName != null) putString("fileName", fileName) else putNull("fileName")
-                    putInt("rowCount", rowCount)
-                    if (error != null) putString("error", error) else putNull("error")
-                }
-                context
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    .emit("onAutoExportComplete", params)
-                true
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Failed to send auto-export event", e)
-                false
+        fun sendAutoExportEvent(success: Boolean, fileName: String?, rowCount: Int, error: String?): Boolean =
+            emit("onAutoExportComplete") {
+                putBoolean("success", success)
+                if (fileName != null) putString("fileName", fileName) else putNull("fileName")
+                putInt("rowCount", rowCount)
+                if (error != null) putString("error", error) else putNull("error")
             }
-        }
 
-        /** Emits pause zone entry/exit events for the JS geofence UI. */
         @JvmStatic
-        fun sendPauseZoneEvent(entered: Boolean, zoneName: String?, pauseReason: String? = null): Boolean {
-            val context = reactContextRef.get() ?: return false
-            if (!context.hasActiveCatalystInstance()) return false
-
-            return try {
-                val params = Arguments.createMap().apply {
-                    putBoolean("entered", entered)
-                    putString("zoneName", zoneName)
-                    putString("pauseReason", pauseReason)
-                }
-                context
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    .emit("onPauseZoneChange", params)
-                true
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Failed to send pause zone event", e)
-                false
+        fun sendPauseZoneEvent(entered: Boolean, zoneName: String?, pauseReason: String? = null): Boolean =
+            emit("onPauseZoneChange") {
+                putBoolean("entered", entered)
+                putString("zoneName", zoneName)
+                putString("pauseReason", pauseReason)
             }
-        }
     }
 
     override fun getName(): String = "LocationServiceModule"
@@ -302,12 +215,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
 
-    /** Runs on IO thread and resolves/rejects the JS promise. */
+    /** Runs [operation] on Dispatchers.IO and resolves/rejects the JS promise. */
     private fun executeAsync(promise: Promise, operation: suspend () -> Any?) {
         moduleScope.launch {
             try {
-                val result = withContext(Dispatchers.IO) { operation() }
-                promise.resolve(result)
+                promise.resolve(withContext(Dispatchers.IO) { operation() })
             } catch (e: Exception) {
                 AppLogger.e(TAG, "Database operation failed", e)
                 promise.reject("DB_ERROR", e.message, e)
@@ -326,7 +238,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         try {
             reactApplicationContext.startForegroundService(serviceIntent)
             moduleScope.launch(Dispatchers.IO) {
-                dbHelper.saveSetting("tracking_enabled", "true")
+                dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
             }
             promise.resolve(null)
         } catch (e: Exception) {
@@ -343,7 +255,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         reactApplicationContext.stopService(intent)
 
         moduleScope.launch(Dispatchers.IO) {
-            dbHelper.saveSetting("tracking_enabled", "false")
+            dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "false")
         }
     }
 
@@ -406,146 +318,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             promise.reject("ERR_NOT_DEBUG", "insertDummyData is only available in debug builds")
             return
         }
-        executeAsync(promise) {
-        val now = System.currentTimeMillis() / 1000
-        var count = 0
-
-        // Realistic scenario: Home (Friedrichshain) → Supermarket → Gym → Home
-        // All locations follow real Berlin streets for plausible GPS tracks.
-
-        // Home: Boxhagener Platz area, Friedrichshain
-        // Supermarket: REWE on Warschauer Str (~1.2 km south)
-        // Gym: FitX Ostkreuz (~1.5 km south-east of supermarket)
-
-        // Trip 1: Home → Supermarket (driving, ~12 min)
-        val trip1 = arrayOf(
-            //             lat         lon       alt  speed  acc
-            doubleArrayOf(52.51420, 13.45830, 38.0, 0.2, 4.0),   // parked at home
-            doubleArrayOf(52.51390, 13.45780, 37.0, 3.5, 5.0),   // pulling out
-            doubleArrayOf(52.51310, 13.45650, 36.0, 8.2, 4.0),   // Grünberger Str
-            doubleArrayOf(52.51220, 13.45490, 35.0, 11.5, 3.5),  // heading south
-            doubleArrayOf(52.51120, 13.45340, 35.0, 12.8, 3.0),  // Revaler Str
-            doubleArrayOf(52.50980, 13.45220, 34.0, 10.1, 4.0),  // turning onto Warschauer
-            doubleArrayOf(52.50870, 13.45100, 34.0, 8.7, 3.5),   // Warschauer Str south
-            doubleArrayOf(52.50760, 13.44950, 33.0, 11.3, 3.0),  // passing S-Bahn bridge
-            doubleArrayOf(52.50650, 13.44820, 33.0, 9.4, 4.0),   // Stralauer Allee
-            doubleArrayOf(52.50560, 13.44710, 33.0, 6.2, 4.5),   // slowing down
-            doubleArrayOf(52.50490, 13.44650, 32.0, 2.1, 5.0),   // arriving
-            doubleArrayOf(52.50460, 13.44630, 32.0, 0.3, 4.0)    // parked at supermarket
-        )
-
-        // Trip 2: Supermarket → Gym (driving, ~8 min)
-        val trip2 = arrayOf(
-            doubleArrayOf(52.50460, 13.44630, 32.0, 0.5, 4.0),   // leaving supermarket
-            doubleArrayOf(52.50430, 13.44700, 32.0, 5.8, 4.5),   // pulling out east
-            doubleArrayOf(52.50380, 13.44890, 33.0, 10.2, 3.5),  // Stralauer Allee east
-            doubleArrayOf(52.50340, 13.45120, 33.0, 12.5, 3.0),  // along the Spree
-            doubleArrayOf(52.50310, 13.45380, 34.0, 11.8, 3.5),  // heading east
-            doubleArrayOf(52.50270, 13.45640, 34.0, 9.6, 4.0),   // Modersohnstr area
-            doubleArrayOf(52.50230, 13.45900, 35.0, 8.3, 4.0),   // near Ostkreuz
-            doubleArrayOf(52.50180, 13.46100, 35.0, 5.1, 4.5),   // slowing for turn
-            doubleArrayOf(52.50150, 13.46250, 35.0, 2.4, 5.0),   // arriving at gym
-            doubleArrayOf(52.50140, 13.46280, 35.0, 0.2, 4.0)    // parked at gym
-        )
-
-        // Trip 3: Gym → Home (driving, ~14 min, slightly different route)
-        val trip3 = arrayOf(
-            doubleArrayOf(52.50140, 13.46280, 35.0, 0.4, 4.0),   // leaving gym
-            doubleArrayOf(52.50190, 13.46180, 35.0, 4.2, 4.5),   // pulling out
-            doubleArrayOf(52.50280, 13.45980, 34.0, 9.7, 3.5),   // Sonntagstr north
-            doubleArrayOf(52.50390, 13.45820, 34.0, 11.4, 3.0),  // heading north-west
-            doubleArrayOf(52.50510, 13.45700, 33.0, 12.1, 3.5),  // Simplonstr
-            doubleArrayOf(52.50630, 13.45590, 33.0, 10.5, 4.0),  // crossing rail tracks
-            doubleArrayOf(52.50740, 13.45480, 34.0, 8.9, 3.5),   // Warschauer north
-            doubleArrayOf(52.50860, 13.45360, 34.0, 11.0, 3.0),  // RAW-Gelände area
-            doubleArrayOf(52.50970, 13.45280, 35.0, 9.3, 4.0),   // Revaler Str
-            doubleArrayOf(52.51080, 13.45370, 36.0, 10.8, 3.5),  // turning onto Grünberger
-            doubleArrayOf(52.51190, 13.45490, 37.0, 8.2, 4.0),   // Grünberger Str north
-            doubleArrayOf(52.51290, 13.45620, 37.0, 6.5, 4.5),   // approaching home
-            doubleArrayOf(52.51370, 13.45740, 38.0, 3.1, 5.0),   // slowing down
-            doubleArrayOf(52.51420, 13.45830, 38.0, 0.2, 4.0)    // back home
-        )
-
-        // Generate data for the past 7 days with slight daily variation
-        for (dayOffset in 6 downTo 0) {
-            val dayMidnight = now - (now % 86400) - (dayOffset * 86400L)
-            val battery = 92 - (dayOffset * 3)
-            // Small daily jitter so tracks aren't perfectly identical
-            val jitterLat = (dayOffset * 0.00003) - 0.00009
-            val jitterLon = (dayOffset * 0.00002) - 0.00006
-
-            // Trip 1: Home → Supermarket, depart 09:30, ~30s between points
-            val t1Start = dayMidnight + 9 * 3600 + 1800
-            for ((i, wp) in trip1.withIndex()) {
-                val ts = t1Start + (i * 30L)
-                if (ts > now) break
-                dbHelper.saveLocation(
-                    wp[0] + jitterLat, wp[1] + jitterLon,
-                    wp[4], wp[2].toInt(), wp[3],
-                    null, battery - i, 1, ts
-                )
-                count++
-            }
-
-            // Gap: 45 min at supermarket (triggers trip segmentation at 15-min threshold)
-
-            // Trip 2: Supermarket → Gym, depart 10:20, ~30s between points
-            val t2Start = dayMidnight + 10 * 3600 + 1200
-            for ((i, wp) in trip2.withIndex()) {
-                val ts = t2Start + (i * 30L)
-                if (ts > now) break
-                dbHelper.saveLocation(
-                    wp[0] + jitterLat, wp[1] + jitterLon,
-                    wp[4], wp[2].toInt(), wp[3],
-                    null, battery - 15 - i, 2, ts
-                )
-                count++
-            }
-
-            // Gap: 1h 30min at gym
-
-            // Trip 3: Gym → Home, depart 12:00, ~30s between points
-            val t3Start = dayMidnight + 12 * 3600
-            for ((i, wp) in trip3.withIndex()) {
-                val ts = t3Start + (i * 30L)
-                if (ts > now) break
-                dbHelper.saveLocation(
-                    wp[0] + jitterLat, wp[1] + jitterLon,
-                    wp[4], wp[2].toInt(), wp[3],
-                    null, battery - 30 - i, 1, ts
-                )
-                count++
-            }
-
-            // Skip afternoon trip on some days for variety
-            if (dayOffset % 2 == 0) continue
-
-            // Trip 4 (some days): Quick evening walk, depart 18:00
-            // Short loop around Boxhagener Platz (~10 min walk)
-            val walkTrip = arrayOf(
-                doubleArrayOf(52.51420, 13.45830, 38.0, 1.2, 6.0),
-                doubleArrayOf(52.51450, 13.45900, 38.0, 1.4, 5.5),
-                doubleArrayOf(52.51480, 13.45970, 38.0, 1.3, 5.0),
-                doubleArrayOf(52.51500, 13.46050, 38.0, 1.5, 5.5),
-                doubleArrayOf(52.51480, 13.46130, 38.0, 1.4, 6.0),
-                doubleArrayOf(52.51450, 13.46080, 38.0, 1.3, 5.5),
-                doubleArrayOf(52.51430, 13.45970, 38.0, 1.2, 5.0),
-                doubleArrayOf(52.51420, 13.45830, 38.0, 0.3, 6.0)
-            )
-            val t4Start = dayMidnight + 18 * 3600
-            for ((i, wp) in walkTrip.withIndex()) {
-                val ts = t4Start + (i * 75L)
-                if (ts > now) break
-                dbHelper.saveLocation(
-                    wp[0] + jitterLat, wp[1] + jitterLon,
-                    wp[4], wp[2].toInt(), wp[3],
-                    null, battery - 45 - i, 1, ts
-                )
-                count++
-            }
-        }
-        count
-    }
+        executeAsync(promise) { DebugSeedData.insertDummyData(dbHelper) }
     }
 
     @ReactMethod
@@ -559,35 +332,24 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    @ReactMethod 
-    fun clearSentHistory(promise: Promise) = executeAsync(promise) { 
-        val deleted = dbHelper.clearSentHistory()
-        moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
-        deleted
+    @ReactMethod
+    fun clearSentHistory(promise: Promise) = executeAsync(promise) {
+        deleteThenVacuum { dbHelper.clearSentHistory() }
     }
-    
+
     @ReactMethod
     fun clearQueue(promise: Promise) = executeAsync(promise) {
-        val deleted = dbHelper.clearQueue()
-        refreshNotificationIfTracking()
-        moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
-        deleted
+        deleteThenVacuum(refresh = true) { dbHelper.clearQueue() }
     }
-    
+
     @ReactMethod
     fun clearAllLocations(promise: Promise) = executeAsync(promise) {
-        val deleted = dbHelper.clearAllLocations()
-        refreshNotificationIfTracking()
-        moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
-        deleted
+        deleteThenVacuum(refresh = true) { dbHelper.clearAllLocations() }
     }
-    
+
     @ReactMethod
     fun deleteOlderThan(days: Int, promise: Promise) = executeAsync(promise) {
-        val deleted = dbHelper.deleteOlderThan(days)
-        refreshNotificationIfTracking()
-        moduleScope.launch(Dispatchers.IO) {  dbHelper.vacuum() }
-        deleted
+        deleteThenVacuum(refresh = true) { dbHelper.deleteOlderThan(days) }
     }
     
     @ReactMethod
@@ -597,15 +359,17 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     private fun triggerZoneRecheck() {
+        val isTracking = dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
+        if (!isTracking) return
         try {
             startServiceWithAction(LocationForegroundService.ACTION_RECHECK_ZONE)
         } catch (e: Exception) {
-            AppLogger.e(TAG, "Failed to trigger zone recheck", e)
+            AppLogger.w(TAG, "Zone recheck skipped: service not running")
         }
     }
 
     private fun refreshNotificationIfTracking() {
-        val isTracking = dbHelper.getSetting("tracking_enabled", "false") == "true"
+        val isTracking = dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
         if (isTracking) {
             try {
                 startServiceWithAction(LocationForegroundService.ACTION_REFRESH_NOTIFICATION)
@@ -615,10 +379,28 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    /**
-    * Creates a geofence and invalidates cache to ensure the 
-    * Foreground Service recognizes the change immediately.
-    */
+    /** Invalidates the geofence cache and asks the service to re-evaluate pause zones so the change takes effect immediately. */
+    private fun afterGeofenceMutation(changed: Boolean) {
+        if (!changed) return
+        geofenceHelper.invalidateCache()
+        triggerZoneRecheck()
+    }
+
+    /** Invalidates the profile cache and asks the service to re-evaluate active profile so the change takes effect immediately. */
+    private fun afterProfileMutation(changed: Boolean) {
+        if (!changed) return
+        profileHelper.invalidateCache()
+        triggerProfileRecheck()
+    }
+
+    /** delete() runs inline; vacuum is fire-and-forget so callers return immediately. */
+    private fun deleteThenVacuum(refresh: Boolean = false, delete: () -> Int): Int {
+        val deleted = delete()
+        if (refresh) refreshNotificationIfTracking()
+        moduleScope.launch(Dispatchers.IO) { dbHelper.vacuum() }
+        return deleted
+    }
+
     @ReactMethod
     fun createGeofence(
         name: String,
@@ -633,21 +415,25 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         heartbeatIntervalMinutes: Int,
         promise: Promise
     ) = executeAsync(promise) {
-        val result = geofenceHelper.insertGeofence(name, lat, lon, radius, pause, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes, heartbeatEnabled, heartbeatIntervalMinutes)
-        if (result > 0) {
-            geofenceHelper.invalidateCache()
-            triggerZoneRecheck()
-        }
-        result
+        val id = geofenceHelper.insertGeofence(
+            name = name,
+            lat = lat,
+            lon = lon,
+            radius = radius,
+            pauseTracking = pause,
+            pauseOnWifi = pauseOnWifi,
+            pauseOnMotionless = pauseOnMotionless,
+            motionlessTimeoutMinutes = motionlessTimeoutMinutes,
+            heartbeatEnabled = heartbeatEnabled,
+            heartbeatIntervalMinutes = heartbeatIntervalMinutes,
+        )
+        afterGeofenceMutation(id > 0)
+        id
     }
 
-    /**
-    * Fetches all geofences for the UI.
-    * Does not invalidate cache as this is a read-only operation.
-    */
     @ReactMethod
-    fun getGeofences(promise: Promise) = executeAsync(promise) { 
-        geofenceHelper.getGeofencesAsArray() 
+    fun getGeofences(promise: Promise) = executeAsync(promise) {
+        geofenceHelper.getGeofencesAsArray()
     }
 
     @ReactMethod
@@ -666,75 +452,50 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         heartbeatIntervalMinutes: Int?,
         promise: Promise
     ) = executeAsync(promise) {
-        val result = geofenceHelper.updateGeofence(id, name, lat, lon, radius, enabled, pause, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes, heartbeatEnabled, heartbeatIntervalMinutes)
-        if (result) {
-            geofenceHelper.invalidateCache()
-            triggerZoneRecheck()
-        }
-        result
-    }
-
-    /**
-    * Deletes a geofence and invalidates cache to ensure the 
-    * Foreground Service recognizes the change immediately.
-    */
-   @ReactMethod
-    fun deleteGeofence(id: Int, promise: Promise) = executeAsync(promise) { 
-        val result = geofenceHelper.deleteGeofence(id)
-        if (result) {
-            geofenceHelper.invalidateCache()
-            triggerZoneRecheck()
-        }
-        result
+        val changed = geofenceHelper.updateGeofence(
+            id = id,
+            name = name,
+            lat = lat,
+            lon = lon,
+            radius = radius,
+            enabled = enabled,
+            pauseTracking = pause,
+            pauseOnWifi = pauseOnWifi,
+            pauseOnMotionless = pauseOnMotionless,
+            motionlessTimeoutMinutes = motionlessTimeoutMinutes,
+            heartbeatEnabled = heartbeatEnabled,
+            heartbeatIntervalMinutes = heartbeatIntervalMinutes,
+        )
+        afterGeofenceMutation(changed)
+        changed
     }
 
     @ReactMethod
-    fun checkCurrentPauseZone(promise: Promise) {
-        val provider = LocationProviderFactory.create(reactApplicationContext)
+    fun deleteGeofence(id: Int, promise: Promise) = executeAsync(promise) {
+        val changed = geofenceHelper.deleteGeofence(id)
+        afterGeofenceMutation(changed)
+        changed
+    }
 
-        try {
-            provider.getLastLocation(
-                onSuccess = { loc ->
-                    if (loc == null) {
-                        promise.resolve(null)
-                    } else {
-                        moduleScope.launch {
-                            try {
-                                val zone = withContext(Dispatchers.IO) {
-                                    geofenceHelper.getPauseZone(loc)
-                                }
-                                if (zone == null) {
-                                    promise.resolve(null)
-                                } else {
-                                    val db = DatabaseHelper.getInstance(reactApplicationContext)
-                                    val reason = withContext(Dispatchers.IO) {
-                                        when {
-                                            db.getSetting("pause_zone_wifi_active") == "true" -> "wifi"
-                                            db.getSetting("pause_zone_motionless_active") == "true" -> "motionless"
-                                            else -> null
-                                        }
-                                    }
-                                    val result = Arguments.createMap().apply {
-                                        putString("zoneName", zone.name)
-                                        putString("pauseReason", reason)
-                                    }
-                                    promise.resolve(result)
-                                }
-                            } catch (e: Exception) {
-                                AppLogger.e(TAG, "Pause zone check failed", e)
-                                promise.resolve(null)
-                            }
-                        }
-                    }
-                },
-                onFailure = { e ->
-                    AppLogger.e(TAG, "Failed to get location for pause zone check", e)
-                    promise.resolve(null)
-                }
-            )
-        } catch (e: SecurityException) {
-            AppLogger.e(TAG, "Location permission not granted", e)
-            promise.resolve(null)
+    /**
+     * Reads the current pause state from persisted settings written by the service
+     * on every enter/exit transition. Avoids the location API so opening screens that
+     * call this does not trigger Android's location-access indicator.
+     */
+    @ReactMethod
+    fun checkCurrentPauseZone(promise: Promise) = executeAsync(promise) {
+        val zoneName = dbHelper.getSetting(SettingsKeys.PAUSE_ZONE_NAME)
+        if (zoneName.isNullOrBlank()) return@executeAsync null
+
+        val reason = when {
+            dbHelper.getSetting(SettingsKeys.PAUSE_ZONE_WIFI_ACTIVE) == "true" -> "wifi"
+            dbHelper.getSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE) == "true" -> "motionless"
+            else -> null
+        }
+
+        Arguments.createMap().apply {
+            putString("zoneName", zoneName)
+            putString("pauseReason", reason)
         }
     }
 
@@ -758,18 +519,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             conditionType = config.getString("conditionType") ?: ProfileConstants.CONDITION_CHARGING,
             speedThreshold = if (config.hasKey("speedThreshold") && !config.isNull("speedThreshold"))
                 config.getDouble("speedThreshold").toFloat() else null,
-            deactivationDelaySeconds = config.getInt("deactivationDelaySeconds")
+            deactivationDelaySeconds = config.getInt("deactivationDelaySeconds"),
         )
-        if (id > 0) {
-            profileHelper.invalidateCache()
-            triggerProfileRecheck()
-        }
+        afterProfileMutation(id > 0)
         id
     }
 
     @ReactMethod
     fun updateProfile(config: ReadableMap, promise: Promise) = executeAsync(promise) {
-        val result = profileHelper.updateProfile(
+        val changed = profileHelper.updateProfile(
             id = config.getInt("id"),
             name = config.getStringOrNull("name")?.trim(),
             intervalMs = config.getDoubleOrNull("intervalMs")?.toLong(),
@@ -781,23 +539,17 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 config.getDouble("speedThreshold").toFloat() else null,
             hasSpeedThreshold = config.hasKey("speedThreshold"),
             deactivationDelaySeconds = config.getIntOrNull("deactivationDelaySeconds"),
-            enabled = config.getBooleanOrNull("enabled")
+            enabled = config.getBooleanOrNull("enabled"),
         )
-        if (result) {
-            profileHelper.invalidateCache()
-            triggerProfileRecheck()
-        }
-        result
+        afterProfileMutation(changed)
+        changed
     }
 
     @ReactMethod
     fun deleteProfile(id: Int, promise: Promise) = executeAsync(promise) {
-        val result = profileHelper.deleteProfile(id)
-        if (result) {
-            profileHelper.invalidateCache()
-            triggerProfileRecheck()
-        }
-        result
+        val changed = profileHelper.deleteProfile(id)
+        afterProfileMutation(changed)
+        changed
     }
 
     @ReactMethod
@@ -817,7 +569,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     private fun triggerProfileRecheck() {
-        val isTracking = dbHelper.getSetting("tracking_enabled", "false") == "true"
+        val isTracking = dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
         if (isTracking) {
             try {
                 startServiceWithAction(LocationForegroundService.ACTION_RECHECK_PROFILES)
@@ -983,20 +735,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun saveAuthConfig(config: ReadableMap, promise: Promise) = executeAsync(promise) {
-        config.getString("authType")?.let {
-            secureStorage.putString(SecureStorageHelper.KEY_AUTH_TYPE, it)
-        }
-        config.getString("username")?.let {
-            secureStorage.putString(SecureStorageHelper.KEY_USERNAME, it)
-        }
-        config.getString("password")?.let {
-            secureStorage.putString(SecureStorageHelper.KEY_PASSWORD, it)
-        }
-        config.getString("bearerToken")?.let {
-            secureStorage.putString(SecureStorageHelper.KEY_BEARER_TOKEN, it)
-        }
-        config.getString("customHeaders")?.let {
-            secureStorage.putString(SecureStorageHelper.KEY_CUSTOM_HEADERS, it)
+        AUTH_CONFIG_KEYS.forEach { (jsKey, storageKey) ->
+            config.getString(jsKey)?.let { secureStorage.putString(storageKey, it) }
         }
         true
     }

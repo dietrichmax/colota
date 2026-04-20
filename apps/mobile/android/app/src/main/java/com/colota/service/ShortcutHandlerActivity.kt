@@ -9,6 +9,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import com.Colota.data.DatabaseHelper
+import com.Colota.data.SettingsKeys
 import com.Colota.util.AppLogger
 
 /**
@@ -38,8 +39,8 @@ class ShortcutHandlerActivity : Activity() {
             }
             ACTION_STOP -> {
                 AppLogger.d(TAG, "Shortcut: stop tracking")
-                dbHelper.saveSetting("tracking_enabled", "false")
-                dbHelper.saveSetting("pause_zone_name", "")
+                dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "false")
+                dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_NAME, "")
                 stopService(Intent(this, LocationForegroundService::class.java))
             }
         }

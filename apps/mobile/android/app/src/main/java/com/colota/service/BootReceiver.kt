@@ -10,6 +10,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.Colota.data.DatabaseHelper
+import com.Colota.data.SettingsKeys
 import com.Colota.util.AppLogger
 import com.Colota.util.DeviceInfoHelper
 import kotlinx.coroutines.*
@@ -60,7 +61,7 @@ class LocationBootReceiver : BroadcastReceiver() {
         repeat(MAX_DB_RETRIES) { attempt ->
             try {
                 // Test database access
-                dbHelper.getSetting("tracking_enabled")
+                dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED)
                 return true
             } catch (e: Exception) {
                 AppLogger.d(TAG, "DB not ready, attempt ${attempt + 1}/$MAX_DB_RETRIES")
@@ -82,7 +83,7 @@ class LocationBootReceiver : BroadcastReceiver() {
                 return
             }
             
-            val isEnabled = dbHelper.getSetting("tracking_enabled", "false") == "true"
+            val isEnabled = dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
             
             if (!isEnabled) {
                 AppLogger.d(TAG, "Boot detected but tracking disabled")

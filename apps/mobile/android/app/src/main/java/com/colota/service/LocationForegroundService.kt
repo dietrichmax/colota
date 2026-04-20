@@ -6,6 +6,7 @@
 package com.Colota.service
 
 import android.app.*
+import android.location.Location
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -15,6 +16,7 @@ import com.Colota.util.AppLogger
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
 import com.Colota.data.ProfileHelper
+import com.Colota.data.SettingsKeys
 import com.Colota.sync.NetworkManager
 import com.Colota.sync.PayloadBuilder
 import com.Colota.sync.SyncManager
@@ -38,7 +40,8 @@ class LocationForegroundService : Service() {
     private lateinit var notificationManager: NotificationManager
     private lateinit var notificationHelper: NotificationHelper
     private lateinit var dbHelper: DatabaseHelper
-    private lateinit var payloadBuilder: PayloadBuilder
+    @Volatile private var payloadFieldMap: Map<String, String> = emptyMap()
+    @Volatile private var payloadCustomFields: Map<String, String> = emptyMap()
     private lateinit var deviceInfoHelper: DeviceInfoHelper
     private lateinit var networkManager: NetworkManager
     private lateinit var geofenceHelper: GeofenceHelper
@@ -48,30 +51,43 @@ class LocationForegroundService : Service() {
     private lateinit var profileManager: ProfileManager
     private lateinit var conditionMonitor: ConditionMonitor
 
+    // ── Service infrastructure ──
     @Volatile private var serviceScope: CoroutineScope? = null
     @Volatile private var locationUpdateCallback: LocationUpdateCallback? = null
     @Volatile private var locationRestartJob: Job? = null
     @Volatile private var trackingHeartbeatJob: Job? = null
     @Volatile private var lastFixAtMs: Long = 0L
     @Volatile private var motionDetector: MotionDetector? = null
+    @Volatile private var lastKnownLocation: Location? = null
+
+    /**
+     * Pause-zone state. Threading contract:
+     * - Mutated ONLY on the Main thread. Call sites: onStartCommand, enter/exitPauseZone,
+     *   activateWifiPause, unregisterWifiPause, clearMotionlessPauseState, and the bodies of
+     *   Main-dispatched coroutines (registerWifiPause's NetworkCallback uses Main Looper;
+     *   motionlessJob + wifiResumeJob switch to Dispatchers.Main before mutating).
+     * - Read from any thread (location callbacks, notification builder, heartbeat IO coroutine).
+     *   @Volatile exists for reader visibility, not mutation safety. Do NOT mutate off-Main.
+     */
     @Volatile private var insidePauseZone = false
-    @Volatile private var isWifiPaused = false
-    // Accessed exclusively on the main thread - @Volatile not needed and would be misleading
-    private var unmeteredNetworkCount = 0
-    @Volatile private var wifiCallback: ConnectivityManager.NetworkCallback? = null
-    @Volatile private var wifiResumeJob: Job? = null
-    @Volatile private var isMotionlessPaused = false
-    @Volatile private var motionlessJob: Job? = null
     @Volatile private var currentZoneName: String? = null
     @Volatile private var currentZoneGeofence: GeofenceHelper.CachedGeofence? = null
-    @Volatile private var lastKnownLocation: android.location.Location? = null
-    @Volatile private var entryDelayJob: Job? = null
     @Volatile private var pendingPauseZone: GeofenceHelper.CachedGeofence? = null
+    @Volatile private var entryDelayJob: Job? = null
     @Volatile private var heartbeatJob: Job? = null
 
+    // WiFi pause sub-state (same Main-only mutation contract as above)
+    @Volatile private var isWifiPaused = false
+    @Volatile private var wifiCallback: ConnectivityManager.NetworkCallback? = null
+    @Volatile private var wifiResumeJob: Job? = null
+    // Main-only reads + writes (no cross-thread reads), so @Volatile is unnecessary here
+    private var unmeteredNetworkCount = 0
+
+    // Motionless pause sub-state (same Main-only mutation contract as above)
+    @Volatile private var isMotionlessPaused = false
+    @Volatile private var motionlessJob: Job? = null
+
     @Volatile private lateinit var config: ServiceConfig
-    @Volatile private var fieldMap: Map<String, String>? = null
-    @Volatile private var customFields: Map<String, String>? = null
 
     companion object {
         private const val TAG = "LocationService"
@@ -103,7 +119,6 @@ class LocationForegroundService : Service() {
         locationProvider = LocationProviderFactory.create(this)
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         dbHelper = DatabaseHelper.getInstance(this)
-        payloadBuilder = PayloadBuilder()
         deviceInfoHelper = DeviceInfoHelper(this)
         networkManager = NetworkManager(this)
         geofenceHelper = GeofenceHelper(this)
@@ -112,8 +127,8 @@ class LocationForegroundService : Service() {
         profileHelper = ProfileHelper(this)
         profileManager = ProfileManager(
             profileHelper, serviceScope!!,
-            onConfigSwitch = { interval, distance, syncInterval, _, _ ->
-                applyProfileConfig(interval, distance, syncInterval)
+            onConfigSwitch = { config ->
+                applyProfileConfig(config.interval, config.distance, config.syncInterval)
             },
             onStationaryChanged = ::handleStationaryChanged
         )
@@ -133,7 +148,7 @@ class LocationForegroundService : Service() {
         }
 
         val savedSettings = dbHelper.getAllSettings()
-        val shouldBeTracking = savedSettings["tracking_enabled"]?.toBoolean() ?: false
+        val shouldBeTracking = savedSettings[SettingsKeys.TRACKING_ENABLED]?.toBoolean() ?: false
 
         // intent == null: Android restarted the service after OOM kill
         if (intent == null && !shouldBeTracking) {
@@ -157,7 +172,7 @@ class LocationForegroundService : Service() {
 
         // Restore pause zone state so a restart without a cached location fix doesn't incorrectly resume tracking
         if (!insidePauseZone) {
-            val savedZone = savedSettings["pause_zone_name"]
+            val savedZone = savedSettings[SettingsKeys.PAUSE_ZONE_NAME]
             if (!savedZone.isNullOrBlank()) {
                 insidePauseZone = true
                 currentZoneName = savedZone
@@ -173,7 +188,7 @@ class LocationForegroundService : Service() {
                     // so setupLocationUpdates() won't start GPS before onAvailable fires.
                     registerWifiPause()
                 }
-                if (savedSettings["pause_zone_motionless_active"]?.toBoolean() == true) {
+                if (savedSettings[SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE]?.toBoolean() == true) {
                     isMotionlessPaused = true
                     motionDetector?.arm()
                     AppLogger.d(TAG, "Restored motionless pause state")
@@ -210,60 +225,62 @@ class LocationForegroundService : Service() {
         }
 
         if (!isLightweight) {
-            dbHelper.saveSetting("tracking_enabled", "true")
+            dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
         }
 
         when (action) {
-            ACTION_REFRESH_NOTIFICATION -> {
-                syncManager.invalidateQueueCache()
-                val loc = lastKnownLocation
-                updateNotification(
-                    lat = loc?.latitude,
-                    lon = loc?.longitude,
-                    forceUpdate = true
-                )
-                return START_STICKY
-            }
-            ACTION_RECHECK_ZONE -> {
-                handleZoneRecheckAction()
-                return START_STICKY
-            }
-            ACTION_RECHECK_PROFILES -> {
-                profileManager.invalidateProfiles()
-                conditionMonitor.start()
-                profileManager.evaluate()
-                return START_STICKY
-            }
-            ACTION_MANUAL_FLUSH -> {
-                serviceScope?.launch {
-                    syncManager.manualFlush()
-                }
-                return START_STICKY
-            }
-            else -> {
-                locationRestartJob?.cancel()
-                locationRestartJob = serviceScope?.launch {
-                    withContext(Dispatchers.Main) {
-                        stopLocationUpdates()
-                        syncManager.stopPeriodicSync()
-
-                        setupLocationUpdates()
-                        syncManager.startPeriodicSync()
-
-                        // Start after setup so profile evaluations don't race
-                        // with setupLocationUpdates above
-                        conditionMonitor.start()
-                    }
-
-                    if (!config.isOfflineMode && config.syncIntervalSeconds == 0 && config.endpoint.isNotBlank() &&
-                        syncManager.isSyncAllowed()) {
-                        syncManager.manualFlush()
-                    }
-                }
-            }
+            ACTION_REFRESH_NOTIFICATION -> handleRefreshNotification()
+            ACTION_RECHECK_ZONE -> handleZoneRecheckAction()
+            ACTION_RECHECK_PROFILES -> handleRecheckProfiles()
+            ACTION_MANUAL_FLUSH -> handleManualFlush()
+            else -> handleStart()
         }
 
         return START_STICKY
+    }
+
+    private fun handleRefreshNotification() {
+        syncManager.invalidateQueueCache()
+        val loc = lastKnownLocation
+        updateNotification(
+            lat = loc?.latitude,
+            lon = loc?.longitude,
+            forceUpdate = true
+        )
+    }
+
+    private fun handleRecheckProfiles() {
+        profileManager.invalidateProfiles()
+        conditionMonitor.start()
+        profileManager.evaluate()
+    }
+
+    private fun handleManualFlush() {
+        serviceScope?.launch {
+            syncManager.manualFlush()
+        }
+    }
+
+    private fun handleStart() {
+        locationRestartJob?.cancel()
+        locationRestartJob = serviceScope?.launch {
+            withContext(Dispatchers.Main) {
+                stopLocationUpdates()
+                syncManager.stopPeriodicSync()
+
+                setupLocationUpdates()
+                syncManager.startPeriodicSync()
+
+                // Start after setup so profile evaluations don't race
+                // with setupLocationUpdates above
+                conditionMonitor.start()
+            }
+
+            if (!config.isOfflineMode && config.syncIntervalSeconds == 0 && config.endpoint.isNotBlank() &&
+                syncManager.isSyncAllowed()) {
+                syncManager.manualFlush()
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -294,7 +311,7 @@ class LocationForegroundService : Service() {
         if (isWifiPaused || isMotionlessPaused) return  // GPS intentionally stopped by a zone pause hold
 
         val callback = object : LocationUpdateCallback {
-            override fun onLocationUpdate(location: android.location.Location) {
+            override fun onLocationUpdate(location: Location) {
                 lastFixAtMs = SystemClock.elapsedRealtime()
                 handleLocationUpdate(location)
             }
@@ -405,7 +422,7 @@ class LocationForegroundService : Service() {
     }
 
 
-    private fun recheckZoneWithLocation(location: android.location.Location) {
+    private fun recheckZoneWithLocation(location: Location) {
         val zone = geofenceHelper.getPauseZone(location)
 
         // Already inside this zone - refresh settings in case they changed via editor
@@ -414,8 +431,6 @@ class LocationForegroundService : Service() {
             updateNotification(
                 lat = location.latitude,
                 lon = location.longitude,
-                pausedInZone = true,
-                zoneName = currentZoneName,
                 forceUpdate = true
             )
             val reason = when {
@@ -492,7 +507,7 @@ class LocationForegroundService : Service() {
     }
 
     /** Derives speed from consecutive GPS points when the device doesn't report it. */
-    private fun applySpeedFallback(location: android.location.Location) {
+    private fun applySpeedFallback(location: Location) {
         if (location.hasSpeed()) return
 
         val prev = lastKnownLocation ?: return
@@ -508,7 +523,7 @@ class LocationForegroundService : Service() {
         location.speed = calculatedSpeed
     }
 
-    private fun handleLocationUpdate(location: android.location.Location) {
+    private fun handleLocationUpdate(location: Location) {
         if (config.filterInaccurateLocations && location.accuracy > config.accuracyThreshold) {
             AppLogger.d(TAG, "Location filtered: accuracy ${location.accuracy}m > threshold ${config.accuracyThreshold}m")
             return
@@ -560,7 +575,6 @@ class LocationForegroundService : Service() {
         }
 
         val timestampSec = location.time / 1000
-        val currentFieldMap = fieldMap ?: emptyMap()
 
         serviceScope?.launch {
             anchorJob?.join()
@@ -579,15 +593,7 @@ class LocationForegroundService : Service() {
 
             LocationServiceModule.sendLocationEvent(location, battery, batteryStatus)
 
-            val payload = payloadBuilder.buildPayload(
-                location,
-                battery,
-                batteryStatus,
-                // emptyMap() keeps internal field names (lat/lon/vel/bear/...) so buildTraccarJsonPayload can read them directly
-                if (config.apiFormat == NetworkManager.FORMAT_TRACCAR_JSON) emptyMap() else currentFieldMap,
-                timestampSec,
-                customFields
-            )
+            val payload = PayloadBuilder.buildLocationPayload(location, timestampSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat)
 
             syncManager.queueAndSend(locationId, payload)
 
@@ -634,32 +640,19 @@ class LocationForegroundService : Service() {
         pendingPauseZone = null
         AppLogger.d(TAG, "Entry delay cancelled - left zone '${zone?.name}' before delay completed")
 
-        val loc = lastKnownLocation
-        updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
+        refreshNotificationForCurrentState()
     }
 
     private fun enterPauseZone(geofence: GeofenceHelper.CachedGeofence) {
         insidePauseZone = true
         currentZoneName = geofence.name
         currentZoneGeofence = geofence
-        dbHelper.saveSetting("pause_zone_name", geofence.name)
+        dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_NAME, geofence.name)
 
-        val loc = lastKnownLocation
-        updateNotification(
-            lat = loc?.latitude,
-            lon = loc?.longitude,
-            pausedInZone = true,
-            zoneName = geofence.name,
-            forceUpdate = true
-        )
-
+        refreshNotificationForCurrentState()
         LocationServiceModule.sendPauseZoneEvent(true, geofence.name)
 
-        if (geofence.pauseOnWifi) registerWifiPause()
-        if (geofence.pauseOnMotionless) startMotionlessCountdown(geofence.motionlessTimeoutMinutes)
-        if (geofence.heartbeatEnabled) {
-            startHeartbeat(geofence.heartbeatIntervalMinutes)
-        }
+        startZoneHolds(geofence)
 
         profileManager.clearSpeedBuffer()
 
@@ -675,30 +668,47 @@ class LocationForegroundService : Service() {
     private fun exitPauseZone(): Job? {
         val exitedGeofence = currentZoneGeofence
         val exitedName = currentZoneName
+        val wasWifiPaused = isWifiPaused
+        val wasMotionlessPaused = isMotionlessPaused
 
         insidePauseZone = false
         currentZoneName = null
         currentZoneGeofence = null
-        dbHelper.saveSetting("pause_zone_name", "")
-        val wasWifiPaused = isWifiPaused
-        val wasMotionlessPaused = isMotionlessPaused
-        unregisterWifiPause()
-        cancelMotionlessCountdown()
-        clearMotionlessPauseState()
-        cancelHeartbeat()
+        dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_NAME, "")
+
+        stopZoneHolds()
 
         val anchorJob = exitedGeofence?.let { saveAnchorPoint(it) }
 
         // Resume GPS if it was stopped by any zone pause hold
         if (wasWifiPaused || wasMotionlessPaused) setupLocationUpdates()
 
-        val loc = lastKnownLocation
-        updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
-
+        refreshNotificationForCurrentState()
         LocationServiceModule.sendPauseZoneEvent(false, exitedName)
         AppLogger.d(TAG, "Exited pause zone: $exitedName")
 
         return anchorJob
+    }
+
+    /**
+     * Starts any pause-zone holds (WiFi, motionless, heartbeat) that the zone has enabled.
+     * Must stay mirrored with [stopZoneHolds] - when adding a new hold, update both.
+     */
+    private fun startZoneHolds(zone: GeofenceHelper.CachedGeofence) {
+        if (zone.pauseOnWifi) registerWifiPause()
+        if (zone.pauseOnMotionless) startMotionlessCountdown(zone.motionlessTimeoutMinutes)
+        if (zone.heartbeatEnabled) startHeartbeat(zone.heartbeatIntervalMinutes)
+    }
+
+    /**
+     * Stops all pause-zone holds. Safe to call when a hold was never started (each sub-stop is idempotent).
+     * Must stay mirrored with [startZoneHolds].
+     */
+    private fun stopZoneHolds() {
+        unregisterWifiPause()
+        cancelMotionlessCountdown()
+        clearMotionlessPauseState()
+        cancelHeartbeat()
     }
 
     // ── WiFi pause ────────────────────────────────────────────────────────
@@ -706,9 +716,9 @@ class LocationForegroundService : Service() {
     /** Stops GPS and updates state when an unmetered network becomes active. */
     private fun activateWifiPause() {
         isWifiPaused = true
-        dbHelper.saveSetting("pause_zone_wifi_active", "true")
+        dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_WIFI_ACTIVE, "true")
         stopLocationUpdates()
-        updateNotification(forceUpdate = true)
+        refreshNotificationForCurrentState()
         LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, "wifi")
         AppLogger.i(TAG, "Unmetered network available - WiFi pause active")
     }
@@ -753,7 +763,7 @@ class LocationForegroundService : Service() {
                     withContext(Dispatchers.Main) {
                         if (isWifiPaused && unmeteredNetworkCount == 0) {
                             isWifiPaused = false
-                            dbHelper.saveSetting("pause_zone_wifi_active", "false")
+                            dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_WIFI_ACTIVE, "false")
                             maybeResumeGps()
                             LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, if (isMotionlessPaused) "motionless" else null)
                             AppLogger.i(TAG, "GPS resumed after unmetered network lost")
@@ -776,7 +786,7 @@ class LocationForegroundService : Service() {
         wifiResumeJob = null
         unmeteredNetworkCount = 0
         isWifiPaused = false
-        dbHelper.saveSetting("pause_zone_wifi_active", "false")
+        dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_WIFI_ACTIVE, "false")
         val cb = wifiCallback ?: return
         wifiCallback = null
         try {
@@ -800,10 +810,10 @@ class LocationForegroundService : Service() {
                 motionlessJob = null
                 if (insidePauseZone && !isMotionlessPaused) {
                     isMotionlessPaused = true
-                    dbHelper.saveSetting("pause_zone_motionless_active", "true")
+                    dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "true")
                     stopLocationUpdates()
                     motionDetector?.arm()
-                    updateNotification(forceUpdate = true)
+                    refreshNotificationForCurrentState()
                     LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, "motionless")
                     AppLogger.i(TAG, "Motionless timeout reached - GPS paused, motion sensor armed")
                 }
@@ -818,7 +828,7 @@ class LocationForegroundService : Service() {
 
     private fun clearMotionlessPauseState() {
         isMotionlessPaused = false
-        dbHelper.saveSetting("pause_zone_motionless_active", "false")
+        dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "false")
         if (!profileManager.isStationary) motionDetector?.disarm()
     }
 
@@ -860,7 +870,7 @@ class LocationForegroundService : Service() {
             return
         }
 
-        val location = android.location.Location("geofence").apply {
+        val location = Location("geofence").apply {
             latitude = zone.lat
             longitude = zone.lon
             accuracy = zone.radius.toFloat()
@@ -870,16 +880,8 @@ class LocationForegroundService : Service() {
 
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
         val timestampSec = location.time / 1000
-        val currentFieldMap = fieldMap ?: emptyMap()
 
-        val payload = payloadBuilder.buildPayload(
-            location,
-            battery,
-            batteryStatus,
-            if (config.apiFormat == NetworkManager.FORMAT_TRACCAR_JSON) emptyMap() else currentFieldMap,
-            timestampSec,
-            customFields
-        )
+        val payload = PayloadBuilder.buildLocationPayload(location, timestampSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat)
 
         val sent = networkManager.sendToEndpoint(
             payload, config.endpoint, secureStorage.getAuthHeaders(),
@@ -900,7 +902,7 @@ class LocationForegroundService : Service() {
                 timestamp = timestampSec,
                 endpoint = config.endpoint
             )
-            dbHelper.markLocationSent(locationId)
+            dbHelper.markLocationsSent(listOf(locationId))
             LocationServiceModule.sendLocationEvent(location, battery, batteryStatus)
             AppLogger.d(TAG, "Heartbeat sent: lat=${location.latitude}, lon=${location.longitude}")
         } else {
@@ -929,13 +931,13 @@ class LocationForegroundService : Service() {
      * Use this instead of calling [setupLocationUpdates] directly in WiFi/motionless resume paths.
      */
     private fun maybeResumeGps() {
-        val geofence = currentZoneGeofence ?: run { setupLocationUpdates(); updateNotification(forceUpdate = true); return }
+        val geofence = currentZoneGeofence ?: run { setupLocationUpdates(); refreshNotificationForCurrentState(); return }
         val wifiHold = geofence.pauseOnWifi && isWifiPaused
         val motionHold = geofence.pauseOnMotionless && isMotionlessPaused
         if (!wifiHold && !motionHold) {
             AppLogger.i(TAG, "GPS resumed - all pause holds cleared")
             setupLocationUpdates()
-            updateNotification(forceUpdate = true)
+            refreshNotificationForCurrentState()
         } else {
             AppLogger.i(TAG, "GPS still held: wifi=$wifiHold motionless=$motionHold")
         }
@@ -953,9 +955,8 @@ class LocationForegroundService : Service() {
         val anchorTimeSec = anchorTimeMs / 1000
 
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
-        val currentFieldMap = fieldMap ?: emptyMap()
 
-        val syntheticLocation = android.location.Location("geofence").apply {
+        val syntheticLocation = Location("geofence").apply {
             latitude = geofence.lat
             longitude = geofence.lon
             accuracy = geofence.radius.toFloat()
@@ -976,15 +977,7 @@ class LocationForegroundService : Service() {
                 endpoint = config.endpoint
             )
 
-            val payload = payloadBuilder.buildPayload(
-                syntheticLocation,
-                battery,
-                batteryStatus,
-                // emptyMap() keeps internal field names (lat/lon/vel/bear/...) so buildTraccarJsonPayload can read them directly
-                if (config.apiFormat == NetworkManager.FORMAT_TRACCAR_JSON) emptyMap() else currentFieldMap,
-                anchorTimeSec,
-                customFields
-            )
+            val payload = PayloadBuilder.buildLocationPayload(syntheticLocation, anchorTimeSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat)
 
             syncManager.queueAndSend(locationId, payload)
 
@@ -992,22 +985,31 @@ class LocationForegroundService : Service() {
         }
     }
 
+    /**
+     * Forces a notification refresh using the current pause/zone state and last known location.
+     * Call after any pause-state change (enter/exit zone, wifi/motionless activate/clear, profile swap).
+     *
+     * Contract: this reads [insidePauseZone], [currentZoneName], and [lastKnownLocation] directly.
+     * Callers MUST mutate those fields (and persist pause-state settings when relevant)
+     * BEFORE invoking this — order is state → DB → refresh. Refreshing before the state
+     * is written will render a stale notification.
+     */
+    private fun refreshNotificationForCurrentState() {
+        val loc = lastKnownLocation
+        updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
+    }
+
     private fun updateNotification(
         lat: Double? = null,
         lon: Double? = null,
-        pausedInZone: Boolean = false,
-        zoneName: String? = null,
         forceUpdate: Boolean = false
     ) {
-        val isCurrentlyPaused = pausedInZone || insidePauseZone
-        val activeZone = zoneName ?: currentZoneName
-
         val offline = ::config.isInitialized && config.isOfflineMode
         notificationHelper.update(
             lat = lat,
             lon = lon,
-            isPaused = isCurrentlyPaused,
-            zoneName = activeZone,
+            isPaused = insidePauseZone,
+            zoneName = currentZoneName,
             queuedCount = if (offline) 0 else syncManager.getCachedQueuedCount(),
             lastSyncTime = if (offline) 0L else syncManager.lastSuccessfulSyncTime,
             activeProfileName = profileManager.getActiveProfileName(),
@@ -1028,10 +1030,10 @@ class LocationForegroundService : Service() {
         }
 
         LocationServiceModule.sendTrackingStoppedEvent(reason)
-        dbHelper.saveSetting("tracking_enabled", "false")
-        dbHelper.saveSetting("pause_zone_name", "")
-        dbHelper.saveSetting("pause_zone_wifi_active", "false")
-        dbHelper.saveSetting("pause_zone_motionless_active", "false")
+        dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "false")
+        dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_NAME, "")
+        dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_WIFI_ACTIVE, "false")
+        dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "false")
 
         stopForeground(Service.STOP_FOREGROUND_DETACH)
 
@@ -1081,8 +1083,7 @@ class LocationForegroundService : Service() {
         stopLocationUpdates()
         setupLocationUpdates()
 
-        val loc = lastKnownLocation
-        updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
+        refreshNotificationForCurrentState()
 
         AppLogger.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} - interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
     }
@@ -1115,19 +1116,16 @@ class LocationForegroundService : Service() {
         profileManager.defaultDistance = config.minUpdateDistance
         profileManager.defaultSyncInterval = config.syncIntervalSeconds
 
-        config.fieldMap?.let {
-            if (it.isNotBlank()) fieldMap = payloadBuilder.parseFieldMap(it)
-        }
-
-        config.customFields?.let {
-            if (it.isNotBlank()) customFields = payloadBuilder.parseCustomFields(it)
-        }
+        val parsedFieldMap = PayloadBuilder.parseFieldMap(config.fieldMap) ?: emptyMap()
+        val parsedCustomFields = PayloadBuilder.parseCustomFields(config.customFields) ?: emptyMap()
+        payloadFieldMap = parsedFieldMap
+        payloadCustomFields = parsedCustomFields
 
         AppLogger.d(TAG, buildString {
             append("Config loaded: interval=${config.interval}ms, distance=${config.minUpdateDistance}m, accuracy=${config.accuracyThreshold}m")
             append(", endpoint=${if (config.endpoint.isBlank()) "NOT CONFIGURED" else config.endpoint}")
             append(", offline=${config.isOfflineMode}, sync=${if (config.syncIntervalSeconds == 0) "instant" else "${config.syncIntervalSeconds}s"}")
-            if (!fieldMap.isNullOrEmpty()) append(", fieldMap=${fieldMap!!.size} mappings")
+            if (parsedFieldMap.isNotEmpty()) append(", fieldMap=${parsedFieldMap.size} mappings")
         })
     }
 }

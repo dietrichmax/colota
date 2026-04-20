@@ -24,14 +24,10 @@ import com.Colota.data.DatabaseHelper
 import com.Colota.util.AppLogger
 import java.io.File
 import java.io.IOException
-import java.io.OutputStreamWriter
 
 /**
- * WorkManager worker that performs automatic location data export.
- * Runs without the React Native JS runtime - uses native Kotlin converters.
- *
- * Scheduled as a daily periodic worker. On each run it checks whether an
- * export is actually due (daily/weekly/monthly) via AutoExportConfig.isExportDue().
+ * Runs daily and asks AutoExportConfig.isExportDue() whether the configured
+ * daily/weekly/monthly cadence has actually elapsed. Runs without the JS runtime.
  */
 class AutoExportWorker(
     private val appContext: Context,
@@ -43,8 +39,8 @@ class AutoExportWorker(
         private const val CHANNEL_ID = "auto_export"
         private const val NOTIFICATION_ID = 9001
         private const val FOREGROUND_NOTIFICATION_ID = 9002
+        // OneTimeWorkRequest has no default retry cap - bound transient IO retries here.
         private const val MAX_RETRIES = 3
-        private const val PAGE_SIZE = 10_000
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
@@ -82,7 +78,6 @@ class AutoExportWorker(
             return Result.failure()
         }
 
-        // One-time "run now" workers skip the due check
         val isManualRun = tags.contains("colota_auto_export_now")
         if (!isManualRun && !config.isExportDue()) {
             AppLogger.d(TAG, "Export not yet due, skipping")
@@ -91,12 +86,11 @@ class AutoExportWorker(
 
         AppLogger.i(TAG, "Starting auto-export: format=${config.format}, mode=${config.mode}")
 
-        // Promote to foreground service to prevent OS from killing long exports
+        // Some OEMs (Samsung, Xiaomi) throw under aggressive background restrictions;
+        // the export often still completes.
         try {
             setForeground(getForegroundInfo())
         } catch (e: Exception) {
-            // Some OEMs (Samsung, Xiaomi) throw when background restrictions are aggressive.
-            // Continue with the export anyway - it may still complete.
             AppLogger.w(TAG, "Could not promote to foreground service: ${e.message}")
         }
 
@@ -106,22 +100,21 @@ class AutoExportWorker(
             .format(java.util.Date())
         val fileName = "colota_export_$dateStr$ext"
 
-        // Write to temp file first for atomic writes
+        // Write to cache first, then copy to SAF.
         val tempFile = File(appContext.cacheDir, "auto_export_temp$ext")
 
         return try {
             val rowCount = if (config.mode == "incremental" && config.lastExportTimestamp > 0) {
                 val now = System.currentTimeMillis() / 1000
-                writePaginatedExport(config.format, tempFile) { limit, offset ->
+                ExportConverters.exportToFile(config.format, tempFile, shouldCancel = { isStopped }) { limit, offset ->
                     db.getLocationsByDateRange(config.lastExportTimestamp, now, limit, offset)
                 }
             } else {
-                writePaginatedExport(config.format, tempFile) { limit, offset ->
+                ExportConverters.exportToFile(config.format, tempFile, shouldCancel = { isStopped }) { limit, offset ->
                     db.getLocationsChronological(limit, offset)
                 }
             }
 
-            // Check cancellation before copying
             if (isStopped) {
                 tempFile.delete()
                 AppLogger.w(TAG, "Auto-export cancelled")
@@ -136,11 +129,9 @@ class AutoExportWorker(
                 return Result.success()
             }
 
-            // Atomic: copy completed temp file to SAF directory, then verify
             val tempSize = tempFile.length()
             val destDocFile = copyToSafDirectory(dirUri, fileName, tempFile, config.format)
 
-            // Verify the destination file
             val destSize = destDocFile.length()
             if (!destDocFile.exists() || destSize == 0L) {
                 tempFile.delete()
@@ -155,7 +146,6 @@ class AutoExportWorker(
             val now = System.currentTimeMillis() / 1000
             config.saveLastExportTimestamp(db, now)
 
-            // Clean up old export files beyond retention limit
             cleanupOldExports(dirUri, config.retentionCount)
 
             AppLogger.i(TAG, "Auto-export complete: $fileName ($rowCount locations)")
@@ -165,100 +155,71 @@ class AutoExportWorker(
                 "Exported $rowCount locations to $fileName",
                 dirUri
             )
-            sendExportBroadcast(true, fileName, rowCount, null)
+            LocationServiceModule.sendAutoExportEvent(true, fileName, rowCount, null)
             Result.success()
         } catch (e: SecurityException) {
-            tempFile.delete()
-            val error = "Directory permission lost"
-            AppLogger.e(TAG, "Auto-export failed - permission denied", e)
             config.saveEnabled(db, false)
             config.savePermissionLost(db, true)
-            config.saveLastError(db, error)
-            showNotification("Auto-Export Failed", "$error. Please re-select the export directory.")
-            sendExportBroadcast(false, null, 0, error)
-            Result.failure()
+            handleExportFailure(
+                tempFile, config, db, e,
+                error = "Directory permission lost",
+                logMessage = "Auto-export failed - permission denied",
+                userMessage = "Directory permission lost. Please re-select the export directory.",
+                retry = false
+            )
         } catch (e: IllegalArgumentException) {
-            tempFile.delete()
-            val error = "Invalid configuration: ${e.message}"
-            AppLogger.e(TAG, "Auto-export failed - invalid configuration", e)
-            config.saveLastError(db, error)
-            showNotification("Auto-Export Failed", "Invalid export configuration: ${e.message}")
-            sendExportBroadcast(false, null, 0, error)
-            Result.failure()
+            handleExportFailure(
+                tempFile, config, db, e,
+                error = "Invalid configuration: ${e.message}",
+                logMessage = "Auto-export failed - invalid configuration",
+                userMessage = "Invalid export configuration: ${e.message}",
+                retry = false
+            )
         } catch (e: IllegalStateException) {
-            tempFile.delete()
-            val error = "Directory access failed: ${e.message}"
-            AppLogger.e(TAG, "Auto-export failed - directory access issue", e)
-            config.saveLastError(db, error)
-            showNotification("Auto-Export Failed", "Could not access export directory: ${e.message}")
-            sendExportBroadcast(false, null, 0, error)
-            Result.failure()
+            handleExportFailure(
+                tempFile, config, db, e,
+                error = "Directory access failed: ${e.message}",
+                logMessage = "Auto-export failed - directory access issue",
+                userMessage = "Could not access export directory: ${e.message}",
+                retry = false
+            )
         } catch (e: IOException) {
-            tempFile.delete()
-            val error = "IO error: ${e.message}"
-            AppLogger.e(TAG, "Auto-export failed - IO error, will retry", e)
-            config.saveLastError(db, error)
-            showNotification("Auto-Export Failed", "Could not save export file. Will retry.")
-            sendExportBroadcast(false, null, 0, error)
-            Result.retry()
+            handleExportFailure(
+                tempFile, config, db, e,
+                error = "IO error: ${e.message}",
+                logMessage = "Auto-export failed - IO error, will retry",
+                userMessage = "Could not save export file. Will retry.",
+                retry = true
+            )
         } catch (e: Exception) {
-            tempFile.delete()
-            val error = "Export failed: ${e.message}"
-            AppLogger.e(TAG, "Auto-export failed", e)
-            config.saveLastError(db, error)
-            showNotification("Auto-Export Failed", "Could not save export file. Will retry.")
-            sendExportBroadcast(false, null, 0, error)
-            Result.retry()
+            handleExportFailure(
+                tempFile, config, db, e,
+                error = "Export failed: ${e.message}",
+                logMessage = "Auto-export failed",
+                userMessage = "Could not save export file. Will retry.",
+                retry = true
+            )
         }
     }
 
-    /**
-     * Streams a paginated export to temp file, fetching rows via the provided lambda.
-     * Checks isStopped between chunks for graceful cancellation.
-     */
-    private fun writePaginatedExport(
-        format: String,
+    private fun handleExportFailure(
         tempFile: File,
-        fetchPage: (limit: Int, offset: Int) -> List<Map<String, Any?>>
-    ): Int {
-        val coordsCollector = if (format == "kml") KmlCoordsCollector(appContext.cacheDir) else null
-        var totalRows = 0
-        var offset = 0
-
-        coordsCollector.use {
-            OutputStreamWriter(tempFile.outputStream(), Charsets.UTF_8).use { writer ->
-                ExportConverters.writeHeader(writer, format)
-
-                while (true) {
-                    if (isStopped) {
-                        AppLogger.w(TAG, "Auto-export cancelled during write")
-                        break
-                    }
-                    val page = fetchPage(PAGE_SIZE, offset)
-                    if (page.isEmpty()) break
-                    ExportConverters.writeRows(writer, format, page, offset, coordsCollector)
-                    totalRows += page.size
-                    offset += PAGE_SIZE
-                }
-
-                if (!isStopped) {
-                    ExportConverters.writeFooter(writer, format, coordsCollector)
-                }
-            }
-        }
-
-        if (isStopped) {
-            tempFile.delete()
-            return 0
-        }
-
-        return totalRows
+        config: AutoExportConfig,
+        db: DatabaseHelper,
+        e: Throwable,
+        error: String,
+        logMessage: String,
+        userMessage: String,
+        retry: Boolean
+    ): Result {
+        tempFile.delete()
+        AppLogger.e(TAG, logMessage, e)
+        config.saveLastError(db, error)
+        showNotification("Auto-Export Failed", userMessage)
+        LocationServiceModule.sendAutoExportEvent(false, null, 0, error)
+        return if (retry) Result.retry() else Result.failure()
     }
 
-    /**
-     * Copies temp file to SAF directory and returns the destination DocumentFile
-     * for verification.
-     */
     private fun copyToSafDirectory(
         dirUri: Uri,
         fileName: String,
@@ -281,18 +242,15 @@ class AutoExportWorker(
         return docFile
     }
 
-    /**
-     * Deletes oldest export files beyond the retention limit.
-     * Only touches files matching the colota_export_ prefix.
-     */
     private fun cleanupOldExports(dirUri: Uri, retentionCount: Int) {
         if (retentionCount <= 0) return // 0 = unlimited
 
         try {
             val dir = DocumentFile.fromTreeUri(appContext, dirUri) ?: return
+            // File names embed a sortable timestamp, so lexicographic == chronological.
             val exportFiles = dir.listFiles()
                 .filter { it.name?.startsWith("colota_export_") == true }
-                .sortedBy { it.name } // lexicographic = chronological (timestamp in name)
+                .sortedBy { it.name }
 
             val toDelete = exportFiles.size - retentionCount
             if (toDelete <= 0) return
@@ -354,7 +312,4 @@ class AutoExportWorker(
         nm.notify(NOTIFICATION_ID, builder.build())
     }
 
-    private fun sendExportBroadcast(success: Boolean, fileName: String?, rowCount: Int, error: String?) {
-        LocationServiceModule.sendAutoExportEvent(success, fileName, rowCount, error)
-    }
 }

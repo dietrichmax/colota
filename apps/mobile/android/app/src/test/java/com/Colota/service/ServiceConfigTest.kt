@@ -8,6 +8,7 @@ package com.Colota.service
 import android.content.Intent
 import android.os.Bundle
 import com.Colota.data.DatabaseHelper
+import com.Colota.sync.ApiFormat
 import com.facebook.react.bridge.JavaOnlyMap
 import io.mockk.every
 import io.mockk.mockk
@@ -125,21 +126,21 @@ class ServiceConfigTest {
     fun `fromDatabase derives apiFormat traccar_json for traccar template with POST`() {
         val db = mockDbHelper(baseSettings + mapOf("apiTemplate" to "traccar", "httpMethod" to "POST"))
         val config = ServiceConfig.fromDatabase(db)
-        assertEquals("traccar_json", config.apiFormat)
+        assertEquals(ApiFormat.TRACCAR_JSON, config.apiFormat)
     }
 
     @Test
     fun `fromDatabase returns empty apiFormat for traccar template with GET`() {
         val db = mockDbHelper(baseSettings + mapOf("apiTemplate" to "traccar", "httpMethod" to "GET"))
         val config = ServiceConfig.fromDatabase(db)
-        assertEquals("", config.apiFormat)
+        assertEquals(ApiFormat.FIELD_MAPPED, config.apiFormat)
     }
 
     @Test
     fun `fromDatabase returns empty apiFormat for non-traccar template`() {
         val db = mockDbHelper(baseSettings + mapOf("apiTemplate" to "dawarich", "httpMethod" to "POST"))
         val config = ServiceConfig.fromDatabase(db)
-        assertEquals("", config.apiFormat)
+        assertEquals(ApiFormat.FIELD_MAPPED, config.apiFormat)
     }
 
     // --- data class defaults ---
@@ -257,7 +258,7 @@ class ServiceConfigTest {
         assertEquals("wifi_any", config.syncCondition)
         assertEquals("""{"lat":"latitude"}""", config.fieldMap)
         assertEquals("GET", config.httpMethod)
-        assertEquals("traccar_json", config.apiFormat)
+        assertEquals(ApiFormat.TRACCAR_JSON, config.apiFormat)
     }
 
     // --- toIntent ---
@@ -368,7 +369,7 @@ class ServiceConfigTest {
             putString("httpMethod", "POST")
         }
         val config = ServiceConfig.fromReadableMap(map, db)
-        assertEquals("traccar_json", config.apiFormat)
+        assertEquals(ApiFormat.TRACCAR_JSON, config.apiFormat)
     }
 
     @Test
@@ -379,7 +380,7 @@ class ServiceConfigTest {
             putString("httpMethod", "GET")
         }
         val config = ServiceConfig.fromReadableMap(map, db)
-        assertEquals("", config.apiFormat)
+        assertEquals(ApiFormat.FIELD_MAPPED, config.apiFormat)
     }
 
     @Test
@@ -390,7 +391,7 @@ class ServiceConfigTest {
             putString("httpMethod", "POST")
         }
         val config = ServiceConfig.fromReadableMap(map, db)
-        assertEquals("", config.apiFormat)
+        assertEquals(ApiFormat.FIELD_MAPPED, config.apiFormat)
     }
 
     @Test

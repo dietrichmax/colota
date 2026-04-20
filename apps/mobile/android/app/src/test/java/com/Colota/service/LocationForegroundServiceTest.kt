@@ -39,7 +39,6 @@ class LocationForegroundServiceTest {
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var geofenceHelper: GeofenceHelper
     private lateinit var syncManager: SyncManager
-    private lateinit var payloadBuilder: PayloadBuilder
     private lateinit var deviceInfoHelper: DeviceInfoHelper
     private lateinit var notificationHelper: NotificationHelper
     private lateinit var profileManager: ProfileManager
@@ -59,7 +58,6 @@ class LocationForegroundServiceTest {
         dbHelper = mockk(relaxed = true)
         geofenceHelper = mockk(relaxed = true)
         syncManager = mockk(relaxed = true)
-        payloadBuilder = mockk(relaxed = true)
         deviceInfoHelper = mockk(relaxed = true)
         notificationHelper = mockk(relaxed = true)
         profileManager = mockk(relaxed = true)
@@ -77,7 +75,10 @@ class LocationForegroundServiceTest {
         every { deviceInfoHelper.isBatteryCritical(any()) } returns false
         every { deviceInfoHelper.isBatteryCritical() } returns false
         every { geofenceHelper.getPauseZone(any()) } returns null
-        every { payloadBuilder.buildPayload(any(), any(), any(), any(), any(), any()) } returns JSONObject()
+        mockkObject(PayloadBuilder)
+        every { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any()) } returns JSONObject()
+        every { PayloadBuilder.parseFieldMap(any()) } returns null
+        every { PayloadBuilder.parseCustomFields(any()) } returns null
         every { syncManager.getCachedQueuedCount() } returns 0
         every { syncManager.lastSuccessfulSyncTime } returns 0L
         every { profileManager.getActiveProfileName() } returns null
@@ -113,6 +114,7 @@ class LocationForegroundServiceTest {
         testScope.cancel()
         Dispatchers.resetMain()
         unmockkObject(LocationServiceModule)
+        unmockkObject(PayloadBuilder)
         unmockkObject(AppLogger)
         unmockkStatic(android.os.Looper::class)
     }
@@ -122,7 +124,6 @@ class LocationForegroundServiceTest {
         setField("dbHelper", dbHelper)
         setField("geofenceHelper", geofenceHelper)
         setField("syncManager", syncManager)
-        setField("payloadBuilder", payloadBuilder)
         setField("deviceInfoHelper", deviceInfoHelper)
         setField("notificationHelper", notificationHelper)
         setField("profileManager", profileManager)
@@ -229,17 +230,13 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `handleLocationUpdate builds payload with field map and custom fields`() = testScope.runTest {
+    fun `handleLocationUpdate builds location payload from PayloadBuilder`() = testScope.runTest {
         val location = mockLocation()
-        val fieldMap = mapOf("lat" to "latitude", "lon" to "longitude")
-        val customFields = mapOf("device" to "test")
-        setField("fieldMap", fieldMap)
-        setField("customFields", customFields)
         every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
 
         invokeHandleLocationUpdate(location)
 
-        verify { payloadBuilder.buildPayload(location, 80, 2, fieldMap, any(), customFields) }
+        verify { PayloadBuilder.buildLocationPayload(location, any(), 80, 2, any(), any(), any()) }
     }
 
     @Test
@@ -525,17 +522,6 @@ class LocationForegroundServiceTest {
             timestamp = 1700000000L,
             any()
         ) }
-    }
-
-    @Test
-    fun `handleLocationUpdate uses empty field map when none configured`() = testScope.runTest {
-        setField("fieldMap", null)
-        val location = mockLocation()
-        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
-
-        invokeHandleLocationUpdate(location)
-
-        verify { payloadBuilder.buildPayload(any(), any(), any(), emptyMap(), any(), any()) }
     }
 
     // =========================================================================
@@ -1887,27 +1873,6 @@ class LocationForegroundServiceTest {
         invokeMaybeResumeGps()
 
         verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
-    }
-
-    // =========================================================================
-    // handleLocationUpdate - Traccar format uses empty field map
-    // =========================================================================
-
-    @Test
-    fun `handleLocationUpdate uses empty field map when apiFormat is traccar_json`() = testScope.runTest {
-        setField("config", ServiceConfig(
-            endpoint = "https://example.com",
-            interval = 5000L,
-            filterInaccurateLocations = false,
-            apiFormat = "traccar_json"
-        ))
-        setField("fieldMap", mapOf("lat" to "latitude", "lon" to "longitude"))
-        val location = mockLocation()
-        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
-
-        invokeHandleLocationUpdate(location)
-
-        verify { payloadBuilder.buildPayload(any(), any(), any(), emptyMap(), any(), any()) }
     }
 
     // =========================================================================

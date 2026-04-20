@@ -18,18 +18,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-/**
- * Native export converters for location data.
- * Used by AutoExportWorker (background) and manual export (via bridge).
- *
- * Streaming API (writeHeader/writeRows/writeFooter) for memory-efficient
- * chunked export. The in-memory convert() delegates to the streaming API.
- */
-/**
- * File-backed collector for KML LineString coordinates.
- * Writes coordinates to a temp file instead of accumulating in memory,
- * preventing OOM on large exports.
- */
+/** Spools KML LineString coords to a temp file to avoid OOM on large exports. */
 class KmlCoordsCollector(cacheDir: File) : AutoCloseable {
     private val tempFile = File(cacheDir, "kml_coords_temp.txt")
     private val writer = BufferedWriter(FileWriter(tempFile))
@@ -59,7 +48,7 @@ class KmlCoordsCollector(cacheDir: File) : AutoCloseable {
 
 object ExportConverters {
 
-    private const val PAGE_SIZE = 10_000
+    const val PAGE_SIZE = 10_000
 
     private fun isoTime(unixSeconds: Long): String {
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
@@ -67,14 +56,12 @@ object ExportConverters {
         return sdf.format(Date(unixSeconds * 1000))
     }
 
-    /** Formats a value as a valid JSON value (null-safe, properly escaped). */
     private fun jsonValue(value: Any?): String = when (value) {
         null -> "null"
         is String -> "\"${escapeJson(value)}\""
         else -> value.toString()
     }
 
-    /** Escapes special characters for JSON string values. */
     private fun escapeJson(s: String): String = buildString(s.length) {
         for (c in s) {
             when (c) {
@@ -90,44 +77,83 @@ object ExportConverters {
         }
     }
 
-    // -- Shared chunked export to file --
-
-    /**
-     * Exports all locations from the database to a file using streaming chunks.
-     * Shared between AutoExportWorker and the manual export bridge method.
-     *
-     * @return Number of rows exported
-     */
-    fun exportToFile(db: DatabaseHelper, format: String, outputFile: File, pageSize: Int = PAGE_SIZE): Int {
-        val coordsCollector = if (format == "kml") KmlCoordsCollector(outputFile.parentFile!!) else null
-        var totalRows = 0
-        var offset = 0
-
-        coordsCollector.use {
-            OutputStreamWriter(outputFile.outputStream(), Charsets.UTF_8).use { writer ->
-                writeHeader(writer, format)
-
-                while (true) {
-                    val page = db.getLocationsChronological(pageSize, offset)
-                    if (page.isEmpty()) break
-                    writeRows(writer, format, page, offset, coordsCollector)
-                    totalRows += page.size
-                    offset += pageSize
-                }
-
-                writeFooter(writer, format, coordsCollector)
-            }
+    private data class ExportRow(
+        val ts: Long,
+        val lat: Double,
+        val lon: Double,
+        val altitude: Any?,
+        val accuracy: Any?,
+        val speed: Any?,
+        val battery: Any?,
+    ) {
+        companion object {
+            fun from(row: Map<String, Any?>): ExportRow = ExportRow(
+                ts = (row["timestamp"] as? Long) ?: (System.currentTimeMillis() / 1000),
+                lat = (row["latitude"] as? Double) ?: 0.0,
+                lon = (row["longitude"] as? Double) ?: 0.0,
+                altitude = row["altitude"],
+                accuracy = row["accuracy"],
+                speed = row["speed"],
+                battery = row["battery"],
+            )
         }
-        return totalRows
     }
 
-    // -- Streaming interface for chunked export --
+    private sealed class FormatWriter(val extension: String, val mimeType: String) {
+        abstract fun writeHeader(w: Writer)
+        abstract fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?)
+        abstract fun writeFooter(w: Writer, kml: KmlCoordsCollector?)
+        open val usesKmlCoords: Boolean = false
 
-    fun writeHeader(writer: Writer, format: String) {
-        when (format) {
-            "csv" -> writer.write("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,battery\n")
-            "geojson" -> writer.write("{\n  \"type\": \"FeatureCollection\",\n  \"features\": [\n")
-            "gpx" -> writer.write("""<?xml version="1.0" encoding="UTF-8"?>
+        fun writeRows(w: Writer, rows: List<ExportRow>, globalOffset: Int, kml: KmlCoordsCollector?) {
+            rows.forEachIndexed { i, row -> writeRow(w, row, globalOffset + i, kml) }
+        }
+    }
+
+    private object CsvFormat : FormatWriter(".csv", "text/csv") {
+        override fun writeHeader(w: Writer) {
+            w.write("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,battery\n")
+        }
+        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
+            w.write(listOf(
+                globalIndex, row.ts, isoTime(row.ts), row.lat, row.lon,
+                row.accuracy ?: 0, row.altitude ?: 0, row.speed ?: 0, row.battery ?: 0
+            ).joinToString(","))
+            w.write("\n")
+        }
+        override fun writeFooter(w: Writer, kml: KmlCoordsCollector?) {}
+    }
+
+    private object GeoJsonFormat : FormatWriter(".geojson", "application/json") {
+        override fun writeHeader(w: Writer) {
+            w.write("{\n  \"type\": \"FeatureCollection\",\n  \"features\": [\n")
+        }
+        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
+            if (globalIndex > 0) w.write(",\n")
+            w.write("""    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [${row.lon}, ${row.lat}]
+      },
+      "properties": {
+        "id": $globalIndex,
+        "accuracy": ${jsonValue(row.accuracy)},
+        "altitude": ${jsonValue(row.altitude)},
+        "speed": ${jsonValue(row.speed)},
+        "battery": ${jsonValue(row.battery)},
+        "time": "${isoTime(row.ts)}"
+      }
+    }""")
+        }
+        override fun writeFooter(w: Writer, kml: KmlCoordsCollector?) {
+            w.write("\n  ]\n}\n")
+        }
+    }
+
+    private object GpxFormat : FormatWriter(".gpx", "application/gpx+xml") {
+        override fun writeHeader(w: Writer) {
+            w.write("""<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Colota" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>Colota Location Export</name>
@@ -137,7 +163,33 @@ object ExportConverters {
     <name>Colota Track Export</name>
     <trkseg>
 """)
-            "kml" -> writer.write("""<?xml version="1.0" encoding="UTF-8"?>
+        }
+        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
+            val lat = String.format(Locale.US, "%.6f", row.lat)
+            val lon = String.format(Locale.US, "%.6f", row.lon)
+            w.write("""      <trkpt lat="$lat" lon="$lon">
+        <ele>${row.altitude ?: 0}</ele>
+        <time>${isoTime(row.ts)}</time>
+        <extensions>
+          <accuracy>${row.accuracy ?: 0}</accuracy>
+          <speed>${row.speed ?: 0}</speed>
+          <battery>${row.battery ?: 0}</battery>
+        </extensions>
+      </trkpt>
+""")
+        }
+        override fun writeFooter(w: Writer, kml: KmlCoordsCollector?) {
+            w.write("""    </trkseg>
+  </trk>
+</gpx>
+""")
+        }
+    }
+
+    private object KmlFormat : FormatWriter(".kml", "application/vnd.google-earth.kml+xml") {
+        override val usesKmlCoords: Boolean = true
+        override fun writeHeader(w: Writer) {
+            w.write("""<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
     <name>Colota Location Export</name>
@@ -149,14 +201,92 @@ object ExportConverters {
       </LineStyle>
     </Style>
 """)
-            else -> throw IllegalArgumentException("Unknown export format: $format")
+        }
+        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
+            kml?.add("${row.lon},${row.lat},${row.altitude ?: 0}")
+            w.write("""    <Placemark>
+      <TimeStamp><when>${isoTime(row.ts)}</when></TimeStamp>
+      <description>Accuracy: ${row.accuracy ?: 0}m, Speed: ${row.speed ?: 0}m/s</description>
+      <Point>
+        <coordinates>${row.lon},${row.lat},${row.altitude ?: 0}</coordinates>
+      </Point>
+    </Placemark>
+""")
+        }
+        override fun writeFooter(w: Writer, kml: KmlCoordsCollector?) {
+            w.write("""    <Placemark>
+      <name>Track Path</name>
+      <styleUrl>#pathStyle</styleUrl>
+      <LineString>
+        <tessellate>1</tessellate>
+        <coordinates>
+          """)
+            kml?.writeTo(w)
+            w.write("""
+        </coordinates>
+      </LineString>
+    </Placemark>
+  </Document>
+</kml>
+""")
         }
     }
 
+    private fun forFormat(format: String): FormatWriter = when (format) {
+        "csv" -> CsvFormat
+        "geojson" -> GeoJsonFormat
+        "gpx" -> GpxFormat
+        "kml" -> KmlFormat
+        else -> throw IllegalArgumentException("Unknown export format: $format")
+    }
+
     /**
-     * Write a chunk of rows. For KML, coordsCollector writes LineString
-     * coordinates to a temp file to avoid unbounded memory growth.
+     * Streams a paginated export to file. On cancellation mid-write the footer
+     * is skipped and the partial row count is returned; file cleanup is the
+     * caller's job.
      */
+    fun exportToFile(
+        format: String,
+        outputFile: File,
+        pageSize: Int = PAGE_SIZE,
+        shouldCancel: () -> Boolean = { false },
+        fetchPage: (limit: Int, offset: Int) -> List<Map<String, Any?>>
+    ): Int {
+        val writer = forFormat(format)
+        val coordsCollector = if (writer.usesKmlCoords) KmlCoordsCollector(outputFile.parentFile!!) else null
+        var totalRows = 0
+        var offset = 0
+        var cancelled = false
+
+        coordsCollector.use {
+            OutputStreamWriter(outputFile.outputStream(), Charsets.UTF_8).use { w ->
+                writer.writeHeader(w)
+
+                while (true) {
+                    if (shouldCancel()) { cancelled = true; break }
+                    val page = fetchPage(pageSize, offset)
+                    if (page.isEmpty()) break
+                    writer.writeRows(w, page.map(ExportRow::from), offset, coordsCollector)
+                    totalRows += page.size
+                    offset += pageSize
+                }
+
+                if (!cancelled) writer.writeFooter(w, coordsCollector)
+            }
+        }
+        return totalRows
+    }
+
+    fun exportToFile(db: DatabaseHelper, format: String, outputFile: File, pageSize: Int = PAGE_SIZE): Int =
+        exportToFile(format, outputFile, pageSize) { limit, offset ->
+            db.getLocationsChronological(limit, offset)
+        }
+
+    fun writeHeader(writer: Writer, format: String) {
+        forFormat(format).writeHeader(writer)
+    }
+
+    /** `coordsCollector` is required for KML (spills LineString coords to disk). */
     fun writeRows(
         writer: Writer,
         format: String,
@@ -164,141 +294,35 @@ object ExportConverters {
         globalOffset: Int,
         coordsCollector: KmlCoordsCollector?
     ) {
-        when (format) {
-            "csv" -> {
-                rows.forEachIndexed { i, row ->
-                    val ts = (row["timestamp"] as? Long) ?: (System.currentTimeMillis() / 1000)
-                    writer.write(listOf(
-                        globalOffset + i,
-                        ts,
-                        isoTime(ts),
-                        row["latitude"] ?: 0.0,
-                        row["longitude"] ?: 0.0,
-                        row["accuracy"] ?: 0,
-                        row["altitude"] ?: 0,
-                        row["speed"] ?: 0,
-                        row["battery"] ?: 0
-                    ).joinToString(","))
-                    writer.write("\n")
-                }
-            }
-            "geojson" -> {
-                rows.forEachIndexed { i, row ->
-                    if (globalOffset + i > 0) writer.write(",\n")
-                    val ts = (row["timestamp"] as? Long) ?: (System.currentTimeMillis() / 1000)
-                    val lon = row["longitude"] ?: 0.0
-                    val lat = row["latitude"] ?: 0.0
-                    writer.write("""    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [$lon, $lat]
-      },
-      "properties": {
-        "id": ${globalOffset + i},
-        "accuracy": ${jsonValue(row["accuracy"])},
-        "altitude": ${jsonValue(row["altitude"])},
-        "speed": ${jsonValue(row["speed"])},
-        "battery": ${jsonValue(row["battery"])},
-        "time": "${isoTime(ts)}"
-      }
-    }""")
-                }
-            }
-            "gpx" -> {
-                for (row in rows) {
-                    val ts = (row["timestamp"] as? Long) ?: (System.currentTimeMillis() / 1000)
-                    val lat = (row["latitude"] as? Double)?.let { String.format(Locale.US, "%.6f", it) } ?: "0.000000"
-                    val lon = (row["longitude"] as? Double)?.let { String.format(Locale.US, "%.6f", it) } ?: "0.000000"
-                    writer.write("""      <trkpt lat="$lat" lon="$lon">
-        <ele>${row["altitude"] ?: 0}</ele>
-        <time>${isoTime(ts)}</time>
-        <extensions>
-          <accuracy>${row["accuracy"] ?: 0}</accuracy>
-          <speed>${row["speed"] ?: 0}</speed>
-          <battery>${row["battery"] ?: 0}</battery>
-        </extensions>
-      </trkpt>
-""")
-                }
-            }
-            "kml" -> {
-                for (row in rows) {
-                    coordsCollector?.add("${row["longitude"] ?: 0},${row["latitude"] ?: 0},${row["altitude"] ?: 0}")
-                    val ts = (row["timestamp"] as? Long) ?: (System.currentTimeMillis() / 1000)
-                    writer.write("""    <Placemark>
-      <TimeStamp><when>${isoTime(ts)}</when></TimeStamp>
-      <description>Accuracy: ${row["accuracy"] ?: 0}m, Speed: ${row["speed"] ?: 0}m/s</description>
-      <Point>
-        <coordinates>${row["longitude"] ?: 0},${row["latitude"] ?: 0},${row["altitude"] ?: 0}</coordinates>
-      </Point>
-    </Placemark>
-""")
-                }
-            }
-        }
+        forFormat(format).writeRows(writer, rows.map(ExportRow::from), globalOffset, coordsCollector)
     }
 
     fun writeFooter(writer: Writer, format: String, coordsCollector: KmlCoordsCollector?) {
-        when (format) {
-            "csv" -> { /* no footer */ }
-            "geojson" -> writer.write("\n  ]\n}\n")
-            "gpx" -> writer.write("""    </trkseg>
-  </trk>
-</gpx>
-""")
-            "kml" -> {
-                writer.write("""    <Placemark>
-      <name>Track Path</name>
-      <styleUrl>#pathStyle</styleUrl>
-      <LineString>
-        <tessellate>1</tessellate>
-        <coordinates>
-          """)
-                coordsCollector?.writeTo(writer)
-                writer.write("""
-        </coordinates>
-      </LineString>
-    </Placemark>
-  </Document>
-</kml>
-""")
-            }
-        }
+        forFormat(format).writeFooter(writer, coordsCollector)
     }
 
-    /**
-     * Converts rows to the given format using the streaming API with a StringWriter.
-     * Single source of truth for all format output.
-     */
     fun convert(format: String, rows: List<Map<String, Any?>>): String {
+        val writer = forFormat(format)
         val sw = java.io.StringWriter()
-        val coordsCollector = if (format == "kml") {
-            // In-memory: use a temp list to collect coords (small datasets only)
+        val coordsCollector = if (writer.usesKmlCoords) {
             KmlCoordsCollector(java.io.File(System.getProperty("java.io.tmpdir")!!))
         } else null
 
         coordsCollector.use {
-            writeHeader(sw, format)
-            writeRows(sw, format, rows, 0, coordsCollector)
-            writeFooter(sw, format, coordsCollector)
+            writer.writeHeader(sw)
+            writer.writeRows(sw, rows.map(ExportRow::from), 0, coordsCollector)
+            writer.writeFooter(sw, coordsCollector)
         }
         return sw.toString()
     }
 
     fun extensionFor(format: String): String = when (format) {
-        "csv" -> ".csv"
-        "geojson" -> ".geojson"
-        "gpx" -> ".gpx"
-        "kml" -> ".kml"
+        "csv", "geojson", "gpx", "kml" -> forFormat(format).extension
         else -> ".txt"
     }
 
     fun mimeTypeFor(format: String): String = when (format) {
-        "csv" -> "text/csv"
-        "geojson" -> "application/json"
-        "gpx" -> "application/gpx+xml"
-        "kml" -> "application/vnd.google-earth.kml+xml"
+        "csv", "geojson", "gpx", "kml" -> forFormat(format).mimeType
         else -> "text/plain"
     }
 }
