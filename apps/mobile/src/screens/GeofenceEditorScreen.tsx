@@ -267,27 +267,37 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
             />
           </SettingRow>
 
-          <SettingRow label="WiFi/Ethernet pause" hint="Stop GPS on unmetered networks" style={styles.toggleRow}>
+          <SettingRow
+            label="WiFi/Ethernet pause"
+            hint="Stop GPS on unmetered networks"
+            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+          >
             <Switch
               testID="pause-wifi-toggle"
               value={pauseOnWifi}
               onValueChange={setPauseOnWifi}
+              disabled={!pauseTracking}
               trackColor={{ false: colors.border, true: colors.primary + "80" }}
               thumbColor={pauseOnWifi ? colors.primary : colors.border}
             />
           </SettingRow>
 
-          <SettingRow label="Motionless pause" hint="Stop GPS after no motion for a set time" style={styles.toggleRow}>
+          <SettingRow
+            label="Motionless pause"
+            hint="Stop GPS after no motion for a set time"
+            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+          >
             <Switch
               testID="pause-motionless-toggle"
               value={pauseOnMotionless}
               onValueChange={setPauseOnMotionless}
+              disabled={!pauseTracking}
               trackColor={{ false: colors.border, true: colors.primary + "80" }}
               thumbColor={pauseOnMotionless ? colors.primary : colors.border}
             />
           </SettingRow>
 
-          {pauseOnMotionless && (
+          {pauseTracking && pauseOnMotionless && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
               <SettingRow label="Timeout (min)" hint="Minutes without motion before GPS stops">
                 <TextInput
@@ -303,17 +313,22 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
             </View>
           )}
 
-          <SettingRow label="Stationary heartbeat" hint="Periodic server update while paused" style={styles.toggleRow}>
+          <SettingRow
+            label="Stationary heartbeat"
+            hint="Periodic server update while paused"
+            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+          >
             <Switch
               testID="heartbeat-toggle"
               value={heartbeatEnabled}
               onValueChange={setHeartbeatEnabled}
+              disabled={!pauseTracking}
               trackColor={{ false: colors.border, true: colors.primary + "80" }}
               thumbColor={heartbeatEnabled ? colors.primary : colors.border}
             />
           </SettingRow>
 
-          {heartbeatEnabled && (
+          {pauseTracking && heartbeatEnabled && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
               <SettingRow label="Interval (min)" hint="How often to send a location update">
                 <TextInput
@@ -329,7 +344,7 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
             </View>
           )}
 
-          {pauseOnWifi && pauseOnMotionless && (
+          {pauseTracking && pauseOnWifi && pauseOnMotionless && (
             <View style={[styles.combinedNote, { borderTopColor: colors.border }]}>
               <Text style={[styles.combinedNoteText, { color: colors.textSecondary }]}>
                 GPS resumes only when both WiFi is disconnected and motion is detected
@@ -362,6 +377,7 @@ const styles = StyleSheet.create({
   nameInput: { flex: 1 },
   numInput: { width: 80, textAlign: "center" },
   toggleRow: { paddingVertical: 10 },
+  disabledRow: { opacity: 0.45 },
   nestedSetting: { marginLeft: 16, paddingLeft: 12, borderLeftWidth: 3, marginTop: 4, marginBottom: 4 },
   combinedNote: {
     marginTop: 8,

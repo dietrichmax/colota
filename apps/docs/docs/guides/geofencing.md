@@ -31,6 +31,8 @@ Each geofence has independent pause settings, configured in the editor (tap **â€
 
 Locations are not saved or synced while inside the zone. GPS continues running to detect when you leave. This is the default behavior.
 
+This is also the master switch for the other pause options below. WiFi pause, motionless pause and the stationary heartbeat only take effect when this is on.
+
 ### Pause when on WiFi or Ethernet
 
 Stops GPS entirely when connected to an unmetered network (home WiFi, Ethernet). GPS resumes automatically when the connection is lost. Useful if you want to completely stop GPS while at home on WiFi, saving additional battery.
