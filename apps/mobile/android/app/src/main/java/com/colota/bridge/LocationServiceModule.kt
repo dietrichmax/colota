@@ -379,10 +379,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    /** Invalidates the geofence cache and asks the service to re-evaluate pause zones so the change takes effect immediately. */
+    /** Asks the service to re-evaluate pause zones so the geofence change takes effect immediately. */
     private fun afterGeofenceMutation(changed: Boolean) {
         if (!changed) return
-        geofenceHelper.invalidateCache()
         triggerZoneRecheck()
     }
 

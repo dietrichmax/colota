@@ -91,7 +91,6 @@ class GeofenceHelperTest {
             it.moveToFirst(); it.getInt(0)
         }
         helper.updateGeofence(id, enabled = false)
-        helper.invalidateCache()
 
         assertNull(helper.getGeofenceByName("Home"))
     }
@@ -157,7 +156,6 @@ class GeofenceHelperTest {
             it.moveToFirst(); it.getInt(0)
         }
         helper.updateGeofence(id, enabled = false)
-        helper.invalidateCache()
 
         val location = mockLocation(52.5, 13.4)
         assertNull(helper.getPauseZone(location))

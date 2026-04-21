@@ -9,7 +9,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.location.Location
 import com.Colota.util.AppLogger
-import com.Colota.util.TimedCache
 import com.Colota.util.geo.haversineDistance
 import com.Colota.util.geo.isWithinRadius
 import com.facebook.react.bridge.Arguments
@@ -18,8 +17,6 @@ import com.facebook.react.bridge.WritableArray
 class GeofenceHelper(private val context: Context) {
 
     private val dbHelper by lazy { DatabaseHelper.getInstance(context) }
-
-    private val geofenceCache = TimedCache(CACHE_TTL_MS) { loadGeofencesFromDB() }
 
     /** Runtime view of an enabled pause-tracking geofence (what the service reads). */
     data class CachedGeofence(
@@ -36,15 +33,13 @@ class GeofenceHelper(private val context: Context) {
 
     companion object {
         private const val TAG = "GeofenceHelper"
-        private const val CACHE_TTL_MS = 30_000L
     }
 
     fun getGeofenceByName(name: String): CachedGeofence? =
-        geofenceCache.get().find { it.name == name }
+        loadGeofencesFromDB().find { it.name == name }
 
     fun getPauseZone(location: Location): CachedGeofence? {
-        val fences = getGeofences()
-        val match = fences.find {
+        val match = loadGeofencesFromDB().find {
             isWithinRadius(location.latitude, location.longitude, it.lat, it.lon, it.radius)
         }
         if (match != null) {
@@ -53,13 +48,6 @@ class GeofenceHelper(private val context: Context) {
         }
         return match
     }
-
-    fun invalidateCache() {
-        geofenceCache.invalidate()
-        AppLogger.d(TAG, "Geofence cache invalidated")
-    }
-
-    private fun getGeofences(): List<CachedGeofence> = geofenceCache.get()
 
     private fun loadGeofencesFromDB(): List<CachedGeofence> {
         return try {
