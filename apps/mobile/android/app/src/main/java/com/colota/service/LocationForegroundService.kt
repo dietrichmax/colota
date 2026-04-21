@@ -874,7 +874,7 @@ class LocationForegroundService : Service() {
         val location = Location("geofence").apply {
             latitude = zone.lat
             longitude = zone.lon
-            accuracy = zone.radius.toFloat()
+            accuracy = 0f
             time = System.currentTimeMillis()
         }
         lastKnownLocation = location
@@ -960,7 +960,7 @@ class LocationForegroundService : Service() {
         val syntheticLocation = Location("geofence").apply {
             latitude = geofence.lat
             longitude = geofence.lon
-            accuracy = geofence.radius.toFloat()
+            accuracy = 0f
             time = anchorTimeMs
         }
 
@@ -968,7 +968,7 @@ class LocationForegroundService : Service() {
             val locationId = dbHelper.saveLocation(
                 latitude = geofence.lat,
                 longitude = geofence.lon,
-                accuracy = geofence.radius,
+                accuracy = 0.0,
                 altitude = null,
                 speed = null,
                 bearing = null,

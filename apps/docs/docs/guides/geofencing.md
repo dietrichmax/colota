@@ -67,4 +67,4 @@ When both **WiFi** and **motionless** pause are enabled, GPS only resumes when *
 
 ## Anchor Points
 
-When you exit a pause zone, Colota saves a synthetic location at the geofence center. This gives your new trip a clean start point rather than somewhere mid-road where GPS first locks in. Anchor points use the zone radius as their accuracy value and are timestamped 1 second before the first real GPS fix after leaving the zone, ensuring correct chronological order.
+When you exit a pause zone, Colota saves a synthetic location at the geofence center. This gives your new trip a clean start point rather than somewhere mid-road where GPS first locks in. Anchor points report accuracy 0 so they pass any downstream quality filter and are recognizable as synthetic in backend data, and are timestamped 1 second before the first real GPS fix after leaving the zone, ensuring correct chronological order.

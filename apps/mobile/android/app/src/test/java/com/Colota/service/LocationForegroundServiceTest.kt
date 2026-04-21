@@ -762,7 +762,7 @@ class LocationForegroundServiceTest {
         verify { dbHelper.saveLocation(
             latitude = homeGeofence.lat,
             longitude = homeGeofence.lon,
-            accuracy = homeGeofence.radius,
+            accuracy = 0.0,
             altitude = null,
             speed = null,
             bearing = null,
@@ -789,7 +789,7 @@ class LocationForegroundServiceTest {
         verify { dbHelper.saveLocation(
             latitude = homeGeofence.lat,
             longitude = homeGeofence.lon,
-            accuracy = homeGeofence.radius,
+            accuracy = 0.0,
             altitude = null,
             speed = null,
             bearing = null,
