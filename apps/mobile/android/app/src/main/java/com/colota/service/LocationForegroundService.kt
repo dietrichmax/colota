@@ -391,8 +391,6 @@ class LocationForegroundService : Service() {
     }
 
     private fun handleZoneRecheckAction() {
-        geofenceHelper.invalidateCache()
-
         val cachedLoc = lastKnownLocation
         val now = System.currentTimeMillis()
 
@@ -833,24 +831,27 @@ class LocationForegroundService : Service() {
     }
 
     /**
-     * Starts a periodic heartbeat that sends a location update to the server
-     * at a relaxed interval while paused in a geofence zone.
+     * Starts a heartbeat that sends a location update to the server at a relaxed
+     * interval while paused in a geofence zone. Fires one send immediately so the
+     * backend sees zone entry without waiting a full interval.
      */
     private fun startHeartbeat(intervalMinutes: Int) {
-        heartbeatJob?.cancel()
-        AppLogger.d(TAG, "Heartbeat started: ${intervalMinutes}min interval")
+        cancelHeartbeat()
+        AppLogger.i(TAG, "Heartbeat started: ${intervalMinutes}min interval")
         heartbeatJob = serviceScope?.launch {
-            while (isActive && insidePauseZone) {
+            sendHeartbeatLocation()
+            while (isActive) {
                 delay(intervalMinutes * 60_000L)
-                if (!insidePauseZone) break
                 sendHeartbeatLocation()
             }
         }
     }
 
     private fun cancelHeartbeat() {
+        if (heartbeatJob == null) return
         heartbeatJob?.cancel()
         heartbeatJob = null
+        AppLogger.i(TAG, "Heartbeat cancelled")
     }
 
     private suspend fun sendHeartbeatLocation() {
@@ -904,7 +905,7 @@ class LocationForegroundService : Service() {
             )
             dbHelper.markLocationsSent(listOf(locationId))
             LocationServiceModule.sendLocationEvent(location, battery, batteryStatus)
-            AppLogger.d(TAG, "Heartbeat sent: lat=${location.latitude}, lon=${location.longitude}")
+            AppLogger.i(TAG, "Heartbeat sent for zone '${zone.name}'")
         } else {
             AppLogger.d(TAG, "Heartbeat failed: server unreachable, will retry next cycle")
         }

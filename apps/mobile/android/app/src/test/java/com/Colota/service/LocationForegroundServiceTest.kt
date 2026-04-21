@@ -589,7 +589,6 @@ class LocationForegroundServiceTest {
 
         invokeHandleZoneRecheckAction()
 
-        verify { geofenceHelper.invalidateCache() }
         assertFalse(getField("insidePauseZone"))
         assertEquals(parkGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
     }
@@ -601,7 +600,6 @@ class LocationForegroundServiceTest {
 
         invokeHandleZoneRecheckAction()
 
-        verify { geofenceHelper.invalidateCache() }
         verify { locationProvider.getLastLocation(any(), any()) }
     }
 
@@ -1926,6 +1924,7 @@ class LocationForegroundServiceTest {
         invokeSendHeartbeatLocation()
 
         coVerify { networkManager.sendToEndpoint(any(), "https://example.com", any(), any(), any()) }
+        verify { AppLogger.i("LocationService", "Heartbeat sent for zone 'Home'") }
     }
 
     @Test

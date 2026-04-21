@@ -133,7 +133,7 @@ HTTP client. Validates endpoints, enforces HTTPS for public hosts, injects auth 
 
 ### GeofenceHelper
 
-Manages pause zones using the **haversine formula** for distance calculations. Maintains an in-memory cache of geofences that invalidates on CRUD changes.
+Manages pause zones using the **haversine formula** for distance calculations. Reads geofences directly from SQLite on each lookup.
 
 Each geofence supports three independent GPS pause modes, configured per zone:
 
@@ -175,7 +175,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `FileOperations` | File I/O, sharing via FileProvider, and clipboard access |
 | `PayloadBuilder` | Builds JSON payloads with dynamic field mapping |
 | `ServiceConfig` | Centralized configuration data class |
-| `TimedCache` | Generic TTL cache used for queue count, device info, geofences, profiles, and network state |
+| `TimedCache` | Generic TTL cache used for queue count, device info, profiles, and network state |
 | `BuildConfigModule` | Exposes build constants (SDK versions, app version) to JS |
 | `AppLogger` | Centralized logger - always active, all tags prefixed with `Colota.` for logcat filtering |
 | `AutoExportWorker` | WorkManager `CoroutineWorker` for scheduled exports - checks `AutoExportConfig.isExportDue()` on each run, streams chunked writes, verifies output, and cleans up old files beyond retention limit |
