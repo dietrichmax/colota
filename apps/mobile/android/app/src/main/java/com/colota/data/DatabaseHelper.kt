@@ -207,8 +207,15 @@ class DatabaseHelper private constructor(context: Context) :
         }
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE $TABLE_LOCATIONS ADD COLUMN sent INTEGER NOT NULL DEFAULT 0")
-            // Mark existing locations not in queue as sent (accurate for pre-offline-mode users)
-            db.execSQL("UPDATE $TABLE_LOCATIONS SET sent = 1 WHERE id NOT IN (SELECT location_id FROM $TABLE_QUEUE)")
+            // NOT EXISTS uses idx_queue_location; the original NOT IN (SELECT ...) ran
+            // a full queue scan per row and OOM'd users with weeks of accumulated data.
+            db.execSQL("""
+                UPDATE $TABLE_LOCATIONS SET sent = 1
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM $TABLE_QUEUE
+                    WHERE $TABLE_QUEUE.location_id = $TABLE_LOCATIONS.id
+                )
+            """.trimIndent())
         }
         if (oldVersion < 4) {
             db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN pause_on_wifi INTEGER NOT NULL DEFAULT 0")
