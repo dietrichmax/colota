@@ -29,9 +29,9 @@ describe("resolveHealthUrls", () => {
     ])
   })
 
-  it("geopulse: tries /health then origin", () => {
+  it("geopulse: tries /api/health then origin", () => {
     expect(resolveHealthUrls("http://geopulse.local/ingest", "geopulse")).toEqual([
-      "http://geopulse.local/health",
+      "http://geopulse.local/api/health",
       "http://geopulse.local"
     ])
   })
