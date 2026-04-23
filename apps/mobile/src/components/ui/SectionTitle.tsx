@@ -19,7 +19,7 @@ export function SectionTitle({ children, style, color }: SectionTitleProps) {
 
   return (
     <View style={style}>
-      <Text style={[styles.sectionTitle, { color: color ? color : colors.text }]}>{children}</Text>
+      <Text style={[styles.sectionTitle, { color: color ? color : colors.primary }]}>{children}</Text>
     </View>
   )
 }

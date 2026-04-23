@@ -67,7 +67,7 @@ const LinkRow = ({
     style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
     onPress={() => onOpenURL(url)}
   >
-    <Icon size={20} color={colors.primaryDark} />
+    <Icon size={20} color={colors.textLight} />
     <View style={styles.linkTextContainer}>
       <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
       <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>{subtitle}</Text>
