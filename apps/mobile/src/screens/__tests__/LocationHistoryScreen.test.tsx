@@ -110,15 +110,16 @@ jest.mock("../../utils/logger", () => ({
 
 import { LocationHistoryScreen } from "../LocationInspectorScreen"
 
-const createProps = () => ({
-  navigation: {
-    navigate: jest.fn(),
-    setOptions: jest.fn()
-  },
-  route: {
-    params: {}
-  }
-})
+const createProps = () =>
+  ({
+    navigation: {
+      navigate: jest.fn(),
+      setOptions: jest.fn()
+    },
+    route: {
+      params: {}
+    }
+  }) as any
 
 describe("LocationHistoryScreen", () => {
   beforeEach(() => {

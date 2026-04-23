@@ -7,8 +7,11 @@
 // NAVIGATION & UI
 // ============================================================================
 
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
+import type { RootStackParamList } from "./navigation"
+
 export interface ScreenProps {
-  navigation: any
+  navigation: NativeStackNavigationProp<RootStackParamList>
 }
 
 export type { ThemeColors, ThemeMode } from "@colota/shared"

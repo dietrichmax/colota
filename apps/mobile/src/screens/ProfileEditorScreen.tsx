@@ -16,6 +16,7 @@ import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { MS_TO_KMH, PROFILE_CONDITIONS, SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } from "../constants"
+import type { RootScreenProps } from "../types/navigation"
 
 function formatSyncDefault(seconds: number): string {
   if (SYNC_INTERVAL_LABELS[seconds]) return SYNC_INTERVAL_LABELS[seconds]
@@ -23,7 +24,7 @@ function formatSyncDefault(seconds: number): string {
   return `${Math.round(seconds / 60)} min`
 }
 
-export function ProfileEditorScreen({ navigation, route }: any) {
+export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Profile Editor">) {
   const { colors } = useTheme()
   const { settings } = useTracking()
   const profileId = route?.params?.profileId as number | undefined

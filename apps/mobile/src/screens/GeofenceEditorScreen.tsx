@@ -23,8 +23,9 @@ import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { parsePositiveInt, isPositiveInt } from "../utils/settingsValidation"
+import type { RootScreenProps } from "../types/navigation"
 
-export function GeofenceEditorScreen({ navigation, route }: any) {
+export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geofence Editor">) {
   const { colors } = useTheme()
   const geofenceId = route?.params?.geofenceId as number | undefined
   const isEditing = !!geofenceId

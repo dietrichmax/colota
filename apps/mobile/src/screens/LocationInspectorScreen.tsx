@@ -20,6 +20,7 @@ import { formatDistance } from "../utils/geo"
 import { segmentTrips } from "../utils/trips"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert } from "../services/modalService"
+import type { RootScreenProps } from "../types/navigation"
 
 interface TabProps {
   label: string
@@ -30,7 +31,7 @@ interface TabProps {
 
 type TabType = "map" | "trips" | "data"
 
-export function LocationHistoryScreen({ navigation, route }: { navigation: any; route: any }) {
+export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Location History">) {
   const { colors } = useTheme()
   const [activeTab, setActiveTab] = useState<TabType>(route?.params?.initialTab ?? "map")
 
