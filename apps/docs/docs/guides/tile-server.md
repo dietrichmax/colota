@@ -37,7 +37,7 @@ Offline map packs are downloaded from whichever tile server is configured at the
 :::
 
 1. Open **Settings**
-2. Scroll to **Appearance** and tap **Map Tile Server**
+2. Open **Appearance** and tap **Map Tile Server**
 3. Enter your style JSON URLs for light and dark mode
 4. Leave a field empty to fall back to the default
 
@@ -271,7 +271,7 @@ With caching enabled, most tile requests are served directly from nginx without 
 ### 4. Connect Colota
 
 1. Open **Settings** in Colota
-2. Scroll to **Appearance** and tap **Map Tile Server**
+2. Open **Appearance** and tap **Map Tile Server**
 3. Enter your style URLs:
    - Light: `https://tiles.example.com/styles/bright/style.json`
    - Dark: `https://tiles.example.com/styles/dark/style.json`
