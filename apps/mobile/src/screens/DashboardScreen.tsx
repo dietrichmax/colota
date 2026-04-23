@@ -203,7 +203,8 @@ export function DashboardScreen({ navigation }: ScreenProps) {
               colors={colors}
               onDismiss={() => setSettings({ ...settings, hasCompletedSetup: true })}
               onStartTracking={handleStart}
-              onNavigateToSettings={() => navigation.navigate("Settings")}
+              onNavigateToConnection={() => navigation.navigate("Connection")}
+              onNavigateToTrackingSync={() => navigation.navigate("Tracking & Sync")}
               onNavigateToApiConfig={() => navigation.navigate("API Config")}
             />
           )}

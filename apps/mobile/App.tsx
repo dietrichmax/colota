@@ -12,6 +12,7 @@ import { ThemeProvider, useTheme } from "./src/hooks/useTheme"
 import { fonts } from "./src/styles/typography"
 import { TrackingProvider } from "./src/contexts/TrackingProvider"
 import { ErrorBoundary } from "./src/components/ui/ErrorBoundary"
+import type { RootStackParamList, RootStackRoute } from "./src/types/navigation"
 import {
   ActivityLogScreen,
   DashboardScreen,
@@ -30,7 +31,10 @@ import {
   ProfileEditorScreen,
   SetupImportScreen,
   TripDetailScreen,
-  OfflineMapsScreen
+  OfflineMapsScreen,
+  AppearanceScreen,
+  ConnectionScreen,
+  TrackingSyncScreen
 } from "./src/screens/"
 import { BottomTabBar } from "./src/components"
 import { loadDisplayPreferences } from "./src/utils/geo"
@@ -39,9 +43,11 @@ MapLibreGL.setAccessToken(null)
 // Load display preferences early
 loadDisplayPreferences()
 
-const Stack = createNativeStackNavigator()
+const Stack = createNativeStackNavigator<RootStackParamList>()
 
-const SCREEN_CONFIG = [
+type ScreenConfig = { name: RootStackRoute; component: React.ComponentType<any>; title: string }
+
+const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Dashboard",
     component: DashboardScreen,
@@ -131,8 +137,23 @@ const SCREEN_CONFIG = [
     name: "Activity Log",
     component: ActivityLogScreen,
     title: "Activity Log"
+  },
+  {
+    name: "Appearance",
+    component: AppearanceScreen,
+    title: "Appearance"
+  },
+  {
+    name: "Connection",
+    component: ConnectionScreen,
+    title: "Connection"
+  },
+  {
+    name: "Tracking & Sync",
+    component: TrackingSyncScreen,
+    title: "Tracking & Sync"
   }
-] as const
+]
 
 const TAB_SCREEN_NAMES = new Set(["Dashboard", "Location History", "Geofences", "Settings"])
 

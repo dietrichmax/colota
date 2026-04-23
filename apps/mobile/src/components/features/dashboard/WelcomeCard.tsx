@@ -17,7 +17,8 @@ interface WelcomeCardProps {
   colors: ThemeColors
   onDismiss: () => void
   onStartTracking: () => void
-  onNavigateToSettings: () => void
+  onNavigateToConnection: () => void
+  onNavigateToTrackingSync: () => void
   onNavigateToApiConfig: () => void
 }
 
@@ -73,7 +74,8 @@ export function WelcomeCard({
   colors,
   onDismiss,
   onStartTracking,
-  onNavigateToSettings,
+  onNavigateToConnection,
+  onNavigateToTrackingSync,
   onNavigateToApiConfig
 }: WelcomeCardProps) {
   const {
@@ -94,7 +96,7 @@ export function WelcomeCard({
               label="2. Configure your server endpoint"
               completed={hasEndpoint}
               colors={colors}
-              onPress={onNavigateToSettings}
+              onPress={onNavigateToConnection}
             />
           )}
         </View>
@@ -109,7 +111,7 @@ export function WelcomeCard({
             </Pressable>
           )}
           <Pressable
-            onPress={onNavigateToSettings}
+            onPress={onNavigateToTrackingSync}
             style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
           >
             <Text style={[styles.link, { color: colors.primaryDark }]}>Tracking presets</Text>
