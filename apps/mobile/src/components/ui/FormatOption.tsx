@@ -38,7 +38,7 @@ export const FormatOption = ({
     >
       <View style={styles.formatContent}>
         <View style={styles.leftContent}>
-          <Icon size={28} color={colors.primaryDark} />
+          <Icon size={22} color={colors.textLight} />
           <View style={styles.textContent}>
             <View style={styles.titleRow}>
               <Text
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 14
+    gap: 16
   },
   textContent: {
     flex: 1
