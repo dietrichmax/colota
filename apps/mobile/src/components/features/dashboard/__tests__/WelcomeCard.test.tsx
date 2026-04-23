@@ -45,7 +45,8 @@ const defaultProps = {
   colors: mockColors,
   onDismiss: jest.fn(),
   onStartTracking: jest.fn(),
-  onNavigateToSettings: jest.fn(),
+  onNavigateToConnection: jest.fn(),
+  onNavigateToTrackingSync: jest.fn(),
   onNavigateToApiConfig: jest.fn()
 }
 
@@ -126,12 +127,28 @@ describe("WelcomeCard", () => {
     expect(defaultProps.onDismiss).toHaveBeenCalledTimes(1)
   })
 
-  it("calls onNavigateToSettings when Tracking presets is pressed", () => {
+  it("calls onNavigateToTrackingSync when Tracking presets is pressed", () => {
     const { getByText } = render(<WelcomeCard {...defaultProps} />)
 
     fireEvent.press(getByText("Tracking presets"))
 
-    expect(defaultProps.onNavigateToSettings).toHaveBeenCalledTimes(1)
+    expect(defaultProps.onNavigateToTrackingSync).toHaveBeenCalledTimes(1)
+  })
+
+  it("calls onNavigateToConnection when Configure your server endpoint is pressed", () => {
+    const { getByText } = render(<WelcomeCard {...defaultProps} />)
+
+    fireEvent.press(getByText("2. Configure your server endpoint"))
+
+    expect(defaultProps.onNavigateToConnection).toHaveBeenCalledTimes(1)
+  })
+
+  it("calls onNavigateToApiConfig when API field mapping is pressed", () => {
+    const { getByText } = render(<WelcomeCard {...defaultProps} />)
+
+    fireEvent.press(getByText("API field mapping"))
+
+    expect(defaultProps.onNavigateToApiConfig).toHaveBeenCalledTimes(1)
   })
 
   it("marks Start tracking as completed when tracking is active", () => {

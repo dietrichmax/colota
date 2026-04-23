@@ -19,7 +19,7 @@ Self-signed certificates are supported - install your CA certificate on the devi
 
 On **Android 17+**, connecting to another device on the local network (everything above except `localhost`) requires the **ACCESS_LOCAL_NETWORK** permission. Colota requests this when you use **Test Connection**. See [Permissions](/docs/development/permissions#local-network-access) for details.
 
-Use the **Test Connection** button in settings to verify your server is reachable.
+Use the **Test Connection** button in Settings → Connection to verify your server is reachable.
 
 ### Multiple Backends
 

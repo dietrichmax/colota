@@ -180,7 +180,7 @@ jest.mock("lucide-react-native", () => {
 import { AutoExportScreen } from "../AutoExportScreen"
 
 describe("AutoExportScreen", () => {
-  const mockProps = { navigation: { navigate: jest.fn() } }
+  const mockProps = { navigation: { navigate: jest.fn() } } as any
 
   beforeEach(() => {
     jest.clearAllMocks()

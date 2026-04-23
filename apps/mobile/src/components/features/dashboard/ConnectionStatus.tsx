@@ -105,7 +105,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
 
   return (
     <Pressable
-      onPress={() => navigation.navigate("Settings")}
+      onPress={() => navigation.navigate("Connection")}
       style={({ pressed }) => [
         styles.container,
         { backgroundColor: colors.card, borderColor: colors.border },

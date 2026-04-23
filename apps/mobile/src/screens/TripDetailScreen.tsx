@@ -19,6 +19,7 @@ import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
 import type { Trip, ThemeColors } from "../types/global"
+import type { RootScreenProps } from "../types/navigation"
 
 const MAX_BARS = 120
 
@@ -37,7 +38,7 @@ function downsample(values: number[], maxBars: number): number[] {
   return result
 }
 
-export function TripDetailScreen({ route }: { navigation: any; route: any }) {
+export function TripDetailScreen({ route }: RootScreenProps<"Trip Detail">) {
   const { colors } = useTheme()
   const trip: Trip = route.params.trip
   const tripColor = getTripColor(trip.index)

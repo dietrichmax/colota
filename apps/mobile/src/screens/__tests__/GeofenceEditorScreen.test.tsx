@@ -133,14 +133,14 @@ describe("GeofenceEditorScreen", () => {
   })
 
   function renderEdit(geofenceId = 1) {
-    return render(<GeofenceEditorScreen navigation={mockNavigation as any} route={{ params: { geofenceId } }} />)
+    return render(<GeofenceEditorScreen navigation={mockNavigation as any} route={{ params: { geofenceId } } as any} />)
   }
 
   function renderNew() {
     return render(
       <GeofenceEditorScreen
         navigation={mockNavigation as any}
-        route={{ params: { lat: 48.1, lon: 11.5, name: "New Zone", radius: 50 } }}
+        route={{ params: { lat: 48.1, lon: 11.5, name: "New Zone", radius: 50 } } as any}
       />
     )
   }

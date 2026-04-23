@@ -108,11 +108,11 @@ describe("ProfileEditorScreen", () => {
   })
 
   function renderNewProfile() {
-    return render(<ProfileEditorScreen navigation={mockNavigation as any} route={{ params: {} }} />)
+    return render(<ProfileEditorScreen navigation={mockNavigation as any} route={{ params: {} } as any} />)
   }
 
   function renderEditProfile(profileId = 1) {
-    return render(<ProfileEditorScreen navigation={mockNavigation as any} route={{ params: { profileId } }} />)
+    return render(<ProfileEditorScreen navigation={mockNavigation as any} route={{ params: { profileId } } as any} />)
   }
 
   // --- New Profile Mode ---
