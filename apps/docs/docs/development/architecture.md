@@ -191,10 +191,14 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | Screen | Purpose |
 | --- | --- |
 | `DashboardScreen` | Live map with tracking controls, coordinates, database stats, geofence and profile status |
-| `SettingsScreen` | GPS interval, distance filter, sync strategy, offline mode, accuracy threshold, unit system, time format |
+| `SettingsScreen` | Hub with stats card and navigation to Connection, Tracking & Sync, API Field Mapping, Tracking Profiles, Appearance and data/about screens |
+| `ConnectionScreen` | Server endpoint URL, offline mode toggle and connection test |
+| `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
+| `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |
 | `ApiSettingsScreen` | Endpoint URL, HTTP method, field mapping with backend templates |
 | `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | `GeofenceScreen` | Create, edit, and delete pause zones on an interactive map |
+| `GeofenceEditorScreen` | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
 | `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
 | `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
 | `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards and export |

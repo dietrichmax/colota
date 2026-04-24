@@ -26,16 +26,19 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## App Screens
 
-Colota has eighteen screens, each focused on a specific task:
+Colota has twenty-one screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
 | **Dashboard** | Live map with current coordinates, today's track overlay, tracking controls, database stats, and geofence status |
-| **Settings** | GPS polling interval, distance filter, sync strategy, offline mode, accuracy threshold, unit system, time format |
+| **Settings** | Hub linking to Connection, Tracking and Sync, API Field Mapping, Tracking Profiles, Appearance and data/about screens |
+| **Connection** | Server endpoint URL, offline mode toggle and connection test |
+| **Tracking & Sync** | GPS polling interval, distance filter, accuracy threshold and sync strategy preset |
+| **Appearance** | Light/dark theme, unit system, time format and custom map tile URLs |
 | **API Config** | Endpoint field mapping with templates for Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or custom backends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | **Geofences** | Create pause zones by tapping the map, view all zones with pause option indicators |
-| **Geofence Editor** | Configure pause options per zone: record pause, WiFi pause, motionless pause, stationary heartbeat and delete |
+| **Geofence Editor** | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
 | **Offline Maps** | Download map areas to the device for use without an internet connection |
 | **Tracking Profiles** | Create and manage condition-based profiles that automatically adjust tracking settings |
 | **Profile Editor** | Configure profile name, condition trigger, GPS interval, distance filter, sync interval, priority, and deactivation delay |
