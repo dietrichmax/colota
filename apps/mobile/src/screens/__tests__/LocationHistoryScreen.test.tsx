@@ -108,6 +108,10 @@ jest.mock("../../utils/logger", () => ({
   logger: { error: jest.fn(), info: jest.fn(), debug: jest.fn() }
 }))
 
+jest.mock("@react-navigation/native", () => ({
+  useFocusEffect: jest.fn()
+}))
+
 import { LocationHistoryScreen } from "../LocationInspectorScreen"
 
 const createProps = () =>

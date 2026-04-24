@@ -536,6 +536,14 @@ class DatabaseHelper private constructor(context: Context) :
         return writableDatabase.delete(TABLE_LOCATIONS, "timestamp < ?", arrayOf(cutoff.toString()))
     }
 
+    fun deleteInRange(startTs: Long, endTs: Long): Int {
+        return writableDatabase.delete(
+            TABLE_LOCATIONS,
+            "timestamp >= ? AND timestamp <= ?",
+            arrayOf(startTs.toString(), endTs.toString())
+        )
+    }
+
     /** Reclaims unused space. Call from background thread only. */
     fun vacuum() {
         AppLogger.d(TAG, "Starting VACUUM + ANALYZE")

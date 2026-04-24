@@ -351,6 +351,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     fun deleteOlderThan(days: Int, promise: Promise) = executeAsync(promise) {
         deleteThenVacuum(refresh = true) { dbHelper.deleteOlderThan(days) }
     }
+
+    @ReactMethod
+    fun deleteLocationsInRange(startTs: Double, endTs: Double, promise: Promise) = executeAsync(promise) {
+        deleteThenVacuum(refresh = true) { dbHelper.deleteInRange(startTs.toLong(), endTs.toLong()) }
+    }
     
     @ReactMethod
     fun vacuumDatabase(promise: Promise) = executeAsync(promise) { 

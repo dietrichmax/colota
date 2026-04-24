@@ -19,6 +19,7 @@ jest.mock("react-native", () => ({
       clearQueue: jest.fn().mockResolvedValue(10),
       clearAllLocations: jest.fn().mockResolvedValue(50),
       deleteOlderThan: jest.fn().mockResolvedValue(25),
+      deleteLocationsInRange: jest.fn().mockResolvedValue(7),
       vacuumDatabase: jest.fn().mockResolvedValue(undefined),
       getGeofences: jest.fn().mockResolvedValue([]),
       createGeofence: jest.fn().mockResolvedValue(1),

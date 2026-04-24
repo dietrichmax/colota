@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
+import { useFocusEffect } from "@react-navigation/native"
 import { fonts } from "../styles/typography"
 import { BarChart2 } from "lucide-react-native"
 import { Container } from "../components"
@@ -151,6 +152,17 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   useEffect(() => {
     fetchTrackData()
   }, [fetchTrackData])
+
+  /** Refresh on focus so trip deletions in TripDetail are reflected */
+  useFocusEffect(
+    useCallback(() => {
+      const key = `${mapDate.getFullYear()}-${String(mapDate.getMonth() + 1).padStart(2, "0")}`
+      daysCache.current.delete(key)
+      distanceCache.current.delete(key)
+      fetchTrackData()
+      fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
+    }, [fetchTrackData, fetchDaysWithData, mapDate])
+  )
 
   /** Tap a trip card -> open detail screen */
   const handleTripSelect = useCallback(

@@ -198,7 +198,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
 | `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
 | `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards and export |
-| `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, and per-trip export |
+| `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, per-trip export, and per-trip delete |
 | `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
 | `ExportDataScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
 | `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, export range, and file retention |
