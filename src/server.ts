@@ -7,7 +7,7 @@ import { maskUrl } from "./utils"
 import "dotenv/config"
 
 const app: Application = express()
-const PORT = process.env.PORT || 3000
+const PORT = Number(process.env.PORT) || 3000
 const API_KEY = process.env.API_KEY
 const REQUIRE_AUTH = typeof API_KEY === "string" && API_KEY.length > 0
 
