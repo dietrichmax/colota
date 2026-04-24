@@ -2,7 +2,9 @@
   "scripts": {
     "dev": "nodemon --watch src/** --watch .env --ext ts,js -I --exec node --experimental-specifier-resolution=node --loader ts-node/esm ./src/server.ts",
     "build": "webpack",
-    "start": "node dist/server.cjs"
+    "start": "node dist/server.cjs",
+    "format": "prettier --write \"**/*.{js,ts,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,json,md,yml,yaml}\""
   },
   "type": "module",
   "dependencies": {
@@ -12,6 +14,7 @@
   "devDependencies": {
     "@types/express": "^5.0.3",
     "nodemon": "^3.0.0",
+    "prettier": "^3.8.3",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0",

@@ -44,9 +44,7 @@ function authenticate(req: Request, res: Response, next: NextFunction): void {
 
   const bearer = req.header("authorization")?.startsWith("Bearer ") ? req.header("authorization")!.slice(7) : undefined
   const key =
-    req.header("x-api-key") ??
-    bearer ??
-    (typeof req.query.api_key === "string" ? req.query.api_key : undefined)
+    req.header("x-api-key") ?? bearer ?? (typeof req.query.api_key === "string" ? req.query.api_key : undefined)
 
   if (!key || !API_KEY) {
     res.status(403).json({ error: "Forbidden: missing API key" })
@@ -74,10 +72,14 @@ app.post("/owntracks", authenticate, async (req: Request, res: Response): Promis
 
   const { lat, lon, tst, acc } = body
   if (
-    typeof lat !== "number" || !isFinite(lat) ||
-    typeof lon !== "number" || !isFinite(lon) ||
-    typeof tst !== "number" || !isFinite(tst) ||
-    typeof acc !== "number" || !isFinite(acc)
+    typeof lat !== "number" ||
+    !isFinite(lat) ||
+    typeof lon !== "number" ||
+    !isFinite(lon) ||
+    typeof tst !== "number" ||
+    !isFinite(tst) ||
+    typeof acc !== "number" ||
+    !isFinite(acc)
   ) {
     res.status(400).json({ error: "Missing or invalid required fields: lat, lon, tst, acc" })
     return
@@ -102,12 +104,18 @@ app.post("/locations", authenticate, async (req: Request, res: Response): Promis
 
   const body = req.body as Record<string, unknown>
   if (
-    typeof body.lat !== "number" || !isFinite(body.lat) ||
-    typeof body.lon !== "number" || !isFinite(body.lon) ||
-    typeof body.tst !== "number" || !isFinite(body.tst) ||
-    typeof body.acc !== "number" || !isFinite(body.acc) ||
-    typeof body.batt !== "number" || !isFinite(body.batt) ||
-    typeof body.bs !== "number" || !isFinite(body.bs)
+    typeof body.lat !== "number" ||
+    !isFinite(body.lat) ||
+    typeof body.lon !== "number" ||
+    !isFinite(body.lon) ||
+    typeof body.tst !== "number" ||
+    !isFinite(body.tst) ||
+    typeof body.acc !== "number" ||
+    !isFinite(body.acc) ||
+    typeof body.batt !== "number" ||
+    !isFinite(body.batt) ||
+    typeof body.bs !== "number" ||
+    !isFinite(body.bs)
   ) {
     res.status(400).json({ error: "Missing or invalid required fields: lat, lon, tst, acc, batt, bs" })
     return
@@ -125,7 +133,6 @@ app.post("/locations", authenticate, async (req: Request, res: Response): Promis
   res.status(200).json({ message: "Accepted", forwarded })
   forwardToAll(targets, payload)
 })
-
 
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   const errUrl = new URL(req.originalUrl, "http://localhost")

@@ -9,21 +9,19 @@ export default {
   output: {
     filename: "server.cjs",
     path: path.resolve(__dirname, "dist"),
-    clean: true,
+    clean: true
   },
   resolve: {
-    extensions: [".ts", ".js"],
+    extensions: [".ts", ".js"]
   },
   module: {
     rules: [
       {
         test: /\.ts$/,
         use: "ts-loader",
-        exclude: /node_modules/,
-      },
-    ],
+        exclude: /node_modules/
+      }
+    ]
   },
-  ignoreWarnings: [
-    { module: /express\/lib\/view\.js/ },
-  ],
+  ignoreWarnings: [{ module: /express\/lib\/view\.js/ }]
 }

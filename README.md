@@ -125,7 +125,7 @@ TARGET_6_TYPE=owntracks
 ## Target types
 
 | Type | Use for | Notes |
-|------|---------|-------|
+| --- | --- | --- |
 | `owntracks` | Home Assistant, Dawarich, Reitti, OwnTracks Recorder | Converts to OwnTracks format, adds `X-Limit-U`/`X-Limit-D` headers |
 | `geopulse` | GeoPulse | Passes Colota payload unchanged |
 | `traccar` | Traccar | GET (OsmAnd protocol) by default, set `METHOD=POST` for JSON |
@@ -134,7 +134,7 @@ TARGET_6_TYPE=owntracks
 ## Environment variables
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+| --- | --- | --- |
 | `PORT` | `3000` | Port to listen on |
 | `API_KEY` | - | If set, requests must include it via `x-api-key` header or `?api_key=` query param |
 | `TARGET_n_URL` | - | Forward destination (n = 1-20, must be consecutive) |

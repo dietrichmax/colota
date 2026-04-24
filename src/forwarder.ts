@@ -24,9 +24,7 @@ export async function forwardToAll(targets: Target[], payload: ColotaPayload): P
 
         let url = target.url
         if (isGet) {
-          const params = new URLSearchParams(
-            Object.entries(transformed).map(([k, v]) => [k, String(v)])
-          )
+          const params = new URLSearchParams(Object.entries(transformed).map(([k, v]) => [k, String(v)]))
           url = `${target.url}?${params}`
         }
 
@@ -34,7 +32,7 @@ export async function forwardToAll(targets: Target[], payload: ColotaPayload): P
           method: isGet ? "GET" : "POST",
           headers,
           ...(isGet ? {} : { body: JSON.stringify(transformed) }),
-          signal: controller.signal,
+          signal: controller.signal
         })
 
         if (!res.ok) {
