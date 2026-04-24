@@ -60,6 +60,9 @@ class LocationForegroundService : Service() {
     @Volatile private var motionDetector: MotionDetector? = null
     @Volatile private var lastKnownLocation: Location? = null
 
+    /** Whether the currently-registered location request bypasses the OS-level distance filter. */
+    @Volatile private var lastRequestedBypassOsFilter: Boolean = false
+
     /**
      * Pause-zone state. Threading contract:
      * - Mutated ONLY on the Main thread. Call sites: onStartCommand, enter/exitPauseZone,
@@ -253,6 +256,14 @@ class LocationForegroundService : Service() {
         profileManager.invalidateProfiles()
         conditionMonitor.start()
         profileManager.evaluate()
+        // evaluate() may have triggered a profile switch, which already restarts the
+        // location request. Compare what is currently registered with what is now needed;
+        // only restart when they differ (eg user enabled a speed profile while no profile
+        // matches yet, so evaluate() didn't switch anything).
+        if (isLocationUpdatesRegistered() && needsLocationStreamForProfiles() != lastRequestedBypassOsFilter) {
+            stopLocationUpdates()
+            setupLocationUpdates()
+        }
     }
 
     private fun handleManualFlush() {
@@ -326,15 +337,19 @@ class LocationForegroundService : Service() {
             return
         }
 
-        AppLogger.d(TAG, "Requesting location updates: interval=${config.interval}ms, distance=${config.minUpdateDistance}m")
+        val bypassOsFilter = needsLocationStreamForProfiles()
+        val osMinDistance = if (bypassOsFilter) 0f else config.minUpdateDistance
+        
+        AppLogger.d(TAG, "Requesting location updates: interval=${config.interval}ms, distance=${config.minUpdateDistance}m, osFilter=${osMinDistance}m")
 
         try {
             locationProvider.requestLocationUpdates(
                 intervalMs = config.interval,
-                minDistanceMeters = config.minUpdateDistance,
+                minDistanceMeters = osMinDistance,
                 looper = Looper.getMainLooper(),
                 callback = callback
             )
+            lastRequestedBypassOsFilter = bypassOsFilter
 
             locationProvider.getLastLocation(
                 onSuccess = { location ->
@@ -365,6 +380,17 @@ class LocationForegroundService : Service() {
         locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
         locationUpdateCallback = null
     }
+
+    /**
+     * True when at least one enabled profile's condition depends on the location stream
+     * (speed or stationary). When true, [setupLocationUpdates] passes 0m to the OS provider
+     * so fixes keep arriving within the configured movement threshold; the software-side
+     * filter in [handleLocationUpdate] still enforces it before DB writes and sync.
+     */
+    private fun needsLocationStreamForProfiles(): Boolean =
+        profileManager.getNeededConditionTypes().any { it in ProfileConstants.LOCATION_DEPENDENT_CONDITIONS }
+
+    private fun isLocationUpdatesRegistered(): Boolean = locationUpdateCallback != null
 
     /**
      * Diagnostic-only periodic logger. Records "time since last GPS fix" every 5 minutes
@@ -541,8 +567,9 @@ class LocationForegroundService : Service() {
         // Before distance filter so stationary locations still update the speed buffer
         profileManager.onLocationUpdate(location)
 
-        // Software-side distance filter (FLP bypasses the OS-level distance filter for some fixes)
-        // Bypassed during geofence entry delay so stationary arrival points are logged
+        // Software-side distance filter. Enforces config.minUpdateDistance for DB/sync
+        // regardless of the OS filter (which passes 0m to when a location-dependent
+        // profile is enabled). Bypassed during entry delay so arrival points get logged.
         if (pendingPauseZone == null && config.minUpdateDistance > 0f && prev != null) {
             val distance = prev.distanceTo(location)
             if (distance < config.minUpdateDistance) {

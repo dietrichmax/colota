@@ -1236,6 +1236,121 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // OS-level distance filter bypass for location-dependent profiles
+    // =========================================================================
+
+    @Test
+    fun `setupLocationUpdates passes configured distance when no location-dependent profile enabled`() {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            minUpdateDistance = 50f,
+            filterInaccurateLocations = false
+        ))
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_CHARGING)
+
+        invokeSetupLocationUpdates()
+
+        verify { locationProvider.requestLocationUpdates(5000L, 50f, any(), any()) }
+        assertFalse(getField("lastRequestedBypassOsFilter"))
+    }
+
+    @Test
+    fun `setupLocationUpdates passes zero when a speed_above profile is enabled`() {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            minUpdateDistance = 50f,
+            filterInaccurateLocations = false
+        ))
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_SPEED_ABOVE)
+
+        invokeSetupLocationUpdates()
+
+        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any()) }
+        assertTrue(getField("lastRequestedBypassOsFilter"))
+    }
+
+    @Test
+    fun `setupLocationUpdates passes zero when a speed_below profile is enabled`() {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            minUpdateDistance = 50f,
+            filterInaccurateLocations = false
+        ))
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_SPEED_BELOW)
+
+        invokeSetupLocationUpdates()
+
+        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any()) }
+    }
+
+    @Test
+    fun `setupLocationUpdates passes zero when a stationary profile is enabled`() {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            minUpdateDistance = 50f,
+            filterInaccurateLocations = false
+        ))
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_STATIONARY)
+
+        invokeSetupLocationUpdates()
+
+        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any()) }
+    }
+
+    @Test
+    fun `handleRecheckProfiles restarts updates when effective OS filter flips to bypassed`() = runServiceTest {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            minUpdateDistance = 50f,
+            filterInaccurateLocations = false
+        ))
+        val existingCallback = mockk<LocationUpdateCallback>(relaxed = true)
+        setField("locationUpdateCallback", existingCallback)
+        setField("lastRequestedBypassOsFilter", false)
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_SPEED_ABOVE)
+
+        invokeHandleRecheckProfiles()
+
+        verify { locationProvider.removeLocationUpdates(existingCallback) }
+        verify { locationProvider.requestLocationUpdates(5000L, 0f, any(), any()) }
+    }
+
+    @Test
+    fun `handleRecheckProfiles does not restart when effective OS filter unchanged`() {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            minUpdateDistance = 50f,
+            filterInaccurateLocations = false
+        ))
+        val existingCallback = mockk<LocationUpdateCallback>(relaxed = true)
+        setField("locationUpdateCallback", existingCallback)
+        setField("lastRequestedBypassOsFilter", false)
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_CHARGING)
+
+        invokeHandleRecheckProfiles()
+
+        verify(exactly = 0) { locationProvider.removeLocationUpdates(any()) }
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `handleRecheckProfiles does not restart when not tracking`() {
+        setField("locationUpdateCallback", null)
+        setField("lastRequestedBypassOsFilter", false)
+        every { profileManager.getNeededConditionTypes() } returns setOf(ProfileConstants.CONDITION_SPEED_ABOVE)
+
+        invokeHandleRecheckProfiles()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    // =========================================================================
     // onDestroy - cleanup
     // =========================================================================
 
@@ -1768,6 +1883,13 @@ class LocationForegroundServiceTest {
     private fun invokeSetupLocationUpdates() {
         val method = LocationForegroundService::class.java
             .getDeclaredMethod("setupLocationUpdates")
+        method.isAccessible = true
+        method.invoke(service)
+    }
+
+    private fun invokeHandleRecheckProfiles() {
+        val method = LocationForegroundService::class.java
+            .getDeclaredMethod("handleRecheckProfiles")
         method.isAccessible = true
         method.invoke(service)
     }
