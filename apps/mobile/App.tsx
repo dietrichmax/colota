@@ -7,7 +7,6 @@ import { NavigationContainer, NavigationContainerRef } from "@react-navigation/n
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { View, StatusBar, Platform, StyleSheet } from "react-native"
-import MapLibreGL from "@maplibre/maplibre-react-native"
 import { ThemeProvider, useTheme } from "./src/hooks/useTheme"
 import { fonts } from "./src/styles/typography"
 import { TrackingProvider } from "./src/contexts/TrackingProvider"
@@ -38,7 +37,6 @@ import {
 } from "./src/screens/"
 import { BottomTabBar } from "./src/components"
 import { loadDisplayPreferences } from "./src/utils/geo"
-MapLibreGL.setAccessToken(null)
 
 // Load display preferences early
 loadDisplayPreferences()
