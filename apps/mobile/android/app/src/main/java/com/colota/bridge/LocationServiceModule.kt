@@ -6,7 +6,11 @@
 package com.Colota.bridge
 
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import com.Colota.BuildConfig
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
@@ -68,6 +72,16 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     // SAF directory picker
     private var safPickerPromise: Promise? = null
     private val SAF_PICKER_REQUEST = 9002
+
+    private val chargingReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_POWER_CONNECTED -> handleChargingChange(true)
+                Intent.ACTION_POWER_DISCONNECTED -> handleChargingChange(false)
+            }
+        }
+    }
+    private var chargingReceiverRegistered = false
 
     private val activityEventListener = object : BaseActivityEventListener() {
         override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
@@ -192,20 +206,68 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 putString("zoneName", zoneName)
                 putString("pauseReason", pauseReason)
             }
+
+        @JvmStatic
+        fun sendChargingStateEvent(isPlugged: Boolean): Boolean =
+            emit("onChargingStateChanged") { putBoolean("isPlugged", isPlugged) }
     }
 
     override fun getName(): String = "LocationServiceModule"
 
     override fun onHostResume() {
         isAppInForeground = true
+        registerChargingReceiver()
     }
 
     override fun onHostPause() {
         isAppInForeground = false
+        unregisterChargingReceiver()
     }
 
     override fun onHostDestroy() {
         isAppInForeground = false
+        unregisterChargingReceiver()
+    }
+
+    internal fun handleChargingChange(isPlugged: Boolean) {
+        AppLogger.d(TAG, "Power state changed: plugged=$isPlugged")
+        // Cache invalidation needed because DeviceInfoHelper caches battery status
+        // for 60s; without this the dashboard re-poll could see stale "discharging".
+        deviceInfo.invalidateBatteryCache()
+        sendChargingStateEvent(isPlugged)
+    }
+
+    internal fun resyncChargingState() {
+        handleChargingChange(deviceInfo.isPluggedIn())
+    }
+
+    internal fun registerChargingReceiver() {
+        if (chargingReceiverRegistered) return
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_POWER_CONNECTED)
+            addAction(Intent.ACTION_POWER_DISCONNECTED)
+        }
+        ContextCompat.registerReceiver(
+            reactApplicationContext,
+            chargingReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        chargingReceiverRegistered = true
+        // Power broadcasts aren't sticky; resync on resume to catch plug events
+        // that happened while backgrounded. Receiver-vs-resync race here is
+        // benign because the JS handler (re-poll isBatteryCritical) is idempotent.
+        resyncChargingState()
+    }
+
+    internal fun unregisterChargingReceiver() {
+        if (!chargingReceiverRegistered) return
+        try {
+            reactApplicationContext.unregisterReceiver(chargingReceiver)
+        } catch (e: IllegalArgumentException) {
+            AppLogger.w(TAG, "Charging receiver was not registered: ${e.message}")
+        }
+        chargingReceiverRegistered = false
     }
 
     override fun invalidate() {

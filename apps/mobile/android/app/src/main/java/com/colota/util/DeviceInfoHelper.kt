@@ -48,26 +48,8 @@ class DeviceInfoHelper(private val context: Context) {
     fun getCachedBatteryStatus(): Pair<Int, Int> = batteryCache.get()
 
     fun getBatteryStatus(): Pair<Int, Int> {
-        val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        
-        val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-        val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-        val batteryPct = if (level >= 0 && scale > 0) {
-            (level * 100) / scale
-        } else {
-            100 // Default to full if unable to read
-        }
-
-        val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-        val batteryStatus = when (status) {
-            BatteryManager.BATTERY_STATUS_CHARGING -> 2      // Charging
-            BatteryManager.BATTERY_STATUS_FULL -> 3          // Full
-            BatteryManager.BATTERY_STATUS_DISCHARGING -> 1   // Unplugged/Discharging
-            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> 1  // Unplugged/Discharging
-            else -> 0                                        // Unknown
-        }
-
-        return Pair(batteryPct, batteryStatus)
+        val snap = readBatterySticky()
+        return Pair(snap.level, snap.status)
     }
 
     fun getBatteryStatusString(): String {
@@ -85,6 +67,28 @@ class DeviceInfoHelper(private val context: Context) {
     fun isBatteryCritical(threshold: Int = 5): Boolean {
         val (level, status) = getCachedBatteryStatus()
         return level < threshold && status == 1 // Discharging
+    }
+
+    /** True when device is connected to any power source (AC, USB, wireless). */
+    fun isPluggedIn(): Boolean = readBatterySticky().isPlugged
+
+    private data class BatterySticky(val level: Int, val status: Int, val isPlugged: Boolean)
+
+    private fun readBatterySticky(): BatterySticky {
+        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val rawLevel = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val pct = if (rawLevel >= 0 && scale > 0) (rawLevel * 100) / scale else 100
+        val rawStatus = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        val status = when (rawStatus) {
+            BatteryManager.BATTERY_STATUS_CHARGING -> 2      // Charging
+            BatteryManager.BATTERY_STATUS_FULL -> 3          // Full
+            BatteryManager.BATTERY_STATUS_DISCHARGING -> 1   // Unplugged/Discharging
+            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> 1  // Unplugged/Discharging
+            else -> 0                                        // Unknown
+        }
+        val plugged = (intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
+        return BatterySticky(pct, status, plugged)
     }
 
     fun invalidateBatteryCache() = batteryCache.invalidate()

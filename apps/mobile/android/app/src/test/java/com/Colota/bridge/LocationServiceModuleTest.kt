@@ -11,6 +11,7 @@ import com.Colota.data.GeofenceHelper
 import com.Colota.data.ProfileHelper
 import com.Colota.service.LocationForegroundService
 import com.Colota.util.AppLogger
+import com.Colota.util.DeviceInfoHelper
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.JavaOnlyMap
 import com.facebook.react.bridge.ReactApplicationContext
@@ -245,28 +246,132 @@ class LocationServiceModuleTest {
     }
 
     // ========================================================================
+    // sendChargingStateEvent
+    // ========================================================================
+
+    @Test
+    fun `sendChargingStateEvent emits onChargingStateChanged when charging`() {
+        assertTrue(LocationServiceModule.sendChargingStateEvent(true))
+        verify { mockEmitter.emit("onChargingStateChanged", any()) }
+    }
+
+    @Test
+    fun `sendChargingStateEvent emits onChargingStateChanged when discharging`() {
+        assertTrue(LocationServiceModule.sendChargingStateEvent(false))
+        verify { mockEmitter.emit("onChargingStateChanged", any()) }
+    }
+
+    @Test
+    fun `sendChargingStateEvent returns false when no context`() {
+        setCompanionField("reactContextRef", WeakReference<ReactApplicationContext>(null))
+        assertFalse(LocationServiceModule.sendChargingStateEvent(true))
+    }
+
+    @Test
+    fun `sendChargingStateEvent returns false when no catalyst`() {
+        every { mockContext.hasActiveCatalystInstance() } returns false
+        assertFalse(LocationServiceModule.sendChargingStateEvent(true))
+    }
+
+    // ========================================================================
+    // handleChargingChange — invalidates cache and emits event
+    // ========================================================================
+
+    @Test
+    fun `handleChargingChange invalidates battery cache and emits charging event`() {
+        val module = createModule()
+        val deviceInfo = mockk<DeviceInfoHelper>(relaxed = true)
+        setField(module, "deviceInfo", deviceInfo)
+
+        module.handleChargingChange(true)
+
+        verify { deviceInfo.invalidateBatteryCache() }
+        verify { mockEmitter.emit("onChargingStateChanged", any()) }
+    }
+
+    @Test
+    fun `handleChargingChange emits discharging event`() {
+        val module = createModule()
+        val deviceInfo = mockk<DeviceInfoHelper>(relaxed = true)
+        setField(module, "deviceInfo", deviceInfo)
+
+        module.handleChargingChange(false)
+
+        verify { deviceInfo.invalidateBatteryCache() }
+        verify { mockEmitter.emit("onChargingStateChanged", any()) }
+    }
+
+    // ========================================================================
+    // resyncChargingState — reads sticky and forwards to handleChargingChange
+    // ========================================================================
+
+    @Test
+    fun `resyncChargingState forwards plugged state to handleChargingChange`() {
+        val module = spyk(createModule())
+        val deviceInfo = mockk<DeviceInfoHelper>(relaxed = true) {
+            every { isPluggedIn() } returns true
+        }
+        setField(module, "deviceInfo", deviceInfo)
+        every { module.handleChargingChange(any()) } just Runs
+
+        module.resyncChargingState()
+
+        verify { deviceInfo.isPluggedIn() }
+        verify { module.handleChargingChange(true) }
+    }
+
+    @Test
+    fun `resyncChargingState forwards unplugged state to handleChargingChange`() {
+        val module = spyk(createModule())
+        val deviceInfo = mockk<DeviceInfoHelper>(relaxed = true) {
+            every { isPluggedIn() } returns false
+        }
+        setField(module, "deviceInfo", deviceInfo)
+        every { module.handleChargingChange(any()) } just Runs
+
+        module.resyncChargingState()
+
+        verify { module.handleChargingChange(false) }
+    }
+
+    // ========================================================================
     // Lifecycle methods
     // ========================================================================
 
     @Test
-    fun `onHostResume sets foreground true`() {
+    fun `onHostResume sets foreground true and registers receiver`() {
         setCompanionField("isAppInForeground", false)
-        createModule().onHostResume()
+        val module = spyk(createModule())
+        every { module.registerChargingReceiver() } just Runs
+
+        module.onHostResume()
+
         assertTrue(getCompanionField("isAppInForeground") as Boolean)
+        verify { module.registerChargingReceiver() }
     }
 
     @Test
-    fun `onHostPause sets foreground false`() {
+    fun `onHostPause sets foreground false and unregisters receiver`() {
         setCompanionField("isAppInForeground", true)
-        createModule().onHostPause()
+        val module = spyk(createModule())
+        every { module.unregisterChargingReceiver() } just Runs
+
+        module.onHostPause()
+
         assertFalse(getCompanionField("isAppInForeground") as Boolean)
+        verify { module.unregisterChargingReceiver() }
     }
 
     @Test
-    fun `onHostDestroy sets foreground false`() {
+    fun `onHostDestroy sets foreground false and unregisters receiver`() {
         setCompanionField("isAppInForeground", true)
-        createModule().onHostDestroy()
+        val module = spyk(createModule())
+        every { module.unregisterChargingReceiver() } just Runs
+
+        module.onHostDestroy()
+
         assertFalse(getCompanionField("isAppInForeground") as Boolean)
+        verify { module.unregisterChargingReceiver() }
     }
 
     // ========================================================================
