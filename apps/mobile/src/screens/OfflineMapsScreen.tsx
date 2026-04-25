@@ -381,8 +381,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
             }
           },
           (err: unknown) => {
-            logger.error("[OfflineMapsScreen] Download failed:", err)
-            onFailure("Download failed. Please try again.")
+            logger.warn("[OfflineMapsScreen] Tile error (may retry):", err)
           }
         ).catch(() => {
           onFailure("Failed to start download. Please try again.")
