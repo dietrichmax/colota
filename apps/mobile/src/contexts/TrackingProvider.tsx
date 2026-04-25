@@ -31,6 +31,16 @@ type TrackingContextType = {
 const TrackingContext = createContext<TrackingContextType | null>(null)
 const CoordsContext = createContext<LocationCoords | null>(null)
 
+function parseJsonOr<T>(raw: string | undefined, fallback: T, key: string): T {
+  if (!raw) return fallback
+  try {
+    return JSON.parse(raw)
+  } catch (err) {
+    logger.warn(`[TrackingContext] Corrupted ${key}, using defaults:`, err)
+    return fallback
+  }
+}
+
 /**
  * Parses raw SQLite settings (all strings) into typed Settings object
  */
@@ -58,23 +68,8 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
     syncPreset: (allRaw.syncPreset as any) ?? DEFAULT_SETTINGS.syncPreset,
     filterInaccurateLocations: allRaw.filterInaccurateLocations === "true",
 
-    fieldMap: (() => {
-      try {
-        return allRaw.fieldMap ? JSON.parse(allRaw.fieldMap) : DEFAULT_SETTINGS.fieldMap
-      } catch (err) {
-        logger.warn("[TrackingContext] Corrupted fieldMap, using defaults:", err)
-        return DEFAULT_SETTINGS.fieldMap
-      }
-    })(),
-
-    customFields: (() => {
-      try {
-        return allRaw.customFields ? JSON.parse(allRaw.customFields) : DEFAULT_SETTINGS.customFields
-      } catch (err) {
-        logger.warn("[TrackingContext] Corrupted customFields, using defaults:", err)
-        return DEFAULT_SETTINGS.customFields
-      }
-    })(),
+    fieldMap: parseJsonOr(allRaw.fieldMap, DEFAULT_SETTINGS.fieldMap, "fieldMap"),
+    customFields: parseJsonOr(allRaw.customFields, DEFAULT_SETTINGS.customFields, "customFields"),
 
     apiTemplate: (allRaw.apiTemplate as ApiTemplateName) ?? DEFAULT_SETTINGS.apiTemplate,
     httpMethod: (allRaw.httpMethod as HttpMethod) ?? DEFAULT_SETTINGS.httpMethod,
