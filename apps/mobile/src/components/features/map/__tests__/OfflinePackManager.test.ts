@@ -23,11 +23,11 @@ jest.mock("../../../../services/NativeLocationService")
 
 import { OfflineManager } from "@maplibre/maplibre-react-native"
 import NativeLocationService from "../../../../services/NativeLocationService"
+import { formatBytes } from "../../../../utils/format"
 import {
   willExceedTileLimit,
   estimateSizeLabel,
   estimateSizeBytes,
-  formatBytes,
   createOfflinePack,
   loadOfflineAreas,
   deleteOfflineArea,
@@ -77,8 +77,8 @@ describe("formatBytes", () => {
     expect(formatBytes(512 * 1024)).toBe("512.0 KB")
   })
 
-  it("formats zero bytes as KB", () => {
-    expect(formatBytes(0)).toBe("0.0 KB")
+  it("formats zero bytes as B", () => {
+    expect(formatBytes(0)).toBe("0 B")
   })
 
   it("formats 1MB as MB", () => {

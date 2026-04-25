@@ -16,12 +16,6 @@ function hexToKmlColor(hex: string): string {
   return `ff${h.slice(4, 6)}${h.slice(2, 4)}${h.slice(0, 2)}`
 }
 
-export const formatBytes = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
 export const getByteSize = (content: string): number => {
   let bytes = 0
   for (let i = 0; i < content.length; i++) {

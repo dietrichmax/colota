@@ -95,11 +95,6 @@ export function estimateSizeLabel(ne: [number, number], sw: [number, number]): s
   return `~${mb.toFixed(0)} MB`
 }
 
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
 /** Finds a pack by its stored metadata.name (packs are identified by UUID in v11). */
 async function findPackByName(name: string): Promise<OfflinePack | null> {
   const packs = await OfflineManager.getPacks()
