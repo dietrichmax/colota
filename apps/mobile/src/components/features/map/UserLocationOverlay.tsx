@@ -5,12 +5,11 @@
 
 import React, { useMemo } from "react"
 import { View, StyleSheet } from "react-native"
-import { ShapeSource, CircleLayer, MarkerView } from "@maplibre/maplibre-react-native"
+import { GeoJSONSource, Layer, Marker } from "@maplibre/maplibre-react-native"
 import type { LocationCoords, ThemeColors } from "../../../types/global"
 
 /** meters-per-pixel at zoom 0 on the equator (Web Mercator constant) */
 const METERS_PER_PX_Z0 = 156543.03
-const MARKER_ANCHOR = { x: 0.5, y: 0.5 }
 
 interface Props {
   coords: LocationCoords
@@ -20,8 +19,8 @@ interface Props {
 
 /**
  * Shared overlay for DashboardMap and GeofenceScreen:
- *  – accuracy circle (CircleLayer with zoom-based radius)
- *  – user position dot (MarkerView)
+ *  - accuracy circle (Layer type="circle" with zoom-based radius)
+ *  - user position dot (Marker)
  */
 export function UserLocationOverlay({ coords, isPaused, colors }: Props) {
   const markerColor = isPaused ? colors.textDisabled : colors.primary
@@ -68,14 +67,14 @@ export function UserLocationOverlay({ coords, isPaused, colors }: Props) {
   return (
     <>
       {accuracyGeoJSON && (
-        <ShapeSource id="user-accuracy" shape={accuracyGeoJSON}>
-          <CircleLayer id="user-accuracy-fill" style={accuracyStyle} />
-        </ShapeSource>
+        <GeoJSONSource id="user-accuracy" data={accuracyGeoJSON}>
+          <Layer id="user-accuracy-fill" type="circle" style={accuracyStyle} />
+        </GeoJSONSource>
       )}
 
-      <MarkerView coordinate={markerCoordinate} anchor={MARKER_ANCHOR} allowOverlap>
+      <Marker lngLat={markerCoordinate} anchor="center">
         <View style={[styles.markerDot, { backgroundColor: markerColor }]} />
-      </MarkerView>
+      </Marker>
     </>
   )
 }

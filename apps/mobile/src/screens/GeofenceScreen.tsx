@@ -69,7 +69,10 @@ const GeofenceMap = React.memo(function GeofenceMap({
 
   useEffect(() => {
     if (!coords || !isCenteredRef.current || !tracking || !mapRef.current?.camera) return
-    mapRef.current.camera.moveTo([coords.longitude, coords.latitude], MAP_ANIMATION_DURATION_MS)
+    mapRef.current.camera.easeTo({
+      center: [coords.longitude, coords.latitude],
+      duration: MAP_ANIMATION_DURATION_MS
+    })
   }, [coords, tracking])
 
   useEffect(() => {
@@ -78,20 +81,25 @@ const GeofenceMap = React.memo(function GeofenceMap({
     const latDelta = (geofence.radius / 111320) * 1.5
     const lonDelta = (geofence.radius / (111320 * Math.cos((geofence.lat * Math.PI) / 180))) * 1.5
     mapRef.current.camera.fitBounds(
-      [geofence.lon + lonDelta, geofence.lat + latDelta],
-      [geofence.lon - lonDelta, geofence.lat - latDelta],
-      [...GEOFENCE_ZOOM_PADDING],
-      600
+      [geofence.lon - lonDelta, geofence.lat - latDelta, geofence.lon + lonDelta, geofence.lat + latDelta],
+      {
+        padding: {
+          top: GEOFENCE_ZOOM_PADDING[0],
+          right: GEOFENCE_ZOOM_PADDING[1],
+          bottom: GEOFENCE_ZOOM_PADDING[2],
+          left: GEOFENCE_ZOOM_PADDING[3]
+        },
+        duration: 600
+      }
     )
   }, [focusRequest])
 
   const handleCenterMe = useCallback(() => {
     if (coords && mapRef.current?.camera) {
-      mapRef.current.camera.setCamera({
-        centerCoordinate: [coords.longitude, coords.latitude],
-        zoomLevel: MAX_MAP_ZOOM,
-        animationDuration: MAP_ANIMATION_DURATION_MS,
-        animationMode: "flyTo"
+      mapRef.current.camera.flyTo({
+        center: [coords.longitude, coords.latitude],
+        zoom: MAX_MAP_ZOOM,
+        duration: MAP_ANIMATION_DURATION_MS
       })
       isCenteredRef.current = true
       setIsCentered(true)

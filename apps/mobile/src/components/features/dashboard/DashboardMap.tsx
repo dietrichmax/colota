@@ -85,16 +85,18 @@ export function DashboardMap({ tracking, activeZoneName, pauseReason, activeProf
   // override the setCamera zoom from handleCenterMe with a pan-only moveTo).
   useEffect(() => {
     if (!coords || !isCenteredRef.current || !mapRef.current?.camera) return
-    mapRef.current.camera.moveTo([coords.longitude, coords.latitude], MAP_ANIMATION_DURATION_MS)
+    mapRef.current.camera.easeTo({
+      center: [coords.longitude, coords.latitude],
+      duration: MAP_ANIMATION_DURATION_MS
+    })
   }, [coords])
 
   const handleCenterMe = useCallback(() => {
     if (coords && mapRef.current?.camera) {
-      mapRef.current.camera.setCamera({
-        centerCoordinate: [coords.longitude, coords.latitude],
-        zoomLevel: MAX_MAP_ZOOM,
-        animationDuration: MAP_ANIMATION_DURATION_MS,
-        animationMode: "flyTo"
+      mapRef.current.camera.flyTo({
+        center: [coords.longitude, coords.latitude],
+        zoom: MAX_MAP_ZOOM,
+        duration: MAP_ANIMATION_DURATION_MS
       })
       isCenteredRef.current = true
       setIsCentered(true)

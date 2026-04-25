@@ -6,15 +6,11 @@ jest.mock("@maplibre/maplibre-react-native", () => {
   const { View } = require("react-native")
   return {
     __esModule: true,
-    default: { setAccessToken: jest.fn() },
-    MapView: (props: any) => R.createElement(View, { testID: "mapview", ...props }),
+    Map: (props: any) => R.createElement(View, { testID: "mapview", ...props }),
     Camera: () => null,
-    ShapeSource: ({ children }: any) => children,
-    FillLayer: () => null,
-    LineLayer: () => null,
-    SymbolLayer: () => null,
-    CircleLayer: () => null,
-    MarkerView: ({ children }: any) => children
+    GeoJSONSource: ({ children }: any) => children,
+    Layer: () => null,
+    Marker: ({ children }: any) => children
   }
 })
 
