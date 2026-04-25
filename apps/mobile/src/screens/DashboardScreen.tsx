@@ -136,6 +136,13 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   }, [updatePauseZone])
 
   useEffect(() => {
+    const chargingListener = DeviceEventEmitter.addListener("onChargingStateChanged", () => {
+      NativeLocationService.isBatteryCritical().then(setIsBatteryCritical)
+    })
+    return () => chargingListener.remove()
+  }, [])
+
+  useEffect(() => {
     const pauseZoneListener = DeviceEventEmitter.addListener(
       "onPauseZoneChange",
       (data: { entered: boolean; zoneName: string | null; pauseReason: string | null }) => {

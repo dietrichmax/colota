@@ -206,13 +206,38 @@ class DeviceInfoHelperTest {
         assertEquals(0, statusCode)
     }
 
+    @Test
+    fun `isPluggedIn returns true when plugged via AC`() {
+        mockBatteryIntent(level = 50, scale = 100, status = BatteryManager.BATTERY_STATUS_CHARGING, plugged = BatteryManager.BATTERY_PLUGGED_AC)
+        assertTrue(helper.isPluggedIn())
+    }
+
+    @Test
+    fun `isPluggedIn returns true when plugged via USB`() {
+        mockBatteryIntent(level = 50, scale = 100, status = BatteryManager.BATTERY_STATUS_CHARGING, plugged = BatteryManager.BATTERY_PLUGGED_USB)
+        assertTrue(helper.isPluggedIn())
+    }
+
+    @Test
+    fun `isPluggedIn returns false when unplugged`() {
+        mockBatteryIntent(level = 50, scale = 100, status = BatteryManager.BATTERY_STATUS_DISCHARGING, plugged = 0)
+        assertFalse(helper.isPluggedIn())
+    }
+
+    @Test
+    fun `isPluggedIn returns false when intent is null`() {
+        every { context.registerReceiver(null, any()) } returns null
+        assertFalse(helper.isPluggedIn())
+    }
+
     // --- Helper ---
 
-    private fun mockBatteryIntent(level: Int, scale: Int, status: Int) {
+    private fun mockBatteryIntent(level: Int, scale: Int, status: Int, plugged: Int = 0) {
         val batteryIntent = mockk<Intent> {
             every { getIntExtra(BatteryManager.EXTRA_LEVEL, -1) } returns level
             every { getIntExtra(BatteryManager.EXTRA_SCALE, -1) } returns scale
             every { getIntExtra(BatteryManager.EXTRA_STATUS, -1) } returns status
+            every { getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) } returns plugged
         }
         every { context.registerReceiver(null, any()) } returns batteryIntent
     }
