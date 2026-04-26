@@ -93,9 +93,12 @@ const mockEstimateSizeLabel = jest.fn()
 const mockEstimateSizeBytes = jest.fn()
 const mockWillExceedTileLimit = jest.fn()
 
+jest.mock("../../utils/format", () => ({
+  formatBytes: jest.fn().mockReturnValue("5.0 MB")
+}))
+
 jest.mock("../../components/features/map/OfflinePackManager", () => ({
   DOWNLOAD_STATE: { INACTIVE: "inactive", ACTIVE: "active", COMPLETE: "complete" },
-  formatBytes: jest.fn().mockReturnValue("5.0 MB"),
   loadOfflineAreas: (...args: any[]) => mockLoadOfflineAreas(...args),
   loadOfflineAreaBounds: (...args: any[]) => mockLoadOfflineAreaBounds(...args),
   createOfflinePack: (...args: any[]) => mockCreateOfflinePack(...args),

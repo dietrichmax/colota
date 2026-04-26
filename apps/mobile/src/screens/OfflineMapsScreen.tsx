@@ -20,12 +20,12 @@ import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
+import { formatBytes } from "../utils/format"
 import {
   createOfflinePack,
   loadOfflineAreas,
   deleteOfflineArea,
   unsubscribeOfflinePack,
-  formatBytes,
   DOWNLOAD_STATE,
   OfflinePackStatus,
   OfflineAreaInfo,
