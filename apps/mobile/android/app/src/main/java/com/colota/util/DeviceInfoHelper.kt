@@ -7,6 +7,7 @@ package com.Colota.util
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.location.LocationManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
@@ -23,6 +24,10 @@ class DeviceInfoHelper(private val context: Context) {
     
     private val powerManager by lazy {
         context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    }
+
+    private val locationManager by lazy {
+        context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     }
 
     private val batteryCache = TimedCache(60000L) { getBatteryStatus() }
@@ -95,6 +100,43 @@ class DeviceInfoHelper(private val context: Context) {
 
     fun isIgnoringBatteryOptimizations(): Boolean {
         return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    /** Whether the system location toggle is on. App permission is separate. */
+    fun isLocationEnabled(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            locationManager.isLocationEnabled
+        } else {
+            @Suppress("DEPRECATION")
+            locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        }
+    }
+
+    fun openLocationSettings(): Boolean {
+        val candidates = listOf(
+            Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS),
+            Intent(Settings.ACTION_SECURITY_SETTINGS),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+            }
+        )
+        val flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_NO_HISTORY or
+            Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+        for (intent in candidates) {
+            if (intent.resolveActivity(context.packageManager) == null) continue
+            return try {
+                intent.flags = flags
+                context.startActivity(intent)
+                true
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "Failed to open ${intent.action}, trying next: ${e.message}")
+                continue
+            }
+        }
+        AppLogger.e(TAG, "No supported location settings intent found")
+        return false
     }
 
     fun requestIgnoreBatteryOptimizations(): Boolean {

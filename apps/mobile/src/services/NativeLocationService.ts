@@ -594,6 +594,18 @@ class NativeLocationService {
     )
   }
 
+  /** Whether the system location toggle is on. App permission is separate. */
+  static async isLocationEnabled(): Promise<boolean> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.isLocationEnabled(), false, "isLocationEnabled failed")
+  }
+
+  /** Opens system Location settings. */
+  static async openLocationSettings(): Promise<boolean> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.openLocationSettings(), false, "openLocationSettings failed")
+  }
+
   // ============================================================================
   // BUILD CONFIGURATION
   // ============================================================================

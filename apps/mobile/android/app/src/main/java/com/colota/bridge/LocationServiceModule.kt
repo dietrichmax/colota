@@ -210,6 +210,10 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         @JvmStatic
         fun sendChargingStateEvent(isPlugged: Boolean): Boolean =
             emit("onChargingStateChanged") { putBoolean("isPlugged", isPlugged) }
+
+        @JvmStatic
+        fun sendLocationStateEvent(locationEnabled: Boolean): Boolean =
+            emit("onLocationStateChanged") { putBoolean("locationEnabled", locationEnabled) }
     }
 
     override fun getName(): String = "LocationServiceModule"
@@ -724,6 +728,16 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun isBatteryCritical(promise: Promise) {
         promise.resolve(deviceInfo.isBatteryCritical())
+    }
+
+    @ReactMethod
+    fun isLocationEnabled(promise: Promise) {
+        promise.resolve(deviceInfo.isLocationEnabled())
+    }
+
+    @ReactMethod
+    fun openLocationSettings(promise: Promise) {
+        promise.resolve(deviceInfo.openLocationSettings())
     }
 
     @ReactMethod

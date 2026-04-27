@@ -6,11 +6,16 @@
 package com.Colota.service
 
 import android.app.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 import android.location.Location
+import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import androidx.core.content.ContextCompat
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.util.AppLogger
 import com.Colota.data.DatabaseHelper
@@ -59,6 +64,21 @@ class LocationForegroundService : Service() {
     @Volatile private var lastFixAtMs: Long = 0L
     @Volatile private var motionDetector: MotionDetector? = null
     @Volatile private var lastKnownLocation: Location? = null
+
+    /** Debounces the burst of PROVIDERS_CHANGED broadcasts when system Location toggles (one per provider). */
+    @Volatile private var lastBroadcastLocationEnabled: Boolean = true
+
+    private val locationProvidersReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != LocationManager.PROVIDERS_CHANGED_ACTION) return
+            val current = deviceInfoHelper.isLocationEnabled()
+            if (current == lastBroadcastLocationEnabled) return
+            lastBroadcastLocationEnabled = current
+            AppLogger.d(TAG, "Location providers changed: enabled=$current")
+            LocationServiceModule.sendLocationStateEvent(current)
+            refreshNotificationForCurrentState()
+        }
+    }
 
     /** Whether the currently-registered location request bypasses the OS-level distance filter. */
     @Volatile private var lastRequestedBypassOsFilter: Boolean = false
@@ -123,6 +143,7 @@ class LocationForegroundService : Service() {
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         dbHelper = DatabaseHelper.getInstance(this)
         deviceInfoHelper = DeviceInfoHelper(this)
+        lastBroadcastLocationEnabled = deviceInfoHelper.isLocationEnabled()
         networkManager = NetworkManager(this)
         geofenceHelper = GeofenceHelper(this)
         secureStorage = SecureStorageHelper.getInstance(this)
@@ -142,7 +163,18 @@ class LocationForegroundService : Service() {
 
         motionDetector = MotionDetector(this) { onMotionDetected() }
 
+        registerLocationProvidersReceiver()
+
         AppLogger.d(TAG, "Service created - provider: ${locationProvider.javaClass.simpleName}, motionSensor=${motionDetector?.isAvailable}")
+    }
+
+    private fun registerLocationProvidersReceiver() {
+        val filter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
+        ContextCompat.registerReceiver(this, locationProvidersReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+    }
+
+    private fun unregisterLocationProvidersReceiver() {
+        unregisterReceiver(locationProvidersReceiver)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -304,6 +336,7 @@ class LocationForegroundService : Service() {
         unregisterWifiPause()
         cancelMotionlessCountdown()
         cancelHeartbeat()
+        unregisterLocationProvidersReceiver()
         conditionMonitor.stop()
         stopLocationUpdates()
         syncManager.stopPeriodicSync()
@@ -1045,7 +1078,8 @@ class LocationForegroundService : Service() {
             isOfflineMode = offline,
             isStationary = profileManager.isStationary,
             isWifiPaused = isWifiPaused,
-            isMotionlessPaused = isMotionlessPaused
+            isMotionlessPaused = isMotionlessPaused,
+            locationEnabled = deviceInfoHelper.isLocationEnabled()
         )
     }
 
