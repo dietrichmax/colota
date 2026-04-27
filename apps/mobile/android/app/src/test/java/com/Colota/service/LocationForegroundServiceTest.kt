@@ -74,6 +74,7 @@ class LocationForegroundServiceTest {
         every { deviceInfoHelper.getCachedBatteryStatus() } returns Pair(80, 2)
         every { deviceInfoHelper.isBatteryCritical(any()) } returns false
         every { deviceInfoHelper.isBatteryCritical() } returns false
+        every { deviceInfoHelper.isLocationEnabled() } returns true
         every { geofenceHelper.getPauseZone(any()) } returns null
         mockkObject(PayloadBuilder)
         every { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any()) } returns JSONObject()

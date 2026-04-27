@@ -274,6 +274,28 @@ class LocationServiceModuleTest {
     }
 
     // ========================================================================
+    // sendLocationStateEvent
+    // ========================================================================
+
+    @Test
+    fun `sendLocationStateEvent emits onLocationStateChanged when enabled`() {
+        assertTrue(LocationServiceModule.sendLocationStateEvent(true))
+        verify { mockEmitter.emit("onLocationStateChanged", any()) }
+    }
+
+    @Test
+    fun `sendLocationStateEvent emits onLocationStateChanged when disabled`() {
+        assertTrue(LocationServiceModule.sendLocationStateEvent(false))
+        verify { mockEmitter.emit("onLocationStateChanged", any()) }
+    }
+
+    @Test
+    fun `sendLocationStateEvent returns false when no context`() {
+        setCompanionField("reactContextRef", WeakReference<ReactApplicationContext>(null))
+        assertFalse(LocationServiceModule.sendLocationStateEvent(true))
+    }
+
+    // ========================================================================
     // handleChargingChange — invalidates cache and emits event
     // ========================================================================
 

@@ -4,7 +4,8 @@
  */
 
 import React, { useRef, useEffect, useMemo, useCallback, useState } from "react"
-import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image } from "react-native"
+import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image, Pressable } from "react-native"
+import { AlertTriangle } from "lucide-react-native"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
@@ -28,13 +29,21 @@ type Props = {
   pauseReason: string | null
   activeProfileName: string | null
   isBatteryCritical: boolean
+  locationEnabled: boolean
 }
 
 const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
   return c !== null && c.latitude !== 0 && c.longitude !== 0
 }
 
-export function DashboardMap({ tracking, activeZoneName, pauseReason, activeProfileName, isBatteryCritical }: Props) {
+export function DashboardMap({
+  tracking,
+  activeZoneName,
+  pauseReason,
+  activeProfileName,
+  isBatteryCritical,
+  locationEnabled
+}: Props) {
   const coords = useCoords()
   const mapRef = useRef<ColotaMapRef>(null)
   const { colors } = useTheme()
@@ -114,6 +123,8 @@ export function DashboardMap({ tracking, activeZoneName, pauseReason, activeProf
   const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences, colors), [geofences, colors])
 
   const showMap = tracking && isValidCoords(coords)
+  const waitingForFix = tracking && !isValidCoords(coords)
+  const locationOff = tracking && !locationEnabled
 
   return (
     <View style={[styles.container, { borderRadius: colors.borderRadius }]}>
@@ -163,7 +174,26 @@ export function DashboardMap({ tracking, activeZoneName, pauseReason, activeProf
         </View>
       )}
 
-      {tracking && !isValidCoords(coords) && (
+      {waitingForFix && locationOff && (
+        <Pressable
+          onPress={() => NativeLocationService.openLocationSettings()}
+          style={[
+            styles.stateContainer,
+            styles.overlay,
+            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
+          ]}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: colors.warning + "20" }]}>
+            <AlertTriangle size={32} color={colors.warning} />
+          </View>
+          <Text style={[styles.stateTitle, { color: colors.warning }]}>Location Services Off</Text>
+          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
+            Tracking can&apos;t get GPS fixes. Tap to open Settings.
+          </Text>
+        </Pressable>
+      )}
+
+      {waitingForFix && !locationOff && (
         <View
           style={[
             styles.stateContainer,
@@ -191,7 +221,16 @@ export function DashboardMap({ tracking, activeZoneName, pauseReason, activeProf
         />
       )}
 
-      {showMap && activeZoneName && (
+      {showMap && locationOff && (
+        <Pressable
+          onPress={() => NativeLocationService.openLocationSettings()}
+          style={[styles.statusBar, { backgroundColor: colors.error + "DD" }]}
+        >
+          <Text style={styles.barText}>Location off - tap to enable</Text>
+        </Pressable>
+      )}
+
+      {showMap && !locationOff && activeZoneName && (
         <View style={[styles.statusBar, { backgroundColor: colors.warning + "DD" }]}>
           <Text style={styles.barText}>
             Paused in {activeZoneName}
@@ -200,7 +239,7 @@ export function DashboardMap({ tracking, activeZoneName, pauseReason, activeProf
         </View>
       )}
 
-      {showMap && !activeZoneName && activeProfileName && (
+      {showMap && !locationOff && !activeZoneName && activeProfileName && (
         <View style={[styles.statusBar, { backgroundColor: colors.primary + "DD" }]}>
           <Text style={styles.barText}>{activeProfileName}</Text>
         </View>

@@ -4,12 +4,13 @@
  */
 
 import React, { useEffect, useState, useCallback, useRef } from "react"
-import { StyleSheet, View, ScrollView, DeviceEventEmitter, Animated } from "react-native"
+import { StyleSheet, View, ScrollView, DeviceEventEmitter, Animated, AppState } from "react-native"
 import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { useFocusEffect } from "@react-navigation/native"
+import { showConfirm } from "../services/modalService"
 import {
   Button,
   ConnectionStatus,
@@ -40,11 +41,26 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   const [pauseReason, setPauseReason] = useState<string | null>(null)
   const [scrollEnabled, setScrollEnabled] = useState(true)
   const [isBatteryCritical, setIsBatteryCritical] = useState(false)
+  const [locationEnabled, setLocationEnabled] = useState(true)
 
   // Animation for button
   const buttonScale = useRef(new Animated.Value(1)).current
 
   const handleStart = async () => {
+    const locationOn = await NativeLocationService.isLocationEnabled()
+    if (!locationOn) {
+      const openSettings = await showConfirm({
+        title: "Please enable Location Services",
+        message: "Location Services are disabled. Tracking will not work until they are enabled in Settings.",
+        confirmText: "Location Settings",
+        cancelText: "Start Anyway"
+      })
+      if (openSettings) {
+        await NativeLocationService.openLocationSettings()
+        return
+      }
+    }
+
     // Bounce animation
     Animated.sequence([
       Animated.spring(buttonScale, {
@@ -119,6 +135,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
       } else {
         setIsBatteryCritical(false)
       }
+      NativeLocationService.isLocationEnabled().then(setLocationEnabled)
 
       const interval = tracking ? Math.max(settings.interval * 1000, MIN_STATS_INTERVAL_MS) : STATS_REFRESH_IDLE
 
@@ -140,6 +157,21 @@ export function DashboardScreen({ navigation }: ScreenProps) {
       NativeLocationService.isBatteryCritical().then(setIsBatteryCritical)
     })
     return () => chargingListener.remove()
+  }, [])
+
+  useEffect(() => {
+    const listener = DeviceEventEmitter.addListener("onLocationStateChanged", (data: { locationEnabled: boolean }) => {
+      setLocationEnabled(data.locationEnabled)
+    })
+    const appStateSub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        NativeLocationService.isLocationEnabled().then(setLocationEnabled)
+      }
+    })
+    return () => {
+      listener.remove()
+      appStateSub.remove()
+    }
   }, [])
 
   useEffect(() => {
@@ -180,6 +212,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
               pauseReason={pauseReason}
               activeProfileName={activeProfileName}
               isBatteryCritical={isBatteryCritical}
+              locationEnabled={locationEnabled}
             />
           </View>
 

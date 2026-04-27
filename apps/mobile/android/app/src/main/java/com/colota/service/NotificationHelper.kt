@@ -103,8 +103,10 @@ class NotificationHelper(
         isOfflineMode: Boolean = false,
         isStationary: Boolean = false,
         isWifiPaused: Boolean = false,
-        isMotionlessPaused: Boolean = false
+        isMotionlessPaused: Boolean = false,
+        locationEnabled: Boolean = true
     ): String = when {
+        !locationEnabled -> "Location services off - tracking won't get fixes"
         isPaused -> {
             val zone = zoneName ?: "Unknown"
             when {
@@ -166,7 +168,8 @@ class NotificationHelper(
         isOfflineMode: Boolean = false,
         isStationary: Boolean = false,
         isWifiPaused: Boolean = false,
-        isMotionlessPaused: Boolean = false
+        isMotionlessPaused: Boolean = false,
+        locationEnabled: Boolean = true
     ): Boolean {
         val now = System.currentTimeMillis()
 
@@ -191,7 +194,7 @@ class NotificationHelper(
             lastCoords = Pair(lat, lon)
         }
 
-        val statusText = buildStatusText(isPaused, zoneName, lat, lon, queuedCount, lastSyncTime, isOfflineMode, isStationary, isWifiPaused, isMotionlessPaused)
+        val statusText = buildStatusText(isPaused, zoneName, lat, lon, queuedCount, lastSyncTime, isOfflineMode, isStationary, isWifiPaused, isMotionlessPaused, locationEnabled)
 
         // forceUpdate bypasses dedup so state-change posts land even when the text is unchanged.
         val cacheKey = "$statusText-$queuedCount-$activeProfileName"
