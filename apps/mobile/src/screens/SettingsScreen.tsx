@@ -23,7 +23,8 @@ import {
   Map,
   ScrollText,
   Info,
-  Heart
+  Heart,
+  Clock
 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 
@@ -179,6 +180,14 @@ export function SettingsScreen({ navigation }: Props) {
               label="Export Data"
               sub="Export locations as CSV, GeoJSON, GPX or KML"
               onPress={() => navigation.navigate("Export Data")}
+            />
+            <Divider />
+            <ListItem
+              testID="nav-auto-export"
+              icon={Clock}
+              label="Auto-Export"
+              sub="Schedule daily, weekly or monthly exports"
+              onPress={() => navigation.navigate("Auto-Export")}
             />
             <Divider />
             <ListItem

@@ -94,8 +94,8 @@ class LocationForegroundService : Service() {
      */
     @Volatile private var insidePauseZone = false
     @Volatile private var currentZoneName: String? = null
-    @Volatile private var currentZoneGeofence: GeofenceHelper.CachedGeofence? = null
-    @Volatile private var pendingPauseZone: GeofenceHelper.CachedGeofence? = null
+    @Volatile private var currentZoneGeofence: GeofenceHelper.Geofence? = null
+    @Volatile private var pendingPauseZone: GeofenceHelper.Geofence? = null
     @Volatile private var entryDelayJob: Job? = null
     @Volatile private var heartbeatJob: Job? = null
 
@@ -514,7 +514,7 @@ class LocationForegroundService : Service() {
      * Re-applies WiFi/motionless pause settings from a freshly loaded zone object.
      * Called on RECHECK when already inside the zone so editor changes take effect immediately.
      */
-    private fun applyZoneSettingsIfChanged(zone: GeofenceHelper.CachedGeofence) {
+    private fun applyZoneSettingsIfChanged(zone: GeofenceHelper.Geofence) {
         val timeoutChanged = currentZoneGeofence?.motionlessTimeoutMinutes != zone.motionlessTimeoutMinutes
         val heartbeatChanged = currentZoneGeofence?.heartbeatIntervalMinutes != zone.heartbeatIntervalMinutes
         currentZoneGeofence = zone
@@ -551,7 +551,7 @@ class LocationForegroundService : Service() {
      * Applies zone entry/exit state transitions common to both live location updates
      * and manual zone rechecks. Returns the anchor [Job] if a zone exit was triggered.
      */
-    private fun applyZoneTransition(zone: GeofenceHelper.CachedGeofence?): Job? {
+    private fun applyZoneTransition(zone: GeofenceHelper.Geofence?): Job? {
         return when {
             zone != null && (!insidePauseZone || zone.name != currentZoneName) -> {
                 if (pendingPauseZone?.name != zone.name) startEntryDelay(zone)
@@ -667,7 +667,7 @@ class LocationForegroundService : Service() {
      * like GeoPulse enough arrival points for reliable trip detection.
      * If the device exits the zone before the delay completes, the delay is cancelled.
      */
-    private fun startEntryDelay(geofence: GeofenceHelper.CachedGeofence) {
+    private fun startEntryDelay(geofence: GeofenceHelper.Geofence) {
         entryDelayJob?.cancel()
         pendingPauseZone = geofence
 
@@ -701,7 +701,7 @@ class LocationForegroundService : Service() {
         refreshNotificationForCurrentState()
     }
 
-    private fun enterPauseZone(geofence: GeofenceHelper.CachedGeofence) {
+    private fun enterPauseZone(geofence: GeofenceHelper.Geofence) {
         insidePauseZone = true
         currentZoneName = geofence.name
         currentZoneGeofence = geofence
@@ -752,7 +752,7 @@ class LocationForegroundService : Service() {
      * Starts any pause-zone holds (WiFi, motionless, heartbeat) that the zone has enabled.
      * Must stay mirrored with [stopZoneHolds] - when adding a new hold, update both.
      */
-    private fun startZoneHolds(zone: GeofenceHelper.CachedGeofence) {
+    private fun startZoneHolds(zone: GeofenceHelper.Geofence) {
         if (zone.pauseOnWifi) registerWifiPause()
         if (zone.pauseOnMotionless) startMotionlessCountdown(zone.motionlessTimeoutMinutes)
         if (zone.heartbeatEnabled) startHeartbeat(zone.heartbeatIntervalMinutes)
@@ -1005,7 +1005,7 @@ class LocationForegroundService : Service() {
     }
 
     /** Logs a synthetic location at the geofence center on zone exit to give the departing trip a clean start point. */
-    private fun saveAnchorPoint(geofence: GeofenceHelper.CachedGeofence): Job? {
+    private fun saveAnchorPoint(geofence: GeofenceHelper.Geofence): Job? {
         if (!::config.isInitialized) {
             AppLogger.w(TAG, "Config not yet initialized, skipping anchor point for '${geofence.name}'")
             return null

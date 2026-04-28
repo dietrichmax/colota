@@ -877,7 +877,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 throw Exception("Export directory permission lost. Please re-select the directory.")
             }
         }
-        AutoExportScheduler.schedule(reactApplicationContext)
+        // Anchors isExportDue so the first fire waits for the next configured time.
+        config.saveEnabledAt(dbHelper, System.currentTimeMillis() / 1000)
+        AutoExportScheduler.scheduleNext(reactApplicationContext)
         true
     }
 
@@ -888,8 +890,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun rescheduleAutoExport(promise: Promise) = executeAsync(promise) {
+        AutoExportScheduler.scheduleNext(reactApplicationContext)
+        true
+    }
+
+    @ReactMethod
     fun cancelAutoExport(promise: Promise) = executeAsync(promise) {
         AutoExportScheduler.cancel(reactApplicationContext)
+        AutoExportConfig.from(dbHelper).saveEnabledAt(dbHelper, 0L)
         true
     }
 
@@ -911,6 +920,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             putString("lastFileName", config.lastFileName)
             putInt("lastRowCount", config.lastRowCount)
             putString("lastError", config.lastError)
+            putString("timeOfDay", config.timeOfDay)
+            putInt("weeklyDow", config.weeklyDow)
+            putInt("monthlyDom", config.monthlyDom)
         }
     }
 

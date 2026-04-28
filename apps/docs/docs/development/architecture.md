@@ -178,9 +178,10 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `TimedCache` | Generic TTL cache used for queue count, device info, profiles, and network state |
 | `BuildConfigModule` | Exposes build constants (SDK versions, app version) to JS |
 | `AppLogger` | Centralized logger - always active, all tags prefixed with `Colota.` for logcat filtering |
-| `AutoExportWorker` | WorkManager `CoroutineWorker` for scheduled exports - checks `AutoExportConfig.isExportDue()` on each run, streams chunked writes, verifies output, and cleans up old files beyond retention limit |
-| `AutoExportScheduler` | Schedules a daily (24h) check worker via WorkManager with battery-not-low constraint - frequency logic (daily/weekly/monthly) is handled at runtime by the worker |
-| `AutoExportConfig` | Typed data class wrapping auto-export settings from the SQLite settings table with validation, `isExportDue()`, and `nextExportTimestamp()` |
+| `AutoExportWorker` | WorkManager `CoroutineWorker` enqueued by `AutoExportAlarmReceiver` - performs the export (chunked writes, foreground service, retries, retention cleanup) and re-arms the next alarm in `finally` |
+| `AutoExportAlarmReceiver` | Broadcast receiver fired by AlarmManager at the configured time - hands off to `AutoExportWorker` because the receiver's 10s budget can't run an export |
+| `AutoExportScheduler` | Arms `AlarmManager.setAndAllowWhileIdle` for the next configured wall-clock time. Called on enable, after each worker run, after schedule edits and on boot |
+| `AutoExportConfig` | Typed data class wrapping auto-export settings (interval, time-of-day, weekday, day-of-month, enabledAt) from the SQLite settings table with validation, `isExportDue()` and `nextExportTimestamp()` |
 | `ExportConverters` | Native Kotlin export converters (CSV, GeoJSON, GPX, KML) with in-memory, streaming, and file-based (`exportToFile`) interfaces |
 | `ShortcutHandlerActivity` | Handles app shortcut intents (start/stop tracking) without showing UI - reads config from DB via `ServiceConfig.fromDatabase()` and dispatches to `LocationForegroundService` |
 
@@ -205,7 +206,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, per-trip export, and per-trip delete |
 | `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
 | `ExportDataScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
-| `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, export range, and file retention |
+| `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, time of day, weekday or day-of-month, export range and file retention |
 | `OfflineMapsScreen` | Download and manage offline map areas - interactive bounding box picker, size estimate, progress tracking, and area deletion |
 | `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |

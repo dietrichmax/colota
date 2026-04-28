@@ -4,9 +4,9 @@
  */
 
 import { useState, useEffect, useCallback } from "react"
-import { Text, StyleSheet, View, ActivityIndicator, ScrollView, Pressable } from "react-native"
+import { Text, StyleSheet, View, ActivityIndicator, ScrollView } from "react-native"
 import { fonts } from "../styles/typography"
-import { Download, MapPinOff, Clock, ChevronRight } from "lucide-react-native"
+import { Download, MapPinOff } from "lucide-react-native"
 import { Container, Card, SectionTitle, Button, FormatSelector } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
@@ -15,16 +15,12 @@ import { logger } from "../utils/logger"
 import { showAlert } from "../services/modalService"
 import { ScreenProps } from "../types/global"
 
-export function ExportDataScreen({ navigation }: ScreenProps) {
+export function ExportDataScreen({}: ScreenProps) {
   const { colors } = useTheme()
   const [exporting, setExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState<string>("")
   const [totalLocations, setTotalLocations] = useState(0)
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat | null>(null)
-  const [autoExportEnabled, setAutoExportEnabled] = useState(false)
-  const [autoExportInterval, setAutoExportInterval] = useState("")
-  const [autoExportFormat, setAutoExportFormat] = useState("")
-  const [lastExportTs, setLastExportTs] = useState(0)
 
   const loadStats = useCallback(async () => {
     try {
@@ -35,22 +31,9 @@ export function ExportDataScreen({ navigation }: ScreenProps) {
     }
   }, [])
 
-  const loadAutoExportStatus = useCallback(async () => {
-    try {
-      const status = await NativeLocationService.getAutoExportStatus()
-      setAutoExportEnabled(status.enabled)
-      setAutoExportInterval(status.interval)
-      setAutoExportFormat(status.format)
-      setLastExportTs(status.lastExportTimestamp)
-    } catch (error) {
-      logger.error("[ExportDataScreen] Failed to load auto-export status:", error)
-    }
-  }, [])
-
   useEffect(() => {
     loadStats()
-    loadAutoExportStatus()
-  }, [loadStats, loadAutoExportStatus])
+  }, [loadStats])
 
   const handleExport = async (format: ExportFormat) => {
     if (totalLocations === 0) {
@@ -146,28 +129,6 @@ export function ExportDataScreen({ navigation }: ScreenProps) {
             )}
           </>
         )}
-
-        {/* Auto-Export */}
-        <View style={styles.section}>
-          <SectionTitle>Scheduled Export</SectionTitle>
-          <Card>
-            <Pressable
-              style={({ pressed }) => [styles.autoExportRow, pressed && { opacity: colors.pressedOpacity }]}
-              onPress={() => navigation.navigate("Auto-Export")}
-            >
-              <Clock size={22} color={autoExportEnabled ? colors.primary : colors.textLight} />
-              <View style={styles.autoExportContent}>
-                <Text style={[styles.autoExportLabel, { color: colors.text }]}>Auto-Export</Text>
-                <Text style={[styles.autoExportSub, { color: colors.textSecondary }]}>
-                  {autoExportEnabled
-                    ? `${autoExportInterval === "daily" ? "Daily" : autoExportInterval === "weekly" ? "Weekly" : "Monthly"} - ${autoExportFormat.toUpperCase()}${lastExportTs > 0 ? ` - Last: ${new Date(lastExportTs * 1000).toLocaleDateString()}` : ""}`
-                    : "Schedule automatic exports"}
-                </Text>
-              </View>
-              <ChevronRight size={20} color={colors.textLight} />
-            </Pressable>
-          </Card>
-        </View>
       </ScrollView>
 
       {/* Loading Overlay */}
@@ -275,24 +236,6 @@ const styles = StyleSheet.create({
   loaderText: {
     fontSize: 13,
     textAlign: "center"
-  },
-  autoExportRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 8
-  },
-  autoExportContent: {
-    flex: 1
-  },
-  autoExportLabel: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  autoExportSub: {
-    fontSize: 13,
-    ...fonts.regular
   },
   exportButtonWrapper: {
     marginBottom: 16

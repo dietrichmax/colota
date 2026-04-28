@@ -104,6 +104,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- Auto-export alarm receiver -->
+        <receiver
+            android:name=".export.AutoExportAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

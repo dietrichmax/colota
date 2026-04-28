@@ -18,8 +18,8 @@ class GeofenceHelper(private val context: Context) {
 
     private val dbHelper by lazy { DatabaseHelper.getInstance(context) }
 
-    /** Runtime view of an enabled pause-tracking geofence (what the service reads). */
-    data class CachedGeofence(
+    /** Runtime view of an enabled pause-tracking geofence row. */
+    data class Geofence(
         val name: String,
         val lat: Double,
         val lon: Double,
@@ -35,10 +35,10 @@ class GeofenceHelper(private val context: Context) {
         private const val TAG = "GeofenceHelper"
     }
 
-    fun getGeofenceByName(name: String): CachedGeofence? =
+    fun getGeofenceByName(name: String): Geofence? =
         loadGeofencesFromDB().find { it.name == name }
 
-    fun getPauseZone(location: Location): CachedGeofence? {
+    fun getPauseZone(location: Location): Geofence? {
         val match = loadGeofencesFromDB().find {
             isWithinRadius(location.latitude, location.longitude, it.lat, it.lon, it.radius)
         }
@@ -49,9 +49,9 @@ class GeofenceHelper(private val context: Context) {
         return match
     }
 
-    private fun loadGeofencesFromDB(): List<CachedGeofence> {
+    private fun loadGeofencesFromDB(): List<Geofence> {
         return try {
-            val fences = mutableListOf<CachedGeofence>()
+            val fences = mutableListOf<Geofence>()
             dbHelper.readableDatabase.query(
                 DatabaseHelper.TABLE_GEOFENCES,
                 arrayOf(
@@ -73,7 +73,7 @@ class GeofenceHelper(private val context: Context) {
                 val heartbeatIntervalIdx = cursor.getColumnIndexOrThrow("heartbeat_interval_minutes")
 
                 while (cursor.moveToNext()) {
-                    fences.add(CachedGeofence(
+                    fences.add(Geofence(
                         name = cursor.getString(nameIdx),
                         lat = cursor.getDouble(latIdx),
                         lon = cursor.getDouble(lonIdx),
@@ -89,7 +89,7 @@ class GeofenceHelper(private val context: Context) {
             AppLogger.d(TAG, "Loaded ${fences.size} active pause zone(s)")
             fences
         } catch (e: Exception) {
-            AppLogger.e(TAG, "Failed to refresh geofence cache", e)
+            AppLogger.e(TAG, "Failed to load geofences from DB", e)
             emptyList()
         }
     }
