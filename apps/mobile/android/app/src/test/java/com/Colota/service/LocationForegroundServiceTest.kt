@@ -455,7 +455,7 @@ class LocationForegroundServiceTest {
 
         // Entry delay pending - not yet inside zone
         assertFalse(getField("insidePauseZone"))
-        assertEquals(homeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertEquals(homeGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
         // GPS location is saved during the delay window
         verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         // Zone event not sent until delay completes
@@ -490,7 +490,7 @@ class LocationForegroundServiceTest {
         // Still in Home until delay fires
         assertTrue(getField("insidePauseZone"))
         assertEquals("Home", getField<String?>("currentZoneName"))
-        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertEquals(officeGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -579,7 +579,7 @@ class LocationForegroundServiceTest {
         invokeRecheckZoneWithLocation(location)
 
         assertFalse(getField("insidePauseZone"))
-        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertEquals(officeGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -591,7 +591,7 @@ class LocationForegroundServiceTest {
         invokeHandleZoneRecheckAction()
 
         assertFalse(getField("insidePauseZone"))
-        assertEquals(parkGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertEquals(parkGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -676,7 +676,7 @@ class LocationForegroundServiceTest {
 
         assertTrue(getField("insidePauseZone"))
         assertEquals("Home", getField<String?>("currentZoneName"))
-        assertEquals(homeGeofence, getField<GeofenceHelper.CachedGeofence?>("currentZoneGeofence"))
+        assertEquals(homeGeofence, getField<GeofenceHelper.Geofence?>("currentZoneGeofence"))
         verify { LocationServiceModule.sendPauseZoneEvent(true, "Home") }
     }
 
@@ -748,7 +748,7 @@ class LocationForegroundServiceTest {
 
         assertFalse(getField("insidePauseZone"))
         assertNull(getField<String?>("currentZoneName"))
-        assertNull(getField<GeofenceHelper.CachedGeofence?>("currentZoneGeofence"))
+        assertNull(getField<GeofenceHelper.Geofence?>("currentZoneGeofence"))
         verify { LocationServiceModule.sendPauseZoneEvent(false, "Home") }
     }
 
@@ -842,7 +842,7 @@ class LocationForegroundServiceTest {
         invokeExitPauseZone()
         assertFalse(getField("insidePauseZone"))
         assertNull(getField<String?>("currentZoneName"))
-        assertNull(getField<GeofenceHelper.CachedGeofence?>("currentZoneGeofence"))
+        assertNull(getField<GeofenceHelper.Geofence?>("currentZoneGeofence"))
     }
 
     @Test
@@ -879,7 +879,7 @@ class LocationForegroundServiceTest {
         invokeRecheckZoneWithLocation(location)
 
         assertFalse(getField("insidePauseZone"))
-        assertEquals(parkGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertEquals(parkGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -908,7 +908,7 @@ class LocationForegroundServiceTest {
         // Still in Home until delay fires
         assertTrue(getField("insidePauseZone"))
         assertEquals("Home", getField<String?>("currentZoneName"))
-        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertEquals(officeGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -926,7 +926,7 @@ class LocationForegroundServiceTest {
         verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         // Still in Home - delay pending for Office
         assertEquals("Home", getField<String?>("currentZoneName"))
-        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertEquals(officeGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -1030,7 +1030,7 @@ class LocationForegroundServiceTest {
         invokeStartEntryDelay(homeGeofence)
 
         assertFalse(getField("insidePauseZone"))
-        assertEquals(homeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertEquals(homeGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
         assertNotNull(getField<Job?>("entryDelayJob"))
     }
 
@@ -1044,7 +1044,7 @@ class LocationForegroundServiceTest {
 
         assertTrue(getField("insidePauseZone"))
         assertEquals("Home", getField<String?>("currentZoneName"))
-        assertNull(getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertNull(getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
         verify { LocationServiceModule.sendPauseZoneEvent(true, "Home") }
     }
 
@@ -1067,7 +1067,7 @@ class LocationForegroundServiceTest {
         invokeStartEntryDelay(officeGeofence)
 
         assertTrue(firstJob?.isCancelled == true)
-        assertEquals(officeGeofence, getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertEquals(officeGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -1076,7 +1076,7 @@ class LocationForegroundServiceTest {
 
         invokeCancelEntryDelay()
 
-        assertNull(getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertNull(getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
         assertNull(getField<Job?>("entryDelayJob"))
     }
 
@@ -1112,7 +1112,7 @@ class LocationForegroundServiceTest {
         invokeHandleLocationUpdate(location)
 
         verify { mockJob.cancel() }
-        assertNull(getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertNull(getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -1222,7 +1222,7 @@ class LocationForegroundServiceTest {
         invokeApplyProfileConfig(interval = 2000L, distance = 5f, syncInterval = 30)
 
         verify { mockJob.cancel() }
-        assertNull(getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertNull(getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -1398,7 +1398,7 @@ class LocationForegroundServiceTest {
         invokeOnDestroy()
 
         verify { mockJob.cancel() }
-        assertNull(getField<GeofenceHelper.CachedGeofence?>("pendingPauseZone"))
+        assertNull(getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -1838,9 +1838,9 @@ class LocationForegroundServiceTest {
         method.invoke(service, location)
     }
 
-    private fun invokeEnterPauseZone(geofence: GeofenceHelper.CachedGeofence) {
+    private fun invokeEnterPauseZone(geofence: GeofenceHelper.Geofence) {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
-            "enterPauseZone", GeofenceHelper.CachedGeofence::class.java
+            "enterPauseZone", GeofenceHelper.Geofence::class.java
         )
         method.isAccessible = true
         method.invoke(service, geofence)
@@ -1895,9 +1895,9 @@ class LocationForegroundServiceTest {
         method.invoke(service)
     }
 
-    private fun invokeSaveAnchorPoint(geofence: GeofenceHelper.CachedGeofence) {
+    private fun invokeSaveAnchorPoint(geofence: GeofenceHelper.Geofence) {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
-            "saveAnchorPoint", GeofenceHelper.CachedGeofence::class.java
+            "saveAnchorPoint", GeofenceHelper.Geofence::class.java
         )
         method.isAccessible = true
         method.invoke(service, geofence)
@@ -2064,9 +2064,9 @@ class LocationForegroundServiceTest {
     // Reflection helpers
     // =========================================================================
 
-    private fun invokeStartEntryDelay(geofence: GeofenceHelper.CachedGeofence) {
+    private fun invokeStartEntryDelay(geofence: GeofenceHelper.Geofence) {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
-            "startEntryDelay", GeofenceHelper.CachedGeofence::class.java
+            "startEntryDelay", GeofenceHelper.Geofence::class.java
         )
         method.isAccessible = true
         method.invoke(service, geofence)
@@ -2102,9 +2102,9 @@ class LocationForegroundServiceTest {
         method.invoke(service)
     }
 
-    private fun invokeApplyZoneSettingsIfChanged(zone: GeofenceHelper.CachedGeofence) {
+    private fun invokeApplyZoneSettingsIfChanged(zone: GeofenceHelper.Geofence) {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
-            "applyZoneSettingsIfChanged", GeofenceHelper.CachedGeofence::class.java
+            "applyZoneSettingsIfChanged", GeofenceHelper.Geofence::class.java
         )
         method.isAccessible = true
         method.invoke(service, zone)
@@ -2118,7 +2118,7 @@ class LocationForegroundServiceTest {
         pauseOnWifi: Boolean = false,
         pauseOnMotionless: Boolean = false,
         motionlessTimeoutMinutes: Int = 10
-    ) = GeofenceHelper.CachedGeofence(name, lat, lon, radius, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes)
+    ) = GeofenceHelper.Geofence(name, lat, lon, radius, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes)
 
     private fun invokeSendHeartbeatLocation() = runBlocking {
         val method = LocationForegroundService::class.java.getDeclaredMethod(

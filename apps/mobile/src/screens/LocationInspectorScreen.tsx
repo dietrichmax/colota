@@ -18,6 +18,7 @@ import { TrackMap } from "../components/features/inspector/TrackMap"
 import { TripList } from "../components/features/inspector/TripList"
 import { LocationTable } from "../components/features/inspector/LocationTable"
 import { formatDistance } from "../utils/geo"
+import { pad2 } from "../utils/format"
 import { segmentTrips } from "../utils/trips"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert } from "../services/modalService"
@@ -81,7 +82,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
 
   /** Fetch days-with-data and daily distances for a month into cache. */
   const prefetchMonth = useCallback(async (year: number, month: number): Promise<Set<string>> => {
-    const key = `${year}-${String(month + 1).padStart(2, "0")}`
+    const key = `${year}-${pad2(month + 1)}`
     if (daysCache.current.has(key)) return daysCache.current.get(key)!
     try {
       const start = new Date(year, month, 1)
@@ -156,7 +157,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   /** Refresh on focus so trip deletions in TripDetail are reflected */
   useFocusEffect(
     useCallback(() => {
-      const key = `${mapDate.getFullYear()}-${String(mapDate.getMonth() + 1).padStart(2, "0")}`
+      const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
       daysCache.current.delete(key)
       distanceCache.current.delete(key)
       fetchTrackData()
@@ -216,9 +217,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         distance={dailyDistance}
         colors={colors}
         daysWithData={daysWithData}
-        dayDistances={distanceCache.current.get(
-          `${mapDate.getFullYear()}-${String(mapDate.getMonth() + 1).padStart(2, "0")}`
-        )}
+        dayDistances={distanceCache.current.get(`${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`)}
         onMonthChange={fetchDaysWithData}
         onPrefetchMonth={prefetchMonth}
       />

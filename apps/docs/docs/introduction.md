@@ -46,7 +46,7 @@ Colota has twenty-one screens, each focused on a specific task:
 | **Trip Detail** | Full trip view with dedicated map, stats grid (distance, duration, avg speed, elevation), speed and elevation profile charts, export, and delete |
 | **Location Summary** | Aggregated stats (total distance, trips, active days, avg distance) for selectable periods with daily breakdown and tap-to-inspect navigation |
 | **Export Data** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
-| **Auto-Export** | Configure scheduled exports: format, directory, frequency, export range, and file retention |
+| **Auto-Export** | Configure scheduled exports: directory, format, frequency, time of day (with weekday or day-of-month for weekly/monthly), export range and file retention |
 | **Data Management** | Clear sent history, delete old data, vacuum the database |
 | **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
 | **Activity Log** | In-app log viewer with level filtering, search, and export for bug reports |

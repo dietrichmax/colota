@@ -26,8 +26,10 @@ import java.io.File
 import java.io.IOException
 
 /**
- * Runs daily and asks AutoExportConfig.isExportDue() whether the configured
- * daily/weekly/monthly cadence has actually elapsed. Runs without the JS runtime.
+ * Performs the actual export. Triggered by AutoExportAlarmReceiver when the
+ * configured time arrives, or by an immediate "Export Now" enqueue. Runs as
+ * a foreground service so the OS does not kill long exports. Runs without the
+ * JS runtime.
  */
 class AutoExportWorker(
     private val appContext: Context,
@@ -59,6 +61,21 @@ class AutoExportWorker(
     }
 
     override suspend fun doWork(): Result {
+        val isManualRun = tags.contains(AutoExportScheduler.IMMEDIATE_WORK_TAG)
+        return try {
+            executeWork(isManualRun)
+        } finally {
+            if (!isManualRun) {
+                try {
+                    AutoExportScheduler.scheduleNext(appContext)
+                } catch (e: Exception) {
+                    AppLogger.w(TAG, "scheduleNext failed: ${e.message}")
+                }
+            }
+        }
+    }
+
+    private suspend fun executeWork(isManualRun: Boolean): Result {
         if (runAttemptCount >= MAX_RETRIES) {
             AppLogger.e(TAG, "Auto-export failed after $MAX_RETRIES attempts, giving up")
             showNotification("Auto-Export Failed", "Export failed after multiple attempts. Please check your settings.")
@@ -78,13 +95,13 @@ class AutoExportWorker(
             return Result.failure()
         }
 
-        val isManualRun = tags.contains("colota_auto_export_now")
+        // Guards against early fires from stale alarms or mid-flight schedule edits.
         if (!isManualRun && !config.isExportDue()) {
-            AppLogger.d(TAG, "Export not yet due, skipping")
+            AppLogger.i(TAG, "Not due. ${config.interval} ${config.timeOfDay} next=${config.nextExportTimestamp()}")
             return Result.success()
         }
 
-        AppLogger.i(TAG, "Starting auto-export: format=${config.format}, mode=${config.mode}")
+        AppLogger.i(TAG, "Starting export: format=${config.format} mode=${config.mode}")
 
         // Some OEMs (Samsung, Xiaomi) throw under aggressive background restrictions;
         // the export often still completes.
@@ -103,11 +120,14 @@ class AutoExportWorker(
         // Write to cache first, then copy to SAF.
         val tempFile = File(appContext.cacheDir, "auto_export_temp$ext")
 
+        // Used for both the incremental upper bound and the saved lastExport,
+        // so points written mid-export aren't dropped.
+        val exportStartSec = System.currentTimeMillis() / 1000
+
         return try {
             val rowCount = if (config.mode == "incremental" && config.lastExportTimestamp > 0) {
-                val now = System.currentTimeMillis() / 1000
                 ExportConverters.exportToFile(config.format, tempFile, shouldCancel = { isStopped }) { limit, offset ->
-                    db.getLocationsByDateRange(config.lastExportTimestamp, now, limit, offset)
+                    db.getLocationsByDateRange(config.lastExportTimestamp, exportStartSec, limit, offset)
                 }
             } else {
                 ExportConverters.exportToFile(config.format, tempFile, shouldCancel = { isStopped }) { limit, offset ->
@@ -143,8 +163,7 @@ class AutoExportWorker(
 
             tempFile.delete()
 
-            val now = System.currentTimeMillis() / 1000
-            config.saveLastExportTimestamp(db, now)
+            config.saveLastExportTimestamp(db, exportStartSec)
 
             cleanupOldExports(dirUri, config.retentionCount)
 

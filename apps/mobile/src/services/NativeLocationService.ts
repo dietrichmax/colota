@@ -718,9 +718,7 @@ class NativeLocationService {
   }
 
   /**
-   * Schedules the daily auto-export check worker via WorkManager.
-   * The worker checks AutoExportConfig.isExportDue() to determine
-   * if an export should actually run (daily/weekly/monthly).
+   * Marks enabledAt and arms the first auto-export alarm.
    */
   static async scheduleAutoExport(): Promise<boolean> {
     this.ensureModule()
@@ -744,6 +742,14 @@ class NativeLocationService {
   }
 
   /**
+   * Re-arms the auto-export alarm after a schedule-affecting setting change.
+   */
+  static async rescheduleAutoExport(): Promise<boolean> {
+    this.ensureModule()
+    return LocationServiceModule.rescheduleAutoExport()
+  }
+
+  /**
    * Returns current auto-export configuration and status.
    */
   static async getAutoExportStatus(): Promise<{
@@ -759,6 +765,9 @@ class NativeLocationService {
     lastFileName: string | null
     lastRowCount: number
     lastError: string | null
+    timeOfDay: string
+    weeklyDow: number
+    monthlyDom: number
   }> {
     this.ensureModule()
     return LocationServiceModule.getAutoExportStatus()

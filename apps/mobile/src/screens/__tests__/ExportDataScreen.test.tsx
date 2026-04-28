@@ -293,45 +293,4 @@ describe("ExportDataScreen", () => {
     // totalLocations is 0 so the format cards are not rendered and no export button exists
     expect(queryByText("CSV")).toBeNull()
   })
-
-  it("shows auto-export section with status", async () => {
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Scheduled Export")).toBeTruthy()
-      expect(getByText("Auto-Export")).toBeTruthy()
-    })
-  })
-
-  it("shows auto-export summary when enabled", async () => {
-    const mockModule = require("../../services/NativeLocationService").default
-    mockModule.getAutoExportStatus.mockResolvedValueOnce({
-      enabled: true,
-      format: "csv",
-      interval: "weekly",
-      uri: "content://some-uri",
-      mode: "all",
-      lastExportTimestamp: 1700000000,
-      nextExportTimestamp: 1700604800,
-      fileCount: 5
-    })
-
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText(/Weekly/)).toBeTruthy()
-    })
-  })
-
-  it("navigates to Auto-Export screen on press", async () => {
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Auto-Export")).toBeTruthy()
-    })
-
-    fireEvent.press(getByText("Auto-Export"))
-
-    expect(mockNavigation.navigate).toHaveBeenCalledWith("Auto-Export")
-  })
 })

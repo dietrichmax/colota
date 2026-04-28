@@ -43,11 +43,11 @@ Automatically export your location data on a schedule without opening the app.
 
 ### Setup
 
-1. Go to **Data Management** > **Export Data**
-2. Tap the **Auto-Export** card at the bottom
-3. Select an export directory (files are saved there via Android's Storage Access Framework)
-4. Choose a format (CSV, GeoJSON, GPX, or KML)
-5. Set the frequency: **Daily**, **Weekly**, or **Monthly**
+1. Go to **Settings > Auto-Export**
+2. Select an export directory (files are saved there via Android's Storage Access Framework)
+3. Choose a format (CSV, GeoJSON, GPX, or KML)
+4. Set the frequency: **Daily**, **Weekly**, or **Monthly**
+5. Pick the **Time** (24-hour) in your device's local timezone. For **Weekly**, also pick a day of week. For **Monthly**, pick a day of month (1-31)
 6. Enable the toggle
 
 You can also tap **Export Now** to trigger an immediate export using your current auto-export settings, without waiting for the next scheduled run.
@@ -59,11 +59,13 @@ You can also tap **Export Now** to trigger an immediate export using your curren
 
 ### File Retention
 
-By default, auto-export keeps the last **10** export files and deletes older ones automatically. You can change this in the **File Retention** setting (1, 5, 10, 30, or Unlimited).
+By default, auto-export keeps the last **10** export files and deletes older ones automatically. You can change this in the **File Retention** setting - enter any number or **0** for unlimited (no automatic cleanup).
 
 ### How it works
 
-- Uses Android WorkManager with a daily check interval - the worker runs every 24 hours and checks whether an export is actually due based on your chosen frequency
+- Uses Android AlarmManager (`setAndAllowWhileIdle`) to fire at your configured wall-clock time. Typical accuracy is within minutes; Doze mode may delay by up to ~15 minutes
+- After each export the next alarm is armed automatically. Alarms also re-arm after device reboot
+- Exports fire at the configured time, not on enable. To run an export immediately for testing or backup, tap **Export Now**
 - Promotes to a foreground service during export, preventing Android from killing long-running exports
 - Streams data in chunks (10,000 locations at a time) to keep memory usage low even with very large datasets
 - Writes to a temporary file first, then copies to the export directory - if something goes wrong mid-export, you never get a partial or corrupted file
@@ -74,7 +76,7 @@ By default, auto-export keeps the last **10** export files and deletes older one
 - A notification is shown after each export with the file name and location count
 - Old export files beyond the retention limit are cleaned up after each successful export
 
-:::note **Monthly** frequency uses a calendar month (e.g. Jan 15 to Feb 15), not a fixed 30-day interval. **Daily** and **Weekly** intervals are approximate due to Android battery optimization.
+:::note **Monthly** frequency uses a calendar month (e.g. Jan 15 to Feb 15), not a fixed 30-day interval. If the chosen day-of-month doesn't exist in a given month (e.g. day 31 in February), the export runs on the last day of that month instead. **Daily**, **Weekly** and **Monthly** intervals fire at the chosen wall-clock time via Android AlarmManager. Typical accuracy is within minutes.
 
 :::
 

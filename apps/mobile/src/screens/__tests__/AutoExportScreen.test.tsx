@@ -41,11 +41,15 @@ const mockGetAutoExportStatus = jest.fn().mockResolvedValue({
   retentionCount: 10,
   lastFileName: null,
   lastRowCount: 0,
-  lastError: null
+  lastError: null,
+  timeOfDay: "00:00",
+  weeklyDow: 1,
+  monthlyDom: 1
 })
 const mockSaveSetting = jest.fn().mockResolvedValue(undefined)
 const mockScheduleAutoExport = jest.fn().mockResolvedValue(true)
 const mockCancelAutoExport = jest.fn().mockResolvedValue(true)
+const mockRescheduleAutoExport = jest.fn().mockResolvedValue(true)
 const mockPickExportDirectory = jest.fn().mockResolvedValue(null)
 const mockRunAutoExportNow = jest.fn().mockResolvedValue(true)
 const mockGetSetting = jest.fn().mockResolvedValue(null)
@@ -69,6 +73,9 @@ jest.mock("../../services/NativeLocationService", () => ({
     },
     cancelAutoExport: function () {
       return mockCancelAutoExport.apply(null, arguments)
+    },
+    rescheduleAutoExport: function () {
+      return mockRescheduleAutoExport.apply(null, arguments)
     },
     pickExportDirectory: function () {
       return mockPickExportDirectory.apply(null, arguments)
@@ -161,6 +168,30 @@ jest.mock("../../components", () => {
         RN.Pressable,
         { onPress: props.onPress, disabled: props.disabled },
         R.createElement(RN.Text, null, props.title)
+      ),
+    TimePicker: (props: any) =>
+      R.createElement(
+        RN.View,
+        { testID: "time-picker" },
+        R.createElement(RN.Text, null, props.value),
+        R.createElement(
+          RN.Pressable,
+          { testID: "time-picker-bump", onPress: () => props.onChange("06:30") },
+          R.createElement(RN.Text, null, "bump")
+        )
+      ),
+    NumericInput: (props: any) =>
+      R.createElement(
+        RN.View,
+        null,
+        R.createElement(RN.Text, null, props.label),
+        props.hint && R.createElement(RN.Text, null, props.hint),
+        R.createElement(RN.TextInput, {
+          testID: `numeric-input-${props.label}`,
+          value: props.value,
+          onChangeText: props.onChange,
+          onBlur: props.onBlur
+        })
       )
   }
 })
@@ -196,7 +227,10 @@ describe("AutoExportScreen", () => {
       retentionCount: 10,
       lastFileName: null,
       lastRowCount: 0,
-      lastError: null
+      lastError: null,
+      timeOfDay: "00:00",
+      weeklyDow: 1,
+      monthlyDom: 1
     })
     mockGetExportFiles.mockResolvedValue([])
   })
@@ -441,17 +475,35 @@ describe("AutoExportScreen", () => {
     })
   })
 
-  it("changing retention saves the setting", async () => {
-    const { getByText } = render(<AutoExportScreen {...mockProps} />)
+  it("changing retention saves the setting on blur", async () => {
+    const { getByTestId } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("5 files")).toBeTruthy()
+      expect(getByTestId("numeric-input-Files to keep")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("5 files"))
+    const input = getByTestId("numeric-input-Files to keep")
+    fireEvent.changeText(input, "25")
+    fireEvent(input, "blur")
 
     await waitFor(() => {
-      expect(mockSaveSetting).toHaveBeenCalledWith("autoExportRetentionCount", "5")
+      expect(mockSaveSetting).toHaveBeenCalledWith("autoExportRetentionCount", "25")
+    })
+  })
+
+  it("retention 0 saves as unlimited", async () => {
+    const { getByTestId, getByText } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByText("Set to 0 for unlimited")).toBeTruthy()
+    })
+
+    const input = getByTestId("numeric-input-Files to keep")
+    fireEvent.changeText(input, "0")
+    fireEvent(input, "blur")
+
+    await waitFor(() => {
+      expect(mockSaveSetting).toHaveBeenCalledWith("autoExportRetentionCount", "0")
     })
   })
 
@@ -627,6 +679,175 @@ describe("AutoExportScreen", () => {
         "Exported 100 locations to colota_export_2026-03-10.csv",
         "success"
       )
+    })
+  })
+
+  it("renders time picker with configured timeOfDay", async () => {
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      format: "geojson",
+      interval: "daily",
+      uri: "content://some-uri",
+      mode: "all",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0,
+      retentionCount: 10,
+      lastFileName: null,
+      lastRowCount: 0,
+      lastError: null,
+      timeOfDay: "07:45",
+      weeklyDow: 1,
+      monthlyDom: 1
+    })
+
+    const { getByText } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByText("07:45")).toBeTruthy()
+    })
+  })
+
+  it("changing time of day saves the setting", async () => {
+    const { getByTestId } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByTestId("time-picker")).toBeTruthy()
+    })
+
+    fireEvent.press(getByTestId("time-picker-bump"))
+
+    await waitFor(() => {
+      expect(mockSaveSetting).toHaveBeenCalledWith("autoExportTimeOfDay", "06:30")
+    })
+  })
+
+  it("renders weekday chips when interval is weekly", async () => {
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      format: "geojson",
+      interval: "weekly",
+      uri: "content://some-uri",
+      mode: "all",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0,
+      retentionCount: 10,
+      lastFileName: null,
+      lastRowCount: 0,
+      lastError: null,
+      timeOfDay: "00:00",
+      weeklyDow: 3,
+      monthlyDom: 1
+    })
+
+    const { getByText } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByText("Mon")).toBeTruthy()
+      expect(getByText("Sun")).toBeTruthy()
+    })
+
+    fireEvent.press(getByText("Fri"))
+
+    await waitFor(() => {
+      expect(mockSaveSetting).toHaveBeenCalledWith("autoExportWeeklyDow", "5")
+    })
+  })
+
+  it("renders day-of-month input when interval is monthly", async () => {
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      format: "geojson",
+      interval: "monthly",
+      uri: "content://some-uri",
+      mode: "all",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0,
+      retentionCount: 10,
+      lastFileName: null,
+      lastRowCount: 0,
+      lastError: null,
+      timeOfDay: "00:00",
+      weeklyDow: 1,
+      monthlyDom: 7
+    })
+
+    const { getByTestId } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByTestId("numeric-input-Day of month")).toBeTruthy()
+    })
+
+    const input = getByTestId("numeric-input-Day of month")
+    fireEvent.changeText(input, "15")
+    fireEvent(input, "blur")
+
+    await waitFor(() => {
+      expect(mockSaveSetting).toHaveBeenCalledWith("autoExportMonthlyDom", "15")
+    })
+  })
+
+  it("clamps day-of-month to 31", async () => {
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      format: "geojson",
+      interval: "monthly",
+      uri: "content://some-uri",
+      mode: "all",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0,
+      retentionCount: 10,
+      lastFileName: null,
+      lastRowCount: 0,
+      lastError: null,
+      timeOfDay: "00:00",
+      weeklyDow: 1,
+      monthlyDom: 1
+    })
+
+    const { getByTestId } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByTestId("numeric-input-Day of month")).toBeTruthy()
+    })
+
+    const input = getByTestId("numeric-input-Day of month")
+    fireEvent.changeText(input, "99")
+    fireEvent(input, "blur")
+
+    await waitFor(() => {
+      expect(mockSaveSetting).toHaveBeenCalledWith("autoExportMonthlyDom", "31")
+    })
+  })
+
+  it("formats Last Export with 24h clock", async () => {
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      format: "geojson",
+      interval: "daily",
+      uri: "content://some-uri",
+      mode: "all",
+      lastExportTimestamp: 1700000000, // 2023-11-14 22:13:20 UTC
+      nextExportTimestamp: 1700086400,
+      fileCount: 0,
+      retentionCount: 10,
+      lastFileName: null,
+      lastRowCount: 0,
+      lastError: null,
+      timeOfDay: "00:00",
+      weeklyDow: 1,
+      monthlyDom: 1
+    })
+
+    const { queryAllByText } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      // Format: "YYYY-MM-DD HH:MM" - assert no AM/PM and digits look right.
+      const ampmMatches = queryAllByText(/\b(AM|PM)\b/)
+      expect(ampmMatches.length).toBe(0)
     })
   })
 

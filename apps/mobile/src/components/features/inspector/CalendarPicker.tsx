@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight, Calendar } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
 import { formatDistance } from "../../../utils/geo"
+import { pad2 } from "../../../utils/format"
 import { HIT_SLOP_LG } from "../../../constants"
 
 interface CalendarPickerProps {
@@ -30,7 +31,7 @@ function isSameDay(a: Date, b: Date): boolean {
 }
 
 function formatDateKey(year: number, month: number, day: number): string {
-  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+  return `${year}-${pad2(month + 1)}-${pad2(day)}`
 }
 
 export function CalendarPicker({
