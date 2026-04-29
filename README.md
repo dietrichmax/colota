@@ -4,7 +4,7 @@
 
 # Colota - GPS Location Tracker
 
-[![Version](https://img.shields.io/github/v/release/dietrichmax/colota)](https://github.com/dietrichmax/colota/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Google Play](https://img.shields.io/badge/Google_Play-Download-green.svg?logo=google-play)](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) [![IzzyOnDroid](https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/com.Colota&label=IzzyOnDroid)](https://apt.izzysoft.de/fdroid/index/apk/com.Colota)
+[![Version](https://img.shields.io/github/v/release/dietrichmax/colota)](https://github.com/dietrichmax/colota/releases) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Google Play](https://img.shields.io/badge/Google_Play-Download-green.svg?logo=google-play)](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) [![F-Droid Version](https://img.shields.io/f-droid/v/com.Colota)](https://f-droid.org/de/packages/com.Colota) [![IzzyOnDroid](https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/com.Colota&label=IzzyOnDroid)](https://apt.izzysoft.de/fdroid/index/apk/com.Colota)
 
 **Self-hosted GPS tracking app for Android.**
 
@@ -64,7 +64,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 
 ## Quick Start
 
-1. Install from [Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US) or download the APK from [GitHub Releases](https://github.com/dietrichmax/colota/releases)
+1. Install from [Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US), [F-Droid](https://f-droid.org/packages/com.Colota/), [IzzyOnDroid](https://apt.izzysoft.de/packages/com.Colota/) or download the APK from [GitHub Releases](https://github.com/dietrichmax/colota/releases)
 2. Grant location permissions (precise, all the time)
 3. Grant notification permission (required for the foreground service)
 4. Disable battery optimization for Colota

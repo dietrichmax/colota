@@ -10,13 +10,19 @@ sidebar_position: 1
 
 The Google Play version uses Google Play Services for location (FusedLocationProvider).
 
+## From F-Droid
+
+[Get it on F-Droid](https://f-droid.org/packages/com.Colota/)
+
+The F-Droid version uses Android's native LocationManager and has **no Google Play Services dependency**. This is the recommended option for devices running LineageOS, CalyxOS, or any ROM without Google services.
+
 ## From IzzyOnDroid
 
 [Get it on IzzyOnDroid](https://apt.izzysoft.de/packages/com.Colota/)
 
-The IzzyOnDroid version uses Android's native LocationManager and has **no Google Play Services dependency**. This is the recommended option for devices running LineageOS, CalyxOS, or any ROM without Google services.
+The IzzyOnDroid version is the same FOSS variant as on F-Droid and has **no Google Play Services dependency**. IzzyOnDroid typically receives new releases faster than the official F-Droid repository.
 
-**GrapheneOS users:** You can use the Google Play variant with sandboxed Google Play, or install the FOSS variant via IzzyOnDroid or GitHub Releases. GrapheneOS reroutes location requests to its own reimplementation of the Play geolocation service, so you get the accuracy benefits of FusedLocationProvider without sending location data to Google.
+**GrapheneOS users:** You can use the Google Play variant with sandboxed Google Play, or install the FOSS variant via F-Droid, IzzyOnDroid or GitHub Releases. GrapheneOS reroutes location requests to its own reimplementation of the Play geolocation service, so you get the accuracy benefits of FusedLocationProvider without sending location data to Google.
 
 ## From GitHub Releases
 
