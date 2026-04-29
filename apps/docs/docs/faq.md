@@ -18,7 +18,7 @@ No, but you can use [Dawarich](/docs/integrations/dawarich) or a custom backend 
 
 ### Does this work without Google Play Services?
 
-Yes. The **FOSS variant** (available on IzzyOnDroid and GitHub Releases) uses Android's native `LocationManager` and has no Google Play Services dependency. It works on LineageOS, GrapheneOS, CalyxOS, and any ROM without Google services.
+Yes. The **FOSS variant** (available on F-Droid, IzzyOnDroid and GitHub Releases) uses Android's native `LocationManager` and has no Google Play Services dependency. It works on LineageOS, GrapheneOS, CalyxOS and any ROM without Google services.
 
 The Google Play variant uses `FusedLocationProvider` for potentially better location accuracy through Wi-Fi and cell tower fusion.
 
@@ -51,6 +51,7 @@ Depends on your settings. With the **Balanced** preset (30s interval, batch sync
 ### How do I update the app?
 
 - **Google Play** - updates automatically, or open the Play Store and tap Update
+- **F-Droid** - open the F-Droid client and update from there, or use [Obtainium](https://github.com/ImranR98/Obtainium) to track releases automatically
 - **IzzyOnDroid** - open the IzzyOnDroid client and update from there, or use [Obtainium](https://github.com/ImranR98/Obtainium) to track releases automatically
 - **GitHub Releases** - download the latest APK from [GitHub Releases](https://github.com/dietrichmax/colota/releases) and install it - Android will update the existing app in place
 

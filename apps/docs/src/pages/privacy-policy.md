@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-**Last updated: March 28, 2026**
+**Last updated: April 29, 2026**
 
 Colota ("the App") is a self-hosted GPS tracking application for Android, developed by Max Dietrich. This privacy policy explains what data the App collects, how it is used, and your rights regarding that data.
 
@@ -73,7 +73,7 @@ Colota does not share your data with anyone. The only data transmission occurs t
 
 ### Google Play
 
-The GMS variant of the App is distributed via Google Play, which may collect data according to [Google's Privacy Policy](https://policies.google.com/privacy). This is outside the App's control. The FOSS variant is available on IzzyOnDroid and GitHub Releases with no Google dependency.
+The GMS variant of the App is distributed via Google Play, which may collect data according to [Google's Privacy Policy](https://policies.google.com/privacy). This is outside the App's control. The FOSS variant is available on F-Droid, IzzyOnDroid and GitHub Releases with no Google dependency.
 
 ### Map Tiles (maps.mxd.codes)
 
