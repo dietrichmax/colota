@@ -1,0 +1,10 @@
+- Configurable auto-export time (daily/weekly/monthly)
+- Warning on dashboard when system Location is off
+- Delete individual trips from history detail
+- Settings reorganized into grouped sub-screens
+- FOSS variant now GPS-only
+- Profile switching reacts at low speeds and indoor drift
+- Fixed gray Start button after plugging in charger
+- Fixed startup hang on database migration
+- Fixed GeoPulse health endpoint
+- Fixed empty-day map auto-fit
