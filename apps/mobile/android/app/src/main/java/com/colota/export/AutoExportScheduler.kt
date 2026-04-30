@@ -67,7 +67,6 @@ object AutoExportScheduler {
 
     private fun pendingIntent(context: Context): PendingIntent {
         val intent = Intent(context, AutoExportAlarmReceiver::class.java).apply {
-            action = AutoExportAlarmReceiver.ACTION_FIRE
             setPackage(context.packageName)
         }
         return PendingIntent.getBroadcast(

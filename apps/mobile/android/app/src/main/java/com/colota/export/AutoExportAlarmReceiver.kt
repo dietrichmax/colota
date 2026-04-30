@@ -27,6 +27,5 @@ class AutoExportAlarmReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "AutoExportAlarm"
-        const val ACTION_FIRE = "com.Colota.export.action.FIRE_AUTO_EXPORT"
     }
 }
