@@ -92,18 +92,18 @@ describe("TrackMap auto-fit", () => {
     const locsA = [loc(48.1, 11.5), loc(48.2, 11.6)]
     const locsB = [loc(52.5, 13.4), loc(52.6, 13.5)]
 
-    const { rerender } = render(<TrackMap locations={locsA} selectedPoint={null} colors={colors} fitVersion={1} />)
+    const { rerender } = render(<TrackMap locations={locsA} colors={colors} fitVersion={1} />)
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
 
     // Switch to empty day
     act(() => {
-      rerender(<TrackMap locations={[]} selectedPoint={null} colors={colors} fitVersion={2} />)
+      rerender(<TrackMap locations={[]} colors={colors} fitVersion={2} />)
     })
     expect(mockFitBounds).toHaveBeenCalledTimes(1) // no new fit on empty
 
     // Switch to another non-empty day - the regression target
     act(() => {
-      rerender(<TrackMap locations={locsB} selectedPoint={null} colors={colors} fitVersion={3} />)
+      rerender(<TrackMap locations={locsB} colors={colors} fitVersion={3} />)
     })
     expect(mockFitBounds).toHaveBeenCalledTimes(2)
   })

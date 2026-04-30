@@ -239,7 +239,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
           {calendarPicker}
           <TrackMap
             locations={mapLocations}
-            selectedPoint={null}
             colors={colors}
             trips={selectedTrip ? undefined : trips}
             fitVersion={fitVersion}

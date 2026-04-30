@@ -4,3 +4,8 @@ paths-ignore:
   - '**/*.test.ts'
   - '**/*.test.tsx'
   - '**/src/test/**'
+
+query-filters:
+  - exclude:
+      id:
+        - java/missing-override-annotation
