@@ -7,6 +7,7 @@ package com.Colota.export
 
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.WorkerThread
@@ -66,7 +67,8 @@ object AutoExportScheduler {
     }
 
     private fun pendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, AutoExportAlarmReceiver::class.java).apply {
+        val intent = Intent().apply {
+            component = ComponentName(context, AutoExportAlarmReceiver::class.java)
             setPackage(context.packageName)
         }
         return PendingIntent.getBroadcast(
