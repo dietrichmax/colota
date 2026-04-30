@@ -10,6 +10,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.Colota.data.DatabaseHelper
+import com.Colota.data.SettingsKeys
+import com.Colota.export.AutoExportScheduler
 import com.Colota.util.AppLogger
 import com.Colota.util.DeviceInfoHelper
 import kotlinx.coroutines.*
@@ -60,7 +62,7 @@ class LocationBootReceiver : BroadcastReceiver() {
         repeat(MAX_DB_RETRIES) { attempt ->
             try {
                 // Test database access
-                dbHelper.getSetting("tracking_enabled")
+                dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED)
                 return true
             } catch (e: Exception) {
                 AppLogger.d(TAG, "DB not ready, attempt ${attempt + 1}/$MAX_DB_RETRIES")
@@ -75,14 +77,21 @@ class LocationBootReceiver : BroadcastReceiver() {
     private suspend fun handleBootCompleted(context: Context, action: String) {
         try {
             val dbHelper = DatabaseHelper.getInstance(context)
-            
+
             // Wait for database to be ready
             if (!waitForDatabaseReady(dbHelper)) {
                 AppLogger.e(TAG, "Database not ready after $MAX_DB_RETRIES attempts")
                 return
             }
-            
-            val isEnabled = dbHelper.getSetting("tracking_enabled", "false") == "true"
+
+            // Alarms don't survive reboot. No-op if auto-export is disabled.
+            try {
+                AutoExportScheduler.scheduleNext(context)
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "scheduleNext failed on boot: ${e.message}")
+            }
+
+            val isEnabled = dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
             
             if (!isEnabled) {
                 AppLogger.d(TAG, "Boot detected but tracking disabled")

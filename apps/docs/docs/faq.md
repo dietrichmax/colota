@@ -24,6 +24,14 @@ The Google Play variant uses `FusedLocationProvider` for potentially better loca
 
 **GrapheneOS users:** You can use the GMS variant with sandboxed Google Play. GrapheneOS reroutes location requests to its own reimplementation of the Play geolocation service, so you get the accuracy benefits of `FusedLocationProvider` without sending location data to Google.
 
+### Which variant should I use - FOSS or Google Play?
+
+The **Google Play variant** is generally the better choice for most users. `FusedLocationProvider` combines GPS, Wi-Fi, cell towers and motion sensors to deliver faster fixes and better battery efficiency, especially indoors and in dense urban areas.
+
+The **FOSS variant** uses Android's raw `LocationManager` with GPS as primary and network as fallback. It works reliably outdoors, but cold-start fixes can be slower and indoor accuracy is weaker without Wi-Fi and cell tower fusion.
+
+If avoiding (sandboxed) Play Services is a priority, the FOSS variant is a perfectly fine option. On GrapheneOS with sandboxed Google Play, the GMS variant gives you the accuracy benefits without sending location data to Google (see above).
+
 ### Why AGPL-3.0?
 
 To ensure modifications stay open source, especially server-side components.

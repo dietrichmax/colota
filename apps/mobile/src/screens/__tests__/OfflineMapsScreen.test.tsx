@@ -9,9 +9,8 @@ import { OfflineMapsScreen } from "../OfflineMapsScreen"
 
 // --- MapLibre ---
 jest.mock("@maplibre/maplibre-react-native", () => ({
-  ShapeSource: () => null,
-  FillLayer: () => null,
-  LineLayer: () => null
+  GeoJSONSource: () => null,
+  Layer: () => null
 }))
 
 // --- Navigation ---
@@ -94,9 +93,12 @@ const mockEstimateSizeLabel = jest.fn()
 const mockEstimateSizeBytes = jest.fn()
 const mockWillExceedTileLimit = jest.fn()
 
+jest.mock("../../utils/format", () => ({
+  formatBytes: jest.fn().mockReturnValue("5.0 MB")
+}))
+
 jest.mock("../../components/features/map/OfflinePackManager", () => ({
-  DOWNLOAD_STATE: { INACTIVE: 0, ACTIVE: 1, COMPLETE: 2, FAILED: 3 },
-  formatBytes: jest.fn().mockReturnValue("5.0 MB"),
+  DOWNLOAD_STATE: { INACTIVE: "inactive", ACTIVE: "active", COMPLETE: "complete" },
   loadOfflineAreas: (...args: any[]) => mockLoadOfflineAreas(...args),
   loadOfflineAreaBounds: (...args: any[]) => mockLoadOfflineAreaBounds(...args),
   createOfflinePack: (...args: any[]) => mockCreateOfflinePack(...args),
@@ -118,10 +120,7 @@ jest.mock("../../components/features/map/ColotaMapView", () => {
       R.useEffect(() => {
         onRegionDidChange?.({
           isUserInteraction: false,
-          visibleBounds: [
-            [13.5, 52.6],
-            [13.4, 52.5]
-          ]
+          bounds: [13.4, 52.5, 13.5, 52.6]
         })
       }, [])
       return R.createElement(View, { testID: "map-view" }, children)

@@ -6,6 +6,7 @@
 import React, { useState, useRef, useCallback, useMemo } from "react"
 import { View, PanResponder, LayoutChangeEvent } from "react-native"
 import Svg, { Path, Line, Circle, Rect, Text as SvgText } from "react-native-svg"
+import { clamp } from "../../../utils/format"
 
 interface InteractiveLineChartProps {
   data: number[]
@@ -53,9 +54,9 @@ export function InteractiveLineChart({
     const d = dataRef.current
     if (w === 0 || d.length === 0) return null
     const plotW = w - CHART_PADDING.left - CHART_PADDING.right
-    const clampedX = Math.max(0, Math.min(x - CHART_PADDING.left, plotW))
+    const clampedX = clamp(x - CHART_PADDING.left, 0, plotW)
     const idx = Math.round((clampedX / plotW) * (d.length - 1))
-    return Math.max(0, Math.min(idx, d.length - 1))
+    return clamp(idx, 0, d.length - 1)
   }, [])
 
   const panResponder = useMemo(

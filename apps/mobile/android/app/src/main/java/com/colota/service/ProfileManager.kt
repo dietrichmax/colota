@@ -19,32 +19,45 @@ import kotlinx.coroutines.*
  *
  * @param profileHelper CRUD access to profile database
  * @param scope Coroutine scope for deactivation delay timers
- * @param onConfigSwitch Callback to apply new interval/distance/sync params
+ * @param onConfigSwitch Callback to apply the resolved profile config (or defaults when null-profile)
  */
 class ProfileManager(
     private val profileHelper: ProfileHelper,
     private val scope: CoroutineScope,
-    private val onConfigSwitch: (interval: Long, distance: Float, syncInterval: Int, profileName: String?, profileId: Int?) -> Unit,
+    private val onConfigSwitch: (ProfileConfig) -> Unit,
     private val onStationaryChanged: ((stationary: Boolean) -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "ProfileManager"
     }
 
-    // Default config values (set by the service after loading config)
+    data class ProfileConfig(
+        val interval: Long,
+        val distance: Float,
+        val syncInterval: Int,
+        val profileName: String?,
+        val profileId: Int?,
+    )
+
+    // Default config (written externally by the service, read inside @Synchronized deactivateToDefault)
     @Volatile var defaultInterval: Long = 5000L
     @Volatile var defaultDistance: Float = 0f
     @Volatile var defaultSyncInterval: Int = 0
 
-    // Current active profile (null = using default settings)
+    // Active profile: mutated only inside @Synchronized methods.
+    // @Volatile because getActiveProfileName() is read externally without the lock.
     @Volatile private var activeProfile: ProfileHelper.CachedProfile? = null
-    @Volatile private var deactivationJob: Job? = null
+    // Accessed only inside @Synchronized methods — the intrinsic lock covers visibility.
+    private var deactivationJob: Job? = null
 
-    // Condition states
+    // Condition flags: written from broadcast callbacks, each write immediately followed by
+    // @Synchronized evaluate() which reads them. @Volatile makes the write visible to readers
+    // already holding the lock on another thread.
     @Volatile private var isCharging = false
     @Volatile private var isCarMode = false
     @Volatile var isStationary = false
         private set
+    // Written/read from location + motion callbacks without synchronization.
     @Volatile private var stationaryJob: Job? = null
 
     // Speed rolling average buffer
@@ -93,7 +106,7 @@ class ProfileManager(
     fun getActiveProfileName(): String? = activeProfile?.name
 
     fun getNeededConditionTypes(): Set<String> =
-        profileHelper.getEnabledProfiles().map { it.conditionType }.toSet()
+        profileHelper.getEnabledProfiles().mapTo(HashSet()) { it.conditionType }
 
     /**
      * Re-evaluates all enabled profiles against current conditions.
@@ -198,13 +211,13 @@ class ProfileManager(
         LocationServiceModule.sendProfileSwitchEvent(profile.name, profile.id)
 
         // Apply config
-        onConfigSwitch(
-            profile.intervalMs,
-            profile.minUpdateDistance,
-            profile.syncIntervalSeconds,
-            profile.name,
-            profile.id
-        )
+        onConfigSwitch(ProfileConfig(
+            interval = profile.intervalMs,
+            distance = profile.minUpdateDistance,
+            syncInterval = profile.syncIntervalSeconds,
+            profileName = profile.name,
+            profileId = profile.id,
+        ))
     }
 
     private fun scheduleDeactivation(profile: ProfileHelper.CachedProfile) {
@@ -275,6 +288,12 @@ class ProfileManager(
         LocationServiceModule.sendProfileSwitchEvent(null, null)
 
         // Revert to default config
-        onConfigSwitch(defaultInterval, defaultDistance, defaultSyncInterval, null, null)
+        onConfigSwitch(ProfileConfig(
+            interval = defaultInterval,
+            distance = defaultDistance,
+            syncInterval = defaultSyncInterval,
+            profileName = null,
+            profileId = null,
+        ))
     }
 }

@@ -1,5 +1,5 @@
+import { formatBytes } from "../format"
 import {
-  formatBytes,
   getByteSize,
   convertTripsToCSV,
   convertTripsToGeoJSON,

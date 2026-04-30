@@ -107,6 +107,20 @@ class NotificationHelperTest {
     }
 
     @Test
+    fun `status text shows location-off message when location services disabled`() {
+        // Disabled location takes priority over every other state - the user needs to know.
+        assertEquals(
+            "Location services off - tracking won't get fixes",
+            helper.buildStatusText(false, null, 52.0, 13.0, 0, 0L, locationEnabled = false)
+        )
+        // Even when paused or stationary, the location-off message wins.
+        assertEquals(
+            "Location services off - tracking won't get fixes",
+            helper.buildStatusText(true, "Home", 52.0, 13.0, 0, 0L, locationEnabled = false)
+        )
+    }
+
+    @Test
     fun `status text shows coordinates when tracking normally`() {
         assertEquals("52.51630, 13.37770", helper.buildStatusText(false, null, 52.51630, 13.37770, 0, 0L))
     }

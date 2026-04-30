@@ -31,6 +31,8 @@ Each geofence has independent pause settings, configured in the editor (tap **â€
 
 Locations are not saved or synced while inside the zone. GPS continues running to detect when you leave. This is the default behavior.
 
+This is also the master switch for the other pause options below. WiFi pause, motionless pause and the stationary heartbeat only take effect when this is on.
+
 ### Pause when on WiFi or Ethernet
 
 Stops GPS entirely when connected to an unmetered network (home WiFi, Ethernet). GPS resumes automatically when the connection is lost. Useful if you want to completely stop GPS while at home on WiFi, saving additional battery.
@@ -41,7 +43,7 @@ Stops GPS after no device motion is detected for a configurable time (default 10
 
 ### Stationary heartbeat
 
-Sends a periodic location update to your server while paused inside the zone. Useful as a proof-of-presence signal so your backend knows the device is still there. The heartbeat sends the geofence center as a synthetic anchor point (no GPS wake), bypassing normal sync conditions like Wi-Fi only. Configure the interval in minutes (default 15).
+Sends a periodic location update to your server while paused inside the zone. Useful as a proof-of-presence signal so your backend knows the device is still there. The heartbeat sends the geofence center as a synthetic anchor point (no GPS wake), bypassing normal sync conditions like Wi-Fi only. The first heartbeat fires immediately on zone entry, then repeats at the configured interval. Minimum 1 minute, default 15.
 
 ### Combined behavior
 
@@ -65,4 +67,4 @@ When both **WiFi** and **motionless** pause are enabled, GPS only resumes when *
 
 ## Anchor Points
 
-When you exit a pause zone, Colota saves a synthetic location at the geofence center. This gives your new trip a clean start point rather than somewhere mid-road where GPS first locks in. Anchor points use the zone radius as their accuracy value and are timestamped 1 second before the first real GPS fix after leaving the zone, ensuring correct chronological order.
+When you exit a pause zone, Colota saves a synthetic location at the geofence center. This gives your new trip a clean start point rather than somewhere mid-road where GPS first locks in. Anchor points report accuracy 0 so they pass any downstream quality filter and are recognizable as synthetic in backend data, and are timestamped 1 second before the first real GPS fix after leaving the zone, ensuring correct chronological order.

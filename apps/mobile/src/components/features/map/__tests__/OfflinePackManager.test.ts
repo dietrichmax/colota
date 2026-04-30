@@ -10,7 +10,7 @@ jest.mock("@maplibre/maplibre-react-native", () => ({
     getPack: jest.fn(),
     deletePack: jest.fn(),
     setTileCountLimit: jest.fn(),
-    unsubscribe: jest.fn(),
+    removeListener: jest.fn(),
     resetDatabase: jest.fn()
   }
 }))
@@ -23,11 +23,11 @@ jest.mock("../../../../services/NativeLocationService")
 
 import { OfflineManager } from "@maplibre/maplibre-react-native"
 import NativeLocationService from "../../../../services/NativeLocationService"
+import { formatBytes } from "../../../../utils/format"
 import {
   willExceedTileLimit,
   estimateSizeLabel,
   estimateSizeBytes,
-  formatBytes,
   createOfflinePack,
   loadOfflineAreas,
   deleteOfflineArea,
@@ -62,10 +62,9 @@ beforeEach(() => {
 
 describe("constants", () => {
   it("DOWNLOAD_STATE has expected values", () => {
-    expect(DOWNLOAD_STATE.INACTIVE).toBe(0)
-    expect(DOWNLOAD_STATE.ACTIVE).toBe(1)
-    expect(DOWNLOAD_STATE.COMPLETE).toBe(2)
-    expect(DOWNLOAD_STATE.FAILED).toBe(3)
+    expect(DOWNLOAD_STATE.INACTIVE).toBe("inactive")
+    expect(DOWNLOAD_STATE.ACTIVE).toBe("active")
+    expect(DOWNLOAD_STATE.COMPLETE).toBe("complete")
   })
 })
 
@@ -78,8 +77,8 @@ describe("formatBytes", () => {
     expect(formatBytes(512 * 1024)).toBe("512.0 KB")
   })
 
-  it("formats zero bytes as KB", () => {
-    expect(formatBytes(0)).toBe("0.0 KB")
+  it("formats zero bytes as B", () => {
+    expect(formatBytes(0)).toBe("0 B")
   })
 
   it("formats 1MB as MB", () => {
@@ -205,12 +204,14 @@ describe("estimateSizeLabel", () => {
 
 describe("createOfflinePack", () => {
   beforeEach(() => {
-    mockOfflineManager.getPack.mockResolvedValue(null as never)
+    mockOfflineManager.getPacks.mockResolvedValue([] as never)
     mockGetSetting.mockResolvedValue(null)
   })
 
   it("throws if a pack with the same name already exists", async () => {
-    mockOfflineManager.getPack.mockResolvedValueOnce({ name: "existing" } as never)
+    mockOfflineManager.getPacks.mockResolvedValueOnce([
+      { id: "uuid-existing", metadata: { name: "existing" } }
+    ] as never)
     await expect(createOfflinePack("existing", SMALL_NE, SMALL_SW, jest.fn(), jest.fn())).rejects.toThrow(
       'An offline area named "existing" already exists'
     )
@@ -218,7 +219,7 @@ describe("createOfflinePack", () => {
   })
 
   it("calls OfflineManager.setTileCountLimit before creating pack", async () => {
-    mockOfflineManager.createPack.mockResolvedValueOnce(undefined as never)
+    mockOfflineManager.createPack.mockResolvedValueOnce({} as never)
     await createOfflinePack("test", SMALL_NE, SMALL_SW, jest.fn(), jest.fn())
     expect(mockOfflineManager.setTileCountLimit).toHaveBeenCalledWith(100_000)
     expect((mockOfflineManager.setTileCountLimit as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
@@ -227,12 +228,12 @@ describe("createOfflinePack", () => {
   })
 
   it("uses default style URL when no custom URL is configured", async () => {
-    mockOfflineManager.createPack.mockResolvedValueOnce(undefined as never)
+    mockOfflineManager.createPack.mockResolvedValueOnce({} as never)
     await createOfflinePack("my-area", SMALL_NE, SMALL_SW, jest.fn(), jest.fn())
     expect(mockOfflineManager.createPack).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: "my-area",
-        styleURL: "https://tiles.example.com/style.json",
+        metadata: { name: "my-area" },
+        mapStyle: "https://tiles.example.com/style.json",
         minZoom: 8,
         maxZoom: 14,
         bounds: expect.any(Array)
@@ -244,10 +245,10 @@ describe("createOfflinePack", () => {
 
   it("uses custom style URL from settings when configured", async () => {
     mockGetSetting.mockResolvedValueOnce("https://my-server.com/style.json")
-    mockOfflineManager.createPack.mockResolvedValueOnce(undefined as never)
+    mockOfflineManager.createPack.mockResolvedValueOnce({} as never)
     await createOfflinePack("my-area", SMALL_NE, SMALL_SW, jest.fn(), jest.fn())
     expect(mockOfflineManager.createPack).toHaveBeenCalledWith(
-      expect.objectContaining({ styleURL: "https://my-server.com/style.json" }),
+      expect.objectContaining({ mapStyle: "https://my-server.com/style.json" }),
       expect.any(Function),
       expect.any(Function)
     )
@@ -255,26 +256,30 @@ describe("createOfflinePack", () => {
 
   it("invokes onProgress callback when OfflineManager progress fires", async () => {
     const onProgress = jest.fn()
-    mockOfflineManager.createPack.mockImplementationOnce((_opts: unknown, progressCb: Function) => {
+    mockOfflineManager.createPack.mockImplementationOnce((async (_opts: unknown, progressCb: Function) => {
       progressCb(null, {
-        state: 1,
+        state: "active",
         percentage: 50,
         completedResourceCount: 50,
         requiredResourceCount: 100,
         completedResourceSize: 25600
       })
-      return Promise.resolve()
-    })
+      return {} as never
+    }) as never)
     await createOfflinePack("test", SMALL_NE, SMALL_SW, onProgress, jest.fn())
-    expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({ state: 1, percentage: 50 }))
+    expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({ state: "active", percentage: 50 }))
   })
 
   it("invokes onError callback when OfflineManager error fires", async () => {
     const onError = jest.fn()
-    mockOfflineManager.createPack.mockImplementationOnce((_opts: unknown, _progressCb: Function, errorCb: Function) => {
+    mockOfflineManager.createPack.mockImplementationOnce((async (
+      _opts: unknown,
+      _progressCb: Function,
+      errorCb: Function
+    ) => {
       errorCb(null, new Error("tile limit exceeded"))
-      return Promise.resolve()
-    })
+      return {} as never
+    }) as never)
     await createOfflinePack("test", SMALL_NE, SMALL_SW, jest.fn(), onError)
     expect(onError).toHaveBeenCalledWith(expect.any(Error))
   })
@@ -290,10 +295,13 @@ describe("loadOfflineAreas", () => {
     expect(await loadOfflineAreas()).toEqual([])
   })
 
-  it("filters out packs without a name", async () => {
+  it("filters out packs without a name in metadata", async () => {
     mockOfflineManager.getPacks.mockResolvedValueOnce([
-      { name: undefined, status: jest.fn().mockResolvedValue({ state: 2, completedResourceSize: 1024 }) },
-      { name: "valid-area", status: jest.fn().mockResolvedValue({ state: 2, completedResourceSize: 2048 }) }
+      { metadata: {}, status: jest.fn().mockResolvedValue({ state: "complete", completedResourceSize: 1024 }) },
+      {
+        metadata: { name: "valid-area" },
+        status: jest.fn().mockResolvedValue({ state: "complete", completedResourceSize: 2048 })
+      }
     ] as never)
     const areas = await loadOfflineAreas()
     expect(areas).toHaveLength(1)
@@ -303,7 +311,7 @@ describe("loadOfflineAreas", () => {
   it("maps complete pack status correctly", async () => {
     mockOfflineManager.getPacks.mockResolvedValueOnce([
       {
-        name: "downtown",
+        metadata: { name: "downtown" },
         status: jest.fn().mockResolvedValue({ state: DOWNLOAD_STATE.COMPLETE, completedResourceSize: 5_000_000 })
       }
     ] as never)
@@ -315,7 +323,7 @@ describe("loadOfflineAreas", () => {
   it("maps active pack status correctly", async () => {
     mockOfflineManager.getPacks.mockResolvedValueOnce([
       {
-        name: "in-progress",
+        metadata: { name: "in-progress" },
         status: jest.fn().mockResolvedValue({ state: DOWNLOAD_STATE.ACTIVE, completedResourceSize: 1_000_000 })
       }
     ] as never)
@@ -326,7 +334,7 @@ describe("loadOfflineAreas", () => {
 
   it("handles status() throwing - returns null sizeBytes and false flags", async () => {
     mockOfflineManager.getPacks.mockResolvedValueOnce([
-      { name: "broken-pack", status: jest.fn().mockRejectedValue(new Error("status unavailable")) }
+      { metadata: { name: "broken-pack" }, status: jest.fn().mockRejectedValue(new Error("status unavailable")) }
     ] as never)
     expect(await loadOfflineAreas()).toEqual([
       { name: "broken-pack", sizeBytes: null, isComplete: false, isActive: false }
@@ -335,7 +343,7 @@ describe("loadOfflineAreas", () => {
 
   it("handles null completedResourceSize as null sizeBytes", async () => {
     mockOfflineManager.getPacks.mockResolvedValueOnce([
-      { name: "partial", status: jest.fn().mockResolvedValue({ state: DOWNLOAD_STATE.INACTIVE }) }
+      { metadata: { name: "partial" }, status: jest.fn().mockResolvedValue({ state: DOWNLOAD_STATE.INACTIVE }) }
     ] as never)
     expect((await loadOfflineAreas())[0].sizeBytes).toBeNull()
   })
@@ -348,45 +356,47 @@ describe("loadOfflineAreas", () => {
 describe("deleteOfflineArea", () => {
   it("unsubscribes, pauses, and deletes pack", async () => {
     const mockPause = jest.fn().mockResolvedValue(undefined)
-    mockOfflineManager.getPack.mockResolvedValueOnce({ pause: mockPause } as never)
+    mockOfflineManager.getPacks
+      .mockResolvedValueOnce([{ id: "uuid-1", metadata: { name: "my-area" }, pause: mockPause }] as never)
+      .mockResolvedValueOnce([{ id: "uuid-2", metadata: { name: "other-area" } }] as never)
     mockOfflineManager.deletePack.mockResolvedValueOnce(undefined as never)
-    mockOfflineManager.getPacks.mockResolvedValueOnce([{ name: "other-area" }] as never)
 
     await deleteOfflineArea("my-area")
 
-    expect(mockOfflineManager.unsubscribe).toHaveBeenCalledWith("my-area")
+    expect(mockOfflineManager.removeListener).toHaveBeenCalledWith("uuid-1")
     expect(mockPause).toHaveBeenCalled()
-    expect(mockOfflineManager.deletePack).toHaveBeenCalledWith("my-area")
+    expect(mockOfflineManager.deletePack).toHaveBeenCalledWith("uuid-1")
     expect(mockOfflineManager.resetDatabase).not.toHaveBeenCalled()
   })
 
   it("resets database when last pack is deleted", async () => {
     const mockPause = jest.fn().mockResolvedValue(undefined)
-    mockOfflineManager.getPack.mockResolvedValueOnce({ pause: mockPause } as never)
+    mockOfflineManager.getPacks
+      .mockResolvedValueOnce([{ id: "uuid-last", metadata: { name: "last-area" }, pause: mockPause }] as never)
+      .mockResolvedValueOnce([] as never)
     mockOfflineManager.deletePack.mockResolvedValueOnce(undefined as never)
-    mockOfflineManager.getPacks.mockResolvedValueOnce([] as never)
     mockOfflineManager.resetDatabase.mockResolvedValueOnce(undefined as never)
 
     await deleteOfflineArea("last-area")
 
-    expect(mockOfflineManager.deletePack).toHaveBeenCalledWith("last-area")
+    expect(mockOfflineManager.deletePack).toHaveBeenCalledWith("uuid-last")
     expect(mockOfflineManager.resetDatabase).toHaveBeenCalled()
   })
 
   it("skips pause if pack is already inactive (pause throws) but still deletes", async () => {
     const mockPause = jest.fn().mockRejectedValue(new Error("not active"))
-    mockOfflineManager.getPack.mockResolvedValueOnce({ pause: mockPause } as never)
+    mockOfflineManager.getPacks
+      .mockResolvedValueOnce([{ id: "uuid-x", metadata: { name: "inactive-area" }, pause: mockPause }] as never)
+      .mockResolvedValueOnce([] as never)
     mockOfflineManager.deletePack.mockResolvedValueOnce(undefined as never)
-    mockOfflineManager.getPacks.mockResolvedValueOnce([] as never)
     mockOfflineManager.resetDatabase.mockResolvedValueOnce(undefined as never)
 
     await expect(deleteOfflineArea("inactive-area")).resolves.toBeUndefined()
-    expect(mockOfflineManager.deletePack).toHaveBeenCalledWith("inactive-area")
+    expect(mockOfflineManager.deletePack).toHaveBeenCalledWith("uuid-x")
   })
 
   it("skips delete if pack does not exist", async () => {
-    mockOfflineManager.getPack.mockResolvedValueOnce(null as never)
-    mockOfflineManager.getPacks.mockResolvedValueOnce([] as never)
+    mockOfflineManager.getPacks.mockResolvedValueOnce([] as never).mockResolvedValueOnce([] as never)
     mockOfflineManager.resetDatabase.mockResolvedValueOnce(undefined as never)
 
     await deleteOfflineArea("missing-area")
@@ -400,9 +410,10 @@ describe("deleteOfflineArea", () => {
 // ============================================================================
 
 describe("unsubscribeOfflinePack", () => {
-  it("calls OfflineManager.unsubscribe with the pack name", () => {
-    unsubscribeOfflinePack("some-area")
-    expect(mockOfflineManager.unsubscribe).toHaveBeenCalledWith("some-area")
+  it("calls OfflineManager.removeListener with the pack id", async () => {
+    mockOfflineManager.getPacks.mockResolvedValueOnce([{ id: "uuid-sub", metadata: { name: "some-area" } }] as never)
+    await unsubscribeOfflinePack("some-area")
+    expect(mockOfflineManager.removeListener).toHaveBeenCalledWith("uuid-sub")
   })
 })
 

@@ -1,5 +1,5 @@
 import React from "react"
-import { render } from "@testing-library/react-native"
+import { render, fireEvent, waitFor } from "@testing-library/react-native"
 import { DEFAULT_SETTINGS, Settings } from "../../types/global"
 
 // --- Mocks ---
@@ -7,6 +7,9 @@ import { DEFAULT_SETTINGS, Settings } from "../../types/global"
 const mockStartTracking = jest.fn().mockResolvedValue(undefined)
 const mockStopTracking = jest.fn().mockResolvedValue(undefined)
 const mockSetSettings = jest.fn().mockResolvedValue(undefined)
+const mockIsLocationEnabled = jest.fn().mockResolvedValue(true)
+const mockOpenLocationSettings = jest.fn().mockResolvedValue(true)
+const mockShowConfirm = jest.fn().mockResolvedValue(false)
 
 let mockSettings: Settings = { ...DEFAULT_SETTINGS }
 let mockTracking = false
@@ -46,7 +49,11 @@ jest.mock("../../hooks/useTheme", () => ({
 }))
 
 jest.mock("@react-navigation/native", () => ({
-  useFocusEffect: jest.fn()
+  useFocusEffect: (cb: () => void | (() => void)) => {
+    const { useEffect } = require("react")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => cb(), [])
+  }
 }))
 
 jest.mock("../../services/NativeLocationService", () => ({
@@ -59,8 +66,15 @@ jest.mock("../../services/NativeLocationService", () => ({
       today: 3,
       databaseSizeMB: 0.5
     }),
-    checkCurrentPauseZone: jest.fn().mockResolvedValue(null)
+    checkCurrentPauseZone: jest.fn().mockResolvedValue(null),
+    isBatteryCritical: jest.fn().mockResolvedValue(false),
+    isLocationEnabled: (...args: unknown[]) => mockIsLocationEnabled(...args),
+    openLocationSettings: (...args: unknown[]) => mockOpenLocationSettings(...args)
   }
+}))
+
+jest.mock("../../services/modalService", () => ({
+  showConfirm: (...args: unknown[]) => mockShowConfirm(...args)
 }))
 
 jest.mock("../../components", () => {
@@ -88,6 +102,9 @@ describe("DashboardScreen", () => {
     mockSettings = { ...DEFAULT_SETTINGS }
     mockTracking = false
     mockCoords = null
+    mockIsLocationEnabled.mockResolvedValue(true)
+    mockOpenLocationSettings.mockResolvedValue(true)
+    mockShowConfirm.mockResolvedValue(false)
   })
 
   it("shows Start Tracking button when not tracking", () => {
@@ -166,5 +183,65 @@ describe("DashboardScreen", () => {
     const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 
     expect(getByTestId("DatabaseStatistics")).toBeTruthy()
+  })
+
+  // ── Start Tracking + Location Services check (#312) ────────────────────────
+
+  it("starts tracking directly when location services are enabled", async () => {
+    mockTracking = false
+    mockIsLocationEnabled.mockResolvedValue(true)
+
+    const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
+    fireEvent.press(getByText("Start Tracking"))
+
+    await waitFor(() => expect(mockStartTracking).toHaveBeenCalled())
+    expect(mockShowConfirm).not.toHaveBeenCalled()
+    expect(mockOpenLocationSettings).not.toHaveBeenCalled()
+  })
+
+  it("opens location settings and skips start when user picks 'Location Settings'", async () => {
+    mockTracking = false
+    mockIsLocationEnabled.mockResolvedValue(false)
+    mockShowConfirm.mockResolvedValue(true) // user taps "Location Settings"
+
+    const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
+    fireEvent.press(getByText("Start Tracking"))
+
+    await waitFor(() => expect(mockOpenLocationSettings).toHaveBeenCalled())
+    expect(mockStartTracking).not.toHaveBeenCalled()
+  })
+
+  it("starts tracking anyway when user dismisses the location warning", async () => {
+    mockTracking = false
+    mockIsLocationEnabled.mockResolvedValue(false)
+    mockShowConfirm.mockResolvedValue(false) // user taps "Close"
+
+    const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
+    fireEvent.press(getByText("Start Tracking"))
+
+    await waitFor(() => expect(mockStartTracking).toHaveBeenCalled())
+    expect(mockOpenLocationSettings).not.toHaveBeenCalled()
+  })
+
+  it("revalidates locationEnabled when AppState transitions to active", async () => {
+    const { AppState } = require("react-native")
+    const addSpy = jest.spyOn(AppState, "addEventListener")
+
+    render(<DashboardScreen navigation={mockNavigation} />)
+
+    // Wait for the initial isLocationEnabled call from useFocusEffect
+    await waitFor(() => expect(mockIsLocationEnabled).toHaveBeenCalled())
+    const callsAfterMount = mockIsLocationEnabled.mock.calls.length
+
+    const changeHandler = addSpy.mock.calls.find(([event]) => event === "change")?.[1] as (s: string) => void
+    expect(changeHandler).toBeDefined()
+
+    changeHandler("background")
+    expect(mockIsLocationEnabled).toHaveBeenCalledTimes(callsAfterMount)
+
+    changeHandler("active")
+    await waitFor(() => expect(mockIsLocationEnabled).toHaveBeenCalledTimes(callsAfterMount + 1))
+
+    addSpy.mockRestore()
   })
 })

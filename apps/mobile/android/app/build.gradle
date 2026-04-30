@@ -94,8 +94,8 @@ android {
         applicationId "com.Colota"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 33
-        versionName "1.6.1"
+        versionCode 34
+        versionName "1.7.0"
 
         // Strip Build IDs for reproducible builds (IzzyOnDroid/F-Droid)
         externalNativeBuild {
@@ -201,7 +201,7 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
     implementation 'androidx.security:security-crypto:1.1.0'
     implementation 'androidx.car.app:app:1.7.0'
-    implementation 'androidx.work:work-runtime:2.11.1'
+    implementation 'androidx.work:work-runtime:2.11.2'
     implementation 'androidx.documentfile:documentfile:1.1.0'
     
       if (isHermesEnabled) {
@@ -216,4 +216,5 @@ dependencies {
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
     testImplementation 'org.robolectric:robolectric:4.16.1'
     testImplementation 'androidx.test:core:1.6.1'
+    testImplementation 'androidx.work:work-testing:2.11.2'
 }

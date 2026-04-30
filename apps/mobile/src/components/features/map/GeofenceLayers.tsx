@@ -4,16 +4,16 @@
  */
 
 import React, { useMemo } from "react"
-import { ShapeSource, FillLayer, LineLayer, SymbolLayer } from "@maplibre/maplibre-react-native"
+import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native"
 
-const geofenceFillStyle = {
-  fillColor: ["get", "fillColor"] as const,
-  fillOpacity: ["get", "fillOpacity"] as const,
-  fillOutlineColor: ["get", "strokeColor"] as const
+const geofenceFillStyle: any = {
+  fillColor: ["get", "fillColor"],
+  fillOpacity: ["get", "fillOpacity"],
+  fillOutlineColor: ["get", "strokeColor"]
 }
 
-const geofenceStrokeStyle = {
-  lineColor: ["get", "strokeColor"] as const,
+const geofenceStrokeStyle: any = {
+  lineColor: ["get", "strokeColor"],
   lineWidth: 2
 }
 
@@ -24,14 +24,14 @@ interface Props {
 }
 
 export function GeofenceLayers({ fills, labels, haloColor }: Props) {
-  const labelStyle = useMemo(
+  const labelStyle = useMemo<any>(
     () => ({
-      textField: ["get", "name"] as const,
+      textField: ["get", "name"],
       textSize: 12,
-      textColor: ["get", "textColor"] as const,
+      textColor: ["get", "textColor"],
       textHaloColor: haloColor,
       textHaloWidth: 2,
-      textOffset: [0, -1.8] as [number, number],
+      textOffset: [0, -1.8],
       textFont: ["Noto Sans Bold"]
     }),
     [haloColor]
@@ -40,16 +40,16 @@ export function GeofenceLayers({ fills, labels, haloColor }: Props) {
   return (
     <>
       {fills.features.length > 0 && (
-        <ShapeSource id="geofence-fills" shape={fills}>
-          <FillLayer id="geofence-fill" style={geofenceFillStyle} />
-          <LineLayer id="geofence-stroke" style={geofenceStrokeStyle} />
-        </ShapeSource>
+        <GeoJSONSource id="geofence-fills" data={fills}>
+          <Layer id="geofence-fill" type="fill" style={geofenceFillStyle} />
+          <Layer id="geofence-stroke" type="line" style={geofenceStrokeStyle} />
+        </GeoJSONSource>
       )}
 
       {labels.features.length > 0 && (
-        <ShapeSource id="geofence-labels" shape={labels}>
-          <SymbolLayer id="geofence-label-text" style={labelStyle} />
-        </ShapeSource>
+        <GeoJSONSource id="geofence-labels" data={labels}>
+          <Layer id="geofence-label-text" type="symbol" style={labelStyle} />
+        </GeoJSONSource>
       )}
     </>
   )

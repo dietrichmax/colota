@@ -77,7 +77,7 @@ Emits events back to JavaScript:
 Location services are abstracted behind a `LocationProvider` interface (`location/LocationProvider.kt`), with flavor-specific implementations:
 
 - **GMS** (`src/gms/`) - `GmsLocationProvider` wraps Google Play Services `FusedLocationProviderClient`
-- **FOSS** (`src/foss/`) - `NativeLocationProvider` wraps Android's native `LocationManager` with `GPS_PROVIDER` and `NETWORK_PROVIDER` fallback
+- **FOSS** (`src/foss/`) - `NativeLocationProvider` wraps Android's native `LocationManager` with `GPS_PROVIDER`
 
 Each flavor provides a `LocationProviderFactory` that instantiates and returns the correct implementation at runtime. The service and bridge code in `src/main/` depends only on the `LocationProvider` interface, never on a concrete class.
 
@@ -133,7 +133,7 @@ HTTP client. Validates endpoints, enforces HTTPS for public hosts, injects auth 
 
 ### GeofenceHelper
 
-Manages pause zones using the **haversine formula** for distance calculations. Maintains an in-memory cache of geofences that invalidates on CRUD changes.
+Manages pause zones using the **haversine formula** for distance calculations. Reads geofences directly from SQLite on each lookup.
 
 Each geofence supports three independent GPS pause modes, configured per zone:
 
@@ -175,12 +175,13 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `FileOperations` | File I/O, sharing via FileProvider, and clipboard access |
 | `PayloadBuilder` | Builds JSON payloads with dynamic field mapping |
 | `ServiceConfig` | Centralized configuration data class |
-| `TimedCache` | Generic TTL cache used for queue count, device info, geofences, profiles, and network state |
+| `TimedCache` | Generic TTL cache used for queue count, device info, profiles, and network state |
 | `BuildConfigModule` | Exposes build constants (SDK versions, app version) to JS |
 | `AppLogger` | Centralized logger - always active, all tags prefixed with `Colota.` for logcat filtering |
-| `AutoExportWorker` | WorkManager `CoroutineWorker` for scheduled exports - checks `AutoExportConfig.isExportDue()` on each run, streams chunked writes, verifies output, and cleans up old files beyond retention limit |
-| `AutoExportScheduler` | Schedules a daily (24h) check worker via WorkManager with battery-not-low constraint - frequency logic (daily/weekly/monthly) is handled at runtime by the worker |
-| `AutoExportConfig` | Typed data class wrapping auto-export settings from the SQLite settings table with validation, `isExportDue()`, and `nextExportTimestamp()` |
+| `AutoExportWorker` | WorkManager `CoroutineWorker` enqueued by `AutoExportAlarmReceiver` - performs the export (chunked writes, foreground service, retries, retention cleanup) and re-arms the next alarm in `finally` |
+| `AutoExportAlarmReceiver` | Broadcast receiver fired by AlarmManager at the configured time - hands off to `AutoExportWorker` because the receiver's 10s budget can't run an export |
+| `AutoExportScheduler` | Arms `AlarmManager.setAndAllowWhileIdle` for the next configured wall-clock time. Called on enable, after each worker run, after schedule edits and on boot |
+| `AutoExportConfig` | Typed data class wrapping auto-export settings (interval, time-of-day, weekday, day-of-month, enabledAt) from the SQLite settings table with validation, `isExportDue()` and `nextExportTimestamp()` |
 | `ExportConverters` | Native Kotlin export converters (CSV, GeoJSON, GPX, KML) with in-memory, streaming, and file-based (`exportToFile`) interfaces |
 | `ShortcutHandlerActivity` | Handles app shortcut intents (start/stop tracking) without showing UI - reads config from DB via `ServiceConfig.fromDatabase()` and dispatches to `LocationForegroundService` |
 
@@ -191,17 +192,21 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | Screen | Purpose |
 | --- | --- |
 | `DashboardScreen` | Live map with tracking controls, coordinates, database stats, geofence and profile status |
-| `SettingsScreen` | GPS interval, distance filter, sync strategy, offline mode, accuracy threshold, unit system, time format |
+| `SettingsScreen` | Hub with stats card and navigation to Connection, Tracking & Sync, API Field Mapping, Tracking Profiles, Appearance and data/about screens |
+| `ConnectionScreen` | Server endpoint URL, offline mode toggle and connection test |
+| `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
+| `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |
 | `ApiSettingsScreen` | Endpoint URL, HTTP method, field mapping with backend templates |
 | `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | `GeofenceScreen` | Create, edit, and delete pause zones on an interactive map |
+| `GeofenceEditorScreen` | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
 | `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
 | `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
 | `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards and export |
-| `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, and per-trip export |
+| `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, per-trip export, and per-trip delete |
 | `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
 | `ExportDataScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
-| `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, export range, and file retention |
+| `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, time of day, weekday or day-of-month, export range and file retention |
 | `OfflineMapsScreen` | Download and manage offline map areas - interactive bounding box picker, size estimate, progress tracking, and area deletion |
 | `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |

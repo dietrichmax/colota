@@ -6,10 +6,10 @@
 package com.Colota.data
 
 import android.content.ContentValues
+import android.content.Context
 import com.Colota.util.AppLogger
 import com.Colota.service.ProfileConstants
 import com.Colota.util.TimedCache
-import android.content.Context
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableArray
 
@@ -28,7 +28,7 @@ class ProfileHelper(private val context: Context) {
         val priority: Int,
         val conditionType: String,
         val speedThreshold: Float?,
-        val deactivationDelaySeconds: Int
+        val deactivationDelaySeconds: Int,
     )
 
     companion object {
@@ -42,21 +42,6 @@ class ProfileHelper(private val context: Context) {
 
     fun getEnabledProfiles(): List<CachedProfile> = profileCache.get()
 
-    private fun cursorToProfile(cursor: android.database.Cursor): CachedProfile {
-        val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
-        return CachedProfile(
-            id = cursor.getInt(cursor.getColumnIndexOrThrow("id")),
-            name = cursor.getString(cursor.getColumnIndexOrThrow("name")),
-            intervalMs = cursor.getLong(cursor.getColumnIndexOrThrow("interval_ms")),
-            minUpdateDistance = cursor.getFloat(cursor.getColumnIndexOrThrow("min_update_distance")),
-            syncIntervalSeconds = cursor.getInt(cursor.getColumnIndexOrThrow("sync_interval_seconds")),
-            priority = cursor.getInt(cursor.getColumnIndexOrThrow("priority")),
-            conditionType = cursor.getString(cursor.getColumnIndexOrThrow("condition_type")),
-            speedThreshold = if (cursor.isNull(speedIdx)) null else cursor.getFloat(speedIdx),
-            deactivationDelaySeconds = cursor.getInt(cursor.getColumnIndexOrThrow("deactivation_delay_seconds"))
-        )
-    }
-
     private fun loadEnabledProfilesFromDB(): List<CachedProfile> {
         return try {
             val profiles = mutableListOf<CachedProfile>()
@@ -65,14 +50,34 @@ class ProfileHelper(private val context: Context) {
                 arrayOf(
                     "id", "name", "interval_ms", "min_update_distance",
                     "sync_interval_seconds", "priority", "condition_type",
-                    "speed_threshold", "deactivation_delay_seconds"
+                    "speed_threshold", "deactivation_delay_seconds",
                 ),
                 "enabled = 1",
                 null, null, null,
                 "priority DESC"
             ).use { cursor ->
+                val idIdx = cursor.getColumnIndexOrThrow("id")
+                val nameIdx = cursor.getColumnIndexOrThrow("name")
+                val intervalIdx = cursor.getColumnIndexOrThrow("interval_ms")
+                val minDistIdx = cursor.getColumnIndexOrThrow("min_update_distance")
+                val syncIdx = cursor.getColumnIndexOrThrow("sync_interval_seconds")
+                val priorityIdx = cursor.getColumnIndexOrThrow("priority")
+                val conditionIdx = cursor.getColumnIndexOrThrow("condition_type")
+                val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
+                val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
+
                 while (cursor.moveToNext()) {
-                    profiles.add(cursorToProfile(cursor))
+                    profiles.add(CachedProfile(
+                        id = cursor.getInt(idIdx),
+                        name = cursor.getString(nameIdx),
+                        intervalMs = cursor.getLong(intervalIdx),
+                        minUpdateDistance = cursor.getFloat(minDistIdx),
+                        syncIntervalSeconds = cursor.getInt(syncIdx),
+                        priority = cursor.getInt(priorityIdx),
+                        conditionType = cursor.getString(conditionIdx),
+                        speedThreshold = if (cursor.isNull(speedIdx)) null else cursor.getFloat(speedIdx),
+                        deactivationDelaySeconds = cursor.getInt(delayIdx),
+                    ))
                 }
             }
             profiles
@@ -94,10 +99,10 @@ class ProfileHelper(private val context: Context) {
                 val idIdx = cursor.getColumnIndexOrThrow("id")
                 val nameIdx = cursor.getColumnIndexOrThrow("name")
                 val intervalIdx = cursor.getColumnIndexOrThrow("interval_ms")
-                val distIdx = cursor.getColumnIndexOrThrow("min_update_distance")
+                val minDistIdx = cursor.getColumnIndexOrThrow("min_update_distance")
                 val syncIdx = cursor.getColumnIndexOrThrow("sync_interval_seconds")
-                val prioIdx = cursor.getColumnIndexOrThrow("priority")
-                val condIdx = cursor.getColumnIndexOrThrow("condition_type")
+                val priorityIdx = cursor.getColumnIndexOrThrow("priority")
+                val conditionIdx = cursor.getColumnIndexOrThrow("condition_type")
                 val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
                 val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
                 val enabledIdx = cursor.getColumnIndexOrThrow("enabled")
@@ -108,10 +113,10 @@ class ProfileHelper(private val context: Context) {
                         putInt("id", cursor.getInt(idIdx))
                         putString("name", cursor.getString(nameIdx))
                         putDouble("intervalMs", cursor.getLong(intervalIdx).toDouble())
-                        putDouble("minUpdateDistance", cursor.getFloat(distIdx).toDouble())
+                        putDouble("minUpdateDistance", cursor.getFloat(minDistIdx).toDouble())
                         putInt("syncIntervalSeconds", cursor.getInt(syncIdx))
-                        putInt("priority", cursor.getInt(prioIdx))
-                        putString("conditionType", cursor.getString(condIdx))
+                        putInt("priority", cursor.getInt(priorityIdx))
+                        putString("conditionType", cursor.getString(conditionIdx))
                         if (cursor.isNull(speedIdx)) {
                             putNull("speedThreshold")
                         } else {
@@ -138,7 +143,7 @@ class ProfileHelper(private val context: Context) {
         priority: Int,
         conditionType: String,
         speedThreshold: Float?,
-        deactivationDelaySeconds: Int
+        deactivationDelaySeconds: Int,
     ): Int {
         val values = ContentValues().apply {
             put("name", name)
@@ -147,11 +152,7 @@ class ProfileHelper(private val context: Context) {
             put("sync_interval_seconds", syncIntervalSeconds)
             put("priority", priority)
             put("condition_type", conditionType)
-            if (speedThreshold != null) {
-                put("speed_threshold", speedThreshold)
-            } else {
-                putNull("speed_threshold")
-            }
+            if (speedThreshold != null) put("speed_threshold", speedThreshold) else putNull("speed_threshold")
             put("deactivation_delay_seconds", deactivationDelaySeconds)
             put("enabled", 1)
             put("created_at", System.currentTimeMillis() / 1000)
@@ -162,18 +163,23 @@ class ProfileHelper(private val context: Context) {
             .toInt()
     }
 
+    /**
+     * PATCH-style update: null args leave the column untouched. Returns false if nothing changed.
+     * [speedThreshold] is tri-state because null is a valid column value: set [hasSpeedThreshold]
+     * false to leave it alone, true+null to clear, true+value to write.
+     */
     fun updateProfile(
         id: Int,
-        name: String?,
-        intervalMs: Long?,
-        minUpdateDistance: Float?,
-        syncIntervalSeconds: Int?,
-        priority: Int?,
-        conditionType: String?,
-        speedThreshold: Float?,
-        hasSpeedThreshold: Boolean,
-        deactivationDelaySeconds: Int?,
-        enabled: Boolean?
+        name: String? = null,
+        intervalMs: Long? = null,
+        minUpdateDistance: Float? = null,
+        syncIntervalSeconds: Int? = null,
+        priority: Int? = null,
+        conditionType: String? = null,
+        speedThreshold: Float? = null,
+        hasSpeedThreshold: Boolean = false,
+        deactivationDelaySeconds: Int? = null,
+        enabled: Boolean? = null,
     ): Boolean {
         val values = ContentValues().apply {
             name?.let { put("name", it) }
@@ -183,11 +189,7 @@ class ProfileHelper(private val context: Context) {
             priority?.let { put("priority", it) }
             conditionType?.let { put("condition_type", it) }
             if (hasSpeedThreshold) {
-                if (speedThreshold != null) {
-                    put("speed_threshold", speedThreshold)
-                } else {
-                    putNull("speed_threshold")
-                }
+                if (speedThreshold != null) put("speed_threshold", speedThreshold) else putNull("speed_threshold")
             }
             deactivationDelaySeconds?.let { put("deactivation_delay_seconds", it) }
             enabled?.let { put("enabled", if (it) 1 else 0) }
@@ -210,5 +212,4 @@ class ProfileHelper(private val context: Context) {
             arrayOf(id.toString())
         ) > 0
     }
-
 }

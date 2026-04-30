@@ -17,7 +17,9 @@ import {
   RadioDot,
   FloatingSaveIndicator,
   SettingRow,
-  Button
+  Button,
+  TimePicker,
+  NumericInput
 } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { useTimeout } from "../hooks/useTimeout"
@@ -26,7 +28,9 @@ import NativeLocationService from "../services/NativeLocationService"
 import { ExportFormat, EXPORT_FORMATS } from "../utils/exportConverters"
 import { fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
+import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
+import { SAVE_SUCCESS_DISPLAY_MS } from "../constants"
 
 type ExportInterval = "daily" | "weekly" | "monthly"
 type ExportMode = "all" | "incremental"
@@ -49,19 +53,16 @@ const MODE_OPTIONS: { key: ExportMode; label: string; description: string }[] = 
   { key: "incremental", label: "Since last export", description: "Only export new locations" }
 ]
 
-const RETENTION_OPTIONS: readonly { value: string; label: string }[] = [
-  { value: "1", label: "1 file" },
-  { value: "5", label: "5 files" },
-  { value: "10", label: "10 files" },
-  { value: "30", label: "30 files" },
-  { value: "0", label: "Unlimited" }
+// ISO weekday Mon=1..Sun=7
+const WEEKDAY_OPTIONS: readonly { value: string; label: string }[] = [
+  { value: "1", label: "Mon" },
+  { value: "2", label: "Tue" },
+  { value: "3", label: "Wed" },
+  { value: "4", label: "Thu" },
+  { value: "5", label: "Fri" },
+  { value: "6", label: "Sat" },
+  { value: "7", label: "Sun" }
 ]
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
 
 export function AutoExportScreen(_props: ScreenProps) {
   const { colors } = useTheme()
@@ -74,16 +75,20 @@ export function AutoExportScreen(_props: ScreenProps) {
   const [nextExport, setNextExport] = useState<number>(0)
   const [fileCount, setFileCount] = useState<number>(0)
   const [retentionCount, setRetentionCount] = useState<number>(10)
+  const [retentionInput, setRetentionInput] = useState<string>("10")
   const [lastFileName, setLastFileName] = useState<string | null>(null)
   const [lastRowCount, setLastRowCount] = useState<number>(0)
   const [lastError, setLastError] = useState<string | null>(null)
+  const [timeOfDay, setTimeOfDay] = useState<string>("00:00")
+  const [weeklyDow, setWeeklyDow] = useState<number>(1)
+  const [monthlyDom, setMonthlyDom] = useState<number>(1)
+  const [monthlyDomInput, setMonthlyDomInput] = useState<string>("1")
   const [exportFiles, setExportFiles] = useState<ExportFile[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const successTimeout = useTimeout()
-  const statusRefreshTimeout = useTimeout()
 
   const loadStatus = useCallback(async () => {
     try {
@@ -97,9 +102,14 @@ export function AutoExportScreen(_props: ScreenProps) {
       setNextExport(status.nextExportTimestamp)
       setFileCount(status.fileCount)
       setRetentionCount(status.retentionCount ?? 10)
+      setRetentionInput((status.retentionCount ?? 10).toString())
       setLastFileName(status.lastFileName || null)
       setLastRowCount(status.lastRowCount ?? 0)
       setLastError(status.lastError || null)
+      setTimeOfDay(status.timeOfDay || "00:00")
+      setWeeklyDow(status.weeklyDow || 1)
+      setMonthlyDom(status.monthlyDom || 1)
+      setMonthlyDomInput((status.monthlyDom || 1).toString())
 
       const permissionLost = await NativeLocationService.getSetting("autoExportPermissionLost")
       if (permissionLost === "true") {
@@ -133,7 +143,6 @@ export function AutoExportScreen(_props: ScreenProps) {
     }, [loadStatus, loadExportFiles])
   )
 
-  // Listen for real-time export completion events
   useEffect(() => {
     const listener = DeviceEventEmitter.addListener(
       "onAutoExportComplete",
@@ -161,7 +170,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         await NativeLocationService.saveSetting(key, value)
         setSaving(false)
         setSaveSuccess(true)
-        successTimeout.set(() => setSaveSuccess(false), 2000)
+        successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
       } catch (error) {
         setSaving(false)
         logger.error("[AutoExportScreen] Save failed:", error)
@@ -206,12 +215,24 @@ export function AutoExportScreen(_props: ScreenProps) {
     [saveSetting]
   )
 
+  const reschedule = useCallback(async () => {
+    if (!enabled) return
+    try {
+      await NativeLocationService.rescheduleAutoExport()
+    } catch (error) {
+      logger.error("[AutoExportScreen] Reschedule failed:", error)
+      showAlert("Error", "Failed to reschedule auto-export. Please try again.", "error")
+    }
+  }, [enabled])
+
   const handleIntervalChange = useCallback(
     async (newInterval: ExportInterval) => {
       setInterval(newInterval)
       await saveSetting("autoExportInterval", newInterval)
+      await reschedule()
+      await loadStatus()
     },
-    [saveSetting]
+    [saveSetting, loadStatus, reschedule]
   )
 
   const handleModeChange = useCallback(
@@ -222,14 +243,52 @@ export function AutoExportScreen(_props: ScreenProps) {
     [saveSetting]
   )
 
-  const handleRetentionChange = useCallback(
-    async (newRetention: string) => {
-      const count = parseInt(newRetention, 10)
-      setRetentionCount(count)
-      await saveSetting("autoExportRetentionCount", newRetention)
+  const handleTimeChange = useCallback(
+    async (newTime: string) => {
+      setTimeOfDay(newTime)
+      await saveSetting("autoExportTimeOfDay", newTime)
+      await reschedule()
+      await loadStatus()
     },
-    [saveSetting]
+    [saveSetting, loadStatus, reschedule]
   )
+
+  const handleWeeklyDowChange = useCallback(
+    async (newDow: string) => {
+      const dow = parseInt(newDow, 10)
+      setWeeklyDow(dow)
+      await saveSetting("autoExportWeeklyDow", newDow)
+      await reschedule()
+      await loadStatus()
+    },
+    [saveSetting, loadStatus, reschedule]
+  )
+
+  const handleMonthlyDomChange = useCallback((text: string) => {
+    setMonthlyDomInput(text.replace(/\D/g, ""))
+  }, [])
+
+  const handleMonthlyDomBlur = useCallback(async () => {
+    const parsed = parseInt(monthlyDomInput, 10)
+    const dom = isNaN(parsed) ? monthlyDom : Math.max(1, Math.min(31, parsed))
+    setMonthlyDom(dom)
+    setMonthlyDomInput(dom.toString())
+    await saveSetting("autoExportMonthlyDom", dom.toString())
+    await reschedule()
+    await loadStatus()
+  }, [monthlyDomInput, monthlyDom, saveSetting, loadStatus, reschedule])
+
+  const handleRetentionChange = useCallback((text: string) => {
+    setRetentionInput(text.replace(/\D/g, ""))
+  }, [])
+
+  const handleRetentionBlur = useCallback(async () => {
+    const parsed = parseInt(retentionInput, 10)
+    const count = isNaN(parsed) ? retentionCount : Math.max(0, parsed)
+    setRetentionCount(count)
+    setRetentionInput(count.toString())
+    await saveSetting("autoExportRetentionCount", count.toString())
+  }, [retentionInput, retentionCount, saveSetting])
 
   const handlePickDirectory = useCallback(async () => {
     try {
@@ -254,14 +313,13 @@ export function AutoExportScreen(_props: ScreenProps) {
     try {
       await NativeLocationService.runAutoExportNow()
       showAlert("Export Started", "Export is running in the background. The status will update when complete.", "info")
-      statusRefreshTimeout.set(() => loadStatus(), 3000)
     } catch (error) {
       logger.error("[AutoExportScreen] Export now failed:", error)
       showAlert("Error", "Failed to start export.", "error")
     } finally {
       setExporting(false)
     }
-  }, [directoryUri, loadStatus, statusRefreshTimeout])
+  }, [directoryUri])
 
   const handleShareFile = useCallback(async (file: ExportFile) => {
     const ext = file.name.split(".").pop() || ""
@@ -277,11 +335,6 @@ export function AutoExportScreen(_props: ScreenProps) {
       showAlert("Error", "Failed to share file.", "error")
     }
   }, [])
-
-  const formatTimestamp = (timestamp: number): string => {
-    if (timestamp === 0) return "Never"
-    return new Date(timestamp * 1000).toLocaleString()
-  }
 
   if (loading)
     return (
@@ -352,6 +405,37 @@ export function AutoExportScreen(_props: ScreenProps) {
           <SectionTitle>Frequency</SectionTitle>
           <Card>
             <ChipGroup options={INTERVAL_OPTIONS} selected={interval} onSelect={handleIntervalChange} colors={colors} />
+            {interval === "weekly" && (
+              <>
+                <Divider />
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Day of week</Text>
+                <ChipGroup
+                  options={WEEKDAY_OPTIONS}
+                  selected={weeklyDow.toString()}
+                  onSelect={handleWeeklyDowChange}
+                  colors={colors}
+                />
+              </>
+            )}
+            {interval === "monthly" && (
+              <>
+                <Divider />
+                <NumericInput
+                  label="Day of month"
+                  value={monthlyDomInput}
+                  onChange={handleMonthlyDomChange}
+                  onBlur={handleMonthlyDomBlur}
+                  unit="day"
+                  placeholder="1"
+                  min={1}
+                  colors={colors}
+                  hint="1-31. Falls back to last day in shorter months."
+                />
+              </>
+            )}
+            <Divider />
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Time (24h)</Text>
+            <TimePicker value={timeOfDay} onChange={handleTimeChange} colors={colors} />
           </Card>
         </View>
 
@@ -385,11 +469,16 @@ export function AutoExportScreen(_props: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>File Retention</SectionTitle>
           <Card>
-            <ChipGroup
-              options={RETENTION_OPTIONS}
-              selected={retentionCount.toString()}
-              onSelect={handleRetentionChange}
+            <NumericInput
+              label="Files to keep"
+              value={retentionInput}
+              onChange={handleRetentionChange}
+              onBlur={handleRetentionBlur}
+              unit="files"
+              placeholder="10"
+              min={0}
               colors={colors}
+              hint="Set to 0 for unlimited"
             />
           </Card>
         </View>
@@ -400,7 +489,7 @@ export function AutoExportScreen(_props: ScreenProps) {
           <Card>
             <View style={styles.statusRow}>
               <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last Export</Text>
-              <Text style={[styles.statusValue, { color: colors.text }]}>{formatTimestamp(lastExport)}</Text>
+              <Text style={[styles.statusValue, { color: colors.text }]}>{formatExportDateTime(lastExport)}</Text>
             </View>
             {lastFileName && (
               <>
@@ -434,7 +523,7 @@ export function AutoExportScreen(_props: ScreenProps) {
                 <Divider />
                 <View style={styles.statusRow}>
                   <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Next Export</Text>
-                  <Text style={[styles.statusValue, { color: colors.text }]}>{formatTimestamp(nextExport)}</Text>
+                  <Text style={[styles.statusValue, { color: colors.text }]}>{formatExportDateTime(nextExport)}</Text>
                 </View>
               </>
             )}
@@ -476,7 +565,7 @@ export function AutoExportScreen(_props: ScreenProps) {
                         {file.name}
                       </Text>
                       <Text style={[styles.fileMeta, { color: colors.textSecondary }]}>
-                        {formatFileSize(file.size)} - {formatTimestamp(file.lastModified)}
+                        {formatBytes(file.size)} - {formatExportDateTime(file.lastModified)}
                       </Text>
                     </View>
                     <Pressable
@@ -595,5 +684,13 @@ const styles = StyleSheet.create({
   },
   shareButton: {
     padding: 8
+  },
+  fieldLabel: {
+    fontSize: 12,
+    ...fonts.semiBold,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 12,
+    marginBottom: 8
   }
 })

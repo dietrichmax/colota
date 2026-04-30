@@ -400,7 +400,7 @@ class DatabaseHelperSQLiteTest {
         val queued = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L)
         val sent = db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 2000L)
         db.addToQueue(queued, """{"lat":52.0}""")
-        db.markLocationSent(sent)
+        db.markLocationsSent(listOf(sent))
 
         val deleted = db.clearSentHistory()
         assertEquals(1, deleted)
@@ -767,23 +767,6 @@ class DatabaseHelperSQLiteTest {
     }
 
     // ========================================================================
-    // haversineDistance
-    // ========================================================================
-
-    @Test
-    fun `haversineDistance Berlin to Munich is approximately 504 km`() {
-        val distance = db.haversineDistance(52.52, 13.405, 48.1351, 11.582)
-        assertTrue("Expected ~504km, got ${distance / 1000}km", distance > 500000)
-        assertTrue("Expected ~504km, got ${distance / 1000}km", distance < 510000)
-    }
-
-    @Test
-    fun `haversineDistance same point returns zero`() {
-        val distance = db.haversineDistance(52.52, 13.405, 52.52, 13.405)
-        assertEquals(0.0, distance, 0.001)
-    }
-
-    // ========================================================================
     // deleteOlderThan
     // ========================================================================
 
@@ -799,6 +782,27 @@ class DatabaseHelperSQLiteTest {
         val remaining = db.getTableData(DatabaseHelper.TABLE_LOCATIONS, 100, 0)
         assertEquals(1, remaining.size)
         assertEquals(53.0, remaining[0]["latitude"] as Double, 0.001)
+    }
+
+    // ========================================================================
+    // deleteInRange
+    // ========================================================================
+
+    @Test
+    fun `deleteInRange removes only locations within inclusive range`() {
+        db.saveLocation(latitude = 50.0, longitude = 10.0, timestamp = 1000L) // before
+        db.saveLocation(latitude = 51.0, longitude = 11.0, timestamp = 2000L) // start (inclusive)
+        db.saveLocation(latitude = 52.0, longitude = 12.0, timestamp = 2500L) // inside
+        db.saveLocation(latitude = 53.0, longitude = 13.0, timestamp = 3000L) // end (inclusive)
+        db.saveLocation(latitude = 54.0, longitude = 14.0, timestamp = 4000L) // after
+
+        val deleted = db.deleteInRange(2000L, 3000L)
+        assertEquals(3, deleted)
+
+        val remaining = db.getTableData(DatabaseHelper.TABLE_LOCATIONS, 100, 0)
+        assertEquals(2, remaining.size)
+        val timestamps = remaining.map { (it["timestamp"] as Number).toLong() }.toSet()
+        assertEquals(setOf(1000L, 4000L), timestamps)
     }
 
     // ========================================================================

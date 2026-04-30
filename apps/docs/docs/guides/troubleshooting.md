@@ -89,14 +89,15 @@ To change: **Settings > Advanced Settings > Network Settings > Sync Only On**.
 
 ## Auto-export not working
 
-- Verify a directory is selected in **Export Data > Auto-Export**
+- Verify a directory is selected in **Settings > Auto-Export**
 - Check that the toggle is enabled
-- Make sure battery is not critically low (exports are deferred when battery is low)
+- The first export fires at the configured time, not on enable. Tap **Export Now** to confirm the pipeline works without waiting
+- Doze mode can delay an alarm by up to ~15 minutes - if exports are running but a few minutes late, that's expected
 - If you see a "Directory permission lost" notification, re-select the export directory
 - Check that the selected directory still exists and is accessible
 - Transient errors (I/O failures) retry up to 3 times automatically; permanent errors (invalid config, directory issues) fail immediately without retrying
 - If old exports seem to disappear, check the **File Retention** setting - by default only the last 10 files are kept
-- Check the `AutoExportWorker` log tag in native logs for details
+- Check the `Colota.AutoExportAlarm`, `Colota.AutoExportScheduler` and `Colota.AutoExportWorker` log tags in native logs for details
 
 ## Database growing too large
 

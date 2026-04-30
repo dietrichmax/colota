@@ -34,12 +34,12 @@ class ProfileManagerTest {
     private fun createManager(): ProfileManager {
         return ProfileManager(
             profileHelper, testScope,
-            onConfigSwitch = { interval, distance, sync, name, id ->
-                switchedInterval = interval
-                switchedDistance = distance
-                switchedSyncInterval = sync
-                switchedProfileName = name
-                switchedProfileId = id
+            onConfigSwitch = { config ->
+                switchedInterval = config.interval
+                switchedDistance = config.distance
+                switchedSyncInterval = config.syncInterval
+                switchedProfileName = config.profileName
+                switchedProfileId = config.profileId
                 switchCount++
             },
             onStationaryChanged = { stationary ->

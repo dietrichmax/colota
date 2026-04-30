@@ -1,5 +1,5 @@
 import React from "react"
-import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { render, fireEvent } from "@testing-library/react-native"
 import { DEFAULT_SETTINGS, Settings } from "../../types/global"
 
 // --- Mocks ---
@@ -9,17 +9,14 @@ jest.mock("@react-navigation/native", () => ({
 }))
 
 let mockSettings: Settings = { ...DEFAULT_SETTINGS }
-const mockSetSettings = jest.fn()
-const mockUpdateSettingsLocal = jest.fn()
-const mockRestartTracking = jest.fn()
 let mockTracking = false
 
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
     settings: mockSettings,
-    setSettings: mockSetSettings,
-    updateSettingsLocal: mockUpdateSettingsLocal,
-    restartTracking: mockRestartTracking,
+    setSettings: jest.fn(),
+    updateSettingsLocal: jest.fn(),
+    restartTracking: jest.fn(),
     tracking: mockTracking
   })
 }))
@@ -47,17 +44,6 @@ jest.mock("../../hooks/useTheme", () => ({
   })
 }))
 
-jest.mock("../../hooks/useAutoSave", () => ({
-  useAutoSave: () => ({
-    saving: false,
-    saveSuccess: false,
-    debouncedSaveAndRestart: jest.fn(),
-    immediateSaveAndRestart: jest.fn()
-  })
-}))
-
-const mockSaveSetting = jest.fn().mockResolvedValue(undefined)
-
 jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
   default: {
@@ -68,65 +54,40 @@ jest.mock("../../services/NativeLocationService", () => ({
       today: 10,
       databaseSizeMB: 1.2
     }),
-    saveSetting: (...args: any[]) => mockSaveSetting(...args),
+    saveSetting: jest.fn().mockResolvedValue(undefined),
     getSetting: jest.fn().mockResolvedValue(null)
   }
 }))
 
-jest.mock("../../utils/geo", () => ({
-  ...jest.requireActual("../../utils/geo"),
-  getUnitSystem: () => "metric",
-  getTimeFormat: () => "24h",
-  loadDisplayPreferences: jest.fn().mockResolvedValue(undefined)
-}))
-
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text } = require("react-native")
+  const { View, Text, Pressable } = require("react-native")
   return {
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
-    SettingRow: ({ label, children }: any) => R.createElement(View, null, R.createElement(Text, null, label), children),
     StatsCard: ({ queueCount, sentCount }: any) =>
       R.createElement(
         View,
         { testID: "StatsCard" },
         R.createElement(Text, null, `${queueCount}`),
         R.createElement(Text, null, `${sentCount}`)
+      ),
+    ListItem: ({ testID, label, sub, onPress }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress },
+        R.createElement(Text, null, label),
+        sub ? R.createElement(Text, null, sub) : null
       )
-  }
-})
-
-jest.mock("../../components/features/settings/ConnectionSettings", () => {
-  const R = require("react")
-  const { View } = require("react-native")
-  return {
-    ConnectionSettings: () => R.createElement(View, { testID: "ConnectionSettings" })
-  }
-})
-
-jest.mock("../../components/features/settings/SyncStrategySettings", () => {
-  const R = require("react")
-  const { View } = require("react-native")
-  return {
-    SyncStrategySettings: () => R.createElement(View, { testID: "SyncStrategySettings" })
-  }
-})
-
-jest.mock("../../components/ui/FloatingSaveIndicator", () => {
-  const R = require("react")
-  const { View } = require("react-native")
-  return {
-    FloatingSaveIndicator: () => R.createElement(View, { testID: "FloatingSaveIndicator" })
   }
 })
 
 import { SettingsScreen } from "../SettingsScreen"
 
 const mockNavigate = jest.fn()
-const mockNavigation = { navigate: mockNavigate } as any
+const mockProps = { navigation: { navigate: mockNavigate }, route: { key: "Settings", name: "Settings" } } as any
 
 describe("SettingsScreen", () => {
   beforeEach(() => {
@@ -135,67 +96,89 @@ describe("SettingsScreen", () => {
     mockTracking = false
   })
 
-  it("renders title and main sections", () => {
-    const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
+  it("renders grouped section headers", () => {
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    expect(getByText("Settings")).toBeTruthy()
-    expect(getByText("Appearance")).toBeTruthy()
-    expect(getByText("Advanced")).toBeTruthy()
+    expect(getByText("Display")).toBeTruthy()
+    expect(getByText("Data")).toBeTruthy()
   })
 
-  it("renders StatsCard with stats", async () => {
-    const { getByTestId } = render(<SettingsScreen navigation={mockNavigation} />)
+  it("renders StatsCard with stats", () => {
+    const { getByTestId } = render(<SettingsScreen {...mockProps} />)
 
     expect(getByTestId("StatsCard")).toBeTruthy()
   })
 
-  it("renders ConnectionSettings and SyncStrategySettings", () => {
-    const { getByTestId } = render(<SettingsScreen navigation={mockNavigation} />)
+  // --- Summary rows ---
 
-    expect(getByTestId("ConnectionSettings")).toBeTruthy()
-    expect(getByTestId("SyncStrategySettings")).toBeTruthy()
+  it("shows the endpoint host as the Connection summary", () => {
+    mockSettings = { ...DEFAULT_SETTINGS, endpoint: "https://api.example.com/track" }
+
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
+
+    expect(getByText("api.example.com")).toBeTruthy()
   })
 
-  // --- Chip selectors ---
+  it("shows 'No server configured' when endpoint is empty and not offline", () => {
+    mockSettings = { ...DEFAULT_SETTINGS, endpoint: "", isOfflineMode: false }
 
-  it("shows unit system chips with Metric selected by default", () => {
-    const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    expect(getByText("Metric")).toBeTruthy()
-    expect(getByText("Imperial")).toBeTruthy()
+    expect(getByText("No server configured")).toBeTruthy()
   })
 
-  it("shows time format chips with 24h and 12h", () => {
-    const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
+  it("shows 'Offline' as the Connection summary in offline mode", () => {
+    mockSettings = { ...DEFAULT_SETTINGS, isOfflineMode: true }
 
-    expect(getByText("24h")).toBeTruthy()
-    expect(getByText("12h")).toBeTruthy()
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
+
+    expect(getByText("Offline - saved locally")).toBeTruthy()
   })
 
-  it("saves unit system when chip is pressed", async () => {
-    const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
+  it("shows the preset label as the Sync Strategy summary", () => {
+    mockSettings = { ...DEFAULT_SETTINGS, syncPreset: "balanced" }
 
-    fireEvent.press(getByText("Imperial"))
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    await waitFor(() => {
-      expect(mockSaveSetting).toHaveBeenCalledWith("unitSystem", "imperial")
-    })
+    expect(getByText(/Balanced/)).toBeTruthy()
   })
 
-  it("saves time format when chip is pressed", async () => {
-    const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
+  it("shows a custom summary when syncPreset is custom", () => {
+    mockSettings = { ...DEFAULT_SETTINGS, syncPreset: "custom", interval: 45 }
 
-    fireEvent.press(getByText("12h"))
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    await waitFor(() => {
-      expect(mockSaveSetting).toHaveBeenCalledWith("timeFormat", "12h")
-    })
+    expect(getByText("Custom · every 45s")).toBeTruthy()
   })
 
   // --- Navigation ---
 
+  it("navigates to Appearance", () => {
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
+
+    fireEvent.press(getByText("Appearance"))
+
+    expect(mockNavigate).toHaveBeenCalledWith("Appearance")
+  })
+
+  it("navigates to Connection", () => {
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
+
+    fireEvent.press(getByText("Connection"))
+
+    expect(mockNavigate).toHaveBeenCalledWith("Connection")
+  })
+
+  it("navigates to Tracking & Sync", () => {
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
+
+    fireEvent.press(getByText("Tracking & Sync"))
+
+    expect(mockNavigate).toHaveBeenCalledWith("Tracking & Sync")
+  })
+
   it("navigates to Tracking Profiles", () => {
-    const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
 
     fireEvent.press(getByText("Tracking Profiles"))
 
@@ -203,7 +186,7 @@ describe("SettingsScreen", () => {
   })
 
   it("navigates to Data Management", () => {
-    const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
 
     fireEvent.press(getByText("Data Management"))
 
@@ -211,7 +194,7 @@ describe("SettingsScreen", () => {
   })
 
   it("navigates to API Config", () => {
-    const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
 
     fireEvent.press(getByText("API Field Mapping"))
 
@@ -223,16 +206,17 @@ describe("SettingsScreen", () => {
   it("hides API Field Mapping link when offline mode is enabled", () => {
     mockSettings = { ...DEFAULT_SETTINGS, isOfflineMode: true }
 
-    const { queryByText } = render(<SettingsScreen navigation={mockNavigation} />)
+    const { queryByText } = render(<SettingsScreen {...mockProps} />)
 
     expect(queryByText("API Field Mapping")).toBeNull()
   })
 
-  it("still shows Tracking Profiles and Data Management in offline mode", () => {
+  it("still shows Connection, Tracking Profiles and Data Management in offline mode", () => {
     mockSettings = { ...DEFAULT_SETTINGS, isOfflineMode: true }
 
-    const { getByText } = render(<SettingsScreen navigation={mockNavigation} />)
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
 
+    expect(getByText("Connection")).toBeTruthy()
     expect(getByText("Tracking Profiles")).toBeTruthy()
     expect(getByText("Data Management")).toBeTruthy()
   })

@@ -5,8 +5,8 @@
 import React from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { AlertTriangle, ChevronRight } from "lucide-react-native"
-import { ThemeColors } from "../../../types/global"
 import { useTracking } from "../../../contexts/TrackingProvider"
+import { useTheme } from "../../../hooks/useTheme"
 import { getQueueColor } from "../../../utils/queueStatus"
 import { fonts } from "../../../styles/typography"
 import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../constants"
@@ -17,7 +17,6 @@ interface StatsCardProps {
   todayCount?: number
   interval: string
   onManageClick?: () => void
-  colors: ThemeColors
 }
 
 type WarningLevel = "normal" | "warning" | "critical"
@@ -31,8 +30,9 @@ type WarningLevel = "normal" | "warning" | "critical"
  * - Improved warning states
  * - More prominent CTA when needed
  */
-export function StatsCard({ queueCount, sentCount, todayCount, interval, onManageClick, colors }: StatsCardProps) {
+export function StatsCard({ queueCount, sentCount, todayCount, interval, onManageClick }: StatsCardProps) {
   const { settings } = useTracking()
+  const { colors } = useTheme()
   const isOfflineMode = settings.isOfflineMode
   const getWarningLevel = (): WarningLevel => {
     if (queueCount > CRITICAL_QUEUE_THRESHOLD) return "critical"

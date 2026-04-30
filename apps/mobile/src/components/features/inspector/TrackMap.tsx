@@ -5,7 +5,8 @@
 
 import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
 import { View, StyleSheet, Text, Pressable } from "react-native"
-import { ShapeSource, LineLayer, CircleLayer } from "@maplibre/maplibre-react-native"
+import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
+import type { NativeSyntheticEvent } from "react-native"
 import { MapPinOff, X } from "lucide-react-native"
 import { ThemeColors, Trip } from "../../../types/global"
 import { getTripColor } from "../../../utils/trips"
@@ -21,18 +22,18 @@ import {
 import { getSpeedUnit } from "../../../utils/geo"
 import { HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
 
-const trackLineStyle = {
-  lineColor: ["get", "color"] as const,
+const trackLineStyle: any = {
+  lineColor: ["get", "color"],
   lineWidth: 3,
-  lineCap: "round" as const,
-  lineJoin: "round" as const
+  lineCap: "round",
+  lineJoin: "round"
 }
 
-const trackPointStyle = {
+const trackPointStyle: any = {
   circleRadius: 4,
-  circleColor: ["get", "color"] as const,
+  circleColor: ["get", "color"],
   circleOpacity: 0.4,
-  circleStrokeColor: ["get", "color"] as const,
+  circleStrokeColor: ["get", "color"],
   circleStrokeWidth: 1.5
 }
 
@@ -68,7 +69,10 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
     requestAnimationFrame(() => {
       if (!mapRef.current?.camera) return
       fittedVersionRef.current = fitVersion ?? 0
-      mapRef.current.camera.fitBounds(bounds.ne, bounds.sw, [60, 60, 60, 60], MAP_ANIMATION_DURATION_MS)
+      mapRef.current.camera.fitBounds([bounds.sw[0], bounds.sw[1], bounds.ne[0], bounds.ne[1]], {
+        padding: { top: 60, right: 60, bottom: 60, left: 60 },
+        duration: MAP_ANIMATION_DURATION_MS
+      })
     })
   }, [bounds, mapReady, fitVersion])
 
@@ -82,18 +86,20 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
   // Zoom to selected point from table tap
   useEffect(() => {
     if (selectedPoint && mapRef.current?.camera) {
-      mapRef.current.camera.setCamera({
-        centerCoordinate: [selectedPoint.longitude, selectedPoint.latitude],
-        zoomLevel: 17,
-        animationDuration: 500,
-        animationMode: "flyTo"
+      mapRef.current.camera.flyTo({
+        center: [selectedPoint.longitude, selectedPoint.latitude],
+        zoom: 17,
+        duration: 500
       })
     }
   }, [selectedPoint])
 
   const handleFitTrack = useCallback(() => {
     if (bounds && mapRef.current?.camera) {
-      mapRef.current.camera.fitBounds(bounds.ne, bounds.sw, [60, 60, 60, 60], MAP_ANIMATION_DURATION_MS)
+      mapRef.current.camera.fitBounds([bounds.sw[0], bounds.sw[1], bounds.ne[0], bounds.ne[1]], {
+        padding: { top: 60, right: 60, bottom: 60, left: 60 },
+        duration: MAP_ANIMATION_DURATION_MS
+      })
       setIsCentered(true)
     }
   }, [bounds])
@@ -175,8 +181,8 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
 
   const lastPointPressRef = useRef(0)
   const handlePointPress = useCallback(
-    (event: { features: GeoJSON.Feature[]; coordinates: { latitude: number; longitude: number } }) => {
-      const feature = event.features[0]
+    (event: NativeSyntheticEvent<PressEventWithFeatures>) => {
+      const feature = event.nativeEvent.features[0]
       if (!feature?.properties || !feature?.geometry) return
       lastPointPressRef.current = Date.now()
       const geom = feature.geometry as GeoJSON.Point
@@ -214,20 +220,20 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
         onRegionDidChange={handleRegionChange}
         onMapReady={handleMapReady}
       >
-        <ShapeSource id="track-segments" shape={segmentsGeoJSON}>
-          <LineLayer id="track-line" style={trackLineStyle} />
-        </ShapeSource>
-        <ShapeSource
+        <GeoJSONSource id="track-segments" data={segmentsGeoJSON}>
+          <Layer id="track-line" type="line" style={trackLineStyle} />
+        </GeoJSONSource>
+        <GeoJSONSource
           id="track-points"
-          shape={pointsGeoJSON}
+          data={pointsGeoJSON}
           onPress={handlePointPress}
-          hitbox={{ width: 20, height: 20 }}
+          hitbox={{ top: 10, right: 10, bottom: 10, left: 10 }}
         >
-          <CircleLayer id="track-point-circles" style={trackPointStyle} />
-        </ShapeSource>
-        <ShapeSource id="highlight-point" shape={highlightGeoJSON}>
-          <CircleLayer id="highlight-circle" style={highlightStyle} />
-        </ShapeSource>
+          <Layer id="track-point-circles" type="circle" style={trackPointStyle} />
+        </GeoJSONSource>
+        <GeoJSONSource id="highlight-point" data={highlightGeoJSON}>
+          <Layer id="highlight-circle" type="circle" style={highlightStyle} />
+        </GeoJSONSource>
       </ColotaMapView>
     ),
     [
@@ -243,24 +249,23 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
     ]
   )
 
-  if (locations.length === 0) {
-    return (
-      <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
-        <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
-          <MapPinOff size={32} color={colors.textSecondary} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
-        <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>No tracked locations for this day.</Text>
-      </View>
-    )
-  }
+  const isEmpty = locations.length === 0
 
   return (
     <View style={styles.container}>
       {mapView}
 
-      {/* Point detail popup */}
-      {popup && (
+      {isEmpty && (
+        <View style={[styles.emptyOverlay, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
+          <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
+            <MapPinOff size={32} color={colors.textSecondary} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>No tracked locations for this day.</Text>
+        </View>
+      )}
+
+      {!isEmpty && popup && (
         <View style={[styles.popupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.popupHeader}>
             <Text style={[styles.popupTime, { color: colors.text }]}>
@@ -294,10 +299,9 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
         </View>
       )}
 
-      <MapCenterButton visible={!isCentered} onPress={handleFitTrack} />
+      {!isEmpty && <MapCenterButton visible={!isCentered} onPress={handleFitTrack} />}
 
-      {/* Trip legend */}
-      {trips && trips.length > 1 && (
+      {!isEmpty && trips && trips.length > 1 && (
         <View style={[styles.legend, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {trips.map((trip) => (
             <View key={trip.index} style={styles.legendItem}>
@@ -316,11 +320,16 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: "hidden"
   },
-  emptyContainer: {
-    flex: 1,
+  emptyOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24
+    padding: 24,
+    zIndex: 20
   },
   iconCircle: {
     width: 64,

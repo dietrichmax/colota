@@ -17,7 +17,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Location History** - View daily summaries, trip segmentation, calendar with activity dots and per-trip export.
 - **Reliable Tracking** - Foreground service, auto-start on boot and exponential backoff retry.
 - **Geofencing** - Pause zones that stop recording locations. Optionally stop GPS entirely when on WiFi or when the device is motionless.
-- **Tracking Profiles** - Automatically adjust GPS interval, distance filter and sync settings based on conditions like charging, car mode, speed or stationary detection.
+- **Tracking Profiles** - Automatically adjust GPS interval, distance filter and sync settings based on conditions like charging, Android Auto, speed or stationary detection.
 - **Flexible Sync** - Instant, batch, Wi-Fi only or offline modes.
 - **Display Settings** - Choose between metric and imperial units, 12h or 24h time format. Auto-detected from device locale on first use.
 - **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
@@ -26,24 +26,27 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## App Screens
 
-Colota has eighteen screens, each focused on a specific task:
+Colota has twenty-one screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
 | **Dashboard** | Live map with current coordinates, today's track overlay, tracking controls, database stats, and geofence status |
-| **Settings** | GPS polling interval, distance filter, sync strategy, offline mode, accuracy threshold, unit system, time format |
+| **Settings** | Hub linking to Connection, Tracking and Sync, API Field Mapping, Tracking Profiles, Appearance and data/about screens |
+| **Connection** | Server endpoint URL, offline mode toggle and connection test |
+| **Tracking & Sync** | GPS polling interval, distance filter, accuracy threshold and sync strategy preset |
+| **Appearance** | Light/dark theme, unit system, time format and custom map tile URLs |
 | **API Config** | Endpoint field mapping with templates for Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or custom backends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | **Geofences** | Create pause zones by tapping the map, view all zones with pause option indicators |
-| **Geofence Editor** | Configure pause options per zone: record pause, WiFi pause, motionless pause, stationary heartbeat and delete |
+| **Geofence Editor** | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
 | **Offline Maps** | Download map areas to the device for use without an internet connection |
 | **Tracking Profiles** | Create and manage condition-based profiles that automatically adjust tracking settings |
 | **Profile Editor** | Configure profile name, condition trigger, GPS interval, distance filter, sync interval, priority, and deactivation delay |
 | **Location History** | Browse recorded locations on a track map with calendar day picker and trip-colored segments, view segmented trips with per-trip stats |
-| **Trip Detail** | Full trip view with dedicated map, stats grid (distance, duration, avg speed, elevation), speed and elevation profile charts, and export |
+| **Trip Detail** | Full trip view with dedicated map, stats grid (distance, duration, avg speed, elevation), speed and elevation profile charts, export, and delete |
 | **Location Summary** | Aggregated stats (total distance, trips, active days, avg distance) for selectable periods with daily breakdown and tap-to-inspect navigation |
 | **Export Data** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
-| **Auto-Export** | Configure scheduled exports: format, directory, frequency, export range, and file retention |
+| **Auto-Export** | Configure scheduled exports: directory, format, frequency, time of day (with weekday or day-of-month for weekly/monthly), export range and file retention |
 | **Data Management** | Clear sent history, delete old data, vacuum the database |
 | **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
 | **Activity Log** | In-app log viewer with level filtering, search, and export for bug reports |

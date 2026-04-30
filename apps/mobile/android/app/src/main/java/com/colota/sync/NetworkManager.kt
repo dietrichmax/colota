@@ -31,7 +31,6 @@ class NetworkManager(private val context: Context) {
         private const val CONNECTION_TIMEOUT = 10000
         private const val READ_TIMEOUT = 10000
         private const val NETWORK_CHECK_CACHE_MS = 5000L
-        const val FORMAT_TRACCAR_JSON = "traccar_json"
     }
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -43,30 +42,34 @@ class NetworkManager(private val context: Context) {
     private val networkCallback = createNetworkCallback()
 
     private fun createNetworkCallback(): ConnectivityManager.NetworkCallback {
+        fun update(caps: NetworkCapabilities) {
+            currentSsid = readSsid(caps)
+            isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+        }
+        fun clear() {
+            currentSsid = ""
+            isVpn = false
+        }
+
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
-                override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                    val wifiInfo = caps.transportInfo as? WifiInfo
-                    currentSsid = wifiInfo?.ssid?.removeSurrounding("\"") ?: ""
-                    isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-                }
-                override fun onLost(network: Network) {
-                    currentSsid = ""
-                    isVpn = false
-                }
+                override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = update(caps)
+                override fun onLost(network: Network) = clear()
             }
         } else {
             object : ConnectivityManager.NetworkCallback() {
-                @Suppress("DEPRECATION")
-                override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                    currentSsid = wifiManager?.connectionInfo?.ssid?.removeSurrounding("\"") ?: ""
-                    isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-                }
-                override fun onLost(network: Network) {
-                    currentSsid = ""
-                    isVpn = false
-                }
+                override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = update(caps)
+                override fun onLost(network: Network) = clear()
             }
+        }
+    }
+
+    private fun readSsid(caps: NetworkCapabilities): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (caps.transportInfo as? WifiInfo)?.ssid?.removeSurrounding("\"") ?: ""
+        } else {
+            @Suppress("DEPRECATION")
+            wifiManager?.connectionInfo?.ssid?.removeSurrounding("\"") ?: ""
         }
     }
 
@@ -100,7 +103,7 @@ class NetworkManager(private val context: Context) {
         endpoint: String,
         extraHeaders: Map<String, String> = emptyMap(),
         httpMethod: String = "POST",
-        apiFormat: String = ""
+        apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED
     ): Boolean = withContext(Dispatchers.IO) {
         if (endpoint.isBlank()) {
             AppLogger.d(TAG, "Empty endpoint provided")
@@ -127,8 +130,8 @@ class NetworkManager(private val context: Context) {
         }
 
         val transformedPayload = when (apiFormat) {
-            FORMAT_TRACCAR_JSON -> buildTraccarJsonPayload(payload)
-            else -> payload
+            ApiFormat.TRACCAR_JSON -> buildTraccarJsonPayload(payload)
+            ApiFormat.FIELD_MAPPED -> payload
         }
 
         val isGet = httpMethod.equals("GET", ignoreCase = true)
@@ -143,54 +146,10 @@ class NetworkManager(private val context: Context) {
 
         var connection: HttpURLConnection? = null
         try {
-            connection = targetUrl.openConnection() as HttpURLConnection
-            connection.apply {
-                requestMethod = if (isGet) "GET" else "POST"
-                if (!isGet) {
-                    setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                    setRequestProperty("Accept", "application/json")
-                    doOutput = true
-                }
-                extraHeaders.forEach { (key, value) ->
-                    setRequestProperty(key, value)
-                }
-                connectTimeout = CONNECTION_TIMEOUT
-                readTimeout = READ_TIMEOUT
-                useCaches = false
-            }
-
-            if (BuildConfig.DEBUG) {
-                AppLogger.d(TAG, "=== HTTP REQUEST ===")
-                AppLogger.d(TAG, "Endpoint: ${if (isGet) targetUrl else resolvedEndpoint}")
-                AppLogger.d(TAG, "Method: ${connection.requestMethod}")
-                AppLogger.d(TAG, "Headers:")
-                connection.requestProperties.forEach { (key, values) ->
-                    val masked = values.map { maskSensitiveHeaderValue(key, it) }
-                    AppLogger.d(TAG, "$key: ${masked.joinToString()}")
-                }
-                if (!isGet) {
-                    AppLogger.d(TAG, "Body: ${transformedPayload.toString(2)}")
-                }
-                AppLogger.d(TAG, "===================")
-            }
-
-            if (!isGet) {
-                val bodyBytes = transformedPayload.toString().toByteArray(StandardCharsets.UTF_8)
-                connection.setFixedLengthStreamingMode(bodyBytes.size)
-                connection.outputStream.use { it.write(bodyBytes) }
-            }
-
-            val responseCode = connection.responseCode
-            return@withContext if (responseCode in 200..299) {
-                AppLogger.d(TAG, "Location successfully sent")
-                true
-            } else {
-                val errorBody = try {
-                    connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
-                } catch (_: Exception) { "Could not read error body" }
-                AppLogger.e(TAG, "${connection.requestMethod} failed: $responseCode - $errorBody")
-                false
-            }
+            connection = buildConnection(targetUrl, isGet, extraHeaders)
+            logRequest(connection, isGet, resolvedEndpoint, targetUrl, transformedPayload)
+            if (!isGet) writeBody(connection, transformedPayload)
+            return@withContext readResponse(connection)
         } catch (e: java.net.SocketException) {
             if (isPrivateHost(url.host ?: "") && e.message?.contains("EPERM") == true) {
                 AppLogger.e(TAG, "Local network access denied - grant Local Network Access permission", e)
@@ -204,6 +163,64 @@ class NetworkManager(private val context: Context) {
         } finally {
             connection?.disconnect()
         }
+    }
+
+    private fun buildConnection(
+        targetUrl: URL,
+        isGet: Boolean,
+        extraHeaders: Map<String, String>,
+    ): HttpURLConnection = (targetUrl.openConnection() as HttpURLConnection).apply {
+        requestMethod = if (isGet) "GET" else "POST"
+        if (!isGet) {
+            setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+            setRequestProperty("Accept", "application/json")
+            doOutput = true
+        }
+        extraHeaders.forEach { (key, value) -> setRequestProperty(key, value) }
+        connectTimeout = CONNECTION_TIMEOUT
+        readTimeout = READ_TIMEOUT
+        useCaches = false
+    }
+
+    private fun writeBody(connection: HttpURLConnection, payload: JSONObject) {
+        val bodyBytes = payload.toString().toByteArray(StandardCharsets.UTF_8)
+        connection.setFixedLengthStreamingMode(bodyBytes.size)
+        connection.outputStream.use { it.write(bodyBytes) }
+    }
+
+    private fun readResponse(connection: HttpURLConnection): Boolean {
+        val responseCode = connection.responseCode
+        if (responseCode in 200..299) {
+            AppLogger.d(TAG, "Location successfully sent")
+            return true
+        }
+        val errorBody = try {
+            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
+        } catch (_: Exception) { "Could not read error body" }
+        AppLogger.e(TAG, "${connection.requestMethod} failed: $responseCode - $errorBody")
+        return false
+    }
+
+    private fun logRequest(
+        connection: HttpURLConnection,
+        isGet: Boolean,
+        resolvedEndpoint: String,
+        targetUrl: URL,
+        payload: JSONObject,
+    ) {
+        if (!BuildConfig.DEBUG) return
+        AppLogger.d(TAG, "=== HTTP REQUEST ===")
+        AppLogger.d(TAG, "Endpoint: ${if (isGet) targetUrl else resolvedEndpoint}")
+        AppLogger.d(TAG, "Method: ${connection.requestMethod}")
+        AppLogger.d(TAG, "Headers:")
+        connection.requestProperties.forEach { (key, values) ->
+            val masked = values.map { maskSensitiveHeaderValue(key, it) }
+            AppLogger.d(TAG, "$key: ${masked.joinToString()}")
+        }
+        if (!isGet) {
+            AppLogger.d(TAG, "Body: ${payload.toString(2)}")
+        }
+        AppLogger.d(TAG, "===================")
     }
 
     /**
@@ -235,13 +252,13 @@ class NetworkManager(private val context: Context) {
         return true
     }
 
+    /** Per-hostname cache of the DNS lookup + private-range check. */
     private val privateHostCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
     /**
      * Checks if the given host is private or local.
      * Matches Android's local network definition:
      * loopback, site-local (RFC 1918), link-local, and CGNAT (100.64.0.0/10).
-     * Results are cached to avoid repeated DNS lookups on every request.
      */
     private fun isPrivateHost(host: String): Boolean {
         if (host == "localhost") return true

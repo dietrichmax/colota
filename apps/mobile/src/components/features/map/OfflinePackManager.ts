@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { OfflineManager } from "@maplibre/maplibre-react-native"
+import { OfflineManager, type OfflinePack } from "@maplibre/maplibre-react-native"
 import { MAP_STYLE_URL_LIGHT as MAP_STYLE_URL } from "../../../constants"
 import NativeLocationService from "../../../services/NativeLocationService"
 
@@ -19,16 +19,15 @@ function bytesPerTile(z: number): number {
   return 50 * 1024
 }
 
-// state values from MapLibre's OfflinePackDownloadState
+// state values from MapLibre's OfflinePackDownloadState (v11 uses string literals)
 export const DOWNLOAD_STATE = {
-  INACTIVE: 0,
-  ACTIVE: 1,
-  COMPLETE: 2,
-  FAILED: 3
+  INACTIVE: "inactive",
+  ACTIVE: "active",
+  COMPLETE: "complete"
 } as const
 
 export interface OfflinePackStatus {
-  state: number
+  state: string
   percentage: number
   completedResourceCount: number
   requiredResourceCount: number
@@ -96,9 +95,10 @@ export function estimateSizeLabel(ne: [number, number], sw: [number, number]): s
   return `~${mb.toFixed(0)} MB`
 }
 
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+/** Finds a pack by its stored metadata.name (packs are identified by UUID in v11). */
+async function findPackByName(name: string): Promise<OfflinePack | null> {
+  const packs = await OfflineManager.getPacks()
+  return packs.find((p) => (p.metadata as { name?: string })?.name === name) ?? null
 }
 
 export async function createOfflinePack(
@@ -108,54 +108,61 @@ export async function createOfflinePack(
   onProgress: (status: OfflinePackStatus) => void,
   onError: (err: unknown) => void
 ): Promise<void> {
-  const existing = await OfflineManager.getPack(name)
+  const existing = await findPackByName(name)
   if (existing) throw new Error(`An offline area named "${name}" already exists`)
 
   const customStyleUrl = await NativeLocationService.getSetting("mapStyleUrlLight")
-  const styleURL = customStyleUrl || MAP_STYLE_URL
+  const mapStyle = customStyleUrl || MAP_STYLE_URL
 
   OfflineManager.setTileCountLimit(TILE_COUNT_LIMIT)
 
   await OfflineManager.createPack(
-    { name, styleURL, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, bounds: [ne, sw] },
-    (_pack: unknown, status: OfflinePackStatus) => onProgress(status),
-    (_pack: unknown, err: unknown) => onError(err)
+    {
+      mapStyle,
+      minZoom: MIN_ZOOM,
+      maxZoom: MAX_ZOOM,
+      bounds: [sw[0], sw[1], ne[0], ne[1]],
+      metadata: { name }
+    },
+    (_pack, status) => onProgress(status as OfflinePackStatus),
+    (_pack, err) => onError(err)
   )
 }
 
 export async function loadOfflineAreas(): Promise<OfflineAreaInfo[]> {
   const packs = await OfflineManager.getPacks()
 
-  const namedPacks = packs.filter((p): p is typeof p & { name: string } => !!p.name)
-
-  return Promise.all(
-    namedPacks.map(async (pack) => {
+  const results = await Promise.all(
+    packs.map(async (pack): Promise<OfflineAreaInfo | null> => {
+      const name = (pack.metadata as { name?: string })?.name
+      if (!name) return null
       try {
         const status = await pack.status()
         return {
-          name: pack.name,
+          name,
           sizeBytes: status?.completedResourceSize ?? null,
           isComplete: status?.state === DOWNLOAD_STATE.COMPLETE,
           isActive: status?.state === DOWNLOAD_STATE.ACTIVE
-        } satisfies OfflineAreaInfo
+        }
       } catch {
-        return { name: pack.name, sizeBytes: null, isComplete: false, isActive: false } satisfies OfflineAreaInfo
+        return { name, sizeBytes: null, isComplete: false, isActive: false }
       }
     })
   )
+  return results.filter((r): r is OfflineAreaInfo => r !== null)
 }
 
 /** Stops any active download for the pack and removes it and its tiles from disk. */
 export async function deleteOfflineArea(name: string): Promise<void> {
-  OfflineManager.unsubscribe(name)
-  const pack = await OfflineManager.getPack(name)
+  const pack = await findPackByName(name)
   if (pack) {
+    OfflineManager.removeListener(pack.id)
     try {
       await pack.pause()
     } catch {
       // pack may already be inactive - proceed to delete
     }
-    await OfflineManager.deletePack(name)
+    await OfflineManager.deletePack(pack.id)
   }
 
   // SQLite does not shrink the database file when rows are deleted - freed pages
@@ -167,8 +174,9 @@ export async function deleteOfflineArea(name: string): Promise<void> {
   }
 }
 
-export function unsubscribeOfflinePack(name: string): void {
-  OfflineManager.unsubscribe(name)
+export async function unsubscribeOfflinePack(name: string): Promise<void> {
+  const pack = await findPackByName(name)
+  if (pack) OfflineManager.removeListener(pack.id)
 }
 
 // ---------------------------------------------------------------------------

@@ -13,7 +13,7 @@ Colota includes built-in presets that configure tracking interval, movement thre
 | **Power Saver** | 60s      | 2m       | 15 minutes    | Long trips      |
 | **Custom**      | 1s-∞     | 0m-∞     | 0s-∞          | Advanced users  |
 
-Select a preset in **Settings** or choose **Custom** to configure each parameter individually.
+Select a preset in **Settings → Tracking & Sync** or choose **Custom** to configure each parameter individually.
 
 ## Sync Condition
 
@@ -32,7 +32,7 @@ This is useful for:
 - **Private backends** - Only sync when on your home network or VPN
 - **Roaming** - Prevent expensive data charges while traveling abroad
 
-Configure this in **Settings > Advanced Settings > Network Settings > Sync Only On**.
+Configure this in **Settings → Tracking & Sync → Advanced Settings → Network Settings → Sync Only On**.
 
 ## Offline Mode
 

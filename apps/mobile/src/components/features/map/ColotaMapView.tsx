@@ -5,9 +5,9 @@
 
 import React, { useRef, useImperativeHandle, forwardRef, useState, useEffect, useCallback } from "react"
 import { StyleProp, ViewStyle, View, Text, StyleSheet, Linking, Pressable } from "react-native"
-import { MapView, Camera } from "@maplibre/maplibre-react-native"
-import type { MapViewRef, CameraRef } from "@maplibre/maplibre-react-native"
-import type { RegionPayload } from "@maplibre/maplibre-react-native"
+import { Map, Camera } from "@maplibre/maplibre-react-native"
+import type { MapRef, CameraRef, ViewStateChangeEvent, LngLatBounds } from "@maplibre/maplibre-react-native"
+import type { NativeSyntheticEvent } from "react-native"
 import { Compass } from "lucide-react-native"
 import { useIsFocused } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
@@ -23,14 +23,20 @@ const DEFAULT_ATTRIBUTION_LINKS = [
 
 export interface ColotaMapRef {
   camera: CameraRef | null
-  mapView: MapViewRef | null
+  mapView: MapRef | null
+}
+
+export interface RegionChangePayload {
+  heading: number
+  isUserInteraction: boolean
+  bounds: LngLatBounds
 }
 
 interface Props {
   initialCenter: [number, number] // [lon, lat]
   initialZoom?: number
   onPress?: (coords: { latitude: number; longitude: number }) => void
-  onRegionDidChange?: (payload: RegionPayload & { isUserInteraction: boolean }) => void
+  onRegionDidChange?: (payload: RegionChangePayload) => void
   onMapReady?: () => void
   style?: StyleProp<ViewStyle>
   children?: React.ReactNode
@@ -41,7 +47,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
   ref
 ) {
   const cameraRef = useRef<CameraRef>(null)
-  const mapViewRef = useRef<MapViewRef>(null)
+  const mapViewRef = useRef<MapRef>(null)
   const { colors, mode } = useTheme()
   const isDark = mode === "dark"
 
@@ -81,11 +87,11 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
   const isCustomStyle = mapStyleLight !== MAP_STYLE_URL_LIGHT || mapStyleDark !== MAP_STYLE_URL_DARK
 
   const handleRegionDidChange = useCallback(
-    (feature: GeoJSON.Feature<GeoJSON.Point, RegionPayload>) => {
-      const props = feature.properties as RegionPayload & { isUserInteraction: boolean }
-      setHeading(props.heading ?? 0)
+    (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
+      const { bearing, userInteraction, bounds } = event.nativeEvent
+      setHeading(bearing ?? 0)
       if (onRegionDidChange) {
-        onRegionDidChange(props)
+        onRegionDidChange({ heading: bearing ?? 0, isUserInteraction: userInteraction, bounds })
       }
     },
     [onRegionDidChange]
@@ -93,18 +99,18 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
 
   const handleCompassPress = useCallback(() => {
     if (cameraRef.current) {
-      cameraRef.current.setCamera({
-        heading: 0,
-        animationDuration: 300,
-        animationMode: "easeTo"
+      cameraRef.current.setStop({
+        bearing: 0,
+        duration: 300,
+        easing: "ease"
       })
     }
   }, [])
 
   const handlePress = useCallback(
-    (feature: GeoJSON.Feature) => {
-      if (onPress && feature.geometry?.type === "Point") {
-        const [lon, lat] = (feature.geometry as GeoJSON.Point).coordinates
+    (event: NativeSyntheticEvent<{ lngLat: [number, number] }>) => {
+      if (onPress) {
+        const [lon, lat] = event.nativeEvent.lngLat
         onPress({ latitude: lat, longitude: lon })
       }
     },
@@ -115,27 +121,27 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
 
   return (
     <View style={[styles.container, style]}>
-      <MapView
+      <Map
         ref={mapViewRef}
         style={styles.map}
         mapStyle={mapStyle}
-        attributionEnabled={isCustomStyle}
-        logoEnabled={false}
-        compassEnabled={false}
+        attribution={isCustomStyle}
+        logo={false}
+        compass={false}
         onDidFinishLoadingMap={onMapReady}
         onPress={onPress ? handlePress : undefined}
         onRegionDidChange={handleRegionDidChange}
       >
         <Camera
           ref={cameraRef}
-          defaultSettings={{
-            centerCoordinate: initialCenter,
-            zoomLevel: initialZoom
+          initialViewState={{
+            center: initialCenter,
+            zoom: initialZoom
           }}
         />
 
         {children}
-      </MapView>
+      </Map>
 
       {/* Custom compass button */}
       {showCompass && (

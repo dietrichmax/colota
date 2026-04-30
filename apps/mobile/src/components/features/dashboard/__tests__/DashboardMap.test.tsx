@@ -6,15 +6,11 @@ jest.mock("@maplibre/maplibre-react-native", () => {
   const { View } = require("react-native")
   return {
     __esModule: true,
-    default: { setAccessToken: jest.fn() },
-    MapView: (props: any) => R.createElement(View, { testID: "mapview", ...props }),
+    Map: (props: any) => R.createElement(View, { testID: "mapview", ...props }),
     Camera: () => null,
-    ShapeSource: ({ children }: any) => children,
-    FillLayer: () => null,
-    LineLayer: () => null,
-    SymbolLayer: () => null,
-    CircleLayer: () => null,
-    MarkerView: ({ children }: any) => children
+    GeoJSONSource: ({ children }: any) => children,
+    Layer: () => null,
+    Marker: ({ children }: any) => children
   }
 })
 
@@ -53,7 +49,11 @@ jest.mock("../../../../services/NativeLocationService", () => ({
   getSetting: jest.fn().mockResolvedValue(null)
 }))
 
-const mockCoords = { latitude: 48.1, longitude: 11.5, accuracy: 10 }
+let mockCoords: { latitude: number; longitude: number; accuracy: number } | null = {
+  latitude: 48.1,
+  longitude: 11.5,
+  accuracy: 10
+}
 jest.mock("../../../../contexts/TrackingProvider", () => ({
   useCoords: () => mockCoords
 }))
@@ -73,12 +73,17 @@ jest.mock("../../map/MapCenterButton", () => {
 import { DashboardMap } from "../DashboardMap"
 
 describe("DashboardMap info cards", () => {
+  beforeEach(() => {
+    mockCoords = { latitude: 48.1, longitude: 11.5, accuracy: 10 }
+  })
+
   const baseProps = {
     tracking: true,
     activeZoneName: null as string | null,
     pauseReason: null as string | null,
     activeProfileName: null as string | null,
-    isBatteryCritical: false
+    isBatteryCritical: false,
+    locationEnabled: true
   }
 
   it("shows profile name when activeProfileName is set and no pause zone", () => {
@@ -138,5 +143,46 @@ describe("DashboardMap info cards", () => {
 
     expect(getByText("Tracking Disabled")).toBeTruthy()
     expect(getByText("Start tracking to see the map.")).toBeTruthy()
+  })
+
+  it("shows Location Services Off overlay when tracking but location services are off", () => {
+    mockCoords = null
+    const { getByText, queryByText } = render(<DashboardMap {...baseProps} locationEnabled={false} />)
+
+    expect(getByText("Location Services Off")).toBeTruthy()
+    expect(getByText(/Tap to open Settings/)).toBeTruthy()
+    // The Searching GPS spinner overlay should NOT show simultaneously
+    expect(queryByText("Searching GPS...")).toBeNull()
+  })
+
+  it("shows Searching GPS overlay when tracking and location services are on but no fix yet", () => {
+    mockCoords = null
+    const { getByText, queryByText } = render(<DashboardMap {...baseProps} locationEnabled={true} />)
+
+    expect(getByText("Searching GPS...")).toBeTruthy()
+    expect(queryByText("Location Services Off")).toBeNull()
+  })
+
+  it("shows location-off status bar when tracking with cached coords but location services off", () => {
+    // Coords are valid (cached from before location was disabled), so the full
+    // overlay doesn't fire - the slim status bar at the top of the map does.
+    const { getByText, queryByText } = render(
+      <DashboardMap {...baseProps} activeProfileName="Charging" locationEnabled={false} />
+    )
+
+    expect(getByText("Location off - tap to enable")).toBeTruthy()
+    // Profile chip is hidden while location is off (location-off takes priority)
+    expect(queryByText("Charging")).toBeNull()
+    // Full-screen overlay should NOT show because we have valid coords
+    expect(queryByText("Location Services Off")).toBeNull()
+  })
+
+  it("hides profile and pause-zone chips when location services are off", () => {
+    const { queryByText } = render(
+      <DashboardMap {...baseProps} activeZoneName="Home" activeProfileName="Charging" locationEnabled={false} />
+    )
+
+    expect(queryByText(/Paused in Home/)).toBeNull()
+    expect(queryByText("Charging")).toBeNull()
   })
 })

@@ -8,7 +8,7 @@ package com.Colota.service
 import android.content.Intent
 import android.os.Bundle
 import com.Colota.data.DatabaseHelper
-import com.Colota.sync.NetworkManager
+import com.Colota.sync.ApiFormat
 import com.facebook.react.bridge.ReadableMap
 import org.json.JSONObject
 
@@ -29,14 +29,14 @@ data class ServiceConfig(
     val fieldMap: String? = null,
     val customFields: String? = null,
     val httpMethod: String = "POST",
-    val apiFormat: String = ""
+    val apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED
 ) {
     companion object {
         fun fromDatabase(dbHelper: DatabaseHelper): ServiceConfig {
             val saved = dbHelper.getAllSettings()
             val httpMethod = saved["httpMethod"] ?: "POST"
             val apiTemplate = saved["apiTemplate"] ?: ""
-            val apiFormat = if (apiTemplate == "traccar" && httpMethod == "POST") NetworkManager.FORMAT_TRACCAR_JSON else ""
+            val apiFormat = if (apiTemplate == "traccar" && httpMethod == "POST") ApiFormat.TRACCAR_JSON else ApiFormat.FIELD_MAPPED
 
             return ServiceConfig(
                 endpoint = saved["endpoint"] ?: "",
@@ -81,7 +81,7 @@ data class ServiceConfig(
 
             val httpMethod = config.getStringOrNull("httpMethod") ?: dbConfig.httpMethod
             val apiTemplate = config.getStringOrNull("apiTemplate") ?: ""
-            val apiFormat = if (apiTemplate == "traccar" && httpMethod == "POST") NetworkManager.FORMAT_TRACCAR_JSON else ""
+            val apiFormat = if (apiTemplate == "traccar" && httpMethod == "POST") ApiFormat.TRACCAR_JSON else ApiFormat.FIELD_MAPPED
 
             return ServiceConfig(
                 endpoint = config.getStringOrNull("endpoint") ?: dbConfig.endpoint,
@@ -119,11 +119,13 @@ data class ServiceConfig(
                 fieldMap = extras.getStringOrDefault("fieldMap", dbConfig.fieldMap),
                 customFields = extras.getStringOrDefault("customFields", dbConfig.customFields),
                 httpMethod = extras.getStringOrDefault("httpMethod", dbConfig.httpMethod) ?: "POST",
-                apiFormat = extras.getStringOrDefault("apiFormat", dbConfig.apiFormat) ?: ""
+                apiFormat = if (extras.containsKey("apiFormat"))
+                    ApiFormat.fromWire(extras.getString("apiFormat"))
+                else dbConfig.apiFormat
             )
         }
     }
-    
+
     fun toIntent(intent: Intent): Intent {
         return intent.apply {
             putExtra("interval", interval)
@@ -139,7 +141,7 @@ data class ServiceConfig(
             fieldMap?.let { putExtra("fieldMap", it) }
             customFields?.let { putExtra("customFields", it) }
             putExtra("httpMethod", httpMethod)
-            putExtra("apiFormat", apiFormat)
+            putExtra("apiFormat", apiFormat.wireName)
         }
     }
 }

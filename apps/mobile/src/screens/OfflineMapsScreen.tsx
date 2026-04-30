@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react"
 import { View, Text, StyleSheet, TextInput, Pressable, FlatList, ActivityIndicator, AppState } from "react-native"
-import { ShapeSource, FillLayer, LineLayer, type OnPressEvent } from "@maplibre/maplibre-react-native"
+import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
+import type { NativeSyntheticEvent } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { showAlert, showConfirm } from "../services/modalService"
 import { ScreenProps } from "../types/global"
@@ -19,12 +20,12 @@ import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
+import { formatBytes } from "../utils/format"
 import {
   createOfflinePack,
   loadOfflineAreas,
   deleteOfflineArea,
   unsubscribeOfflinePack,
-  formatBytes,
   DOWNLOAD_STATE,
   OfflinePackStatus,
   OfflineAreaInfo,
@@ -293,11 +294,10 @@ export function OfflineMapsScreen({}: ScreenProps) {
 
   const handleCenterMe = useCallback(() => {
     if (coords && mapRef.current?.camera) {
-      mapRef.current.camera.setCamera({
-        centerCoordinate: [coords.longitude, coords.latitude],
-        zoomLevel: DEFAULT_MAP_ZOOM,
-        animationDuration: MAP_ANIMATION_DURATION_MS,
-        animationMode: "flyTo"
+      mapRef.current.camera.flyTo({
+        center: [coords.longitude, coords.latitude],
+        zoom: DEFAULT_MAP_ZOOM,
+        duration: MAP_ANIMATION_DURATION_MS
       })
       setIsCentered(true)
     }
@@ -309,13 +309,11 @@ export function OfflineMapsScreen({}: ScreenProps) {
   }, [])
 
   const handleRegionChange = useCallback(
-    (payload: { isUserInteraction: boolean; visibleBounds?: number[][] }) => {
+    (payload: { isUserInteraction: boolean; bounds?: [number, number, number, number] }) => {
       if (payload.isUserInteraction) setIsCentered(false)
-      if (payload.visibleBounds && payload.visibleBounds.length >= 2) {
-        updateBoundsAndEstimate(
-          payload.visibleBounds[0] as [number, number],
-          payload.visibleBounds[1] as [number, number]
-        )
+      if (payload.bounds) {
+        const [west, south, east, north] = payload.bounds
+        updateBoundsAndEstimate([east, north], [west, south])
       }
     },
     [updateBoundsAndEstimate]
@@ -323,8 +321,11 @@ export function OfflineMapsScreen({}: ScreenProps) {
 
   const handleMapReady = useCallback(async () => {
     try {
-      const bounds = await mapRef.current?.mapView?.getVisibleBounds()
-      if (bounds) updateBoundsAndEstimate(bounds[0] as [number, number], bounds[1] as [number, number])
+      const bounds = await mapRef.current?.mapView?.getBounds()
+      if (bounds) {
+        const [west, south, east, north] = bounds
+        updateBoundsAndEstimate([east, north], [west, south])
+      }
     } catch {
       // map not ready yet
     }
@@ -377,9 +378,6 @@ export function OfflineMapsScreen({}: ScreenProps) {
               setDownloadBounds(null)
               onComplete?.()
               loadAreas()
-            } else if (status.state === DOWNLOAD_STATE.FAILED) {
-              logger.error("[OfflineMapsScreen] Download failed via progress callback")
-              onFailure("Download failed. Please try again.")
             }
           },
           (err: unknown) => {
@@ -582,15 +580,18 @@ export function OfflineMapsScreen({}: ScreenProps) {
     (name: string) => {
       const entry = areaBounds.find((b) => b.name === name)
       if (!entry || !mapRef.current?.camera) return
-      mapRef.current.camera.fitBounds(entry.ne, entry.sw, 40, MAP_ANIMATION_DURATION_MS)
+      mapRef.current.camera.fitBounds([entry.sw[0], entry.sw[1], entry.ne[0], entry.ne[1]], {
+        padding: { top: 40, right: 40, bottom: 40, left: 40 },
+        duration: MAP_ANIMATION_DURATION_MS
+      })
     },
     [areaBounds]
   )
 
   const handleAreaPress = useCallback(
-    (event: OnPressEvent) => {
+    (event: NativeSyntheticEvent<PressEventWithFeatures>) => {
       if (downloading) return
-      const name: string | undefined = event.features?.[0]?.properties?.name
+      const name: string | undefined = event.nativeEvent.features?.[0]?.properties?.name
       if (name) fitToArea(name)
     },
     [downloading, fitToArea]
@@ -819,16 +820,16 @@ export function OfflineMapsScreen({}: ScreenProps) {
             onMapReady={handleMapReady}
           >
             {savedAreasGeoJSON.features.length > 0 && (
-              <ShapeSource id="saved-areas" shape={savedAreasGeoJSON} onPress={handleAreaPress}>
-                <FillLayer id="saved-areas-fill" style={savedAreasFillStyle} />
-                <LineLayer id="saved-areas-border" style={savedAreasBorderStyle} />
-              </ShapeSource>
+              <GeoJSONSource id="saved-areas" data={savedAreasGeoJSON} onPress={handleAreaPress}>
+                <Layer id="saved-areas-fill" type="fill" style={savedAreasFillStyle} />
+                <Layer id="saved-areas-border" type="line" style={savedAreasBorderStyle} />
+              </GeoJSONSource>
             )}
             {downloadAreaGeoJSON && (
-              <ShapeSource id="offline-area" shape={downloadAreaGeoJSON}>
-                <FillLayer id="offline-area-fill" style={downloadAreaFillStyle} />
-                <LineLayer id="offline-area-border" style={downloadAreaBorderStyle} />
-              </ShapeSource>
+              <GeoJSONSource id="offline-area" data={downloadAreaGeoJSON}>
+                <Layer id="offline-area-fill" type="fill" style={downloadAreaFillStyle} />
+                <Layer id="offline-area-border" type="line" style={downloadAreaBorderStyle} />
+              </GeoJSONSource>
             )}
           </ColotaMapView>
         ) : null}

@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
+import { useFocusEffect } from "@react-navigation/native"
 import { fonts } from "../styles/typography"
 import { BarChart2 } from "lucide-react-native"
 import { Container } from "../components"
@@ -17,9 +18,11 @@ import { TrackMap } from "../components/features/inspector/TrackMap"
 import { TripList } from "../components/features/inspector/TripList"
 import { LocationTable } from "../components/features/inspector/LocationTable"
 import { formatDistance } from "../utils/geo"
+import { pad2 } from "../utils/format"
 import { segmentTrips } from "../utils/trips"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert } from "../services/modalService"
+import type { RootScreenProps } from "../types/navigation"
 
 interface TabProps {
   label: string
@@ -30,7 +33,7 @@ interface TabProps {
 
 type TabType = "map" | "trips" | "data"
 
-export function LocationHistoryScreen({ navigation, route }: { navigation: any; route: any }) {
+export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Location History">) {
   const { colors } = useTheme()
   const [activeTab, setActiveTab] = useState<TabType>(route?.params?.initialTab ?? "map")
 
@@ -79,7 +82,7 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
 
   /** Fetch days-with-data and daily distances for a month into cache. */
   const prefetchMonth = useCallback(async (year: number, month: number): Promise<Set<string>> => {
-    const key = `${year}-${String(month + 1).padStart(2, "0")}`
+    const key = `${year}-${pad2(month + 1)}`
     if (daysCache.current.has(key)) return daysCache.current.get(key)!
     try {
       const start = new Date(year, month, 1)
@@ -151,6 +154,17 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
     fetchTrackData()
   }, [fetchTrackData])
 
+  /** Refresh on focus so trip deletions in TripDetail are reflected */
+  useFocusEffect(
+    useCallback(() => {
+      const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
+      daysCache.current.delete(key)
+      distanceCache.current.delete(key)
+      fetchTrackData()
+      fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
+    }, [fetchTrackData, fetchDaysWithData, mapDate])
+  )
+
   /** Tap a trip card -> open detail screen */
   const handleTripSelect = useCallback(
     (trip: Trip) => {
@@ -203,9 +217,7 @@ export function LocationHistoryScreen({ navigation, route }: { navigation: any; 
         distance={dailyDistance}
         colors={colors}
         daysWithData={daysWithData}
-        dayDistances={distanceCache.current.get(
-          `${mapDate.getFullYear()}-${String(mapDate.getMonth() + 1).padStart(2, "0")}`
-        )}
+        dayDistances={distanceCache.current.get(`${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`)}
         onMonthChange={fetchDaysWithData}
         onPrefetchMonth={prefetchMonth}
       />

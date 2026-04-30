@@ -3,9 +3,19 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useMemo, useState, useCallback } from "react"
+import React, { useMemo, useState, useCallback, useLayoutEffect } from "react"
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native"
-import { Route, Clock, Gauge, TrendingUp, TrendingDown, MapPin, Share, type LucideIcon } from "lucide-react-native"
+import {
+  Route,
+  Clock,
+  Gauge,
+  TrendingUp,
+  TrendingDown,
+  MapPin,
+  Share,
+  Trash2,
+  type LucideIcon
+} from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
 import { fonts } from "../styles/typography"
 import { Card } from "../components/ui/Card"
@@ -15,10 +25,11 @@ import { InteractiveLineChart } from "../components/features/inspector/Interacti
 import { getTripColor, computeTripStats } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
-import { showAlert } from "../services/modalService"
+import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
 import type { Trip, ThemeColors } from "../types/global"
+import type { RootScreenProps } from "../types/navigation"
 
 const MAX_BARS = 120
 
@@ -37,10 +48,11 @@ function downsample(values: number[], maxBars: number): number[] {
   return result
 }
 
-export function TripDetailScreen({ route }: { navigation: any; route: any }) {
+export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip Detail">) {
   const { colors } = useTheme()
   const trip: Trip = route.params.trip
   const tripColor = getTripColor(trip.index)
+  const [deleting, setDeleting] = useState(false)
 
   const stats = useMemo(() => computeTripStats(trip.locations), [trip])
   const duration = trip.endTime - trip.startTime
@@ -69,6 +81,45 @@ export function TripDetailScreen({ route }: { navigation: any; route: any }) {
     },
     [trip, displayName]
   )
+
+  const handleDelete = useCallback(async () => {
+    const confirmed = await showConfirm({
+      title: `Delete ${displayName}?`,
+      message: `This permanently removes ${trip.locationCount} location point${
+        trip.locationCount === 1 ? "" : "s"
+      } from this device. Unsent points will not be uploaded.`,
+      confirmText: "Delete",
+      destructive: true
+    })
+    if (!confirmed) return
+    setDeleting(true)
+    try {
+      await NativeLocationService.deleteLocationsInRange(trip.startTime, trip.endTime)
+      navigation.goBack()
+    } catch (error) {
+      logger.error("[TripDetail] Delete failed:", error)
+      showAlert("Delete Failed", "Unable to delete trip. Please try again.", "error")
+      setDeleting(false)
+    }
+  }, [trip, displayName, navigation])
+
+  const headerRight = useCallback(
+    () => (
+      <Pressable
+        onPress={handleDelete}
+        disabled={deleting}
+        hitSlop={8}
+        style={({ pressed }) => [styles.headerBtn, (pressed || deleting) && { opacity: colors.pressedOpacity }]}
+      >
+        <Trash2 size={20} color={colors.error} />
+      </Pressable>
+    ),
+    [handleDelete, deleting, colors.error, colors.pressedOpacity]
+  )
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerRight })
+  }, [navigation, headerRight])
 
   const speedProfile = useMemo(() => {
     const raw = trip.locations.filter((loc) => loc.speed != null).map((loc) => loc.speed ?? 0)
@@ -355,5 +406,8 @@ const styles = StyleSheet.create({
   exportChipText: {
     fontSize: 12,
     ...fonts.bold
+  },
+  headerBtn: {
+    padding: 8
   }
 })

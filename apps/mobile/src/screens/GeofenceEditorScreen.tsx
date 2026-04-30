@@ -22,8 +22,10 @@ import { Container, SectionTitle, Card, SettingRow, Button } from "../components
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
+import { parsePositiveInt, isPositiveInt } from "../utils/settingsValidation"
+import type { RootScreenProps } from "../types/navigation"
 
-export function GeofenceEditorScreen({ navigation, route }: any) {
+export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geofence Editor">) {
   const { colors } = useTheme()
   const geofenceId = route?.params?.geofenceId as number | undefined
   const isEditing = !!geofenceId
@@ -35,10 +37,8 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
   const [pauseTracking, setPauseTracking] = useState(true)
   const [pauseOnWifi, setPauseOnWifi] = useState(false)
   const [pauseOnMotionless, setPauseOnMotionless] = useState(false)
-  const [motionlessTimeoutMinutes, setMotionlessTimeoutMinutes] = useState(10)
   const [motionlessTimeoutStr, setMotionlessTimeoutStr] = useState("10")
   const [heartbeatEnabled, setHeartbeatEnabled] = useState(false)
-  const [heartbeatIntervalMinutes, setHeartbeatIntervalMinutes] = useState(15)
   const [heartbeatIntervalStr, setHeartbeatIntervalStr] = useState("15")
   const [saving, setSaving] = useState(false)
 
@@ -48,9 +48,9 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
     pauseTracking: true,
     pauseOnWifi: false,
     pauseOnMotionless: false,
-    motionlessTimeoutMinutes: 10,
+    motionlessTimeoutStr: "10",
     heartbeatEnabled: false,
-    heartbeatIntervalMinutes: 15
+    heartbeatIntervalStr: "15"
   })
 
   const hasChanges = useMemo(() => {
@@ -61,9 +61,9 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
       pauseTracking !== s.pauseTracking ||
       pauseOnWifi !== s.pauseOnWifi ||
       pauseOnMotionless !== s.pauseOnMotionless ||
-      motionlessTimeoutMinutes !== s.motionlessTimeoutMinutes ||
+      parsePositiveInt(motionlessTimeoutStr, 10) !== parsePositiveInt(s.motionlessTimeoutStr, 10) ||
       heartbeatEnabled !== s.heartbeatEnabled ||
-      heartbeatIntervalMinutes !== s.heartbeatIntervalMinutes
+      parsePositiveInt(heartbeatIntervalStr, 15) !== parsePositiveInt(s.heartbeatIntervalStr, 15)
     )
   }, [
     name,
@@ -71,9 +71,9 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
     pauseTracking,
     pauseOnWifi,
     pauseOnMotionless,
-    motionlessTimeoutMinutes,
+    motionlessTimeoutStr,
     heartbeatEnabled,
-    heartbeatIntervalMinutes
+    heartbeatIntervalStr
   ])
 
   useEffect(() => {
@@ -90,10 +90,8 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
             setPauseTracking(existing.pauseTracking)
             setPauseOnWifi(existing.pauseOnWifi)
             setPauseOnMotionless(existing.pauseOnMotionless)
-            setMotionlessTimeoutMinutes(existing.motionlessTimeoutMinutes)
             setMotionlessTimeoutStr(String(existing.motionlessTimeoutMinutes))
             setHeartbeatEnabled(existing.heartbeatEnabled ?? false)
-            setHeartbeatIntervalMinutes(existing.heartbeatIntervalMinutes ?? 15)
             setHeartbeatIntervalStr(String(existing.heartbeatIntervalMinutes ?? 15))
             savedState.current = {
               name: existing.name,
@@ -101,9 +99,9 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
               pauseTracking: existing.pauseTracking,
               pauseOnWifi: existing.pauseOnWifi,
               pauseOnMotionless: existing.pauseOnMotionless,
-              motionlessTimeoutMinutes: existing.motionlessTimeoutMinutes,
+              motionlessTimeoutStr: String(existing.motionlessTimeoutMinutes),
               heartbeatEnabled: existing.heartbeatEnabled ?? false,
-              heartbeatIntervalMinutes: existing.heartbeatIntervalMinutes ?? 15
+              heartbeatIntervalStr: String(existing.heartbeatIntervalMinutes ?? 15)
             }
           }
         })
@@ -123,18 +121,6 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
     if (!isNaN(num) && num > 0) setRadius(inputToMeters(num))
   }, [])
 
-  const handleTimeoutChange = useCallback((val: string) => {
-    setMotionlessTimeoutStr(val)
-    const num = parseInt(val, 10)
-    if (!isNaN(num) && num >= 1) setMotionlessTimeoutMinutes(num)
-  }, [])
-
-  const handleHeartbeatIntervalChange = useCallback((val: string) => {
-    setHeartbeatIntervalStr(val)
-    const num = parseInt(val, 10)
-    if (!isNaN(num) && num >= 1) setHeartbeatIntervalMinutes(num)
-  }, [])
-
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
       showAlert("Missing Name", "Please enter a name.", "warning")
@@ -144,10 +130,8 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
       showAlert("Invalid Radius", "Please enter a valid radius.", "warning")
       return
     }
-    if (heartbeatEnabled && heartbeatIntervalMinutes < 1) {
-      showAlert("Invalid Heartbeat", "Heartbeat interval must be at least 1 minute.", "warning")
-      return
-    }
+    const effectiveHeartbeat = parsePositiveInt(heartbeatIntervalStr, 15)
+    const effectiveTimeout = parsePositiveInt(motionlessTimeoutStr, 10)
 
     setSaving(true)
     try {
@@ -159,9 +143,9 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
           pauseTracking,
           pauseOnWifi,
           pauseOnMotionless,
-          motionlessTimeoutMinutes,
+          motionlessTimeoutMinutes: effectiveTimeout,
           heartbeatEnabled,
-          heartbeatIntervalMinutes
+          heartbeatIntervalMinutes: effectiveHeartbeat
         })
       } else {
         const lat = route?.params?.lat as number
@@ -175,9 +159,9 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
           pauseTracking,
           pauseOnWifi,
           pauseOnMotionless,
-          motionlessTimeoutMinutes,
+          motionlessTimeoutMinutes: effectiveTimeout,
           heartbeatEnabled,
-          heartbeatIntervalMinutes
+          heartbeatIntervalMinutes: effectiveHeartbeat
         })
       }
       DeviceEventEmitter.emit("geofenceUpdated")
@@ -194,9 +178,9 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
     pauseTracking,
     pauseOnWifi,
     pauseOnMotionless,
-    motionlessTimeoutMinutes,
+    motionlessTimeoutStr,
     heartbeatEnabled,
-    heartbeatIntervalMinutes,
+    heartbeatIntervalStr,
     isEditing,
     geofenceId,
     navigation,
@@ -267,69 +251,90 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
             />
           </SettingRow>
 
-          <SettingRow label="WiFi/Ethernet pause" hint="Stop GPS on unmetered networks" style={styles.toggleRow}>
+          <SettingRow
+            label="WiFi/Ethernet pause"
+            hint="Stop GPS on unmetered networks"
+            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+          >
             <Switch
               testID="pause-wifi-toggle"
               value={pauseOnWifi}
               onValueChange={setPauseOnWifi}
+              disabled={!pauseTracking}
               trackColor={{ false: colors.border, true: colors.primary + "80" }}
               thumbColor={pauseOnWifi ? colors.primary : colors.border}
             />
           </SettingRow>
 
-          <SettingRow label="Motionless pause" hint="Stop GPS after no motion for a set time" style={styles.toggleRow}>
+          <SettingRow
+            label="Motionless pause"
+            hint="Stop GPS after no motion for a set time"
+            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+          >
             <Switch
               testID="pause-motionless-toggle"
               value={pauseOnMotionless}
               onValueChange={setPauseOnMotionless}
+              disabled={!pauseTracking}
               trackColor={{ false: colors.border, true: colors.primary + "80" }}
               thumbColor={pauseOnMotionless ? colors.primary : colors.border}
             />
           </SettingRow>
 
-          {pauseOnMotionless && (
+          {pauseTracking && pauseOnMotionless && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
               <SettingRow label="Timeout (min)" hint="Minutes without motion before GPS stops">
                 <TextInput
                   testID="motionless-timeout-input"
                   style={[inputStyle, styles.numInput]}
                   value={motionlessTimeoutStr}
-                  onChangeText={handleTimeoutChange}
+                  onChangeText={setMotionlessTimeoutStr}
                   placeholder="10"
                   placeholderTextColor={colors.placeholder}
-                  keyboardType="numeric"
+                  keyboardType="number-pad"
                 />
               </SettingRow>
+              {!isPositiveInt(motionlessTimeoutStr) && (
+                <Text style={[styles.fieldError, { color: colors.error }]}>Must be at least 1 minute</Text>
+              )}
             </View>
           )}
 
-          <SettingRow label="Stationary heartbeat" hint="Periodic server update while paused" style={styles.toggleRow}>
+          <SettingRow
+            label="Stationary heartbeat"
+            hint="Periodic server update while paused"
+            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+          >
             <Switch
               testID="heartbeat-toggle"
               value={heartbeatEnabled}
               onValueChange={setHeartbeatEnabled}
+              disabled={!pauseTracking}
               trackColor={{ false: colors.border, true: colors.primary + "80" }}
               thumbColor={heartbeatEnabled ? colors.primary : colors.border}
             />
           </SettingRow>
 
-          {heartbeatEnabled && (
+          {pauseTracking && heartbeatEnabled && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
               <SettingRow label="Interval (min)" hint="How often to send a location update">
                 <TextInput
                   testID="heartbeat-interval-input"
                   style={[inputStyle, styles.numInput]}
                   value={heartbeatIntervalStr}
-                  onChangeText={handleHeartbeatIntervalChange}
+                  onChangeText={setHeartbeatIntervalStr}
                   placeholder="15"
                   placeholderTextColor={colors.placeholder}
-                  keyboardType="numeric"
+                  keyboardType="number-pad"
                 />
               </SettingRow>
+              {!isPositiveInt(heartbeatIntervalStr) && (
+                <Text style={[styles.fieldError, { color: colors.error }]}>Must be at least 1 minute</Text>
+              )}
             </View>
           )}
 
-          {pauseOnWifi && pauseOnMotionless && (
+          {pauseTracking && pauseOnWifi && pauseOnMotionless && (
             <View style={[styles.combinedNote, { borderTopColor: colors.border }]}>
               <Text style={[styles.combinedNoteText, { color: colors.textSecondary }]}>
                 GPS resumes only when both WiFi is disconnected and motion is detected
@@ -341,7 +346,12 @@ export function GeofenceEditorScreen({ navigation, route }: any) {
         <Button
           title={saving ? "Saving..." : "Save Geofence"}
           onPress={handleSave}
-          disabled={saving || (isEditing && !hasChanges)}
+          disabled={
+            saving ||
+            (isEditing && !hasChanges) ||
+            (heartbeatEnabled && !isPositiveInt(heartbeatIntervalStr)) ||
+            (pauseOnMotionless && !isPositiveInt(motionlessTimeoutStr))
+          }
           icon={Check}
         />
         {isEditing && <Button title="Delete Geofence" onPress={handleDelete} variant="danger" icon={Trash2} />}
@@ -362,6 +372,7 @@ const styles = StyleSheet.create({
   nameInput: { flex: 1 },
   numInput: { width: 80, textAlign: "center" },
   toggleRow: { paddingVertical: 10 },
+  disabledRow: { opacity: 0.45 },
   nestedSetting: { marginLeft: 16, paddingLeft: 12, borderLeftWidth: 3, marginTop: 4, marginBottom: 4 },
   combinedNote: {
     marginTop: 8,
@@ -373,5 +384,10 @@ const styles = StyleSheet.create({
     ...fonts.regular,
     lineHeight: 17,
     fontStyle: "italic"
+  },
+  fieldError: {
+    fontSize: 12,
+    ...fonts.regular,
+    marginTop: 4
   }
 })
