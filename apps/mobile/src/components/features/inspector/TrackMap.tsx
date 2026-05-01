@@ -47,7 +47,11 @@ interface Props {
 export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
   const mapRef = useRef<ColotaMapRef>(null)
   const [isCentered, setIsCentered] = useState(true)
-  const [selectedPoint, setSelectedPoint] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [selectedPoint, setSelectedPoint] = useState<{
+    latitude: number
+    longitude: number
+    color: string
+  } | null>(null)
   const [popup, setPopup] = useState<{
     coordinate: [number, number]
     speed: number
@@ -144,12 +148,13 @@ export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
   // Highlight GeoJSON for selected point
   const highlightGeoJSON = useMemo(() => {
     const coord = selectedPoint ? [selectedPoint.longitude, selectedPoint.latitude] : null
+    const color = selectedPoint?.color ?? colors.primary
     return {
       type: "FeatureCollection" as const,
       features: [
         {
           type: "Feature" as const,
-          properties: { color: colors.primary, visible: coord ? 1 : 0 },
+          properties: { color, visible: coord ? 1 : 0 },
           geometry: { type: "Point" as const, coordinates: coord ?? [0, 0] }
         }
       ]
@@ -161,10 +166,10 @@ export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
       circleRadius: 8,
       circleColor: ["get", "color"] as any,
       circleOpacity: ["get", "visible"] as any,
-      circleStrokeColor: "#ffffff",
+      circleStrokeColor: colors.cardElevated,
       circleStrokeWidth: ["*", 2.5, ["get", "visible"]] as any
     }),
-    []
+    [colors.cardElevated]
   )
 
   const { factor: speedFactor, unit: speedUnit } = getSpeedUnit()
@@ -177,14 +182,15 @@ export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
       lastPointPressRef.current = Date.now()
       const geom = feature.geometry as GeoJSON.Point
       const coord = geom.coordinates as [number, number]
-      setSelectedPoint({ longitude: coord[0], latitude: coord[1] })
+      const color = feature.properties.color ?? colors.primary
+      setSelectedPoint({ longitude: coord[0], latitude: coord[1], color })
       setPopup({
         coordinate: coord,
         speed: feature.properties.speed,
         timestamp: feature.properties.timestamp,
         accuracy: feature.properties.accuracy,
         altitude: feature.properties.altitude,
-        color: feature.properties.color ?? colors.primary
+        color
       })
     },
     [colors.primary]
