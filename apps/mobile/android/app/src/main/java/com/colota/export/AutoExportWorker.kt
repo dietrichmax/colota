@@ -318,11 +318,18 @@ class AutoExportWorker(
                     setDataAndType(docUri, DocumentsContract.Document.MIME_TYPE_DIR)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                val pendingIntent = PendingIntent.getActivity(
-                    appContext, 0, intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                builder.setContentIntent(pendingIntent)
+                val resolved = appContext.packageManager.resolveActivity(intent, 0)
+                if (resolved != null) {
+                    intent.setClassName(
+                        resolved.activityInfo.packageName,
+                        resolved.activityInfo.name
+                    )
+                    val pendingIntent = PendingIntent.getActivity(
+                        appContext, 0, intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    builder.setContentIntent(pendingIntent)
+                }
             } catch (e: Exception) {
                 AppLogger.w(TAG, "Could not create directory open intent: ${e.message}")
             }
