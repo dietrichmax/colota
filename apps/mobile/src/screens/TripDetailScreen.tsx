@@ -144,12 +144,10 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
   return (
     <Container>
+      <View style={styles.mapContainer}>
+        <TrackMap locations={trip.locations} colors={colors} fitVersion={1} />
+      </View>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Map */}
-        <View style={styles.mapContainer}>
-          <TrackMap locations={trip.locations} colors={colors} fitVersion={1} />
-        </View>
-
         {/* Header */}
         <View style={styles.section}>
           <View style={styles.headerTitleRow}>
