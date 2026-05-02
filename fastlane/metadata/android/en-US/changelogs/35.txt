@@ -1,0 +1,2 @@
+- Fixed tracking getting stuck inside a geofence after physically leaving it. Open the app once after updating to resume tracking; if still stuck, toggle tracking off and on from the dashboard.
+- Hardened auto-export notification PendingIntent against implicit-intent hijacking

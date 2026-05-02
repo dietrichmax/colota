@@ -39,15 +39,19 @@ const trackPointStyle: any = {
 
 interface Props {
   locations: TrackLocation[]
-  selectedPoint: { latitude: number; longitude: number } | null
   colors: ThemeColors
   trips?: Trip[]
   fitVersion?: number
 }
 
-export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }: Props) {
+export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
   const mapRef = useRef<ColotaMapRef>(null)
   const [isCentered, setIsCentered] = useState(true)
+  const [selectedPoint, setSelectedPoint] = useState<{
+    latitude: number
+    longitude: number
+    color: string
+  } | null>(null)
   const [popup, setPopup] = useState<{
     coordinate: [number, number]
     speed: number
@@ -78,21 +82,11 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
 
   const handleMapReady = useCallback(() => setMapReady(true), [])
 
-  // Clear popup when underlying locations change (new day / different trip)
+  // Clear popup and highlight when underlying locations change (new day / different trip)
   useEffect(() => {
     setPopup(null)
+    setSelectedPoint(null)
   }, [locations])
-
-  // Zoom to selected point from table tap
-  useEffect(() => {
-    if (selectedPoint && mapRef.current?.camera) {
-      mapRef.current.camera.flyTo({
-        center: [selectedPoint.longitude, selectedPoint.latitude],
-        zoom: 17,
-        duration: 500
-      })
-    }
-  }, [selectedPoint])
 
   const handleFitTrack = useCallback(() => {
     if (bounds && mapRef.current?.camera) {
@@ -154,12 +148,13 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
   // Highlight GeoJSON for selected point
   const highlightGeoJSON = useMemo(() => {
     const coord = selectedPoint ? [selectedPoint.longitude, selectedPoint.latitude] : null
+    const color = selectedPoint?.color ?? colors.primary
     return {
       type: "FeatureCollection" as const,
       features: [
         {
           type: "Feature" as const,
-          properties: { color: colors.primary, visible: coord ? 1 : 0 },
+          properties: { color, visible: coord ? 1 : 0 },
           geometry: { type: "Point" as const, coordinates: coord ?? [0, 0] }
         }
       ]
@@ -171,10 +166,10 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
       circleRadius: 8,
       circleColor: ["get", "color"] as any,
       circleOpacity: ["get", "visible"] as any,
-      circleStrokeColor: "#ffffff",
+      circleStrokeColor: colors.cardElevated,
       circleStrokeWidth: ["*", 2.5, ["get", "visible"]] as any
     }),
-    []
+    [colors.cardElevated]
   )
 
   const { factor: speedFactor, unit: speedUnit } = getSpeedUnit()
@@ -187,13 +182,15 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
       lastPointPressRef.current = Date.now()
       const geom = feature.geometry as GeoJSON.Point
       const coord = geom.coordinates as [number, number]
+      const color = feature.properties.color ?? colors.primary
+      setSelectedPoint({ longitude: coord[0], latitude: coord[1], color })
       setPopup({
         coordinate: coord,
         speed: feature.properties.speed,
         timestamp: feature.properties.timestamp,
         accuracy: feature.properties.accuracy,
         altitude: feature.properties.altitude,
-        color: feature.properties.color ?? colors.primary
+        color
       })
     },
     [colors.primary]
@@ -202,6 +199,7 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
   const handleMapPress = useCallback(() => {
     if (Date.now() - lastPointPressRef.current < 200) return
     setPopup(null)
+    setSelectedPoint(null)
   }, [])
 
   const initialCenter = useMemo(
@@ -272,7 +270,10 @@ export function TrackMap({ locations, selectedPoint, colors, trips, fitVersion }
               {popup.timestamp ? new Date(popup.timestamp * 1000).toLocaleTimeString() : "-"}
             </Text>
             <Pressable
-              onPress={() => setPopup(null)}
+              onPress={() => {
+                setPopup(null)
+                setSelectedPoint(null)
+              }}
               hitSlop={HIT_SLOP_MD}
               style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
             >
