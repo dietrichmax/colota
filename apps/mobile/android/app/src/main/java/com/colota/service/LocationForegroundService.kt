@@ -937,8 +937,6 @@ class LocationForegroundService : Service() {
             accuracy = 0f
             time = System.currentTimeMillis()
         }
-        lastKnownLocation = location
-
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
         val timestampSec = location.time / 1000
 
