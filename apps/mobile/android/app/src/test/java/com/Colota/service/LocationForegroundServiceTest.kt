@@ -2060,6 +2060,23 @@ class LocationForegroundServiceTest {
         coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
     }
 
+    @Test
+    fun `sendHeartbeatLocation must not overwrite lastKnownLocation`() = testScope.runTest {
+        val realPreviousFix = mockLocation(lat = 52.50, lon = 13.40,
+            time = System.currentTimeMillis() - 60_000)
+        setField("currentZoneGeofence", homeGeofence)
+        setField("lastKnownLocation", realPreviousFix)
+        every { syncManager.isSyncAllowed() } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(),
+            any(), any(), any(), any()) } returns 1L
+
+        invokeSendHeartbeatLocation()
+
+        assertSame(realPreviousFix, getField<Location?>("lastKnownLocation"))
+    }
+
+
     // =========================================================================
     // Reflection helpers
     // =========================================================================
