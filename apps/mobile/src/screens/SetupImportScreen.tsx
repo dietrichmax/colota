@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from "react"
-import { View, Text, ScrollView, StyleSheet } from "react-native"
+import { View, Text, ScrollView, StyleSheet, Switch } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Container, Card, Button, SectionTitle } from "../components"
@@ -315,6 +315,7 @@ export function SetupImportScreen({ route, navigation }: any) {
   const { colors } = useTheme()
   const { settings: currentSettings, setSettings } = useTracking()
   const [applying, setApplying] = useState(false)
+  const [replaceByName, setReplaceByName] = useState(false)
 
   const result = useMemo(() => {
     try {
@@ -371,9 +372,25 @@ export function SetupImportScreen({ route, navigation }: any) {
         await NativeLocationService.saveAuthConfig(mergedAuth)
       }
 
-      // Apply geofences - append-only, may create duplicates by name
-      for (const g of result.config.geofences) {
-        await NativeLocationService.createGeofence(g)
+      // Apply geofences. Default is append-only (may create duplicates by name).
+      // When replaceByName is on, existing zones with matching names are deleted first.
+      if (result.config.geofences.length > 0) {
+        const existingByName = replaceByName
+          ? new Map(
+              (await NativeLocationService.getGeofences())
+                .filter((g) => typeof g.id === "number")
+                .map((g) => [g.name, g.id as number])
+            )
+          : null
+        for (const g of result.config.geofences) {
+          if (existingByName) {
+            const existingId = existingByName.get(g.name)
+            if (existingId !== undefined) {
+              await NativeLocationService.deleteGeofence(existingId)
+            }
+          }
+          await NativeLocationService.createGeofence(g)
+        }
       }
 
       showAlert("Configuration Applied", "Settings have been updated successfully.", "success")
@@ -462,6 +479,22 @@ export function SetupImportScreen({ route, navigation }: any) {
         {renderSection("AUTHENTICATION", authEntries)}
         {renderSection("GEOFENCES", geofenceEntries)}
 
+        {geofenceEntries.length > 0 && (
+          <View style={styles.section}>
+            <Card>
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleText}>
+                  <Text style={[styles.toggleLabel, { color: colors.text }]}>Replace zones with the same name</Text>
+                  <Text style={[styles.toggleHint, { color: colors.textSecondary }]}>
+                    Off: imports are added as new entries
+                  </Text>
+                </View>
+                <Switch testID="replace-geofences-switch" value={replaceByName} onValueChange={setReplaceByName} />
+              </View>
+            </Card>
+          </View>
+        )}
+
         <View style={styles.actions}>
           <Button
             title="Apply Configuration"
@@ -522,6 +555,24 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 13,
     ...fonts.semiBold
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    gap: 12
+  },
+  toggleText: {
+    flex: 1
+  },
+  toggleLabel: {
+    fontSize: 13,
+    ...fonts.semiBold
+  },
+  toggleHint: {
+    fontSize: 12,
+    ...fonts.regular,
+    marginTop: 2
   },
   settingValue: {
     fontSize: 13,
