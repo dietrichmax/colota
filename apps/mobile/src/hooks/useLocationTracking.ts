@@ -105,7 +105,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
 
     return () => {
       if (listenerRef.current) {
-        logger.debug("[useLocationTracking] Detaching native listener")
+        logger.debug("[useLocationTracking] Removing JS event listener (foreground service unaffected)")
         listenerRef.current.remove()
         listenerRef.current = null
       }
@@ -327,7 +327,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    */
   useEffect(() => {
     return () => {
-      logger.debug("[useLocationTracking] Component unmounted, service remains active")
+      logger.debug("[useLocationTracking] React component unmounted (foreground service still running)")
       restartQueuedRef.current = false
       restartingRef.current = false
     }
