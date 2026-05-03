@@ -25,8 +25,11 @@ import {
   type ApiTemplateName,
   type HttpMethod,
   type SelectablePreset,
-  type SyncPreset
+  type SyncPreset,
+  type Geofence
 } from "../types/global"
+
+type ImportGeofence = Omit<Geofence, "id" | "createdAt">
 
 // ============================================================================
 // TYPES
@@ -35,12 +38,13 @@ import {
 interface ParsedConfig {
   settings: Partial<Settings>
   auth: Partial<AuthConfig> | null
+  geofences: ImportGeofence[]
 }
 
 interface ConfigEntry {
   label: string
   value: string
-  category: "tracking" | "api" | "auth"
+  category: "tracking" | "api" | "auth" | "geofence"
   rejected?: boolean
 }
 
@@ -83,7 +87,12 @@ function detectPreset(settings: Partial<Settings>): SyncPreset {
 
 function validateConfig(raw: unknown): ValidationResult {
   if (!raw || typeof raw !== "object") {
-    return { valid: false, config: { settings: {}, auth: null }, entries: [], error: "Invalid configuration format" }
+    return {
+      valid: false,
+      config: { settings: {}, auth: null, geofences: [] },
+      entries: [],
+      error: "Invalid configuration format"
+    }
   }
 
   const obj = raw as Record<string, unknown>
@@ -251,11 +260,51 @@ function validateConfig(raw: unknown): ValidationResult {
     }
   }
 
-  if (entries.length === 0) {
-    return { valid: false, config: { settings, auth }, entries, error: "No valid settings found in configuration" }
+  // --- Geofences ---
+
+  const geofences: ImportGeofence[] = []
+
+  if ("geofences" in obj && Array.isArray(obj.geofences)) {
+    for (const entry of obj.geofences) {
+      if (!entry || typeof entry !== "object") continue
+      const g = entry as Record<string, unknown>
+      if (
+        typeof g.name !== "string" ||
+        g.name.length === 0 ||
+        typeof g.lat !== "number" ||
+        typeof g.lon !== "number" ||
+        typeof g.radius !== "number" ||
+        g.radius <= 0
+      ) {
+        continue
+      }
+      geofences.push({
+        name: g.name,
+        lat: g.lat,
+        lon: g.lon,
+        radius: g.radius,
+        enabled: typeof g.enabled === "boolean" ? g.enabled : true,
+        pauseTracking: typeof g.pauseTracking === "boolean" ? g.pauseTracking : false,
+        pauseOnWifi: typeof g.pauseOnWifi === "boolean" ? g.pauseOnWifi : false,
+        pauseOnMotionless: typeof g.pauseOnMotionless === "boolean" ? g.pauseOnMotionless : false,
+        motionlessTimeoutMinutes: typeof g.motionlessTimeoutMinutes === "number" ? g.motionlessTimeoutMinutes : 10,
+        heartbeatEnabled: typeof g.heartbeatEnabled === "boolean" ? g.heartbeatEnabled : false,
+        heartbeatIntervalMinutes: typeof g.heartbeatIntervalMinutes === "number" ? g.heartbeatIntervalMinutes : 15
+      })
+      entries.push({ label: g.name, value: `${g.radius}m`, category: "geofence" })
+    }
   }
 
-  return { valid: true, config: { settings, auth }, entries }
+  if (entries.length === 0) {
+    return {
+      valid: false,
+      config: { settings, auth, geofences },
+      entries,
+      error: "No valid settings found in configuration"
+    }
+  }
+
+  return { valid: true, config: { settings, auth, geofences }, entries }
 }
 
 // ============================================================================
@@ -273,7 +322,7 @@ export function SetupImportScreen({ route, navigation }: any) {
       if (!configParam || typeof configParam !== "string") {
         return {
           valid: false,
-          config: { settings: {}, auth: null },
+          config: { settings: {}, auth: null, geofences: [] },
           entries: [],
           error: "No configuration data in URL"
         } as ValidationResult
@@ -286,7 +335,7 @@ export function SetupImportScreen({ route, navigation }: any) {
       logger.error("[SetupImport] Failed to parse config:", e)
       return {
         valid: false,
-        config: { settings: {}, auth: null },
+        config: { settings: {}, auth: null, geofences: [] },
         entries: [],
         error: "Invalid configuration data. The URL may be malformed."
       } as ValidationResult
@@ -296,6 +345,7 @@ export function SetupImportScreen({ route, navigation }: any) {
   const trackingEntries = result.entries.filter((e) => e.category === "tracking")
   const apiEntries = result.entries.filter((e) => e.category === "api")
   const authEntries = result.entries.filter((e) => e.category === "auth")
+  const geofenceEntries = result.entries.filter((e) => e.category === "geofence")
 
   const handleApply = async () => {
     setApplying(true)
@@ -311,7 +361,7 @@ export function SetupImportScreen({ route, navigation }: any) {
       await SettingsService.updateMultiple(merged)
       await setSettings(merged)
 
-      // Apply auth — deep merge customHeaders
+      // Apply auth - deep merge customHeaders
       if (result.config.auth) {
         const currentAuth = await NativeLocationService.getAuthConfig()
         const mergedAuth = { ...currentAuth, ...result.config.auth }
@@ -319,6 +369,11 @@ export function SetupImportScreen({ route, navigation }: any) {
           mergedAuth.customHeaders = { ...currentAuth.customHeaders, ...result.config.auth.customHeaders }
         }
         await NativeLocationService.saveAuthConfig(mergedAuth)
+      }
+
+      // Apply geofences - append-only, may create duplicates by name
+      for (const g of result.config.geofences) {
+        await NativeLocationService.createGeofence(g)
       }
 
       showAlert("Configuration Applied", "Settings have been updated successfully.", "success")
@@ -405,6 +460,7 @@ export function SetupImportScreen({ route, navigation }: any) {
         {renderSection("TRACKING", trackingEntries)}
         {renderSection("API", apiEntries)}
         {renderSection("AUTHENTICATION", authEntries)}
+        {renderSection("GEOFENCES", geofenceEntries)}
 
         <View style={styles.actions}>
           <Button

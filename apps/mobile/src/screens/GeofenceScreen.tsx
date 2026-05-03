@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { View, Text, StyleSheet, TextInput, Pressable, FlatList, DeviceEventEmitter } from "react-native"
+import { View, Text, StyleSheet, TextInput, Pressable, FlatList, DeviceEventEmitter, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { fonts } from "../styles/typography"
-import { ChevronRight, Wifi, PersonStanding, MapPinHouse } from "lucide-react-native"
+import { ChevronRight, Wifi, PersonStanding, MapPinHouse, Share2 } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
 import {
   DEFAULT_MAP_ZOOM,
@@ -229,6 +229,19 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
     setFocusRequest({ geofence: item, key: ++focusKeyRef.current })
   }, [])
 
+  const handleShareGeofences = useCallback(async () => {
+    if (geofences.length === 0) return
+    try {
+      const exportable = geofences.map(({ id: _id, createdAt: _createdAt, enabled: _enabled, ...rest }) => rest)
+      const encoded = btoa(JSON.stringify({ geofences: exportable }))
+      const link = `colota://setup?config=${encoded}`
+      await Share.share({ message: link })
+    } catch (err) {
+      logger.error("[GeofenceScreen] Failed to share geofences:", err)
+      showAlert("Error", "Failed to share geofences.", "error")
+    }
+  }, [geofences])
+
   const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences, colors), [geofences, colors])
 
   const renderItem = useCallback(
@@ -348,7 +361,19 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
               </Card>
             </View>
 
-            {geofences.length > 0 && <SectionTitle>Active Geofences ({geofences.length})</SectionTitle>}
+            {geofences.length > 0 && (
+              <View style={styles.activeHeader}>
+                <SectionTitle>Active Geofences ({geofences.length})</SectionTitle>
+                <Pressable
+                  testID="share-geofences-btn"
+                  onPress={handleShareGeofences}
+                  hitSlop={HIT_SLOP_MD}
+                  style={({ pressed }) => [styles.shareBtn, pressed && { opacity: colors.pressedOpacity }]}
+                >
+                  <Share2 size={20} color={colors.textSecondary} />
+                </Pressable>
+              </View>
+            )}
           </>
         }
         ListEmptyComponent={
@@ -401,6 +426,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between"
   },
   zoomBtn: { padding: 4, marginRight: 16 },
+  activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  shareBtn: { padding: 4 },
   editBtn: { flex: 1, flexDirection: "row", alignItems: "center" },
   info: { flex: 1, marginRight: 12 },
   name: { fontSize: 15, ...fonts.semiBold, marginBottom: 2 },
