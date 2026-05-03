@@ -18,7 +18,7 @@ export function TrackToggleButton({ onPress, active }: Props) {
 
   return (
     <MapActionButton onPress={onPress} style={mapActionStyles.left}>
-      <Route size={24} color={active ? colors.primary : colors.text} />
+      <Route size={20} color={active ? colors.primary : colors.textLight} />
     </MapActionButton>
   )
 }
