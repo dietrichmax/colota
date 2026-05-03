@@ -1,5 +1,6 @@
 import React from "react"
 import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { Share } from "react-native"
 import { Geofence } from "../../types/global"
 
 // --- Mocks ---
@@ -141,7 +142,8 @@ jest.mock("lucide-react-native", () => {
     ChevronRight: (props: any) => R.createElement(Text, props, "ChevronRight"),
     Wifi: (props: any) => R.createElement(Text, props, "Wifi"),
     PersonStanding: (props: any) => R.createElement(Text, props, "PersonStanding"),
-    MapPinHouse: (props: any) => R.createElement(Text, props, "MapPinHouse")
+    MapPinHouse: (props: any) => R.createElement(Text, props, "MapPinHouse"),
+    Share2: (props: any) => R.createElement(Text, props, "Share2")
   }
 })
 
@@ -277,5 +279,107 @@ describe("GeofenceScreen", () => {
     fireEvent.press(getAllByText("ChevronRight")[0])
 
     expect(mockNavigate).toHaveBeenCalledWith("Geofence Editor", { geofenceId: 1 })
+  })
+
+  describe("share geofences", () => {
+    let shareSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction" })
+    })
+
+    afterEach(() => {
+      shareSpy.mockRestore()
+    })
+
+    it("does not render the share button when there are no geofences", async () => {
+      const { queryByTestId, getByText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByText("No geofences yet")).toBeTruthy()
+      })
+
+      expect(queryByTestId("share-geofences-btn")).toBeNull()
+    })
+
+    it("renders the share button when at least one geofence exists", async () => {
+      mockGetGeofences.mockResolvedValue(mockGeofences)
+      const { getByTestId } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByTestId("share-geofences-btn")).toBeTruthy()
+      })
+    })
+
+    it("opens the share sheet with a colota://setup link on press", async () => {
+      mockGetGeofences.mockResolvedValue(mockGeofences)
+      const { getByTestId } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByTestId("share-geofences-btn")).toBeTruthy()
+      })
+
+      fireEvent.press(getByTestId("share-geofences-btn"))
+
+      await waitFor(() => {
+        expect(shareSpy).toHaveBeenCalledTimes(1)
+      })
+
+      const arg = shareSpy.mock.calls[0][0]
+      expect(arg.message).toMatch(/^colota:\/\/setup\?config=/)
+    })
+
+    it("encodes geofences without id, createdAt, or enabled fields", async () => {
+      mockGetGeofences.mockResolvedValue(mockGeofences)
+      const { getByTestId } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByTestId("share-geofences-btn")).toBeTruthy()
+      })
+
+      fireEvent.press(getByTestId("share-geofences-btn"))
+
+      await waitFor(() => {
+        expect(shareSpy).toHaveBeenCalledTimes(1)
+      })
+
+      const link = shareSpy.mock.calls[0][0].message as string
+      const encoded = link.split("config=")[1]
+      const decoded = JSON.parse(atob(encoded))
+
+      expect(decoded.geofences).toHaveLength(2)
+      expect(decoded.geofences[0]).toEqual({
+        name: "Home",
+        lat: 48.1,
+        lon: 11.5,
+        radius: 100,
+        pauseTracking: true,
+        pauseOnWifi: false,
+        pauseOnMotionless: false,
+        motionlessTimeoutMinutes: 10,
+        heartbeatEnabled: false,
+        heartbeatIntervalMinutes: 15
+      })
+      expect(decoded.geofences[0]).not.toHaveProperty("id")
+      expect(decoded.geofences[0]).not.toHaveProperty("createdAt")
+      expect(decoded.geofences[0]).not.toHaveProperty("enabled")
+    })
+
+    it("shows an error alert when sharing fails", async () => {
+      mockGetGeofences.mockResolvedValue(mockGeofences)
+      shareSpy.mockRejectedValueOnce(new Error("share failed"))
+
+      const { getByTestId } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByTestId("share-geofences-btn")).toBeTruthy()
+      })
+
+      fireEvent.press(getByTestId("share-geofences-btn"))
+
+      await waitFor(() => {
+        expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to share geofences.", "error")
+      })
+    })
   })
 })

@@ -8,6 +8,9 @@ const mockSetSettings = jest.fn().mockResolvedValue(undefined)
 const mockSaveSetting = jest.fn().mockResolvedValue(undefined)
 const mockGetAuthConfig = jest.fn().mockResolvedValue({ ...DEFAULT_AUTH_CONFIG })
 const mockSaveAuthConfig = jest.fn().mockResolvedValue(true)
+const mockCreateGeofence = jest.fn().mockResolvedValue(1)
+const mockGetGeofences = jest.fn().mockResolvedValue([])
+const mockDeleteGeofence = jest.fn().mockResolvedValue(true)
 const mockNavigate = jest.fn()
 const mockShowAlert = jest.fn()
 
@@ -16,7 +19,10 @@ jest.mock("../../services/NativeLocationService", () => ({
   default: {
     getAuthConfig: (...args: any[]) => mockGetAuthConfig(...args),
     saveAuthConfig: (...args: any[]) => mockSaveAuthConfig(...args),
-    saveSetting: (...args: any[]) => mockSaveSetting(...args)
+    saveSetting: (...args: any[]) => mockSaveSetting(...args),
+    createGeofence: (...args: any[]) => mockCreateGeofence(...args),
+    getGeofences: (...args: any[]) => mockGetGeofences(...args),
+    deleteGeofence: (...args: any[]) => mockDeleteGeofence(...args)
   }
 }))
 
@@ -277,6 +283,210 @@ describe("SetupImportScreen", () => {
       const { getByText } = renderScreen()
       fireEvent.press(getByText("Go Back"))
       expect(mockNavigate).toHaveBeenCalledWith("Dashboard")
+    })
+  })
+
+  describe("geofences", () => {
+    const validGeofence = { name: "Home", lat: 52.5, lon: 13.4, radius: 100 }
+
+    it("parses a valid geofence and shows it under GEOFENCES", () => {
+      const { getByText } = renderScreen(encode({ geofences: [validGeofence] }))
+      expect(getByText("GEOFENCES")).toBeTruthy()
+      expect(getByText("Home")).toBeTruthy()
+      expect(getByText("100m")).toBeTruthy()
+    })
+
+    it("rejects a geofence missing required fields", () => {
+      const { getByText } = renderScreen(encode({ geofences: [{ name: "X", lat: 52.5 }] }))
+      expect(getByText("Invalid Configuration")).toBeTruthy()
+    })
+
+    it("rejects a geofence with non-positive radius", () => {
+      const { getByText } = renderScreen(encode({ geofences: [{ ...validGeofence, radius: 0 }] }))
+      expect(getByText("Invalid Configuration")).toBeTruthy()
+    })
+
+    it("skips invalid entries but keeps valid ones", () => {
+      const config = {
+        geofences: [{ name: "X", lat: 52.5 }, validGeofence]
+      }
+      const { getByText, queryByText } = renderScreen(encode(config))
+      expect(getByText("Home")).toBeTruthy()
+      expect(queryByText("X")).toBeNull()
+    })
+
+    it("calls createGeofence on apply with defaults filled in", async () => {
+      const { getByText } = renderScreen(encode({ geofences: [validGeofence] }))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateGeofence).toHaveBeenCalledTimes(1)
+      })
+      expect(mockCreateGeofence).toHaveBeenCalledWith({
+        name: "Home",
+        lat: 52.5,
+        lon: 13.4,
+        radius: 100,
+        enabled: true,
+        pauseTracking: false,
+        pauseOnWifi: false,
+        pauseOnMotionless: false,
+        motionlessTimeoutMinutes: 10,
+        heartbeatEnabled: false,
+        heartbeatIntervalMinutes: 15
+      })
+    })
+
+    it("preserves explicit boolean and numeric flags", async () => {
+      const config = {
+        geofences: [
+          {
+            ...validGeofence,
+            pauseTracking: true,
+            pauseOnWifi: true,
+            pauseOnMotionless: true,
+            motionlessTimeoutMinutes: 5,
+            heartbeatEnabled: true,
+            heartbeatIntervalMinutes: 30,
+            enabled: false
+          }
+        ]
+      }
+      const { getByText } = renderScreen(encode(config))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateGeofence).toHaveBeenCalledTimes(1)
+      })
+      expect(mockCreateGeofence).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pauseTracking: true,
+          pauseOnWifi: true,
+          pauseOnMotionless: true,
+          motionlessTimeoutMinutes: 5,
+          heartbeatEnabled: true,
+          heartbeatIntervalMinutes: 30,
+          enabled: false
+        })
+      )
+    })
+
+    it("creates multiple geofences in order", async () => {
+      const config = {
+        geofences: [
+          { name: "Home", lat: 52.5, lon: 13.4, radius: 100 },
+          { name: "Office", lat: 52.6, lon: 13.5, radius: 200 }
+        ]
+      }
+      const { getByText } = renderScreen(encode(config))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateGeofence).toHaveBeenCalledTimes(2)
+      })
+      expect(mockCreateGeofence.mock.calls[0][0].name).toBe("Home")
+      expect(mockCreateGeofence.mock.calls[1][0].name).toBe("Office")
+    })
+
+    it("does not call createGeofence when no geofences in config", async () => {
+      const { getByText } = renderScreen(encode({ endpoint: "https://test.com" }))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockShowAlert).toHaveBeenCalledWith("Configuration Applied", expect.any(String), "success")
+      })
+      expect(mockCreateGeofence).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("replace geofences toggle", () => {
+    const validGeofence = { name: "Home", lat: 52.5, lon: 13.4, radius: 100 }
+
+    beforeEach(() => {
+      mockGetGeofences.mockReset()
+      mockGetGeofences.mockResolvedValue([])
+      mockDeleteGeofence.mockReset()
+      mockDeleteGeofence.mockResolvedValue(true)
+    })
+
+    it("hides the toggle when no geofences are in the import", () => {
+      const { queryByTestId } = renderScreen(encode({ endpoint: "https://test.com" }))
+      expect(queryByTestId("replace-geofences-switch")).toBeNull()
+    })
+
+    it("shows the toggle when geofences are in the import", () => {
+      const { getByTestId } = renderScreen(encode({ geofences: [validGeofence] }))
+      expect(getByTestId("replace-geofences-switch")).toBeTruthy()
+    })
+
+    it("does not delete existing zones when toggle is off (default)", async () => {
+      mockGetGeofences.mockResolvedValueOnce([{ id: 7, name: "Home", lat: 0, lon: 0, radius: 50, enabled: true }])
+      const { getByText } = renderScreen(encode({ geofences: [validGeofence] }))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateGeofence).toHaveBeenCalledTimes(1)
+      })
+      expect(mockGetGeofences).not.toHaveBeenCalled()
+      expect(mockDeleteGeofence).not.toHaveBeenCalled()
+    })
+
+    it("deletes matching zones before creating when toggle is on", async () => {
+      mockGetGeofences.mockResolvedValueOnce([
+        { id: 7, name: "Home", lat: 0, lon: 0, radius: 50, enabled: true },
+        { id: 8, name: "Other", lat: 0, lon: 0, radius: 50, enabled: true }
+      ])
+      const { getByText, getByTestId } = renderScreen(encode({ geofences: [validGeofence] }))
+
+      fireEvent(getByTestId("replace-geofences-switch"), "valueChange", true)
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateGeofence).toHaveBeenCalledTimes(1)
+      })
+      expect(mockDeleteGeofence).toHaveBeenCalledTimes(1)
+      expect(mockDeleteGeofence).toHaveBeenCalledWith(7)
+    })
+
+    it("creates without delete when toggle is on but no name match exists", async () => {
+      mockGetGeofences.mockResolvedValueOnce([{ id: 8, name: "Other", lat: 0, lon: 0, radius: 50, enabled: true }])
+      const { getByText, getByTestId } = renderScreen(encode({ geofences: [validGeofence] }))
+
+      fireEvent(getByTestId("replace-geofences-switch"), "valueChange", true)
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateGeofence).toHaveBeenCalledTimes(1)
+      })
+      expect(mockDeleteGeofence).not.toHaveBeenCalled()
+    })
+
+    it("only fetches existing zones once when replacing multiple imports", async () => {
+      mockGetGeofences.mockResolvedValueOnce([
+        { id: 7, name: "Home", lat: 0, lon: 0, radius: 50, enabled: true },
+        { id: 8, name: "Office", lat: 0, lon: 0, radius: 50, enabled: true }
+      ])
+      const config = {
+        geofences: [
+          { name: "Home", lat: 52.5, lon: 13.4, radius: 100 },
+          { name: "Office", lat: 52.6, lon: 13.5, radius: 200 }
+        ]
+      }
+      const { getByText, getByTestId } = renderScreen(encode(config))
+
+      fireEvent(getByTestId("replace-geofences-switch"), "valueChange", true)
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateGeofence).toHaveBeenCalledTimes(2)
+      })
+      expect(mockGetGeofences).toHaveBeenCalledTimes(1)
+      expect(mockDeleteGeofence).toHaveBeenCalledTimes(2)
     })
   })
 })

@@ -6,6 +6,19 @@ interface KeyValue {
   value: string
 }
 
+interface GeofenceRow {
+  name: string
+  lat: string
+  lon: string
+  radius: string
+  pauseTracking: boolean
+  pauseOnWifi: boolean
+  pauseOnMotionless: boolean
+  motionlessTimeoutMinutes: string
+  heartbeatEnabled: boolean
+  heartbeatIntervalMinutes: string
+}
+
 const API_TEMPLATES = ["custom", "dawarich", "geopulse", "owntracks", "phonetrack", "reitti", "traccar"] as const
 const AUTH_TYPES = ["none", "basic", "bearer"] as const
 const SYNC_CONDITIONS = ["any", "wifi_any", "wifi_ssid", "vpn"] as const
@@ -42,6 +55,9 @@ export default function DeepLinkGenerator() {
 
   // Custom headers
   const [customHeaders, setCustomHeaders] = useState<KeyValue[]>([])
+
+  // Geofences
+  const [geofences, setGeofences] = useState<GeofenceRow[]>([])
 
   // QR
   const qrRef = useRef<HTMLDivElement>(null)
@@ -96,6 +112,33 @@ export default function DeepLinkGenerator() {
     }
     if (Object.keys(ch).length > 0) obj.customHeaders = ch
 
+    const gfs = geofences
+      .filter((g) => g.name && g.lat && g.lon && g.radius && Number(g.radius) > 0)
+      .map((g) => {
+        const entry: Record<string, unknown> = {
+          name: g.name,
+          lat: Number(g.lat),
+          lon: Number(g.lon),
+          radius: Number(g.radius)
+        }
+        if (g.pauseTracking) entry.pauseTracking = true
+        if (g.pauseOnWifi) entry.pauseOnWifi = true
+        if (g.pauseOnMotionless) {
+          entry.pauseOnMotionless = true
+          if (g.motionlessTimeoutMinutes && Number(g.motionlessTimeoutMinutes) > 0) {
+            entry.motionlessTimeoutMinutes = Number(g.motionlessTimeoutMinutes)
+          }
+        }
+        if (g.heartbeatEnabled) {
+          entry.heartbeatEnabled = true
+          if (g.heartbeatIntervalMinutes && Number(g.heartbeatIntervalMinutes) > 0) {
+            entry.heartbeatIntervalMinutes = Number(g.heartbeatIntervalMinutes)
+          }
+        }
+        return entry
+      })
+    if (gfs.length > 0) obj.geofences = gfs
+
     return obj
   }, [
     endpoint,
@@ -115,7 +158,8 @@ export default function DeepLinkGenerator() {
     authBearerToken,
     fieldMapEntries,
     customFields,
-    customHeaders
+    customHeaders,
+    geofences
   ])
 
   const isEmpty = Object.keys(config).length === 0
@@ -177,6 +221,34 @@ export default function DeepLinkGenerator() {
 
   const removeKV = (list: KeyValue[], setList: (v: KeyValue[]) => void, index: number) => {
     setList(list.filter((_, i) => i !== index))
+  }
+
+  const updateGeofence = <K extends keyof GeofenceRow>(index: number, field: K, val: GeofenceRow[K]) => {
+    const next = [...geofences]
+    next[index] = { ...next[index], [field]: val }
+    setGeofences(next)
+  }
+
+  const removeGeofence = (index: number) => {
+    setGeofences(geofences.filter((_, i) => i !== index))
+  }
+
+  const addGeofence = () => {
+    setGeofences([
+      ...geofences,
+      {
+        name: "",
+        lat: "",
+        lon: "",
+        radius: "",
+        pauseTracking: true,
+        pauseOnWifi: false,
+        pauseOnMotionless: false,
+        motionlessTimeoutMinutes: "",
+        heartbeatEnabled: false,
+        heartbeatIntervalMinutes: ""
+      }
+    ])
   }
 
   return (
@@ -286,6 +358,14 @@ export default function DeepLinkGenerator() {
               onChange={(e) => setSyncInterval(e.target.value)}
             />
           </div>
+          <div className={styles.field}>
+            <label className={styles.label}>Offline mode</label>
+            <select className={styles.select} value={isOfflineMode} onChange={(e) => setIsOfflineMode(e.target.value)}>
+              <option value="">-- not set --</option>
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
         </div>
         <div className={styles.row}>
           <div className={styles.field}>
@@ -310,14 +390,6 @@ export default function DeepLinkGenerator() {
               />
             </div>
           )}
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label}>Offline mode</label>
-          <select className={styles.select} value={isOfflineMode} onChange={(e) => setIsOfflineMode(e.target.value)}>
-            <option value="">-- not set --</option>
-            <option value="true">Enabled</option>
-            <option value="false">Disabled</option>
-          </select>
         </div>
       </div>
 
@@ -453,6 +525,129 @@ export default function DeepLinkGenerator() {
           onClick={() => setFieldMapEntries([...fieldMapEntries, { key: "", value: "" }])}
         >
           + Add mapping
+        </button>
+      </div>
+
+      {/* Geofences */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Geofences</div>
+        <div className={styles.keyValueList}>
+          {geofences.map((g, i) => (
+            <div key={i} className={styles.geofenceCard}>
+              <div className={styles.row}>
+                <div className={styles.field}>
+                  <label className={styles.label}>Name</label>
+                  <input
+                    className={styles.input}
+                    placeholder="Home"
+                    value={g.name}
+                    onChange={(e) => updateGeofence(i, "name", e.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>Radius (m)</label>
+                  <input
+                    className={styles.input}
+                    type="number"
+                    min="1"
+                    placeholder="100"
+                    value={g.radius}
+                    onChange={(e) => updateGeofence(i, "radius", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className={styles.row}>
+                <div className={styles.field}>
+                  <label className={styles.label}>Latitude</label>
+                  <input
+                    className={styles.input}
+                    type="number"
+                    step="any"
+                    placeholder="52.52"
+                    value={g.lat}
+                    onChange={(e) => updateGeofence(i, "lat", e.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>Longitude</label>
+                  <input
+                    className={styles.input}
+                    type="number"
+                    step="any"
+                    placeholder="13.405"
+                    value={g.lon}
+                    onChange={(e) => updateGeofence(i, "lon", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className={styles.geofenceFlags}>
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={g.pauseTracking}
+                    onChange={(e) => updateGeofence(i, "pauseTracking", e.target.checked)}
+                  />
+                  Pause tracking
+                </label>
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={g.pauseOnWifi}
+                    onChange={(e) => updateGeofence(i, "pauseOnWifi", e.target.checked)}
+                  />
+                  Pause on Wi-Fi
+                </label>
+              </div>
+              <div className={styles.conditionalRow}>
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={g.pauseOnMotionless}
+                    onChange={(e) => updateGeofence(i, "pauseOnMotionless", e.target.checked)}
+                  />
+                  Pause when motionless
+                </label>
+                <input
+                  className={`${styles.input} ${!g.pauseOnMotionless ? styles.hidden : ""}`}
+                  type="number"
+                  min="1"
+                  placeholder="Timeout in min (default 10)"
+                  value={g.motionlessTimeoutMinutes}
+                  onChange={(e) => updateGeofence(i, "motionlessTimeoutMinutes", e.target.value)}
+                  aria-hidden={!g.pauseOnMotionless}
+                  tabIndex={g.pauseOnMotionless ? 0 : -1}
+                />
+              </div>
+              <div className={styles.conditionalRow}>
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={g.heartbeatEnabled}
+                    onChange={(e) => updateGeofence(i, "heartbeatEnabled", e.target.checked)}
+                  />
+                  Stationary heartbeat
+                </label>
+                <input
+                  className={`${styles.input} ${!g.heartbeatEnabled ? styles.hidden : ""}`}
+                  type="number"
+                  min="1"
+                  placeholder="Interval in min (default 15)"
+                  value={g.heartbeatIntervalMinutes}
+                  onChange={(e) => updateGeofence(i, "heartbeatIntervalMinutes", e.target.value)}
+                  aria-hidden={!g.heartbeatEnabled}
+                  tabIndex={g.heartbeatEnabled ? 0 : -1}
+                />
+              </div>
+              <div className={styles.geofenceActions}>
+                <button className={styles.removeBtn} onClick={() => removeGeofence(i)}>
+                  x
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button className={styles.addBtn} onClick={addGeofence}>
+          + Add geofence
         </button>
       </div>
 

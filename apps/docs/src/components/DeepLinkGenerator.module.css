@@ -128,6 +128,50 @@
   margin-top: 0.25rem;
 }
 
+.geofenceCard {
+  border: 1px solid var(--colota-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.geofenceFlags {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.geofenceFlags .checkbox {
+  margin-bottom: 0;
+}
+
+.conditionalRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.conditionalRow > * {
+  flex: 1;
+}
+
+.conditionalRow .checkbox {
+  margin-bottom: 0;
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+.geofenceActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
 .addBtn:hover {
   background: rgba(13, 148, 136, 0.05);
   border-color: var(--ifm-color-primary);
