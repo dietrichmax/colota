@@ -171,7 +171,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
           // when permission is revoked, leaving tracking_enabled stale
           const perms = await checkPermissions()
           if (!perms.location) {
-            logger.debug("[TrackingContext] Permission lost, clearing stale tracking state")
+            logger.warn("[TrackingContext] Location permission lost, clearing stale tracking state")
             await NativeLocationService.saveSetting("tracking_enabled", "false")
             return
           }
@@ -181,6 +181,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
 
           // Restore active profile name from the running service
           const profileName = await NativeLocationService.getActiveProfileName()
+          logger.debug(`[TrackingContext] Active profile on reconnect: ${profileName ?? "(default)"}`)
           if (isMountedRef.current) {
             setActiveProfileName(profileName)
           }
@@ -220,7 +221,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const listener = DeviceEventEmitter.addListener("onProfileSwitch", (event) => {
       if (isMountedRef.current) {
-        setActiveProfileName(event.profileName ?? null)
+        setActiveProfileName(event?.profileName ?? null)
       }
     })
     return () => listener.remove()

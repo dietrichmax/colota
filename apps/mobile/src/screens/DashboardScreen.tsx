@@ -161,6 +161,11 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
   useEffect(() => {
     const listener = DeviceEventEmitter.addListener("onLocationStateChanged", (data: { locationEnabled: boolean }) => {
+      if (data.locationEnabled) {
+        logger.debug("[Dashboard] Location services enabled")
+      } else {
+        logger.warn("[Dashboard] Location services disabled - GPS will not produce fixes until re-enabled")
+      }
       setLocationEnabled(data.locationEnabled)
     })
     const appStateSub = AppState.addEventListener("change", (state) => {
