@@ -8,6 +8,7 @@
     "format:check": "prettier --check \"**/*.{js,ts,json,md,yml,yaml}\""
   },
   "type": "module",
+  "license": "AGPL-3.0-or-later",
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
