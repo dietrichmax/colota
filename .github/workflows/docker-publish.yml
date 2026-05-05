@@ -3,6 +3,14 @@ name: Docker Publish
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
+      - "package*.json"
+      - "tsconfig.json"
+      - "webpack.config.js"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".github/workflows/docker-publish.yml"
   release:
     types: [published]
 
