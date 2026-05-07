@@ -7,7 +7,8 @@
     "start": "node dist/server.cjs",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"**/*.{js,ts,json,md,yml,yaml}\"",
-    "format:check": "prettier --check \"**/*.{js,ts,json,md,yml,yaml}\""
+    "format:check": "prettier --check \"**/*.{js,ts,json,md,yml,yaml}\"",
+    "check": "npm audit --audit-level=high && npm run format:check && npm run typecheck && npm run build"
   },
   "type": "module",
   "license": "AGPL-3.0-or-later",
