@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: ["Android Build Check"]
     types: [completed]
-    branches: [dev]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

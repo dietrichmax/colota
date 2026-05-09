@@ -2,14 +2,14 @@ name: Android Build Check
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths:
       - 'apps/mobile/**'
       - '!fastlane/**'
       - 'packages/shared/**'
       - 'package-lock.json'
   pull_request:
-    branches: [main, dev]
+    branches: [main]
     paths:
       - 'apps/mobile/**'
       - '!fastlane/**'
