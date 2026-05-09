@@ -3,7 +3,6 @@ name: Update Release Draft
 on:
   push:
     branches:
-      - dev
       - main
 
 permissions:
