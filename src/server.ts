@@ -1,10 +1,10 @@
+import "dotenv/config" // must load .env before any module reads process.env at import time
 import express, { Request, Response, NextFunction, Application } from "express"
 import crypto from "crypto"
 import { loadTargets } from "./targets"
-import { forwardToAll } from "./forwarder"
-import { owntracksToColota, type ColotaPayload } from "./transform"
-import { maskUrl } from "./utils"
-import "dotenv/config"
+import { forwardToAll, forwardBatch } from "./forwarder"
+import { owntracksToColota, overlandFeatureToColota, type ColotaPayload } from "./transform"
+import { maskUrl, hasFiniteNumbers } from "./utils"
 
 const app: Application = express()
 const PORT = Number(process.env.PORT) || 3000
@@ -70,17 +70,7 @@ app.post("/owntracks", authenticate, async (req: Request, res: Response): Promis
     return
   }
 
-  const { lat, lon, tst, acc } = body
-  if (
-    typeof lat !== "number" ||
-    !isFinite(lat) ||
-    typeof lon !== "number" ||
-    !isFinite(lon) ||
-    typeof tst !== "number" ||
-    !isFinite(tst) ||
-    typeof acc !== "number" ||
-    !isFinite(acc)
-  ) {
+  if (!hasFiniteNumbers(body, ["lat", "lon", "tst", "acc"])) {
     res.status(400).json({ error: "Missing or invalid required fields: lat, lon, tst, acc" })
     return
   }
@@ -103,20 +93,7 @@ app.post("/locations", authenticate, async (req: Request, res: Response): Promis
   }
 
   const body = req.body as Record<string, unknown>
-  if (
-    typeof body.lat !== "number" ||
-    !isFinite(body.lat) ||
-    typeof body.lon !== "number" ||
-    !isFinite(body.lon) ||
-    typeof body.tst !== "number" ||
-    !isFinite(body.tst) ||
-    typeof body.acc !== "number" ||
-    !isFinite(body.acc) ||
-    typeof body.batt !== "number" ||
-    !isFinite(body.batt) ||
-    typeof body.bs !== "number" ||
-    !isFinite(body.bs)
-  ) {
+  if (!hasFiniteNumbers(body, ["lat", "lon", "tst", "acc", "batt", "bs"])) {
     res.status(400).json({ error: "Missing or invalid required fields: lat, lon, tst, acc, batt, bs" })
     return
   }
@@ -129,16 +106,55 @@ app.post("/locations", authenticate, async (req: Request, res: Response): Promis
   const payload = body as unknown as ColotaPayload
   const forwarded = targets.filter((t) => !t.filter_tid || payload.tid === t.filter_tid).length
 
-  // Fire-and-forget: respond immediately, forward in background
   res.status(200).json({ message: "Accepted", forwarded })
   forwardToAll(targets, payload)
 })
 
+app.post("/overland", authenticate, async (req: Request, res: Response): Promise<void> => {
+  if (!req.is("application/json")) {
+    res.status(400).json({ error: "Invalid content type" })
+    return
+  }
+
+  const body = req.body as { locations?: unknown; device_id?: unknown }
+  if (!Array.isArray(body.locations)) {
+    res.status(400).json({ error: "Missing or invalid 'locations' array" })
+    return
+  }
+
+  const deviceId = typeof body.device_id === "string" ? body.device_id : undefined
+
+  // 201 per Overland spec; fire-and-forget so the client doesn't wait on N target round-trips.
+  res.status(201).json({ result: "ok" })
+
+  if (targets.length === 0) return
+
+  const payloads: ColotaPayload[] = []
+  let skipped = 0
+  for (const feature of body.locations) {
+    try {
+      payloads.push(overlandFeatureToColota(feature, deviceId))
+    } catch (err) {
+      skipped++
+      console.warn(`[overland] Skipped malformed Feature: ${(err as Error).message}`)
+    }
+  }
+  if (skipped > 0) {
+    console.warn(`[overland] ${skipped}/${body.locations.length} Features skipped`)
+  }
+
+  forwardBatch(targets, { locations: body.locations, device_id: deviceId }, payloads)
+})
+
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  // Respect upstream status (express.json sets 400 on bad JSON).
+  const status =
+    (err as { status?: number; statusCode?: number }).status ?? (err as { statusCode?: number }).statusCode ?? 500
   const errUrl = new URL(req.originalUrl, "http://localhost")
   errUrl.searchParams.delete("api_key")
-  console.error(`[ERROR] ${req.method} ${errUrl.pathname}${errUrl.search}:`, err)
-  res.status(500).json({ error: "Internal Server Error" })
+  if (status >= 500) console.error(`[ERROR] ${req.method} ${errUrl.pathname}${errUrl.search}:`, err)
+  else console.warn(`[${status}] ${req.method} ${errUrl.pathname}${errUrl.search}: ${err.message}`)
+  res.status(status).json({ error: status >= 500 ? "Internal Server Error" : "Bad Request" })
 })
 
 app.listen(PORT, () => {

@@ -1,6 +1,6 @@
-export type TargetType = "owntracks" | "geopulse" | "traccar" | "colota" | "raw"
+export type TargetType = "owntracks" | "geopulse" | "traccar" | "colota" | "overland" | "raw"
 
-const VALID_TYPES: TargetType[] = ["owntracks", "geopulse", "traccar", "colota", "raw"]
+const VALID_TYPES: TargetType[] = ["owntracks", "geopulse", "traccar", "colota", "overland", "raw"]
 
 export interface Target {
   url: string
@@ -11,6 +11,9 @@ export interface Target {
   user?: string // X-Limit-U header for owntracks type (default: "colota")
   device?: string // X-Limit-D header for owntracks type (default: "phone")
   filter_tid?: string // only forward to this target when payload tid matches
+  batchMode?: "split" | "latest" // how a batch is handled: split into single points (default) or newest point only
+  splitConcurrency?: number // max in-flight requests when splitting a batch (non-overland targets)
+  splitDelayMs?: number // delay between requests when splitting a batch (non-overland targets)
 }
 
 export function loadTargets(): Target[] {
@@ -39,6 +42,13 @@ export function loadTargets(): Target[] {
     const user = process.env[`TARGET_${i}_USER`]
     const device = process.env[`TARGET_${i}_DEVICE`]
     const filter_tid = process.env[`TARGET_${i}_FILTER_TID`]
+    const rawBatchMode = process.env[`TARGET_${i}_BATCH_MODE`]?.toLowerCase()
+    if (rawBatchMode && rawBatchMode !== "split" && rawBatchMode !== "latest") {
+      console.warn(`TARGET_${i}_BATCH_MODE "${rawBatchMode}" is invalid, falling back to "split"`)
+    }
+    const batchMode = rawBatchMode === "latest" ? "latest" : undefined
+    const splitConcurrency = Number(process.env[`TARGET_${i}_SPLIT_CONCURRENCY`]) || undefined
+    const splitDelayMs = Number(process.env[`TARGET_${i}_SPLIT_DELAY_MS`]) || undefined
     targets.push({
       url,
       type,
@@ -47,7 +57,10 @@ export function loadTargets(): Target[] {
       ...(tid ? { tid } : {}),
       ...(user ? { user } : {}),
       ...(device ? { device } : {}),
-      ...(filter_tid ? { filter_tid } : {})
+      ...(filter_tid ? { filter_tid } : {}),
+      ...(batchMode ? { batchMode } : {}),
+      ...(splitConcurrency ? { splitConcurrency } : {}),
+      ...(splitDelayMs ? { splitDelayMs } : {})
     })
   }
   return targets
