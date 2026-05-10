@@ -143,6 +143,63 @@ class ServiceConfigTest {
         assertEquals(ApiFormat.FIELD_MAPPED, config.apiFormat)
     }
 
+    @Test
+    fun `fromDatabase derives OVERLAND_BATCH for dawarich template with batch mode`() {
+        // Boot path coverage: BootCompletedReceiver loads from DB, must produce OVERLAND_BATCH
+        // so the foreground service uses the batch endpoint after a reboot.
+        val db = mockDbHelper(baseSettings + mapOf(
+            "apiTemplate" to "dawarich",
+            "dawarichMode" to "batch"
+        ))
+        val config = ServiceConfig.fromDatabase(db)
+        assertEquals(ApiFormat.OVERLAND_BATCH, config.apiFormat)
+    }
+
+    @Test
+    fun `fromDatabase derives OVERLAND_BATCH for overland template regardless of dawarichMode`() {
+        val singleDb = mockDbHelper(baseSettings + mapOf("apiTemplate" to "overland", "dawarichMode" to "single"))
+        assertEquals(ApiFormat.OVERLAND_BATCH, ServiceConfig.fromDatabase(singleDb).apiFormat)
+
+        val batchDb = mockDbHelper(baseSettings + mapOf("apiTemplate" to "overland", "dawarichMode" to "batch"))
+        assertEquals(ApiFormat.OVERLAND_BATCH, ServiceConfig.fromDatabase(batchDb).apiFormat)
+
+        val noModeDb = mockDbHelper(baseSettings + ("apiTemplate" to "overland"))
+        assertEquals(ApiFormat.OVERLAND_BATCH, ServiceConfig.fromDatabase(noModeDb).apiFormat)
+    }
+
+    @Test
+    fun `fromDatabase keeps FIELD_MAPPED for dawarich template with single mode`() {
+        val db = mockDbHelper(baseSettings + mapOf(
+            "apiTemplate" to "dawarich",
+            "dawarichMode" to "single"
+        ))
+        val config = ServiceConfig.fromDatabase(db)
+        assertEquals(ApiFormat.FIELD_MAPPED, config.apiFormat)
+    }
+
+    @Test
+    fun `fromDatabase reads overlandBatchSize`() {
+        val db = mockDbHelper(baseSettings + ("overlandBatchSize" to "100"))
+        val config = ServiceConfig.fromDatabase(db)
+        assertEquals(100, config.overlandBatchSize)
+    }
+
+    @Test
+    fun `fromDatabase defaults overlandBatchSize to 50 when missing`() {
+        val db = mockDbHelper(baseSettings)
+        val config = ServiceConfig.fromDatabase(db)
+        assertEquals(50, config.overlandBatchSize)
+    }
+
+    @Test
+    fun `fromDatabase clamps overlandBatchSize to valid range`() {
+        val tooLow = mockDbHelper(baseSettings + ("overlandBatchSize" to "0"))
+        assertEquals(1, ServiceConfig.fromDatabase(tooLow).overlandBatchSize)
+
+        val tooHigh = mockDbHelper(baseSettings + ("overlandBatchSize" to "9999"))
+        assertEquals(500, ServiceConfig.fromDatabase(tooHigh).overlandBatchSize)
+    }
+
     // --- data class defaults ---
 
     @Test
@@ -240,6 +297,7 @@ class ServiceConfigTest {
             every { getString("customFields") } returns """{"_type":"location"}"""
             every { getString("httpMethod") } returns "GET"
             every { getString("apiFormat") } returns "traccar_json"
+            every { getInt("overlandBatchSize") } returns 50
         }
         val intent = mockk<Intent> {
             every { extras } returns bundle
@@ -392,6 +450,27 @@ class ServiceConfigTest {
         }
         val config = ServiceConfig.fromReadableMap(map, db)
         assertEquals(ApiFormat.FIELD_MAPPED, config.apiFormat)
+    }
+
+    @Test
+    fun `fromReadableMap derives OVERLAND_BATCH for dawarich template with batch mode`() {
+        val db = mockDbHelper(baseSettings)
+        val map = JavaOnlyMap().apply {
+            putString("apiTemplate", "dawarich")
+            putString("dawarichMode", "batch")
+        }
+        val config = ServiceConfig.fromReadableMap(map, db)
+        assertEquals(ApiFormat.OVERLAND_BATCH, config.apiFormat)
+    }
+
+    @Test
+    fun `fromReadableMap reads overlandBatchSize`() {
+        val db = mockDbHelper(baseSettings)
+        val map = JavaOnlyMap().apply {
+            putInt("overlandBatchSize", 200)
+        }
+        val config = ServiceConfig.fromReadableMap(map, db)
+        assertEquals(200, config.overlandBatchSize)
     }
 
     @Test

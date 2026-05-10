@@ -82,6 +82,10 @@ export const SYNC_INTERVAL_LABELS: Record<number, string> = {
   900: "15 min"
 }
 
+// Overland batch envelope (Dawarich + batch mode, Overland template)
+export const OVERLAND_BATCH_MIN = 1
+export const OVERLAND_BATCH_MAX = 500
+
 // Thresholds
 export const HIGH_QUEUE_THRESHOLD = 50
 export const CRITICAL_QUEUE_THRESHOLD = 100

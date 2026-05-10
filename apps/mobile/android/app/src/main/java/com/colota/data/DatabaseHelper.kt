@@ -173,7 +173,9 @@ class DatabaseHelper private constructor(context: Context) :
             SettingsKeys.TRACKING_ENABLED to "false",
             "apiTemplate" to "custom",
             "syncPreset" to "instant",
-            "httpMethod" to "POST"
+            "httpMethod" to "POST",
+            "dawarichMode" to "single",
+            "overlandBatchSize" to "50"
         )
 
         db.beginTransaction()

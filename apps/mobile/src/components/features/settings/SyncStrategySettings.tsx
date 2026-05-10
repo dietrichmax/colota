@@ -8,10 +8,11 @@ import { Text, StyleSheet, Switch, View, Pressable, TextInput, AppState } from "
 import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
-import { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } from "../../../constants"
+import { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS, OVERLAND_BATCH_MIN, OVERLAND_BATCH_MAX } from "../../../constants"
 import { SectionTitle, Card, Divider, NumericInput, SettingRow } from "../../index"
 import { PresetOption } from "./PresetOption"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
+import { isOverlandFormat } from "../../../utils/apiPayload"
 import NativeLocationService from "../../../services/NativeLocationService"
 
 interface SyncStrategySettingsProps {
@@ -35,7 +36,9 @@ export function SyncStrategySettings({
     metersToInput(settings.accuracyThreshold).toString()
   )
   const [syncIntervalInput, setSyncIntervalInput] = useState(settings.syncInterval.toString())
+  const [overlandBatchSizeInput, setOverlandBatchSizeInput] = useState(settings.overlandBatchSize.toString())
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const showOverlandBatchSize = isOverlandFormat(settings.apiTemplate, settings.dawarichMode)
   const [currentSsid, setCurrentSsid] = useState("")
 
   useEffect(() => {
@@ -61,7 +64,14 @@ export function SyncStrategySettings({
     setDistanceInput(metersToInput(settings.distance ?? 0).toString())
     setAccuracyThresholdInput(metersToInput(settings.accuracyThreshold).toString())
     setSyncIntervalInput(settings.syncInterval.toString())
-  }, [settings.interval, settings.distance, settings.accuracyThreshold, settings.syncInterval])
+    setOverlandBatchSizeInput(settings.overlandBatchSize.toString())
+  }, [
+    settings.interval,
+    settings.distance,
+    settings.accuracyThreshold,
+    settings.syncInterval,
+    settings.overlandBatchSize
+  ])
 
   const handleNumericChange = useCallback(
     (key: "interval" | "distance" | "accuracyThreshold", value: string, min: number = 0) => {
@@ -302,6 +312,38 @@ export function SyncStrategySettings({
                     </View>
                   )}
 
+                  {showOverlandBatchSize && (
+                    <View style={styles.customSyncInput}>
+                      <NumericInput
+                        label="Batch Size"
+                        value={overlandBatchSizeInput}
+                        onChange={(val) => {
+                          setOverlandBatchSizeInput(val)
+                          const num = Number(val)
+                          if (!isNaN(num) && num >= OVERLAND_BATCH_MIN && num <= OVERLAND_BATCH_MAX) {
+                            const next = { ...settings, overlandBatchSize: num }
+                            onDebouncedSave(next)
+                          }
+                        }}
+                        onBlur={() => {
+                          let val = Number(overlandBatchSizeInput)
+                          if (isNaN(val) || val < OVERLAND_BATCH_MIN) val = OVERLAND_BATCH_MIN
+                          if (val > OVERLAND_BATCH_MAX) val = OVERLAND_BATCH_MAX
+                          if (val !== settings.overlandBatchSize || overlandBatchSizeInput !== val.toString()) {
+                            setOverlandBatchSizeInput(val.toString())
+                            const next = { ...settings, overlandBatchSize: val }
+                            onSettingsChange(next)
+                            onImmediateSave(next)
+                          }
+                        }}
+                        unit="points"
+                        placeholder="50"
+                        hint={`Points/upload (${OVERLAND_BATCH_MIN}-${OVERLAND_BATCH_MAX}). Larger = fewer requests, bigger payloads.`}
+                        colors={colors}
+                      />
+                    </View>
+                  )}
+
                   {/* Sync Condition */}
                   <View style={styles.settingRowSpaced}>
                     <Text style={[styles.blockLabel, { color: colors.text }]}>Sync Only On</Text>
@@ -525,8 +567,7 @@ const styles = StyleSheet.create({
   },
   syncConditionChips: {
     flexDirection: "row",
-    gap: 6,
-    marginTop: 8
+    gap: 6
   },
   syncConditionChip: {
     paddingHorizontal: 12,

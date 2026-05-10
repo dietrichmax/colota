@@ -35,7 +35,7 @@ Colota has twenty-one screens, each focused on a specific task:
 | **Connection** | Server endpoint URL, offline mode toggle and connection test |
 | **Tracking & Sync** | GPS polling interval, distance filter, accuracy threshold and sync strategy preset |
 | **Appearance** | Light/dark theme, unit system, time format and custom map tile URLs |
-| **API Config** | Endpoint field mapping with templates for Dawarich, OwnTracks, PhoneTrack, Reitti, Traccar, or custom backends |
+| **API Config** | Endpoint field mapping with templates for Dawarich, Overland, OwnTracks, PhoneTrack, Reitti, Traccar, or custom backends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | **Geofences** | Create pause zones by tapping the map, view all zones with pause option indicators |
 | **Geofence Editor** | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |

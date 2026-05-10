@@ -29,14 +29,23 @@ data class ServiceConfig(
     val fieldMap: String? = null,
     val customFields: String? = null,
     val httpMethod: String = "POST",
-    val apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED
+    val apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED,
+    val overlandBatchSize: Int = 50
 ) {
     companion object {
+        internal fun deriveApiFormat(apiTemplate: String, httpMethod: String, dawarichMode: String): ApiFormat = when {
+            apiTemplate == "traccar" && httpMethod == "POST" -> ApiFormat.TRACCAR_JSON
+            apiTemplate == "overland" -> ApiFormat.OVERLAND_BATCH
+            apiTemplate == "dawarich" && dawarichMode == "batch" -> ApiFormat.OVERLAND_BATCH
+            else -> ApiFormat.FIELD_MAPPED
+        }
+
         fun fromDatabase(dbHelper: DatabaseHelper): ServiceConfig {
             val saved = dbHelper.getAllSettings()
             val httpMethod = saved["httpMethod"] ?: "POST"
             val apiTemplate = saved["apiTemplate"] ?: ""
-            val apiFormat = if (apiTemplate == "traccar" && httpMethod == "POST") ApiFormat.TRACCAR_JSON else ApiFormat.FIELD_MAPPED
+            val dawarichMode = saved["dawarichMode"] ?: "single"
+            val apiFormat = deriveApiFormat(apiTemplate, httpMethod, dawarichMode)
 
             return ServiceConfig(
                 endpoint = saved["endpoint"] ?: "",
@@ -52,7 +61,8 @@ data class ServiceConfig(
                 fieldMap = saved["fieldMap"],
                 customFields = saved["customFields"],
                 httpMethod = httpMethod,
-                apiFormat = apiFormat
+                apiFormat = apiFormat,
+                overlandBatchSize = saved["overlandBatchSize"]?.toIntOrNull()?.coerceIn(1, 500) ?: 50
             )
         }
 
@@ -81,7 +91,8 @@ data class ServiceConfig(
 
             val httpMethod = config.getStringOrNull("httpMethod") ?: dbConfig.httpMethod
             val apiTemplate = config.getStringOrNull("apiTemplate") ?: ""
-            val apiFormat = if (apiTemplate == "traccar" && httpMethod == "POST") ApiFormat.TRACCAR_JSON else ApiFormat.FIELD_MAPPED
+            val dawarichMode = config.getStringOrNull("dawarichMode") ?: "single"
+            val apiFormat = deriveApiFormat(apiTemplate, httpMethod, dawarichMode)
 
             return ServiceConfig(
                 endpoint = config.getStringOrNull("endpoint") ?: dbConfig.endpoint,
@@ -97,14 +108,15 @@ data class ServiceConfig(
                 fieldMap = fieldMapJson ?: dbConfig.fieldMap,
                 customFields = customFieldsJson ?: dbConfig.customFields,
                 httpMethod = httpMethod,
-                apiFormat = apiFormat
+                apiFormat = apiFormat,
+                overlandBatchSize = (config.getIntOrNull("overlandBatchSize") ?: dbConfig.overlandBatchSize).coerceIn(1, 500)
             )
         }
 
         fun fromIntent(intent: Intent, dbHelper: DatabaseHelper): ServiceConfig {
             val extras = intent.extras ?: return fromDatabase(dbHelper)
             val dbConfig = fromDatabase(dbHelper)
-            
+
             return ServiceConfig(
                 endpoint = extras.getString("endpoint") ?: dbConfig.endpoint,
                 interval = extras.getLongOrDefault("interval", dbConfig.interval),
@@ -121,7 +133,8 @@ data class ServiceConfig(
                 httpMethod = extras.getStringOrDefault("httpMethod", dbConfig.httpMethod) ?: "POST",
                 apiFormat = if (extras.containsKey("apiFormat"))
                     ApiFormat.fromWire(extras.getString("apiFormat"))
-                else dbConfig.apiFormat
+                else dbConfig.apiFormat,
+                overlandBatchSize = extras.getIntOrDefault("overlandBatchSize", dbConfig.overlandBatchSize).coerceIn(1, 500)
             )
         }
     }
@@ -142,6 +155,7 @@ data class ServiceConfig(
             customFields?.let { putExtra("customFields", it) }
             putExtra("httpMethod", httpMethod)
             putExtra("apiFormat", apiFormat.wireName)
+            putExtra("overlandBatchSize", overlandBatchSize)
         }
     }
 }

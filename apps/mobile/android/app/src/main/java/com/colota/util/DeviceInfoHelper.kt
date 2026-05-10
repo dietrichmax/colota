@@ -59,19 +59,12 @@ class DeviceInfoHelper(private val context: Context) {
 
     fun getBatteryStatusString(): String {
         val (level, status) = getCachedBatteryStatus()
-        val statusText = when (status) {
-            0 -> "Unknown"
-            1 -> "Unplugged/Discharging"
-            2 -> "Charging"
-            3 -> "Full"
-            else -> "Unknown ($status)"
-        }
-        return "$level% ($statusText)"
+        return "$level% (${BatteryStatus.toDisplayString(status)})"
     }
 
     fun isBatteryCritical(threshold: Int = 5): Boolean {
         val (level, status) = getCachedBatteryStatus()
-        return level < threshold && status == 1 // Discharging
+        return level < threshold && status == BatteryStatus.DISCHARGING
     }
 
     /** True when device is connected to any power source (AC, USB, wireless). */
@@ -86,11 +79,11 @@ class DeviceInfoHelper(private val context: Context) {
         val pct = if (rawLevel >= 0 && scale > 0) (rawLevel * 100) / scale else 100
         val rawStatus = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         val status = when (rawStatus) {
-            BatteryManager.BATTERY_STATUS_CHARGING -> 2      // Charging
-            BatteryManager.BATTERY_STATUS_FULL -> 3          // Full
-            BatteryManager.BATTERY_STATUS_DISCHARGING -> 1   // Unplugged/Discharging
-            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> 1  // Unplugged/Discharging
-            else -> 0                                        // Unknown
+            BatteryManager.BATTERY_STATUS_CHARGING -> BatteryStatus.CHARGING
+            BatteryManager.BATTERY_STATUS_FULL -> BatteryStatus.FULL
+            BatteryManager.BATTERY_STATUS_DISCHARGING -> BatteryStatus.DISCHARGING
+            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> BatteryStatus.DISCHARGING
+            else -> BatteryStatus.UNKNOWN
         }
         val plugged = (intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
         return BatterySticky(pct, status, plugged)

@@ -11,6 +11,7 @@ import { Container, Card, Button, SectionTitle } from "../components"
 import { fonts } from "../styles/typography"
 import { CircleAlert, CircleCheck, Import } from "lucide-react-native"
 import SettingsService from "../services/SettingsService"
+import { OVERLAND_BATCH_MIN, OVERLAND_BATCH_MAX } from "../constants"
 import { isEndpointAllowed } from "../utils/settingsValidation"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
@@ -24,6 +25,7 @@ import {
   type CustomField,
   type ApiTemplateName,
   type HttpMethod,
+  type DawarichMode,
   type SelectablePreset,
   type SyncPreset,
   type Geofence
@@ -63,12 +65,14 @@ const VALID_API_TEMPLATES: ApiTemplateName[] = [
   "custom",
   "dawarich",
   "geopulse",
+  "overland",
   "owntracks",
   "phonetrack",
   "reitti",
   "traccar"
 ]
 const VALID_HTTP_METHODS: HttpMethod[] = ["POST", "GET"]
+const VALID_DAWARICH_MODES: DawarichMode[] = ["single", "batch"]
 const VALID_AUTH_TYPES: AuthType[] = ["none", "basic", "bearer"]
 
 function detectPreset(settings: Partial<Settings>): SyncPreset {
@@ -184,6 +188,25 @@ function validateConfig(raw: unknown): ValidationResult {
   ) {
     settings.httpMethod = obj.httpMethod as HttpMethod
     entries.push({ label: "HTTP method", value: obj.httpMethod, category: "api" })
+  }
+
+  if (
+    "dawarichMode" in obj &&
+    typeof obj.dawarichMode === "string" &&
+    VALID_DAWARICH_MODES.includes(obj.dawarichMode as DawarichMode)
+  ) {
+    settings.dawarichMode = obj.dawarichMode as DawarichMode
+    entries.push({ label: "Dawarich mode", value: obj.dawarichMode, category: "api" })
+  }
+
+  if (
+    "overlandBatchSize" in obj &&
+    typeof obj.overlandBatchSize === "number" &&
+    obj.overlandBatchSize >= OVERLAND_BATCH_MIN &&
+    obj.overlandBatchSize <= OVERLAND_BATCH_MAX
+  ) {
+    settings.overlandBatchSize = Math.floor(obj.overlandBatchSize)
+    entries.push({ label: "Overland batch size", value: String(settings.overlandBatchSize), category: "api" })
   }
 
   if ("fieldMap" in obj && typeof obj.fieldMap === "object" && obj.fieldMap !== null) {

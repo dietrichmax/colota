@@ -35,6 +35,11 @@ class SyncManager(
     @Volatile private var authHeaders: Map<String, String> = emptyMap()
     @Volatile private var httpMethod: String = "POST"
     @Volatile private var apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED
+    @Volatile private var overlandBatchSize: Int = 50
+
+    // Names PayloadBuilder writes when usesFixedFieldNames=true. Anything else in the payload
+    // is a user-configured custom field (device_id, tid, etc.) and lifts to envelope level.
+    private val canonicalLocationKeys = setOf("lat", "lon", "acc", "alt", "vel", "batt", "bs", "tst", "bear")
 
     private var syncJob: Job? = null
     @Volatile private var lastSyncTime: Long = 0
@@ -55,6 +60,7 @@ class SyncManager(
         authHeaders: Map<String, String>,
         httpMethod: String = "POST",
         apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED,
+        overlandBatchSize: Int = 50,
     ) {
         this.endpoint = endpoint
         this.syncIntervalSeconds = syncIntervalSeconds
@@ -65,6 +71,7 @@ class SyncManager(
         this.authHeaders = authHeaders
         this.httpMethod = httpMethod
         this.apiFormat = apiFormat
+        this.overlandBatchSize = overlandBatchSize.coerceIn(1, 500)
     }
 
     fun startPeriodicSync() {
@@ -210,13 +217,15 @@ class SyncManager(
         val currentAuthHeaders = authHeaders
         val currentHttpMethod = httpMethod
         val currentApiFormat = apiFormat
+        val currentBatchSize = overlandBatchSize
         var totalProcessed = 0
         var totalSucceeded = 0
         var totalFailed = 0
         var batchNumber = 1
 
         while (isActive && batchNumber <= MAX_BATCHES_PER_SYNC) {
-            val queued = dbHelper.getQueuedLocations(50)
+            val fetchSize = if (currentApiFormat == ApiFormat.OVERLAND_BATCH) currentBatchSize else 50
+            val queued = dbHelper.getQueuedLocations(fetchSize)
             if (queued.isEmpty()) {
                 if (totalProcessed > 0) {
                     AppLogger.d(TAG, "Sync complete: $totalProcessed items in $batchNumber batches")
@@ -229,48 +238,60 @@ class SyncManager(
             // Chunks of 10 concurrent HTTP requests to avoid flooding the server
             val processedBefore = totalProcessed
 
-            for (chunk in queued.chunked(10)) {
-                val successfulIds = mutableListOf<Long>()
+            if (currentApiFormat == ApiFormat.OVERLAND_BATCH) {
+                val result = sendBatchRecursive(queued, currentEndpoint, currentAuthHeaders)
+                totalProcessed += result.processed
+                totalSucceeded += result.processed
+                totalFailed += result.failed
+                if (result.processed > 0) onProgress?.invoke(totalSucceeded, totalFailed)
+                if (result.stop) {
+                    AppLogger.d(TAG, "Sync pass aborted by transport failure")
+                    break
+                }
+            } else {
+                for (chunk in queued.chunked(10)) {
+                    val successfulIds = mutableListOf<Long>()
 
-                val results = chunk.map { item ->
-                    async {
-                        try {
-                            val itemPayload = JSONObject(item.payload)
-                            val success = networkManager.sendToEndpoint(
-                                itemPayload,
-                                currentEndpoint,
-                                currentAuthHeaders,
-                                currentHttpMethod,
-                                currentApiFormat
-                            )
-                            item.queueId to success
-                        } catch (e: Exception) {
-                            AppLogger.e(TAG, "Failed to send item ${item.queueId}", e)
-                            item.queueId to false
+                    val results = chunk.map { item ->
+                        async {
+                            try {
+                                val itemPayload = JSONObject(item.payload)
+                                val success = networkManager.sendToEndpoint(
+                                    itemPayload,
+                                    currentEndpoint,
+                                    currentAuthHeaders,
+                                    currentHttpMethod,
+                                    currentApiFormat
+                                )
+                                item.queueId to success
+                            } catch (e: Exception) {
+                                AppLogger.e(TAG, "Failed to send item ${item.queueId}", e)
+                                item.queueId to false
+                            }
+                        }
+                    }.awaitAll()
+
+                    results.forEach { (queueId, success) ->
+                        if (success) {
+                            successfulIds.add(queueId)
+                        } else {
+                            dbHelper.incrementRetryCount(queueId, "Send failed")
+                            totalFailed++
                         }
                     }
-                }.awaitAll()
 
-                results.forEach { (queueId, success) ->
-                    if (success) {
-                        successfulIds.add(queueId)
-                    } else {
-                        dbHelper.incrementRetryCount(queueId, "Send failed")
-                        totalFailed++
+                    if (successfulIds.isNotEmpty()) {
+                        val sentLocationIds = chunk.filter { it.queueId in successfulIds }.map { it.locationId }
+                        dbHelper.markLocationsSent(sentLocationIds)
+                        dbHelper.removeBatchFromQueue(successfulIds)
+
+                        totalProcessed += successfulIds.size
+                        totalSucceeded += successfulIds.size
+                        onProgress?.invoke(totalSucceeded, totalFailed)
                     }
+
+                    yield()
                 }
-
-                if (successfulIds.isNotEmpty()) {
-                    val sentLocationIds = chunk.filter { it.queueId in successfulIds }.map { it.locationId }
-                    dbHelper.markLocationsSent(sentLocationIds)
-                    dbHelper.removeBatchFromQueue(successfulIds)
-
-                    totalProcessed += successfulIds.size
-                    totalSucceeded += successfulIds.size
-                    onProgress?.invoke(totalSucceeded, totalFailed)
-                }
-
-                yield()
             }
 
             // No items removed from queue. Stop re-fetching the same failing items
@@ -291,6 +312,91 @@ class SyncManager(
         if (totalSucceeded > 0) {
             lastSuccessfulSyncTime = System.currentTimeMillis()
         }
+    }
+
+    private data class BatchSendResult(val processed: Int, val failed: Int, val stop: Boolean)
+
+    /**
+     * Endpoint and auth headers are passed by parameter (not read from volatiles)
+     * so a settings change mid-pass cannot mix them across recursive calls.
+     */
+    private suspend fun sendBatchRecursive(
+        items: List<com.Colota.data.QueuedLocation>,
+        endpoint: String,
+        authHeaders: Map<String, String>,
+    ): BatchSendResult {
+        if (items.isEmpty()) return BatchSendResult(0, 0, false)
+
+        // Isolate corrupt rows so one bad payload doesn't poison the whole batch
+        // (matches the per-item path's per-item try/catch).
+        val parsed = items.mapNotNull { item ->
+            try {
+                item to JSONObject(item.payload)
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Corrupt queue row ${item.queueId}, bumping retry counter", e)
+                dbHelper.incrementRetryCount(item.queueId, "Corrupt payload")
+                null
+            }
+        }
+        val corruptedFailed = items.size - parsed.size
+        if (parsed.isEmpty()) {
+            return BatchSendResult(processed = 0, failed = corruptedFailed, stop = false)
+        }
+
+        val parseableItems = parsed.map { it.first }
+        val payloads = parsed.map { it.second }
+        val customFields = extractEnvelopeCustomFields(payloads.first())
+
+        val result = networkManager.sendBatchToEndpoint(
+            items = payloads,
+            customFields = customFields,
+            endpoint = endpoint,
+            extraHeaders = authHeaders,
+        )
+
+        return when (result) {
+            BatchResult.Success -> {
+                dbHelper.markLocationsSent(parseableItems.map { it.locationId })
+                dbHelper.removeBatchFromQueue(parseableItems.map { it.queueId })
+                BatchSendResult(processed = parseableItems.size, failed = corruptedFailed, stop = false)
+            }
+            is BatchResult.ClientError -> {
+                if (parseableItems.size == 1) {
+                    dbHelper.incrementRetryCount(parseableItems[0].queueId, "4xx: ${result.code}")
+                    BatchSendResult(processed = 0, failed = 1 + corruptedFailed, stop = false)
+                } else {
+                    val mid = parseableItems.size / 2
+                    val left = sendBatchRecursive(parseableItems.take(mid), endpoint, authHeaders)
+                    yield()
+                    val right = sendBatchRecursive(parseableItems.drop(mid), endpoint, authHeaders)
+                    BatchSendResult(
+                        processed = left.processed + right.processed,
+                        failed = left.failed + right.failed + corruptedFailed,
+                        stop = left.stop || right.stop,
+                    )
+                }
+            }
+            is BatchResult.ServerError -> {
+                parseableItems.forEach { dbHelper.incrementRetryCount(it.queueId, "5xx: ${result.code}") }
+                BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
+            }
+            BatchResult.NetworkError -> {
+                parseableItems.forEach { dbHelper.incrementRetryCount(it.queueId, "network") }
+                BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
+            }
+        }
+    }
+
+    private fun extractEnvelopeCustomFields(payload: JSONObject): Map<String, String> {
+        val fields = mutableMapOf<String, String>()
+        val keys = payload.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            if (key !in canonicalLocationKeys) {
+                fields[key] = payload.optString(key, "")
+            }
+        }
+        return fields
     }
 
     private fun calculateNextSyncDelay(): Long {

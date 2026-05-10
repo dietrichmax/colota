@@ -8,7 +8,8 @@ Colota includes built-in templates for popular backends. Select a template in **
 
 | Template | HTTP Method | Bearing Field | Custom Fields | Notes |
 | --- | --- | --- | --- | --- |
-| **Dawarich** | POST | `cog` | `_type: "location"` | OwnTracks-compatible format |
+| **Dawarich** | POST | `cog` | `_type: "location"` | OwnTracks single-point format. Optional Batch chip switches to Overland envelope (see [Dawarich integration](./dawarich.md)). |
+| **Overland** | POST | n/a (uses Overland format) | `device_id: "colota"` | Batch-only Overland GeoJSON envelope. For any backend that accepts the Overland format (Compass, Wayfinder, Dawarich, etc). |
 | **OwnTracks** | POST | `cog` | `_type: "location"`, `tid: "AA"` | Standard OwnTracks HTTP format |
 | **GeoPulse** | POST | `bear` | _(none)_ | Native Colota format |
 | **PhoneTrack** | POST | `bearing` | `useragent: "Colota"` | Nextcloud PhoneTrack format |

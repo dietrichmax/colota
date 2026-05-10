@@ -14,6 +14,9 @@ export function resolveHealthUrls(endpoint: string, apiTemplate: ApiTemplateName
       }
       case "dawarich":
         return [`${origin}/api/v1/health`, origin]
+      case "overland":
+        // Portable format, no canonical server
+        return [origin]
       case "owntracks":
         // /api/0/version for OwnTracks Recorder; Home Assistant responds at root if that 404s
         return [`${origin}/api/0/version`, origin]

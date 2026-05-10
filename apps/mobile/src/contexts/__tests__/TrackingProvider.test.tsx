@@ -55,7 +55,7 @@ jest.mock("../../utils/logger", () => ({
   }
 }))
 
-import { TrackingProvider, useTracking } from "../TrackingProvider"
+import { TrackingProvider, useTracking, parseRawSettings } from "../TrackingProvider"
 import NativeLocationService from "../../services/NativeLocationService"
 import SettingsService from "../../services/SettingsService"
 import { logger } from "../../utils/logger"
@@ -337,5 +337,29 @@ describe("useTracking", () => {
 
     expect(mockGetActiveProfileName).toHaveBeenCalled()
     expect(result.current.activeProfileName).toBe("Charging")
+  })
+})
+
+describe("parseRawSettings", () => {
+  it("round-trips dawarichMode from raw SQLite", () => {
+    const settings = parseRawSettings({ dawarichMode: "batch" })
+    expect(settings.dawarichMode).toBe("batch")
+  })
+
+  it("round-trips overlandBatchSize from raw SQLite", () => {
+    const settings = parseRawSettings({ overlandBatchSize: "200" })
+    expect(settings.overlandBatchSize).toBe(200)
+  })
+
+  it("falls back to defaults when dawarich keys are missing", () => {
+    const settings = parseRawSettings({})
+    expect(settings.dawarichMode).toBe(DEFAULT_SETTINGS.dawarichMode)
+    expect(settings.overlandBatchSize).toBe(DEFAULT_SETTINGS.overlandBatchSize)
+  })
+
+  it("falls back to default when overlandBatchSize is non-numeric", () => {
+    const settings = parseRawSettings({ overlandBatchSize: "not-a-number" })
+    // parseInt("not-a-number", 10) returns NaN, but we should not propagate NaN
+    expect(Number.isFinite(settings.overlandBatchSize)).toBe(true)
   })
 })

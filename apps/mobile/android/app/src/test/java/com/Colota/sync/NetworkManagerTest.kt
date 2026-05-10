@@ -465,6 +465,201 @@ class NetworkManagerTest {
         assertFalse(result.getJSONObject("location").has("battery"))
     }
 
+    // --- buildOverlandBatchPayload ---
+
+    @Test
+    fun `buildOverlandBatchPayload wraps single point in locations array`() {
+        val flat = JSONObject().apply {
+            put("lat", 51.5); put("lon", -0.04); put("acc", 12); put("alt", 519)
+            put("vel", 0.0); put("bear", 180.5); put("batt", 85); put("bs", 2)
+            put("tst", 1704067200L)
+        }
+        val result = invokeBuildOverlandBatchPayload(listOf(flat), emptyMap())
+
+        assertTrue(result.has("locations"))
+        val locations = result.getJSONArray("locations")
+        assertEquals(1, locations.length())
+        val feature = locations.getJSONObject(0)
+        assertEquals("Feature", feature.getString("type"))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload uses GeoJSON lon-lat coordinate order`() {
+        val flat = JSONObject().apply {
+            put("lat", 51.5); put("lon", -0.04); put("tst", 1704067200L)
+        }
+        val result = invokeBuildOverlandBatchPayload(listOf(flat), emptyMap())
+        val coords = result.getJSONArray("locations").getJSONObject(0)
+            .getJSONObject("geometry").getJSONArray("coordinates")
+        assertEquals(-0.04, coords.getDouble(0), 0.001)  // lon first
+        assertEquals(51.5, coords.getDouble(1), 0.001)   // lat second
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload bundles 50 features in one envelope`() {
+        val items = (1..50).map {
+            JSONObject().apply {
+                put("lat", it.toDouble()); put("lon", it.toDouble()); put("tst", 1704067200L + it)
+            }
+        }
+        val result = invokeBuildOverlandBatchPayload(items, emptyMap())
+        assertEquals(50, result.getJSONArray("locations").length())
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload formats timestamp as ISO 8601`() {
+        val flat = JSONObject().apply {
+            put("lat", 51.5); put("lon", -0.04); put("tst", 1704067200L)
+        }
+        val result = invokeBuildOverlandBatchPayload(listOf(flat), emptyMap())
+        val timestamp = result.getJSONArray("locations").getJSONObject(0)
+            .getJSONObject("properties").getString("timestamp")
+        assertTrue("Expected ISO 8601 format, got: $timestamp", timestamp.contains("T") && timestamp.endsWith("Z"))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload scales battery_level from 0-100 to 0-1`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+            put("batt", 85); put("bs", 2)
+        }
+        val result = invokeBuildOverlandBatchPayload(listOf(flat), emptyMap())
+        val props = result.getJSONArray("locations").getJSONObject(0).getJSONObject("properties")
+        assertEquals(0.85, props.getDouble("battery_level"), 0.001)
+        assertEquals("charging", props.getString("battery_state"))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload maps battery_state correctly`() {
+        fun stateFor(bs: Int): String {
+            val flat = JSONObject().apply {
+                put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+                put("batt", 50); put("bs", bs)
+            }
+            return invokeBuildOverlandBatchPayload(listOf(flat), emptyMap())
+                .getJSONArray("locations").getJSONObject(0)
+                .getJSONObject("properties").getString("battery_state")
+        }
+        // Mapping must match DeviceInfoHelper.kt: 0=default/unknown, 1=discharging or not charging
+        // (unplugged), 2=charging, 3=full. Out-of-range values default to "unknown" (safer than
+        // inventing a definite state).
+        assertEquals("unknown", stateFor(0))
+        assertEquals("unplugged", stateFor(1))
+        assertEquals("charging", stateFor(2))
+        assertEquals("full", stateFor(3))
+        assertEquals("unknown", stateFor(99))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload device_id falls back when explicit override is empty string`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L); put("tid", "AA")
+        }
+        // Empty-string override should not bypass the fallback chain.
+        val result = invokeBuildOverlandBatchPayload(listOf(flat), mapOf("device_id" to ""))
+        assertEquals("AA", result.getString("device_id"))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload does not clobber locations when custom field has reserved key`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+        }
+        // A custom field named "locations" or "device_id" must not overwrite the envelope structure.
+        val result = invokeBuildOverlandBatchPayload(
+            listOf(flat),
+            mapOf("locations" to "evil", "device_id" to "my-pixel", "extra" to "ok")
+        )
+        // locations stays a JSONArray, not a string
+        val locations = result.getJSONArray("locations")
+        assertEquals(1, locations.length())
+        // device_id uses the explicit override (not literally "my-pixel" being clobbered)
+        assertEquals("my-pixel", result.getString("device_id"))
+        // Non-reserved custom fields still propagate
+        assertEquals("ok", result.getString("extra"))
+    }
+
+    @Test
+    fun `flatToOverlandFeature replaces tst=0 with current time`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 0L)  // corrupted/zero timestamp
+        }
+        val result = invokeBuildOverlandBatchPayload(listOf(flat), emptyMap())
+        val timestamp = result.getJSONArray("locations").getJSONObject(0)
+            .getJSONObject("properties").getString("timestamp")
+        // Must NOT be 1970-01-01 - we substitute current time when the stored timestamp is invalid
+        assertFalse("timestamp should not be epoch zero, got: $timestamp", timestamp.startsWith("1970"))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload omits optional properties when absent`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+        }
+        val result = invokeBuildOverlandBatchPayload(listOf(flat), emptyMap())
+        val props = result.getJSONArray("locations").getJSONObject(0).getJSONObject("properties")
+        assertFalse(props.has("horizontal_accuracy"))
+        assertFalse(props.has("altitude"))
+        assertFalse(props.has("speed"))
+        assertFalse(props.has("course"))
+        assertFalse(props.has("battery_level"))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload places custom fields at envelope level not per Feature`() {
+        val flat = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+        }
+        val result = invokeBuildOverlandBatchPayload(
+            listOf(flat),
+            mapOf("device_id" to "my-pixel", "extra" to "value")
+        )
+        // Envelope has the custom fields
+        assertEquals("my-pixel", result.getString("device_id"))
+        assertEquals("value", result.getString("extra"))
+        // Feature properties do NOT have them
+        val props = result.getJSONArray("locations").getJSONObject(0).getJSONObject("properties")
+        assertFalse(props.has("device_id"))
+        assertFalse(props.has("extra"))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload device_id falls back through device_id then tid then id then literal`() {
+        // Explicit envelope override wins
+        val withDeviceId = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L); put("device_id", "from-payload")
+        }
+        var result = invokeBuildOverlandBatchPayload(listOf(withDeviceId), emptyMap())
+        assertEquals("from-payload", result.getString("device_id"))
+
+        // tid fallback (OwnTracks user migrating to batch)
+        val withTid = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L); put("tid", "AA")
+        }
+        result = invokeBuildOverlandBatchPayload(listOf(withTid), emptyMap())
+        assertEquals("AA", result.getString("device_id"))
+
+        // id fallback (Traccar user migrating to batch)
+        val withId = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L); put("id", "trax")
+        }
+        result = invokeBuildOverlandBatchPayload(listOf(withId), emptyMap())
+        assertEquals("trax", result.getString("device_id"))
+
+        // Literal default when nothing set
+        val empty = JSONObject().apply {
+            put("lat", 1.0); put("lon", 1.0); put("tst", 1000L)
+        }
+        result = invokeBuildOverlandBatchPayload(listOf(empty), emptyMap())
+        assertEquals("colota", result.getString("device_id"))
+    }
+
+    @Test
+    fun `buildOverlandBatchPayload returns empty locations array for empty input`() {
+        val result = invokeBuildOverlandBatchPayload(emptyList(), emptyMap())
+        assertEquals(0, result.getJSONArray("locations").length())
+    }
+
     // --- buildQueryString ---
 
     @Test
@@ -542,6 +737,17 @@ class NetworkManagerTest {
         method.isAccessible = true
         val manager = createNetworkManagerViaReflection()
         return method.invoke(manager, flat) as JSONObject
+    }
+
+    private fun invokeBuildOverlandBatchPayload(items: List<JSONObject>, customFields: Map<String, String>): JSONObject {
+        val method = NetworkManager::class.java.getDeclaredMethod(
+            "buildOverlandBatchPayload",
+            List::class.java,
+            Map::class.java
+        )
+        method.isAccessible = true
+        val manager = createNetworkManagerViaReflection()
+        return method.invoke(manager, items, customFields) as JSONObject
     }
 
     private fun invokeBuildQueryString(payload: JSONObject): String {

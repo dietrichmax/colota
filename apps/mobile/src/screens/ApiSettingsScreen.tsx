@@ -12,7 +12,8 @@ import {
   CustomField,
   ApiTemplateName,
   API_TEMPLATES,
-  HttpMethod
+  HttpMethod,
+  DawarichMode
 } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
@@ -22,7 +23,12 @@ import NativeLocationService from "../services/NativeLocationService"
 import { fonts } from "../styles/typography"
 import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
-import { buildTraccarJsonPayload, isTraccarJsonFormat } from "../utils/apiPayload"
+import {
+  buildTraccarJsonPayload,
+  buildOverlandBatchPayload,
+  isTraccarJsonFormat,
+  isOverlandFormat
+} from "../utils/apiPayload"
 
 type LocalCustomField = CustomField & { id: number }
 
@@ -50,6 +56,11 @@ const TEMPLATE_OPTIONS: { value: ApiTemplateName; label: string }[] = [
 const HTTP_METHOD_OPTIONS: { value: HttpMethod; label: string }[] = [
   { value: "POST", label: "POST" },
   { value: "GET", label: "GET" }
+]
+
+const DAWARICH_MODE_OPTIONS: { value: DawarichMode; label: string }[] = [
+  { value: "single", label: "Single point" },
+  { value: "batch", label: "Batch" }
 ]
 
 /**
@@ -83,7 +94,12 @@ export function ApiSettingsScreen({}: ScreenProps) {
   )
   const [localTemplate, setLocalTemplate] = useState<ApiTemplateName>(settings.apiTemplate || "custom")
   const [localHttpMethod, setLocalHttpMethod] = useState<HttpMethod>(settings.httpMethod || "POST")
+  const [localDawarichMode, setLocalDawarichMode] = useState<DawarichMode>(settings.dawarichMode || "single")
   const [copied, setCopied] = useState(false)
+  const isInstantSync = settings.syncInterval === 0
+  const isGetMethod = localHttpMethod === "GET"
+  const showDawarichChip = localTemplate === "dawarich"
+  const batchDisabled = isInstantSync || isGetMethod
   const copiedTimeout = useTimeout()
   const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
 
@@ -115,6 +131,28 @@ export function ApiSettingsScreen({}: ScreenProps) {
   /** Example payload string showing all fields */
   const examplePayload = useMemo(() => {
     const isTraccarJson = isTraccarJsonFormat(localTemplate, localHttpMethod)
+    const isOverland = isOverlandFormat(localTemplate, localDawarichMode)
+
+    if (isOverland) {
+      const deviceId =
+        localCustomFields.find((f) => f.key === "device_id" || f.key === "tid" || f.key === "id")?.value ?? "colota"
+      return JSON.stringify(
+        buildOverlandBatchPayload({
+          latitude: 52.12345,
+          longitude: -2.12345,
+          accuracy: 15,
+          altitude: 380,
+          speed: 5,
+          course: 180,
+          batteryLevel: 0.85,
+          batteryState: "unplugged",
+          deviceId,
+          timestamp: "2025-02-12T13:00:00Z"
+        }),
+        null,
+        2
+      )
+    }
 
     if (isTraccarJson) {
       const deviceId = localCustomFields.find((f) => f.key === "id" || f.key === "device_id")?.value ?? "colota"
@@ -161,7 +199,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
     const entries = params.map((p) => `  "${p.key}": ${isNaN(Number(p.value)) ? `"${p.value}"` : p.value}`)
     return "{\n" + entries.join(",\n") + "\n}"
-  }, [localFieldMap, localCustomFields, localHttpMethod, localTemplate])
+  }, [localFieldMap, localCustomFields, localHttpMethod, localTemplate, localDawarichMode])
 
   /**
    * Build sanitized settings from current field map, custom fields, and template.
@@ -172,7 +210,8 @@ export function ApiSettingsScreen({}: ScreenProps) {
       newFieldMap: FieldMap,
       newCustomFields: CustomField[],
       newTemplate: ApiTemplateName,
-      newHttpMethod: HttpMethod
+      newHttpMethod: HttpMethod,
+      newDawarichMode: DawarichMode
     ) => {
       const sanitizedMap = Object.fromEntries(
         Object.entries(newFieldMap).map(([key, value]) => [key, value.trim()])
@@ -200,7 +239,8 @@ export function ApiSettingsScreen({}: ScreenProps) {
         fieldMap: sanitizedMap,
         customFields: sanitizedCustomFields,
         apiTemplate: newTemplate,
-        httpMethod: newHttpMethod
+        httpMethod: newHttpMethod,
+        dawarichMode: newDawarichMode
       }
     },
     [settings]
@@ -214,9 +254,16 @@ export function ApiSettingsScreen({}: ScreenProps) {
       newFieldMap: FieldMap,
       newCustomFields: CustomField[],
       newTemplate: ApiTemplateName,
-      newHttpMethod: HttpMethod
+      newHttpMethod: HttpMethod,
+      newDawarichMode: DawarichMode
     ) => {
-      const newSettings = buildSanitizedSettings(newFieldMap, newCustomFields, newTemplate, newHttpMethod)
+      const newSettings = buildSanitizedSettings(
+        newFieldMap,
+        newCustomFields,
+        newTemplate,
+        newHttpMethod,
+        newDawarichMode
+      )
       if (!newSettings) return
 
       debouncedSaveAndRestart(
@@ -235,9 +282,16 @@ export function ApiSettingsScreen({}: ScreenProps) {
       newFieldMap: FieldMap,
       newCustomFields: CustomField[],
       newTemplate: ApiTemplateName,
-      newHttpMethod: HttpMethod
+      newHttpMethod: HttpMethod,
+      newDawarichMode: DawarichMode
     ) => {
-      const newSettings = buildSanitizedSettings(newFieldMap, newCustomFields, newTemplate, newHttpMethod)
+      const newSettings = buildSanitizedSettings(
+        newFieldMap,
+        newCustomFields,
+        newTemplate,
+        newHttpMethod,
+        newDawarichMode
+      )
       if (!newSettings) return
 
       immediateSaveAndRestart(
@@ -255,8 +309,13 @@ export function ApiSettingsScreen({}: ScreenProps) {
     (template: ApiTemplateName) => {
       setLocalTemplate(template)
 
+      // Reset to "single" when leaving dawarich so the saved value doesn't silently
+      // flip behavior the next time the user picks dawarich again.
+      const nextDawarichMode: DawarichMode = template === "dawarich" ? localDawarichMode : "single"
+      if (nextDawarichMode !== localDawarichMode) setLocalDawarichMode(nextDawarichMode)
+
       if (template === "custom") {
-        saveImmediately(localFieldMap, localCustomFields, template, localHttpMethod)
+        saveImmediately(localFieldMap, localCustomFields, template, localHttpMethod, nextDawarichMode)
         return
       }
 
@@ -266,9 +325,9 @@ export function ApiSettingsScreen({}: ScreenProps) {
       setLocalFieldMap(tmpl.fieldMap)
       setLocalCustomFields(newCustomFields)
       setLocalHttpMethod(method)
-      saveImmediately(tmpl.fieldMap, newCustomFields, template, method)
+      saveImmediately(tmpl.fieldMap, newCustomFields, template, method, nextDawarichMode)
     },
-    [localFieldMap, localCustomFields, localHttpMethod, saveImmediately]
+    [localFieldMap, localCustomFields, localHttpMethod, localDawarichMode, saveImmediately]
   )
 
   /**
@@ -283,9 +342,9 @@ export function ApiSettingsScreen({}: ScreenProps) {
       const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
       if (newTemplate !== localTemplate) setLocalTemplate(newTemplate)
 
-      debouncedSave(newFieldMap, localCustomFields, newTemplate, localHttpMethod)
+      debouncedSave(newFieldMap, localCustomFields, newTemplate, localHttpMethod, localDawarichMode)
     },
-    [localFieldMap, localCustomFields, localTemplate, localHttpMethod, debouncedSave]
+    [localFieldMap, localCustomFields, localTemplate, localHttpMethod, localDawarichMode, debouncedSave]
   )
 
   /**
@@ -295,9 +354,17 @@ export function ApiSettingsScreen({}: ScreenProps) {
     (key: keyof FieldMap) => {
       const newFieldMap = { ...localFieldMap, [key]: referenceFieldMap[key] }
       setLocalFieldMap(newFieldMap)
-      saveImmediately(newFieldMap, localCustomFields, localTemplate, localHttpMethod)
+      saveImmediately(newFieldMap, localCustomFields, localTemplate, localHttpMethod, localDawarichMode)
     },
-    [localFieldMap, localCustomFields, localTemplate, localHttpMethod, referenceFieldMap, saveImmediately]
+    [
+      localFieldMap,
+      localCustomFields,
+      localTemplate,
+      localHttpMethod,
+      localDawarichMode,
+      referenceFieldMap,
+      saveImmediately
+    ]
   )
 
   /**
@@ -307,8 +374,8 @@ export function ApiSettingsScreen({}: ScreenProps) {
     const refFields = getReferenceCustomFields(localTemplate).map((f) => ({ ...f, id: assignId() }))
     setLocalFieldMap(referenceFieldMap)
     setLocalCustomFields(refFields)
-    saveImmediately(referenceFieldMap, refFields, localTemplate, localHttpMethod)
-  }, [referenceFieldMap, localTemplate, localHttpMethod, saveImmediately])
+    saveImmediately(referenceFieldMap, refFields, localTemplate, localHttpMethod, localDawarichMode)
+  }, [referenceFieldMap, localTemplate, localHttpMethod, localDawarichMode, saveImmediately])
 
   // --- Custom Fields handlers ---
 
@@ -329,9 +396,9 @@ export function ApiSettingsScreen({}: ScreenProps) {
         setLocalTemplate(newTemplate)
       }
 
-      debouncedSave(localFieldMap, newFields, newTemplate, localHttpMethod)
+      debouncedSave(localFieldMap, newFields, newTemplate, localHttpMethod, localDawarichMode)
     },
-    [localCustomFields, localFieldMap, localTemplate, localHttpMethod, debouncedSave]
+    [localCustomFields, localFieldMap, localTemplate, localHttpMethod, localDawarichMode, debouncedSave]
   )
 
   const handleRemoveCustomField = useCallback(
@@ -342,17 +409,44 @@ export function ApiSettingsScreen({}: ScreenProps) {
       const newTemplate = localTemplate !== "custom" ? "custom" : localTemplate
       if (newTemplate !== localTemplate) setLocalTemplate(newTemplate)
 
-      saveImmediately(localFieldMap, newFields, newTemplate, localHttpMethod)
+      saveImmediately(localFieldMap, newFields, newTemplate, localHttpMethod, localDawarichMode)
     },
-    [localCustomFields, localFieldMap, localTemplate, localHttpMethod, saveImmediately]
+    [localCustomFields, localFieldMap, localTemplate, localHttpMethod, localDawarichMode, saveImmediately]
   )
 
   const handleHttpMethodChange = useCallback(
     (method: HttpMethod) => {
       setLocalHttpMethod(method)
-      saveImmediately(localFieldMap, localCustomFields, localTemplate, method)
+
+      // Batch requires POST; revert to single if the user picks GET while in batch
+      // so the saved state matches the disabled chip.
+      const nextDawarichMode: DawarichMode =
+        method === "GET" && localDawarichMode === "batch" ? "single" : localDawarichMode
+      if (nextDawarichMode !== localDawarichMode) setLocalDawarichMode(nextDawarichMode)
+
+      saveImmediately(localFieldMap, localCustomFields, localTemplate, method, nextDawarichMode)
     },
-    [localFieldMap, localCustomFields, localTemplate, saveImmediately]
+    [localFieldMap, localCustomFields, localTemplate, localDawarichMode, saveImmediately]
+  )
+
+  const handleDawarichModeChange = useCallback(
+    (mode: DawarichMode) => {
+      setLocalDawarichMode(mode)
+
+      // Reseed the default custom field on mode flip, but only when the list still
+      // matches the previous mode's default (i.e. the user hasn't edited it).
+      const prevDefault = mode === "batch" ? "_type" : "device_id"
+      const nextDefault = mode === "batch" ? "device_id" : "_type"
+      const nextDefaultValue = mode === "batch" ? "colota" : "location"
+      const looksLikeOldDefault = localCustomFields.length === 1 && localCustomFields[0]?.key === prevDefault
+      const newCustomFields = looksLikeOldDefault
+        ? [{ key: nextDefault, value: nextDefaultValue, id: assignId() }]
+        : localCustomFields
+      if (looksLikeOldDefault) setLocalCustomFields(newCustomFields)
+
+      saveImmediately(localFieldMap, newCustomFields, localTemplate, localHttpMethod, mode)
+    },
+    [localFieldMap, localCustomFields, localTemplate, localHttpMethod, saveImmediately]
   )
 
   const handleCopyPayload = useCallback(async () => {
@@ -393,20 +487,52 @@ export function ApiSettingsScreen({}: ScreenProps) {
         </View>
 
         {/* HTTP Method Selector */}
-        <View style={styles.section}>
-          <SectionTitle>HTTP METHOD</SectionTitle>
-          <ChipGroup
-            options={HTTP_METHOD_OPTIONS}
-            selected={localHttpMethod}
-            onSelect={handleHttpMethodChange}
-            colors={colors}
-          />
-          {localHttpMethod === "GET" && (
+        {/* Overland template is POST-only by spec; no need to expose the choice */}
+        {localTemplate !== "overland" && (
+          <View style={styles.section}>
+            <SectionTitle>HTTP METHOD</SectionTitle>
+            <ChipGroup
+              options={HTTP_METHOD_OPTIONS}
+              selected={localHttpMethod}
+              onSelect={handleHttpMethodChange}
+              colors={colors}
+            />
+            {localHttpMethod === "GET" && (
+              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
+                Fields sent as URL query parameters instead of JSON body
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Dawarich Mode Selector (Dawarich template only) */}
+        {showDawarichChip && (
+          <View style={styles.section}>
+            <SectionTitle>DAWARICH MODE</SectionTitle>
+            <ChipGroup
+              options={DAWARICH_MODE_OPTIONS}
+              selected={localDawarichMode}
+              onSelect={handleDawarichModeChange}
+              colors={colors}
+              disabled={batchDisabled ? new Set<DawarichMode>(["batch"]) : undefined}
+            />
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-              Fields sent as URL query parameters instead of JSON body
+              {localDawarichMode === "batch"
+                ? "Endpoint: /api/v1/overland/batches?api_key=YOUR_API_KEY"
+                : "Endpoint: /api/v1/owntracks/points?api_key=YOUR_API_KEY"}
             </Text>
-          )}
-        </View>
+            {isInstantSync && (
+              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
+                Batch mode requires a non-zero sync interval. Switch to a batched preset to enable it.
+              </Text>
+            )}
+            {isGetMethod && !isInstantSync && (
+              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
+                Batch mode requires POST. Switch HTTP method to POST to enable batch.
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* Field Mapping Section */}
         <View style={styles.fieldsSection}>

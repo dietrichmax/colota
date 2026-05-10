@@ -43,8 +43,10 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 | `isOfflineMode` | boolean | Store locally only, never sync |
 | `syncCondition` | string | `any`, `wifi_any`, `wifi_ssid`, or `vpn` |
 | `syncSsid` | string | Wi-Fi SSID to sync on (only used with `wifi_ssid`) |
-| `apiTemplate` | string | `custom`, `dawarich`, `geopulse`, `owntracks`, `phonetrack`, `reitti`, or `traccar` |
+| `apiTemplate` | string | `custom`, `dawarich`, `geopulse`, `overland`, `owntracks`, `phonetrack`, `reitti`, or `traccar` |
 | `httpMethod` | string | `POST` or `GET` |
+| `dawarichMode` | string | `single` (OwnTracks endpoint) or `batch` (Overland endpoint). Only applies to `apiTemplate: dawarich`. |
+| `overlandBatchSize` | number | Points per batch POST for Overland format (1-500, default 50). Used by `apiTemplate: overland` and `dawarich` + `batch`. |
 | `fieldMap` | object | Custom field name mapping for the JSON payload |
 | `customFields` | array | Static key-value pairs added to every payload |
 | `auth.type` | string | `none`, `basic`, or `bearer` |
