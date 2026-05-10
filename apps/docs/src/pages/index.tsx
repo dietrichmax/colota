@@ -112,6 +112,7 @@ const homepageScreenshots = [
 
 const integrations = [
   { label: "Dawarich", to: "/docs/integrations/dawarich" },
+  { label: "Overland", to: "/docs/integrations/overland" },
   { label: "OwnTracks", to: "/docs/integrations/owntracks" },
   { label: "Home Assistant", to: "/docs/integrations/home-assistant" },
   { label: "Traccar", to: "/docs/integrations/traccar" },

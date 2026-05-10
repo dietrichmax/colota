@@ -106,7 +106,17 @@ export type HttpMethod = "POST" | "GET"
 
 export type SyncCondition = "any" | "wifi_any" | "wifi_ssid" | "vpn"
 
-export type ApiTemplateName = "custom" | "dawarich" | "geopulse" | "owntracks" | "phonetrack" | "reitti" | "traccar"
+export type ApiTemplateName =
+  | "custom"
+  | "dawarich"
+  | "geopulse"
+  | "overland"
+  | "owntracks"
+  | "phonetrack"
+  | "reitti"
+  | "traccar"
+
+export type DawarichMode = "single" | "batch"
 
 export interface ApiTemplate {
   name: ApiTemplateName
@@ -151,6 +161,23 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
       bear: "cog"
     },
     customFields: [{ key: "_type", value: "location" }]
+  },
+  overland: {
+    name: "overland",
+    label: "Overland",
+    description: "Overland-compatible batch endpoint (GeoJSON Features)",
+    fieldMap: {
+      lat: "lat",
+      lon: "lon",
+      acc: "acc",
+      alt: "alt",
+      vel: "vel",
+      batt: "batt",
+      bs: "bs",
+      tst: "tst",
+      bear: "bear"
+    },
+    customFields: [{ key: "device_id", value: "colota" }]
   },
   owntracks: {
     name: "owntracks",
@@ -292,6 +319,8 @@ export interface Settings {
   customFields: CustomField[]
   apiTemplate: ApiTemplateName
   httpMethod: HttpMethod
+  dawarichMode: DawarichMode
+  overlandBatchSize: number
 
   // Sync & Upload
   syncInterval: number
@@ -320,7 +349,9 @@ export const DEFAULT_SETTINGS: Settings = {
   syncCondition: "any",
   syncSsid: "",
   hasCompletedSetup: false,
-  httpMethod: "POST"
+  httpMethod: "POST",
+  dawarichMode: "single",
+  overlandBatchSize: 50
 } as const
 
 // ============================================================================

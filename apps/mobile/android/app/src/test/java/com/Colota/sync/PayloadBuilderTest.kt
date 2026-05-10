@@ -72,6 +72,29 @@ class PayloadBuilderTest {
     }
 
     @Test
+    fun `buildLocationPayload ignores user fieldMap when apiFormat is OVERLAND_BATCH`() {
+        val location = createMockLocation(lat = 51.5, lon = -0.04, acc = 12.0f, speed = 0.0f)
+
+        val userFieldMap = mapOf("lat" to "latitude", "lon" to "longitude", "tst" to "ts")
+        val payload = buildPayload(
+            location = location,
+            batteryLevel = 85,
+            batteryStatus = 2,
+            fieldMap = userFieldMap,
+            timestamp = 1704067200L,
+            apiFormat = ApiFormat.OVERLAND_BATCH
+        )
+
+        // Must use canonical names so NetworkManager.buildOverlandBatchPayload can extract them.
+        assertEquals(51.5, payload.getDouble("lat"), 0.001)
+        assertEquals(-0.04, payload.getDouble("lon"), 0.001)
+        assertEquals(1704067200L, payload.getLong("tst"))
+        assertFalse(payload.has("latitude"))
+        assertFalse(payload.has("longitude"))
+        assertFalse(payload.has("ts"))
+    }
+
+    @Test
     fun `buildLocationPayload applies field name mapping`() {
         val location = createMockLocation(lat = 48.0, lon = 11.0, acc = 5.0f, speed = 0.0f)
 

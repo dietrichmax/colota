@@ -74,6 +74,8 @@ class NativeLocationService {
       syncSsid: settings.syncSsid,
       httpMethod: settings.httpMethod,
       apiTemplate: settings.apiTemplate,
+      dawarichMode: settings.dawarichMode,
+      overlandBatchSize: settings.overlandBatchSize,
       customFields: Object.fromEntries(settings.customFields.filter((f) => f.key).map((f) => [f.key, f.value]))
     }
 

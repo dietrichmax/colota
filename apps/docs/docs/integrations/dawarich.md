@@ -21,7 +21,11 @@ sidebar_position: 2
 
 ## Payload Format
 
-The Dawarich template auto-configures the following payload:
+The Dawarich template ships with two modes, picked via a chip in **Settings > API Settings** when the Dawarich template is selected.
+
+### Single point (default)
+
+Posts one OwnTracks-format point per request to `/api/v1/owntracks/points`. Best for small queues or near-real-time delivery.
 
 ```json
 {
@@ -39,3 +43,36 @@ The Dawarich template auto-configures the following payload:
 ```
 
 Note: Dawarich uses `cog` (course over ground) instead of `bear` for the bearing field.
+
+### Batch (Overland)
+
+Bundles up to N queued points into a single request to `/api/v1/overland/batches`, using the [Overland](https://github.com/aaronpk/Overland-iOS) GeoJSON format. Best for high-frequency tracking or flaky cellular networks.
+
+```json
+{
+  "locations": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-0.043945, 51.495065] },
+      "properties": {
+        "timestamp": "2026-05-09T12:34:56Z",
+        "horizontal_accuracy": 12,
+        "altitude": 519,
+        "speed": 0,
+        "course": 180.5,
+        "battery_level": 0.85,
+        "battery_state": "charging"
+      }
+    }
+  ],
+  "device_id": "colota"
+}
+```
+
+**Endpoint URL**: change the saved endpoint to `https://dawarich.yourdomain.com/api/v1/overland/batches?api_key=YOUR_API_KEY`. The chip only updates the placeholder hint, not your saved endpoint.
+
+**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & Sync > Advanced > Network Settings > Batch Size** (only shown when batch mode is active).
+
+**Requires non-zero sync interval**: batch mode is incompatible with instant sync. Pick a batched preset or set a custom sync interval before enabling. The chip is disabled when sync interval is 0.
+
+**Device identifier**: your Dawarich server sees this device as the value of the `device_id` custom field, defaulting to `"colota"`. Edit it under **Settings > API Settings > Custom Fields** if you run multiple devices.

@@ -5,10 +5,11 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { DeviceEventEmitter } from "react-native"
-import { Settings, DEFAULT_SETTINGS, LocationCoords, ApiTemplateName, HttpMethod } from "../types/global"
+import { Settings, DEFAULT_SETTINGS, LocationCoords, ApiTemplateName, HttpMethod, DawarichMode } from "../types/global"
 import { useLocationTracking } from "../hooks/useLocationTracking"
 import NativeLocationService from "../services/NativeLocationService"
 import SettingsService from "../services/SettingsService"
+import { parsePositiveInt } from "../utils/settingsValidation"
 import { LocationDisclosureModal } from "../components/ui/LocationDisclosureModal"
 import { LocalNetworkDisclosureModal } from "../components/ui/LocalNetworkDisclosureModal"
 import { AppModal } from "../components/ui/AppModal"
@@ -44,7 +45,7 @@ function parseJsonOr<T>(raw: string | undefined, fallback: T, key: string): T {
 /**
  * Parses raw SQLite settings (all strings) into typed Settings object
  */
-function parseRawSettings(allRaw: Record<string, string>): Settings {
+export function parseRawSettings(allRaw: Record<string, string>): Settings {
   return {
     ...DEFAULT_SETTINGS,
     // Convert Android milliseconds back to seconds (UNIX-Timestamp)
@@ -73,6 +74,8 @@ function parseRawSettings(allRaw: Record<string, string>): Settings {
 
     apiTemplate: (allRaw.apiTemplate as ApiTemplateName) ?? DEFAULT_SETTINGS.apiTemplate,
     httpMethod: (allRaw.httpMethod as HttpMethod) ?? DEFAULT_SETTINGS.httpMethod,
+    dawarichMode: (allRaw.dawarichMode as DawarichMode) ?? DEFAULT_SETTINGS.dawarichMode,
+    overlandBatchSize: parsePositiveInt(allRaw.overlandBatchSize ?? "", DEFAULT_SETTINGS.overlandBatchSize),
 
     hasCompletedSetup: allRaw.hasCompletedSetup === "true"
   }

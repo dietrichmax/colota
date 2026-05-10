@@ -19,15 +19,28 @@ interface GeofenceRow {
   heartbeatIntervalMinutes: string
 }
 
-const API_TEMPLATES = ["custom", "dawarich", "geopulse", "owntracks", "phonetrack", "reitti", "traccar"] as const
+const API_TEMPLATES = [
+  "custom",
+  "dawarich",
+  "geopulse",
+  "overland",
+  "owntracks",
+  "phonetrack",
+  "reitti",
+  "traccar"
+] as const
 const AUTH_TYPES = ["none", "basic", "bearer"] as const
 const SYNC_CONDITIONS = ["any", "wifi_any", "wifi_ssid", "vpn"] as const
+
+const DAWARICH_MODES = ["single", "batch"] as const
 
 export default function DeepLinkGenerator() {
   // Connection
   const [endpoint, setEndpoint] = useState("")
   const [apiTemplate, setApiTemplate] = useState("")
   const [httpMethod, setHttpMethod] = useState("")
+  const [dawarichMode, setDawarichMode] = useState("")
+  const [overlandBatchSize, setOverlandBatchSize] = useState("")
 
   // Tracking
   const [interval, setInterval_] = useState("")
@@ -73,6 +86,8 @@ export default function DeepLinkGenerator() {
     if (endpoint) obj.endpoint = endpoint
     if (apiTemplate) obj.apiTemplate = apiTemplate
     if (httpMethod) obj.httpMethod = httpMethod
+    if (dawarichMode) obj.dawarichMode = dawarichMode
+    if (overlandBatchSize && Number(overlandBatchSize) > 0) obj.overlandBatchSize = Number(overlandBatchSize)
 
     if (interval) obj.interval = Number(interval)
     if (distance) obj.distance = Number(distance)
@@ -144,6 +159,8 @@ export default function DeepLinkGenerator() {
     endpoint,
     apiTemplate,
     httpMethod,
+    dawarichMode,
+    overlandBatchSize,
     interval,
     distance,
     accuracyThreshold,
@@ -287,6 +304,37 @@ export default function DeepLinkGenerator() {
             </select>
           </div>
         </div>
+        {apiTemplate === "dawarich" && (
+          <div className={styles.row}>
+            <div className={styles.field}>
+              <label className={styles.label}>Dawarich Mode</label>
+              <select className={styles.select} value={dawarichMode} onChange={(e) => setDawarichMode(e.target.value)}>
+                <option value="">-- not set --</option>
+                {DAWARICH_MODES.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+        {(apiTemplate === "overland" || (apiTemplate === "dawarich" && dawarichMode === "batch")) && (
+          <div className={styles.row}>
+            <div className={styles.field}>
+              <label className={styles.label}>Batch size (1-500)</label>
+              <input
+                className={styles.input}
+                type="number"
+                min="1"
+                max="500"
+                placeholder="50"
+                value={overlandBatchSize}
+                onChange={(e) => setOverlandBatchSize(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tracking */}

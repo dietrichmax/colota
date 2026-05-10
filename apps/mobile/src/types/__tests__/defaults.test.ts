@@ -55,6 +55,14 @@ describe("DEFAULT_SETTINGS", () => {
     expect(DEFAULT_SETTINGS.httpMethod).toBe("POST")
   })
 
+  it("defaults to single dawarichMode", () => {
+    expect(DEFAULT_SETTINGS.dawarichMode).toBe("single")
+  })
+
+  it("defaults overlandBatchSize to 50", () => {
+    expect(DEFAULT_SETTINGS.overlandBatchSize).toBe(50)
+  })
+
   it("has all required Settings keys", () => {
     const requiredKeys: (keyof Settings)[] = [
       "interval",
@@ -69,7 +77,9 @@ describe("DEFAULT_SETTINGS", () => {
       "syncPreset",
       "filterInaccurateLocations",
       "accuracyThreshold",
-      "httpMethod"
+      "httpMethod",
+      "dawarichMode",
+      "overlandBatchSize"
     ]
 
     for (const key of requiredKeys) {
@@ -125,7 +135,7 @@ describe("TRACKING_PRESETS", () => {
 })
 
 describe("API_TEMPLATES", () => {
-  const templateNames = ["dawarich", "geopulse", "owntracks", "phonetrack", "reitti", "traccar"] as const
+  const templateNames = ["dawarich", "geopulse", "overland", "owntracks", "phonetrack", "reitti", "traccar"] as const
 
   it.each(templateNames)("%s has valid fieldMap with required keys", (name) => {
     const template = API_TEMPLATES[name]
@@ -134,7 +144,7 @@ describe("API_TEMPLATES", () => {
     expect(template.fieldMap).toHaveProperty("acc")
   })
 
-  const templatesWithCustomFields = ["dawarich", "owntracks", "phonetrack", "reitti", "traccar"] as const
+  const templatesWithCustomFields = ["dawarich", "overland", "owntracks", "phonetrack", "reitti", "traccar"] as const
 
   it.each(templatesWithCustomFields)("%s has non-empty customFields", (name) => {
     expect(API_TEMPLATES[name].customFields.length).toBeGreaterThan(0)

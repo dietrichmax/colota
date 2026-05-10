@@ -9,7 +9,12 @@ import { CheckCircle, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isEndpointAllowed } from "../../../utils/settingsValidation"
-import { buildTraccarJsonPayload, isTraccarJsonFormat } from "../../../utils/apiPayload"
+import {
+  buildTraccarJsonPayload,
+  buildOverlandBatchPayload,
+  isTraccarJsonFormat,
+  isOverlandFormat
+} from "../../../utils/apiPayload"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
 import { fonts } from "../../../styles/typography"
 import { SettingRow } from "../../ui/SettingRow"
@@ -161,19 +166,36 @@ export function ConnectionSettings({
 
       const method = settings.httpMethod ?? "POST"
       const isTraccarJson = isTraccarJsonFormat(settings.apiTemplate, method)
-      const body = isTraccarJson
-        ? buildTraccarJsonPayload({
-            latitude: recentLocation.latitude,
-            longitude: recentLocation.longitude,
-            accuracy: recentLocation.accuracy,
-            altitude: recentLocation.altitude ?? 0,
-            speed: recentLocation.speed ?? 0,
-            heading: recentLocation.bearing ?? 0,
-            batteryLevel: (recentLocation.battery ?? 0) / 100,
-            isCharging: false,
-            deviceId: settings.customFields.find((f) => f.key === "device_id")?.value ?? "colota"
-          })
-        : payload
+      const isOverland = isOverlandFormat(settings.apiTemplate, settings.dawarichMode ?? "single")
+
+      let body: object = payload
+      if (isOverland) {
+        body = buildOverlandBatchPayload({
+          latitude: recentLocation.latitude,
+          longitude: recentLocation.longitude,
+          accuracy: Math.round(recentLocation.accuracy),
+          altitude: recentLocation.altitude ?? 0,
+          speed: recentLocation.speed ?? 0,
+          course: recentLocation.bearing ?? 0,
+          batteryLevel: (recentLocation.battery ?? 0) / 100,
+          batteryState: "unplugged",
+          deviceId:
+            settings.customFields.find((f) => f.key === "device_id" || f.key === "tid" || f.key === "id")?.value ??
+            "colota"
+        })
+      } else if (isTraccarJson) {
+        body = buildTraccarJsonPayload({
+          latitude: recentLocation.latitude,
+          longitude: recentLocation.longitude,
+          accuracy: recentLocation.accuracy,
+          altitude: recentLocation.altitude ?? 0,
+          speed: recentLocation.speed ?? 0,
+          heading: recentLocation.bearing ?? 0,
+          batteryLevel: (recentLocation.battery ?? 0) / 100,
+          isCharging: false,
+          deviceId: settings.customFields.find((f) => f.key === "device_id")?.value ?? "colota"
+        })
+      }
       const params = new URLSearchParams(Object.entries(payload).map(([k, v]) => [k, String(v)]))
       const url =
         method === "GET" ? `${endpointInput}${endpointInput.includes("?") ? "&" : "?"}${params}` : endpointInput

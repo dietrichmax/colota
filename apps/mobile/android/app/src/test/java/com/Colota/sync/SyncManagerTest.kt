@@ -857,6 +857,246 @@ class SyncManagerTest {
     }
 
     // ========================================================================
+    // OVERLAND_BATCH path
+    // ========================================================================
+
+    @Test
+    fun `batch path sends one POST and removes all rows on success`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 50
+        )
+
+        val items = (1L..50L).map {
+            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
+        }
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(items, emptyList())
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
+        verify { dbHelper.markLocationsSent(items.map { it.locationId }) }
+        verify { dbHelper.removeBatchFromQueue(items.map { it.queueId }) }
+    }
+
+    @Test
+    fun `batch path bails on 5xx without splitting and bumps retry counts once each`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 50
+        )
+
+        val items = (1L..4L).map {
+            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
+        }
+        every { dbHelper.getQueuedLocations(50) } returns items
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.ServerError(503)
+
+        syncManager.manualFlush()
+
+        // Critical: exactly ONE HTTP call. NOT recursive splits, that would amplify the outage.
+        coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
+        // Each row gets one retry bump
+        items.forEach { verify { dbHelper.incrementRetryCount(it.queueId, "5xx: 503") } }
+    }
+
+    @Test
+    fun `batch path bails on network error without splitting`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 50
+        )
+
+        val items = (1L..3L).map {
+            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
+        }
+        every { dbHelper.getQueuedLocations(50) } returns items
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.NetworkError
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
+        items.forEach { verify { dbHelper.incrementRetryCount(it.queueId, "network") } }
+    }
+
+    @Test
+    fun `batch path splits on 4xx to isolate poison row`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 50
+        )
+
+        // 4 items: items 1, 2, 3 are good. Item 4 (queueId=4) is the poison row.
+        val items = (1L..4L).map {
+            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000,"id":$it}""", 0)
+        }
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(items, emptyList())
+
+        // Server rejects any batch that contains the poison item (queueId 4)
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } answers {
+            val sent = arg<List<JSONObject>>(0)
+            val containsPoison = sent.any { it.optInt("id", -1) == 4 }
+            if (containsPoison) BatchResult.ClientError(400) else BatchResult.Success
+        }
+
+        // Capture every commit call so we can assert across all split-recovery calls
+        val sentLocationIds = mutableSetOf<Long>()
+        val removedQueueIds = mutableSetOf<Long>()
+        every { dbHelper.markLocationsSent(any()) } answers {
+            sentLocationIds.addAll(firstArg<List<Long>>())
+        }
+        every { dbHelper.removeBatchFromQueue(any()) } answers {
+            removedQueueIds.addAll(firstArg<List<Long>>())
+        }
+
+        syncManager.manualFlush()
+
+        // Poison row gets isolated to a 1-item batch that fails alone -> retry counter bumped
+        verify { dbHelper.incrementRetryCount(4L, "4xx: 400") }
+        // Good rows committed across one or more split-recovery calls
+        assertEquals(setOf(101L, 102L, 103L), sentLocationIds)
+        assertEquals(setOf(1L, 2L, 3L), removedQueueIds)
+        // Poison row was NOT committed
+        assertFalse(sentLocationIds.contains(104L))
+        assertFalse(removedQueueIds.contains(4L))
+    }
+
+    @Test
+    fun `batch path uses overlandBatchSize for the fetch limit`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 200
+        )
+
+        every { dbHelper.getQueuedLocations(any()) } returns emptyList()
+
+        syncManager.manualFlush()
+
+        // Plan called this out: overlandBatchSize must thread into the fetch limit, not just the wire bundle.
+        verify { dbHelper.getQueuedLocations(200) }
+    }
+
+    @Test
+    fun `batch path lifts custom fields to envelope and sends device_id`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 50
+        )
+
+        // Payload has a custom field (device_id) baked in by PayloadBuilder
+        val item = QueuedLocation(
+            1L, 100L,
+            """{"device_id":"my-pixel","lat":52.0,"lon":13.0,"tst":1700000000}""",
+            0
+        )
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(item), emptyList())
+
+        var capturedFields: Map<String, String>? = null
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            capturedFields = arg<Map<String, String>>(1)
+            BatchResult.Success
+        }
+
+        syncManager.manualFlush()
+
+        // Custom fields must be extracted from the per-row payload and passed at envelope level.
+        // Canonical location keys must NOT be passed as custom fields.
+        val fields = checkNotNull(capturedFields)
+        assertEquals("my-pixel", fields["device_id"])
+        assertFalse("lat is a canonical key, not a custom field", fields.containsKey("lat"))
+        assertFalse("tst is a canonical key, not a custom field", fields.containsKey("tst"))
+    }
+
+    @Test
+    fun `batch path isolates corrupt payload without poisoning the bundle`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 50
+        )
+
+        // Item 1 has a corrupted payload (not valid JSON). Items 2 and 3 are valid.
+        // Without isolation, JSONObject(item.payload) would throw and abort the whole pass,
+        // leaving the corrupt row to re-throw forever next cycle.
+        val corrupted = QueuedLocation(1L, 100L, "NOT_VALID_JSON{{{", 0)
+        val valid1 = QueuedLocation(2L, 101L, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
+        val valid2 = QueuedLocation(3L, 102L, """{"lat":52.1,"lon":13.1,"tst":1700000001}""", 0)
+        every { dbHelper.getQueuedLocations(50) } returnsMany listOf(
+            listOf(corrupted, valid1, valid2),
+            emptyList()
+        )
+
+        var capturedItemCount = 0
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            capturedItemCount = arg<List<JSONObject>>(0).size
+            BatchResult.Success
+        }
+
+        syncManager.manualFlush()
+
+        // Corrupt row gets its retry counter bumped
+        verify { dbHelper.incrementRetryCount(1L, "Corrupt payload") }
+        // Only the 2 valid rows are bundled into the wire request
+        assertEquals(2, capturedItemCount)
+        // Valid rows are committed
+        verify { dbHelper.markLocationsSent(listOf(101L, 102L)) }
+        verify { dbHelper.removeBatchFromQueue(listOf(2L, 3L)) }
+        // Corrupt row is NOT removed from the queue (stays for next cycle, just deprioritized)
+        verify(exactly = 0) { dbHelper.removeBatchFromQueue(match { it.contains(1L) }) }
+    }
+
+    // ========================================================================
     // Helpers
     // ========================================================================
 

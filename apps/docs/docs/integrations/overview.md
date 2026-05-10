@@ -12,6 +12,7 @@ Colota sends location data to a server you control. If you're not sure which bac
 | ----------------------------------- | --------------------------------------------------------------------------- |
 | [Dawarich](dawarich.md)             | Location history, map visualization, stats and trip analysis                |
 | [GeoPulse](geopulse.md)             | Location tracking with trip visualization and timeline                      |
+| [Overland](overland.md)             | Any Overland-compatible server                                              |
 | [Home Assistant](home-assistant.md) | Home automation - use location as a trigger for automations and zones       |
 | [OwnTracks](owntracks.md)           | Self-hosted location history using the OwnTracks Recorder                   |
 | [Reitti](reitti.md)                 | Location history with automatic visit and trip detection and daily timeline |

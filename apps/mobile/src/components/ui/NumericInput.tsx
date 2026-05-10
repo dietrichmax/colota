@@ -48,7 +48,7 @@ export function NumericInput({
       <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
 
       {/* Hint (optional) */}
-      {hint && <Text style={[styles.hint, { color: colors.textLight }]}>{hint}</Text>}
+      {hint && <Text style={[styles.hint, { color: colors.textSecondary }]}>{hint}</Text>}
 
       {/* Input Row */}
       <View style={styles.inputRow}>
@@ -84,9 +84,10 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   hint: {
-    fontSize: 12,
-    fontStyle: "italic",
-    marginBottom: 12
+    fontSize: 13,
+    ...fonts.regular,
+    marginBottom: 12,
+    lineHeight: 18
   },
   inputRow: {
     flexDirection: "row",

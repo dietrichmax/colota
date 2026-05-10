@@ -13,21 +13,25 @@ interface ChipGroupProps<T extends string> {
   selected: T
   onSelect: (value: T) => void
   colors: ThemeColors
+  disabled?: ReadonlySet<T>
 }
 
-export function ChipGroup<T extends string>({ options, selected, onSelect, colors }: ChipGroupProps<T>) {
+export function ChipGroup<T extends string>({ options, selected, onSelect, colors, disabled }: ChipGroupProps<T>) {
   return (
     <View style={styles.row}>
       {options.map(({ value, label }) => {
         const isSelected = selected === value
+        const isDisabled = disabled?.has(value) ?? false
         return (
           <Pressable
             key={value}
+            disabled={isDisabled}
             style={({ pressed }) => [
               styles.chip,
               { borderColor: colors.border, backgroundColor: colors.background },
               isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + "20" },
-              pressed && { opacity: colors.pressedOpacity }
+              isDisabled && { opacity: 0.4 },
+              pressed && !isDisabled && { opacity: colors.pressedOpacity }
             ]}
             onPress={() => onSelect(value)}
           >

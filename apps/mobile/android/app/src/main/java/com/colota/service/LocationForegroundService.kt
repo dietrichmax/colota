@@ -22,6 +22,7 @@ import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
 import com.Colota.data.ProfileHelper
 import com.Colota.data.SettingsKeys
+import com.Colota.sync.ApiFormat
 import com.Colota.sync.NetworkManager
 import com.Colota.sync.PayloadBuilder
 import com.Colota.sync.SyncManager
@@ -1149,6 +1150,15 @@ class LocationForegroundService : Service() {
     }
 
     private fun pushConfigToSyncManager() {
+        // Instant mode bypasses the queue and posts one flat payload, which 4xxs
+        // forever against /api/v1/overland/batches. Defensive net under the UI guard.
+        val effectiveFormat = if (config.syncIntervalSeconds == 0 && config.apiFormat == ApiFormat.OVERLAND_BATCH) {
+            AppLogger.w(TAG, "Batch mode incompatible with instant sync (interval=0); downgrading to single-point")
+            ApiFormat.FIELD_MAPPED
+        } else {
+            config.apiFormat
+        }
+
         syncManager.updateConfig(
             endpoint = config.endpoint,
             syncIntervalSeconds = config.syncIntervalSeconds,
@@ -1158,7 +1168,8 @@ class LocationForegroundService : Service() {
             syncSsid = config.syncSsid,
             authHeaders = secureStorage.getAuthHeaders(),
             httpMethod = config.httpMethod,
-            apiFormat = config.apiFormat
+            apiFormat = effectiveFormat,
+            overlandBatchSize = config.overlandBatchSize
         )
     }
 

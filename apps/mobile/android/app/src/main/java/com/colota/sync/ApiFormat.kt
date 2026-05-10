@@ -14,9 +14,10 @@ package com.Colota.sync
  */
 enum class ApiFormat(val wireName: String) {
     FIELD_MAPPED(""),
-    TRACCAR_JSON("traccar_json");
+    TRACCAR_JSON("traccar_json"),
+    OVERLAND_BATCH("overland_batch");
 
-    val usesFixedFieldNames: Boolean get() = this == TRACCAR_JSON
+    val usesFixedFieldNames: Boolean get() = this == TRACCAR_JSON || this == OVERLAND_BATCH
 
     companion object {
         fun fromWire(wire: String?): ApiFormat =
