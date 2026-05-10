@@ -121,6 +121,8 @@ describe("NativeLocationService", () => {
         apiTemplate: "custom" as const,
         syncPreset: "instant" as const,
         httpMethod: "POST" as const,
+        dawarichMode: "single" as const,
+        overlandBatchSize: 50,
         hasCompletedSetup: false
       }
 
@@ -153,6 +155,8 @@ describe("NativeLocationService", () => {
         apiTemplate: "traccar" as const,
         syncPreset: "instant" as const,
         httpMethod: "GET" as const,
+        dawarichMode: "single" as const,
+        overlandBatchSize: 50,
         hasCompletedSetup: false
       }
 
@@ -183,6 +187,8 @@ describe("NativeLocationService", () => {
         apiTemplate: "traccar" as const,
         syncPreset: "instant" as const,
         httpMethod: "POST" as const,
+        dawarichMode: "single" as const,
+        overlandBatchSize: 50,
         hasCompletedSetup: false
       }
 
