@@ -22,7 +22,7 @@ Free to use. Normal usage means map tiles loading as you pan and zoom within the
 
 If the default server is unavailable or you run into issues, you can either configure a custom tile server (see below) or open an issue on [GitHub](https://github.com/dietrichmax/colota/issues).
 
-:::tip Support the server
+:::tip[Support the server]
 
 If you find Colota useful and want to help keep the default server running, contributions are welcome - the hosting runs at 17,94€/month. [mxd.codes/support](https://mxd.codes/support)
 
@@ -30,7 +30,7 @@ If you find Colota useful and want to help keep the default server running, cont
 
 ## Using a Custom Server
 
-:::note Offline maps
+:::note[Offline maps]
 
 Offline map packs are downloaded from whichever tile server is configured at the time. Switching to a custom server won't affect packs you've already downloaded, but new downloads will come from the new server.
 
@@ -55,7 +55,7 @@ Any [MapLibre GL style](https://maplibre.org/maplibre-style-spec/) endpoint work
 
 For a light/dark pair, use `bright` or `liberty` for light mode and `fiord` for dark mode.
 
-:::note Attribution
+:::note[Attribution]
 
 When using the default server, the map shows **© OpenMapTiles · © OpenStreetMap contributors · © maps.mxd.codes** attribution. When a custom server is configured, attribution is read automatically from the style JSON served by your tile server.
 

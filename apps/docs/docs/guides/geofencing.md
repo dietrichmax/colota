@@ -39,7 +39,7 @@ Stops GPS entirely when connected to an unmetered network (home WiFi, Ethernet).
 
 ### Pause when motionless
 
-Stops GPS after no device motion is detected for a configurable time (default 10 minutes). GPS resumes automatically when the device moves again. Useful for users who put their phone in airplane mode at night or sit still for long periods.
+Stops GPS after the device has been still for the configured time (default 1 minute, minimum 1 minute). Stillness is detected automatically via the accelerometer; any motion above the detection threshold resets the timer. GPS resumes within seconds when the device moves again. Useful for users who put their phone in airplane mode at night or sit still for long periods.
 
 ### Stationary heartbeat
 
@@ -49,7 +49,9 @@ Sends a periodic location update to your server while paused inside the zone. Us
 
 When both **WiFi** and **motionless** pause are enabled, GPS only resumes when **both** conditions clear - WiFi must be disconnected **and** motion must be detected. Either condition alone is not enough to resume.
 
-:::tip Changes made in the editor take effect immediately, even when you are already inside the zone.
+:::tip
+
+Changes made in the editor take effect immediately, even when you are already inside the zone.
 
 :::
 

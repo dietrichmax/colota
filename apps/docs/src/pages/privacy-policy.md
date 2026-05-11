@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-**Last updated: April 29, 2026**
+**Last updated: May 11, 2026**
 
 Colota ("the App") is a self-hosted GPS tracking application for Android, developed by Max Dietrich. This privacy policy explains what data the App collects, how it is used, and your rights regarding that data.
 
@@ -38,7 +38,7 @@ When tracking profiles are enabled, the App monitors charging state, car mode (A
 
 ### Sensor Data
 
-When motionless pause is enabled for a geofence zone, the App uses the device's significant motion sensor to detect motion. This data is processed in real time and is never stored or transmitted.
+When motionless pause is enabled for a geofence zone or a stationary tracking profile is active, the App reads the device's accelerometer (in low-power batched mode) and significant motion sensor to detect motion. Raw sensor values are processed in real time on-device and are never stored or transmitted.
 
 ### Network State
 

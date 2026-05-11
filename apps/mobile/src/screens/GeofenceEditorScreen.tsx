@@ -37,7 +37,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
   const [pauseTracking, setPauseTracking] = useState(true)
   const [pauseOnWifi, setPauseOnWifi] = useState(false)
   const [pauseOnMotionless, setPauseOnMotionless] = useState(false)
-  const [motionlessTimeoutStr, setMotionlessTimeoutStr] = useState("10")
+  const [motionlessTimeoutStr, setMotionlessTimeoutStr] = useState("1")
   const [heartbeatEnabled, setHeartbeatEnabled] = useState(false)
   const [heartbeatIntervalStr, setHeartbeatIntervalStr] = useState("15")
   const [saving, setSaving] = useState(false)
@@ -48,7 +48,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     pauseTracking: true,
     pauseOnWifi: false,
     pauseOnMotionless: false,
-    motionlessTimeoutStr: "10",
+    motionlessTimeoutStr: "1",
     heartbeatEnabled: false,
     heartbeatIntervalStr: "15"
   })
@@ -289,7 +289,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
                   style={[inputStyle, styles.numInput]}
                   value={motionlessTimeoutStr}
                   onChangeText={setMotionlessTimeoutStr}
-                  placeholder="10"
+                  placeholder="1"
                   placeholderTextColor={colors.placeholder}
                   keyboardType="number-pad"
                 />
