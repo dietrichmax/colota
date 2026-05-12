@@ -6,6 +6,8 @@
 package com.Colota
 
 import android.os.Bundle
+import android.util.Log
+import android.view.MotionEvent
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -17,16 +19,18 @@ class MainActivity : ReactActivity() {
     super.onCreate(null)
   }
 
-  /**
-   * Returns the name of the main component registered from JavaScript. This is used to schedule
-   * rendering of the component.
-   */
+  // RN ScrollView pointerIndex race: getY() on an invalidated pointer mid-gesture.
+  override fun dispatchTouchEvent(ev: MotionEvent): Boolean = try {
+    super.dispatchTouchEvent(ev)
+  } catch (e: IllegalArgumentException) {
+    if (e.message?.contains("pointerIndex", ignoreCase = true) == true) {
+      Log.w("MainActivity", "Dropped MotionEvent (pointerIndex bug)", e)
+      false
+    } else throw e
+  }
+
   override fun getMainComponentName(): String = "Colota"
 
-  /**
-   * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]
-   * which allows you to enable New Architecture with a single boolean flags [fabricEnabled]
-   */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 }
