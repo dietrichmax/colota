@@ -91,7 +91,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Anchor points - a synthetic location saved on zone exit as a clean start point for the departing trip, timestamped 1s before the first real GPS fix
 - Battery critical shutdown (below 5% while discharging)
 - Location accuracy filtering
-- Stationary detection - pauses GPS after 60s without movement and arms `MotionDetector` to resume on motion (suspended during entry delay and inside geofence pause zones)
+- Stationary detection - pauses GPS after 60s without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). Suspended during entry delay and inside geofence pause zones.
 - Queuing data for server sync
 
 ### NotificationHelper
@@ -139,7 +139,7 @@ Each geofence supports three independent GPS pause modes, configured per zone:
 
 - **Pause tracking** - Stops saving and syncing locations inside the zone. GPS continues running to detect exit.
 - **WiFi pause** - Stops GPS entirely when connected to an unmetered network (WiFi/Ethernet). Implemented via `ConnectivityManager.NetworkCallback`, which fires immediately on network availability changes. An active network counter handles devices with multiple simultaneous unmetered networks - GPS only resumes once all of them are gone, after a short debounce.
-- **Motionless pause** - Stops GPS after no device motion is detected for a configurable timeout. Uses the hardware motion sensor (via `MotionDetector`) to resume GPS when movement is detected again.
+- **Motionless pause** - Stops GPS after the device has been still for the configured per-zone dwell window (default 1 minute). Stillness is detected by `RawSensorMotionDetector` (batched accelerometer variance + parallel SIG_MOTION); any motion above the variance threshold resets the timer. The same detector fires GPS resume when movement returns.
 
 A per-zone **stationary heartbeat** can send periodic location updates while paused. It sends the geofence center as a synthetic anchor point - no GPS wake required - bypassing sync conditions. Configured via `heartbeatEnabled` and `heartbeatIntervalMinutes` per geofence.
 
@@ -170,7 +170,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | Module | Purpose |
 | --- | --- |
 | `LocationBootReceiver` | Auto-restarts tracking after device reboot |
-| `MotionDetector` | Wraps `TYPE_SIGNIFICANT_MOTION` sensor - arms a one-shot hardware trigger that fires when the device starts moving, used to resume GPS after a stationary pause |
+| `MotionStateDetector` / `RawSensorMotionDetector` | Single detector behind a `MotionState { STATIONARY, MOVING }` interface. Backed by 30s-batched accelerometer variance (hysteresis: > 0.30 m/s² for 3s -> MOVING; < 0.15 m/s² for the configured per-zone dwell -> STATIONARY) and parallel `TYPE_SIGNIFICANT_MOTION` as a fast-path for sharp events. Fans out to both motionless-pause and stationary-profile exit consumers via one callback site in `LocationForegroundService.onMotionStateChange`. |
 | `DeviceInfoHelper` | Device metadata and battery status with caching |
 | `FileOperations` | File I/O, sharing via FileProvider, and clipboard access |
 | `PayloadBuilder` | Builds JSON payloads with dynamic field mapping |

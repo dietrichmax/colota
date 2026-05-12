@@ -16,6 +16,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.core.content.ContextCompat
+import com.Colota.BuildConfig
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.util.AppLogger
 import com.Colota.data.DatabaseHelper
@@ -63,7 +64,7 @@ class LocationForegroundService : Service() {
     @Volatile private var locationRestartJob: Job? = null
     @Volatile private var trackingHeartbeatJob: Job? = null
     @Volatile private var lastFixAtMs: Long = 0L
-    @Volatile private var motionDetector: MotionDetector? = null
+    @Volatile private var motionDetector: MotionStateDetector? = null
     @Volatile private var lastKnownLocation: Location? = null
 
     /** Debounces the burst of PROVIDERS_CHANGED broadcasts when system Location toggles (one per provider). */
@@ -87,9 +88,9 @@ class LocationForegroundService : Service() {
     /**
      * Pause-zone state. Threading contract:
      * - Mutated ONLY on the Main thread. Call sites: onStartCommand, enter/exitPauseZone,
-     *   activateWifiPause, unregisterWifiPause, clearMotionlessPauseState, and the bodies of
-     *   Main-dispatched coroutines (registerWifiPause's NetworkCallback uses Main Looper;
-     *   motionlessJob + wifiResumeJob switch to Dispatchers.Main before mutating).
+     *   activateWifiPause, unregisterWifiPause, clearMotionlessPauseState, onMotionStateChange,
+     *   and the bodies of Main-dispatched coroutines (registerWifiPause's NetworkCallback uses
+     *   Main Looper; wifiResumeJob switches to Dispatchers.Main before mutating).
      * - Read from any thread (location callbacks, notification builder, heartbeat IO coroutine).
      *   @Volatile exists for reader visibility, not mutation safety. Do NOT mutate off-Main.
      */
@@ -109,7 +110,6 @@ class LocationForegroundService : Service() {
 
     // Motionless pause sub-state (same Main-only mutation contract as above)
     @Volatile private var isMotionlessPaused = false
-    @Volatile private var motionlessJob: Job? = null
 
     @Volatile private lateinit var config: ServiceConfig
 
@@ -125,6 +125,8 @@ class LocationForegroundService : Service() {
         const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
         const val ACTION_REFRESH_NOTIFICATION = "com.Colota.REFRESH_NOTIFICATION"
         const val ACTION_RECHECK_PROFILES = "com.Colota.RECHECK_PROFILES"
+        /** Debug-only: directly inject a MotionState transition. `--es state STATIONARY|MOVING`. */
+        const val ACTION_DEBUG_FORCE_MOTION = "com.Colota.DEBUG_FORCE_MOTION"
 
         /** Actions that skip config reload and preserve current notification state. */
         private val LIGHTWEIGHT_ACTIONS = setOf(
@@ -162,9 +164,14 @@ class LocationForegroundService : Service() {
         notificationHelper = NotificationHelper(this, notificationManager)
         notificationHelper.createChannel()
 
-        motionDetector = MotionDetector(this) { onMotionDetected() }
+        motionDetector = RawSensorMotionDetector(this) {
+            currentZoneGeofence?.motionlessTimeoutMinutes
+                ?.let { it.coerceAtLeast(0) * 60_000L }
+                ?: RawSensorMotionDetector.DEFAULT_STATIONARY_DWELL_MS
+        }
 
         registerLocationProvidersReceiver()
+        registerDebugMotionReceiver()
 
         AppLogger.d(TAG, "Service created - provider: ${locationProvider.javaClass.simpleName}, motionSensor=${motionDetector?.isAvailable}")
     }
@@ -226,16 +233,13 @@ class LocationForegroundService : Service() {
                 }
                 if (savedSettings[SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE]?.toBoolean() == true) {
                     isMotionlessPaused = true
-                    motionDetector?.arm()
                     AppLogger.d(TAG, "Restored motionless pause state")
-                } else if (restoredGeofence?.pauseOnMotionless == true) {
-                    startMotionlessCountdown(restoredGeofence.motionlessTimeoutMinutes)
-                    AppLogger.d(TAG, "Restored motionless countdown: ${restoredGeofence.motionlessTimeoutMinutes}min")
                 }
                 if (restoredGeofence?.heartbeatEnabled == true) {
                     startHeartbeat(restoredGeofence.heartbeatIntervalMinutes)
                     AppLogger.d(TAG, "Restored heartbeat: ${restoredGeofence.heartbeatIntervalMinutes}min")
                 }
+                ensureMotionDetectorRunning()
             }
         }
 
@@ -330,14 +334,14 @@ class LocationForegroundService : Service() {
     override fun onDestroy() {
         AppLogger.d(TAG, "Service destroyed")
 
-        motionDetector?.disarm()
+        motionDetector?.stop()
         entryDelayJob?.cancel()
         entryDelayJob = null
         pendingPauseZone = null
         unregisterWifiPause()
-        cancelMotionlessCountdown()
         cancelHeartbeat()
         unregisterLocationProvidersReceiver()
+        unregisterDebugMotionReceiver()
         conditionMonitor.stop()
         stopLocationUpdates()
         syncManager.stopPeriodicSync()
@@ -516,7 +520,6 @@ class LocationForegroundService : Service() {
      * Called on RECHECK when already inside the zone so editor changes take effect immediately.
      */
     private fun applyZoneSettingsIfChanged(zone: GeofenceHelper.Geofence) {
-        val timeoutChanged = currentZoneGeofence?.motionlessTimeoutMinutes != zone.motionlessTimeoutMinutes
         val heartbeatChanged = currentZoneGeofence?.heartbeatIntervalMinutes != zone.heartbeatIntervalMinutes
         currentZoneGeofence = zone
 
@@ -530,16 +533,11 @@ class LocationForegroundService : Service() {
             unregisterWifiPause()
         }
 
-        if (zone.pauseOnMotionless && !isMotionlessPaused && (motionlessJob == null || timeoutChanged)) {
-            if (timeoutChanged) cancelMotionlessCountdown()
-            startMotionlessCountdown(zone.motionlessTimeoutMinutes)
-        } else if (!zone.pauseOnMotionless) {
-            cancelMotionlessCountdown()
-            if (isMotionlessPaused) {
-                clearMotionlessPauseState()
-                maybeResumeGps()
-            }
+        if (!zone.pauseOnMotionless && isMotionlessPaused) {
+            clearMotionlessPauseState()
+            maybeResumeGps()
         }
+        ensureMotionDetectorRunning()
 
         if (zone.heartbeatEnabled && (heartbeatJob == null || heartbeatChanged)) {
             startHeartbeat(zone.heartbeatIntervalMinutes)
@@ -755,8 +753,8 @@ class LocationForegroundService : Service() {
      */
     private fun startZoneHolds(zone: GeofenceHelper.Geofence) {
         if (zone.pauseOnWifi) registerWifiPause()
-        if (zone.pauseOnMotionless) startMotionlessCountdown(zone.motionlessTimeoutMinutes)
         if (zone.heartbeatEnabled) startHeartbeat(zone.heartbeatIntervalMinutes)
+        ensureMotionDetectorRunning()
     }
 
     /**
@@ -765,9 +763,9 @@ class LocationForegroundService : Service() {
      */
     private fun stopZoneHolds() {
         unregisterWifiPause()
-        cancelMotionlessCountdown()
         clearMotionlessPauseState()
         cancelHeartbeat()
+        ensureMotionDetectorRunning()
     }
 
     // ── WiFi pause ────────────────────────────────────────────────────────
@@ -856,39 +854,9 @@ class LocationForegroundService : Service() {
 
     // ── Motionless pause ──────────────────────────────────────────────────
 
-    /**
-     * Starts the motionless timeout countdown for a zone with [pauseOnMotionless] enabled.
-     * When the countdown completes without significant motion, GPS is stopped and the
-     * motion sensor is armed to resume it when the device moves again.
-     */
-    private fun startMotionlessCountdown(timeoutMinutes: Int) {
-        motionlessJob?.cancel()
-        motionlessJob = serviceScope?.launch {
-            delay(timeoutMinutes * 60_000L)
-            withContext(Dispatchers.Main) {
-                motionlessJob = null
-                if (insidePauseZone && !isMotionlessPaused) {
-                    isMotionlessPaused = true
-                    dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "true")
-                    stopLocationUpdates()
-                    motionDetector?.arm()
-                    refreshNotificationForCurrentState()
-                    LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, "motionless")
-                    AppLogger.i(TAG, "Motionless timeout reached - GPS paused, motion sensor armed")
-                }
-            }
-        }
-    }
-
-    private fun cancelMotionlessCountdown() {
-        motionlessJob?.cancel()
-        motionlessJob = null
-    }
-
     private fun clearMotionlessPauseState() {
         isMotionlessPaused = false
         dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "false")
-        if (!profileManager.isStationary) motionDetector?.disarm()
     }
 
     /**
@@ -968,22 +936,6 @@ class LocationForegroundService : Service() {
         } else {
             AppLogger.d(TAG, "Heartbeat failed: server unreachable, will retry next cycle")
         }
-    }
-
-    /**
-     * Resumes GPS after motion is detected in a motionless-paused zone.
-     * Re-arms the countdown so the zone can pause again if device becomes stationary again.
-     */
-    private fun resumeFromMotionlessPause() {
-        clearMotionlessPauseState()
-        val geofence = currentZoneGeofence
-        maybeResumeGps()
-        LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, if (isWifiPaused) "wifi" else null)
-        // Restart countdown so the zone can pause again if device becomes stationary
-        if (geofence?.pauseOnMotionless == true) {
-            startMotionlessCountdown(geofence.motionlessTimeoutMinutes)
-        }
-        AppLogger.i(TAG, "Motion detected in pause zone - motionless hold cleared")
     }
 
     /**
@@ -1107,21 +1059,81 @@ class LocationForegroundService : Service() {
         stopSelf()
     }
 
-    /** Called by MotionDetector when the device starts moving again. */
-    private fun onMotionDetected() {
-        if (isMotionlessPaused) {
-            resumeFromMotionlessPause()
+    /**
+     * STATIONARY: pause GPS if inside a `pauseOnMotionless` zone.
+     * MOVING: clear motionless pause and notify the profile manager.
+     */
+    private fun onMotionStateChange(state: MotionState) {
+        when (state) {
+            MotionState.STATIONARY -> {
+                if (insidePauseZone && currentZoneGeofence?.pauseOnMotionless == true && !isMotionlessPaused) {
+                    isMotionlessPaused = true
+                    dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "true")
+                    stopLocationUpdates()
+                    refreshNotificationForCurrentState()
+                    LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, "motionless")
+                    AppLogger.i(TAG, "Motion detector reports STATIONARY in pause zone - GPS paused")
+                }
+            }
+            MotionState.MOVING -> {
+                if (isMotionlessPaused) {
+                    clearMotionlessPauseState()
+                    maybeResumeGps()
+                    LocationServiceModule.sendPauseZoneEvent(true, currentZoneName, if (isWifiPaused) "wifi" else null)
+                    AppLogger.i(TAG, "Motion detector reports MOVING in pause zone - motionless hold cleared")
+                }
+                profileManager.onMotionDetected()
+                ensureMotionDetectorRunning()
+            }
         }
-        profileManager.onMotionDetected()
     }
 
-    /** Arms or disarms the motion sensor when the stationary profile state changes. */
-    private fun handleStationaryChanged(stationary: Boolean) {
-        if (stationary) {
-            motionDetector?.arm()
-        } else if (!isMotionlessPaused) {
-            motionDetector?.disarm()
+    /** Runs the detector when motionless pause is enabled inside the current zone or the profile is stationary. */
+    private fun ensureMotionDetectorRunning() {
+        val detector = motionDetector ?: return
+        val needForZone = insidePauseZone && currentZoneGeofence?.pauseOnMotionless == true
+        val needForProfile = profileManager.isStationary
+        if (needForZone || needForProfile) {
+            detector.start(::onMotionStateChange)
+        } else {
+            detector.stop()
         }
+    }
+
+    private fun handleStationaryChanged(stationary: Boolean) {
+        ensureMotionDetectorRunning()
+    }
+
+    // ── Debug-only motion injection (BuildConfig.DEBUG) ───────────────────
+
+    private val debugMotionReceiver = if (BuildConfig.DEBUG) object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != ACTION_DEBUG_FORCE_MOTION) return
+            val raw = intent.getStringExtra("state") ?: run {
+                AppLogger.w(TAG, "DEBUG_FORCE_MOTION: missing 'state' extra")
+                return
+            }
+            val state = try {
+                MotionState.valueOf(raw)
+            } catch (_: IllegalArgumentException) {
+                AppLogger.w(TAG, "DEBUG_FORCE_MOTION: invalid state '$raw' (expected STATIONARY|MOVING)")
+                return
+            }
+            (motionDetector as? RawSensorMotionDetector)?.forceState(state)
+            AppLogger.d(TAG, "DEBUG_FORCE_MOTION -> $state")
+        }
+    } else null
+
+    private fun registerDebugMotionReceiver() {
+        val receiver = debugMotionReceiver ?: return
+        ContextCompat.registerReceiver(
+            this, receiver, IntentFilter(ACTION_DEBUG_FORCE_MOTION), ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    private fun unregisterDebugMotionReceiver() {
+        val receiver = debugMotionReceiver ?: return
+        try { unregisterReceiver(receiver) } catch (_: IllegalArgumentException) {}
     }
 
     // ── Profile hot-swap ────────────────────────────────────────────────

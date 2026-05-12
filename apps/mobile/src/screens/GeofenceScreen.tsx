@@ -193,7 +193,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
           pauseTracking: true,
           pauseOnWifi: false,
           pauseOnMotionless: false,
-          motionlessTimeoutMinutes: 10,
+          motionlessTimeoutMinutes: 1,
           heartbeatEnabled: false,
           heartbeatIntervalMinutes: 15
         })

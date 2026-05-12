@@ -76,7 +76,9 @@ By default, auto-export keeps the last **10** export files and deletes older one
 - A notification is shown after each export with the file name and location count
 - Old export files beyond the retention limit are cleaned up after each successful export
 
-:::note **Monthly** frequency uses a calendar month (e.g. Jan 15 to Feb 15), not a fixed 30-day interval. If the chosen day-of-month doesn't exist in a given month (e.g. day 31 in February), the export runs on the last day of that month instead. **Daily**, **Weekly** and **Monthly** intervals fire at the chosen wall-clock time via Android AlarmManager. Typical accuracy is within minutes.
+:::note
+
+**Monthly** frequency uses a calendar month (e.g. Jan 15 to Feb 15), not a fixed 30-day interval. If the chosen day-of-month doesn't exist in a given month (e.g. day 31 in February), the export runs on the last day of that month instead. **Daily**, **Weekly** and **Monthly** intervals fire at the chosen wall-clock time via Android AlarmManager. Typical accuracy is within minutes.
 
 :::
 
