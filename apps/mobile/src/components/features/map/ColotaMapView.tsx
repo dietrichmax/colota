@@ -14,6 +14,7 @@ import { useTheme } from "../../../hooks/useTheme"
 import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_LIGHT, MAP_STYLE_URL_DARK } from "../../../constants"
 import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
+import { MapActionButton, mapActionStyles } from "./MapActionButton"
 
 interface AttributionLink {
   url: string
@@ -191,35 +192,24 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
 
       {/* Custom compass button */}
       {showCompass && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.compassButton,
-            { backgroundColor: colors.card, borderColor: colors.border },
-            pressed && { opacity: colors.pressedOpacity }
-          ]}
-          onPress={handleCompassPress}
-        >
+        <MapActionButton onPress={handleCompassPress} style={[mapActionStyles.right, styles.compassPosition]}>
           <View style={{ transform: [{ rotate: `${-heading}deg` }] }}>
             <Compass size={20} color={colors.textLight} />
           </View>
-        </Pressable>
+        </MapActionButton>
       )}
 
       {attributionLinks.length > 0 && (
         <>
-          <Pressable
+          <MapActionButton
             onPress={() => setAttributionOpen(true)}
+            style={mapActionStyles.right}
             hitSlop={8}
-            style={({ pressed }) => [
-              styles.attributionButton,
-              { backgroundColor: colors.card, borderColor: colors.border },
-              pressed && { opacity: colors.pressedOpacity }
-            ]}
             accessibilityRole="button"
             accessibilityLabel="Show map attribution"
           >
             <Info size={20} color={colors.textLight} />
-          </Pressable>
+          </MapActionButton>
 
           <Modal
             transparent
@@ -265,40 +255,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
-  compassButton: {
-    position: "absolute",
-    bottom: 126,
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    borderWidth: 1,
-    zIndex: 10
-  },
-  attributionButton: {
-    position: "absolute",
-    bottom: 30,
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 10
-  },
+  compassPosition: { bottom: 126 },
   attributionBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.4)",
