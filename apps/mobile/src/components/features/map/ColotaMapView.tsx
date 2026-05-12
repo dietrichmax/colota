@@ -172,6 +172,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
         ref={mapViewRef}
         style={styles.map}
         mapStyle={mapStyle}
+        androidView="texture"
         attribution={false}
         logo={false}
         compass={false}
