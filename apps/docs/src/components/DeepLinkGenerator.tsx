@@ -19,6 +19,31 @@ interface GeofenceRow {
   heartbeatIntervalMinutes: string
 }
 
+type ProfileConditionType = "charging" | "android_auto" | "speed_above" | "speed_below" | "stationary"
+
+interface ProfileRow {
+  name: string
+  conditionType: ProfileConditionType
+  speedKmh: string
+  interval: string
+  distance: string
+  syncInterval: string
+  priority: string
+  deactivationDelay: string
+  enabled: boolean
+}
+
+// chosen to keep the QR below v25 at ECC L
+const QR_MAX_SCANNABLE_LENGTH = 1200
+
+const PROFILE_CONDITION_OPTIONS: { value: ProfileConditionType; label: string }[] = [
+  { value: "charging", label: "Charging" },
+  { value: "android_auto", label: "Android Auto / Car mode" },
+  { value: "speed_above", label: "Speed above threshold" },
+  { value: "speed_below", label: "Speed below threshold" },
+  { value: "stationary", label: "Stationary" }
+]
+
 const API_TEMPLATES = [
   "custom",
   "dawarich",
@@ -71,6 +96,9 @@ export default function DeepLinkGenerator() {
 
   // Geofences
   const [geofences, setGeofences] = useState<GeofenceRow[]>([])
+
+  // Tracking Profiles
+  const [profiles, setProfiles] = useState<ProfileRow[]>([])
 
   // QR
   const qrRef = useRef<HTMLDivElement>(null)
@@ -154,6 +182,33 @@ export default function DeepLinkGenerator() {
       })
     if (gfs.length > 0) obj.geofences = gfs
 
+    const pfs: Record<string, unknown>[] = []
+    for (const p of profiles) {
+      if (!p.name) continue
+      if (!p.interval || Number(p.interval) <= 0) continue
+      if (p.distance === "" || Number(p.distance) < 0) continue
+      if (p.syncInterval === "" || Number(p.syncInterval) < 0) continue
+
+      const isSpeed = p.conditionType === "speed_above" || p.conditionType === "speed_below"
+      const condition: Record<string, unknown> = { type: p.conditionType }
+      if (isSpeed) {
+        if (!p.speedKmh || Number(p.speedKmh) <= 0) continue
+        condition.speedThreshold = Number(p.speedKmh) / 3.6
+      }
+
+      pfs.push({
+        name: p.name,
+        condition,
+        interval: Number(p.interval),
+        distance: Number(p.distance),
+        syncInterval: Number(p.syncInterval),
+        priority: p.priority ? Number(p.priority) : 10,
+        deactivationDelay: p.deactivationDelay ? Number(p.deactivationDelay) : 60,
+        enabled: p.enabled
+      })
+    }
+    if (pfs.length > 0) obj.profiles = pfs
+
     return obj
   }, [
     endpoint,
@@ -176,7 +231,8 @@ export default function DeepLinkGenerator() {
     fieldMapEntries,
     customFields,
     customHeaders,
-    geofences
+    geofences,
+    profiles
   ])
 
   const isEmpty = Object.keys(config).length === 0
@@ -187,7 +243,8 @@ export default function DeepLinkGenerator() {
     return `colota://setup?config=${encoded}`
   }, [config, isEmpty])
 
-  // QR code rendering
+  const isQrTooLarge = deepLink.length > QR_MAX_SCANNABLE_LENGTH
+
   useEffect(() => {
     if (!qrRef.current || !qrLib || !deepLink) {
       if (qrRef.current) qrRef.current.innerHTML = ""
@@ -195,7 +252,7 @@ export default function DeepLinkGenerator() {
     }
 
     const canvas = document.createElement("canvas")
-    qrLib.toCanvas(canvas, deepLink, { width: 200, margin: 2 }, (err: Error | null) => {
+    qrLib.toCanvas(canvas, deepLink, { width: 400, margin: 2, errorCorrectionLevel: "L" }, (err: Error | null) => {
       if (!err && qrRef.current) {
         qrRef.current.innerHTML = ""
         qrRef.current.appendChild(canvas)
@@ -264,6 +321,33 @@ export default function DeepLinkGenerator() {
         motionlessTimeoutMinutes: "",
         heartbeatEnabled: false,
         heartbeatIntervalMinutes: ""
+      }
+    ])
+  }
+
+  const updateProfile = <K extends keyof ProfileRow>(index: number, field: K, val: ProfileRow[K]) => {
+    const next = [...profiles]
+    next[index] = { ...next[index], [field]: val }
+    setProfiles(next)
+  }
+
+  const removeProfile = (index: number) => {
+    setProfiles(profiles.filter((_, i) => i !== index))
+  }
+
+  const addProfile = () => {
+    setProfiles([
+      ...profiles,
+      {
+        name: "",
+        conditionType: "charging",
+        speedKmh: "",
+        interval: "5",
+        distance: "0",
+        syncInterval: "0",
+        priority: "10",
+        deactivationDelay: "60",
+        enabled: true
       }
     ])
   }
@@ -699,6 +783,140 @@ export default function DeepLinkGenerator() {
         </button>
       </div>
 
+      {/* Tracking Profiles */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Tracking Profiles</div>
+        <div className={styles.keyValueList}>
+          {profiles.map((p, i) => {
+            const isSpeed = p.conditionType === "speed_above" || p.conditionType === "speed_below"
+            const isStationary = p.conditionType === "stationary"
+            return (
+              <div key={i} className={styles.geofenceCard}>
+                <div className={styles.row}>
+                  <div className={styles.field}>
+                    <label className={styles.label}>Name</label>
+                    <input
+                      className={styles.input}
+                      placeholder="Driving"
+                      value={p.name}
+                      onChange={(e) => updateProfile(i, "name", e.target.value)}
+                    />
+                  </div>
+                  <div className={styles.field}>
+                    <label className={styles.label}>Priority</label>
+                    <input
+                      className={styles.input}
+                      type="number"
+                      min="0"
+                      placeholder="10"
+                      value={p.priority}
+                      onChange={(e) => updateProfile(i, "priority", e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className={styles.row}>
+                  <div className={styles.field}>
+                    <label className={styles.label}>Condition</label>
+                    <select
+                      className={styles.select}
+                      value={p.conditionType}
+                      onChange={(e) => updateProfile(i, "conditionType", e.target.value as ProfileConditionType)}
+                    >
+                      {PROFILE_CONDITION_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {isSpeed && (
+                    <div className={styles.field}>
+                      <label className={styles.label}>Speed threshold (km/h)</label>
+                      <input
+                        className={styles.input}
+                        type="number"
+                        min="1"
+                        placeholder="30"
+                        value={p.speedKmh}
+                        onChange={(e) => updateProfile(i, "speedKmh", e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className={styles.row}>
+                  <div className={styles.field}>
+                    <label className={styles.label}>Interval (sec)</label>
+                    <input
+                      className={styles.input}
+                      type="number"
+                      min="1"
+                      placeholder="5"
+                      value={p.interval}
+                      onChange={(e) => updateProfile(i, "interval", e.target.value)}
+                    />
+                  </div>
+                  <div className={styles.field}>
+                    <label className={styles.label}>Distance (m)</label>
+                    <input
+                      className={styles.input}
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={p.distance}
+                      onChange={(e) => updateProfile(i, "distance", e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className={styles.row}>
+                  <div className={styles.field}>
+                    <label className={styles.label}>Sync interval (sec)</label>
+                    <input
+                      className={styles.input}
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={p.syncInterval}
+                      onChange={(e) => updateProfile(i, "syncInterval", e.target.value)}
+                    />
+                  </div>
+                  {!isStationary && (
+                    <div className={styles.field}>
+                      <label className={styles.label}>Deactivation delay (sec)</label>
+                      <input
+                        className={styles.input}
+                        type="number"
+                        min="0"
+                        placeholder="60"
+                        value={p.deactivationDelay}
+                        onChange={(e) => updateProfile(i, "deactivationDelay", e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className={styles.geofenceFlags}>
+                  <label className={styles.checkbox}>
+                    <input
+                      type="checkbox"
+                      checked={p.enabled}
+                      onChange={(e) => updateProfile(i, "enabled", e.target.checked)}
+                    />
+                    Enabled on import
+                  </label>
+                </div>
+                <div className={styles.geofenceActions}>
+                  <button className={styles.removeBtn} onClick={() => removeProfile(i)}>
+                    x
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <button className={styles.addBtn} onClick={addProfile}>
+          + Add profile
+        </button>
+      </div>
+
       {/* Output */}
       <hr className={styles.divider} />
 
@@ -724,6 +942,15 @@ export default function DeepLinkGenerator() {
                 QR Code
               </div>
               <div className={styles.qrContainer} ref={qrRef} />
+              {isQrTooLarge && (
+                <div className={styles.qrWarning}>
+                  <strong>This QR code may not be readable on all phones.</strong>
+                  <span>
+                    The configuration is large, so the QR has dense modules. If scanning fails, use the{" "}
+                    <em>Copy link</em> or <em>Download JSON</em> button above instead.
+                  </span>
+                </div>
+              )}
             </>
           )}
         </>

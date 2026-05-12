@@ -55,6 +55,7 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 | `auth.bearerToken` | string | Token for Bearer Auth |
 | `customHeaders` | object | Custom HTTP headers (e.g. Cloudflare Access) |
 | `geofences` | array | Pause zone definitions (see [Geofences](#geofences)) |
+| `profiles` | array | Tracking profile definitions (see [Tracking Profiles](#tracking-profiles)) |
 
 ### Geofences
 
@@ -77,6 +78,26 @@ Each entry in the `geofences` array describes one pause zone. `name`, `lat`, `lo
 Imported geofences are appended by default. The import confirmation screen has a "Replace zones with the same name" toggle that deletes existing zones whose names match before creating the incoming ones.
 
 You can build links with geofences using the in-browser generator above, the Node.js or Python snippets below, or by sharing zones directly from the Geofences screen in the app (see the [Geofencing](geofencing.md#sharing-zones) guide).
+
+### Tracking Profiles
+
+Each entry in the `profiles` array describes one [tracking profile](tracking-profiles.md). `name`, `interval`, `distance`, `syncInterval` and `condition` are required. Other fields fall back to safe defaults. `id` and `createdAt` are ignored on import - the receiving device always creates fresh rows.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | string | (required) | Display name |
+| `interval` | number | (required) | GPS interval in seconds (must be >= 1) |
+| `distance` | number | (required) | Movement threshold in meters |
+| `syncInterval` | number | (required) | Sync interval in seconds (0 = instant) |
+| `condition.type` | string | (required) | `charging`, `android_auto`, `speed_above`, `speed_below`, or `stationary` |
+| `condition.speedThreshold` | number | - | Required for `speed_above` / `speed_below`. Speed in m/s (divide km/h by 3.6) |
+| `priority` | number | `10` | Higher value wins when multiple profiles match |
+| `deactivationDelay` | number | `60` | Seconds to keep the profile active after the condition stops matching |
+| `enabled` | boolean | `true` | Profile is active on import |
+
+Imported profiles are appended by default. When both profiles and geofences are present the same "Replace ... with the same name" toggle on the import screen also deletes existing profiles whose names match before creating the incoming ones.
+
+You can build links with profiles using the in-browser generator above, the Node.js or Python snippets below, or by sharing profiles directly from the Tracking Profiles screen in the app.
 
 ## Generating Links Programmatically
 

@@ -11,6 +11,9 @@ const mockSaveAuthConfig = jest.fn().mockResolvedValue(true)
 const mockCreateGeofence = jest.fn().mockResolvedValue(1)
 const mockGetGeofences = jest.fn().mockResolvedValue([])
 const mockDeleteGeofence = jest.fn().mockResolvedValue(true)
+const mockCreateProfile = jest.fn().mockResolvedValue(1)
+const mockGetProfiles = jest.fn().mockResolvedValue([])
+const mockDeleteProfile = jest.fn().mockResolvedValue(true)
 const mockNavigate = jest.fn()
 const mockShowAlert = jest.fn()
 
@@ -22,7 +25,10 @@ jest.mock("../../services/NativeLocationService", () => ({
     saveSetting: (...args: any[]) => mockSaveSetting(...args),
     createGeofence: (...args: any[]) => mockCreateGeofence(...args),
     getGeofences: (...args: any[]) => mockGetGeofences(...args),
-    deleteGeofence: (...args: any[]) => mockDeleteGeofence(...args)
+    deleteGeofence: (...args: any[]) => mockDeleteGeofence(...args),
+    createProfile: (...args: any[]) => mockCreateProfile(...args),
+    getProfiles: (...args: any[]) => mockGetProfiles(...args),
+    deleteProfile: (...args: any[]) => mockDeleteProfile(...args)
   }
 }))
 
@@ -415,12 +421,12 @@ describe("SetupImportScreen", () => {
 
     it("hides the toggle when no geofences are in the import", () => {
       const { queryByTestId } = renderScreen(encode({ endpoint: "https://test.com" }))
-      expect(queryByTestId("replace-geofences-switch")).toBeNull()
+      expect(queryByTestId("replace-imports-switch")).toBeNull()
     })
 
     it("shows the toggle when geofences are in the import", () => {
       const { getByTestId } = renderScreen(encode({ geofences: [validGeofence] }))
-      expect(getByTestId("replace-geofences-switch")).toBeTruthy()
+      expect(getByTestId("replace-imports-switch")).toBeTruthy()
     })
 
     it("does not delete existing zones when toggle is off (default)", async () => {
@@ -443,7 +449,7 @@ describe("SetupImportScreen", () => {
       ])
       const { getByText, getByTestId } = renderScreen(encode({ geofences: [validGeofence] }))
 
-      fireEvent(getByTestId("replace-geofences-switch"), "valueChange", true)
+      fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
       fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
@@ -457,7 +463,7 @@ describe("SetupImportScreen", () => {
       mockGetGeofences.mockResolvedValueOnce([{ id: 8, name: "Other", lat: 0, lon: 0, radius: 50, enabled: true }])
       const { getByText, getByTestId } = renderScreen(encode({ geofences: [validGeofence] }))
 
-      fireEvent(getByTestId("replace-geofences-switch"), "valueChange", true)
+      fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
       fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
@@ -479,7 +485,7 @@ describe("SetupImportScreen", () => {
       }
       const { getByText, getByTestId } = renderScreen(encode(config))
 
-      fireEvent(getByTestId("replace-geofences-switch"), "valueChange", true)
+      fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
       fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
@@ -487,6 +493,198 @@ describe("SetupImportScreen", () => {
       })
       expect(mockGetGeofences).toHaveBeenCalledTimes(1)
       expect(mockDeleteGeofence).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe("profiles", () => {
+    const validProfile = {
+      name: "Driving",
+      interval: 3,
+      distance: 5,
+      syncInterval: 60,
+      priority: 20,
+      deactivationDelay: 30,
+      enabled: true,
+      condition: { type: "speed_above", speedThreshold: 8.33 }
+    }
+
+    beforeEach(() => {
+      mockGetProfiles.mockReset()
+      mockGetProfiles.mockResolvedValue([])
+      mockDeleteProfile.mockReset()
+      mockDeleteProfile.mockResolvedValue(true)
+      mockCreateProfile.mockReset()
+      mockCreateProfile.mockResolvedValue(1)
+    })
+
+    it("parses a valid profile and shows it under TRACKING PROFILES", () => {
+      const { getByText } = renderScreen(encode({ profiles: [validProfile] }))
+      expect(getByText("TRACKING PROFILES")).toBeTruthy()
+      expect(getByText("Driving")).toBeTruthy()
+    })
+
+    it("rejects a profile missing name", () => {
+      const { getByText } = renderScreen(encode({ profiles: [{ ...validProfile, name: "" }] }))
+      expect(getByText("Invalid Configuration")).toBeTruthy()
+    })
+
+    it("rejects a profile with unknown condition type", () => {
+      const config = { profiles: [{ ...validProfile, condition: { type: "bogus" } }] }
+      const { getByText } = renderScreen(encode(config))
+      expect(getByText("Invalid Configuration")).toBeTruthy()
+    })
+
+    it("rejects a speed profile missing speedThreshold", () => {
+      const config = { profiles: [{ ...validProfile, condition: { type: "speed_above" } }] }
+      const { getByText } = renderScreen(encode(config))
+      expect(getByText("Invalid Configuration")).toBeTruthy()
+    })
+
+    it("accepts a non-speed condition without speedThreshold", () => {
+      const config = {
+        profiles: [{ ...validProfile, condition: { type: "charging" } }]
+      }
+      const { getByText } = renderScreen(encode(config))
+      expect(getByText("Driving")).toBeTruthy()
+    })
+
+    it("rejects a profile with interval < 1", () => {
+      const { getByText } = renderScreen(encode({ profiles: [{ ...validProfile, interval: 0 }] }))
+      expect(getByText("Invalid Configuration")).toBeTruthy()
+    })
+
+    it("calls createProfile on apply with all fields", async () => {
+      const { getByText } = renderScreen(encode({ profiles: [validProfile] }))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateProfile).toHaveBeenCalledTimes(1)
+      })
+      expect(mockCreateProfile).toHaveBeenCalledWith({
+        name: "Driving",
+        interval: 3,
+        distance: 5,
+        syncInterval: 60,
+        priority: 20,
+        deactivationDelay: 30,
+        enabled: true,
+        condition: { type: "speed_above", speedThreshold: 8.33 }
+      })
+    })
+
+    it("fills in default priority/delay/enabled when omitted", async () => {
+      const minimal = {
+        name: "Charging",
+        interval: 10,
+        distance: 0,
+        syncInterval: 0,
+        condition: { type: "charging" }
+      }
+      const { getByText } = renderScreen(encode({ profiles: [minimal] }))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateProfile).toHaveBeenCalledTimes(1)
+      })
+      expect(mockCreateProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Charging",
+          priority: 10,
+          deactivationDelay: 60,
+          enabled: true,
+          condition: { type: "charging" }
+        })
+      )
+    })
+
+    it("creates multiple profiles in order", async () => {
+      const config = {
+        profiles: [validProfile, { ...validProfile, name: "Stationary", condition: { type: "stationary" } }]
+      }
+      const { getByText } = renderScreen(encode(config))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateProfile).toHaveBeenCalledTimes(2)
+      })
+      expect(mockCreateProfile.mock.calls[0][0].name).toBe("Driving")
+      expect(mockCreateProfile.mock.calls[1][0].name).toBe("Stationary")
+    })
+
+    it("does not call createProfile when no profiles in config", async () => {
+      const { getByText } = renderScreen(encode({ endpoint: "https://test.com" }))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockShowAlert).toHaveBeenCalledWith("Configuration Applied", expect.any(String), "success")
+      })
+      expect(mockCreateProfile).not.toHaveBeenCalled()
+    })
+
+    it("deletes matching profiles before creating when replace toggle is on", async () => {
+      mockGetProfiles.mockResolvedValueOnce([
+        {
+          id: 5,
+          name: "Driving",
+          interval: 1,
+          distance: 0,
+          syncInterval: 0,
+          priority: 0,
+          deactivationDelay: 0,
+          enabled: true,
+          condition: { type: "charging" }
+        },
+        {
+          id: 6,
+          name: "Other",
+          interval: 1,
+          distance: 0,
+          syncInterval: 0,
+          priority: 0,
+          deactivationDelay: 0,
+          enabled: true,
+          condition: { type: "charging" }
+        }
+      ])
+      const { getByText, getByTestId } = renderScreen(encode({ profiles: [validProfile] }))
+
+      fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateProfile).toHaveBeenCalledTimes(1)
+      })
+      expect(mockDeleteProfile).toHaveBeenCalledTimes(1)
+      expect(mockDeleteProfile).toHaveBeenCalledWith(5)
+    })
+
+    it("defaults to appending without deleting when replace toggle is off", async () => {
+      mockGetProfiles.mockResolvedValueOnce([
+        {
+          id: 5,
+          name: "Driving",
+          interval: 1,
+          distance: 0,
+          syncInterval: 0,
+          priority: 0,
+          deactivationDelay: 0,
+          enabled: true,
+          condition: { type: "charging" }
+        }
+      ])
+      const { getByText } = renderScreen(encode({ profiles: [validProfile] }))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateProfile).toHaveBeenCalledTimes(1)
+      })
+      expect(mockGetProfiles).not.toHaveBeenCalled()
+      expect(mockDeleteProfile).not.toHaveBeenCalled()
     })
   })
 })

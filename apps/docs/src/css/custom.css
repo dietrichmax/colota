@@ -49,10 +49,3 @@
   text-transform: none;
   font-weight: 600;
 }
-
-/* Sidebar */
-.theme-doc-sidebar-menu .menu__list-item-collapsible > .menu__link {
-  font-weight: 600;
-}
-
-

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react"
-import { View, Text, StyleSheet, FlatList, Switch, Pressable } from "react-native"
+import { View, Text, StyleSheet, FlatList, Switch, Pressable, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
@@ -12,9 +12,9 @@ import { showAlert, showConfirm } from "../services/modalService"
 import { SavedTrackingProfile, ScreenProps } from "../types/global"
 import { fonts } from "../styles/typography"
 import { Container, SectionTitle, Card } from "../components"
-import { Plus, X, Zap } from "lucide-react-native"
+import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
-import { PROFILE_CONDITIONS, MS_TO_KMH } from "../constants"
+import { PROFILE_CONDITIONS, MS_TO_KMH, HIT_SLOP_MD } from "../constants"
 
 function formatCondition(profile: SavedTrackingProfile): string {
   const condition = PROFILE_CONDITIONS.find((c) => c.type === profile.condition.type)
@@ -72,6 +72,19 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
     },
     [loadProfiles]
   )
+
+  const handleShareProfiles = useCallback(async () => {
+    if (profiles.length === 0) return
+    try {
+      const exportable = profiles.map(({ id: _id, createdAt: _createdAt, ...rest }) => rest)
+      const encoded = btoa(JSON.stringify({ profiles: exportable }))
+      const link = `colota://setup?config=${encoded}`
+      await Share.share({ message: link })
+    } catch (err) {
+      logger.error("[TrackingProfilesScreen] Failed to share profiles:", err)
+      showAlert("Error", "Failed to share profiles.", "error")
+    }
+  }, [profiles])
 
   const handleDelete = useCallback(
     async (item: SavedTrackingProfile) => {
@@ -184,7 +197,19 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
               <Text style={[styles.createBtnText, { color: colors.textOnPrimary }]}>Create Profile</Text>
             </Pressable>
 
-            {profiles.length > 0 && <SectionTitle>Profiles ({profiles.length})</SectionTitle>}
+            {profiles.length > 0 && (
+              <View style={styles.activeHeader}>
+                <SectionTitle>Profiles ({profiles.length})</SectionTitle>
+                <Pressable
+                  testID="share-profiles-btn"
+                  onPress={handleShareProfiles}
+                  hitSlop={HIT_SLOP_MD}
+                  style={({ pressed }) => [styles.shareBtn, pressed && { opacity: colors.pressedOpacity }]}
+                >
+                  <Share2 size={20} color={colors.textSecondary} />
+                </Pressable>
+              </View>
+            )}
           </>
         }
         ListEmptyComponent={
@@ -245,6 +270,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
+  activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  shareBtn: { padding: 4, marginBottom: 12 },
   empty: { alignItems: "center", paddingVertical: 40 },
   emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
   emptyHint: {
