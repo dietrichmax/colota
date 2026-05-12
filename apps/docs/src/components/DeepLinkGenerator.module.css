@@ -248,8 +248,24 @@
 }
 
 .qrContainer canvas {
-  max-width: 200px;
-  max-height: 200px;
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.qrWarning {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  margin-top: 0.75rem;
+  background: var(--ifm-color-warning-contrast-background, #fff8e1);
+  border: 1px solid var(--ifm-color-warning, #f59e0b);
+  border-radius: 8px;
+  color: var(--ifm-color-warning-contrast-foreground, #78350f);
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .empty {

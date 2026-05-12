@@ -1,5 +1,6 @@
 import React from "react"
 import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { Share } from "react-native"
 import { TrackingProfile } from "../../types/global"
 
 // --- Mocks ---
@@ -244,6 +245,103 @@ describe("TrackingProfilesScreen", () => {
 
     await waitFor(() => {
       expect(queryByText("Active")).toBeNull()
+    })
+  })
+
+  describe("share profiles", () => {
+    let shareSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction" })
+    })
+
+    afterEach(() => {
+      shareSpy.mockRestore()
+    })
+
+    it("does not render the share button when there are no profiles", async () => {
+      mockGetProfiles.mockResolvedValue([])
+      const { queryByTestId, getByText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByText("No profiles yet")).toBeTruthy()
+      })
+
+      expect(queryByTestId("share-profiles-btn")).toBeNull()
+    })
+
+    it("renders the share button when at least one profile exists", async () => {
+      const { getByTestId } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByTestId("share-profiles-btn")).toBeTruthy()
+      })
+    })
+
+    it("opens the share sheet with a colota://setup link on press", async () => {
+      const { getByTestId } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByTestId("share-profiles-btn")).toBeTruthy()
+      })
+
+      fireEvent.press(getByTestId("share-profiles-btn"))
+
+      await waitFor(() => {
+        expect(shareSpy).toHaveBeenCalledTimes(1)
+      })
+
+      const arg = shareSpy.mock.calls[0][0]
+      expect(arg.message).toMatch(/^colota:\/\/setup\?config=/)
+    })
+
+    it("encodes profiles without id or createdAt fields", async () => {
+      const { getByTestId } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByTestId("share-profiles-btn")).toBeTruthy()
+      })
+
+      fireEvent.press(getByTestId("share-profiles-btn"))
+
+      await waitFor(() => {
+        expect(shareSpy).toHaveBeenCalledTimes(1)
+      })
+
+      const link = shareSpy.mock.calls[0][0].message as string
+      const encoded = link.split("config=")[1]
+      const decoded = JSON.parse(atob(encoded))
+
+      expect(decoded.profiles).toHaveLength(2)
+      expect(decoded.profiles[0]).not.toHaveProperty("id")
+      expect(decoded.profiles[0]).not.toHaveProperty("createdAt")
+      expect(decoded.profiles[0]).toEqual({
+        name: "Charging",
+        interval: 10,
+        distance: 0,
+        syncInterval: 0,
+        priority: 10,
+        condition: { type: "charging" },
+        deactivationDelay: 60,
+        enabled: true
+      })
+      expect(decoded.profiles[1].condition).toEqual({ type: "speed_above", speedThreshold: 13.89 })
+    })
+
+    it("shows an error alert when sharing fails", async () => {
+      shareSpy.mockRejectedValueOnce(new Error("share failed"))
+
+      const { getByTestId } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByTestId("share-profiles-btn")).toBeTruthy()
+      })
+
+      fireEvent.press(getByTestId("share-profiles-btn"))
+
+      await waitFor(() => {
+        expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to share profiles.", "error")
+      })
     })
   })
 })

@@ -28,10 +28,13 @@ import {
   type DawarichMode,
   type SelectablePreset,
   type SyncPreset,
-  type Geofence
+  type Geofence,
+  type TrackingProfile,
+  type ProfileConditionType
 } from "../types/global"
 
 type ImportGeofence = Omit<Geofence, "id" | "createdAt">
+type ImportProfile = Omit<TrackingProfile, "id" | "createdAt">
 
 // ============================================================================
 // TYPES
@@ -41,12 +44,13 @@ interface ParsedConfig {
   settings: Partial<Settings>
   auth: Partial<AuthConfig> | null
   geofences: ImportGeofence[]
+  profiles: ImportProfile[]
 }
 
 interface ConfigEntry {
   label: string
   value: string
-  category: "tracking" | "api" | "auth" | "geofence"
+  category: "tracking" | "api" | "auth" | "geofence" | "profile"
   rejected?: boolean
 }
 
@@ -75,6 +79,14 @@ const VALID_HTTP_METHODS: HttpMethod[] = ["POST", "GET"]
 const VALID_DAWARICH_MODES: DawarichMode[] = ["single", "batch"]
 const VALID_AUTH_TYPES: AuthType[] = ["none", "basic", "bearer"]
 
+const VALID_PROFILE_CONDITIONS: ProfileConditionType[] = [
+  "charging",
+  "android_auto",
+  "speed_above",
+  "speed_below",
+  "stationary"
+]
+
 function detectPreset(settings: Partial<Settings>): SyncPreset {
   for (const [name, config] of Object.entries(TRACKING_PRESETS)) {
     if (
@@ -93,7 +105,7 @@ function validateConfig(raw: unknown): ValidationResult {
   if (!raw || typeof raw !== "object") {
     return {
       valid: false,
-      config: { settings: {}, auth: null, geofences: [] },
+      config: { settings: {}, auth: null, geofences: [], profiles: [] },
       entries: [],
       error: "Invalid configuration format"
     }
@@ -318,16 +330,62 @@ function validateConfig(raw: unknown): ValidationResult {
     }
   }
 
+  // --- Tracking Profiles ---
+
+  const profiles: ImportProfile[] = []
+
+  if ("profiles" in obj && Array.isArray(obj.profiles)) {
+    for (const entry of obj.profiles) {
+      if (!entry || typeof entry !== "object") continue
+      const p = entry as Record<string, unknown>
+      if (
+        typeof p.name !== "string" ||
+        p.name.length === 0 ||
+        typeof p.interval !== "number" ||
+        p.interval < 1 ||
+        typeof p.distance !== "number" ||
+        p.distance < 0 ||
+        typeof p.syncInterval !== "number" ||
+        p.syncInterval < 0
+      ) {
+        continue
+      }
+
+      const condRaw = p.condition as Record<string, unknown> | undefined
+      if (!condRaw || typeof condRaw !== "object" || typeof condRaw.type !== "string") continue
+      if (!VALID_PROFILE_CONDITIONS.includes(condRaw.type as ProfileConditionType)) continue
+      const condType = condRaw.type as ProfileConditionType
+      const needsSpeed = condType === "speed_above" || condType === "speed_below"
+      if (needsSpeed && (typeof condRaw.speedThreshold !== "number" || condRaw.speedThreshold <= 0)) continue
+      const condition: TrackingProfile["condition"] = needsSpeed
+        ? { type: condType, speedThreshold: condRaw.speedThreshold as number }
+        : { type: condType }
+
+      profiles.push({
+        name: p.name,
+        interval: p.interval,
+        distance: p.distance,
+        syncInterval: p.syncInterval,
+        priority: typeof p.priority === "number" ? p.priority : 10,
+        deactivationDelay:
+          typeof p.deactivationDelay === "number" && p.deactivationDelay >= 0 ? p.deactivationDelay : 60,
+        enabled: typeof p.enabled === "boolean" ? p.enabled : true,
+        condition
+      })
+      entries.push({ label: p.name, value: `${p.interval}s`, category: "profile" })
+    }
+  }
+
   if (entries.length === 0) {
     return {
       valid: false,
-      config: { settings, auth, geofences },
+      config: { settings, auth, geofences, profiles },
       entries,
       error: "No valid settings found in configuration"
     }
   }
 
-  return { valid: true, config: { settings, auth, geofences }, entries }
+  return { valid: true, config: { settings, auth, geofences, profiles }, entries }
 }
 
 // ============================================================================
@@ -346,7 +404,7 @@ export function SetupImportScreen({ route, navigation }: any) {
       if (!configParam || typeof configParam !== "string") {
         return {
           valid: false,
-          config: { settings: {}, auth: null, geofences: [] },
+          config: { settings: {}, auth: null, geofences: [], profiles: [] },
           entries: [],
           error: "No configuration data in URL"
         } as ValidationResult
@@ -359,7 +417,7 @@ export function SetupImportScreen({ route, navigation }: any) {
       logger.error("[SetupImport] Failed to parse config:", e)
       return {
         valid: false,
-        config: { settings: {}, auth: null, geofences: [] },
+        config: { settings: {}, auth: null, geofences: [], profiles: [] },
         entries: [],
         error: "Invalid configuration data. The URL may be malformed."
       } as ValidationResult
@@ -370,6 +428,7 @@ export function SetupImportScreen({ route, navigation }: any) {
   const apiEntries = result.entries.filter((e) => e.category === "api")
   const authEntries = result.entries.filter((e) => e.category === "auth")
   const geofenceEntries = result.entries.filter((e) => e.category === "geofence")
+  const profileEntries = result.entries.filter((e) => e.category === "profile")
 
   const handleApply = async () => {
     setApplying(true)
@@ -413,6 +472,21 @@ export function SetupImportScreen({ route, navigation }: any) {
             }
           }
           await NativeLocationService.createGeofence(g)
+        }
+      }
+
+      if (result.config.profiles.length > 0) {
+        const existingProfilesByName = replaceByName
+          ? new Map((await NativeLocationService.getProfiles()).map((p) => [p.name, p.id]))
+          : null
+        for (const p of result.config.profiles) {
+          if (existingProfilesByName) {
+            const existingId = existingProfilesByName.get(p.name)
+            if (existingId !== undefined) {
+              await NativeLocationService.deleteProfile(existingId)
+            }
+          }
+          await NativeLocationService.createProfile(p)
         }
       }
 
@@ -501,18 +575,25 @@ export function SetupImportScreen({ route, navigation }: any) {
         {renderSection("API", apiEntries)}
         {renderSection("AUTHENTICATION", authEntries)}
         {renderSection("GEOFENCES", geofenceEntries)}
+        {renderSection("TRACKING PROFILES", profileEntries)}
 
-        {geofenceEntries.length > 0 && (
+        {(geofenceEntries.length > 0 || profileEntries.length > 0) && (
           <View style={styles.section}>
             <Card>
               <View style={styles.toggleRow}>
                 <View style={styles.toggleText}>
-                  <Text style={[styles.toggleLabel, { color: colors.text }]}>Replace zones with the same name</Text>
+                  <Text style={[styles.toggleLabel, { color: colors.text }]}>
+                    {geofenceEntries.length > 0 && profileEntries.length > 0
+                      ? "Replace zones and profiles with the same name"
+                      : profileEntries.length > 0
+                        ? "Replace profiles with the same name"
+                        : "Replace zones with the same name"}
+                  </Text>
                   <Text style={[styles.toggleHint, { color: colors.textSecondary }]}>
                     Off: imports are added as new entries
                   </Text>
                 </View>
-                <Switch testID="replace-geofences-switch" value={replaceByName} onValueChange={setReplaceByName} />
+                <Switch testID="replace-imports-switch" value={replaceByName} onValueChange={setReplaceByName} />
               </View>
             </Card>
           </View>
