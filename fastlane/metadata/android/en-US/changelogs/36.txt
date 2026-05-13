@@ -1,0 +1,7 @@
+- Share/import Tracking Profiles and Geofences via setup deep links and QR
+- Overland batch upload support
+- Motion detection now uses accelerometer variance
+- Tracking lifecycle event logging for troubleshooting
+- Map switched to TextureView to avoid ANR on dispose
+- Fixed ScrollView MotionEvent crash
+- Fixed trip detail map gestures blocked by ScrollView
