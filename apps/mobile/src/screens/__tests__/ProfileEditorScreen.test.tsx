@@ -344,7 +344,7 @@ describe("ProfileEditorScreen", () => {
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "60")
 
-      expect(queryByText(/may miss the first minutes of a trip/)).toBeNull()
+      expect(queryByText(/may miss the first \d+ minutes of a trip/)).toBeNull()
     })
 
     it("shows a warning when the interval exceeds 60s", () => {
@@ -354,7 +354,7 @@ describe("ProfileEditorScreen", () => {
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "600")
 
-      expect(getByText(/may miss the first minutes of a trip/)).toBeTruthy()
+      expect(getByText(/may miss the first \d+ minutes of a trip/)).toBeTruthy()
     })
 
     it("does not show the warning for non-stationary conditions even with large intervals", () => {
@@ -363,7 +363,7 @@ describe("ProfileEditorScreen", () => {
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "3600")
 
-      expect(queryByText(/may miss the first minutes of a trip/)).toBeNull()
+      expect(queryByText(/may miss the first \d+ minutes of a trip/)).toBeNull()
     })
 
     it("loads an existing Stationary profile with interval > 60 unchanged", async () => {
@@ -386,7 +386,7 @@ describe("ProfileEditorScreen", () => {
       await waitFor(() => {
         expect(getByDisplayValue("3600")).toBeTruthy()
       })
-      expect(getByText(/may miss the first minutes of a trip/)).toBeTruthy()
+      expect(getByText(/may miss the first \d+ minutes of a trip/)).toBeTruthy()
     })
   })
 })
