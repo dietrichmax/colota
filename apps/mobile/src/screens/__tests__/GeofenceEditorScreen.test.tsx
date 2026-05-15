@@ -88,7 +88,8 @@ jest.mock("../../components", () => {
           accessibilityState: { disabled: !!disabled }
         },
         R.createElement(Text, null, title)
-      )
+      ),
+    FieldMessage: ({ children }: any) => R.createElement(Text, null, children)
   }
 })
 

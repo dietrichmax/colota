@@ -18,7 +18,7 @@ import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { fonts } from "../styles/typography"
-import { Container, SectionTitle, Card, SettingRow, Button } from "../components"
+import { Container, SectionTitle, Card, SettingRow, Button, FieldMessage } from "../components"
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
@@ -295,7 +295,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
                 />
               </SettingRow>
               {!isPositiveInt(motionlessTimeoutStr) && (
-                <Text style={[styles.fieldError, { color: colors.error }]}>Must be at least 1 minute</Text>
+                <FieldMessage variant="error">Must be at least 1 minute</FieldMessage>
               )}
             </View>
           )}
@@ -329,7 +329,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
                 />
               </SettingRow>
               {!isPositiveInt(heartbeatIntervalStr) && (
-                <Text style={[styles.fieldError, { color: colors.error }]}>Must be at least 1 minute</Text>
+                <FieldMessage variant="error">Must be at least 1 minute</FieldMessage>
               )}
             </View>
           )}
@@ -384,10 +384,5 @@ const styles = StyleSheet.create({
     ...fonts.regular,
     lineHeight: 17,
     fontStyle: "italic"
-  },
-  fieldError: {
-    fontSize: 12,
-    ...fonts.regular,
-    marginTop: 4
   }
 })

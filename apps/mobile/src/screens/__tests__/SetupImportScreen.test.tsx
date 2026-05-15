@@ -599,6 +599,50 @@ describe("SetupImportScreen", () => {
       )
     })
 
+    it("preserves stationary profile interval as set, even when large", async () => {
+      const config = {
+        profiles: [
+          {
+            name: "Stationary",
+            interval: 3600,
+            distance: 0,
+            syncInterval: 0,
+            condition: { type: "stationary" }
+          }
+        ]
+      }
+      const { getByText } = renderScreen(encode(config))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateProfile).toHaveBeenCalledTimes(1)
+      })
+      expect(mockCreateProfile.mock.calls[0][0].interval).toBe(3600)
+    })
+
+    it("leaves non-stationary profile intervals untouched", async () => {
+      const config = {
+        profiles: [
+          {
+            name: "Driving",
+            interval: 3600,
+            distance: 0,
+            syncInterval: 0,
+            condition: { type: "speed_above", speedThreshold: 8.33 }
+          }
+        ]
+      }
+      const { getByText } = renderScreen(encode(config))
+
+      fireEvent.press(getByText("Apply Configuration"))
+
+      await waitFor(() => {
+        expect(mockCreateProfile).toHaveBeenCalledTimes(1)
+      })
+      expect(mockCreateProfile.mock.calls[0][0].interval).toBe(3600)
+    })
+
     it("creates multiple profiles in order", async () => {
       const config = {
         profiles: [validProfile, { ...validProfile, name: "Stationary", condition: { type: "stationary" } }]

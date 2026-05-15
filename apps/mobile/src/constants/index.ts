@@ -34,6 +34,9 @@ export const MIN_STATS_INTERVAL_MS = 2000
 // Profiles
 export const MS_TO_KMH = 3.6
 
+// Doze batches motion sensors past this; longer Stationary intervals risk missed trip starts.
+export const STATIONARY_MAX_INTERVAL_SECONDS = 60
+
 export const PROFILE_CONDITIONS: {
   type: ProfileConditionType
   label: string

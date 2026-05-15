@@ -31,6 +31,7 @@ export { FormatOption } from "./ui/FormatOption"
 export { FormatSelector } from "./ui/FormatSelector"
 export { RadioDot } from "./ui/RadioDot"
 export { SettingRow } from "./ui/SettingRow"
+export { FieldMessage } from "./ui/FieldMessage"
 export { ListItem } from "./ui/ListItem"
 export { BottomTabBar } from "./ui/BottomTabBar"
 

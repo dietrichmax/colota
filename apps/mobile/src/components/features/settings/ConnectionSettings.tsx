@@ -21,7 +21,7 @@ import { SettingRow } from "../../ui/SettingRow"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { CONNECTION_TEST_TIMEOUT, TEST_RESULT_DISPLAY_MS } from "../../../constants"
 import { logger } from "../../../utils/logger"
-import { Button, Card, SectionTitle, Divider } from "../../index"
+import { Button, Card, SectionTitle, Divider, FieldMessage } from "../../index"
 import { showChoice } from "../../../services/modalService"
 
 interface ConnectionSettingsProps {
@@ -303,21 +303,15 @@ export function ConnectionSettings({
               />
 
               {!endpointInput && (
-                <Text style={[styles.endpointHint, { color: colors.warning }]}>
-                  No server configured. Locations are saved locally
-                </Text>
+                <FieldMessage variant="warning">No server configured. Locations are saved locally</FieldMessage>
               )}
 
               {endpointInput.startsWith("http://") && !endpointPrivate && (
-                <Text style={[styles.httpWarning, { color: colors.warning }]}>
-                  HTTP only allowed for private IPs / localhost
-                </Text>
+                <FieldMessage variant="warning">HTTP only allowed for private IPs / localhost</FieldMessage>
               )}
 
               {endpointInput.includes("%") && (
-                <Text style={[styles.endpointHint, { color: colors.textSecondary }]}>
-                  Variables: %DATE, %YEAR, %MONTH, %DAY, %TIMESTAMP
-                </Text>
+                <FieldMessage>Variables: %DATE, %YEAR, %MONTH, %DAY, %TIMESTAMP</FieldMessage>
               )}
             </View>
 
@@ -441,15 +435,5 @@ const styles = StyleSheet.create({
   linkSub: {
     fontSize: 13,
     ...fonts.regular
-  },
-  endpointHint: {
-    marginTop: 6,
-    fontSize: 12,
-    ...fonts.medium
-  },
-  httpWarning: {
-    marginTop: 6,
-    fontSize: 12,
-    ...fonts.medium
   }
 })
