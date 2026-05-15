@@ -1,0 +1,8 @@
+- Share/import Tracking Profiles and Geofences via setup deep links and QR
+- Overland batch upload support
+- Motion detection now uses accelerometer variance
+- Warning when a Stationary profile interval is above 60s, since longer values can miss the first minutes of a trip
+- Tracking lifecycle event logging for troubleshooting
+- Map switched to TextureView to avoid ANR on dispose
+- Fixed ScrollView MotionEvent crash
+- Fixed trip detail map gestures blocked by ScrollView
