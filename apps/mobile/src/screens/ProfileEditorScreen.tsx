@@ -11,11 +11,17 @@ import { ProfileService } from "../services/ProfileService"
 import { showAlert } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
 import { fonts } from "../styles/typography"
-import { Container, SectionTitle, Card, Divider, SettingRow, NumericInput } from "../components"
+import { Container, SectionTitle, Card, Divider, SettingRow, NumericInput, FieldMessage } from "../components"
 import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
-import { MS_TO_KMH, PROFILE_CONDITIONS, SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } from "../constants"
+import {
+  MS_TO_KMH,
+  PROFILE_CONDITIONS,
+  SYNC_INTERVAL_PRESETS,
+  SYNC_INTERVAL_LABELS,
+  STATIONARY_MAX_INTERVAL_SECONDS
+} from "../constants"
 import type { RootScreenProps } from "../types/navigation"
 
 function formatSyncDefault(seconds: number): string {
@@ -272,6 +278,13 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
             </View>
           </SettingRow>
+
+          {profile.condition.type === "stationary" && profile.interval > STATIONARY_MAX_INTERVAL_SECONDS && (
+            <FieldMessage variant="warning">
+              The device may miss the first {Math.floor(profile.interval / 60)} minutes of a trip when you start moving
+              with the specified interval!
+            </FieldMessage>
+          )}
 
           <Divider />
 

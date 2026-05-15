@@ -18,7 +18,8 @@ jest.mock("../../../index", () => {
         R.createElement(Text, null, label),
         hint && R.createElement(Text, null, hint),
         children
-      )
+      ),
+    FieldMessage: ({ children }: any) => R.createElement(Text, null, children)
   }
 })
 

@@ -89,7 +89,8 @@ jest.mock("../../components", () => {
         R.createElement(Text, null, label),
         hint && R.createElement(Text, null, hint),
         children
-      )
+      ),
+    FieldMessage: ({ children }: any) => R.createElement(Text, null, children)
   }
 })
 
@@ -331,5 +332,61 @@ describe("ProfileEditorScreen", () => {
     fireEvent.changeText(priorityInput, "25")
 
     expect(getByDisplayValue("25")).toBeTruthy()
+  })
+
+  // --- Stationary interval warning ---
+
+  describe("stationary interval warning", () => {
+    it("does not show the warning while interval is at or below 60s", () => {
+      const { getByText, queryByText, getByDisplayValue } = renderNewProfile()
+
+      fireEvent.press(getByText("Stationary"))
+      const intervalInput = getByDisplayValue("5")
+      fireEvent.changeText(intervalInput, "60")
+
+      expect(queryByText(/may miss the first minutes of a trip/)).toBeNull()
+    })
+
+    it("shows a warning when the interval exceeds 60s", () => {
+      const { getByText, getByDisplayValue } = renderNewProfile()
+
+      fireEvent.press(getByText("Stationary"))
+      const intervalInput = getByDisplayValue("5")
+      fireEvent.changeText(intervalInput, "600")
+
+      expect(getByText(/may miss the first minutes of a trip/)).toBeTruthy()
+    })
+
+    it("does not show the warning for non-stationary conditions even with large intervals", () => {
+      const { queryByText, getByDisplayValue } = renderNewProfile()
+
+      const intervalInput = getByDisplayValue("5")
+      fireEvent.changeText(intervalInput, "3600")
+
+      expect(queryByText(/may miss the first minutes of a trip/)).toBeNull()
+    })
+
+    it("loads an existing Stationary profile with interval > 60 unchanged", async () => {
+      mockGetProfiles.mockResolvedValueOnce([
+        {
+          id: 1,
+          name: "Old Stationary",
+          interval: 3600,
+          distance: 0,
+          syncInterval: 0,
+          priority: 10,
+          condition: { type: "stationary" },
+          deactivationDelay: 0,
+          enabled: true
+        }
+      ])
+
+      const { getByDisplayValue, getByText } = renderEditProfile()
+
+      await waitFor(() => {
+        expect(getByDisplayValue("3600")).toBeTruthy()
+      })
+      expect(getByText(/may miss the first minutes of a trip/)).toBeTruthy()
+    })
   })
 })
