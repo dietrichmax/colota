@@ -15,7 +15,7 @@ jobs:
     if: github.event.pull_request.base.repo.full_name == 'dietrichmax/colota'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Apply Labels
         uses: actions/labeler@v4
