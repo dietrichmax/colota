@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Apply Labels
-        uses: actions/labeler@v4
+        uses: actions/labeler@v6
         with:
           repo-token: ${{ github.token }}
           configuration-path: .github/labeler.yml
