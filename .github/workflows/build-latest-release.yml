@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node & Java
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
@@ -101,7 +101,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node & Java
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
