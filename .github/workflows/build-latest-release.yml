@@ -78,7 +78,7 @@ jobs:
           ./gradlew assembleGmsRelease --no-daemon
 
       - name: Upload GMS APKs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gms-release-apks
           path: apps/mobile/android/app/build/outputs/apk/gms/release/*.apk
@@ -152,7 +152,7 @@ jobs:
           ./gradlew assembleFossRelease --no-daemon
 
       - name: Upload FOSS APKs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: foss-release-apks
           path: apps/mobile/android/app/build/outputs/apk/foss/release/*.apk
@@ -182,13 +182,13 @@ jobs:
           git push -f origin latest
 
       - name: Download GMS APKs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: gms-release-apks
           path: apks/gms
 
       - name: Download FOSS APKs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: foss-release-apks
           path: apks/foss
