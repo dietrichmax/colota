@@ -111,7 +111,7 @@ jobs:
         run: cp /tmp/gms-apks/*.apk apps/mobile/android/app/build/outputs/apk/gms/release/
 
       - name: Upload GMS APKs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gms-release-apks
           path: apps/mobile/android/app/build/outputs/apk/gms/release/*.apk
@@ -197,7 +197,7 @@ jobs:
         run: cp /tmp/foss-apks/*.apk apps/mobile/android/app/build/outputs/apk/foss/release/
 
       - name: Upload FOSS APKs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: foss-release-apks
           path: apps/mobile/android/app/build/outputs/apk/foss/release/*.apk
@@ -217,13 +217,13 @@ jobs:
 
     steps:
       - name: Download GMS APKs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: gms-release-apks
           path: apks/gms
 
       - name: Download FOSS APKs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: foss-release-apks
           path: apks/foss
