@@ -1,1 +1,1 @@
-Self-hosted GPS tracking with offline support, geofencing and native maps
+Self-hosted GPS tracker. Open source, geofencing, offline mode, no telemetry
