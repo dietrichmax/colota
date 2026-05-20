@@ -5,6 +5,7 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import com.Colota.BuildConfig
 import com.Colota.util.AppLogger
+import com.Colota.sync.tls.ClientCertSslContextProvider
 import com.Colota.util.BatteryStatus
 import com.Colota.util.TimedCache
 import android.os.Build
@@ -18,9 +19,12 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.security.UnrecoverableKeyException
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLHandshakeException
 
 /**
  * Handles all outgoing network communication for the tracking engine.
@@ -39,6 +43,16 @@ class NetworkManager(private val context: Context) {
     @Volatile private var currentSsid: String = ""
     @Volatile private var isVpn: Boolean = false
     private val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+
+    // Lazy so existing unit tests that mock Context don't trigger EncryptedSharedPreferences init.
+    // Singleton so invalidation propagates between every NetworkManager (foreground service +
+    // mTLS bridge module both hold their own NetworkManager).
+    private val clientCertProvider by lazy { ClientCertSslContextProvider.getInstance(context) }
+
+    /** Call after a client cert or trusted CA change so the next request picks it up. */
+    fun invalidateClientCertCache() {
+        clientCertProvider.invalidate()
+    }
 
     private val networkCallback = createNetworkCallback()
 
@@ -105,66 +119,14 @@ class NetworkManager(private val context: Context) {
         extraHeaders: Map<String, String> = emptyMap(),
         httpMethod: String = "POST",
         apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED
-    ): Boolean = withContext(Dispatchers.IO) {
-        if (endpoint.isBlank()) {
-            AppLogger.d(TAG, "Empty endpoint provided")
-            return@withContext false
+    ): Boolean {
+        val result = runRequest(payload, endpoint, extraHeaders, httpMethod, apiFormat, emptyMap())
+        if (result.ok) {
+            AppLogger.d(TAG, "Location successfully sent")
+        } else if (result.errorMessage != null) {
+            AppLogger.e(TAG, result.errorMessage)
         }
-
-        val resolvedEndpoint = resolveUrlVariables(endpoint, payload)
-
-        val url = try {
-            URL(resolvedEndpoint)
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "Invalid URL: $resolvedEndpoint")
-            return@withContext false
-        }
-
-        if (!isValidProtocol(resolvedEndpoint)) {
-            AppLogger.e(TAG, "Protocol blocked or invalid: $endpoint")
-            return@withContext false
-        }
-
-        if (!isNetworkAvailable()) {
-            AppLogger.d(TAG, "Sync skipped: No internet")
-            return@withContext false
-        }
-
-        val transformedPayload = when (apiFormat) {
-            ApiFormat.TRACCAR_JSON -> buildTraccarJsonPayload(payload)
-            ApiFormat.OVERLAND_BATCH -> buildOverlandBatchPayload(listOf(payload), emptyMap())
-            ApiFormat.FIELD_MAPPED -> payload
-        }
-
-        val isGet = httpMethod.equals("GET", ignoreCase = true)
-
-        val targetUrl = if (isGet) {
-            val query = buildQueryString(transformedPayload)
-            val separator = if (url.query != null) "&" else "?"
-            URL("$resolvedEndpoint$separator$query")
-        } else {
-            url
-        }
-
-        var connection: HttpURLConnection? = null
-        try {
-            connection = buildConnection(targetUrl, isGet, extraHeaders)
-            logRequest(connection, isGet, resolvedEndpoint, targetUrl, transformedPayload)
-            if (!isGet) writeBody(connection, transformedPayload)
-            return@withContext readResponse(connection)
-        } catch (e: java.net.SocketException) {
-            if (isPrivateHost(url.host ?: "") && e.message?.contains("EPERM") == true) {
-                AppLogger.e(TAG, "Local network access denied - grant Local Network Access permission", e)
-            } else {
-                AppLogger.e(TAG, "Network error: ${e.message}", e)
-            }
-            false
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "Network error: ${e.message}", e)
-            false
-        } finally {
-            connection?.disconnect()
-        }
+        return result.ok
     }
 
     private fun buildConnection(
@@ -182,25 +144,15 @@ class NetworkManager(private val context: Context) {
         connectTimeout = CONNECTION_TIMEOUT
         readTimeout = READ_TIMEOUT
         useCaches = false
+        if (this is HttpsURLConnection) {
+            clientCertProvider.get()?.let { sslSocketFactory = it }
+        }
     }
 
     private fun writeBody(connection: HttpURLConnection, payload: JSONObject) {
         val bodyBytes = payload.toString().toByteArray(StandardCharsets.UTF_8)
         connection.setFixedLengthStreamingMode(bodyBytes.size)
         connection.outputStream.use { it.write(bodyBytes) }
-    }
-
-    private fun readResponse(connection: HttpURLConnection): Boolean {
-        val responseCode = connection.responseCode
-        if (responseCode in 200..299) {
-            AppLogger.d(TAG, "Location successfully sent")
-            return true
-        }
-        val errorBody = try {
-            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
-        } catch (_: Exception) { "Could not read error body" }
-        AppLogger.e(TAG, "${connection.requestMethod} failed: $responseCode - $errorBody")
-        return false
     }
 
     private fun logRequest(
@@ -353,11 +305,130 @@ class NetworkManager(private val context: Context) {
                 AppLogger.e(TAG, "Network error: ${e.message}", e)
             }
             BatchResult.NetworkError
+        } catch (e: SSLHandshakeException) {
+            AppLogger.e(TAG, mtlsErrorMessage(e), e)
+            BatchResult.NetworkError
+        } catch (e: UnrecoverableKeyException) {
+            AppLogger.e(TAG, "Client certificate password is incorrect - re-import the .p12", e)
+            BatchResult.NetworkError
         } catch (e: Exception) {
             AppLogger.e(TAG, "Network error: ${e.message}", e)
             BatchResult.NetworkError
         } finally {
             connection?.disconnect()
+        }
+    }
+
+    /** Same as [sendToEndpoint] but returns status + error text instead of Boolean. */
+    suspend fun testEndpoint(
+        payload: JSONObject,
+        endpoint: String,
+        extraHeaders: Map<String, String> = emptyMap(),
+        httpMethod: String = "POST",
+        apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED,
+        customFields: Map<String, String> = emptyMap(),
+    ): TestEndpointResult = runRequest(payload, endpoint, extraHeaders, httpMethod, apiFormat, customFields)
+
+    /**
+     * Shared request implementation. Returns a fully-populated [TestEndpointResult];
+     * production callers project this to Boolean via [sendToEndpoint], while the
+     * Test Connection path exposes it directly via [testEndpoint].
+     */
+    private suspend fun runRequest(
+        payload: JSONObject,
+        endpoint: String,
+        extraHeaders: Map<String, String>,
+        httpMethod: String,
+        apiFormat: ApiFormat,
+        customFields: Map<String, String>,
+    ): TestEndpointResult = withContext(Dispatchers.IO) {
+        if (endpoint.isBlank()) {
+            return@withContext TestEndpointResult(false, errorMessage = "Endpoint is empty")
+        }
+        val resolvedEndpoint = resolveUrlVariables(endpoint, payload)
+        val url = try {
+            URL(resolvedEndpoint)
+        } catch (_: Exception) {
+            return@withContext TestEndpointResult(false, errorMessage = "Invalid URL: $resolvedEndpoint")
+        }
+        if (!isValidProtocol(resolvedEndpoint)) {
+            return@withContext TestEndpointResult(
+                false,
+                errorMessage = "HTTPS is required for public endpoints. HTTP is only allowed for private/local addresses."
+            )
+        }
+        if (!isNetworkAvailable()) {
+            return@withContext TestEndpointResult(false, errorMessage = "No internet connection")
+        }
+
+        val transformedPayload = when (apiFormat) {
+            ApiFormat.TRACCAR_JSON -> buildTraccarJsonPayload(payload)
+            ApiFormat.OVERLAND_BATCH -> buildOverlandBatchPayload(listOf(payload), customFields)
+            ApiFormat.FIELD_MAPPED -> payload
+        }
+        val isGet = httpMethod.equals("GET", ignoreCase = true)
+        val targetUrl = if (isGet) {
+            val query = buildQueryString(transformedPayload)
+            val separator = if (url.query != null) "&" else "?"
+            URL("$resolvedEndpoint$separator$query")
+        } else url
+
+        var connection: HttpURLConnection? = null
+        try {
+            connection = buildConnection(targetUrl, isGet, extraHeaders)
+            logRequest(connection, isGet, resolvedEndpoint, targetUrl, transformedPayload)
+            if (!isGet) writeBody(connection, transformedPayload)
+            val responseCode = connection.responseCode
+            if (responseCode in 200..299) {
+                TestEndpointResult(true, httpStatus = responseCode)
+            } else {
+                val errorBody = readErrorBody(connection)
+                TestEndpointResult(
+                    false,
+                    httpStatus = responseCode,
+                    errorMessage = "Server returned $responseCode: ${errorBody.take(200)}"
+                )
+            }
+        } catch (e: SSLHandshakeException) {
+            TestEndpointResult(false, errorMessage = mtlsErrorMessage(e))
+        } catch (e: UnrecoverableKeyException) {
+            TestEndpointResult(false, errorMessage = "Client certificate password is incorrect - re-import the .p12")
+        } catch (e: java.net.SocketException) {
+            val msg = if (isPrivateHost(url.host ?: "") && e.message?.contains("EPERM") == true) {
+                "Local network access denied - grant Local Network Access permission"
+            } else "Network error: ${e.message}"
+            TestEndpointResult(false, errorMessage = msg)
+        } catch (e: java.net.SocketTimeoutException) {
+            TestEndpointResult(false, errorMessage = "Connection timed out")
+        } catch (e: Exception) {
+            TestEndpointResult(false, errorMessage = "Connection failed: ${e.message ?: e.javaClass.simpleName}")
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    // Disambiguates the three TLS failure modes that look similar in logs but
+    // need different fixes: untrusted server cert, missing client cert, rejected
+    // client cert.
+    private fun mtlsErrorMessage(e: SSLHandshakeException): String {
+        val detail = (e.message ?: "") + " " + (e.cause?.message ?: "")
+        val isServerNotTrusted = detail.contains("Trust anchor", ignoreCase = true) ||
+            detail.contains("CertPathValidator", ignoreCase = true) ||
+            detail.contains("unable to find valid certification path", ignoreCase = true)
+        val isClientRejected = detail.contains("certificate_required", ignoreCase = true) ||
+            detail.contains("bad_certificate", ignoreCase = true) ||
+            detail.contains("handshake_failure", ignoreCase = true)
+        val hasClientCert = clientCertProvider.get() != null
+
+        return when {
+            isServerNotTrusted ->
+                "Server certificate is not trusted (self-signed or unknown CA). Import the server's CA via mTLS Settings, or use a publicly-trusted certificate."
+            isClientRejected && hasClientCert ->
+                "Server rejected the client certificate. Common causes: cert signed by wrong CA, cert expired, or cert revoked."
+            isClientRejected && !hasClientCert ->
+                "Server requires a client certificate (mTLS) but none is configured. Import a .p12 in Auth Settings."
+            else ->
+                "TLS handshake failed: ${e.message ?: e.javaClass.simpleName}"
         }
     }
 

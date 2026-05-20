@@ -27,6 +27,8 @@ class SecureStorageHelper private constructor(context: Context) {
         const val KEY_PASSWORD = "auth_password"
         const val KEY_BEARER_TOKEN = "auth_bearer_token"
         const val KEY_CUSTOM_HEADERS = "custom_headers"
+        const val KEY_MTLS_SERVER_CA_B64 = "mtls_server_ca_b64"
+        const val KEY_MTLS_KEYCHAIN_ALIAS = "mtls_keychain_alias"
 
         @Volatile
         private var INSTANCE: SecureStorageHelper? = null
@@ -75,6 +77,33 @@ class SecureStorageHelper private constructor(context: Context) {
 
     fun remove(key: String) {
         prefs.edit().remove(key).apply()
+    }
+
+    fun hasServerCa(): Boolean = !getString(KEY_MTLS_SERVER_CA_B64, null).isNullOrBlank()
+
+    fun getServerCaBytes(): ByteArray? =
+        getString(KEY_MTLS_SERVER_CA_B64, null)?.takeIf { it.isNotBlank() }?.let {
+            try { Base64.decode(it, Base64.NO_WRAP) } catch (_: IllegalArgumentException) { null }
+        }
+
+    fun setServerCa(bytes: ByteArray) {
+        prefs.edit()
+            .putString(KEY_MTLS_SERVER_CA_B64, Base64.encodeToString(bytes, Base64.NO_WRAP))
+            .apply()
+    }
+
+    fun clearServerCa() {
+        prefs.edit().remove(KEY_MTLS_SERVER_CA_B64).apply()
+    }
+
+    fun getKeyChainAlias(): String? = getString(KEY_MTLS_KEYCHAIN_ALIAS, null)?.takeIf { it.isNotBlank() }
+
+    fun setKeyChainAlias(alias: String) {
+        prefs.edit().putString(KEY_MTLS_KEYCHAIN_ALIAS, alias).apply()
+    }
+
+    fun clearKeyChainAlias() {
+        prefs.edit().remove(KEY_MTLS_KEYCHAIN_ALIAS).apply()
     }
 
     /**

@@ -16,6 +16,7 @@ export type RootStackParamList = {
   Appearance: undefined
   "API Config": undefined
   "Auth Settings": undefined
+  "mTLS Settings": undefined
   Geofences: undefined
   "Geofence Editor": { geofenceId?: number; name?: string; radius?: number; lat?: number; lon?: number } | undefined
   "Location History": { initialTab?: InspectorTab; initialDate?: string } | undefined

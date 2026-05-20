@@ -8,11 +8,16 @@
         Actual enforcement happens at the app level:
           - NetworkManager.isValidProtocol() restricts HTTP to private hosts
           - settingsValidation.isEndpointAllowed() blocks public HTTP endpoints in the UI
+
+        Trust anchors: system only. User-installed device CAs are deliberately
+        NOT honored so a malicious or compromised CA on the device can't MITM
+        location sync. Self-hosted users with a private CA should import it via
+        the mTLS Settings screen -> Trusted Server CA - that path is
+        Colota-scoped and backed by Android Keystore.
     -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
-            <certificates src="user" />
         </trust-anchors>
     </base-config>
 </network-security-config>

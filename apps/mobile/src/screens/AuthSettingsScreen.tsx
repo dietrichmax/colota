@@ -5,6 +5,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
+import { ChevronRight } from "lucide-react-native"
 import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
@@ -26,7 +27,7 @@ type LocalHeader = { key: string; value: string; id: number }
 /**
  * Screen for configuring endpoint authentication and custom headers.
  */
-export function AuthSettingsScreen({}: ScreenProps) {
+export function AuthSettingsScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
   const { restartTracking, settings } = useTracking()
 
@@ -337,6 +338,24 @@ export function AuthSettingsScreen({}: ScreenProps) {
           </View>
         )}
 
+        <View style={styles.section}>
+          <SectionTitle>Client Certificate</SectionTitle>
+          <Card>
+            <Pressable
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+              onPress={() => navigation.navigate("mTLS Settings")}
+            >
+              <View style={styles.linkContent}>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Client Certificate (mTLS)</Text>
+                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
+                  Authenticate to servers that require a client certificate
+                </Text>
+              </View>
+              <ChevronRight size={20} color={colors.textLight} />
+            </Pressable>
+          </Card>
+        </View>
+
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.textLight }]}>
@@ -470,5 +489,23 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 11,
     textAlign: "center"
+  },
+  linkRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12
+  },
+  linkContent: {
+    flex: 1
+  },
+  linkLabel: {
+    fontSize: 16,
+    ...fonts.semiBold,
+    marginBottom: 2
+  },
+  linkSub: {
+    fontSize: 13,
+    ...fonts.regular
   }
 })

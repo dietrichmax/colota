@@ -69,8 +69,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     private val moduleScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // SAF directory picker
-    private var safPickerPromise: Promise? = null
+    // @ReactMethod writes, onActivityResult reads on the main thread - CAS prevents double-pick races.
+    private val safPickerPromise = java.util.concurrent.atomic.AtomicReference<Promise?>(null)
     private val SAF_PICKER_REQUEST = 9002
 
     private val chargingReceiver = object : BroadcastReceiver() {
@@ -86,16 +86,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     private val activityEventListener = object : BaseActivityEventListener() {
         override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
             if (requestCode != SAF_PICKER_REQUEST) return
-            val promise = safPickerPromise ?: return
-            safPickerPromise = null
-
+            val promise = safPickerPromise.getAndSet(null) ?: return
             if (resultCode != Activity.RESULT_OK || data?.data == null) {
                 promise.resolve(null)
                 return
             }
-
             val uri = data.data!!
-            // Persist permission so WorkManager can access it later
             val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             reactApplicationContext.contentResolver.takePersistableUriPermission(uri, flags)
             promise.resolve(uri.toString())
@@ -282,16 +278,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
 
     /** Runs [operation] on Dispatchers.IO and resolves/rejects the JS promise. */
-    private fun executeAsync(promise: Promise, operation: suspend () -> Any?) {
-        moduleScope.launch {
-            try {
-                promise.resolve(withContext(Dispatchers.IO) { operation() })
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Database operation failed", e)
-                promise.reject("DB_ERROR", e.message, e)
-            }
-        }
-    }
+    private fun executeAsync(promise: Promise, operation: suspend () -> Any?) =
+        moduleScope.launchForPromise(promise, TAG, "DB_ERROR", "Database operation failed", operation)
 
     @ReactMethod
     fun startService(config: ReadableMap, promise: Promise) {
@@ -854,12 +842,20 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             promise.reject("E_NO_ACTIVITY", "No current activity")
             return
         }
-        safPickerPromise = promise
+        if (!safPickerPromise.compareAndSet(null, promise)) {
+            promise.reject("E_PICKER_BUSY", "A picker is already open")
+            return
+        }
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
         }
-        activity.startActivityForResult(intent, SAF_PICKER_REQUEST)
+        try {
+            activity.startActivityForResult(intent, SAF_PICKER_REQUEST)
+        } catch (e: Exception) {
+            safPickerPromise.compareAndSet(promise, null)
+            promise.reject("E_PICKER_LAUNCH", e.message ?: "Failed to launch picker", e)
+        }
     }
 
     @ReactMethod
