@@ -93,8 +93,8 @@ class ClientCertSslContextProvider private constructor(context: Context) {
             }
 
         private fun X509Certificate.toCertInfo() = CertInfo(
-            subject = subjectDN.name,
-            issuer = issuerDN.name,
+            subject = subjectX500Principal.name,
+            issuer = issuerX500Principal.name,
             notBefore = notBefore.time,
             notAfter = notAfter.time,
         )
