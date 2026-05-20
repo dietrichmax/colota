@@ -66,6 +66,8 @@ jest.mock("../../components", () => {
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
+    Button: ({ title, onPress }: any) => R.createElement(Pressable, { onPress }, R.createElement(Text, null, title)),
+    FieldMessage: ({ children }: any) => R.createElement(Text, null, children),
     ChipGroup: ({ options, onSelect }: any) =>
       R.createElement(
         View,

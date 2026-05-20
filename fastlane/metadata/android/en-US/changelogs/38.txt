@@ -1,0 +1,3 @@
+- mTLS client certificate support: configure a client certificate in the new mTLS Settings screen, either by picking one already installed on the device (key stays in the OS keystore) or by importing a .p12 / .pfx file. Required if your server enforces mutual TLS.
+- Self-signed / private CA support: import a Trusted Server CA in the same screen for self-hosted servers without publicly-trusted certificates.
+- Stricter TLS trust (breaking): user-installed CAs from Android Settings -> Encryption & credentials are no longer trusted by Colota. If you relied on one, re-import via the new mTLS Settings screen.

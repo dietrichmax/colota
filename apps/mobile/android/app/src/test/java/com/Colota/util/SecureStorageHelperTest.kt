@@ -250,4 +250,108 @@ class SecureStorageHelperTest {
         assertEquals("auth_bearer_token", SecureStorageHelper.KEY_BEARER_TOKEN)
         assertEquals("custom_headers", SecureStorageHelper.KEY_CUSTOM_HEADERS)
     }
+
+    // --- mTLS server CA helpers ---
+
+    @Test
+    fun `hasServerCa returns false when no CA stored`() {
+        every { prefs.getString("mtls_server_ca_b64", null) } returns null
+        assertFalse(helper.hasServerCa())
+    }
+
+    @Test
+    fun `hasServerCa returns true when CA stored`() {
+        every { prefs.getString("mtls_server_ca_b64", null) } returns "AAAA"
+        assertTrue(helper.hasServerCa())
+    }
+
+    @Test
+    fun `getServerCaBytes decodes valid base64`() {
+        val raw = byteArrayOf(0x05, 0x06, 0x07, 0x08)
+        val encoded = java.util.Base64.getEncoder().encodeToString(raw)
+        every { prefs.getString("mtls_server_ca_b64", null) } returns encoded
+
+        mockkStatic(Base64::class)
+        every { Base64.decode(encoded, Base64.NO_WRAP) } returns raw
+
+        assertArrayEquals(raw, helper.getServerCaBytes())
+
+        unmockkStatic(Base64::class)
+    }
+
+    @Test
+    fun `setServerCa persists base64 bytes`() {
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { prefs.edit() } returns editor
+        every { editor.putString(any(), any()) } returns editor
+
+        mockkStatic(Base64::class)
+        every { Base64.encodeToString(any(), Base64.NO_WRAP) } answers {
+            java.util.Base64.getEncoder().encodeToString(firstArg())
+        }
+
+        helper.setServerCa(byteArrayOf(0x0C, 0x0D))
+
+        val expected = java.util.Base64.getEncoder().encodeToString(byteArrayOf(0x0C, 0x0D))
+        verify { editor.putString("mtls_server_ca_b64", expected) }
+        verify { editor.apply() }
+
+        unmockkStatic(Base64::class)
+    }
+
+    @Test
+    fun `clearServerCa removes the key`() {
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { prefs.edit() } returns editor
+        every { editor.remove(any()) } returns editor
+
+        helper.clearServerCa()
+
+        verify { editor.remove("mtls_server_ca_b64") }
+        verify { editor.apply() }
+    }
+
+    // --- KeyChain alias storage ---
+
+    @Test
+    fun `getKeyChainAlias returns null when unset`() {
+        every { prefs.getString("mtls_keychain_alias", null) } returns null
+        assertNull(helper.getKeyChainAlias())
+    }
+
+    @Test
+    fun `getKeyChainAlias returns null when stored value is blank`() {
+        every { prefs.getString("mtls_keychain_alias", null) } returns ""
+        assertNull(helper.getKeyChainAlias())
+    }
+
+    @Test
+    fun `getKeyChainAlias returns the stored alias`() {
+        every { prefs.getString("mtls_keychain_alias", null) } returns "colota-cert"
+        assertEquals("colota-cert", helper.getKeyChainAlias())
+    }
+
+    @Test
+    fun `setKeyChainAlias persists the alias string`() {
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { prefs.edit() } returns editor
+        every { editor.putString(any(), any()) } returns editor
+
+        helper.setKeyChainAlias("colota-cert")
+
+        verify { editor.putString("mtls_keychain_alias", "colota-cert") }
+        verify { editor.apply() }
+    }
+
+    @Test
+    fun `clearKeyChainAlias removes the key`() {
+        val editor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { prefs.edit() } returns editor
+        every { editor.remove(any()) } returns editor
+
+        helper.clearKeyChainAlias()
+
+        verify { editor.remove("mtls_keychain_alias") }
+        verify { editor.apply() }
+    }
 }

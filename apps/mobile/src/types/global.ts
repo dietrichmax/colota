@@ -444,3 +444,36 @@ export interface Trip {
   distance: number // meters
   locationCount: number
 }
+
+// ============================================================================
+// mTLS - client certificate bridge contract
+// ============================================================================
+
+export type ClientCertInfo = {
+  subject: string
+  issuer: string
+  notBefore: number
+  notAfter: number
+}
+
+export type ClientCertSource = "keychain" | "p12"
+
+export type ClientCertInfoResult =
+  | { configured: false }
+  | ({ configured: true; error?: string; source?: ClientCertSource } & Partial<ClientCertInfo>)
+
+export type KeyChainPickResult = Extract<ClientCertInfoResult, { configured: true }>
+
+export type TestEndpointArgs = {
+  endpoint: string
+  method: string
+  apiFormat?: string
+  payload: Record<string, string | number | boolean>
+  customFields?: Record<string, string>
+}
+
+export type TestEndpointResult = {
+  ok: boolean
+  status: number
+  errorMessage?: string
+}

@@ -131,6 +131,20 @@ Orchestrates batch location uploads with:
 
 HTTP client. Validates endpoints, enforces HTTPS for public hosts, injects auth headers, caches connectivity checks, and detects unmetered connections, specific SSIDs and VPN status for sync condition filtering.
 
+For mTLS-protected endpoints, builds the `HttpsURLConnection` with a custom `SSLSocketFactory` supplied by `ClientCertSslContextProvider` (per-instance, never `setDefaultSSLSocketFactory()` - the override is scoped to outbound location sync, not the whole process).
+
+### ClientCertSslContextProvider
+
+Builds the cached `SSLSocketFactory` used for mTLS. The key managers are supplied by `DynamicKeyManager` so the cert source can be swapped without rebuilding the SSL context; trust managers come from a `CompositeX509TrustManager` that layers an optional user-imported CA on top of Android's system roots. Includes a lazy migration: legacy PKCS12 + password material in `EncryptedSharedPreferences` (if any) is unwrapped into Android Keystore the first time the provider builds a factory or the Settings UI calls `runMigrationIfNeeded`. Legacy storage is wiped only on permanent failures (bad blob, wrong password, PKCS12-shape errors); transient failures (AndroidKeyStore unavailable, OOM) leave legacy data so the next request can retry.
+
+### DynamicKeyManager
+
+`X509KeyManager` that resolves the active client cert at TLS handshake time from one of two sources: an alias stored in Android's system **KeyChain** (private key stays in the OS / hardware, app never sees the bytes) or a `.p12`-imported entry in **Android Keystore** (key sealed under the app's UID, hardware-backed where available). The resolved alias is cached and invalidated alongside the `SSLSocketFactory` cache, so cert swaps take effect on the next request without an app restart.
+
+### CompositeX509TrustManager
+
+`X509TrustManager` that accepts a server chain if **any** delegate accepts it. Used to layer a user-imported private CA on top of the system trust store without losing system CA validation - additive trust, not pinning.
+
 ### GeofenceHelper
 
 Manages pause zones using the **haversine formula** for distance calculations. Reads geofences directly from SQLite on each lookup.
@@ -163,7 +177,7 @@ Centralized constants for condition type strings (`charging`, `android_auto`, `s
 
 ### SecureStorageHelper
 
-Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (AES-256-GCM for values, AES-256-SIV for keys). Stores Basic Auth passwords, Bearer tokens, and custom headers.
+Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (AES-256-GCM for values, AES-256-SIV for keys). Stores Basic Auth passwords, Bearer tokens, custom headers, and the user-imported server CA (public cert, no key material). Client certificate private keys live in Android Keystore instead, not here - see `ClientCertSslContextProvider`.
 
 ### Other Modules
 
@@ -197,7 +211,8 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
 | `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |
 | `ApiSettingsScreen` | Endpoint URL, HTTP method, field mapping with backend templates |
-| `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers |
+| `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers, with a link row to mTLS Settings |
+| `MtlsSettingsScreen` | Client certificate (PKCS12 import + Android Keystore storage) and Trusted Server CA management |
 | `GeofenceScreen` | Create, edit, and delete pause zones on an interactive map |
 | `GeofenceEditorScreen` | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
 | `TrackingProfilesScreen` | List and manage condition-based tracking profiles |

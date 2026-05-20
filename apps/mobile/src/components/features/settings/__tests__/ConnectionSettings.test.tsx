@@ -51,10 +51,8 @@ const mockGetStats = jest.fn().mockResolvedValue({ queued: 0, sent: 0, total: 0,
 const mockManualFlush = jest.fn().mockResolvedValue(undefined)
 const mockClearQueue = jest.fn().mockResolvedValue(5)
 const mockGetMostRecentLocation = jest.fn().mockResolvedValue(null)
-const mockGetAuthHeaders = jest.fn().mockResolvedValue({})
-const mockIsNetworkAvailable = jest.fn().mockResolvedValue(true)
-const mockIsValidEndpointProtocol = jest.fn().mockResolvedValue(true)
 const mockIsEndpointPrivate = jest.fn().mockResolvedValue(false)
+const mockTestEndpoint = jest.fn().mockResolvedValue({ ok: true, status: 200 })
 
 jest.mock("../../../../services/NativeLocationService", () => ({
   __esModule: true,
@@ -63,10 +61,8 @@ jest.mock("../../../../services/NativeLocationService", () => ({
     manualFlush: (...args: any[]) => mockManualFlush(...args),
     clearQueue: (...args: any[]) => mockClearQueue(...args),
     getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args),
-    getAuthHeaders: (...args: any[]) => mockGetAuthHeaders(...args),
-    isNetworkAvailable: (...args: any[]) => mockIsNetworkAvailable(...args),
-    isValidEndpointProtocol: (...args: any[]) => mockIsValidEndpointProtocol(...args),
-    isPrivateEndpoint: (...args: any[]) => mockIsEndpointPrivate(...args)
+    isPrivateEndpoint: (...args: any[]) => mockIsEndpointPrivate(...args),
+    testEndpoint: (...args: any[]) => mockTestEndpoint(...args)
   }
 }))
 
@@ -327,9 +323,13 @@ describe("ConnectionSettings", () => {
       bearing: 0
     }
 
-    it("blocks when native protocol check rejects endpoint", async () => {
+    it("shows native error message when testEndpoint rejects the protocol", async () => {
       mockGetMostRecentLocation.mockResolvedValue(location)
-      mockIsValidEndpointProtocol.mockResolvedValue(false)
+      mockTestEndpoint.mockResolvedValue({
+        ok: false,
+        status: 0,
+        errorMessage: "HTTPS is required for public endpoints. HTTP is only allowed for private/local addresses."
+      })
       const { getByText } = renderComponent({}, "http://example.com/api")
 
       fireEvent.press(getByText("Test Connection"))
@@ -339,15 +339,31 @@ describe("ConnectionSettings", () => {
       })
     })
 
-    it("allows when native protocol check accepts endpoint", async () => {
+    it("shows success message when testEndpoint reports ok", async () => {
       mockGetMostRecentLocation.mockResolvedValue(location)
-      mockIsValidEndpointProtocol.mockResolvedValue(true)
-      const { queryByText, getByText } = renderComponent({}, "https://example.com/api")
+      mockTestEndpoint.mockResolvedValue({ ok: true, status: 200 })
+      const { getByText } = renderComponent({}, "https://example.com/api")
 
       fireEvent.press(getByText("Test Connection"))
 
       await waitFor(() => {
-        expect(queryByText(/HTTPS is required/)).toBeNull()
+        expect(getByText("Connection successful")).toBeTruthy()
+      })
+    })
+
+    it("surfaces mTLS handshake error from native", async () => {
+      mockGetMostRecentLocation.mockResolvedValue(location)
+      mockTestEndpoint.mockResolvedValue({
+        ok: false,
+        status: 0,
+        errorMessage: "TLS handshake failed - server rejected client certificate or cert is expired"
+      })
+      const { getByText } = renderComponent({}, "https://example.com/api")
+
+      fireEvent.press(getByText("Test Connection"))
+
+      await waitFor(() => {
+        expect(getByText(/TLS handshake failed/)).toBeTruthy()
       })
     })
   })
