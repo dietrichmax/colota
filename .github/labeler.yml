@@ -1,39 +1,69 @@
 # ============================
-# CI
+# CI / build automation
 # ============================
 ci:
-  - '.github/**'
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - 'fastlane/**'
+          - 'scripts/**'
 
 # ============================
 # Android / Native Kotlin
 # ============================
 android:
-  - 'apps/mobile/android/**'
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'apps/mobile/android/**'
 
 # ============================
-# React Native / TypeScript
+# React Native UI (TypeScript / JSX)
 # ============================
-frontend:
-  - 'apps/mobile/src/**'
-  - 'apps/mobile/*.ts'
-  - 'apps/mobile/*.tsx'
+mobile-ui:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'apps/mobile/src/**'
+          - 'apps/mobile/*.ts'
+          - 'apps/mobile/*.tsx'
+          - 'apps/mobile/*.js'
 
 # ============================
-# Tests
+# Tests (both Kotlin and TS/TSX)
 # ============================
 tests:
-  - '**/__tests__/**'
-  - '**/*.test.ts'
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/__tests__/**'
+          - '**/*.test.ts'
+          - '**/*.test.tsx'
+          - '**/*Test.kt'
 
 # ============================
-# Documentation
+# Documentation (Docusaurus site + repo markdown)
 # ============================
-documentation:
-  - '**/*.md'
-  - 'apps/docs/**'
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'apps/docs/**'
+          - '**/*.md'
 
 # ============================
-# Shared Package
+# Shared package (types, theme)
 # ============================
 shared:
-  - 'packages/shared/**'
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'packages/shared/**'
+
+# ============================
+# Dependency bumps (useful for Dependabot routing)
+# ============================
+deps:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/package.json'
+          - '**/package-lock.json'
+          - '**/build.gradle'
+          - '**/build.gradle.kts'
+          - '**/Gemfile'
+          - '**/Gemfile.lock'
