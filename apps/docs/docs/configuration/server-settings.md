@@ -15,7 +15,7 @@ sidebar_position: 3
 
 Your server endpoint must accept HTTP or HTTPS requests (POST or GET depending on your HTTP Method setting). HTTPS is required for public endpoints. HTTP is restricted to private/local addresses at the network level - public HTTP endpoints will be blocked at request time.
 
-Self-signed certificates are supported - install your CA certificate on the device via Settings → Security → Encryption & credentials → Install a certificate.
+Self-signed and private-CA certificates are supported via three trust paths (system CAs, user-installed device CAs, or an in-app imported CA). Servers that require client-certificate authentication (mTLS) are also supported. See the [mTLS guide](./mtls) for setup.
 
 On **Android 17+**, connecting to another device on the local network (everything above except `localhost`) requires the **ACCESS_LOCAL_NETWORK** permission. Colota requests this when you use **Test Connection**. See [Permissions](/docs/development/permissions#local-network-access) for details.
 

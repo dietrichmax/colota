@@ -18,6 +18,7 @@ import {
   SettingsScreen,
   ApiSettingsScreen,
   AuthSettingsScreen,
+  MtlsSettingsScreen,
   AutoExportScreen,
   GeofenceScreen,
   GeofenceEditorScreen,
@@ -65,6 +66,11 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     name: "Auth Settings",
     component: AuthSettingsScreen,
     title: "Auth Settings"
+  },
+  {
+    name: "mTLS Settings",
+    component: MtlsSettingsScreen,
+    title: "mTLS Settings"
   },
   {
     name: "Geofences",

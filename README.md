@@ -27,7 +27,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 - **Display Settings** - Choose between metric and imperial units, 12h or 24h time format. Auto-detected from device locale on first use.
 - **App Shortcuts** - Long-press the app icon to start or stop tracking directly from the home screen, compatible with automation apps like Tasker and Samsung Routines.
 - **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
-- **Authentication** - Basic Auth, Bearer Token or custom headers with AES-256-GCM encryption.
+- **Authentication** - Basic Auth, Bearer Token or custom headers with AES-256-GCM encryption. Optional mutual TLS (mTLS) with a PKCS12 client certificate stored in Android Keystore.
 - **Dark Mode** - Full light and dark theme support.
 
 ## Screenshots

@@ -9,17 +9,12 @@ import { CheckCircle, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isEndpointAllowed } from "../../../utils/settingsValidation"
-import {
-  buildTraccarJsonPayload,
-  buildOverlandBatchPayload,
-  isTraccarJsonFormat,
-  isOverlandFormat
-} from "../../../utils/apiPayload"
+import { isTraccarJsonFormat, isOverlandFormat } from "../../../utils/apiPayload"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
 import { fonts } from "../../../styles/typography"
 import { SettingRow } from "../../ui/SettingRow"
 import { useTimeout } from "../../../hooks/useTimeout"
-import { CONNECTION_TEST_TIMEOUT, TEST_RESULT_DISPLAY_MS } from "../../../constants"
+import { TEST_RESULT_DISPLAY_MS } from "../../../constants"
 import { logger } from "../../../utils/logger"
 import { Button, Card, SectionTitle, Divider, FieldMessage } from "../../index"
 import { showChoice } from "../../../services/modalService"
@@ -132,20 +127,12 @@ export function ConnectionSettings({
       payload[fieldMap.lon] = recentLocation.longitude
       payload[fieldMap.acc] = Math.round(recentLocation.accuracy)
 
-      // Optional fields with real values from the location
       if (fieldMap.alt) payload[fieldMap.alt] = recentLocation.altitude ?? 0
       if (fieldMap.vel) payload[fieldMap.vel] = recentLocation.speed ?? 0
       if (fieldMap.batt) payload[fieldMap.batt] = recentLocation.battery ?? 0
       if (fieldMap.bs) payload[fieldMap.bs] = recentLocation.batteryStatus ?? 0
       if (fieldMap.bear) payload[fieldMap.bear] = recentLocation.bearing ?? 0
       if (fieldMap.tst) payload[fieldMap.tst] = Math.floor(Date.now() / 1000)
-
-      const protocolAllowed = await NativeLocationService.isValidEndpointProtocol(endpointInput)
-      if (!protocolAllowed) {
-        setTestResponse("HTTPS is required for public endpoints. HTTP is only allowed for private/local addresses.")
-        setTestError(true)
-        return
-      }
 
       const isPrivate = await NativeLocationService.isPrivateEndpoint(endpointInput)
       if (isPrivate) {
@@ -157,78 +144,36 @@ export function ConnectionSettings({
         }
       }
 
-      let authHeaders: Record<string, string> = {}
-      try {
-        authHeaders = await NativeLocationService.getAuthHeaders()
-      } catch {
-        // proceed without auth headers
-      }
-
       const method = settings.httpMethod ?? "POST"
       const isTraccarJson = isTraccarJsonFormat(settings.apiTemplate, method)
       const isOverland = isOverlandFormat(settings.apiTemplate, settings.dawarichMode ?? "single")
+      const apiFormat = isTraccarJson ? "traccar_json" : isOverland ? "overland_batch" : ""
 
-      let body: object = payload
-      if (isOverland) {
-        body = buildOverlandBatchPayload({
-          latitude: recentLocation.latitude,
-          longitude: recentLocation.longitude,
-          accuracy: Math.round(recentLocation.accuracy),
-          altitude: recentLocation.altitude ?? 0,
-          speed: recentLocation.speed ?? 0,
-          course: recentLocation.bearing ?? 0,
-          batteryLevel: (recentLocation.battery ?? 0) / 100,
-          batteryState: "unplugged",
-          deviceId:
-            settings.customFields.find((f) => f.key === "device_id" || f.key === "tid" || f.key === "id")?.value ??
-            "colota"
-        })
-      } else if (isTraccarJson) {
-        body = buildTraccarJsonPayload({
-          latitude: recentLocation.latitude,
-          longitude: recentLocation.longitude,
-          accuracy: recentLocation.accuracy,
-          altitude: recentLocation.altitude ?? 0,
-          speed: recentLocation.speed ?? 0,
-          heading: recentLocation.bearing ?? 0,
-          batteryLevel: (recentLocation.battery ?? 0) / 100,
-          isCharging: false,
-          deviceId: settings.customFields.find((f) => f.key === "device_id")?.value ?? "colota"
-        })
+      const customFields: Record<string, string> = {}
+      for (const { key, value } of settings.customFields) {
+        if (key) customFields[key] = value
       }
-      const params = new URLSearchParams(Object.entries(payload).map(([k, v]) => [k, String(v)]))
-      const url =
-        method === "GET" ? `${endpointInput}${endpointInput.includes("?") ? "&" : "?"}${params}` : endpointInput
-      const controller = new AbortController()
-      timeout.set(() => controller.abort(), CONNECTION_TEST_TIMEOUT)
-      const response = await fetch(url, {
-        method,
-        headers: method === "GET" ? authHeaders : { "Content-Type": "application/json", ...authHeaders },
-        ...(method === "GET" ? {} : { body: JSON.stringify(body) }),
-        signal: controller.signal
-      })
-      timeout.clear()
 
-      if (response.ok) {
+      const result = await NativeLocationService.testEndpoint({
+        endpoint: endpointInput,
+        method,
+        apiFormat,
+        payload,
+        customFields
+      })
+
+      if (result.ok) {
         setTestResponse("Connection successful")
         onSettingsChange({ ...settings, endpoint: endpointInput })
       } else {
-        logger.warn("[ConnectionSettings] Test failed: HTTP", response.status)
-        setTestResponse(`Server returned ${response.status} ${response.statusText || ""}`.trim())
+        logger.warn("[ConnectionSettings] Test failed:", result.status, result.errorMessage)
+        setTestResponse(result.errorMessage || `Server returned ${result.status}`)
         setTestError(true)
       }
     } catch (err: any) {
-      const msg = err.message || ""
-      let userMessage: string
-      if (err.name === "AbortError") {
-        userMessage = `Connection timed out - server did not respond within ${CONNECTION_TEST_TIMEOUT / 1000}s`
-      } else if (msg.toLowerCase().includes("network request failed")) {
-        userMessage = "Network request failed - check your URL, connection, and SSL certificate"
-      } else {
-        userMessage = `Connection failed: ${msg || "Unknown error"}`
-      }
-      logger.warn("[ConnectionSettings] Test failed:", err.name, msg)
-      setTestResponse(userMessage)
+      const msg = err?.message || "Unknown error"
+      logger.warn("[ConnectionSettings] Test failed:", err?.name, msg)
+      setTestResponse(`Connection failed: ${msg}`)
       setTestError(true)
     } finally {
       setTesting(false)

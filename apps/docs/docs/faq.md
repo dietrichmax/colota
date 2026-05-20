@@ -76,3 +76,13 @@ Colota requires Android 8.0 (API 26) or higher.
 ### Why does Colota ask for "Local network access" permission?
 
 On Android 17+, apps need the Local Network Access permission to connect to local network addresses. Colota only requests this when your server is on a private/local IP (e.g. `192.168.x.x`). It is not used for device scanning or discovery, only to reach your self-hosted server. On some Android 16 devices, this may be enforced early via security patches under the "Nearby devices" permission name.
+
+### Does Colota support mutual TLS (mTLS)?
+
+Yes. Import a PKCS12 (`.p12` / `.pfx`) bundle in **Settings -> Connection -> Authentication & Headers -> Client Certificate (mTLS)**. The private key is stored in the OS keystore and the password isn't saved. For self-signed server certificates, import a CA in the same screen so trust is scoped to Colota only - no need to install a CA at the OS level. See the [mTLS guide](/docs/configuration/mtls) for details.
+
+### I was using a CA installed in Android Settings for Colota - does it still work?
+
+No, not anymore. As of this release, Colota only trusts system CAs and an optional CA you import in-app via mTLS Settings - user-installed device CAs are deliberately ignored. If sync starts failing with `Server certificate is not trusted...` after upgrading, you'll need to re-import your CA through the new in-app screen.
+
+The migration is one-time: open Colota -> Settings -> Connection -> Authentication & Headers -> Client Certificate (mTLS) -> Trusted Server CA -> Import CA. The same `.crt` / `.pem` you originally installed in Android Settings works. See [Migrating from earlier behavior](/docs/configuration/mtls#migrating-from-earlier-behavior) for the full walkthrough.

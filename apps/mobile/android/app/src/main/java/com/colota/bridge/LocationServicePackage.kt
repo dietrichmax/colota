@@ -22,6 +22,7 @@ class LocationServicePackage : ReactPackage {
     override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
         return listOf(
             LocationServiceModule(reactContext),
+            MtlsBridgeModule(reactContext),
             BuildConfigModule(reactContext)
         )
     }

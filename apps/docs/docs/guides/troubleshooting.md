@@ -32,7 +32,22 @@ sidebar_position: 4
 4. Verify network connectivity
 5. Check the queue count in **Data Management**
 
-**Common causes**: Wrong URL, HTTPS required for public endpoints, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed certificate (install your CA via Settings → Security → Encryption & credentials), **Sync Condition** restricting uploads to a specific network (Wi-Fi, SSID or VPN), missing local network permission on Android 16+.
+**Common causes**: Wrong URL, HTTPS required for public endpoints, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed / private-CA server cert (see the [mTLS guide](/docs/configuration/mtls) for trust setup), **Sync Condition** restricting uploads to a specific network (Wi-Fi, SSID or VPN), missing local network permission on Android 16+.
+
+### Test Connection error messages
+
+If **Test Connection** fails, the message points at the specific layer that broke:
+
+| Message | What it means | Fix |
+| --- | --- | --- |
+| `Server certificate is not trusted (self-signed or unknown CA)` | TLS layer: Colota can't validate the server's certificate chain | Import your CA via mTLS Settings -> Trusted Server CA, or use a publicly-trusted cert. User-installed CAs from Android Settings are not honored. |
+| `Server requires a client certificate (mTLS) but none is configured` | TLS layer: the server demanded mTLS, Colota didn't present one | Import a `.p12` in mTLS Settings -> Client Certificate |
+| `Server rejected the client certificate` | TLS layer: cert was sent but rejected (wrong CA, expired, revoked) | Verify the cert matches what your reverse proxy expects |
+| `Incorrect password for client certificate` | Import-time: the password doesn't unlock the `.p12` | Re-import with the correct password |
+| `Hostname not verified` | TLS layer: server cert doesn't list the hostname/IP you connected to | Reissue the server cert with a SAN that includes your hostname/IP |
+| `Server returned <code>: ...` | HTTP layer: TLS succeeded, but the server returned a 4xx/5xx | Check your auth headers, field mapping, and server logs |
+| `Connection timed out` | Network layer: the server didn't respond in time | Check connectivity, firewall, server availability |
+| `Local network access denied` | Permission: Android 16+ blocked the connection to a private IP | Grant Local Network Access (Settings -> Apps -> Colota -> Permissions) |
 
 ## Exporting app logs
 
