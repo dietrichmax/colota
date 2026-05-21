@@ -59,7 +59,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext), 
     LifecycleEventListener { 
 
-    private val dbHelper = DatabaseHelper.getInstance(reactContext)
+    // Resolved on each access so a restore that nulls the singleton can't leave this
+    // module pointing at the closed pre-restore helper between swap and React reload.
+    private val dbHelper get() = DatabaseHelper.getInstance(reactApplicationContext)
     private val fileOps = FileOperations(reactContext)
     private val deviceInfo = DeviceInfoHelper(reactContext)
     private val geofenceHelper = GeofenceHelper(reactContext)

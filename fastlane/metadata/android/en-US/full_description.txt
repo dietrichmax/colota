@@ -16,7 +16,7 @@ Colota is an open-source GPS tracking app that sends your location to your own s
 <li><b>Display Settings</b> - Metric or imperial units, 12h or 24h time format. Auto-detected from device locale on first use</li>
 <li><b>App Shortcuts</b> - Long-press the app icon to start or stop tracking directly from the home screen. Compatible with automation apps like Tasker and Samsung Routines</li>
 <li><b>Quick Setup</b> - Configure devices via colota://setup deep links or QR codes</li>
-<li><b>Authentication</b> - Basic Auth, Bearer Token or custom headers with AES-256-GCM encryption</li>
+<li><b>Authentication</b> - Basic Auth, Bearer Token or custom headers</li>
 <li><b>Dark Mode</b> - Full light and dark theme support</li>
 </ul>
 

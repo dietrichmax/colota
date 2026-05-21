@@ -12,6 +12,7 @@ import com.facebook.react.ReactHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import com.Colota.backup.BackupOrphanCleanup
 import com.Colota.bridge.LocationServicePackage
 
 class MainApplication : Application(), ReactApplication {
@@ -26,5 +27,6 @@ class MainApplication : Application(), ReactApplication {
     override fun onCreate() {
         super.onCreate()
         loadReactNative(this)
+        BackupOrphanCleanup.start(this)
     }
 }

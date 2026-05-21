@@ -43,6 +43,12 @@ class AutoExportWorker(
         private const val FOREGROUND_NOTIFICATION_ID = 9002
         // OneTimeWorkRequest has no default retry cap - bound transient IO retries here.
         private const val MAX_RETRIES = 3
+
+        // BackupServiceModule.pauseAllDbWriters polls this before the restore swap.
+        @Volatile
+        @JvmStatic
+        var isRunning: Boolean = false
+            private set
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
@@ -62,9 +68,11 @@ class AutoExportWorker(
 
     override suspend fun doWork(): Result {
         val isManualRun = tags.contains(AutoExportScheduler.IMMEDIATE_WORK_TAG)
+        isRunning = true
         return try {
             executeWork(isManualRun)
         } finally {
+            isRunning = false
             if (!isManualRun) {
                 try {
                     AutoExportScheduler.scheduleNext(appContext)

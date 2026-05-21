@@ -23,6 +23,8 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 In [offline mode](/docs/configuration/server-settings#offline-mode), sync-related actions (Sync Now, Clear Sent History, Clear Queue) are hidden since no queue is used. A **Delete All Locations** action is available instead. Data export remains fully available - see [Data Export](data-export.md).
 
+For a full archive of locations, settings and credentials in a single password-encrypted file, use **Settings → Backup & Restore** - see [Backup & Restore](backup-restore.md).
+
 ## Storage Reference
 
 - ~200 bytes per location

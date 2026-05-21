@@ -12,6 +12,7 @@ import com.Colota.util.geo.haversineDistance
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.os.Build
 import java.time.LocalDate
 import java.time.ZoneId
 import org.json.JSONObject
@@ -30,8 +31,8 @@ class DatabaseHelper private constructor(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
-        private const val DATABASE_NAME = "Colota.db"
-        private const val DATABASE_VERSION = 5
+        const val DATABASE_NAME = "Colota.db"
+        const val DATABASE_VERSION = 5
 
         const val TABLE_LOCATIONS = "locations"
         const val TABLE_QUEUE = "queue"
@@ -68,10 +69,151 @@ class DatabaseHelper private constructor(context: Context) :
         @Volatile
         private var INSTANCE: DatabaseHelper? = null
 
-        /**
-         * Returns the singleton instance of the [DatabaseHelper].
-         * Using the Application Context prevents memory leaks.
-         */
+        // Set true while a restore is replacing the DB; JS-bridge writers must short-circuit
+        // so a write doesn't race the file swap. Cleared by BackupServiceModule in its finally.
+        @Volatile
+        private var restoreInProgress: Boolean = false
+
+        @JvmStatic
+        fun setRestoreInProgress(value: Boolean) {
+            restoreInProgress = value
+        }
+
+        // Drain the live WAL into main, then best-effort delete sidecars before the rename
+        // so the new DB starts with a clean directory. SQLite's WAL header binds the WAL to
+        // the main file via salt + checksum, so an orphan WAL is unlikely to be replayed,
+        // but cleaning it up avoids leaving stale files next to the restored DB.
+        @JvmStatic
+        fun replaceLiveDatabase(context: Context, newDb: java.io.File) {
+            synchronized(this) {
+                INSTANCE?.close()
+                INSTANCE = null
+
+                val target = context.applicationContext.getDatabasePath(DATABASE_NAME)
+                target.parentFile?.mkdirs()
+
+                drainLiveWal(target)
+
+                bestEffortDelete(java.io.File("${target.absolutePath}-wal"))
+                bestEffortDelete(java.io.File("${target.absolutePath}-shm"))
+                bestEffortDelete(java.io.File("${target.absolutePath}-journal"))
+
+                val staging = java.io.File(target.parentFile, "${DATABASE_NAME}.incoming")
+                try {
+                    try {
+                        java.nio.file.Files.move(
+                            newDb.toPath(),
+                            target.toPath(),
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                            java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        )
+                    } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+                        newDb.inputStream().use { input ->
+                            staging.outputStream().use { input.copyTo(it) }
+                        }
+                        java.nio.file.Files.move(
+                            staging.toPath(),
+                            target.toPath(),
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                            java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        )
+                        newDb.delete()
+                    }
+                } finally {
+                    if (staging.exists()) staging.delete()
+                }
+            }
+        }
+
+        // Sidecar deletes are non-critical; SQLite recovers fine without them. A SecurityException
+        // from a sandbox-restricted FS shouldn't abort the whole swap.
+        private fun bestEffortDelete(file: java.io.File) {
+            try {
+                file.delete()
+            } catch (e: SecurityException) {
+                AppLogger.w(TAG, "Could not delete ${file.name}: ${e.message}")
+            }
+        }
+
+        // Truncating checkpoint moves uncheckpointed WAL pages into main before sidecar delete.
+        private fun drainLiveWal(target: java.io.File) {
+            if (!target.exists()) return
+            try {
+                val db = SQLiteDatabase.openDatabase(
+                    target.absolutePath,
+                    null,
+                    SQLiteDatabase.OPEN_READWRITE,
+                )
+                try {
+                    db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { it.moveToFirst() }
+                } finally {
+                    db.close()
+                }
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "Could not drain WAL before replace: ${e.message}")
+            }
+        }
+
+        // Run before the swap so a migration failure leaves the live DB untouched.
+        @JvmStatic
+        fun migrateCandidate(candidateFile: java.io.File) {
+            val db = SQLiteDatabase.openDatabase(
+                candidateFile.absolutePath,
+                null,
+                SQLiteDatabase.OPEN_READWRITE,
+            )
+            try {
+                // DELETE mode: migration writes go straight to main, not a -wal that the rename ignores.
+                db.rawQuery("PRAGMA journal_mode=DELETE", null).use { it.moveToFirst() }
+
+                val current = db.version
+                if (current > DATABASE_VERSION) {
+                    throw IllegalStateException(
+                        "Candidate schema $current is newer than app schema $DATABASE_VERSION"
+                    )
+                }
+                if (current < DATABASE_VERSION) {
+                    db.beginTransaction()
+                    try {
+                        applyMigrations(db, current, DATABASE_VERSION)
+                        db.version = DATABASE_VERSION
+                        db.setTransactionSuccessful()
+                    } finally {
+                        db.endTransaction()
+                    }
+                }
+            } finally {
+                db.close()
+            }
+        }
+
+        private fun applyMigrations(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+            AppLogger.i(TAG, "Migrating database from v$oldVersion to v$newVersion")
+            if (oldVersion < 2) {
+                db.execSQL(CREATE_PROFILES_TABLE)
+                db.execSQL(CREATE_PROFILES_INDEX)
+            }
+            if (oldVersion < 3) {
+                db.execSQL("ALTER TABLE $TABLE_LOCATIONS ADD COLUMN sent INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("""
+                    UPDATE $TABLE_LOCATIONS SET sent = 1
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM $TABLE_QUEUE
+                        WHERE $TABLE_QUEUE.location_id = $TABLE_LOCATIONS.id
+                    )
+                """.trimIndent())
+            }
+            if (oldVersion < 4) {
+                db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN pause_on_wifi INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN pause_on_motionless INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN motionless_timeout_minutes INTEGER NOT NULL DEFAULT 10")
+            }
+            if (oldVersion < 5) {
+                db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN heartbeat_enabled INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN heartbeat_interval_minutes INTEGER NOT NULL DEFAULT 15")
+            }
+        }
+
         @JvmStatic
         fun getInstance(context: Context): DatabaseHelper {
             return INSTANCE ?: synchronized(this) {
@@ -202,32 +344,7 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        AppLogger.i(TAG, "Upgrading database from v$oldVersion to v$newVersion")
-        if (oldVersion < 2) {
-            db.execSQL(CREATE_PROFILES_TABLE)
-            db.execSQL(CREATE_PROFILES_INDEX)
-        }
-        if (oldVersion < 3) {
-            db.execSQL("ALTER TABLE $TABLE_LOCATIONS ADD COLUMN sent INTEGER NOT NULL DEFAULT 0")
-            // NOT EXISTS uses idx_queue_location; the original NOT IN (SELECT ...) ran
-            // a full queue scan per row and OOM'd users with weeks of accumulated data.
-            db.execSQL("""
-                UPDATE $TABLE_LOCATIONS SET sent = 1
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM $TABLE_QUEUE
-                    WHERE $TABLE_QUEUE.location_id = $TABLE_LOCATIONS.id
-                )
-            """.trimIndent())
-        }
-        if (oldVersion < 4) {
-            db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN pause_on_wifi INTEGER NOT NULL DEFAULT 0")
-            db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN pause_on_motionless INTEGER NOT NULL DEFAULT 0")
-            db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN motionless_timeout_minutes INTEGER NOT NULL DEFAULT 10")
-        }
-        if (oldVersion < 5) {
-            db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN heartbeat_enabled INTEGER NOT NULL DEFAULT 0")
-            db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN heartbeat_interval_minutes INTEGER NOT NULL DEFAULT 15")
-        }
+        applyMigrations(db, oldVersion, newVersion)
     }
 
     override fun onOpen(db: SQLiteDatabase) {
@@ -238,6 +355,13 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
+
+    // Writers that race the restore swap can land on the orphaned (pre-rename) inode and lose data.
+    private fun requireNotRestoring() {
+        if (restoreInProgress) {
+            throw IllegalStateException("Database is being restored; try again in a moment")
+        }
+    }
 
     fun saveLocation(
         latitude: Double,
@@ -251,6 +375,7 @@ class DatabaseHelper private constructor(context: Context) :
         timestamp: Long,
         endpoint: String? = null
     ): Long {
+        requireNotRestoring()
         val values = ContentValues().apply {
             put("latitude", latitude)
             put("longitude", longitude)
@@ -386,6 +511,7 @@ class DatabaseHelper private constructor(context: Context) :
     * @return The queue ID of the inserted row
     */
     fun addToQueue(locationId: Long, payload: String): Long {
+        requireNotRestoring()
         val values = ContentValues().apply {
             put("location_id", locationId)
             put("payload", payload)
@@ -421,6 +547,7 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun removeFromQueueByLocationId(locationId: Long): Int {
+        requireNotRestoring()
         return writableDatabase.delete(
             TABLE_QUEUE,
             "location_id = ?",
@@ -429,6 +556,7 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun removeBatchFromQueue(queueIds: List<Long>) {
+        requireNotRestoring()
         if (queueIds.isEmpty()) return
 
         val placeholders = queueIds.joinToString(",") { "?" }
@@ -446,6 +574,7 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun deleteLocations(locationIds: List<Long>) {
+        requireNotRestoring()
         if (locationIds.isEmpty()) return
         val placeholders = locationIds.joinToString(",") { "?" }
         val args = locationIds.map { it.toString() }.toTypedArray()
@@ -453,6 +582,7 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun incrementRetryCount(queueId: Long, error: String? = null) {
+        requireNotRestoring()
         writableDatabase.execSQL(
             "UPDATE $TABLE_QUEUE SET retry_count = retry_count + 1, last_error = ? WHERE id = ?",
             arrayOf<Any>(error ?: "", queueId)
@@ -488,6 +618,7 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun markLocationsSent(locationIds: List<Long>) {
+        requireNotRestoring()
         if (locationIds.isEmpty()) return
         val placeholders = locationIds.joinToString(",") { "?" }
         val args = locationIds.map { it.toString() }.toTypedArray()
@@ -508,8 +639,38 @@ class DatabaseHelper private constructor(context: Context) :
         return java.io.File(dbPath).length() / (1024.0 * 1024.0)
     }
 
+    fun snapshotTo(destFile: java.io.File) {
+        requireNotRestoring()
+        val db = writableDatabase
+        val srcPath = db.path ?: throw IllegalStateException("Database path is null")
+
+        // VACUUM INTO is transactional even under concurrent writers (SQLite 3.27+, API 30+).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            db.execSQL("VACUUM INTO ?", arrayOf(destFile.absolutePath))
+            return
+        }
+
+        // API 26-29 fallback: hold an IMMEDIATE write lock around the checkpoint + copy.
+        // beginTransactionNonExclusive maps to BEGIN IMMEDIATE in Android's SQLite,
+        // so other writers must queue at the file lock, preventing -wal appends from
+        // tearing the main-file copy. Readers continue via WAL snapshots.
+        db.beginTransactionNonExclusive()
+        try {
+            db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { it.moveToFirst() }
+            java.io.File(srcPath).inputStream().use { input ->
+                destFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
 
     fun clearSentHistory(): Int {
+        requireNotRestoring()
         AppLogger.d(TAG, "Clearing sent history")
         return writableDatabase.delete(
             TABLE_LOCATIONS,
@@ -519,6 +680,7 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun clearQueue(): Int {
+        requireNotRestoring()
         AppLogger.d(TAG, "Clearing queue")
         // Deleting locations cascades to their queue entries via FK ON DELETE CASCADE
         return writableDatabase.delete(
@@ -529,16 +691,19 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     fun clearAllLocations(): Int {
+        requireNotRestoring()
         writableDatabase.delete(TABLE_QUEUE, null, null) // FK constraint: queue references locations
         return writableDatabase.delete(TABLE_LOCATIONS, null, null)
     }
 
     fun deleteOlderThan(days: Int): Int {
+        requireNotRestoring()
         val cutoff = (System.currentTimeMillis() - days.toLong() * 24 * 60 * 60 * 1000) / 1000
         return writableDatabase.delete(TABLE_LOCATIONS, "timestamp < ?", arrayOf(cutoff.toString()))
     }
 
     fun deleteInRange(startTs: Long, endTs: Long): Int {
+        requireNotRestoring()
         return writableDatabase.delete(
             TABLE_LOCATIONS,
             "timestamp >= ? AND timestamp <= ?",
@@ -548,6 +713,7 @@ class DatabaseHelper private constructor(context: Context) :
 
     /** Reclaims unused space. Call from background thread only. */
     fun vacuum() {
+        requireNotRestoring()
         AppLogger.d(TAG, "Starting VACUUM + ANALYZE")
         try {
             writableDatabase.execSQL("VACUUM")
@@ -560,14 +726,15 @@ class DatabaseHelper private constructor(context: Context) :
 
 
     fun saveSetting(key: String, value: String) {
+        requireNotRestoring()
         val values = ContentValues().apply {
             put("key", key)
             put("value", value)
         }
         writableDatabase.insertWithOnConflict(
-            TABLE_SETTINGS, 
-            null, 
-            values, 
+            TABLE_SETTINGS,
+            null,
+            values,
             SQLiteDatabase.CONFLICT_REPLACE
         )
     }

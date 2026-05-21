@@ -115,6 +115,13 @@ class LocationForegroundService : Service() {
 
     companion object {
         private const val TAG = "LocationService"
+
+        // Polled by BackupServiceModule.pauseAllDbWriters before the restore swap.
+        @Volatile
+        @JvmStatic
+        var isRunning: Boolean = false
+            private set
+
         /** Multiplier applied to the tracking interval for the geofence entry delay. */
         private const val ENTRY_DELAY_MULTIPLIER = 3.5
         /** Debounce before resuming GPS after unmetered network is lost (ms). */
@@ -139,6 +146,7 @@ class LocationForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
 
         serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -334,23 +342,33 @@ class LocationForegroundService : Service() {
     override fun onDestroy() {
         AppLogger.d(TAG, "Service destroyed")
 
-        motionDetector?.stop()
-        entryDelayJob?.cancel()
-        entryDelayJob = null
-        pendingPauseZone = null
-        unregisterWifiPause()
-        cancelHeartbeat()
-        unregisterLocationProvidersReceiver()
-        unregisterDebugMotionReceiver()
-        conditionMonitor.stop()
-        stopLocationUpdates()
-        syncManager.stopPeriodicSync()
-        networkManager.destroy()
+        // Teardown DB writes throw during a restore; swallow so the throw can't
+        // bubble out of onDestroy and kill the process. State is overwritten by the swap.
+        try {
+            motionDetector?.stop()
+            entryDelayJob?.cancel()
+            entryDelayJob = null
+            pendingPauseZone = null
+            unregisterWifiPause()
+            cancelHeartbeat()
+            unregisterLocationProvidersReceiver()
+            unregisterDebugMotionReceiver()
+            conditionMonitor.stop()
+            stopLocationUpdates()
+            syncManager.stopPeriodicSync()
+            networkManager.destroy()
+        } catch (e: IllegalStateException) {
+            AppLogger.w(TAG, "Teardown step skipped: ${e.message}")
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Unexpected error during service teardown", e)
+        }
 
+        // Critical teardown: must run so pauseAllDbWriters' poll loop sees isRunning=false.
         serviceScope?.cancel()
         serviceScope = null
 
         notificationManager.cancel(NotificationHelper.NOTIFICATION_ID)
+        isRunning = false
         super.onDestroy()
     }
 

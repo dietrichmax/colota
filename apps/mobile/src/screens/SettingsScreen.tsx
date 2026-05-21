@@ -22,6 +22,7 @@ import {
   Download,
   Map,
   ScrollText,
+  ShieldCheck,
   Info,
   Heart,
   Clock
@@ -196,6 +197,14 @@ export function SettingsScreen({ navigation }: Props) {
               label="Offline Maps"
               sub="Download map tiles for use without internet"
               onPress={() => navigation.navigate("Offline Maps")}
+            />
+            <Divider />
+            <ListItem
+              testID="nav-backup-restore"
+              icon={ShieldCheck}
+              label="Backup & Restore"
+              sub="Encrypted backup of all your data"
+              onPress={() => navigation.navigate("Backup & Restore")}
             />
             <Divider />
             <ListItem

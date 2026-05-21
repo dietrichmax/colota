@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-**Last updated: May 11, 2026**
+**Last updated: May 20, 2026**
 
 Colota ("the App") is a self-hosted GPS tracking application for Android, developed by Max Dietrich. This privacy policy explains what data the App collects, how it is used, and your rights regarding that data.
 
@@ -52,7 +52,15 @@ Collected data is stored in a local SQLite database on your device. The data is 
 
 If you configure auto-export, the App will write export files (CSV, GeoJSON, GPX, or KML) to a directory you select on your device. No data leaves your device as part of this process.
 
-Authentication credentials (if configured) are encrypted using **AES-256-GCM** via Android's `EncryptedSharedPreferences`.
+Authentication credentials (if configured) are encrypted.
+
+### Encrypted Backups
+
+You can create a password-encrypted backup containing your location history, geofences, settings and authentication credentials. The password is never stored; if you lose it, the backup cannot be recovered, and a weak password weakens the protection.
+
+Backups are written to a destination you choose via the Android file picker. If you pick a cloud-synced folder, the encrypted file leaves your device through that provider.
+
+Restoring a backup overwrites the current database and credentials.
 
 The App supports configuration via `colota://setup` deep links. These links can include server endpoints and authentication credentials. You must explicitly confirm before any configuration is applied. Only open setup links from sources you trust.
 
@@ -99,7 +107,7 @@ Since all data is stored locally on your device, you have full control:
 - **Access**: View all data in the app's Data Management screen
 - **Export**: Export your data at any time in multiple formats
 - **Delete**: Delete any or all data at any time
-- **Portability**: Export and transfer your data freely
+- **Portability**: Export your data freely, including as a full encrypted backup for device-to-device transfer
 
 ## Permissions
 

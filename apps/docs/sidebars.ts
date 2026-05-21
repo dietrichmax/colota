@@ -49,6 +49,7 @@ const sidebars: SidebarsConfig = {
         "guides/app-shortcuts",
         "guides/data-export",
         "guides/data-management",
+        "guides/backup-restore",
         "guides/deep-link-setup",
         "guides/battery-optimization",
         "guides/offline-maps",
