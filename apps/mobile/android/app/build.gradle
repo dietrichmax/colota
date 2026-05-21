@@ -200,6 +200,7 @@ dependencies {
     gmsImplementation 'com.google.android.gms:play-services-location:21.3.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
     implementation 'androidx.security:security-crypto:1.1.0'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.84'
     implementation 'androidx.car.app:app:1.7.0'
     implementation 'androidx.work:work-runtime:2.11.2'
     implementation 'androidx.documentfile:documentfile:1.1.0'

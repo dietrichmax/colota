@@ -6,6 +6,12 @@ sidebar_position: 2
 
 Export your location history in multiple formats.
 
+:::tip Looking for a full archive?
+
+Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) of your location history. If you instead want a single password-encrypted archive of **everything** - locations, settings, geofences and credentials - for device migration or offsite storage, use [Backup & Restore](backup-restore.md).
+
+:::
+
 ## Supported Formats
 
 | Format      | Extension  | Use Case                    |

@@ -113,12 +113,14 @@ colota/
 │   │   │       │   ├── service/     # Foreground service, config & notifications
 │   │   │       │   ├── data/        # SQLite & geofencing
 │   │   │       │   ├── sync/        # Network sync & payloads
+│   │   │       │   ├── export/      # Auto-export worker, scheduler & converters
+│   │   │       │   ├── backup/      # Encrypted backup builder, restorer & crypto
 │   │   │       │   ├── util/        # Helpers & encryption
 │   │   │       │   └── location/    # LocationProvider interface
 │   │   │       ├── gms/java/com/colota/location/   # GMS implementation
 │   │   │       └── foss/java/com/colota/location/  # Native implementation
 │   │   ├── src/
-│   │   │   ├── screens/             # 17 app screens
+│   │   │   ├── screens/             # 23 app screens
 │   │   │   ├── components/          # UI and feature components
 │   │   │   ├── hooks/               # Custom React hooks
 │   │   │   ├── services/            # Native bridge services

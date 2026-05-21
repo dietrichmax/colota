@@ -48,6 +48,18 @@ Yes. Go to **Settings > Offline Maps** to download map areas to your device. Pan
 
 Yes. Tap **Export** on the Dashboard to export in CSV, GeoJSON, GPX, or KML. See [Data Export](/docs/guides/data-export) for details.
 
+### Can I back up everything and move to a new device?
+
+Yes. Go to **Settings → Backup & Restore** to create a single password-encrypted `.colota` file containing your locations, settings, geofences and credentials. Restore it on the new device with the same password. See [Backup & Restore](/docs/guides/backup-restore) for details.
+
+### I forgot my backup password, can I recover it?
+
+No. Backups are encrypted with a key derived from your password. There is no recovery code, no email reset and no developer override. If the password is lost the data inside is unrecoverable. Store the password in a password manager before creating the backup.
+
+### Will restoring a backup overwrite my current data?
+
+Yes. Restore is replace-everything: locations, settings, geofences and credentials currently on the device are replaced by what's in the backup. There is no merge mode. If you want to keep the current data, take a backup of it first.
+
 ### What happens when the phone restarts?
 
 If auto-start on boot is enabled, Colota automatically resumes tracking after a device restart when tracking was active before.

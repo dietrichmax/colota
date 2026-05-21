@@ -56,7 +56,7 @@ android.permission.FOREGROUND_SERVICE_LOCATION
 android.permission.FOREGROUND_SERVICE_DATA_SYNC
 ```
 
-Android requires apps to declare a foreground service with a persistent notification to run in the background. The `FOREGROUND_SERVICE_LOCATION` type specifically indicates the service accesses location data. This is what keeps the "Colota is tracking" notification visible. The `FOREGROUND_SERVICE_DATA_SYNC` type is used by the auto-export WorkManager service for scheduled background exports.
+Android requires apps to declare a foreground service with a persistent notification to run in the background. The `FOREGROUND_SERVICE_LOCATION` type specifically indicates the service accesses location data. This is what keeps the "Colota is tracking" notification visible. The `FOREGROUND_SERVICE_DATA_SYNC` type is used by the auto-export WorkManager service for scheduled background exports and by the encrypted backup/restore service for the encryption phase.
 
 ### Network
 

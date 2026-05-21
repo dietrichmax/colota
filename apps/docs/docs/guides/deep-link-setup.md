@@ -134,4 +134,3 @@ print(f'colota://setup?config={encoded}')
 
 - The configuration URL is not encrypted. Avoid putting sensitive tokens in QR codes displayed in public.
 - All settings are shown to the user for confirmation before being applied.
-- Auth credentials are stored in AES-256-GCM encrypted storage on device after import.

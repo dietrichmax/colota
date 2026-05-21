@@ -30,6 +30,14 @@ class SecureStorageHelper private constructor(context: Context) {
         const val KEY_MTLS_SERVER_CA_B64 = "mtls_server_ca_b64"
         const val KEY_MTLS_KEYCHAIN_ALIAS = "mtls_keychain_alias"
 
+        // KEY_MTLS_KEYCHAIN_ALIAS is intentionally excluded: the private key it points at lives in
+        // Android KeyChain and can't leave the source device. Re-import the cert on the destination.
+        private val BACKED_UP_KEYS = listOf(
+            KEY_AUTH_TYPE, KEY_USERNAME, KEY_PASSWORD,
+            KEY_BEARER_TOKEN, KEY_CUSTOM_HEADERS,
+            KEY_MTLS_SERVER_CA_B64,
+        )
+
         @Volatile
         private var INSTANCE: SecureStorageHelper? = null
 
@@ -109,6 +117,22 @@ class SecureStorageHelper private constructor(context: Context) {
     /**
      * Builds the full set of auth + custom headers for HTTP requests.
      */
+    internal fun exportPlaintextForBackup(): Map<String, String> {
+        return BACKED_UP_KEYS.mapNotNull { key -> getString(key)?.let { key to it } }.toMap()
+    }
+
+    // Clear-then-set so credentials added after the backup don't survive the restore. Sync commit.
+    internal fun importPlaintextFromBackup(secrets: Map<String, String>) {
+        val editor = prefs.edit()
+        BACKED_UP_KEYS.forEach { editor.remove(it) }
+        secrets.forEach { (key, value) ->
+            if (value.isNotEmpty()) editor.putString(key, value)
+        }
+        if (!editor.commit()) {
+            throw IllegalStateException("EncryptedSharedPreferences.commit() returned false")
+        }
+    }
+
     fun getAuthHeaders(): Map<String, String> {
         val headers = mutableMapOf<String, String>()
 

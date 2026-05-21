@@ -14,6 +14,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Works Offline** - Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
 - **Offline Maps** - Download map areas to your device for use without an internet connection.
 - **Scheduled Export** - Automatic daily, weekly or monthly exports to a local directory with file retention management.
+- **Encrypted Backup** - Single password-encrypted archive of locations, settings, geofences and credentials.
 - **Location History** - View daily summaries, trip segmentation, calendar with activity dots and per-trip export.
 - **Reliable Tracking** - Foreground service, auto-start on boot and exponential backoff retry.
 - **Geofencing** - Pause zones that stop recording locations. Optionally stop GPS entirely when on WiFi or when the device is motionless.
@@ -21,12 +22,12 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Flexible Sync** - Instant, batch, Wi-Fi only or offline modes.
 - **Display Settings** - Choose between metric and imperial units, 12h or 24h time format. Auto-detected from device locale on first use.
 - **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
-- **Authentication** - Basic Auth, Bearer Token or custom headers with AES-256-GCM encryption.
+- **Authentication** - Basic Auth, Bearer Token or custom headers
 - **Dark Mode** - Full light and dark theme support.
 
 ## App Screens
 
-Colota has twenty-one screens, each focused on a specific task:
+Colota has twenty-two screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
@@ -48,6 +49,7 @@ Colota has twenty-one screens, each focused on a specific task:
 | **Export Data** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
 | **Auto-Export** | Configure scheduled exports: directory, format, frequency, time of day (with weekday or day-of-month for weekly/monthly), export range and file retention |
 | **Data Management** | Clear sent history, delete old data, vacuum the database |
+| **Backup & Restore** | Create or restore a single password-encrypted `.colota` archive of all data (locations, settings, geofences, credentials) |
 | **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
 | **Activity Log** | In-app log viewer with level filtering, search, and export for bug reports |
 | **About** | App version, device info, links to repository and privacy policy |

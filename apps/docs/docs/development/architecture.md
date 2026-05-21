@@ -48,9 +48,13 @@ The mobile app has a **React Native** UI layer and **native Kotlin** modules for
 
 All native code lives in `apps/mobile/android/app/src/`, organized by build flavor:
 
-- `src/main/java/com/colota/` - Shared code: `bridge/`, `service/`, `data/`, `sync/`, `util/`, `location/` (interface)
+- `src/main/java/com/colota/` - Shared code: `bridge/`, `service/`, `data/`, `sync/`, `util/`, `location/` (interface), `backup/`, `export/`
 - `src/gms/java/com/colota/location/` - Google Play Services location provider
 - `src/foss/java/com/colota/location/` - Native Android location provider
+
+### Bridge Modules
+
+Two React Native bridge modules are registered by `LocationServicePackage`: `LocationServiceModule` (the primary tracking-side bridge) and `BackupServiceModule` (the encrypted-backup bridge).
 
 ### LocationServiceModule
 
@@ -71,6 +75,33 @@ Emits events back to JavaScript:
 - `onPauseZoneChange` - entered or exited a geofence pause zone
 - `onProfileSwitch` - a tracking profile was activated or deactivated
 - `onAutoExportComplete` - auto-export finished with `{success, fileName, rowCount, error}`
+
+### BackupServiceModule
+
+Second React Native bridge module (exposed as `"BackupServiceModule"`). Owns the encrypted backup pipeline end-to-end so the JS layer never touches credentials, the SQLite file, or the Argon2 key directly. JS-callable methods:
+
+- `pickBackupDestination` / `pickBackupSource` - launches the Storage Access Framework picker (`ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT`); a single in-flight picker is enforced via a 5-minute timeout.
+- `createBackup(uri, password)` - validates password strength, claims an operation mutex, runs `BackupBuilder` against a cacheDir-staged file, then atomically copies into the SAF destination. Stops promotion to a foreground service when finished.
+- `restoreBackup(uri, password)` - cancels the location service and any auto-export work, polls until both stop, runs `BackupRestorer`, then forces `tracking_enabled=false` so the destination device doesn't auto-resume.
+- `applyRestore` - JS calls this after the success dialog is dismissed; it triggers `reactHost.reload()` so all modules re-read state from the restored DB.
+
+Both `createBackup` and `restoreBackup` await `BackupOrphanCleanup.awaitComplete()` before claiming the operation mutex, ensuring the launch-time orphan sweeper can't race active operations.
+
+Errors are surfaced to JS as `E_BACKUP_<ERROR_NAME>` codes that map onto the `BackupError` enum (`WRONG_PASSWORD`, `BAD_MAGIC`, `UNSUPPORTED_VERSION`, `UNSUPPORTED_KDF`, `UNSUPPORTED_SCHEMA`, `MISSING_ENTRY`, `INTEGRITY_FAIL`, `TRUNCATED`, `TAMPERED`, `SECRETS_PARTIAL`).
+
+### Backup Pipeline
+
+Native-only modules in `backup/` package. The on-disk format is documented in `BackupFormat.kt`.
+
+| Module | Purpose |
+| --- | --- |
+| `BackupCrypto` | Chunked AES-256-GCM encrypt/decrypt keyed by Argon2id. Each chunk binds the file header into its GCM AAD so any header tamper invalidates the first tag. Argon2 is deferred until the first ciphertext chunk arrives so wrong-password rejection costs no key derivation. |
+| `BackupFormat` | On-disk layout constants, `BackupHeader` data class, `BackupError` enum, and `BackupException`. 76-byte header (magic, format version, KDF id, KDF params, 32-byte salt, 8-byte nonce prefix, chunk size, reserved) followed by length-prefixed ciphertext chunks and an end-marker + chunk-count footer. |
+| `BackupBuilder` | Snapshots the SQLite database via `DatabaseHelper.snapshotTo` (uses `VACUUM INTO` on API 30+, file-copy with WAL checkpoint as fallback), runs `quick_check`, extracts secrets via `SecureStorageHelper.exportPlaintextForBackup()`, deflates everything into a zip, then streams it through `BackupCrypto.encrypt`. Picks Argon2 memory by `ActivityManager.isLowRamDevice` (32 MiB / 64 MiB). |
+| `BackupRestorer` | Decrypts the file via a `PipedInputStream` into a `ZipInputStream`, extracts entries to a temp dir with bounded reads (zip-bomb defense), validates the manifest schema version, runs `PRAGMA integrity_check` on the candidate DB, calls `DatabaseHelper.migrateCandidate` to run any required migrations on the candidate, then atomically swaps the live DB via `DatabaseHelper.replaceLiveDatabase`, then re-imports secrets. A failed secrets commit is surfaced as `SECRETS_PARTIAL` so the UI can prompt the user to re-enter credentials. |
+| `BackupForegroundService` | Notification-only foreground service shown during long backups/restores. Uses `FOREGROUND_SERVICE_TYPE_DATA_SYNC`. Holds no work itself - the actual encryption stays in `BackupServiceModule`'s coroutine so the password `CharArray` lives only on the heap, not in service state. |
+| `BackupOrphanCleanup` | Singleton kicked off from `MainApplication.onCreate` on a daemon thread. Sweeps `cacheDir/backup_temp`, `cacheDir/restore_temp`, `cacheDir/pending_backup.colota`, and `<dbDir>/Colota.db.incoming` left behind by a process death mid-operation. Exposes a `CompletableDeferred` so `BackupServiceModule` can await completion before claiming the operation mutex. |
+| `PasswordStrength` | Mirror of the JS-side `passwordStrength.ts`. Enforces the 12-character floor and ~50-bit entropy floor; sequential runs and `<4` distinct chars cap the score. |
 
 ### LocationProvider Abstraction
 
@@ -117,6 +148,12 @@ SQLite database singleton with five tables:
 | `tracking_profiles` | Condition-based tracking profile definitions |
 
 Uses WAL (Write-Ahead Logging) mode and prepared statements for performance.
+
+Three additional methods support the backup pipeline:
+
+- `snapshotTo(destFile)` - produces a transactional copy of the live DB. Uses `VACUUM INTO` on API 30+; falls back to a file copy with a `wal_checkpoint(FULL)` on API 26-29.
+- `migrateCandidate(file)` - runs schema migrations on a candidate file in `DELETE` journal mode before it is swapped in, so a migration failure leaves the live DB untouched.
+- `replaceLiveDatabase(context, newDb)` - drains the live WAL via `wal_checkpoint(TRUNCATE)`, deletes the live `-wal`/`-shm`/`-journal` sidecars, then atomically moves the candidate into place. Handles `AtomicMoveNotSupportedException` by staging through an `<dbName>.incoming` file. Synchronizes with `getInstance()` so concurrent callers either see the old singleton or the new file.
 
 ### SyncManager
 
@@ -179,6 +216,11 @@ Centralized constants for condition type strings (`charging`, `android_auto`, `s
 
 Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (AES-256-GCM for values, AES-256-SIV for keys). Stores Basic Auth passwords, Bearer tokens, custom headers, and the user-imported server CA (public cert, no key material). Client certificate private keys live in Android Keystore instead, not here - see `ClientCertSslContextProvider`.
 
+For backups, two `internal` methods support the export/import flow without exposing plaintext secrets to other modules:
+
+- `exportPlaintextForBackup()` - returns the BACKED_UP_KEYS as a `Map<String, String>` for inclusion in the encrypted backup container.
+- `importPlaintextFromBackup(secrets)` - clears all BACKED_UP_KEYS then writes the new map in a single sync `commit()`. Throws on commit failure so the restore path can report `SECRETS_PARTIAL`.
+
 ### Other Modules
 
 | Module | Purpose |
@@ -224,6 +266,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, time of day, weekday or day-of-month, export range and file retention |
 | `OfflineMapsScreen` | Download and manage offline map areas - interactive bounding box picker, size estimate, progress tracking, and area deletion |
 | `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
+| `BackupRestoreScreen` | Create or restore a password-encrypted `.colota` archive of all data, with strength meter and no-recovery confirmation |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
 | `ActivityLogScreen` | In-app log viewer with level filtering, search, and export |
 | `AboutScreen` | App version, device info, links to repository and privacy policy |
@@ -236,6 +279,7 @@ Wraps Android's `EncryptedSharedPreferences` for encrypted credential storage (A
 | `LocationServicePermission` | Sequential Android permission requests (fine location → background location → notifications → battery exemption) |
 | `ProfileService` | Thin wrapper over `NativeLocationService` for tracking profile CRUD and trip event queries |
 | `SettingsService` | Bridges UI state to native SQLite with type conversion (seconds↔ms, objects↔JSON) |
+| `BackupService` | Thin TypeScript wrapper over the native `BackupServiceModule` exposing `pickBackupDestination`, `pickBackupSource`, `createBackup`, `restoreBackup`, `applyRestore`. Surfaces typed `BackupErrorCode` strings for screen-side messaging |
 | `modalService` | Centralized alert and confirm dialogs via `showAlert()` and `showConfirm()` |
 
 ### Map Components

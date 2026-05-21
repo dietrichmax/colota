@@ -34,7 +34,8 @@ import {
   OfflineMapsScreen,
   AppearanceScreen,
   ConnectionScreen,
-  TrackingSyncScreen
+  TrackingSyncScreen,
+  BackupRestoreScreen
 } from "./src/screens/"
 import { BottomTabBar } from "./src/components"
 import { loadDisplayPreferences } from "./src/utils/geo"
@@ -141,6 +142,11 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     name: "Activity Log",
     component: ActivityLogScreen,
     title: "Activity Log"
+  },
+  {
+    name: "Backup & Restore",
+    component: BackupRestoreScreen,
+    title: "Backup & Restore"
   },
   {
     name: "Appearance",

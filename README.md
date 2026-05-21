@@ -19,6 +19,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 - **Works Offline** - Fully functional without a server. Export as CSV, GeoJSON, GPX or KML.
 - **Offline Maps** - Download map areas to your device for use without an internet connection.
 - **Scheduled Export** - Automatic daily, weekly or monthly exports to a local directory with file retention management.
+- **Encrypted Backup** - Single password-encrypted archive of all data (locations, settings, geofences, credentials) for migration or offsite storage.
 - **Location History** - View daily summaries, trip segmentation, calendar with activity dots and per-trip export.
 - **Reliable Tracking** - Foreground service, auto-start on boot and exponential backoff retry.
 - **Geofencing** - Pause zones that automatically stop recording locations.
@@ -27,7 +28,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 - **Display Settings** - Choose between metric and imperial units, 12h or 24h time format. Auto-detected from device locale on first use.
 - **App Shortcuts** - Long-press the app icon to start or stop tracking directly from the home screen, compatible with automation apps like Tasker and Samsung Routines.
 - **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
-- **Authentication** - Basic Auth, Bearer Token or custom headers with AES-256-GCM encryption. Optional mutual TLS (mTLS) with a PKCS12 client certificate stored in Android Keystore.
+- **Authentication** - Basic Auth, Bearer Token or custom headers. Optional mutual TLS (mTLS) with a PKCS12 client certificate stored in Android Keystore.
 - **Dark Mode** - Full light and dark theme support.
 
 ## Screenshots

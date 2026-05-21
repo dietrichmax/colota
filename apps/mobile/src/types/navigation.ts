@@ -31,6 +31,7 @@ export type RootStackParamList = {
   "Trip Detail": { trip: Trip }
   "Offline Maps": undefined
   "Activity Log": undefined
+  "Backup & Restore": undefined
 }
 
 export type RootStackRoute = keyof RootStackParamList

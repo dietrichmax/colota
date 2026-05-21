@@ -23,7 +23,8 @@ class LocationServicePackage : ReactPackage {
         return listOf(
             LocationServiceModule(reactContext),
             MtlsBridgeModule(reactContext),
-            BuildConfigModule(reactContext)
+            BuildConfigModule(reactContext),
+            BackupServiceModule(reactContext)
         )
     }
 

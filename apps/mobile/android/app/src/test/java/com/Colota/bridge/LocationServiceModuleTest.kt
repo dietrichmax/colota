@@ -53,6 +53,8 @@ class LocationServiceModuleTest {
         mockkStatic(Arguments::class)
         every { Arguments.createMap() } returns JavaOnlyMap()
 
+        mockkObject(DatabaseHelper.Companion)
+
         setCompanionField("reactContextRef", WeakReference(mockContext))
         setCompanionField("isAppInForeground", true)
         setCompanionField("activeProfileName", null)
@@ -62,6 +64,7 @@ class LocationServiceModuleTest {
     fun tearDown() {
         unmockkObject(AppLogger)
         unmockkStatic(Arguments::class)
+        unmockkObject(DatabaseHelper.Companion)
         setCompanionField("reactContextRef", WeakReference<ReactApplicationContext>(null))
         setCompanionField("isAppInForeground", true)
         setCompanionField("activeProfileName", null)
@@ -494,7 +497,9 @@ class LocationServiceModuleTest {
         val raw = createModule()
         val module = spyk(raw, recordPrivateCalls = true)
         val dbHelper = mockk<DatabaseHelper>(relaxed = true)
-        setField(module, "dbHelper", dbHelper)
+        // Unsafe-allocated module skipped construction; supply the context the dbHelper getter reads.
+        setSuperField(module, "mReactApplicationContext", mockContext)
+        every { DatabaseHelper.getInstance(any()) } returns dbHelper
         // Stub private method to avoid real Android service start
         every { module["startServiceWithAction"](any<String>()) } returns Unit
         return Pair(module, dbHelper)
@@ -530,6 +535,21 @@ class LocationServiceModuleTest {
         val field = obj.javaClass.getDeclaredField(name)
         field.isAccessible = true
         field.set(obj, value)
+    }
+
+    private fun setSuperField(obj: Any, name: String, value: Any?) {
+        var clazz: Class<*>? = obj.javaClass
+        while (clazz != null) {
+            try {
+                val field = clazz.getDeclaredField(name)
+                field.isAccessible = true
+                field.set(obj, value)
+                return
+            } catch (_: NoSuchFieldException) {
+                clazz = clazz.superclass
+            }
+        }
+        throw NoSuchFieldException(name)
     }
 
     private fun getField(obj: Any, name: String): Any? {

@@ -93,6 +93,12 @@
             android:foregroundServiceType="dataSync"
             android:exported="false" />
 
+        <!-- Backup/Restore foreground service -->
+        <service
+            android:name=".backup.BackupForegroundService"
+            android:foregroundServiceType="shortService"
+            android:exported="false" />
+
         <!-- Boot Receiver -->
         <receiver
             android:name=".service.LocationBootReceiver"
