@@ -64,7 +64,6 @@ export function ConnectionSettings({
             const buttons = [
               ...(hasEndpoint ? [{ text: "Sync First", style: "primary" as const }] : []),
               { text: "Keep in Queue", style: "secondary" as const },
-              { text: "Delete Queue", style: "destructive" as const },
               { text: "Cancel", style: "secondary" as const }
             ]
             const choice = await showChoice({
@@ -72,10 +71,9 @@ export function ConnectionSettings({
               message: `You have ${stats.queued} locations waiting to sync. What would you like to do?`,
               buttons
             })
-            // Normalize index: with endpoint [Sync, Keep, Delete, Cancel], without [Keep, Delete, Cancel]
             const action = hasEndpoint
-              ? (["sync", "keep", "delete", "cancel"] as const)[choice]
-              : (["keep", "delete", "cancel"] as const)[choice]
+              ? (["sync", "keep", "cancel"] as const)[choice]
+              : (["keep", "cancel"] as const)[choice]
             if (action === "sync") {
               try {
                 await NativeLocationService.manualFlush()
@@ -84,9 +82,6 @@ export function ConnectionSettings({
               }
               onSettingsChange({ ...settings, isOfflineMode: true })
             } else if (action === "keep") {
-              onSettingsChange({ ...settings, isOfflineMode: true })
-            } else if (action === "delete") {
-              await NativeLocationService.clearQueue()
               onSettingsChange({ ...settings, isOfflineMode: true })
             }
             return
