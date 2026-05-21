@@ -8,8 +8,7 @@ package com.Colota.backup
 import kotlin.math.ln
 import kotlin.math.min
 
-// Authoritative scoring used by both the native acceptance gate (createBackup) and the
-// JS strength meter (via BackupServiceModule.passwordStrength bridge call).
+// Authoritative scoring. Used by createBackup (gate) and the JS strength meter (via bridge).
 object PasswordStrength {
 
     const val MIN_LENGTH = 12
@@ -37,8 +36,7 @@ object PasswordStrength {
         if (password.any { it in 'a'..'z' }) charset += 26
         if (password.any { it in 'A'..'Z' }) charset += 26
         if (password.any { it in '0'..'9' }) charset += 10
-        // ASCII-only check to mirror TS regex /[^A-Za-z0-9]/; Unicode letters
-        // (e.g. 'é', Cyrillic) get the punctuation bonus on both sides.
+        // ASCII-only check; Unicode letters (e.g. 'é', Cyrillic) get the punctuation bonus.
         if (password.any { it !in 'a'..'z' && it !in 'A'..'Z' && it !in '0'..'9' }) charset += 32
 
         if (charset == 0) return 0.0

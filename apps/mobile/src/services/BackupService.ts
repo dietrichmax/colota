@@ -56,9 +56,8 @@ class BackupService {
     return BackupServiceModule.pickBackupSource()
   }
 
-  // Pass password as UTF-16 code units so the Kotlin side never constructs a
-  // non-wipeable JVM String. The JS string itself remains uncleanable; this
-  // only narrows the lifetime of the password on the native heap.
+  // Pass as UTF-16 code units so the Kotlin side never builds a non-wipeable String.
+  // The JS string is still uncleanable; this only narrows the native-heap lifetime.
   static async createBackup(uri: string, password: string): Promise<void> {
     BackupService.ensureModule()
     const codes = passwordToCodes(password)

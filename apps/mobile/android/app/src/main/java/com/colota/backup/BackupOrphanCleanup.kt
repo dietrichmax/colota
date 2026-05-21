@@ -12,9 +12,8 @@ import kotlinx.coroutines.CompletableDeferred
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
-// Sweeps temp files left behind by a process death mid-backup or mid-restore.
-// Run from MainApplication.onCreate; awaited by BackupServiceModule before each
-// operation so a fast user can't race the sweeper into deleting fresh temp dirs.
+// Sweeps temp files left by a process death mid-op. Run from Application.onCreate;
+// callers await before claiming new temp dirs.
 object BackupOrphanCleanup {
 
     private const val TAG = "BackupOrphanCleanup"

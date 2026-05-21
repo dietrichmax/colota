@@ -26,9 +26,8 @@ class BackupForegroundService : Service() {
         private const val NOTIFICATION_ID = 9201
         private const val EXTRA_MESSAGE = "message"
 
-        // Caller must dispatch on Main; Android 12+ throws on background FGS starts.
-        // Throws so the caller can abort the operation; running unprotected risks
-        // a process kill mid-backup or mid-restore.
+        // Must be called from Main (Android 12+ rejects background FGS starts).
+        // Throws on rejection so the caller can abort rather than risk a mid-op kill.
         fun start(context: Context, message: String) {
             val intent = Intent(context, BackupForegroundService::class.java).apply {
                 putExtra(EXTRA_MESSAGE, message)
@@ -73,9 +72,7 @@ class BackupForegroundService : Service() {
             .build()
 
         try {
-            // API 34+ enforces shortService at runtime (3-min cap, no extra permission).
-            // Pre-34, the manifest attribute is unknown and the system tolerates a
-            // typeless start — backup is a brief user-initiated action either way.
+            // API 34+ enforces shortService (3-min cap, no extra permission); pre-34 tolerates a typeless start.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(
                     NOTIFICATION_ID,
@@ -91,9 +88,7 @@ class BackupForegroundService : Service() {
         return START_NOT_STICKY
     }
 
-    // shortService on API 34+ enforces a hard 3-minute cap; if hit, the system invokes
-    // this callback before stopping us. The API 35+ (startId, fgsType) overload's default
-    // impl delegates here, so one override covers both API levels.
+    // shortService 3-min cap. API 35+ (startId, fgsType) overload's default impl delegates here.
     override fun onTimeout(startId: Int) {
         AppLogger.w(TAG, "shortService timeout reached; backup/restore stopping")
         stopSelf(startId)

@@ -30,9 +30,8 @@ class SecureStorageHelper private constructor(context: Context) {
         const val KEY_MTLS_SERVER_CA_B64 = "mtls_server_ca_b64"
         const val KEY_MTLS_KEYCHAIN_ALIAS = "mtls_keychain_alias"
 
-        // KEY_MTLS_KEYCHAIN_ALIAS is intentionally excluded: the alias points at an Android KeyChain entry
-        // on the source device and the private key cannot leave that device, so restoring the alias would
-        // leave the app referencing a phantom key. The client cert must be re-imported on the destination.
+        // KEY_MTLS_KEYCHAIN_ALIAS is intentionally excluded: the private key it points at lives in
+        // Android KeyChain and can't leave the source device. Re-import the cert on the destination.
         private val BACKED_UP_KEYS = listOf(
             KEY_AUTH_TYPE, KEY_USERNAME, KEY_PASSWORD,
             KEY_BEARER_TOKEN, KEY_CUSTOM_HEADERS,

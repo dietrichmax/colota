@@ -79,10 +79,8 @@ class DatabaseHelper private constructor(context: Context) :
             restoreInProgress = value
         }
 
-        // Drain the live WAL into main, then best-effort delete sidecars before the rename
-        // so the new DB starts with a clean directory. SQLite's WAL header binds the WAL to
-        // the main file via salt + checksum, so an orphan WAL is unlikely to be replayed,
-        // but cleaning it up avoids leaving stale files next to the restored DB.
+        // Drain the WAL into main, then best-effort delete sidecars before the rename. SQLite's
+        // WAL salt+checksum makes replay unlikely, but stale sidecars next to the new DB are untidy.
         @JvmStatic
         fun replaceLiveDatabase(context: Context, newDb: java.io.File) {
             synchronized(this) {

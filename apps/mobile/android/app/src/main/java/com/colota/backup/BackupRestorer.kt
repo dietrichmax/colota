@@ -16,10 +16,8 @@ import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.util.zip.ZipInputStream
 
-// DB is swapped only after migration + integrity pass; secrets are applied
-// after the swap, so a failed secrets commit leaves a restored DB with the
-// destination's prior credentials. Surfaced as an exception so the caller
-// can warn the user rather than silently desyncing.
+// Order: migrate, integrity-check, swap DB, import secrets.
+// Secrets failure after the swap throws SECRETS_PARTIAL so the caller can warn the user.
 class BackupRestorer @JvmOverloads constructor(
     private val context: Context,
     private val secureStorageHelper: SecureStorageHelper = SecureStorageHelper.getInstance(context),

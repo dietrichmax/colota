@@ -18,9 +18,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// SAF picker plumbing for BackupServiceModule: claims a single in-flight Promise,
-// dispatches the activity result back to it, and releases the slot on a timeout
-// so a never-returning activity can't permanently block the picker.
+// SAF picker plumbing for BackupServiceModule. One in-flight promise; timeout releases the slot
+// so a never-returning picker activity can't permanently block.
 class BackupPickerCoordinator(
     private val reactContext: ReactApplicationContext,
     private val scope: CoroutineScope,
