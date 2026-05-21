@@ -12,10 +12,10 @@ Use this when you want a full archive of your data, when you're moving to a new 
 
 | Included | Excluded |
 | --- | --- |
-| Location history (the full SQLite database) | Activity log (would leak endpoints and SSIDs) |
+| Location history (the full SQLite database) | mTLS client certificate (private key in OS keystore - re-import the `.p12` after restore) |
 | Settings (sync, GPS, server, appearance) | Offline map tiles (re-download after restore) |
 | Geofences and tracking profiles | Cached map tiles |
-| Auth credentials (Basic, Bearer, custom headers) | mTLS client certificate (private key in OS keystore - re-import the `.p12` after restore) |
+| Auth credentials (Basic, Bearer, custom headers) | |
 | mTLS Trusted Server CA (public cert bytes) |  |
 
 The auth credentials Colota uses to reach your tracking endpoint (Basic Auth, Bearer token, custom headers) are stored as plaintext inside the encrypted container - they are protected by the backup password, not by the device's hardware-backed key. The leaked credentials let an attacker do whatever your server lets those credentials do. If you configured Colota with a credential limited to writing location data, that's all an attacker gets. If you used a credential tied to a user with broader privileges, or any token with more scope than posting locations requires, the attacker inherits that scope. Configure Colota with the minimum permission its endpoint actually needs. On restore the credentials are rewrapped under the destination device's key.
