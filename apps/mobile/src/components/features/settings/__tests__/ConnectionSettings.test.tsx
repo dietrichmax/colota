@@ -208,7 +208,7 @@ describe("ConnectionSettings", () => {
 
     it("shows choice dialog when queue has items", async () => {
       mockGetStats.mockResolvedValue({ queued: 10, sent: 50, total: 60, today: 5, databaseSizeMB: 1 })
-      mockShowChoice.mockResolvedValue(3) // Cancel
+      mockShowChoice.mockResolvedValue(2) // Cancel
       const { getAllByRole } = renderComponent({ endpoint: "https://example.com/api" })
 
       const toggle = getAllByRole("switch")[0]
@@ -253,23 +253,9 @@ describe("ConnectionSettings", () => {
       })
     })
 
-    it("deletes queue and enables offline when Delete chosen", async () => {
-      mockGetStats.mockResolvedValue({ queued: 10, sent: 50, total: 60, today: 5, databaseSizeMB: 1 })
-      mockShowChoice.mockResolvedValue(2) // Delete Queue (with endpoint)
-      const { getAllByRole } = renderComponent({ endpoint: "https://example.com/api" })
-
-      const toggle = getAllByRole("switch")[0]
-      fireEvent(toggle, "valueChange", true)
-
-      await waitFor(() => {
-        expect(mockClearQueue).toHaveBeenCalled()
-        expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ isOfflineMode: true }))
-      })
-    })
-
     it("does not enable offline when Cancel chosen", async () => {
       mockGetStats.mockResolvedValue({ queued: 10, sent: 50, total: 60, today: 5, databaseSizeMB: 1 })
-      mockShowChoice.mockResolvedValue(3) // Cancel (with endpoint)
+      mockShowChoice.mockResolvedValue(2) // Cancel (with endpoint)
       const { getAllByRole } = renderComponent({ endpoint: "https://example.com/api" })
 
       const toggle = getAllByRole("switch")[0]
