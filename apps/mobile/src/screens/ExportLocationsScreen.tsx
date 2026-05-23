@@ -4,10 +4,10 @@
  */
 
 import { useState, useEffect, useCallback } from "react"
-import { Text, StyleSheet, View, ActivityIndicator, ScrollView } from "react-native"
+import { Text, StyleSheet, View, ScrollView } from "react-native"
 import { fonts } from "../styles/typography"
-import { Download, MapPinOff } from "lucide-react-native"
-import { Container, Card, SectionTitle, Button, FormatSelector } from "../components"
+import { MapPinOff, Upload } from "lucide-react-native"
+import { Container, Card, SectionTitle, Button, FormatSelector, LoadingOverlay } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
@@ -15,7 +15,7 @@ import { logger } from "../utils/logger"
 import { showAlert } from "../services/modalService"
 import { ScreenProps } from "../types/global"
 
-export function ExportDataScreen({}: ScreenProps) {
+export function ExportLocationsScreen({}: ScreenProps) {
   const { colors } = useTheme()
   const [exporting, setExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState<string>("")
@@ -27,7 +27,7 @@ export function ExportDataScreen({}: ScreenProps) {
       const stats = await NativeLocationService.getStats()
       setTotalLocations(stats.total ?? 0)
     } catch (error) {
-      logger.error("[ExportDataScreen] Failed to load stats:", error)
+      logger.error("[ExportLocationsScreen] Failed to load stats:", error)
     }
   }, [])
 
@@ -64,10 +64,10 @@ export function ExportDataScreen({}: ScreenProps) {
           `Colota Export - ${result.rowCount} locations`
         )
       } catch (shareError: any) {
-        logger.warn("[ExportDataScreen] Share error:", shareError)
+        logger.warn("[ExportLocationsScreen] Share error:", shareError)
       }
     } catch (error) {
-      logger.error("[ExportDataScreen] Export failed:", error)
+      logger.error("[ExportLocationsScreen] Export failed:", error)
       showAlert("Export Failed", "Unable to export your data. Please try again.", "error")
     } finally {
       setExporting(false)
@@ -79,11 +79,6 @@ export function ExportDataScreen({}: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Export Data</Text>
-        </View>
-
         {totalLocations === 0 ? (
           <Card style={styles.emptyCard}>
             <View style={styles.emptyState}>
@@ -123,7 +118,7 @@ export function ExportDataScreen({}: ScreenProps) {
                   onPress={() => handleExport(selectedFormat)}
                   disabled={exporting}
                   title={`Export ${EXPORT_FORMATS[selectedFormat].label}`}
-                  icon={Download}
+                  icon={Upload}
                 />
               </View>
             )}
@@ -131,16 +126,7 @@ export function ExportDataScreen({}: ScreenProps) {
         )}
       </ScrollView>
 
-      {/* Loading Overlay */}
-      {exporting && (
-        <View style={[styles.loader, { backgroundColor: colors.overlay }]}>
-          <View style={[styles.loaderCard, { backgroundColor: colors.card }]}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.loaderTitle, { color: colors.text }]}>Exporting Data</Text>
-            <Text style={[styles.loaderText, { color: colors.textSecondary }]}>{exportProgress}</Text>
-          </View>
-        </View>
-      )}
+      <LoadingOverlay visible={exporting} title="Exporting Data" message={exportProgress} />
     </Container>
   )
 }
@@ -148,16 +134,8 @@ export function ExportDataScreen({}: ScreenProps) {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
+    paddingTop: 20,
     paddingBottom: 40
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 20
-  },
-  title: {
-    fontSize: 28,
-    ...fonts.bold,
-    letterSpacing: -0.5
   },
   emptyCard: {
     marginBottom: 24
@@ -206,36 +184,6 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24
-  },
-  loader: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 999,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  loaderCard: {
-    padding: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    minWidth: 240
-  },
-  loaderTitle: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginTop: 16,
-    marginBottom: 8
-  },
-  loaderText: {
-    fontSize: 13,
-    textAlign: "center"
   },
   exportButtonWrapper: {
     marginBottom: 16

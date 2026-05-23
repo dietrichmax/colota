@@ -21,7 +21,8 @@ export type RootStackParamList = {
   "Geofence Editor": { geofenceId?: number; name?: string; radius?: number; lat?: number; lon?: number } | undefined
   "Location History": { initialTab?: InspectorTab; initialDate?: string } | undefined
   "Location Summary": undefined
-  "Export Data": undefined
+  "Export Locations": undefined
+  "Import Locations": undefined
   "Auto-Export": undefined
   "Data Management": undefined
   "Tracking Profiles": undefined

@@ -24,7 +24,8 @@ class LocationServicePackage : ReactPackage {
             LocationServiceModule(reactContext),
             MtlsBridgeModule(reactContext),
             BuildConfigModule(reactContext),
-            BackupServiceModule(reactContext)
+            BackupServiceModule(reactContext),
+            ImportServiceModule(reactContext)
         )
     }
 

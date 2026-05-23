@@ -29,6 +29,8 @@ import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 
+const BACKUP_TIP = "Tip: back up your data first (Settings -> Backup & Restore)."
+
 export function DataManagementScreen({}: ScreenProps) {
   const { colors } = useTheme()
   const { settings } = useTracking()
@@ -161,7 +163,7 @@ export function DataManagementScreen({}: ScreenProps) {
   const handleClearSentHistory = useCallback(async () => {
     const confirmed = await showConfirm({
       title: "Clear Sent History",
-      message: `Delete ${stats.sent} sent location${stats.sent !== 1 ? "s" : ""}? This cannot be undone.`,
+      message: `Delete ${stats.sent} sent location${stats.sent !== 1 ? "s" : ""}? This cannot be undone.\n\n${BACKUP_TIP}`,
       confirmText: "Clear",
       destructive: true
     })
@@ -176,7 +178,7 @@ export function DataManagementScreen({}: ScreenProps) {
   const handleClearQueue = useCallback(async () => {
     const confirmed = await showConfirm({
       title: "Clear Queue",
-      message: `Delete ${stats.queued} pending location${stats.queued !== 1 ? "s" : ""}? These will not be synced.`,
+      message: `Delete ${stats.queued} pending location${stats.queued !== 1 ? "s" : ""}? These will not be synced.\n\n${BACKUP_TIP}`,
       confirmText: "Clear",
       destructive: true
     })
@@ -191,7 +193,7 @@ export function DataManagementScreen({}: ScreenProps) {
   const handleDeleteAllLocations = useCallback(async () => {
     const confirmed = await showConfirm({
       title: "Delete All Locations",
-      message: `Delete all ${stats.total} stored location${stats.total !== 1 ? "s" : ""}? This cannot be undone.`,
+      message: `Delete all ${stats.total} stored location${stats.total !== 1 ? "s" : ""}? This cannot be undone.\n\n${BACKUP_TIP}`,
       confirmText: "Delete All",
       destructive: true
     })
@@ -212,7 +214,7 @@ export function DataManagementScreen({}: ScreenProps) {
 
     const confirmed = await showConfirm({
       title: "Delete Old Locations",
-      message: `Delete all locations older than ${days} day${days !== 1 ? "s" : ""}? This cannot be undone.`,
+      message: `Delete all locations older than ${days} day${days !== 1 ? "s" : ""}? This cannot be undone.\n\n${BACKUP_TIP}`,
       confirmText: "Delete",
       destructive: true
     })

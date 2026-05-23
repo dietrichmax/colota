@@ -20,6 +20,7 @@ import {
   Palette,
   Database,
   Download,
+  Upload,
   Map,
   ScrollText,
   ShieldCheck,
@@ -176,11 +177,19 @@ export function SettingsScreen({ navigation }: Props) {
             />
             <Divider />
             <ListItem
-              testID="nav-export-data"
+              testID="nav-import-locations"
               icon={Download}
-              label="Export Data"
+              label="Import Locations"
+              sub="Merge locations from a GeoJSON or Google Timeline file"
+              onPress={() => navigation.navigate("Import Locations")}
+            />
+            <Divider />
+            <ListItem
+              testID="nav-export-locations"
+              icon={Upload}
+              label="Export Locations"
               sub="Export locations as CSV, GeoJSON, GPX or KML"
-              onPress={() => navigation.navigate("Export Data")}
+              onPress={() => navigation.navigate("Export Locations")}
             />
             <Divider />
             <ListItem
@@ -192,19 +201,19 @@ export function SettingsScreen({ navigation }: Props) {
             />
             <Divider />
             <ListItem
-              testID="nav-offline-maps"
-              icon={Map}
-              label="Offline Maps"
-              sub="Download map tiles for use without internet"
-              onPress={() => navigation.navigate("Offline Maps")}
-            />
-            <Divider />
-            <ListItem
               testID="nav-backup-restore"
               icon={ShieldCheck}
               label="Backup & Restore"
               sub="Encrypted backup of all your data"
               onPress={() => navigation.navigate("Backup & Restore")}
+            />
+            <Divider />
+            <ListItem
+              testID="nav-offline-maps"
+              icon={Map}
+              label="Offline Maps"
+              sub="Download map tiles for use without internet"
+              onPress={() => navigation.navigate("Offline Maps")}
             />
             <Divider />
             <ListItem

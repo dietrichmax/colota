@@ -6,7 +6,7 @@ sidebar_position: 3
 
 Bundle your locations, settings and credentials into a single password-encrypted file you can store anywhere - cloud drive, USB stick, another device.
 
-Use this when you want a full archive of your data, when you're moving to a new device, or as insurance before clearing data. For day-to-day analysis or sharing tracks, use [Data Export](data-export.md) instead.
+Use this when you want a full archive of your data, when you're moving to a new device, or as insurance before clearing data. For day-to-day analysis or sharing tracks, use [Data Export](data-export.md) instead. If you only need to **merge** locations from another file into your existing history without overwriting, use [Data Import](data-import.md) - that path is additive with duplicate-skipping, while Restore here is replace-everything.
 
 ## What's Included
 
