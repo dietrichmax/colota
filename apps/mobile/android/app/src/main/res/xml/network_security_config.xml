@@ -6,7 +6,7 @@
         self-hosted servers on private networks (10.x.x.x, 192.168.x.x, 172.16-31.x.x).
 
         Actual enforcement happens at the app level:
-          - NetworkManager.isValidProtocol() restricts HTTP to private hosts
+          - UrlSafety.isValidProtocol() restricts HTTP to private hosts
           - settingsValidation.isEndpointAllowed() blocks public HTTP endpoints in the UI
 
         Trust anchors: system only. User-installed device CAs are deliberately

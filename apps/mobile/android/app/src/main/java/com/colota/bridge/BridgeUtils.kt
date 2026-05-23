@@ -7,6 +7,7 @@ package com.Colota.bridge
 
 import com.Colota.util.AppLogger
 import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReadableArray
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,3 +34,10 @@ internal fun CoroutineScope.launchForPromise(
         }
     }
 }
+
+/**
+ * Converts a JS-side array of UTF-16 code points (passed as ints) to a CharArray.
+ * Used for passwords so the secret never lands in a Java String's intern pool.
+ */
+internal fun readableArrayToCharArray(codes: ReadableArray): CharArray =
+    CharArray(codes.size()) { i -> codes.getInt(i).toChar() }

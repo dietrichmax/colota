@@ -166,9 +166,13 @@ Orchestrates batch location uploads with:
 
 ### NetworkManager
 
-HTTP client. Validates endpoints, enforces HTTPS for public hosts, injects auth headers, caches connectivity checks, and detects unmetered connections, specific SSIDs and VPN status for sync condition filtering.
+HTTP client. Injects auth headers, caches connectivity checks, and detects unmetered connections, specific SSIDs and VPN status for sync condition filtering. Endpoint policy (HTTPS-for-public, private host detection) is delegated to `UrlSafety`.
 
 For mTLS-protected endpoints, builds the `HttpsURLConnection` with a custom `SSLSocketFactory` supplied by `ClientCertSslContextProvider` (per-instance, never `setDefaultSSLSocketFactory()` - the override is scoped to outbound location sync, not the whole process).
+
+### UrlSafety
+
+HTTP endpoint policy: HTTPS is required for public hosts, HTTP is only allowed when the host resolves to a private/local address (loopback, RFC 1918 site-local, link-local, or CGNAT 100.64.0.0/10). Resolves hostnames via `InetAddress` so server.local-style mDNS names work, with a per-hostname cache. Pure validation with no transport state, also exposed to the JS bridge for pre-save endpoint checks.
 
 ### ClientCertSslContextProvider
 
@@ -229,7 +233,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `MotionStateDetector` / `RawSensorMotionDetector` | Single detector behind a `MotionState { STATIONARY, MOVING }` interface. Backed by 30s-batched accelerometer variance (hysteresis: > 0.30 m/s² for 3s -> MOVING; < 0.15 m/s² for the configured per-zone dwell -> STATIONARY) and parallel `TYPE_SIGNIFICANT_MOTION` as a fast-path for sharp events. Fans out to both motionless-pause and stationary-profile exit consumers via one callback site in `LocationForegroundService.onMotionStateChange`. |
 | `DeviceInfoHelper` | Device metadata and battery status with caching |
 | `FileOperations` | File I/O, sharing via FileProvider, and clipboard access |
-| `PayloadBuilder` | Builds JSON payloads with dynamic field mapping |
+| `PayloadBuilder` | Builds outgoing JSON payloads (field-mapped, Overland batch envelope, Traccar JSON) and extracts envelope custom fields |
 | `ServiceConfig` | Centralized configuration data class |
 | `TimedCache` | Generic TTL cache used for queue count, device info, profiles, and network state |
 | `BuildConfigModule` | Exposes build constants (SDK versions, app version) to JS |

@@ -24,6 +24,7 @@ import com.Colota.service.getIntOrNull
 import com.Colota.service.getStringOrNull
 import com.Colota.service.getBooleanOrNull
 import com.Colota.sync.NetworkManager
+import com.Colota.sync.UrlSafety
 import com.Colota.util.DeviceInfoHelper
 import com.Colota.export.AutoExportConfig
 import com.Colota.export.AutoExportScheduler
@@ -668,12 +669,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun isValidEndpointProtocol(endpoint: String, promise: Promise) = executeAsync(promise) {
-        networkManager.isValidProtocol(endpoint)
+        UrlSafety.isValidProtocol(endpoint)
     }
 
     @ReactMethod
     fun isPrivateEndpoint(endpoint: String, promise: Promise) = executeAsync(promise) {
-        networkManager.isPrivateEndpoint(endpoint)
+        UrlSafety.isPrivateEndpoint(endpoint)
     }
 
     @ReactMethod

@@ -17,6 +17,23 @@ object PayloadBuilder {
 
     private const val TAG = "PayloadBuilder"
 
+    // Field names buildLocationPayload writes when usesFixedFieldNames=true. Anything else in
+    // an outgoing payload is a user-configured custom field (device_id, tid, etc.) and lifts
+    // to envelope level via extractEnvelopeCustomFields.
+    private val canonicalLocationKeys = setOf("lat", "lon", "acc", "alt", "vel", "batt", "bs", "tst", "bear")
+
+    fun extractEnvelopeCustomFields(payload: JSONObject): Map<String, String> {
+        val fields = mutableMapOf<String, String>()
+        val keys = payload.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            if (key !in canonicalLocationKeys) {
+                fields[key] = payload.optString(key, "")
+            }
+        }
+        return fields
+    }
+
     fun buildLocationPayload(
         location: Location,
         timestamp: Long,

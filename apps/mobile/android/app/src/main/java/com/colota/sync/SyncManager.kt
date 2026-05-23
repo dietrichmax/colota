@@ -37,10 +37,6 @@ class SyncManager(
     @Volatile private var apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED
     @Volatile private var overlandBatchSize: Int = 50
 
-    // Names PayloadBuilder writes when usesFixedFieldNames=true. Anything else in the payload
-    // is a user-configured custom field (device_id, tid, etc.) and lifts to envelope level.
-    private val canonicalLocationKeys = setOf("lat", "lon", "acc", "alt", "vel", "batt", "bs", "tst", "bear")
-
     private var syncJob: Job? = null
     @Volatile private var lastSyncTime: Long = 0
     @Volatile var lastSuccessfulSyncTime: Long = 0
@@ -345,7 +341,7 @@ class SyncManager(
 
         val parseableItems = parsed.map { it.first }
         val payloads = parsed.map { it.second }
-        val customFields = extractEnvelopeCustomFields(payloads.first())
+        val customFields = PayloadBuilder.extractEnvelopeCustomFields(payloads.first())
 
         val result = networkManager.sendBatchToEndpoint(
             items = payloads,
@@ -385,18 +381,6 @@ class SyncManager(
                 BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
             }
         }
-    }
-
-    private fun extractEnvelopeCustomFields(payload: JSONObject): Map<String, String> {
-        val fields = mutableMapOf<String, String>()
-        val keys = payload.keys()
-        while (keys.hasNext()) {
-            val key = keys.next()
-            if (key !in canonicalLocationKeys) {
-                fields[key] = payload.optString(key, "")
-            }
-        }
-        return fields
     }
 
     private fun calculateNextSyncDelay(): Long {
