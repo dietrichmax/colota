@@ -8,7 +8,7 @@ package com.Colota.sync
 /**
  * Supported outbound payload formats. FIELD_MAPPED applies the user's fieldMap;
  * TRACCAR_JSON uses fixed internal field names so the wire transform in
- * NetworkManager.buildTraccarJsonPayload can read them back unambiguously.
+ * PayloadBuilder.buildTraccarJsonPayload can read them back unambiguously.
  *
  * Wire names are the string values persisted in settings and on the JS bridge.
  */
