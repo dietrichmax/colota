@@ -33,4 +33,24 @@ object AppLogger {
         val t = PREFIX + tag
         if (throwable != null) Log.e(t, msg, throwable) else Log.e(t, msg)
     }
+
+    private val sensitiveHeaderPatterns = listOf(
+        "authorization", "bearer", "token", "secret", "password", "api-key", "apikey"
+    )
+
+    /**
+     * Masks the value of sensitive HTTP headers before logging.
+     * Shows the first 4 characters followed by "***", or "***" for values shorter than 5.
+     */
+    fun maskSensitiveHeaderValue(headerName: String, headerValue: String): String {
+        val nameLower = headerName.lowercase()
+        val isSensitive = sensitiveHeaderPatterns.any { pattern -> nameLower.contains(pattern) }
+        if (!isSensitive) return headerValue
+
+        return if (headerValue.length > 4) {
+            "${headerValue.substring(0, 4)}***"
+        } else {
+            "***"
+        }
+    }
 }

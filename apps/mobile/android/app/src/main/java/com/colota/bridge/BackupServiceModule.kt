@@ -356,7 +356,4 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
         else -> "E_BACKUP_UNKNOWN"
     }
 
-    private fun readableArrayToCharArray(codes: ReadableArray): CharArray {
-        return CharArray(codes.size()) { i -> codes.getInt(i).toChar() }
-    }
 }

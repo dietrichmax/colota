@@ -167,95 +167,13 @@ class NetworkManager(private val context: Context) {
         AppLogger.d(TAG, "Method: ${connection.requestMethod}")
         AppLogger.d(TAG, "Headers:")
         connection.requestProperties.forEach { (key, values) ->
-            val masked = values.map { maskSensitiveHeaderValue(key, it) }
+            val masked = values.map { AppLogger.maskSensitiveHeaderValue(key, it) }
             AppLogger.d(TAG, "$key: ${masked.joinToString()}")
         }
         if (!isGet) {
             AppLogger.d(TAG, "Body: ${payload.toString(2)}")
         }
         AppLogger.d(TAG, "===================")
-    }
-
-    /**
-     * Returns true if the endpoint's host resolves to a private/local address.
-     * Performs DNS resolution and caches the result.
-     */
-    fun isPrivateEndpoint(endpoint: String): Boolean {
-        val host = try {
-            URL(endpoint).host ?: return false
-        } catch (_: Exception) { return false }
-        return isPrivateHost(host)
-    }
-
-    /**
-     * Validates that the endpoint uses an allowed protocol.
-     * HTTPS is required for public hosts; HTTP is only allowed for private/local addresses.
-     * Performs DNS resolution to detect hostnames that resolve to private IPs.
-     */
-    fun isValidProtocol(endpoint: String): Boolean {
-        val url = try { URL(endpoint) } catch (_: Exception) { return false }
-        val protocol = url.protocol.lowercase()
-        val host = url.host ?: return false
-
-        if (protocol != "http" && protocol != "https") return false
-
-        if (protocol == "http" && !isPrivateHost(host)) {
-            return false
-        }
-        return true
-    }
-
-    /** Per-hostname cache of the DNS lookup + private-range check. */
-    private val privateHostCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
-
-    /**
-     * Checks if the given host is private or local.
-     * Matches Android's local network definition:
-     * loopback, site-local (RFC 1918), link-local, and CGNAT (100.64.0.0/10).
-     */
-    private fun isPrivateHost(host: String): Boolean {
-        if (host == "localhost") return true
-        return privateHostCache.getOrPut(host) {
-            try {
-                val address = java.net.InetAddress.getByName(host)
-                address.isAnyLocalAddress ||
-                    address.isLoopbackAddress ||
-                    address.isSiteLocalAddress ||
-                    address.isLinkLocalAddress ||
-                    isCgnatAddress(address)
-            } catch (e: Exception) {
-                false
-            }
-        }
-    }
-
-    /** Checks if the address falls in the CGNAT range 100.64.0.0/10. */
-    private fun isCgnatAddress(address: java.net.InetAddress): Boolean {
-        val bytes = address.address
-        if (bytes.size != 4) return false
-        val a = bytes[0].toInt() and 0xFF
-        val b = bytes[1].toInt() and 0xFF
-        return a == 100 && b in 64..127
-    }
-
-    /**
-     * Masks the value of sensitive headers before logging.
-     * Shows the first 4 characters followed by "***", or the full value
-     * if it is shorter than 4 characters (replaced entirely with "***").
-     */
-    private fun maskSensitiveHeaderValue(headerName: String, headerValue: String): String {
-        val sensitivePatterns = listOf(
-            "authorization", "bearer", "token", "secret", "password", "api-key", "apikey"
-        )
-        val nameLower = headerName.lowercase()
-        val isSensitive = sensitivePatterns.any { pattern -> nameLower.contains(pattern) }
-        if (!isSensitive) return headerValue
-
-        return if (headerValue.length > 4) {
-            "${headerValue.substring(0, 4)}***"
-        } else {
-            "***"
-        }
     }
 
     suspend fun sendBatchToEndpoint(
@@ -279,7 +197,7 @@ class NetworkManager(private val context: Context) {
             return@withContext BatchResult.NetworkError
         }
 
-        if (!isValidProtocol(resolvedEndpoint)) {
+        if (!UrlSafety.isValidProtocol(resolvedEndpoint)) {
             AppLogger.e(TAG, "Protocol blocked or invalid: $endpoint")
             return@withContext BatchResult.NetworkError
         }
@@ -298,7 +216,7 @@ class NetworkManager(private val context: Context) {
             writeBody(connection, envelope)
             return@withContext readBatchResponse(connection, items.size)
         } catch (e: java.net.SocketException) {
-            if (isPrivateHost(url.host ?: "") && e.message?.contains("EPERM") == true) {
+            if (UrlSafety.isPrivateHost(url.host ?: "") && e.message?.contains("EPERM") == true) {
                 AppLogger.e(TAG, "Local network access denied - grant Local Network Access permission", e)
             } else {
                 AppLogger.e(TAG, "Network error: ${e.message}", e)
@@ -350,7 +268,7 @@ class NetworkManager(private val context: Context) {
         } catch (_: Exception) {
             return@withContext TestEndpointResult(false, errorMessage = "Invalid URL: $resolvedEndpoint")
         }
-        if (!isValidProtocol(resolvedEndpoint)) {
+        if (!UrlSafety.isValidProtocol(resolvedEndpoint)) {
             return@withContext TestEndpointResult(
                 false,
                 errorMessage = "HTTPS is required for public endpoints. HTTP is only allowed for private/local addresses."
@@ -393,7 +311,7 @@ class NetworkManager(private val context: Context) {
         } catch (e: UnrecoverableKeyException) {
             TestEndpointResult(false, errorMessage = "Client certificate password is incorrect - re-import the .p12")
         } catch (e: java.net.SocketException) {
-            val msg = if (isPrivateHost(url.host ?: "") && e.message?.contains("EPERM") == true) {
+            val msg = if (UrlSafety.isPrivateHost(url.host ?: "") && e.message?.contains("EPERM") == true) {
                 "Local network access denied - grant Local Network Access permission"
             } else "Network error: ${e.message}"
             TestEndpointResult(false, errorMessage = msg)
