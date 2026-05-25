@@ -57,7 +57,6 @@ When you toggle offline mode on with unsent locations still in the queue, a dial
 
 - **Sync First** - attempt to upload queued locations before switching (only available if an endpoint is configured)
 - **Keep in Queue** - preserve queued locations for later sync when you disable offline mode
-- **Delete Queue** - permanently delete all pending locations
 - **Cancel** - abort and stay in online mode
 
 If no locations are queued, offline mode enables immediately.

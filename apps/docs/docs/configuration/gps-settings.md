@@ -34,6 +34,12 @@ When enabled, GPS fixes with accuracy worse than the threshold are discarded. Th
 
 The Google Play variant uses Android's `HIGH_ACCURACY` positioning mode via FusedLocationProvider, which combines GPS, Wi-Fi, and cellular data. The FOSS variant uses Android's native `LocationManager` with `GPS_PROVIDER` directly.
 
+## Position-Jump Filter
+
+Some GPS chips occasionally emit a single fix that's far off (10s of km) with a wrong altitude but tight reported accuracy. The accuracy filter can't catch these because the chip lies about its own confidence on those fixes.
+
+Colota drops these automatically by comparing the chip's reported speed against the speed implied by the distance and time since the previous fix. When the two disagree by a wide margin, the fix is discarded. The filter is always on, has no user setting, and only triggers on this specific glitch pattern - normal travel passes through because the chip-reported and implied speeds agree closely.
+
 ## Stationary Detection
 
 Stationary detection is available through [tracking profiles](/docs/guides/tracking-profiles) (stationary condition) and [geofence zones](/docs/guides/geofencing) (pause when motionless). See those guides for configuration details.
