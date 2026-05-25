@@ -334,6 +334,122 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // Position-jump filter (#382) - implied-speed vs chip-Doppler-speed disagreement
+    // =========================================================================
+
+    @Test
+    fun `position-jump filter drops fix when implied speed far exceeds chip speed`() = testScope.runTest {
+        // Bug signature: chip reports 0 m/s but position jumps 1670m in 10s (implied 167 m/s).
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 10_000, distanceTo = 1670f)
+        setField("lastKnownLocation", prev)
+
+        val jump = mockLocation(hasSpeed = true, speed = 0f, time = now)
+        invokeHandleLocationUpdate(jump)
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        // Anchor must stay on prev so the next good fix is judged against a trusted point.
+        assertEquals(prev, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `position-jump filter keeps flight cruise where chip and implied agree`() = testScope.runTest {
+        // ~250 m/s (900 km/h) cruise. Both measurements agree -> ratio check passes.
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 5_000, distanceTo = 1250f)  // 1250m in 5s = 250 m/s
+        setField("lastKnownLocation", prev)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        val cruise = mockLocation(hasSpeed = true, speed = 250f, time = now)
+        invokeHandleLocationUpdate(cruise)
+
+        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `position-jump filter keeps highway driving`() = testScope.runTest {
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 2_000, distanceTo = 60f)  // 60m in 2s = 30 m/s
+        setField("lastKnownLocation", prev)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        val driving = mockLocation(hasSpeed = true, speed = 30f, time = now)
+        invokeHandleLocationUpdate(driving)
+
+        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `position-jump filter keeps stationary GPS jitter below floor`() = testScope.runTest {
+        // chip=0, implied=0.5 m/s. Implied is below the 20 m/s floor -> not flagged.
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 10_000, distanceTo = 5f)
+        setField("lastKnownLocation", prev)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        val jitter = mockLocation(hasSpeed = true, speed = 0f, time = now)
+        invokeHandleLocationUpdate(jitter)
+
+        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `position-jump filter bypassed when gap exceeds window`() = testScope.runTest {
+        // 10-minute gap (e.g. post-airplane-mode, deep sleep resume). Implied is huge but
+        // we cannot judge it, so the first fix after a long pause is accepted unconditionally.
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 600_000, distanceTo = 50_000f)
+        setField("lastKnownLocation", prev)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        val resume = mockLocation(hasSpeed = true, speed = 0f, time = now)
+        invokeHandleLocationUpdate(resume)
+
+        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `position-jump filter skipped when chip omits speed`() = testScope.runTest {
+        // Without chip-Doppler speed there's nothing to compare against, so we can't tell
+        // a jump from a legitimate fast fix - accept rather than false-drop flight fixes.
+        val now = System.currentTimeMillis()
+        val prev = mockLocation(time = now - 10_000, distanceTo = 1670f)
+        setField("lastKnownLocation", prev)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        val noSpeed = mockLocation(hasSpeed = false, time = now)
+        invokeHandleLocationUpdate(noSpeed)
+
+        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `position-jump filter not applied on first fix without previous anchor`() = testScope.runTest {
+        // No lastKnownLocation -> nothing to compare against; first fix is always accepted.
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        val firstFix = mockLocation(hasSpeed = true, speed = 0f)
+        invokeHandleLocationUpdate(firstFix)
+
+        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `consecutive position-jumps both dropped with anchor stuck on last good fix`() = testScope.runTest {
+        val t0 = System.currentTimeMillis()
+        val anchor = mockLocation(time = t0, distanceTo = 1670f)
+        setField("lastKnownLocation", anchor)
+
+        val jump1 = mockLocation(hasSpeed = true, speed = 0f, time = t0 + 10_000)
+        invokeHandleLocationUpdate(jump1)
+        val jump2 = mockLocation(hasSpeed = true, speed = 0f, time = t0 + 20_000)
+        invokeHandleLocationUpdate(jump2)
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        assertEquals(anchor, getField<Location?>("lastKnownLocation"))
+    }
+
+    // =========================================================================
     // applySpeedFallback
     // =========================================================================
 

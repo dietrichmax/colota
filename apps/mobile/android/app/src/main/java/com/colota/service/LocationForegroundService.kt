@@ -128,6 +128,14 @@ class LocationForegroundService : Service() {
         private const val WIFI_RESUME_DEBOUNCE_MS = 2_000L
         /** Cadence at which the tracking heartbeat logs time-since-last-fix for diagnostics. */
         private const val TRACKING_HEARTBEAT_INTERVAL_MS = 5 * 60_000L
+
+        /** Stationary-jitter floor for the position-jump filter. */
+        private const val POSITION_JUMP_FILTER_MIN_IMPLIED_MPS = 20f
+        /** Implied speed must exceed chip-Doppler by this factor to count as a jump. */
+        private const val POSITION_JUMP_FILTER_RATIO = 5f
+        /** Gaps above this bypass the filter so post-resume fixes aren't dropped. */
+        private const val POSITION_JUMP_FILTER_WINDOW_MS = 300_000L
+
         const val ACTION_MANUAL_FLUSH = "com.Colota.ACTION_MANUAL_FLUSH"
         const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
         const val ACTION_REFRESH_NOTIFICATION = "com.Colota.REFRESH_NOTIFICATION"
@@ -610,6 +618,20 @@ class LocationForegroundService : Service() {
             && location.longitude == prev.longitude) {
             AppLogger.d(TAG, "Duplicate location skipped (same timestamp and coords)")
             return
+        }
+
+        // Position-jump filter: chip-reported and implied speed are independent signals; large disagreement means the chip hallucinated position.
+        if (prev != null && location.hasSpeed()) {
+            val dt = location.time - prev.time
+            if (dt in 1000..POSITION_JUMP_FILTER_WINDOW_MS) {
+                val distance = prev.distanceTo(location)
+                val implied = distance / (dt / 1000f)
+                if (implied > POSITION_JUMP_FILTER_MIN_IMPLIED_MPS
+                    && implied > location.speed * POSITION_JUMP_FILTER_RATIO) {
+                    AppLogger.w(TAG, "Location filtered: implied ${String.format(Locale.US, "%.1f", implied)}m/s vs chip ${String.format(Locale.US, "%.1f", location.speed)}m/s (dist ${String.format(Locale.US, "%.1f", distance)}m, dt ${dt}ms)")
+                    return
+                }
+            }
         }
 
         applySpeedFallback(location)

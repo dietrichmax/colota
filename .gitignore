@@ -59,3 +59,11 @@ test-output.txt
 testers
 apps/mobile/test-checklist.md
 gitnote.md
+
+# Server
+apps/server/.env
+apps/server/config/users.toml
+apps/server/data/
+apps/server/dist
+apps/server/web/dist
+
