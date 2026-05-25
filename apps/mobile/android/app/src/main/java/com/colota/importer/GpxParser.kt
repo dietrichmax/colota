@@ -57,8 +57,8 @@ object GpxParser {
         while (!(event == XmlPullParser.END_TAG && parser.name == pointName)) {
             if (event == XmlPullParser.START_TAG) {
                 when (parser.name) {
-                    "ele" -> altitude = readTextOrNull(parser)?.toDoubleOrNull()?.toInt()
-                    "time" -> ts = readTextOrNull(parser)?.let { parseIso8601Seconds(it) }
+                    "ele" -> altitude = parser.readTextOrNull()?.toDoubleOrNull()?.toInt()
+                    "time" -> ts = parser.readTextOrNull()?.let { parseIso8601Seconds(it) }
                     "extensions" -> readExtensions(parser) { extName, value ->
                         when (extName.lowercase()) {
                             "accuracy" -> accuracy = value.toDoubleOrNull()?.toInt()
@@ -67,7 +67,7 @@ object GpxParser {
                             "battery" -> battery = value.toDoubleOrNull()?.toInt()
                         }
                     }
-                    else -> skipElement(parser)
+                    else -> parser.skipElement()
                 }
             }
             event = parser.next()
@@ -94,7 +94,7 @@ object GpxParser {
         while (!(event == XmlPullParser.END_TAG && parser.name == "extensions")) {
             if (event == XmlPullParser.START_TAG) {
                 val name = parser.name
-                val text = readTextOrNull(parser)
+                val text = parser.readTextOrNull()
                 if (text != null) {
                     onValue(name, text)
                 } else {
@@ -114,30 +114,10 @@ object GpxParser {
         while (!(event == XmlPullParser.END_TAG && parser.name == containerName)) {
             if (event == XmlPullParser.START_TAG) {
                 val leafName = parser.name
-                val text = readTextOrNull(parser)
-                if (text != null) onValue(leafName, text) else skipElement(parser)
+                val text = parser.readTextOrNull()
+                if (text != null) onValue(leafName, text) else parser.skipElement()
             }
             event = parser.next()
-        }
-    }
-
-    private fun readTextOrNull(parser: XmlPullParser): String? {
-        val event = parser.next()
-        if (event != XmlPullParser.TEXT) return null
-        val text = parser.text?.trim()?.takeIf { it.isNotEmpty() }
-        parser.next()
-        return text
-    }
-
-    private fun skipElement(parser: XmlPullParser) {
-        if (parser.eventType != XmlPullParser.START_TAG) return
-        var depth = 1
-        while (depth > 0) {
-            when (parser.next()) {
-                XmlPullParser.END_TAG -> depth--
-                XmlPullParser.START_TAG -> depth++
-                XmlPullParser.END_DOCUMENT -> return
-            }
         }
     }
 }
