@@ -48,6 +48,7 @@ const sidebars: SidebarsConfig = {
         "guides/geofencing",
         "guides/tracking-profiles",
         "guides/app-shortcuts",
+        "guides/data-import",
         "guides/data-export",
         "guides/data-management",
         "guides/backup-restore",
