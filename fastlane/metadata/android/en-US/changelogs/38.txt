@@ -1,5 +1,7 @@
 - Encrypted backup and restore: bundle your locations, settings and credentials into a single password-encrypted .colota file you can store anywhere. Restore on the same device or migrate to a new one. There is no password recovery, so use one you won't forget.
+- Import location history from external files: read GeoJSON, Google Timeline, GPX, KML or CSV from your device, dedupe against existing data and optionally push the new rows to your sync backend.
 - mTLS client certificate support: configure a client certificate in the new mTLS Settings screen, either by picking one already installed on the device (key stays in the OS keystore) or by importing a .p12 / .pfx file. Required if your server enforces mutual TLS.
 - Self-signed / private CA support: import a Trusted Server CA in the same screen for self-hosted servers without publicly-trusted certificates.
 - Stricter TLS trust (breaking): user-installed CAs from Android Settings -> Encryption & credentials are no longer trusted by Colota. If you relied on one, re-import via the new mTLS Settings screen.
 - Removed the "Delete Queue" button from the offline-mode switch dialog.
+- Filter occasional GPS teleport outliers
