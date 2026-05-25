@@ -20,7 +20,8 @@ const sidebars: SidebarsConfig = {
         "configuration/gps-settings",
         "configuration/server-settings",
         "configuration/field-mapping",
-        "configuration/authentication"
+        "configuration/authentication",
+        "configuration/mtls"
       ]
     },
     {
