@@ -17,12 +17,12 @@
   },
   "devDependencies": {
     "prettier": "^3.8.3",
-    "react-test-renderer": "19.2.3"
+    "react-test-renderer": "19.2.6"
   },
   "overrides": {
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-test-renderer": "19.2.3"
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-test-renderer": "19.2.6"
   },
   "engines": {
     "node": ">=20"
