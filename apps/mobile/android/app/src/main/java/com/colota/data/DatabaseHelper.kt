@@ -361,6 +361,91 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
+    // Single-transaction bulk insert for imports. Rows go in with sent=1 (skip the queue)
+    // by default; pass non-null payloads to also enqueue them with sent=0.
+    fun bulkInsertImportedLocations(
+        rows: List<com.Colota.importer.ImportRow>,
+        payloads: List<String>? = null,
+    ): Int {
+        requireNotRestoring()
+        if (rows.isEmpty()) return 0
+        require(payloads == null || payloads.size == rows.size) {
+            "payloads length (${payloads?.size}) must match rows length (${rows.size})"
+        }
+        val db = writableDatabase
+        val locationSql = """
+            INSERT INTO $TABLE_LOCATIONS
+            (latitude, longitude, accuracy, altitude, speed, bearing, battery, timestamp, sent, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.trimIndent()
+        val queueSql = """
+            INSERT INTO $TABLE_QUEUE
+            (location_id, payload, retry_count, created_at)
+            VALUES (?, ?, 0, ?)
+        """.trimIndent()
+        val sentFlag: Long = if (payloads == null) 1L else 0L
+        val nowSec = System.currentTimeMillis() / 1000
+        var inserted = 0
+        db.beginTransaction()
+        try {
+            val locationStmt = db.compileStatement(locationSql)
+            val queueStmt = if (payloads != null) db.compileStatement(queueSql) else null
+            try {
+                for ((i, row) in rows.withIndex()) {
+                    locationStmt.clearBindings()
+                    locationStmt.bindDouble(1, row.latitude)
+                    locationStmt.bindDouble(2, row.longitude)
+                    if (row.accuracy != null) locationStmt.bindLong(3, row.accuracy.toLong()) else locationStmt.bindNull(3)
+                    if (row.altitude != null) locationStmt.bindLong(4, row.altitude.toLong()) else locationStmt.bindNull(4)
+                    if (row.speed != null) locationStmt.bindLong(5, row.speed.toLong()) else locationStmt.bindNull(5)
+                    if (row.bearing != null) locationStmt.bindDouble(6, row.bearing) else locationStmt.bindNull(6)
+                    if (row.battery != null) locationStmt.bindLong(7, row.battery.toLong()) else locationStmt.bindNull(7)
+                    locationStmt.bindLong(8, row.timestamp)
+                    locationStmt.bindLong(9, sentFlag)
+                    locationStmt.bindLong(10, nowSec)
+                    val locationId = locationStmt.executeInsert()
+                    if (locationId == -1L) continue
+                    inserted++
+                    if (queueStmt != null && payloads != null) {
+                        queueStmt.clearBindings()
+                        queueStmt.bindLong(1, locationId)
+                        queueStmt.bindString(2, payloads[i])
+                        queueStmt.bindLong(3, nowSec)
+                        queueStmt.executeInsert()
+                    }
+                }
+            } finally {
+                locationStmt.close()
+                queueStmt?.close()
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return inserted
+    }
+
+    // ASC-sorted stream of (ts, lat, lon) triples for merge-walk dedup. Memory stays
+    // O(1) because the caller never materialises the existing-key set.
+    fun forEachLocationKeyInRange(
+        startTs: Long,
+        endTs: Long,
+        consumer: (Long, Double, Double) -> Unit,
+    ) {
+        readableDatabase.query(
+            TABLE_LOCATIONS,
+            arrayOf("timestamp", "latitude", "longitude"),
+            "timestamp >= ? AND timestamp <= ?",
+            arrayOf(startTs.toString(), endTs.toString()),
+            null, null,
+            "timestamp ASC, latitude ASC, longitude ASC",
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                consumer(cursor.getLong(0), cursor.getDouble(1), cursor.getDouble(2))
+            }
+        }
+    }
+
     fun saveLocation(
         latitude: Double,
         longitude: Double,

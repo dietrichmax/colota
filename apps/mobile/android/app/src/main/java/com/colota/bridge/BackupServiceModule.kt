@@ -13,7 +13,6 @@ import com.Colota.backup.BackupBuilder
 import com.Colota.backup.BackupException
 import com.Colota.backup.BackupForegroundService
 import com.Colota.backup.BackupOrphanCleanup
-import com.Colota.backup.BackupPickerCoordinator
 import com.Colota.backup.BackupRestorer
 import com.Colota.backup.PasswordStrength
 import com.Colota.data.DatabaseHelper
@@ -22,6 +21,7 @@ import com.Colota.export.AutoExportScheduler
 import com.Colota.export.AutoExportWorker
 import com.Colota.service.LocationForegroundService
 import com.Colota.util.AppLogger
+import com.Colota.util.SafPickerCoordinator
 import com.facebook.react.ReactApplication
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
@@ -60,11 +60,17 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
 
         private const val SERVICE_STOP_TIMEOUT_MS = 5_000L
         private const val SERVICE_STOP_POLL_MS = 50L
+
+        private const val REQUEST_PICK_DESTINATION = 9101
+        private const val REQUEST_PICK_SOURCE = 9102
+
+        private const val DEFAULT_BACKUP_FILENAME = "colota_backup.colota"
+        private const val MIME_BACKUP = "application/octet-stream"
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val operationMutex = Mutex()
-    private val pickerCoordinator = BackupPickerCoordinator(reactContext, scope)
+    private val pickerCoordinator = SafPickerCoordinator(reactContext, scope)
 
     override fun getName() = "BackupServiceModule"
 
@@ -76,12 +82,22 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun pickBackupDestination(promise: Promise) {
-        pickerCoordinator.pickDestination(promise)
+        pickerCoordinator.pickCreateDocument(
+            mime = MIME_BACKUP,
+            defaultName = DEFAULT_BACKUP_FILENAME,
+            requestCode = REQUEST_PICK_DESTINATION,
+            promise = promise,
+        )
     }
 
     @ReactMethod
     fun pickBackupSource(promise: Promise) {
-        pickerCoordinator.pickSource(promise)
+        pickerCoordinator.pickOpenDocument(
+            mime = MIME_BACKUP,
+            extraMimes = null,
+            requestCode = REQUEST_PICK_SOURCE,
+            promise = promise,
+        )
     }
 
     @ReactMethod

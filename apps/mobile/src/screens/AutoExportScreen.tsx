@@ -347,7 +347,6 @@ export function AutoExportScreen(_props: ScreenProps) {
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Auto-Export</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Automatically export your location data on a schedule
           </Text>
@@ -595,14 +594,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 20
   },
-  title: {
-    fontSize: 28,
-    ...fonts.bold,
-    letterSpacing: -0.5
-  },
   subtitle: {
     fontSize: 14,
-    marginTop: 4,
     lineHeight: 20
   },
   section: {

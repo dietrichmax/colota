@@ -235,11 +235,12 @@ describe("AutoExportScreen", () => {
     mockGetExportFiles.mockResolvedValue([])
   })
 
-  it("renders title and subtitle", async () => {
+  it("renders subtitle", async () => {
+    // The "Auto-Export" page title lives in the navigation header, not the screen body
+    // (removed to avoid duplicating the nav-bar title), so we only assert on the subtitle.
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Auto-Export")).toBeTruthy()
       expect(getByText("Automatically export your location data on a schedule")).toBeTruthy()
     })
   })
@@ -570,7 +571,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Auto-Export")).toBeTruthy()
+      expect(getByText("Automatically export your location data on a schedule")).toBeTruthy()
     })
 
     await waitFor(() => {
@@ -661,7 +662,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Auto-Export")).toBeTruthy()
+      expect(getByText("Automatically export your location data on a schedule")).toBeTruthy()
     })
 
     await act(async () => {
@@ -855,7 +856,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Auto-Export")).toBeTruthy()
+      expect(getByText("Automatically export your location data on a schedule")).toBeTruthy()
     })
 
     await act(async () => {

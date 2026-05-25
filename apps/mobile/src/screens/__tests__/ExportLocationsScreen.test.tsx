@@ -162,6 +162,15 @@ jest.mock("../../components", () => {
           )
         })
       )
+    },
+    LoadingOverlay: function (props: any) {
+      if (!props.visible) return null
+      return R.createElement(
+        RN.View,
+        { testID: "loading-overlay" },
+        R.createElement(RN.Text, null, props.title),
+        props.message ? R.createElement(RN.Text, null, props.message) : null
+      )
     }
   }
 })
@@ -186,9 +195,9 @@ jest.mock("lucide-react-native", () => {
   }
 })
 
-import { ExportDataScreen } from "../ExportDataScreen"
+import { ExportLocationsScreen } from "../ExportLocationsScreen"
 
-describe("ExportDataScreen", () => {
+describe("ExportLocationsScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetStats.mockResolvedValue({ total: 100 })
@@ -202,14 +211,16 @@ describe("ExportDataScreen", () => {
   const mockNavigation = { navigate: jest.fn() } as any
 
   function renderScreen() {
-    return render(<ExportDataScreen navigation={mockNavigation} />)
+    return render(<ExportLocationsScreen navigation={mockNavigation} />)
   }
 
-  it("shows Export Data title", async () => {
+  it("renders the format selector", async () => {
+    // The "Export Locations" page title lives in the navigation header, not the screen
+    // body, so this smoke test asserts on the SectionTitle that anchors the page content.
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Export Data")).toBeTruthy()
+      expect(getByText("Select Format")).toBeTruthy()
     })
   })
 

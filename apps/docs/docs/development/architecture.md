@@ -54,7 +54,7 @@ All native code lives in `apps/mobile/android/app/src/`, organized by build flav
 
 ### Bridge Modules
 
-Two React Native bridge modules are registered by `LocationServicePackage`: `LocationServiceModule` (the primary tracking-side bridge) and `BackupServiceModule` (the encrypted-backup bridge).
+Three React Native bridge modules are registered by `LocationServicePackage`: `LocationServiceModule` (the primary tracking-side bridge), `BackupServiceModule` (the encrypted-backup bridge) and `ImportServiceModule` (the external-file-import bridge). The two file-touching modules (Backup and Import) share `SafPickerCoordinator` (`util/SafPickerCoordinator.kt`) for the SAF `ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT` plumbing - each module holds its own instance with its own request codes so multiple coordinators coexist without interfering.
 
 ### LocationServiceModule
 
@@ -102,6 +102,36 @@ Native-only modules in `backup/` package. The on-disk format is documented in `B
 | `BackupForegroundService` | Notification-only foreground service shown during long backups/restores. Uses `FOREGROUND_SERVICE_TYPE_DATA_SYNC`. Holds no work itself - the actual encryption stays in `BackupServiceModule`'s coroutine so the password `CharArray` lives only on the heap, not in service state. |
 | `BackupOrphanCleanup` | Singleton kicked off from `MainApplication.onCreate` on a daemon thread. Sweeps `cacheDir/backup_temp`, `cacheDir/restore_temp`, `cacheDir/pending_backup.colota`, and `<dbDir>/Colota.db.incoming` left behind by a process death mid-operation. Exposes a `CompletableDeferred` so `BackupServiceModule` can await completion before claiming the operation mutex. |
 | `PasswordStrength` | Mirror of the JS-side `passwordStrength.ts`. Enforces the 12-character floor and ~50-bit entropy floor; sequential runs and `<4` distinct chars cap the score. |
+
+### ImportServiceModule
+
+Third React Native bridge module (exposed as `"ImportServiceModule"`). Owns the location-import pipeline end-to-end: file picker, streaming parse, dedup against the live DB, and the two-stage commit. JS-callable methods:
+
+- `pickImportSource` - launches the SAF `ACTION_OPEN_DOCUMENT` picker via the shared `SafPickerCoordinator`. MIME hints cover JSON, XML, CSV and `octet-stream`; the bare `type = "*/*"` keeps `.geojson` and `.gpx` from being filtered out by strict providers.
+- `importLocationsFromFile(uri)` - acquires the operation mutex, opens the file once, sniffs 4 KB for format detection, then prepends those bytes back via `SequenceInputStream` so the format-specific parser sees the full document without a second SAF open. Stashes the surviving rows on the module instance for the commit step.
+- `commitImport(asQueued)` - applies the staged rows in a single transaction. When `asQueued=true` it also reads the live `ServiceConfig`, rebuilds payloads via `PayloadBuilder` (the same one the live tracking path uses), and inserts paired queue rows. Rejects with `E_IMPORT_SYNC_UNAVAILABLE` if no endpoint or offline mode is on, so a stale UI state can't bypass the gate.
+- `cancelImport` - sets the cancellation flag and clears the stash.
+
+The staged rows are guarded by a 15-minute TTL job - a preview-then-walk-away doesn't pin memory indefinitely. Cancellation flows through an `AtomicBoolean` that the parsers and dedup walker check at array boundaries.
+
+Errors surface to JS as `E_IMPORT_*` codes: `E_IMPORT_UNSUPPORTED`, `E_IMPORT_CANCELLED`, `E_IMPORT_NO_PENDING`, `E_IMPORT_SYNC_UNAVAILABLE`, `E_IMPORT_FAILED`, plus the shared `E_BUSY` when another operation holds the mutex.
+
+### Import Pipeline
+
+Native-only modules in the `importer/` package. Format-specific parsers all return the same `ParseResult(rows, invalid)`; the dispatch logic in `LocationImporter` picks one based on a 4 KB content sniff.
+
+| Module | Purpose |
+| --- | --- |
+| `LocationImporter` | Orchestrator. Detects format from the sniff (XML root for GPX/KML, JSON top-level keys for GeoJSON / Google Timeline, CSV header for CSV), dispatches to the per-format parser, runs streaming **merge-walk dedup** against an ASC-ordered DB cursor (no existing-key `HashSet` is materialised - memory is O(1) on top of the parsed-rows list, so the dedup scales to multi-million-row user histories without OOM). On commit, the recovery path writes `sent = 1` and skips the queue; the migration path (`asQueued=true`) builds payloads via the live `PayloadBuilder` against a synthetic `android.location.Location` so the import path can't drift from the live tracking path. |
+| `GeoJsonParser` | Streaming `android.util.JsonReader`-based parser for `FeatureCollection` of `Point` features. Tolerates foreign shapes - any feature without a recognised time / non-Point geometry is counted as invalid and dropped, but parsing continues. |
+| `GoogleTimelineParser` | Handles both Google Timeline schemas in a single pass: legacy Takeout (`locations[].latitudeE7/longitudeE7/timestampMs`) and the new on-device export (`semanticSegments[].timelinePath[]` + `rawSignals[].position` with degree-suffix coord strings). Visit/activity inferences are intentionally skipped. |
+| `GpxParser` | `XmlPullParser`-based. Collects `<wpt>` + `<rtept>` + `<trkpt>` uniformly into the flat locations table. Recognises Garmin's nested `TrackPointExtension` wrapper so sport-watch metadata (speed, course) lands on the row. |
+| `KmlParser` | `XmlPullParser`-based. Reads `Placemark/Point/coordinates` (KML's `lon,lat[,alt]` order, flipped back internally) with `TimeStamp/when`. `LineString`-only Placemarks are dropped + counted as invalid since the KML schema doesn't carry per-vertex timestamps. |
+| `CsvParser` | Header-driven; maps columns by name with aliases (`lat`/`latitude`, `lon`/`lng`/`longitude`, `time`/`timestamp`/`iso_time`, etc.) so foreign column orders work without renaming. Rejects headers missing the required lat+lon+time columns with `UnsupportedFormatException`. |
+| `JsonReadHelpers` | Shared `JsonReader` extensions (`readNullableInt`, `readNullableDouble`) plus `parseIso8601Seconds` backed by pre-built immutable `DateTimeFormatter` instances (thread-safe and ~10× faster than `SimpleDateFormat`, which matters for Timeline files with 100k+ timestamps). |
+| `ImportFormat` / `ImportRow` / `UnsupportedFormatException` | Shared data types. `ImportRow` is the normalised location shape produced by every parser before dedup; format-specific quirks (E7 coords, ISO timestamps, degree-suffix strings) are resolved before construction so the orchestrator never sees them. |
+
+The on-disk format is **never** authoritative for sync decisions: imported rows go in with `sent = 1` by default (no re-upload), and only the explicit "Import + Queue for Sync" button flips that to `sent = 0` + queue rows. See [Data Import](../guides/data-import.md) for the user-facing semantics.
 
 ### LocationProvider Abstraction
 
@@ -266,7 +296,8 @@ For backups, two `internal` methods support the export/import flow without expos
 | `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards and export |
 | `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, per-trip export, and per-trip delete |
 | `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
-| `ExportDataScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
+| `ExportLocationsScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
+| `ImportLocationsScreen` | Import external location files (GeoJSON, Google Timeline legacy + new, GPX, KML, CSV) with auto format detection, dedup preview, and recovery vs migration (queue-for-sync) commit choice |
 | `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, time of day, weekday or day-of-month, export range and file retention |
 | `OfflineMapsScreen` | Download and manage offline map areas - interactive bounding box picker, size estimate, progress tracking, and area deletion |
 | `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
@@ -284,6 +315,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `ProfileService` | Thin wrapper over `NativeLocationService` for tracking profile CRUD and trip event queries |
 | `SettingsService` | Bridges UI state to native SQLite with type conversion (seconds↔ms, objects↔JSON) |
 | `BackupService` | Thin TypeScript wrapper over the native `BackupServiceModule` exposing `pickBackupDestination`, `pickBackupSource`, `createBackup`, `restoreBackup`, `applyRestore`. Surfaces typed `BackupErrorCode` strings for screen-side messaging |
+| `ImportService` | Thin TypeScript wrapper over the native `ImportServiceModule` exposing `pickImportSource`, `importLocationsFromFile`, `commitImport(asQueued)`, `cancelImport`. Returns a typed `ImportPreview` with format, counts, date range, and `canQueueForSync` so the UI can gate the queue-for-sync button |
 | `modalService` | Centralized alert and confirm dialogs via `showAlert()` and `showConfirm()` |
 
 ### Map Components
