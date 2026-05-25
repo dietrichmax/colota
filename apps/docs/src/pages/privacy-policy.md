@@ -56,13 +56,13 @@ Authentication credentials (if configured) are encrypted.
 
 ### Importing Data
 
-You can import location history from external files (GeoJSON, Google Timeline, GPX, KML, CSV) into the local database. The file is read from a location you select via the Android document picker. Imported rows are written to the local SQLite database; nothing leaves your device during import. If you opt in to "Import + Queue for Sync", the imported rows are also enqueued for replication to your configured sync backend and follow the same transmission rules as any other location data.
+You can import location history from external files (GeoJSON, Google Timeline, GPX, KML, CSV) into the local database. The file is read from a location you select via the Android document picker; nothing leaves your device during import. If you opt in to "Import + Queue for Sync", imported rows are enqueued for replication to your sync backend like any other location data.
 
 ### Client Certificates and Trusted CAs
 
-If you configure mTLS, the client certificate's private key is stored in the Android OS KeyStore (hardware-backed where supported), separate from app-managed storage. PKCS12 passwords are used only during import and are not saved. If you pick a certificate from Android's device certificate list instead, only a reference is stored - the key stays in the OS keystore and never enters the app process.
+If you configure mTLS, the client certificate's private key is stored in the Android OS KeyStore. The PKCS12 password is used once during import and discarded. If you pick a certificate from Android's device certificate list instead, only a reference is stored; the key never enters the app process.
 
-The Trusted Server CA (used for self-signed or private-CA servers) is the server's public certificate only and contains no private key.
+The Trusted Server CA (for self-signed or private-CA servers) is the server's public certificate only and contains no private key.
 
 ### Encrypted Backups
 
@@ -78,7 +78,7 @@ The App supports configuration via `colota://setup` deep links. These links can 
 
 The App **only transmits data to a server endpoint that you configure**. No data is sent anywhere by default.
 
-- Data is sent via HTTPS (HTTP is only allowed for local/private network addresses). Self-signed or private-CA TLS certificates are supported by importing the CA in the in-app mTLS Settings (Trusted Server CA). Trust is scoped to Colota; other apps on the device are unaffected
+- Data is sent via HTTPS (HTTP is only allowed for local/private network addresses). Self-signed or private-CA TLS certificates are supported by importing the CA in the in-app mTLS Settings (Trusted Server CA). Trust is scoped to Colota only
 - When a server is configured, the App may send health check requests to backend-specific endpoints to verify connectivity. These requests go only to your own server
 - No analytics, tracking pixels, or advertising networks are used
 - No data is shared with the developer, advertisers or analytics providers
