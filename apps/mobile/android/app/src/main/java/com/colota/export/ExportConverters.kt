@@ -282,40 +282,6 @@ object ExportConverters {
             db.getLocationsChronological(limit, offset)
         }
 
-    fun writeHeader(writer: Writer, format: String) {
-        forFormat(format).writeHeader(writer)
-    }
-
-    /** `coordsCollector` is required for KML (spills LineString coords to disk). */
-    fun writeRows(
-        writer: Writer,
-        format: String,
-        rows: List<Map<String, Any?>>,
-        globalOffset: Int,
-        coordsCollector: KmlCoordsCollector?
-    ) {
-        forFormat(format).writeRows(writer, rows.map(ExportRow::from), globalOffset, coordsCollector)
-    }
-
-    fun writeFooter(writer: Writer, format: String, coordsCollector: KmlCoordsCollector?) {
-        forFormat(format).writeFooter(writer, coordsCollector)
-    }
-
-    fun convert(format: String, rows: List<Map<String, Any?>>): String {
-        val writer = forFormat(format)
-        val sw = java.io.StringWriter()
-        val coordsCollector = if (writer.usesKmlCoords) {
-            KmlCoordsCollector(java.io.File(System.getProperty("java.io.tmpdir")!!))
-        } else null
-
-        coordsCollector.use {
-            writer.writeHeader(sw)
-            writer.writeRows(sw, rows.map(ExportRow::from), 0, coordsCollector)
-            writer.writeFooter(sw, coordsCollector)
-        }
-        return sw.toString()
-    }
-
     fun extensionFor(format: String): String = when (format) {
         "csv", "geojson", "gpx", "kml" -> forFormat(format).extension
         else -> ".txt"
