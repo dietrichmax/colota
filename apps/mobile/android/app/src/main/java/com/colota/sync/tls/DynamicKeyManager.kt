@@ -49,7 +49,9 @@ class DynamicKeyManager(private val context: Context) : X509KeyManager {
 
     private fun resolveAlias(): String? {
         secureStorage.getKeyChainAlias()?.let { return KEYCHAIN_PREFIX + it }
-        if (hasAndroidKeyStoreEntry()) return ClientCertSslContextProvider.CLIENT_CERT_ALIAS
+        if (ClientCertSslContextProvider.hasAndroidKeyStoreClientCert()) {
+            return ClientCertSslContextProvider.CLIENT_CERT_ALIAS
+        }
         return null
     }
 
@@ -115,13 +117,6 @@ class DynamicKeyManager(private val context: Context) : X509KeyManager {
             cachedAlias = null
             aliasResolved = false
         }
-    }
-
-    private fun hasAndroidKeyStoreEntry(): Boolean = try {
-        KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-            .containsAlias(ClientCertSslContextProvider.CLIENT_CERT_ALIAS)
-    } catch (_: Exception) {
-        false
     }
 
     companion object {
