@@ -10,16 +10,16 @@ Configure in **Settings -> Connection -> Authentication & Headers -> Client Cert
 
 ## Setup
 
-There are two ways to provide a client certificate. Pick whichever matches your starting point.
+Two ways to provide a client certificate.
 
 ### Option A: pick from device certificates (recommended)
 
-If your cert is already installed in Android's KeyChain (via Android Settings -> Encryption & credentials), this is the cleanest path:
+If your cert is already installed in Android's KeyChain (via Android Settings -> Encryption & credentials):
 
 1. Open Colota -> Settings -> Connection -> Authentication & Headers -> **Client Certificate (mTLS)**
 2. Tap **Pick from device certificates**
 3. Android's system dialog appears. Select your cert.
-4. The screen now shows the cert's subject, issuer, and expiry date.
+4. The screen now shows the cert's subject, issuer and expiry date.
 
 Colota only remembers which cert you picked - the cert itself stays where it already was on the phone.
 
@@ -31,11 +31,13 @@ If you have a PKCS12 file but the cert isn't installed at the OS level:
 2. Open Colota -> Settings -> Connection -> Authentication & Headers -> **Client Certificate (mTLS)**
 3. Tap **Import .p12 / .pfx**
 4. Pick the file, enter the password (leave blank if none), tap **Save**
-5. The screen now shows the cert's subject, issuer, and expiry date
+5. The screen now shows the cert's subject, issuer and expiry date
 
-The next sync request will use this certificate automatically.
+The new cert takes effect on the next sync request - no app restart needed. Same goes if you switch between Option A and Option B later.
 
-The new cert takes effect on the next request - no app restart needed. Same goes if you switch between Option A and Option B later. Colota does not accept PEM client cert + PEM key as two separate files; bundle them into a `.p12` first, or install via Android Settings and use the KeyChain picker. Hostname verification is always on - the server's certificate must match the hostname or IP you connect to.
+Colota does not accept PEM client cert + PEM key as two separate files. Bundle them into a `.p12` first, or install via Android Settings and use the KeyChain picker.
+
+Hostname verification is always on - the server's certificate must match the hostname or IP you connect to.
 
 ## Trust model
 
@@ -73,18 +75,10 @@ In **Connection Settings**, set your endpoint to your `https://...` URL and tap 
 
 Once imported, the cert lives in the OS keystore - not in the app's regular settings, not on the filesystem in plain form and not in any backup.
 
-What this means in practice:
-
 - You don't need to remember the PKCS12 password. It's used during import and then discarded.
 - If you picked a cert from the device certificates list, it survives an app reinstall.
 - If you imported a `.p12`, uninstalling Colota removes it - re-import after reinstall.
 - The Trusted Server CA is a public certificate, so it stays alongside the app's other settings.
-
-### Renewing
-
-Colota shows a warning in mTLS Settings 14 days before `notAfter`. To renew, generate a new `.p12` and tap **Import .p12 / .pfx** again - the new cert replaces the old one, no need to remove first.
-
-If a cert expires before you renew it, sync will fail with `Server rejected the client certificate`. Locations stay queued locally, nothing is lost, until you import a fresh cert.
 
 ### Removing
 
