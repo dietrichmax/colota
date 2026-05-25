@@ -29,7 +29,7 @@ jobs:
       - name: Setup Node & Java
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
       - uses: actions/setup-java@v5
         with:
@@ -103,7 +103,7 @@ jobs:
       - name: Setup Node & Java
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
       - uses: actions/setup-java@v5
         with:
