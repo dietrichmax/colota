@@ -41,6 +41,15 @@ const config: Config = {
     ]
   ],
 
+  plugins: [
+    [
+      "@docusaurus/plugin-client-redirects",
+      {
+        redirects: [{ from: "/docs/guides/app-shortcuts", to: "/docs/guides/automation" }]
+      }
+    ]
+  ],
+
   themeConfig: {
     colorMode: {
       respectPrefersColorScheme: true
