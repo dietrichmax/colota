@@ -53,33 +53,32 @@ function HomepageHeader() {
 const features = [
   {
     title: "Self-Hosted & Private",
+    description: "No cloud, no analytics, no telemetry. Send data to your own server or any HTTPS endpoint. AGPL-3.0."
+  },
+  {
+    title: "Bring Your History",
     description:
-      "No cloud, no analytics, no telemetry. Send data to your own server or any HTTP/S backend. Open source under AGPL-3.0."
+      "Import from Google Maps Timeline (old and new exports), GPX, KML, GeoJSON or CSV. Move years of data off Google without losing it."
   },
   {
     title: "Works Offline",
     description:
-      "Locations queue locally and sync when connectivity returns. Download map areas for offline use. Export as CSV, GeoJSON, GPX, or KML."
+      "Locations queue locally and sync when connectivity returns. Download map areas for trips out of coverage."
   },
   {
-    title: "Location History",
+    title: "On-Device History",
     description:
-      "Trip segmentation with speed-colored tracks, elevation profiles, and stats. Calendar view with activity dots and per-trip export."
+      "Browse every trip on the phone itself, even without a backend configured. Elevation profiles, per-trip stats and a calendar with activity dots."
   },
   {
     title: "Tracking Profiles",
     description:
-      "Multiple GPS configs that switch automatically based on charging state, Android Auto, speed or stationary detection."
+      "Multiple GPS configs that auto-switch on charging, Android Auto, speed or stationary detection. One profile for hiking, another for the commute."
   },
   {
-    title: "Maps & Geofencing",
+    title: "Sync, Backup, Export",
     description:
-      "GPU-accelerated live tracking map. Define pause zones to automatically stop recording at home or work."
-  },
-  {
-    title: "Flexible Sync",
-    description:
-      "Instant, batched, Wi-Fi only, or fully offline. Scheduled auto-export to a local directory with configurable format and retention."
+      "Instant, batched, Wi-Fi-only or offline-first sync. Encrypted backups for moving to a new phone. Export as CSV, GeoJSON, GPX or KML."
   }
 ]
 

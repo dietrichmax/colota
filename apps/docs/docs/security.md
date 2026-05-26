@@ -31,7 +31,7 @@ Sensitive values (Authorization, Bearer, Token, API-Key) are automatically maske
 
 ## Location Data at Rest
 
-Location history is stored in a local SQLite database on the device. The database is **not encrypted**. This means someone with physical access to a rooted device could read the data. For a self-hosted app where the user controls both the device and the server, this is a reasonable tradeoff.
+Location history is stored in a local SQLite database on the device. The database is **not encrypted**. This means someone with physical access to a rooted device could read the data.
 
 The database is not accessible to other apps (standard Android sandboxing).
 
