@@ -26,12 +26,12 @@ function val(v?: number | null, decimals = 0): string {
   return decimals > 0 ? v.toFixed(decimals) : String(Math.round(v))
 }
 
+// Mirrors BatteryStatus.kt.
 const BATTERY_STATUS: Record<number, string> = {
-  1: "Unknown",
+  0: "Unknown",
+  1: "Discharging",
   2: "Charging",
-  3: "Discharging",
-  4: "Not charging",
-  5: "Full"
+  3: "Full"
 }
 
 const LocationRow = React.memo(
@@ -49,7 +49,7 @@ const LocationRow = React.memo(
         {item.timestamp ? formatTime(item.timestamp, true) : "-"}
       </Text>
       <Text style={[styles.cell, styles.cellNum, { color: colors.textSecondary }]} numberOfLines={1}>
-        {item.delta != null ? `+${item.delta}s` : ""}
+        {item.delta != null ? `+${item.delta}` : ""}
       </Text>
       <Text style={[styles.cell, styles.cellCoord, { color: colors.text }]} numberOfLines={1}>
         {val(item.latitude, 5)}
@@ -133,7 +133,7 @@ export function LocationTable({ locations, colors }: Props) {
           <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>Bear</Text>
           <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>Batt</Text>
           <Text style={[styles.cell, styles.cellStatus, styles.headerText, { color: colors.textSecondary }]}>
-            Status
+            Charge
           </Text>
         </View>
 
