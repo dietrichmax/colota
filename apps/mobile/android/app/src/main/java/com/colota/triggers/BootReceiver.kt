@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
  
-package com.Colota.service
+package com.Colota.triggers
 
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
@@ -12,6 +12,9 @@ import android.content.Intent
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.SettingsKeys
 import com.Colota.export.AutoExportScheduler
+import com.Colota.service.LocationForegroundService
+import com.Colota.service.NotificationHelper
+import com.Colota.service.ServiceConfig
 import com.Colota.util.AppLogger
 import com.Colota.util.DeviceInfoHelper
 import kotlinx.coroutines.*

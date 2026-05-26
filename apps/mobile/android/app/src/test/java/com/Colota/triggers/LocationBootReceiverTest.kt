@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-package com.Colota.service
+package com.Colota.triggers
 
 import android.content.BroadcastReceiver
 import android.content.Context

@@ -128,6 +128,17 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
   }, [])
 
   /**
+   * Listens for tracking starts initiated outside JS (e.g. automation intent)
+   */
+  useEffect(() => {
+    const sub = locationEventEmitter.addListener("onTrackingStarted", (event: { reason: string }) => {
+      logger.info(`[useLocationTracking] Tracking started by native: ${event.reason}`)
+      setTracking(true)
+    })
+    return () => sub.remove()
+  }, [])
+
+  /**
    * Listens for sync errors from native service
    */
   useEffect(() => {

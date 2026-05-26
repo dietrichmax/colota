@@ -140,6 +140,9 @@ class LocationForegroundService : Service() {
         const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
         const val ACTION_REFRESH_NOTIFICATION = "com.Colota.REFRESH_NOTIFICATION"
         const val ACTION_RECHECK_PROFILES = "com.Colota.RECHECK_PROFILES"
+        /** Internal stop request from triggers (broadcast receiver, shortcut activity). */
+        const val ACTION_STOP_REQUEST = "com.Colota.ACTION_STOP_REQUEST"
+        const val EXTRA_STOP_REASON = "stop_reason"
         /** Debug-only: directly inject a MotionState transition. `--es state STATIONARY|MOVING`. */
         const val ACTION_DEBUG_FORCE_MOTION = "com.Colota.DEBUG_FORCE_MOTION"
 
@@ -148,7 +151,8 @@ class LocationForegroundService : Service() {
             ACTION_MANUAL_FLUSH,
             ACTION_RECHECK_ZONE,
             ACTION_REFRESH_NOTIFICATION,
-            ACTION_RECHECK_PROFILES
+            ACTION_RECHECK_PROFILES,
+            ACTION_STOP_REQUEST
         )
     }
 
@@ -289,6 +293,9 @@ class LocationForegroundService : Service() {
             ACTION_RECHECK_ZONE -> handleZoneRecheckAction()
             ACTION_RECHECK_PROFILES -> handleRecheckProfiles()
             ACTION_MANUAL_FLUSH -> handleManualFlush()
+            ACTION_STOP_REQUEST -> stopForegroundServiceWithReason(
+                intent.getStringExtra(EXTRA_STOP_REASON) ?: "Stopped"
+            )
             else -> handleStart()
         }
 

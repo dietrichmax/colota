@@ -159,10 +159,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             }
         }
 
-        /** Fires when service stops for non-user reasons (OOM kill, system cleanup). */
+        /** Fires when the service stops without the JS bridge initiating it. */
         @JvmStatic
         fun sendTrackingStoppedEvent(reason: String): Boolean =
             emit("onTrackingStopped") { putString("reason", reason) }
+
+        /** Fires when the service starts without the JS bridge initiating it. */
+        @JvmStatic
+        fun sendTrackingStartedEvent(reason: String): Boolean =
+            emit("onTrackingStarted") { putString("reason", reason) }
 
         /** Only fires after 3+ consecutive sync failures, see SyncManager.startPeriodicSync(). */
         @JvmStatic
