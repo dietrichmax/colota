@@ -63,22 +63,14 @@ type PasswordFieldProps = {
   value: string
   onChangeText: (v: string) => void
   placeholder: string
-  visible: boolean
-  onToggleVisibility: () => void
   editable: boolean
+  autoComplete: "password" | "new-password"
   colors: ThemeColors
 }
 
-function PasswordField({
-  value,
-  onChangeText,
-  placeholder,
-  visible,
-  onToggleVisibility,
-  editable,
-  colors
-}: PasswordFieldProps) {
-  const Icon = visible ? EyeOff : Eye
+function PasswordField({ value, onChangeText, placeholder, editable, autoComplete, colors }: PasswordFieldProps) {
+  const [revealed, setRevealed] = useState(false)
+  const Icon = revealed ? EyeOff : Eye
   return (
     <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.background }]}>
       <TextInput
@@ -89,14 +81,16 @@ function PasswordField({
         placeholderTextColor={colors.placeholder}
         autoCapitalize="none"
         autoCorrect={false}
-        secureTextEntry={!visible}
+        secureTextEntry={!revealed}
+        autoComplete={autoComplete}
         editable={editable}
       />
       <Pressable
-        onPress={onToggleVisibility}
+        onPressIn={() => setRevealed(true)}
+        onPressOut={() => setRevealed(false)}
         hitSlop={8}
         style={styles.eyeButton}
-        accessibilityLabel={visible ? "Hide password" : "Show password"}
+        accessibilityLabel="Hold to show password"
       >
         <Icon size={20} color={colors.textSecondary} />
       </Pressable>
@@ -120,12 +114,10 @@ function PasswordPromptModal({
   colors: ThemeColors
 }) {
   const [pw, setPw] = useState("")
-  const [show, setShow] = useState(false)
 
   useEffect(() => {
     if (!visible) {
       setPw("")
-      setShow(false)
     }
   }, [visible])
 
@@ -147,9 +139,8 @@ function PasswordPromptModal({
             value={pw}
             onChangeText={setPw}
             placeholder="Backup password"
-            visible={show}
-            onToggleVisibility={() => setShow((v) => !v)}
             editable={!busy}
+            autoComplete="password"
             colors={colors}
           />
           <View style={styles.modalButtonsRow}>
@@ -177,8 +168,6 @@ export function BackupRestoreScreen({}: Props) {
 
   const [backupPassword, setBackupPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [showBackupPassword, setShowBackupPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [busy, setBusy] = useState<"backup" | "restore" | null>(null)
   const [pendingRestore, setPendingRestore] = useState<{ uri: string; filename: string } | null>(null)
 
@@ -224,8 +213,6 @@ export function BackupRestoreScreen({}: Props) {
       await BackupService.createBackup(uri, backupPassword)
       setBackupPassword("")
       setConfirmPassword("")
-      setShowBackupPassword(false)
-      setShowConfirmPassword(false)
       showAlert("Backup created", "Your encrypted backup has been written.", "success")
     } catch (e: unknown) {
       logger.error("[BackupRestoreScreen] backup failed", e)
@@ -301,9 +288,8 @@ export function BackupRestoreScreen({}: Props) {
               value={backupPassword}
               onChangeText={setBackupPassword}
               placeholder={`At least ${MIN_BACKUP_PASSWORD_LENGTH} characters`}
-              visible={showBackupPassword}
-              onToggleVisibility={() => setShowBackupPassword((v) => !v)}
               editable={busy === null}
+              autoComplete="new-password"
               colors={colors}
             />
             {backupPassword.length > 0 && (
@@ -330,9 +316,8 @@ export function BackupRestoreScreen({}: Props) {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               placeholder="Re-enter the same password"
-              visible={showConfirmPassword}
-              onToggleVisibility={() => setShowConfirmPassword((v) => !v)}
               editable={busy === null}
+              autoComplete="new-password"
               colors={colors}
             />
             {showMismatch && <Text style={[styles.errorText, { color: colors.error }]}>Passwords do not match.</Text>}
