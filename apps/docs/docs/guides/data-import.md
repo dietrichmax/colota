@@ -6,7 +6,7 @@ sidebar_position: 3
 
 Merge location history from external files into your Colota database.
 
-:::tip Looking for a full archive restore?
+:::tip[Looking for a full archive restore?]
 
 Data Import is **additive**: existing locations are preserved and duplicates are skipped. Use this to recover from a Colota export, migrate from Google Timeline, or pull historical data from another tracker. If you want to **replace everything** on the device from an encrypted Colota archive (locations, settings, credentials), use [Backup & Restore](backup-restore.md).
 
@@ -86,7 +86,7 @@ If you've configured an optional sync backend in **Settings → Connection**, th
 
 This button is **only shown when a sync endpoint is configured and offline mode is off**. If it's missing, configure sync in **Settings → Connection** first.
 
-:::warning Queueing fans the points out to your backend - irreversible there
+:::warning[Queueing fans the points out to your backend - irreversible there]
 
 Once queued, the rows are uploaded as soon as the next sync runs. Removing them from the backend afterwards isn't something Colota can do for you. If you're importing a multi-year archive (100k+ points), expect the queue to fire that many upload requests against your backend; make sure it can handle the load.
 

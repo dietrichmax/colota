@@ -8,7 +8,7 @@ By default, Colota loads maps from [maps.mxd.codes](https://maps.mxd.codes) - a 
 
 ## Default Server
 
-maps.mxd.codes runs [tileserver-gl](https://github.com/maptiler/tileserver-gl) on a netcup VPS. Two styles are served - bright for light mode, dark for dark mode.
+maps.mxd.codes runs [tileserver-gl](https://github.com/maptiler/tileserver-gl) on a netcup VPS. Two styles are served - bright for light mode, dark for dark mode. Styles are vector-only to keep offline map packs lean.
 
 **Technical details**
 

@@ -21,12 +21,13 @@ interface AttributionLink {
   label: string
 }
 
-// Keep in sync with the attribution in maps.mxd.codes/styles/*/style.json.
+// Used when the style fetch fails or returns no attribution. Must cover
+// anything legally required for the default tile sources (OSM ODbL,
+// OpenMapTiles CC-BY) so attribution is never silently hidden.
 const FALLBACK_ATTRIBUTION_LINKS: AttributionLink[] = [
   { url: "https://www.openstreetmap.org/copyright", label: "© OpenStreetMap contributors" },
   { url: "https://maps.mxd.codes", label: "© maps.mxd.codes" },
-  { url: "https://openmaptiles.org", label: "© OpenMapTiles" },
-  { url: "https://github.com/tilezen/joerd/blob/master/docs/attribution.md", label: "Mapzen Terrain Tiles" }
+  { url: "https://openmaptiles.org", label: "© OpenMapTiles" }
 ]
 
 function parseStyleAttribution(sources: unknown): AttributionLink[] {
