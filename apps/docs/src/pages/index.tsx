@@ -58,7 +58,7 @@ const features = [
   {
     title: "Bring Your History",
     description:
-      "Import from Google Maps Timeline (old and new exports), GPX, KML, GeoJSON or CSV. Move years of data off Google without losing it."
+      "Import from Google Maps Timeline, GPX, KML, GeoJSON or CSV. Move years of data off Google without losing it."
   },
   {
     title: "Works Offline",
