@@ -4,7 +4,7 @@
  */
 
 import { type LucideIcon } from "lucide-react-native"
-import { Table2, Globe, MapPin, Earth } from "lucide-react-native"
+import { Table2, Globe, Activity, Map } from "lucide-react-native"
 import { Trip } from "../types/global"
 import { getTripColor } from "./trips"
 
@@ -224,7 +224,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
     label: "GPX",
     subtitle: "GPS Exchange",
     description: "Garmin, Strava, Google Earth",
-    icon: MapPin,
+    icon: Activity,
     extension: ".gpx",
     mimeType: "application/gpx+xml"
   },
@@ -232,7 +232,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
     label: "KML",
     subtitle: "Keyhole Markup Language",
     description: "Google Earth, Google Maps, ArcGIS",
-    icon: Earth,
+    icon: Map,
     extension: ".kml",
     mimeType: "application/vnd.google-earth.kml+xml"
   }
