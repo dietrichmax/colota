@@ -21,7 +21,7 @@ import { formatDistance } from "../utils/geo"
 import { pad2 } from "../utils/format"
 import { segmentTrips } from "../utils/trips"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
-import { showAlert } from "../services/modalService"
+import { showAlert, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
 
 interface TabProps {
@@ -200,10 +200,34 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     setFitVersion((v) => v + 1)
   }, [])
 
-  const handleTripExport = useCallback((format: ExportFormat) => exportTrips(format, trips), [exportTrips, trips])
-  const handleSingleTripExport = useCallback(
-    (format: ExportFormat, trip: Trip) => exportTrips(format, [trip]),
-    [exportTrips]
+  const handleDeleteTrips = useCallback(
+    async (toDelete: Trip[]) => {
+      if (toDelete.length === 0) return
+      const totalPoints = toDelete.reduce((n, t) => n + t.locationCount, 0)
+      const confirmed = await showConfirm({
+        title: toDelete.length === 1 ? `Delete Trip ${toDelete[0].index}?` : `Delete ${toDelete.length} trips?`,
+        message: `Removes ${totalPoints} location point${
+          totalPoints === 1 ? "" : "s"
+        } from this device only. Already-synced points remain on your server. Unsent points will not be uploaded.`,
+        confirmText: "Delete",
+        destructive: true
+      })
+      if (!confirmed) return
+      try {
+        await NativeLocationService.deleteLocationsInRanges(
+          toDelete.map((t) => ({ start: t.startTime, end: t.endTime }))
+        )
+        const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
+        daysCache.current.delete(key)
+        distanceCache.current.delete(key)
+        await fetchTrackData()
+        await fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
+      } catch (error) {
+        logger.error("[LocationHistory] Trip delete failed:", error)
+        showAlert("Delete Failed", "Unable to delete selection. Please try again.", "error")
+      }
+    },
+    [mapDate, fetchTrackData, fetchDaysWithData]
   )
 
   const mapLocations = selectedTrip ? (selectedTrip.locations as LocationCoords[]) : trackLocations
@@ -268,8 +292,8 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             colors={colors}
             onTripSelect={handleTripSelect}
             selectedTripIndex={selectedTrip?.index ?? null}
-            onExport={handleTripExport}
-            onExportTrip={handleSingleTripExport}
+            onExport={exportTrips}
+            onDelete={handleDeleteTrips}
           />
         </View>
       )}

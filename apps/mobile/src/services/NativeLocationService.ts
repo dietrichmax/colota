@@ -277,6 +277,17 @@ class NativeLocationService {
   }
 
   /**
+   * Deletes locations across multiple inclusive timestamp ranges in one transaction (seconds since epoch)
+   * @returns Count of deleted records
+   */
+  static async deleteLocationsInRanges(ranges: Array<{ start: number; end: number }>): Promise<number> {
+    this.ensureModule()
+    if (ranges.length === 0) return 0
+    logger.debug(`[NativeLocationService] Deleting locations across ${ranges.length} ranges`)
+    return LocationServiceModule.deleteLocationsInRanges(ranges)
+  }
+
+  /**
    * Runs SQLite VACUUM to reclaim disk space
    */
   static async vacuumDatabase(): Promise<void> {

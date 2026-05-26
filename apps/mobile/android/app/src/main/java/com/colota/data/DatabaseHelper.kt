@@ -794,6 +794,28 @@ class DatabaseHelper private constructor(context: Context) :
         )
     }
 
+    /** Single-transaction multi-range delete. All ranges succeed or none do. */
+    fun deleteInRanges(ranges: List<Pair<Long, Long>>): Int {
+        requireNotRestoring()
+        if (ranges.isEmpty()) return 0
+        val db = writableDatabase
+        var total = 0
+        db.beginTransaction()
+        try {
+            for ((startTs, endTs) in ranges) {
+                total += db.delete(
+                    TABLE_LOCATIONS,
+                    "timestamp >= ? AND timestamp <= ?",
+                    arrayOf(startTs.toString(), endTs.toString())
+                )
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return total
+    }
+
     /** Reclaims unused space. Call from background thread only. */
     fun vacuum() {
         requireNotRestoring()

@@ -1,0 +1,1 @@
+- Multi-select trips in Location History: long-press a trip card to select multiple trips, then bulk export as CSV/GeoJSON/GPX/KML or delete them in one go.
