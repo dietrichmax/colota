@@ -806,6 +806,37 @@ class DatabaseHelperSQLiteTest {
     }
 
     // ========================================================================
+    // deleteInRanges
+    // ========================================================================
+
+    @Test
+    fun `deleteInRanges removes locations across non-contiguous ranges atomically`() {
+        db.saveLocation(latitude = 50.0, longitude = 10.0, timestamp = 1000L) // in range 1
+        db.saveLocation(latitude = 51.0, longitude = 11.0, timestamp = 1500L) // in range 1
+        db.saveLocation(latitude = 52.0, longitude = 12.0, timestamp = 2500L) // gap, retained
+        db.saveLocation(latitude = 53.0, longitude = 13.0, timestamp = 3500L) // in range 2
+        db.saveLocation(latitude = 54.0, longitude = 14.0, timestamp = 4500L) // after, retained
+
+        val deleted = db.deleteInRanges(listOf(1000L to 2000L, 3000L to 4000L))
+        assertEquals(3, deleted)
+
+        val remaining = db.getTableData(DatabaseHelper.TABLE_LOCATIONS, 100, 0)
+        val timestamps = remaining.map { (it["timestamp"] as Number).toLong() }.toSet()
+        assertEquals(setOf(2500L, 4500L), timestamps)
+    }
+
+    @Test
+    fun `deleteInRanges with empty list deletes nothing`() {
+        db.saveLocation(latitude = 50.0, longitude = 10.0, timestamp = 1000L)
+
+        val deleted = db.deleteInRanges(emptyList())
+        assertEquals(0, deleted)
+
+        val remaining = db.getTableData(DatabaseHelper.TABLE_LOCATIONS, 100, 0)
+        assertEquals(1, remaining.size)
+    }
+
+    // ========================================================================
     // Helpers
     // ========================================================================
 

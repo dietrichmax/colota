@@ -4,7 +4,7 @@
  */
 
 import React from "react"
-import { View, Pressable, StyleSheet, ViewStyle, StyleProp } from "react-native"
+import { View, Pressable, StyleSheet, ViewStyle, StyleProp, AccessibilityRole, AccessibilityState } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
 
 type CardVariant = "default" | "elevated" | "outlined" | "interactive"
@@ -15,9 +15,25 @@ type CardProps = {
   danger?: boolean
   variant?: CardVariant
   onPress?: () => void
+  onLongPress?: () => void
+  accessibilityRole?: AccessibilityRole
+  accessibilityLabel?: string
+  accessibilityHint?: string
+  accessibilityState?: AccessibilityState
 }
 
-export function Card({ children, style, danger = false, variant = "default", onPress }: CardProps) {
+export function Card({
+  children,
+  style,
+  danger = false,
+  variant = "default",
+  onPress,
+  onLongPress,
+  accessibilityRole,
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityState
+}: CardProps) {
   const { colors } = useTheme()
 
   const getVariantStyles = (): ViewStyle => {
@@ -64,9 +80,17 @@ export function Card({ children, style, danger = false, variant = "default", onP
 
   const cardView = <View style={[styles.card, getVariantStyles(), style]}>{children}</View>
 
-  if (variant === "interactive" && onPress) {
+  if (variant === "interactive" && (onPress || onLongPress)) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? colors.pressedOpacity : 1 })}>
+      <Pressable
+        onPress={onPress}
+        onLongPress={onLongPress}
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={accessibilityState}
+        style={({ pressed }) => ({ opacity: pressed ? colors.pressedOpacity : 1 })}
+      >
         {cardView}
       </Pressable>
     )

@@ -7,9 +7,11 @@ jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
   default: {
     getDaysWithData: jest.fn().mockResolvedValue([]),
+    getDailyStats: jest.fn().mockResolvedValue([]),
     getLocationsByDateRange: jest.fn().mockResolvedValue([]),
     writeFile: jest.fn(),
-    shareFile: jest.fn()
+    shareFile: jest.fn(),
+    deleteLocationsInRange: jest.fn().mockResolvedValue(0)
   }
 }))
 
@@ -27,7 +29,8 @@ jest.mock("../../utils/exportConverters", () => ({
 }))
 
 jest.mock("../../services/modalService", () => ({
-  showAlert: jest.fn()
+  showAlert: jest.fn(),
+  showConfirm: jest.fn().mockResolvedValue(false)
 }))
 
 jest.mock("../../hooks/useTheme", () => ({

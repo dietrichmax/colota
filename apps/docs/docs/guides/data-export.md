@@ -32,12 +32,20 @@ Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) 
 
 ### Trip Export
 
-1. Go to **Location History** → **Trips** tab
-2. Tap the export icon to export all trips for the selected day, or tap a trip card and export that single trip
-3. Select the format
-4. Share via Android's share menu
+Go to **Location History** -> **Trips** tab. There are two ways to export:
 
-Trip exports include a `trip` column/property so each location is tagged with its trip number.
+- **All trips for the day** - tap **Export All** in the header, pick a format, share.
+- **A custom selection** - long-press any trip card to enter selection mode. Tap additional cards to add or remove them. Use **Select all** to grab every trip. Tap the share icon in the selection header, pick a format, share. Works for a single trip too.
+
+For a single trip you can also tap the card to open **Trip Detail**, then use the share icon in the header.
+
+Trip exports include a `trip` column/property so each location is tagged with its trip number. Custom selections produce a single file containing only the chosen trips.
+
+### Delete Trips
+
+From the **Trips** tab, long-press a trip card to enter selection mode, add any other trips you want to remove, then tap the trash icon in the selection header. You'll be asked to confirm before the underlying location points are permanently deleted from the device.
+
+Single-trip delete is also available from the **Trip Detail** screen via the trash icon in the header.
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 

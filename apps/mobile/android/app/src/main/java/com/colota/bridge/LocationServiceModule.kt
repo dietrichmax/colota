@@ -39,6 +39,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
@@ -412,6 +413,18 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun deleteLocationsInRange(startTs: Double, endTs: Double, promise: Promise) = executeAsync(promise) {
         deleteThenVacuum(refresh = true) { dbHelper.deleteInRange(startTs.toLong(), endTs.toLong()) }
+    }
+
+    @ReactMethod
+    fun deleteLocationsInRanges(ranges: ReadableArray, promise: Promise) = executeAsync(promise) {
+        val pairs = mutableListOf<Pair<Long, Long>>()
+        for (i in 0 until ranges.size()) {
+            val r = ranges.getMap(i) ?: continue
+            val start = r.getDouble("start").toLong()
+            val end = r.getDouble("end").toLong()
+            pairs.add(start to end)
+        }
+        deleteThenVacuum(refresh = true) { dbHelper.deleteInRanges(pairs) }
     }
     
     @ReactMethod
