@@ -69,7 +69,7 @@
 
         <!-- Handles app shortcut intents without showing UI -->
         <activity
-            android:name=".service.ShortcutHandlerActivity"
+            android:name=".triggers.ShortcutHandlerActivity"
             android:theme="@android:style/Theme.NoDisplay"
             android:exported="true"
             android:excludeFromRecents="true" />
@@ -101,7 +101,7 @@
 
         <!-- Boot Receiver -->
         <receiver
-            android:name=".service.LocationBootReceiver"
+            android:name=".triggers.LocationBootReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
@@ -115,6 +115,17 @@
             android:name=".export.AutoExportAlarmReceiver"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- Tracking control receiver (Tasker / automation) -->
+        <receiver
+            android:name=".triggers.TrackingControlReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.Colota.action.START_TRACKING" />
+                <action android:name="com.Colota.action.STOP_TRACKING" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"
