@@ -1,1 +1,4 @@
-- Multi-select trips in Location History: long-press a trip card to select multiple trips, then bulk export as CSV/GeoJSON/GPX/KML or delete them in one go.
+- Multi-select trips: long-press a trip in Location History to select.
+- Tasker support: start/stop tracking via broadcast intent.
+- Battery charging status now shows correctly in the Data tab.
+- Backup password field switched to hold-to-reveal.
