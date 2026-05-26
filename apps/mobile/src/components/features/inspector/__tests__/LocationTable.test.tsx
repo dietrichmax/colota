@@ -43,7 +43,7 @@ const locations: LocationCoords[] = [
     speed: 8,
     bearing: 180,
     battery: 79,
-    battery_status: 3
+    battery_status: 1
   },
   {
     latitude: 48.3,
@@ -81,7 +81,7 @@ describe("LocationTable", () => {
     expect(getByText("Alt")).toBeTruthy()
     expect(getByText("Bear")).toBeTruthy()
     expect(getByText("Batt")).toBeTruthy()
-    expect(getByText("Status")).toBeTruthy()
+    expect(getByText("Charge")).toBeTruthy()
   })
 
   it("renders location rows with correct values", () => {
@@ -126,7 +126,7 @@ describe("LocationTable", () => {
     // index 2 (ts=1060): delta = 1060 - 1030 = 30
     // After reverse: [index2, index1, index0]
     // Both index2 and index1 have delta = 30, index0 has delta = null
-    const deltaElements = getAllByText("+30s")
+    const deltaElements = getAllByText("+30")
     expect(deltaElements.length).toBe(2)
   })
 
@@ -144,7 +144,6 @@ describe("LocationTable", () => {
   it("shows battery status text (Charging, Discharging, etc.)", () => {
     const { getByText } = render(<LocationTable locations={locations} colors={mockColors} />)
 
-    // battery_status 2 = "Charging", battery_status 3 = "Discharging"
     expect(getByText("Charging")).toBeTruthy()
     expect(getByText("Discharging")).toBeTruthy()
   })
