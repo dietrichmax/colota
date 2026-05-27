@@ -1,4 +1,4 @@
-import { segmentTrips, getTripColor, TRIP_COLORS, computeTripStats } from "../trips"
+import { segmentTrips, getTripColor, TRIP_COLORS, computeTripStats, buildMergedGapSet, tripMergeKey } from "../trips"
 import { formatDuration, formatTime, formatDate } from "../geo"
 
 describe("segmentTrips", () => {
@@ -88,6 +88,79 @@ describe("segmentTrips", () => {
     expect(trips[0].distance).toBeLessThan(1200)
   })
 
+  it("suppresses a split when the gap matches a persisted merge", () => {
+    const locations = [
+      { latitude: 52.52, longitude: 13.405, timestamp: 1000 },
+      { latitude: 52.521, longitude: 13.405, timestamp: 1005 }, // end of would-be trip 1
+      { latitude: 52.53, longitude: 13.405, timestamp: 1905 }, // 900s later, start of would-be trip 2
+      { latitude: 52.531, longitude: 13.405, timestamp: 1910 }
+    ]
+    const mergedGaps = buildMergedGapSet([{ before_timestamp: 1005, after_timestamp: 1905 }])
+    const trips = segmentTrips(locations, undefined, mergedGaps)
+    expect(trips).toHaveLength(1)
+    expect(trips[0].locationCount).toBe(4)
+  })
+
+  it("merges three trips when both boundary gaps have persisted merges", () => {
+    const locations = [
+      { latitude: 52.52, longitude: 13.405, timestamp: 1000 },
+      { latitude: 52.521, longitude: 13.405, timestamp: 1005 },
+      { latitude: 52.53, longitude: 13.405, timestamp: 2000 },
+      { latitude: 52.531, longitude: 13.405, timestamp: 2005 },
+      { latitude: 52.54, longitude: 13.405, timestamp: 3000 },
+      { latitude: 52.541, longitude: 13.405, timestamp: 3005 }
+    ]
+    const mergedGaps = buildMergedGapSet([
+      { before_timestamp: 1005, after_timestamp: 2000 },
+      { before_timestamp: 2005, after_timestamp: 3000 }
+    ])
+    const trips = segmentTrips(locations, undefined, mergedGaps)
+    expect(trips).toHaveLength(1)
+    expect(trips[0].locationCount).toBe(6)
+  })
+
+  it("ignores a persisted merge whose gap does not exist in this dataset", () => {
+    // Stale merge from prior data the user has since deleted: harmless no-op.
+    const locations = [
+      { latitude: 52.52, longitude: 13.405, timestamp: 1000 },
+      { latitude: 52.521, longitude: 13.405, timestamp: 1005 },
+      { latitude: 52.53, longitude: 13.405, timestamp: 1905 },
+      { latitude: 52.531, longitude: 13.405, timestamp: 1910 }
+    ]
+    const mergedGaps = buildMergedGapSet([{ before_timestamp: 99999, after_timestamp: 100000 }])
+    expect(segmentTrips(locations, undefined, mergedGaps)).toHaveLength(2)
+  })
+
+  it("ignores a merge whose later endpoint lands on a trip that gets filtered to < 2 points", () => {
+    const locations = [
+      { latitude: 52.52, longitude: 13.405, timestamp: 1000 },
+      { latitude: 52.521, longitude: 13.405, timestamp: 1005 },
+      { latitude: 52.53, longitude: 13.405, timestamp: 1905 }, // 900s gap; 1-point "trip"
+      { latitude: 52.54, longitude: 13.405, timestamp: 2806 }, // 901s gap; new trip
+      { latitude: 52.541, longitude: 13.405, timestamp: 2810 }
+    ]
+    const mergedGaps = buildMergedGapSet([{ before_timestamp: 1005, after_timestamp: 1905 }])
+    const trips = segmentTrips(locations, undefined, mergedGaps)
+    expect(trips).toHaveLength(2)
+    expect(trips[0].locationCount).toBe(3)
+    expect(trips[1].locationCount).toBe(2)
+  })
+})
+
+describe("buildMergedGapSet / tripMergeKey", () => {
+  it("produces O(1) lookup keys that round-trip through segmentTrips", () => {
+    const set = buildMergedGapSet([{ before_timestamp: 100, after_timestamp: 200 }])
+    expect(set.has(tripMergeKey(100, 200))).toBe(true)
+    expect(set.has(tripMergeKey(200, 100))).toBe(false) // order matters
+    expect(set.has(tripMergeKey(100, 201))).toBe(false)
+  })
+
+  it("returns an empty set for an empty list", () => {
+    expect(buildMergedGapSet([]).size).toBe(0)
+  })
+})
+
+describe("segmentTrips - threshold", () => {
   it("respects custom gap threshold", () => {
     const locations = [
       { latitude: 52.52, longitude: 13.405, timestamp: 1000 },

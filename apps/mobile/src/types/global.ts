@@ -33,6 +33,12 @@ export interface LocationCoords {
   timestamp?: number
 }
 
+/** A user-applied trip merge: suppress the auto-split between two adjacent locations. */
+export interface TripMerge {
+  before_timestamp: number
+  after_timestamp: number
+}
+
 export interface Geofence {
   id?: number
   name: string

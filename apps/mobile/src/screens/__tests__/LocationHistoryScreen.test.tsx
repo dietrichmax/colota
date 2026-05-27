@@ -11,12 +11,16 @@ jest.mock("../../services/NativeLocationService", () => ({
     getLocationsByDateRange: jest.fn().mockResolvedValue([]),
     writeFile: jest.fn(),
     shareFile: jest.fn(),
-    deleteLocationsInRange: jest.fn().mockResolvedValue(0)
+    deleteLocationsInRange: jest.fn().mockResolvedValue(0),
+    deleteLocationsInRanges: jest.fn().mockResolvedValue(0),
+    addTripMerges: jest.fn().mockResolvedValue(undefined),
+    getTripMerges: jest.fn().mockResolvedValue([])
   }
 }))
 
 jest.mock("../../utils/trips", () => ({
-  segmentTrips: jest.fn().mockReturnValue([])
+  segmentTrips: jest.fn().mockReturnValue([]),
+  buildMergedGapSet: jest.fn().mockReturnValue(new Set())
 }))
 
 jest.mock("../../utils/geo", () => ({

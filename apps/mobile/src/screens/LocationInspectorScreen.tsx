@@ -19,7 +19,7 @@ import { TripList } from "../components/features/inspector/TripList"
 import { LocationTable } from "../components/features/inspector/LocationTable"
 import { formatDistance } from "../utils/geo"
 import { pad2 } from "../utils/format"
-import { segmentTrips } from "../utils/trips"
+import { segmentTrips, buildMergedGapSet } from "../utils/trips"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
@@ -43,6 +43,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     return initialDate ? new Date(initialDate) : new Date()
   })
   const [trackLocations, setTrackLocations] = useState<LocationCoords[]>([])
+  const [mergedGaps, setMergedGaps] = useState<Set<string>>(() => new Set())
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [fitVersion, setFitVersion] = useState(0)
 
@@ -52,7 +53,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   const distanceCache = useRef<Map<string, Map<string, number>>>(new Map())
 
   // Trip segmentation from already-fetched day data
-  const trips = useMemo(() => segmentTrips(trackLocations), [trackLocations])
+  const trips = useMemo(() => segmentTrips(trackLocations, undefined, mergedGaps), [trackLocations, mergedGaps])
 
   // Sum of per-trip distances (excludes gap jumps between trips)
   const dailyDistance = useMemo(() => {
@@ -133,9 +134,13 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       const startTimestamp = Math.floor(start.getTime() / 1000)
       const endTimestamp = Math.floor(end.getTime() / 1000)
 
-      const result = await NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp)
+      const [locations, merges] = await Promise.all([
+        NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp),
+        NativeLocationService.getTripMerges()
+      ])
       if (id === fetchTrackIdRef.current) {
-        setTrackLocations(result || [])
+        setTrackLocations(locations || [])
+        setMergedGaps(buildMergedGapSet(merges))
         setSelectedTrip(null)
         setFitVersion((v) => v + 1)
       }
@@ -143,6 +148,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       logger.error("[LocationHistory] Track fetch error:", err)
       if (id === fetchTrackIdRef.current) {
         setTrackLocations([])
+        setMergedGaps(new Set())
         setSelectedTrip(null)
         setFitVersion((v) => v + 1)
       }
@@ -199,6 +205,39 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     setSelectedTrip(null)
     setFitVersion((v) => v + 1)
   }, [])
+
+  const handleMergeTrips = useCallback(
+    async (toMerge: Trip[]) => {
+      if (toMerge.length < 2) return
+      const sorted = [...toMerge].sort((a, b) => a.index - b.index)
+      // TripList enforces an adjacency invariant before calling us, so sorted indices are contiguous.
+      const rangeLabel =
+        sorted.length === 2
+          ? `Trips ${sorted[0].index} and ${sorted[sorted.length - 1].index}`
+          : `Trips ${sorted[0].index}-${sorted[sorted.length - 1].index}`
+      const confirmed = await showConfirm({
+        title: `Merge ${sorted.length} trips?`,
+        message: `${rangeLabel} will be combined into one trip.`,
+        confirmText: "Merge"
+      })
+      if (!confirmed) return
+      // Key each merge off the gap segmentTrips will see: (earlier.endTime, later.startTime).
+      const merges = sorted.slice(1).map((t, i) => ({
+        before_timestamp: sorted[i].endTime,
+        after_timestamp: t.startTime
+      }))
+      try {
+        await NativeLocationService.addTripMerges(merges)
+        await fetchTrackData()
+      } catch (error) {
+        logger.error("[LocationHistory] Trip merge failed:", error)
+        showAlert("Merge Failed", "Unable to merge the selected trips. Please try again.", "error")
+        // Re-throw so TripList's CAB preserves the selection and lets the user retry.
+        throw error
+      }
+    },
+    [fetchTrackData]
+  )
 
   const handleDeleteTrips = useCallback(
     async (toDelete: Trip[]) => {
@@ -294,6 +333,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             selectedTripIndex={selectedTrip?.index ?? null}
             onExport={exportTrips}
             onDelete={handleDeleteTrips}
+            onMerge={handleMergeTrips}
           />
         </View>
       )}

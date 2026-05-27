@@ -421,6 +421,30 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun addTripMerges(merges: ReadableArray, promise: Promise) = executeAsync(promise) {
+        val pairs = mutableListOf<Pair<Long, Long>>()
+        for (i in 0 until merges.size()) {
+            val m = merges.getMap(i) ?: continue
+            val before = m.getDouble("before_timestamp").toLong()
+            val after = m.getDouble("after_timestamp").toLong()
+            pairs.add(before to after)
+        }
+        dbHelper.addTripMerges(pairs)
+    }
+
+    @ReactMethod
+    fun getTripMerges(promise: Promise) = executeAsync(promise) {
+        Arguments.createArray().apply {
+            dbHelper.getTripMerges().forEach { (before, after) ->
+                pushMap(Arguments.createMap().apply {
+                    putDouble("before_timestamp", before.toDouble())
+                    putDouble("after_timestamp", after.toDouble())
+                })
+            }
+        }
+    }
+
+    @ReactMethod
     fun deleteLocationsInRanges(ranges: ReadableArray, promise: Promise) = executeAsync(promise) {
         val pairs = mutableListOf<Pair<Long, Long>>()
         for (i in 0 until ranges.size()) {

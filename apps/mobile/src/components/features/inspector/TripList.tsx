@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { View, Text, FlatList, Pressable, StyleSheet, BackHandler } from "react-native"
-import { Clock, Route, Share, TrendingUp, TrendingDown, Gauge, Trash2, X } from "lucide-react-native"
+import { Clock, Route, Share, TrendingUp, TrendingDown, Gauge, Trash2, X, Merge } from "lucide-react-native"
 import { Card } from "../../ui/Card"
 import { fonts } from "../../../styles/typography"
 import { formatDistance, formatDuration, formatSpeed, formatTime } from "../../../utils/geo"
@@ -21,6 +21,7 @@ interface TripListProps {
   selectedTripIndex?: number | null
   onExport?: (format: ExportFormat, trips: Trip[]) => void
   onDelete?: (trips: Trip[]) => Promise<void>
+  onMerge?: (trips: Trip[]) => Promise<void>
 }
 
 interface TripRowProps {
@@ -112,7 +113,15 @@ const TripRow = React.memo(function TripRow({
   )
 })
 
-export function TripList({ trips, colors, onTripSelect, selectedTripIndex, onExport, onDelete }: TripListProps) {
+export function TripList({
+  trips,
+  colors,
+  onTripSelect,
+  selectedTripIndex,
+  onExport,
+  onDelete,
+  onMerge
+}: TripListProps) {
   const [showExport, setShowExport] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const selectionMode = selected.size > 0
@@ -134,6 +143,13 @@ export function TripList({ trips, colors, onTripSelect, selectedTripIndex, onExp
 
   const selectedTrips = useMemo(() => trips.filter((t) => selected.has(t.index)), [trips, selected])
   const allSelected = selectionMode && selected.size === trips.length
+  const isAdjacentSelection = useMemo(() => {
+    if (selectedTrips.length < 2) return false
+    for (let i = 1; i < selectedTrips.length; i++) {
+      if (selectedTrips[i].index !== selectedTrips[i - 1].index + 1) return false
+    }
+    return true
+  }, [selectedTrips])
 
   const totalDistance = trips.reduce((sum, t) => sum + t.distance, 0)
 
@@ -193,6 +209,21 @@ export function TripList({ trips, colors, onTripSelect, selectedTripIndex, onExp
       deletingRef.current = false
     }
   }, [onDelete, selectedTrips])
+
+  const mergingRef = useRef(false)
+  const handleMergeSelected = useCallback(async () => {
+    if (!onMerge || !isAdjacentSelection || mergingRef.current) return
+    mergingRef.current = true
+    try {
+      await onMerge(selectedTrips)
+      setSelected(new Set())
+      setShowExport(false)
+    } catch {
+      // Caller surfaces its own error UI. Preserve selection so the user can retry.
+    } finally {
+      mergingRef.current = false
+    }
+  }, [onMerge, selectedTrips, isAdjacentSelection])
 
   const renderTrip = useCallback(
     ({ item }: { item: Trip }) => (
@@ -258,6 +289,20 @@ export function TripList({ trips, colors, onTripSelect, selectedTripIndex, onExp
                 accessibilityState={{ expanded: showExport }}
               >
                 <Share size={18} color={showExport ? colors.primary : colors.text} />
+              </Pressable>
+            )}
+            {onMerge && trips.length >= 2 && (
+              <Pressable
+                onPress={handleMergeSelected}
+                disabled={!isAdjacentSelection}
+                hitSlop={HIT_SLOP_SM}
+                style={({ pressed }) => [styles.cabIconBtn, pressed && { opacity: colors.pressedOpacity }]}
+                accessibilityRole="button"
+                accessibilityLabel="Merge selected trips"
+                accessibilityHint={isAdjacentSelection ? undefined : "Select two or more adjacent trips to merge them"}
+                accessibilityState={{ disabled: !isAdjacentSelection }}
+              >
+                <Merge size={18} color={isAdjacentSelection ? colors.text : colors.textDisabled} />
               </Pressable>
             )}
             {onDelete && (

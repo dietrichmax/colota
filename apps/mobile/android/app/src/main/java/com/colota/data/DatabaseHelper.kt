@@ -32,13 +32,15 @@ class DatabaseHelper private constructor(context: Context) :
 
     companion object {
         const val DATABASE_NAME = "Colota.db"
-        const val DATABASE_VERSION = 5
+        const val DATABASE_VERSION = 6
 
         const val TABLE_LOCATIONS = "locations"
         const val TABLE_QUEUE = "queue"
         const val TABLE_SETTINGS = "settings"
         const val TABLE_GEOFENCES = "geofences"
         const val TABLE_PROFILES = "tracking_profiles"
+        const val TABLE_TRIP_MERGES = "trip_merges"
+        
         private val DEFAULT_FIELD_MAP = mapOf(
             "lat" to "lat", "lon" to "lon", "acc" to "acc",
             "alt" to "alt", "vel" to "vel", "batt" to "batt",
@@ -65,6 +67,16 @@ class DatabaseHelper private constructor(context: Context) :
         """
         private const val CREATE_PROFILES_INDEX =
             "CREATE INDEX IF NOT EXISTS idx_profiles_enabled ON $TABLE_PROFILES(enabled, priority DESC)"
+
+        // Keyed by the gap, not by a row, so location deletes leave merges as inert no-ops.
+        private const val CREATE_TRIP_MERGES_TABLE = """
+            CREATE TABLE IF NOT EXISTS $TABLE_TRIP_MERGES (
+                before_timestamp INTEGER NOT NULL,
+                after_timestamp INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (before_timestamp, after_timestamp)
+            )
+        """
 
         @Volatile
         private var INSTANCE: DatabaseHelper? = null
@@ -210,6 +222,9 @@ class DatabaseHelper private constructor(context: Context) :
                 db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN heartbeat_enabled INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE $TABLE_GEOFENCES ADD COLUMN heartbeat_interval_minutes INTEGER NOT NULL DEFAULT 15")
             }
+            if (oldVersion < 6) {
+                db.execSQL(CREATE_TRIP_MERGES_TABLE)
+            }
         }
 
         @JvmStatic
@@ -282,6 +297,7 @@ class DatabaseHelper private constructor(context: Context) :
         """)
 
         db.execSQL(CREATE_PROFILES_TABLE)
+        db.execSQL(CREATE_TRIP_MERGES_TABLE)
 
         db.execSQL("CREATE INDEX idx_queue_created ON $TABLE_QUEUE(created_at)")
         db.execSQL("CREATE INDEX idx_queue_location ON $TABLE_QUEUE(location_id)")
@@ -776,6 +792,7 @@ class DatabaseHelper private constructor(context: Context) :
     fun clearAllLocations(): Int {
         requireNotRestoring()
         writableDatabase.delete(TABLE_QUEUE, null, null) // FK constraint: queue references locations
+        writableDatabase.delete(TABLE_TRIP_MERGES, null, null) // derived state, no point keeping
         return writableDatabase.delete(TABLE_LOCATIONS, null, null)
     }
 
@@ -783,6 +800,47 @@ class DatabaseHelper private constructor(context: Context) :
         requireNotRestoring()
         val cutoff = (System.currentTimeMillis() - days.toLong() * 24 * 60 * 60 * 1000) / 1000
         return writableDatabase.delete(TABLE_LOCATIONS, "timestamp < ?", arrayOf(cutoff.toString()))
+    }
+
+    fun addTripMerges(merges: List<Pair<Long, Long>>): Int {
+        requireNotRestoring()
+        if (merges.isEmpty()) return 0
+        val now = System.currentTimeMillis() / 1000
+        val db = writableDatabase
+        var inserted = 0
+        db.beginTransaction()
+        try {
+            db.compileStatement(
+                "INSERT OR IGNORE INTO $TABLE_TRIP_MERGES (before_timestamp, after_timestamp, created_at) VALUES (?, ?, ?)"
+            ).use { stmt ->
+                for ((before, after) in merges) {
+                    stmt.clearBindings()
+                    stmt.bindLong(1, before)
+                    stmt.bindLong(2, after)
+                    stmt.bindLong(3, now)
+                    if (stmt.executeInsert() != -1L) inserted++
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return inserted
+    }
+
+    fun getTripMerges(): List<Pair<Long, Long>> {
+        val out = mutableListOf<Pair<Long, Long>>()
+        readableDatabase.query(
+            TABLE_TRIP_MERGES,
+            arrayOf("before_timestamp", "after_timestamp"),
+            null, null, null, null,
+            "before_timestamp ASC"
+        ).use { c ->
+            while (c.moveToNext()) {
+                out.add(c.getLong(0) to c.getLong(1))
+            }
+        }
+        return out
     }
 
     fun deleteInRange(startTs: Long, endTs: Long): Int {

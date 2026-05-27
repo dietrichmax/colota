@@ -4,7 +4,7 @@
  */
 
 import { computeTotalDistance } from "./geo"
-import type { Trip, LocationCoords } from "../types/global"
+import type { Trip, LocationCoords, TripMerge } from "../types/global"
 
 export const TRIP_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"]
 
@@ -15,12 +15,26 @@ export function getTripColor(index: number): string {
 const DEFAULT_GAP_SECONDS = 900 // 15 minutes
 const MIN_TRIP_POINTS = 2
 
+export function tripMergeKey(beforeTs: number, afterTs: number): string {
+  return `${beforeTs}:${afterTs}`
+}
+
+export function buildMergedGapSet(merges: TripMerge[]): Set<string> {
+  const set = new Set<string>()
+  for (const m of merges) set.add(tripMergeKey(m.before_timestamp, m.after_timestamp))
+  return set
+}
+
 /**
  * Segments a chronologically-sorted array of locations into trips.
- * A new trip starts when the time gap between consecutive points
- * exceeds gapThresholdSeconds.
+ * A new trip starts when the time gap between consecutive points exceeds
+ * gapThresholdSeconds, unless the user has persisted a merge for that exact gap.
  */
-export function segmentTrips(locations: LocationCoords[], gapThresholdSeconds: number = DEFAULT_GAP_SECONDS): Trip[] {
+export function segmentTrips(
+  locations: LocationCoords[],
+  gapThresholdSeconds: number = DEFAULT_GAP_SECONDS,
+  mergedGaps?: Set<string>
+): Trip[] {
   if (locations.length === 0) return []
 
   const trips: Trip[] = []
@@ -29,8 +43,9 @@ export function segmentTrips(locations: LocationCoords[], gapThresholdSeconds: n
   for (let i = 1; i < locations.length; i++) {
     const prevTs = locations[i - 1].timestamp ?? 0
     const currTs = locations[i].timestamp ?? 0
+    const isMergedGap = mergedGaps?.has(tripMergeKey(prevTs, currTs)) ?? false
 
-    if (currTs - prevTs >= gapThresholdSeconds) {
+    if (currTs - prevTs >= gapThresholdSeconds && !isMergedGap) {
       trips.push(buildTrip(currentTripLocations))
       currentTripLocations = [locations[i]]
     } else {

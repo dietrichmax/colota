@@ -59,7 +59,8 @@ jest.mock("lucide-react-native", () => {
     Trash2: stub("Trash2"),
     X: stub("X"),
     CheckSquare: stub("CheckSquare"),
-    Square: stub("Square")
+    Square: stub("Square"),
+    Merge: stub("Merge")
   }
 })
 
@@ -272,5 +273,86 @@ describe("TripList - CAB selection", () => {
     const [fmt, exported] = onExport.mock.calls[0] as [ExportFormat, Trip[]]
     expect(fmt).toBe("kml")
     expect(exported).toHaveLength(3)
+  })
+
+  it("Merge button is present in CAB and fires onMerge with adjacent selection", async () => {
+    const onMerge = jest.fn().mockResolvedValue(undefined)
+    const { getByLabelText } = render(
+      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} onMerge={onMerge} />
+    )
+
+    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+    fireEvent.press(getByLabelText(/Trip 2,/))
+
+    await act(async () => {
+      fireEvent.press(getByLabelText("Merge selected trips"))
+    })
+
+    expect(onMerge).toHaveBeenCalledTimes(1)
+    expect(onMerge.mock.calls[0][0].map((t: Trip) => t.index)).toEqual([1, 2])
+  })
+
+  it("Merge button is disabled for non-adjacent selection", async () => {
+    const onMerge = jest.fn().mockResolvedValue(undefined)
+    const { getByLabelText } = render(
+      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} onMerge={onMerge} />
+    )
+
+    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+    fireEvent.press(getByLabelText(/Trip 3,/))
+
+    const mergeBtn = getByLabelText("Merge selected trips")
+    expect(mergeBtn.props.accessibilityState).toEqual({ disabled: true })
+
+    await act(async () => {
+      fireEvent.press(mergeBtn)
+    })
+    expect(onMerge).not.toHaveBeenCalled()
+  })
+
+  it("Merge button is disabled for single-trip selection and pressing it does nothing", async () => {
+    const onMerge = jest.fn().mockResolvedValue(undefined)
+    const { getByLabelText } = render(
+      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} onMerge={onMerge} />
+    )
+
+    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+
+    const mergeBtn = getByLabelText("Merge selected trips")
+    expect(mergeBtn.props.accessibilityState).toEqual({ disabled: true })
+
+    await act(async () => {
+      fireEvent.press(mergeBtn)
+    })
+    expect(onMerge).not.toHaveBeenCalled()
+  })
+
+  it("Merge button is not rendered when fewer than two trips exist", () => {
+    const onMerge = jest.fn().mockResolvedValue(undefined)
+    const { queryByLabelText, getByLabelText } = render(
+      <TripList trips={makeTrips(1)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} onMerge={onMerge} />
+    )
+
+    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+
+    // Structurally-impossible state: hide rather than show-and-disable.
+    expect(queryByLabelText("Merge selected trips")).toBeNull()
+  })
+
+  it("preserves the CAB selection when onMerge throws (user can retry)", async () => {
+    const onMerge = jest.fn().mockRejectedValue(new Error("boom"))
+    const { getByLabelText, getByText } = render(
+      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} onMerge={onMerge} />
+    )
+
+    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+    fireEvent.press(getByLabelText(/Trip 2,/))
+
+    await act(async () => {
+      fireEvent.press(getByLabelText("Merge selected trips"))
+    })
+
+    expect(onMerge).toHaveBeenCalledTimes(1)
+    expect(getByText("2 selected")).toBeTruthy()
   })
 })

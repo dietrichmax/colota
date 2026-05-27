@@ -1,4 +1,5 @@
 - Multi-select trips: long-press a trip in Location History to select.
+- Manually merge adjacent trips from the multi-select action bar.
 - Tasker support: start/stop tracking via broadcast intent.
 - Battery charging status now shows correctly in the Data tab.
 - Backup password field switched to hold-to-reveal.

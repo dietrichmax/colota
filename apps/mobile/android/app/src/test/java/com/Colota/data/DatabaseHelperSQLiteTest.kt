@@ -54,17 +54,125 @@ class DatabaseHelperSQLiteTest {
     }
 
     // ========================================================================
+    // Historical schemas for migration tests
+    // ========================================================================
+
+    private val LOCATIONS_V1_V2 = """
+        CREATE TABLE locations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            accuracy INTEGER,
+            altitude INTEGER,
+            speed INTEGER,
+            bearing REAL,
+            battery INTEGER,
+            battery_status INTEGER,
+            timestamp INTEGER NOT NULL,
+            endpoint TEXT,
+            created_at INTEGER NOT NULL
+        )
+    """
+
+    private val LOCATIONS_V3_PLUS = """
+        CREATE TABLE locations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            accuracy INTEGER,
+            altitude INTEGER,
+            speed INTEGER,
+            bearing REAL,
+            battery INTEGER,
+            battery_status INTEGER,
+            timestamp INTEGER NOT NULL,
+            endpoint TEXT,
+            sent INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL
+        )
+    """
+
+    private val QUEUE_SCHEMA = """
+        CREATE TABLE queue (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            location_id INTEGER NOT NULL,
+            payload TEXT NOT NULL,
+            retry_count INTEGER DEFAULT 0,
+            last_error TEXT,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
+        )
+    """
+
+    private val SETTINGS_SCHEMA = """
+        CREATE TABLE settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+    """
+
+    private val GEOFENCES_V1_V3 = """
+        CREATE TABLE geofences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            radius REAL NOT NULL,
+            enabled INTEGER DEFAULT 1,
+            pause_tracking INTEGER DEFAULT 1,
+            notify_enter INTEGER DEFAULT 0,
+            notify_exit INTEGER DEFAULT 0,
+            created_at INTEGER NOT NULL
+        )
+    """
+
+    private val GEOFENCES_V4 = """
+        CREATE TABLE geofences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            radius REAL NOT NULL,
+            enabled INTEGER DEFAULT 1,
+            pause_tracking INTEGER DEFAULT 1,
+            notify_enter INTEGER DEFAULT 0,
+            notify_exit INTEGER DEFAULT 0,
+            created_at INTEGER NOT NULL,
+            pause_on_wifi INTEGER DEFAULT 0,
+            pause_on_motionless INTEGER DEFAULT 0,
+            motionless_timeout_minutes INTEGER DEFAULT 10
+        )
+    """
+
+    private val PROFILES_SCHEMA = """
+        CREATE TABLE tracking_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            interval_ms INTEGER NOT NULL,
+            min_update_distance REAL NOT NULL,
+            sync_interval_seconds INTEGER NOT NULL,
+            priority INTEGER NOT NULL DEFAULT 0,
+            condition_type TEXT NOT NULL,
+            speed_threshold REAL,
+            deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            created_at INTEGER NOT NULL
+        )
+    """
+
+    // ========================================================================
     // Schema creation — tables and indexes exist
     // ========================================================================
 
     @Test
-    fun `onCreate creates all five tables`() {
+    fun `onCreate creates all six tables`() {
         val tables = queryTableNames()
         assertTrue(tables.contains("locations"))
         assertTrue(tables.contains("queue"))
         assertTrue(tables.contains("settings"))
         assertTrue(tables.contains("geofences"))
         assertTrue(tables.contains("tracking_profiles"))
+        assertTrue(tables.contains("trip_merges"))
     }
 
     @Test
@@ -88,6 +196,135 @@ class DatabaseHelperSQLiteTest {
         assertEquals("false", settings["tracking_enabled"])
         assertEquals("POST", settings["httpMethod"])
         assertEquals("custom", settings["apiTemplate"])
+    }
+
+    // ========================================================================
+    // Migrations
+    // ========================================================================
+
+    @Test
+    fun `migration from v1 applies the full chain - profiles table, sent column, geofence columns, trip_merges`() {
+        migrateFromVersion(
+            version = 1,
+            seedFileName = "migration_v1.sqlite",
+            seed = { db ->
+                db.execSQL(LOCATIONS_V1_V2)
+                db.execSQL(QUEUE_SCHEMA)
+                db.execSQL(SETTINGS_SCHEMA)
+                db.execSQL(GEOFENCES_V1_V3)
+            }
+        ) { migrated ->
+            assertEquals(DatabaseHelper.DATABASE_VERSION, migrated.version)
+            val tables = queryTableNames(migrated)
+            assertTrue("v1->v2 should create tracking_profiles", tables.contains("tracking_profiles"))
+            assertTrue("v5->v6 should create trip_merges", tables.contains("trip_merges"))
+            assertTrue("v2->v3 should add sent column", queryColumnNames("locations", migrated).contains("sent"))
+            val geofenceCols = queryColumnNames("geofences", migrated)
+            assertTrue("v3->v4 should add pause_on_wifi", geofenceCols.contains("pause_on_wifi"))
+            assertTrue("v3->v4 should add pause_on_motionless", geofenceCols.contains("pause_on_motionless"))
+            assertTrue("v3->v4 should add motionless_timeout_minutes", geofenceCols.contains("motionless_timeout_minutes"))
+            assertTrue("v4->v5 should add heartbeat_enabled", geofenceCols.contains("heartbeat_enabled"))
+            assertTrue("v4->v5 should add heartbeat_interval_minutes", geofenceCols.contains("heartbeat_interval_minutes"))
+        }
+    }
+
+    @Test
+    fun `migration from v2 to v3 backfills sent=1 only for locations without a queue entry`() {
+        migrateFromVersion(
+            version = 2,
+            seedFileName = "migration_v2.sqlite",
+            seed = { db ->
+                db.execSQL(LOCATIONS_V1_V2)
+                db.execSQL(QUEUE_SCHEMA)
+                db.execSQL(SETTINGS_SCHEMA)
+                db.execSQL(GEOFENCES_V1_V3)
+                db.execSQL(PROFILES_SCHEMA)
+                db.execSQL("INSERT INTO locations (latitude, longitude, timestamp, created_at) VALUES (1.0, 1.0, 1000, 1000)")
+                db.execSQL("INSERT INTO locations (latitude, longitude, timestamp, created_at) VALUES (2.0, 2.0, 2000, 2000)")
+                db.execSQL("INSERT INTO queue (location_id, payload, created_at) VALUES (1, '{}', 1000)")
+            }
+        ) { migrated ->
+            migrated.rawQuery("SELECT id, sent FROM locations ORDER BY id", null).use { cursor ->
+                assertTrue(cursor.moveToNext())
+                assertEquals(1L, cursor.getLong(0))
+                assertEquals("queued location must remain sent=0", 0, cursor.getInt(1))
+                assertTrue(cursor.moveToNext())
+                assertEquals(2L, cursor.getLong(0))
+                assertEquals("non-queued location must backfill to sent=1", 1, cursor.getInt(1))
+            }
+        }
+    }
+
+    @Test
+    fun `migration from v3 adds geofence pause columns, heartbeat columns, and trip_merges`() {
+        migrateFromVersion(
+            version = 3,
+            seedFileName = "migration_v3.sqlite",
+            seed = { db ->
+                db.execSQL(LOCATIONS_V3_PLUS)
+                db.execSQL(QUEUE_SCHEMA)
+                db.execSQL(SETTINGS_SCHEMA)
+                db.execSQL(GEOFENCES_V1_V3)
+                db.execSQL(PROFILES_SCHEMA)
+            }
+        ) { migrated ->
+            val geofenceCols = queryColumnNames("geofences", migrated)
+            assertTrue(geofenceCols.contains("pause_on_wifi"))
+            assertTrue(geofenceCols.contains("pause_on_motionless"))
+            assertTrue(geofenceCols.contains("motionless_timeout_minutes"))
+            assertTrue(geofenceCols.contains("heartbeat_enabled"))
+            assertTrue(geofenceCols.contains("heartbeat_interval_minutes"))
+            assertTrue(queryTableNames(migrated).contains("trip_merges"))
+        }
+    }
+
+    @Test
+    fun `migration from v4 adds heartbeat columns and trip_merges without disturbing existing geofence pause columns`() {
+        migrateFromVersion(
+            version = 4,
+            seedFileName = "migration_v4.sqlite",
+            seed = { db ->
+                db.execSQL(LOCATIONS_V3_PLUS)
+                db.execSQL(QUEUE_SCHEMA)
+                db.execSQL(SETTINGS_SCHEMA)
+                db.execSQL(GEOFENCES_V4)
+                db.execSQL(PROFILES_SCHEMA)
+                db.execSQL("""
+                    INSERT INTO geofences (name, latitude, longitude, radius, pause_on_wifi, created_at)
+                    VALUES ('home', 52.5, 13.4, 100, 1, 1000)
+                """)
+            }
+        ) { migrated ->
+            val geofenceCols = queryColumnNames("geofences", migrated)
+            assertTrue(geofenceCols.contains("heartbeat_enabled"))
+            assertTrue(geofenceCols.contains("heartbeat_interval_minutes"))
+            assertTrue(queryTableNames(migrated).contains("trip_merges"))
+            migrated.rawQuery("SELECT name, pause_on_wifi FROM geofences", null).use { cursor ->
+                assertTrue(cursor.moveToNext())
+                assertEquals("home", cursor.getString(0))
+                assertEquals(1, cursor.getInt(1))
+            }
+        }
+    }
+
+    @Test
+    fun `migration from v5 to v6 creates the trip_merges table`() {
+        migrateFromVersion(
+            version = 5,
+            seedFileName = "migration_v5.sqlite",
+            seed = { db ->
+                // Minimal v5 seed: only locations is needed because v5->v6 only touches trip_merges.
+                db.execSQL(LOCATIONS_V3_PLUS)
+            }
+        ) { migrated ->
+            assertEquals(DatabaseHelper.DATABASE_VERSION, migrated.version)
+            assertTrue("trip_merges should exist after v5->v6", queryTableNames(migrated).contains("trip_merges"))
+            migrated.execSQL("INSERT INTO trip_merges (before_timestamp, after_timestamp, created_at) VALUES (1, 2, 0)")
+            val count = migrated.rawQuery("SELECT COUNT(*) FROM trip_merges", null).use {
+                if (it.moveToFirst()) it.getInt(0) else 0
+            }
+            assertEquals(1, count)
+        }
     }
 
     // ========================================================================
@@ -806,6 +1043,46 @@ class DatabaseHelperSQLiteTest {
     }
 
     // ========================================================================
+    // trip_merges (addTripMerges / getTripMerges)
+    // ========================================================================
+
+    @Test
+    fun `addTripMerges inserts each pair and getTripMerges returns them sorted`() {
+        val inserted = db.addTripMerges(listOf(3000L to 4000L, 1000L to 2000L))
+        assertEquals(2, inserted)
+
+        val all = db.getTripMerges()
+        assertEquals(listOf(1000L to 2000L, 3000L to 4000L), all)
+    }
+
+    @Test
+    fun `addTripMerges is idempotent - re-inserting an existing pair reports zero new rows`() {
+        db.addTripMerges(listOf(1000L to 2000L))
+        val secondPass = db.addTripMerges(listOf(1000L to 2000L, 3000L to 4000L))
+
+        // Only the (3000, 4000) pair is new; the duplicate is silently ignored by INSERT OR IGNORE.
+        assertEquals(1, secondPass)
+        assertEquals(2, db.getTripMerges().size)
+    }
+
+    @Test
+    fun `addTripMerges with empty list inserts nothing`() {
+        val inserted = db.addTripMerges(emptyList())
+        assertEquals(0, inserted)
+        assertTrue(db.getTripMerges().isEmpty())
+    }
+
+    @Test
+    fun `clearAllLocations also wipes persisted trip merges (factory-reset semantics)`() {
+        db.saveLocation(latitude = 50.0, longitude = 10.0, timestamp = 1000L)
+        db.addTripMerges(listOf(1000L to 2000L))
+
+        db.clearAllLocations()
+
+        assertTrue(db.getTripMerges().isEmpty())
+    }
+
+    // ========================================================================
     // deleteInRanges
     // ========================================================================
 
@@ -840,9 +1117,9 @@ class DatabaseHelperSQLiteTest {
     // Helpers
     // ========================================================================
 
-    private fun queryTableNames(): Set<String> {
+    private fun queryTableNames(rawDb: SQLiteDatabase = db.readableDatabase): Set<String> {
         val tables = mutableSetOf<String>()
-        db.readableDatabase.rawQuery(
+        rawDb.rawQuery(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%'",
             null
         ).use { cursor ->
@@ -853,9 +1130,9 @@ class DatabaseHelperSQLiteTest {
         return tables
     }
 
-    private fun queryColumnNames(table: String): Set<String> {
+    private fun queryColumnNames(table: String, rawDb: SQLiteDatabase = db.readableDatabase): Set<String> {
         val columns = mutableSetOf<String>()
-        db.readableDatabase.rawQuery("PRAGMA table_info($table)", null).use { cursor ->
+        rawDb.rawQuery("PRAGMA table_info($table)", null).use { cursor ->
             while (cursor.moveToNext()) {
                 columns.add(cursor.getString(cursor.getColumnIndexOrThrow("name")))
             }
@@ -863,9 +1140,38 @@ class DatabaseHelperSQLiteTest {
         return columns
     }
 
-    private fun queryIndexNames(): Set<String> {
+    /** Per-step try/finally lets a thrown assertion still close handles, otherwise Windows refuses the delete. */
+    private inline fun migrateFromVersion(
+        version: Int,
+        seedFileName: String,
+        seed: (SQLiteDatabase) -> Unit,
+        block: (SQLiteDatabase) -> Unit
+    ) {
+        val tempDir = ApplicationProvider.getApplicationContext<android.content.Context>().cacheDir
+        val candidate = java.io.File(tempDir, seedFileName).apply { delete() }
+        try {
+            val seedDb = SQLiteDatabase.openOrCreateDatabase(candidate, null)
+            try {
+                seed(seedDb)
+                seedDb.version = version
+            } finally {
+                seedDb.close()
+            }
+            DatabaseHelper.migrateCandidate(candidate)
+            val migrated = SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            try {
+                block(migrated)
+            } finally {
+                migrated.close()
+            }
+        } finally {
+            candidate.delete()
+        }
+    }
+
+    private fun queryIndexNames(rawDb: SQLiteDatabase = db.readableDatabase): Set<String> {
         val indexes = mutableSetOf<String>()
-        db.readableDatabase.rawQuery(
+        rawDb.rawQuery(
             "SELECT name FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%'",
             null
         ).use { cursor ->

@@ -16,7 +16,8 @@ import {
   Settings,
   TestEndpointArgs,
   TestEndpointResult,
-  TrackingProfile
+  TrackingProfile,
+  TripMerge
 } from "../types/global"
 import { logger } from "../utils/logger"
 
@@ -285,6 +286,18 @@ class NativeLocationService {
     if (ranges.length === 0) return 0
     logger.debug(`[NativeLocationService] Deleting locations across ${ranges.length} ranges`)
     return LocationServiceModule.deleteLocationsInRanges(ranges)
+  }
+
+  /** Persists each merge; existing pairs are silently ignored. */
+  static async addTripMerges(merges: TripMerge[]): Promise<void> {
+    this.ensureModule()
+    if (merges.length === 0) return
+    await LocationServiceModule.addTripMerges(merges)
+  }
+
+  static async getTripMerges(): Promise<TripMerge[]> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.getTripMerges(), [], "getTripMerges failed")
   }
 
   /**

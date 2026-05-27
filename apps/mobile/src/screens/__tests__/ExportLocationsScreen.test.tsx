@@ -190,8 +190,8 @@ jest.mock("lucide-react-native", () => {
     Clock: stub("Clock"),
     Table2: stub("Table2"),
     Globe: stub("Globe"),
-    MapPin: stub("MapPin"),
-    Earth: stub("Earth")
+    Activity: stub("Activity"),
+    Map: stub("Map")
   }
 })
 
