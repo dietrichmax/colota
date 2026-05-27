@@ -12,6 +12,9 @@
   },
   "type": "module",
   "license": "AGPL-3.0-or-later",
+  "engines": {
+    "node": ">=24"
+  },
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
