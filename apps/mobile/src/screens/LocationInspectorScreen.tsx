@@ -168,9 +168,9 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   /** Tap a trip card -> open detail screen */
   const handleTripSelect = useCallback(
     (trip: Trip) => {
-      navigation.navigate("Trip Detail", { trip })
+      navigation.navigate("Trip Detail", { trip, trips })
     },
-    [navigation]
+    [navigation, trips]
   )
 
   /** Export trips (all or single) */
@@ -265,6 +265,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             locations={mapLocations}
             colors={colors}
             trips={selectedTrip ? undefined : trips}
+            trackColor={colors.primary}
             fitVersion={fitVersion}
           />
           {selectedTrip && (

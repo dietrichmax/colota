@@ -41,10 +41,11 @@ interface Props {
   locations: TrackLocation[]
   colors: ThemeColors
   trips?: Trip[]
+  trackColor: string
   fitVersion?: number
 }
 
-export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
+export function TrackMap({ locations, colors, trips, trackColor, fitVersion }: Props) {
   const mapRef = useRef<ColotaMapRef>(null)
   const [isCentered, setIsCentered] = useState(true)
   const [selectedPoint, setSelectedPoint] = useState<{
@@ -126,14 +127,13 @@ export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
           arr.push(tripColor)
         }
       }
-      // Fill remaining points with default color
       while (arr.length < locations.length) {
-        arr.push(colors.primary)
+        arr.push(trackColor)
       }
       return arr
     }
-    return locations.map(() => colors.primary)
-  }, [trips, locations, colors.primary])
+    return locations.map(() => trackColor)
+  }, [trips, locations, trackColor])
 
   // GeoJSON data
   const segmentsGeoJSON = useMemo(
@@ -148,7 +148,7 @@ export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
   // Highlight GeoJSON for selected point
   const highlightGeoJSON = useMemo(() => {
     const coord = selectedPoint ? [selectedPoint.longitude, selectedPoint.latitude] : null
-    const color = selectedPoint?.color ?? colors.primary
+    const color = selectedPoint?.color ?? trackColor
     return {
       type: "FeatureCollection" as const,
       features: [
@@ -159,7 +159,7 @@ export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
         }
       ]
     }
-  }, [selectedPoint, colors.primary])
+  }, [selectedPoint, trackColor])
 
   const highlightStyle = useMemo(
     () => ({
@@ -182,7 +182,7 @@ export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
       lastPointPressRef.current = Date.now()
       const geom = feature.geometry as GeoJSON.Point
       const coord = geom.coordinates as [number, number]
-      const color = feature.properties.color ?? colors.primary
+      const color = feature.properties.color ?? trackColor
       setSelectedPoint({ longitude: coord[0], latitude: coord[1], color })
       setPopup({
         coordinate: coord,
@@ -193,7 +193,7 @@ export function TrackMap({ locations, colors, trips, fitVersion }: Props) {
         color
       })
     },
-    [colors.primary]
+    [trackColor]
   )
 
   const handleMapPress = useCallback(() => {
