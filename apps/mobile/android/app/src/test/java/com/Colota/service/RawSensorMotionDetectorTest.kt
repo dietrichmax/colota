@@ -13,6 +13,7 @@ import android.hardware.SensorManager
 import android.hardware.TriggerEvent
 import android.hardware.TriggerEventListener
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import android.os.SystemClock
 import com.Colota.util.AppLogger
@@ -53,6 +54,10 @@ class RawSensorMotionDetectorTest {
             firstArg<Runnable>().run()
             true
         }
+        mockkConstructor(HandlerThread::class)
+        every { anyConstructed<HandlerThread>().start() } just Runs
+        every { anyConstructed<HandlerThread>().looper } returns mockk(relaxed = true)
+        every { anyConstructed<HandlerThread>().quitSafely() } returns true
 
         // SystemClock.elapsedRealtime is read inside accelListener.onSensorChanged; tests
         // that drive synthetic sensor events stub it via stubElapsedRealtime() per sample.
@@ -68,6 +73,7 @@ class RawSensorMotionDetectorTest {
         unmockkStatic(Looper::class)
         unmockkStatic(SystemClock::class)
         unmockkConstructor(Handler::class)
+        unmockkConstructor(HandlerThread::class)
     }
 
     private fun makeDetector(
@@ -80,7 +86,7 @@ class RawSensorMotionDetectorTest {
         every { sensorManager.getDefaultSensor(Sensor.TYPE_SIGNIFICANT_MOTION) } returns
             if (sigMotionAvailable) sigMotionSensor else null
         every { sensorManager.requestTriggerSensor(capture(sigListenerSlot), any()) } returns true
-        every { sensorManager.registerListener(capture(accelListenerSlot), any<Sensor>(), any<Int>(), any<Int>()) } returns true
+        every { sensorManager.registerListener(capture(accelListenerSlot), any<Sensor>(), any<Int>(), any<Int>(), any<Handler>()) } returns true
         return RawSensorMotionDetector(context) { stationaryDwellMs }
     }
 
@@ -124,7 +130,7 @@ class RawSensorMotionDetectorTest {
     fun `start registers accelerometer with batched FIFO and SIG_MOTION`() {
         val detector = makeDetector()
         detector.start { /* no-op */ }
-        verify { sensorManager.registerListener(any(), accelSensor, SensorManager.SENSOR_DELAY_NORMAL, 30_000_000) }
+        verify { sensorManager.registerListener(any(), accelSensor, SensorManager.SENSOR_DELAY_NORMAL, 30_000_000, any<Handler>()) }
         verify { sensorManager.requestTriggerSensor(any(), sigMotionSensor) }
     }
 
@@ -133,7 +139,7 @@ class RawSensorMotionDetectorTest {
         val detector = makeDetector()
         detector.start { }
         detector.start { }
-        verify(exactly = 1) { sensorManager.registerListener(any(), accelSensor, any(), any<Int>()) }
+        verify(exactly = 1) { sensorManager.registerListener(any(), accelSensor, any(), any<Int>(), any<Handler>()) }
         verify(exactly = 1) { sensorManager.requestTriggerSensor(any(), sigMotionSensor) }
     }
 
@@ -158,7 +164,7 @@ class RawSensorMotionDetectorTest {
     fun `start works when SIG_MOTION sensor is missing`() {
         val detector = makeDetector(sigMotionAvailable = false)
         detector.start { }
-        verify { sensorManager.registerListener(any(), accelSensor, any(), any<Int>()) }
+        verify { sensorManager.registerListener(any(), accelSensor, any(), any<Int>(), any<Handler>()) }
         verify(exactly = 0) { sensorManager.requestTriggerSensor(any(), any()) }
     }
 
@@ -201,9 +207,10 @@ class RawSensorMotionDetectorTest {
 
         detector.stop()
 
-        // Drain the post that was queued before stop() ran. The defensive null-check
-        // in the posted lambda should make it a no-op now that listener is null.
-        pending.forEach { it.run() }
+        // Drain loop (not forEach): pending grows mid-iteration as runnables enqueue more.
+        while (pending.isNotEmpty()) {
+            pending.removeAt(0).run()
+        }
         assertNull(received)
     }
 

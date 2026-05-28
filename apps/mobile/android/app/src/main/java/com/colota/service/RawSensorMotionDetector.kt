@@ -13,6 +13,7 @@ import android.hardware.SensorManager
 import android.hardware.TriggerEvent
 import android.hardware.TriggerEventListener
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import android.os.SystemClock
 import com.Colota.BuildConfig
@@ -53,6 +54,9 @@ class RawSensorMotionDetector(
     private val mainHandler = Handler(Looper.getMainLooper())
     private val lifecycleLock = Any()
 
+    private var sensorThread: HandlerThread? = null
+    @Volatile private var sensorHandler: Handler? = null
+
     @Volatile private var listener: ((MotionState) -> Unit)? = null
     @Volatile private var currentState: MotionState = MotionState.MOVING
 
@@ -79,7 +83,7 @@ class RawSensorMotionDetector(
     private val sigMotionListener = object : TriggerEventListener() {
         override fun onTrigger(event: TriggerEvent?) {
             sigMotionSensor?.let { sensorManager.requestTriggerSensor(this, it) }
-            transitionTo(MotionState.MOVING, "sig_motion")
+            sensorHandler?.post { transitionTo(MotionState.MOVING, "sig_motion") }
         }
     }
 
@@ -92,8 +96,13 @@ class RawSensorMotionDetector(
             aboveThresholdSinceMs = 0L
             belowThresholdSinceMs = 0L
 
+            val thread = HandlerThread("MotionDetector-sensor").also { it.start() }
+            val handler = Handler(thread.looper)
+            sensorThread = thread
+            sensorHandler = handler
+
             accelSensor?.let {
-                sensorManager.registerListener(accelListener, it, SensorManager.SENSOR_DELAY_NORMAL, MAX_REPORT_LATENCY_US)
+                sensorManager.registerListener(accelListener, it, SensorManager.SENSOR_DELAY_NORMAL, MAX_REPORT_LATENCY_US, handler)
             }
             sigMotionSensor?.let {
                 sensorManager.requestTriggerSensor(sigMotionListener, it)
@@ -108,17 +117,23 @@ class RawSensorMotionDetector(
             listener = null
             accelSensor?.let { sensorManager.unregisterListener(accelListener, it) }
             sigMotionSensor?.let { sensorManager.cancelTriggerSensor(sigMotionListener, it) }
-            sampleWindow.clear()
-            // Drop transition posts queued before stop arrived. The listener null-check in
-            // the posted lambda is the backstop if cancellation misses one.
             mainHandler.removeCallbacksAndMessages(null)
+            sensorHandler?.removeCallbacksAndMessages(null)
+            sensorThread?.quitSafely()
+            sensorHandler = null
+            sensorThread = null
         }
         AppLogger.d(TAG, "Stopped")
     }
 
     /** Test-build hook: directly inject a state transition (called from ADB-debug receiver). */
     fun forceState(newState: MotionState) {
-        transitionTo(newState, "debug_force")
+        val handler = sensorHandler
+        if (handler != null) {
+            handler.post { transitionTo(newState, "debug_force") }
+        } else {
+            transitionTo(newState, "debug_force")
+        }
     }
 
     private fun processSample(nowMs: Long, magnitude: Double) {
