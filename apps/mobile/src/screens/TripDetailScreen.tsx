@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useMemo, useState, useCallback, useLayoutEffect } from "react"
+import React, { useMemo, useState, useCallback, useLayoutEffect, useEffect } from "react"
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native"
 import {
   Route,
@@ -14,6 +14,8 @@ import {
   MapPin,
   Share,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
   type LucideIcon
 } from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
@@ -25,6 +27,7 @@ import { InteractiveLineChart } from "../components/features/inspector/Interacti
 import { getTripColor, computeTripStats } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
+import { HIT_SLOP_LG } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
@@ -51,6 +54,7 @@ function downsample(values: number[], maxBars: number): number[] {
 export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip Detail">) {
   const { colors } = useTheme()
   const trip: Trip = route.params.trip
+  const trips: Trip[] = route.params.trips
   const tripColor = getTripColor(trip.index)
   const [deleting, setDeleting] = useState(false)
 
@@ -60,6 +64,24 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
   const [showExport, setShowExport] = useState(false)
   const [chartActiveIndex, setChartActiveIndex] = useState<number | null>(null)
+
+  const currentIdx = trips.findIndex((t) => t.index === trip.index)
+  const prevTrip = currentIdx > 0 ? trips[currentIdx - 1] : null
+  const nextTrip = currentIdx >= 0 && currentIdx < trips.length - 1 ? trips[currentIdx + 1] : null
+
+  // Reset transient UI state when switching to a different trip.
+  useEffect(() => {
+    setChartActiveIndex(null)
+    setShowExport(false)
+  }, [trip.index])
+
+  const goToTrip = useCallback(
+    (target: Trip | null) => {
+      if (!target) return
+      navigation.setParams({ trip: target })
+    },
+    [navigation]
+  )
 
   const handleExport = useCallback(
     async (format: ExportFormat) => {
@@ -145,14 +167,32 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   return (
     <Container>
       <View style={styles.mapContainer}>
-        <TrackMap locations={trip.locations} colors={colors} fitVersion={1} />
+        <TrackMap locations={trip.locations} colors={colors} trackColor={tripColor} fitVersion={trip.index} />
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.section}>
           <View style={styles.headerTitleRow}>
-            <View style={[styles.dot, { backgroundColor: tripColor }]} />
-            <Text style={[styles.title, { color: colors.text }]}>{displayName}</Text>
+            <Pressable
+              onPress={() => goToTrip(prevTrip)}
+              disabled={!prevTrip}
+              hitSlop={HIT_SLOP_LG}
+              style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
+            >
+              <ChevronLeft size={24} color={prevTrip ? colors.primary : colors.textDisabled} />
+            </Pressable>
+            <View style={styles.headerTitleCenter}>
+              <View style={[styles.dot, { backgroundColor: tripColor }]} />
+              <Text style={[styles.title, { color: colors.text }]}>{displayName}</Text>
+            </View>
+            <Pressable
+              onPress={() => goToTrip(nextTrip)}
+              disabled={!nextTrip}
+              hitSlop={HIT_SLOP_LG}
+              style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
+            >
+              <ChevronRight size={24} color={nextTrip ? colors.primary : colors.textDisabled} />
+            </Pressable>
           </View>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             {formatDate(trip.startTime)} · {formatTime(trip.startTime, true)} - {formatTime(trip.endTime, true)}
@@ -312,8 +352,18 @@ const styles = StyleSheet.create({
   headerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "space-between",
     marginBottom: 4
+  },
+  headerTitleCenter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    justifyContent: "center"
+  },
+  navBtn: {
+    padding: 4
   },
   dot: {
     width: 12,
@@ -327,7 +377,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     ...fonts.regular,
-    marginLeft: 22
+    textAlign: "center"
   },
   statsGrid: {
     flexDirection: "row",

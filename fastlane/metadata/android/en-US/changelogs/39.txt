@@ -2,3 +2,6 @@
 - Tasker support: start/stop tracking via broadcast intent.
 - Battery charging status now shows correctly in the Data tab.
 - Backup password field switched to hold-to-reveal.
+- Fixed app freezes on slower devices caused by motion detection.
+- Trip detail: track on the map now matches the trip's title color.
+- Trip detail: switch between trips with prev/next arrows next to the title.
