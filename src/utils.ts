@@ -1,3 +1,11 @@
+export function isFiniteNumber(v: unknown): v is number {
+  return typeof v === "number" && isFinite(v)
+}
+
+export function hasFiniteNumbers(obj: Record<string, unknown>, keys: string[]): boolean {
+  return keys.every((k) => isFiniteNumber(obj[k]))
+}
+
 const SENSITIVE_PARAMS = new Set(["api_key", "token"])
 
 export function maskUrl(url: string): string {

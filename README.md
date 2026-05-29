@@ -12,11 +12,12 @@ Receives location updates from the [Colota](https://colota.app) app or any OwnTr
 
 ## Endpoints
 
-| Method | Path         | Auth | Description                                                                     |
-| ------ | ------------ | ---- | ------------------------------------------------------------------------------- |
-| `POST` | `/locations` | yes  | Colota native payload — fans out to all matching targets                        |
-| `POST` | `/owntracks` | yes  | OwnTracks HTTP payload — only `_type: "location"` is forwarded, others drop     |
-| `GET`  | `/health`    | no   | Health check for Docker / orchestrators — returns `{ status, uptime, targets }` |
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `POST` | `/locations` | yes | Colota native payload — fans out to all matching targets |
+| `POST` | `/owntracks` | yes | OwnTracks HTTP payload — only `_type: "location"` is forwarded, others drop |
+| `POST` | `/overland` | yes | Colota batch payload (Overland format) - forwarded whole to `overland` targets, split to single points for the rest |
+| `GET` | `/health` | no | Health check for Docker / orchestrators — returns `{ status, uptime, targets }` |
 
 ## Setup
 
@@ -61,7 +62,8 @@ docker compose up -d
 
 **4. Point your app at the forwarder**
 
-- **Colota:** use the **Custom** API scheme and set the endpoint to `https://your-server/locations`
+- **Colota (single point):** use the **Custom** API scheme and set the endpoint to `https://your-server/locations`
+- **Colota (batch mode):** pick the **Overland** template (or **Dawarich** + Batch chip) and set the endpoint to `https://your-server/overland?api_key=your-key`
 - **OwnTracks (Android/iOS):** set mode to HTTP and the URL to `https://your-server/owntracks?api_key=your-key`. Only `_type: "location"` payloads are forwarded — region transitions, waypoints, and other event types are dropped.
 
 Authentication is accepted via `x-api-key` header, `?api_key=` query param, or `Authorization: Bearer` header.
@@ -80,6 +82,8 @@ TARGET_1_TYPE=colota
 ```
 
 The payload is forwarded unchanged (no OwnTracks conversion). The HA entity is named from the payload's `tid` field — e.g. `tid: "iphone15"` becomes `device_tracker.iphone15`.
+
+If the Colota app uses batch mode (Overland template), add `TARGET_n_BATCH_MODE=latest` so HA receives only the newest fix per upload instead of a replay of the whole batch — HA tracks the current position, not history. See [Batch handling](#batch-handling).
 
 **Alternative — built-in OwnTracks webhook:**
 
@@ -149,7 +153,40 @@ TARGET_6_TYPE=owntracks
 | --- | --- | --- |
 | `owntracks` | Home Assistant (built-in OwnTracks integration), Dawarich, Reitti, OwnTracks Recorder | Converts to OwnTracks format, adds `X-Limit-U` / `X-Limit-D` headers |
 | `traccar` | Traccar | GET (OsmAnd protocol) by default; set `METHOD=POST` for the Traccar JSON API |
+| `overland` | Dawarich (native batch endpoint), any Overland-compatible server | Forwards the **whole** Overland batch unchanged. Point the URL at the destination's batch endpoint (Dawarich: `/api/v1/overland/batches` |
 | `geopulse` / `colota` / `raw` | Home Assistant ([Colota integration](https://github.com/dietrichmax/colota-home-assistant)), GeoPulse, Colota-native services, custom endpoints | Passes the Colota payload through unchanged — names exist for documentation only |
+
+## Batch handling
+
+When the Colota app uses the **Overland** template (or **Dawarich** + Batch mode), it uploads multiple points in one request to `/overland`. The forwarder handles each target according to its type and `BATCH_MODE`:
+
+- **`overland` targets** receive the batch **whole** — one HTTP request per upload, regardless of how many points it contains. This is the efficient path; use it whenever the destination understands the Overland batch format (Dawarich does natively).
+- **`TARGET_n_BATCH_MODE=latest`** forwards only the **newest point** of the batch as a single request. Use it for live-state sinks like Home Assistant that track the _current_ position rather than history — it avoids replaying a backlog (which would spam zone automations and bloat history with points stamped at ingestion time).
+- **Otherwise the batch is split** (`BATCH_MODE=split`, the default) into one request per point. To avoid hammering your own server with a burst of requests, the split is **serial by default** (one request at a time, in chronological order). Tune it with:
+
+  | Variable                     | Default  | Description                                                          |
+  | ---------------------------- | -------- | -------------------------------------------------------------------- |
+  | `TARGET_n_BATCH_MODE`        | `split`  | `split` (one request per point) or `latest` (newest point only)      |
+  | `SPLIT_CONCURRENCY`          | `1`      | Global default for max in-flight requests per target while splitting |
+  | `SPLIT_DELAY_MS`             | `0`      | Global default delay between requests per target while splitting     |
+  | `TARGET_n_SPLIT_CONCURRENCY` | (global) | Per-target override of `SPLIT_CONCURRENCY`                           |
+  | `TARGET_n_SPLIT_DELAY_MS`    | (global) | Per-target override of `SPLIT_DELAY_MS`                              |
+
+  Example — feed Dawarich the raw batch for full history, give Home Assistant just the latest fix, and trickle into a self-hosted Traccar at most 2 at a time with a 200 ms gap:
+
+  ```env
+  TARGET_1_URL=https://dawarich.example.com/api/v1/overland/batches?api_key=your-key
+  TARGET_1_TYPE=overland
+
+  TARGET_2_URL=http://homeassistant:8123/api/webhook/your-webhook-id
+  TARGET_2_TYPE=colota
+  TARGET_2_BATCH_MODE=latest
+
+  TARGET_3_URL=https://traccar.example.com:5055
+  TARGET_3_TYPE=traccar
+  TARGET_3_SPLIT_CONCURRENCY=2
+  TARGET_3_SPLIT_DELAY_MS=200
+  ```
 
 ## Environment variables
 
@@ -158,14 +195,19 @@ TARGET_6_TYPE=owntracks
 | `PORT` | `3000` | Port to listen on |
 | `API_KEY` | - | If set, requests must include it via `x-api-key` header, `?api_key=` query param, or `Authorization: Bearer` |
 | `FORWARD_TIMEOUT_MS` | `30000` | Per-target HTTP timeout in milliseconds |
+| `SPLIT_CONCURRENCY` | `1` | Default max in-flight requests per target when splitting a batch (non-`overland` targets) |
+| `SPLIT_DELAY_MS` | `0` | Default delay between requests per target when splitting a batch |
 | `TARGET_n_URL` | - | Forward destination (n = 1-20, must be consecutive) |
-| `TARGET_n_TYPE` | `raw` | `owntracks`, `geopulse`, `traccar`, `colota`, or `raw` |
+| `TARGET_n_TYPE` | `raw` | `owntracks`, `geopulse`, `traccar`, `colota`, `overland`, or `raw` |
 | `TARGET_n_METHOD` | auto | `GET` or `POST` - overrides the default method for the target type |
 | `TARGET_n_AUTH` | - | Full `Authorization` header value (e.g. `Bearer your-token`) |
 | `TARGET_n_TID` | `CL` (owntracks) / `colota` (traccar) | Tracker ID for `owntracks` targets / device ID for `traccar` targets |
 | `TARGET_n_USER` | `colota` | `X-Limit-U` header for `owntracks` targets |
 | `TARGET_n_DEVICE` | `phone` | `X-Limit-D` fallback for `owntracks` targets - overridden by the payload's `tid` field when present |
 | `TARGET_n_FILTER_TID` | - | Only forward to this target when payload `tid` matches this value |
+| `TARGET_n_BATCH_MODE` | `split` | How a batch upload is handled: `split` (one request per point) or `latest` (newest point only) |
+| `TARGET_n_SPLIT_CONCURRENCY` | (global) | Per-target override of `SPLIT_CONCURRENCY` |
+| `TARGET_n_SPLIT_DELAY_MS` | (global) | Per-target override of `SPLIT_DELAY_MS` |
 
 ## Multi-user / TID routing
 
