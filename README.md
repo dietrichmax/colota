@@ -17,7 +17,6 @@ Receives location updates from the [Colota](https://colota.app) app or any OwnTr
 | `POST` | `/locations` | yes | Colota native payload — fans out to all matching targets |
 | `POST` | `/owntracks` | yes | OwnTracks HTTP payload — only `_type: "location"` is forwarded, others drop |
 | `POST` | `/overland` | yes | Colota batch payload (Overland format) - forwarded whole to `overland` targets, split to single points for the rest |
-| `HEAD` | `/locations` | no | Connectivity ping — used by the Colota app to verify the URL is reachable |
 | `GET` | `/health` | no | Health check for Docker / orchestrators — returns `{ status, uptime, targets }` |
 
 ## Setup
