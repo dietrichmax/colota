@@ -111,13 +111,13 @@ const homepageScreenshots = [
 
 const integrations = [
   { label: "Dawarich", to: "/docs/integrations/dawarich" },
+  { label: "GeoPulse", to: "/docs/integrations/geopulse" },
+  { label: "Home Assistant", to: "/docs/integrations/home-assistant" },
   { label: "Overland", to: "/docs/integrations/overland" },
   { label: "OwnTracks", to: "/docs/integrations/owntracks" },
-  { label: "Home Assistant", to: "/docs/integrations/home-assistant" },
-  { label: "Traccar", to: "/docs/integrations/traccar" },
-  { label: "GeoPulse", to: "/docs/integrations/geopulse" },
   { label: "PhoneTrack", to: "/docs/integrations/phonetrack" },
   { label: "Reitti", to: "/docs/integrations/reitti" },
+  { label: "Traccar", to: "/docs/integrations/traccar" },
   { label: "Custom Backend", to: "/docs/integrations/custom-backend" }
 ]
 

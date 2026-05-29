@@ -31,12 +31,12 @@ const sidebars: SidebarsConfig = {
         "integrations/overview",
         "integrations/api-templates",
         "integrations/dawarich",
-        "integrations/overland",
-        "integrations/home-assistant",
-        "integrations/owntracks",
         "integrations/geopulse",
-        "integrations/reitti",
+        "integrations/home-assistant",
+        "integrations/overland",
+        "integrations/owntracks",
         "integrations/phonetrack",
+        "integrations/reitti",
         "integrations/traccar",
         "integrations/custom-backend"
       ]

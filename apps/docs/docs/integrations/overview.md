@@ -10,11 +10,11 @@ Colota sends location data to a server you control. Choose from the following ba
 
 - [Dawarich](dawarich.md)
 - [GeoPulse](geopulse.md)
-- [Overland](overland.md) - any Overland-compatible server
 - [Home Assistant](home-assistant.md)
+- [Overland](overland.md) - any Overland-compatible server
 - [OwnTracks](owntracks.md)
-- [Reitti](reitti.md)
 - [PhoneTrack](phonetrack.md)
+- [Reitti](reitti.md)
 - [Traccar](traccar.md)
 - [Custom Backend](custom-backend.md)
 

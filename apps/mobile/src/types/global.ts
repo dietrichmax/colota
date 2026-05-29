@@ -128,23 +128,6 @@ export interface ApiTemplate {
 }
 
 export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTemplate> = {
-  geopulse: {
-    name: "geopulse",
-    label: "GeoPulse",
-    description: "Native Colota format for GeoPulse",
-    fieldMap: {
-      lat: "lat",
-      lon: "lon",
-      acc: "acc",
-      alt: "alt",
-      vel: "vel",
-      batt: "batt",
-      bs: "bs",
-      tst: "tst",
-      bear: "bear"
-    },
-    customFields: []
-  },
   dawarich: {
     name: "dawarich",
     label: "Dawarich",
@@ -161,6 +144,23 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
       bear: "cog"
     },
     customFields: [{ key: "_type", value: "location" }]
+  },
+  geopulse: {
+    name: "geopulse",
+    label: "GeoPulse",
+    description: "Native Colota format for GeoPulse",
+    fieldMap: {
+      lat: "lat",
+      lon: "lon",
+      acc: "acc",
+      alt: "alt",
+      vel: "vel",
+      batt: "batt",
+      bs: "bs",
+      tst: "tst",
+      bear: "bear"
+    },
+    customFields: []
   },
   overland: {
     name: "overland",

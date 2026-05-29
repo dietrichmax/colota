@@ -9,7 +9,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## Key Features
 
-- **Self-Hosted** - Send location data to your own server. Works with Dawarich, GeoPulse, OwnTracks, PhoneTrack, Reitti, Traccar, Home Assistant or any custom backend.
+- **Self-Hosted** - Send location data to your own server. Works with Dawarich, GeoPulse, Home Assistant, OwnTracks, PhoneTrack, Reitti, Traccar or any custom backend.
 - **Privacy First** - No analytics, no telemetry, no third-party SDKs. Open source (AGPL-3.0).
 - **Works Offline** - Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
 - **Offline Maps** - Download map areas to your device for use without an internet connection.
@@ -36,7 +36,7 @@ Colota has twenty-two screens, each focused on a specific task:
 | **Connection** | Server endpoint URL, offline mode toggle and connection test |
 | **Tracking & Sync** | GPS polling interval, distance filter, accuracy threshold and sync strategy preset |
 | **Appearance** | Light/dark theme, unit system, time format and custom map tile URLs |
-| **API Config** | Endpoint field mapping with templates for Dawarich, Overland, OwnTracks, PhoneTrack, Reitti, Traccar, or custom backends |
+| **API Config** | Endpoint field mapping with templates for Dawarich, GeoPulse, Overland, OwnTracks, PhoneTrack, Reitti, Traccar or custom backends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | **Geofences** | Create pause zones by tapping the map, view all zones with pause option indicators |
 | **Geofence Editor** | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
