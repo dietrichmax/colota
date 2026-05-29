@@ -6,9 +6,10 @@
     "build": "webpack",
     "start": "node dist/server.cjs",
     "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
     "format": "prettier --write \"**/*.{js,ts,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{js,ts,json,md,yml,yaml}\"",
-    "check": "npm audit --audit-level=high && npm run format:check && npm run typecheck && npm run build"
+    "check": "npm audit --audit-level=high && npm run format:check && npm run typecheck && npm test && npm run build"
   },
   "type": "module",
   "license": "AGPL-3.0-or-later",
@@ -25,6 +26,7 @@
     "prettier": "^3.8.3",
     "ts-loader": "^9.5.7",
     "ts-node": "^10.9.2",
+    "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "webpack": "^5.107.0",
     "webpack-cli": "^7.0.3"
