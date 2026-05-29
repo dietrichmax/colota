@@ -2,3 +2,5 @@ node_modules
 dist
 .env
 *.md
+test
+.github
