@@ -31,7 +31,7 @@ export type RootStackParamList = {
   "Setup Import": undefined
   "Trip Detail": { trip: Trip; trips: Trip[] }
   "Offline Maps": undefined
-  "Activity Log": undefined
+  Logging: undefined
   "Backup & Restore": undefined
 }
 

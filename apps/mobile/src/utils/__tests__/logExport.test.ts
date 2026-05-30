@@ -68,6 +68,25 @@ describe("getMergedLogs", () => {
     expect(result[3].level).toBe("INFO")
   })
 
+  it("parses AppFileLogger format entries with year-qualified timestamps", async () => {
+    mockGetNativeLogs.mockResolvedValue([
+      "2026-03-31 10:00:02.000 DEBUG/Service: Location received",
+      "2026-03-31 10:00:03.000 ERROR/Sync: Network error",
+      "2026-03-31 10:00:04.000 WARN/Boot: Slow start",
+      "2026-03-31 10:00:05.000 INFO/Profile: Switched"
+    ])
+
+    const result = await getMergedLogs()
+
+    expect(result).toHaveLength(4)
+    expect(result[0].level).toBe("DEBUG")
+    expect(result[1].level).toBe("ERROR")
+    expect(result[2].level).toBe("WARN")
+    expect(result[3].level).toBe("INFO")
+    expect(result[1].time).toBeGreaterThan(result[0].time)
+    expect(result[3].time).toBeGreaterThan(result[2].time)
+  })
+
   it("sorts merged entries chronologically", async () => {
     // Use timestamps far apart to avoid timezone issues
     const year = new Date().getFullYear()

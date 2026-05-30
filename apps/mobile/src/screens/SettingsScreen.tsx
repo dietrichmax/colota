@@ -217,11 +217,11 @@ export function SettingsScreen({ navigation }: Props) {
             />
             <Divider />
             <ListItem
-              testID="nav-activity-log"
+              testID="nav-logging"
               icon={ScrollText}
-              label="Activity Log"
-              sub="View and export debug logs"
-              onPress={() => navigation.navigate("Activity Log")}
+              label="Logging"
+              sub="View activity log and configure file logging"
+              onPress={() => navigation.navigate("Logging")}
             />
           </Card>
         </View>

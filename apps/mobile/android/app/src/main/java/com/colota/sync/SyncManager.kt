@@ -71,7 +71,7 @@ class SyncManager(
     }
 
     fun startPeriodicSync() {
-        AppLogger.d(TAG, "Starting periodic sync: interval=${syncIntervalSeconds}s, endpoint=${if (endpoint.isBlank()) "NONE" else endpoint}")
+        AppLogger.d(TAG, "Starting periodic sync: interval=${syncIntervalSeconds}s, endpoint=${if (endpoint.isBlank()) "NONE" else AppLogger.maskSensitiveUrlValues(endpoint)}")
         syncJob = scope.launch {
             while (isActive) {
                 val baseDelay = calculateNextSyncDelay()

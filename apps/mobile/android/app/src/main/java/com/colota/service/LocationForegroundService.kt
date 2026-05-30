@@ -463,21 +463,34 @@ class LocationForegroundService : Service() {
 
     private fun isLocationUpdatesRegistered(): Boolean = locationUpdateCallback != null
 
-    /**
-     * Diagnostic-only periodic logger. Records "time since last GPS fix" every 5 minutes
-     * to the activity log so silent stalls (eg stale FLP binding after long uptime) become
-     * visible in user-exported logs. Does not take any recovery action - data only.
-     */
+    /** Logs a state snapshot every 5 minutes so silent stalls and pause/stop gaps are visible
+     *  in user-exported logs. Data-only; no recovery action. */
     private fun startTrackingHeartbeatLogger() {
         trackingHeartbeatJob?.cancel()
         val scope = serviceScope ?: return
         trackingHeartbeatJob = scope.launch {
             while (isActive) {
                 delay(TRACKING_HEARTBEAT_INTERVAL_MS)
-                if (isWifiPaused || isMotionlessPaused) continue
-                if (locationUpdateCallback == null) continue
-                val sinceLastFix = SystemClock.elapsedRealtime() - lastFixAtMs
-                AppLogger.i(TAG, "Tracking alive: ${sinceLastFix / 1000}s since last fix")
+                // Catch here so a DB or system-service hiccup doesn't kill the heartbeat loop.
+                try {
+                    val state = when {
+                        locationUpdateCallback == null -> "STOPPED"
+                        isWifiPaused && isMotionlessPaused -> "PAUSED(wifi+motionless)"
+                        isWifiPaused -> "PAUSED(wifi)"
+                        isMotionlessPaused -> "PAUSED(motionless)"
+                        else -> "ACTIVE"
+                    }
+                    val sinceLastFix = SystemClock.elapsedRealtime() - lastFixAtMs
+                    val (battery, _) = deviceInfoHelper.getCachedBatteryStatus()
+                    val doze = (getSystemService(POWER_SERVICE) as? PowerManager)?.isDeviceIdleMode ?: false
+                    AppLogger.i(TAG,
+                        "Heartbeat state=$state, ${sinceLastFix / 1000}s since last fix, " +
+                            "queue=${dbHelper.getStats().queued}, batt=$battery%, " +
+                            "profile=${profileManager.getActiveProfileName() ?: "default"}, doze=$doze"
+                    )
+                } catch (e: Exception) {
+                    AppLogger.w(TAG, "Heartbeat snapshot failed: ${e.message}")
+                }
             }
         }
     }
@@ -1253,7 +1266,7 @@ class LocationForegroundService : Service() {
 
         AppLogger.d(TAG, buildString {
             append("Config loaded: interval=${config.interval}ms, distance=${config.minUpdateDistance}m, accuracy=${config.accuracyThreshold}m")
-            append(", endpoint=${if (config.endpoint.isBlank()) "NOT CONFIGURED" else config.endpoint}")
+            append(", endpoint=${if (config.endpoint.isBlank()) "NOT CONFIGURED" else AppLogger.maskSensitiveUrlValues(config.endpoint)}")
             append(", offline=${config.isOfflineMode}, sync=${if (config.syncIntervalSeconds == 0) "instant" else "${config.syncIntervalSeconds}s"}")
             if (parsedFieldMap.isNotEmpty()) append(", fieldMap=${parsedFieldMap.size} mappings")
         })

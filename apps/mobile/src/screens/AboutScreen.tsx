@@ -376,7 +376,7 @@ export function AboutScreen({}: ScreenProps) {
               </Pressable>
 
               <Text style={[styles.logHint, { color: colors.textLight }]}>
-                View and export logs from Settings &gt; Activity Log.
+                View and export logs from Settings &gt; Logging.
               </Text>
             </View>
           </>

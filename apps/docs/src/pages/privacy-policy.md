@@ -52,6 +52,8 @@ Collected data is stored in a local SQLite database on your device. The data is 
 
 If you configure auto-export, the App will write export files (CSV, GeoJSON, GPX, or KML) to a directory you select on your device. No data leaves your device as part of this process.
 
+If you enable persistent file logging in Logging -> File, the App writes diagnostic log entries (which may include location coordinates and other sensitive information) to a private file in app storage. The file is removed when the App is uninstalled. Logs are never sent automatically; sharing them requires explicit user action via the "Export log file..." flow.
+
 Authentication credentials (if configured) are encrypted.
 
 ### Importing Data

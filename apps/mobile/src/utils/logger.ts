@@ -9,7 +9,9 @@
  * via the Activity Log screen.
  */
 
-type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR"
+export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR"
+
+export const LOG_LEVELS: readonly LogLevel[] = ["DEBUG", "INFO", "WARN", "ERROR"]
 
 export interface LogEntry {
   timestamp: string

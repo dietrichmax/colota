@@ -51,7 +51,7 @@ Colota has twenty-two screens, each focused on a specific task:
 | **Data Management** | Clear sent history, delete old data, vacuum the database |
 | **Backup & Restore** | Create or restore a single password-encrypted `.colota` archive of all data (locations, settings, geofences, credentials) |
 | **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
-| **Activity Log** | In-app log viewer with level filtering, search, and export for bug reports |
+| **Logging** | In-app activity log viewer (level filtering, search, export) plus opt-in persistent file logging |
 | **About** | App version, device info, links to repository and privacy policy |
 
 ## Screenshots

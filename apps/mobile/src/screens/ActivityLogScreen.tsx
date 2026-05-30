@@ -6,25 +6,31 @@
 import React, { useState, useCallback, useMemo, useLayoutEffect, useRef } from "react"
 import { Text, StyleSheet, View, ScrollView, TextInput, Pressable, ActivityIndicator } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Share2, Search, X, ArrowDown } from "lucide-react-native"
 import { fonts } from "../styles/typography"
 import { Container, SectionTitle } from "../components"
+import { Tab } from "../components/ui/Tab"
+import { FileLoggingPanel } from "../components/features/log/FileLoggingPanel"
 import { useTheme } from "../hooks/useTheme"
-import { logger } from "../utils/logger"
+import { logger, LOG_LEVELS, type LogLevel } from "../utils/logger"
 import { getMergedLogs, exportLogs, MergedLogEntry } from "../utils/logExport"
 import NativeLocationService from "../services/NativeLocationService"
 import { ScreenProps } from "../types/global"
 
-const LEVEL_LABELS = ["DEBUG", "INFO", "WARN", "ERROR"] as const
-type FilterLevel = (typeof LEVEL_LABELS)[number]
+type FilterLevel = LogLevel
+
+type LogTab = "live" | "file"
 
 export function ActivityLogScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
+  const [tab, setTab] = useState<LogTab>("live")
   const [logs, setLogs] = useState<MergedLogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeLevels, setActiveLevels] = useState<Set<FilterLevel>>(new Set(LEVEL_LABELS))
+  const [activeLevels, setActiveLevels] = useState<Set<FilterLevel>>(new Set(LOG_LEVELS))
   const [showScrollEnd, setShowScrollEnd] = useState(false)
   const isNearEnd = useRef(true)
   const scrollRef = useRef<ScrollView>(null)
@@ -48,10 +54,11 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
 
   useFocusEffect(
     useCallback(() => {
+      if (tab !== "live") return
       loadLogs()
       const interval = setInterval(loadLogs, 3000)
       return () => clearInterval(interval)
-    }, [loadLogs])
+    }, [loadLogs, tab])
   )
 
   const handleExport = useCallback(async () => {
@@ -121,7 +128,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
 
   const levelCounts = useMemo(() => {
     const counts: Record<string, number> = {}
-    for (const level of LEVEL_LABELS) counts[level] = 0
+    for (const level of LOG_LEVELS) counts[level] = 0
     for (const entry of logs) {
       if (entry.level in counts) counts[entry.level]++
     }
@@ -156,9 +163,17 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
     [colors]
   )
 
-  if (loading) {
+  const tabBar = (
+    <View style={styles.tabBar}>
+      <Tab label="Live" active={tab === "live"} onPress={() => setTab("live")} colors={colors} />
+      <Tab label="File" active={tab === "file"} onPress={() => setTab("file")} colors={colors} />
+    </View>
+  )
+
+  if (loading && tab === "live") {
     return (
       <Container>
+        {tabBar}
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -166,8 +181,18 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
     )
   }
 
+  if (tab === "file") {
+    return (
+      <Container>
+        {tabBar}
+        <FileLoggingPanel />
+      </Container>
+    )
+  }
+
   return (
     <Container>
+      {tabBar}
       <View style={styles.filterBar}>
         <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Search size={16} color={colors.textLight} />
@@ -188,7 +213,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
         </View>
 
         <View style={styles.levelChips}>
-          {LEVEL_LABELS.map((level) => {
+          {LOG_LEVELS.map((level) => {
             const active = activeLevels.has(level)
             const color = levelColor(level)
             const count = levelCounts[level] || 0
@@ -199,12 +224,11 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
                 style={[
                   styles.chip,
                   {
-                    backgroundColor: active ? color + "20" : colors.background,
-                    borderColor: active ? color : colors.border
+                    backgroundColor: active ? color : colors.surface
                   }
                 ]}
               >
-                <Text style={[styles.chipText, { color: active ? color : colors.textLight }]}>
+                <Text style={[styles.chipText, { color: active ? colors.textOnPrimary : colors.textLight }]}>
                   {level}
                   {count > 0 ? ` ${count}` : ""}
                 </Text>
@@ -213,6 +237,8 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
           })}
         </View>
       </View>
+
+      <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
       <ScrollView
         ref={scrollRef}
@@ -257,11 +283,14 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
       </ScrollView>
 
       {showScrollEnd ? (
-        <Pressable onPress={scrollToEnd} style={[styles.scrollEndButton, { backgroundColor: colors.primary }]}>
+        <Pressable
+          onPress={scrollToEnd}
+          style={[styles.scrollEndButton, { backgroundColor: colors.primary, bottom: insets.bottom + 24 }]}
+        >
           <ArrowDown size={20} color={colors.textOnPrimary} />
         </Pressable>
       ) : filteredLogs.length > 0 ? (
-        <View style={[styles.followingBadge, { backgroundColor: colors.primary + "20" }]}>
+        <View style={[styles.followingBadge, { backgroundColor: colors.primary + "20", bottom: insets.bottom + 24 }]}>
           <Text style={[styles.followingText, { color: colors.primary }]}>Following</Text>
         </View>
       ) : null}
@@ -270,6 +299,10 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  tabBar: {
+    flexDirection: "row",
+    marginBottom: 12
+  },
   list: {
     padding: 16,
     paddingBottom: 40
@@ -307,13 +340,17 @@ const styles = StyleSheet.create({
     gap: 6
   },
   chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12
+  },
+  separator: {
+    height: 1,
+    marginHorizontal: 16,
+    marginTop: 4
   },
   chipText: {
-    ...fonts.medium,
+    ...fonts.semiBold,
     fontSize: 11
   },
   logText: {

@@ -4,15 +4,49 @@
  */
 
 import NativeLocationService from "../services/NativeLocationService"
-import { getLogEntries } from "./logger"
+import { getLogEntries, type LogLevel } from "./logger"
 
 export interface MergedLogEntry {
   id: string
   time: number
-  level: "DEBUG" | "INFO" | "WARN" | "ERROR" | "NATIVE"
+  level: LogLevel | "NATIVE"
   source: "JS" | "NATIVE"
   message: string
   raw: string
+}
+
+type ParsedLevel = MergedLogEntry["level"]
+
+/**
+ * Recognises both logcat threadtime (`MM-DD HH:MM:SS.mmm PID TID L TAG: msg`)
+ * and AppFileLogger output (`yyyy-MM-dd HH:mm:ss.SSS LEVEL/TAG: msg`).
+ */
+function parseNativeLogLine(raw: string): { time: number; level: ParsedLevel } {
+  const fileMatch = raw.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}\.\d{3})\s+(DEBUG|INFO|WARN|ERROR)\//)
+  if (fileMatch) {
+    return {
+      time: new Date(`${fileMatch[1]}T${fileMatch[2]}`).getTime(),
+      level: fileMatch[3] as ParsedLevel
+    }
+  }
+
+  const logcatMatch = raw.match(/^(\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}\.\d{3})/)
+  const time = logcatMatch ? new Date(`${new Date().getFullYear()}-${logcatMatch[1]}T${logcatMatch[2]}`).getTime() : 0
+
+  const levelMatch = raw.match(/\d+\s+\d+\s+([VDIWEF])\s/)
+  const nativeLevel = levelMatch ? levelMatch[1] : ""
+  const level: ParsedLevel =
+    nativeLevel === "E"
+      ? "ERROR"
+      : nativeLevel === "W"
+        ? "WARN"
+        : nativeLevel === "I"
+          ? "INFO"
+          : nativeLevel === "D"
+            ? "DEBUG"
+            : "NATIVE"
+
+  return { time, level }
 }
 
 /**
@@ -36,26 +70,9 @@ export async function getMergedLogs(): Promise<MergedLogEntry[]> {
 
   try {
     const nativeLogs = await NativeLocationService.getNativeLogs()
-    const year = new Date().getFullYear()
     for (let i = 0; i < nativeLogs.length; i++) {
       const raw = nativeLogs[i]
-      const match = raw.match(/^(\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}\.\d{3})/)
-      const time = match ? new Date(`${year}-${match[1]}T${match[2]}`).getTime() : 0
-
-      // Extract level from logcat threadtime format: "MM-DD HH:MM:SS.mmm PID TID L TAG: msg"
-      const levelMatch = raw.match(/\d+\s+\d+\s+([VDIWEF])\s/)
-      const nativeLevel = levelMatch ? levelMatch[1] : ""
-      const level =
-        nativeLevel === "E"
-          ? "ERROR"
-          : nativeLevel === "W"
-            ? "WARN"
-            : nativeLevel === "I"
-              ? "INFO"
-              : nativeLevel === "D"
-                ? "DEBUG"
-                : ("NATIVE" as const)
-
+      const { time, level } = parseNativeLogLine(raw)
       merged.push({
         id: `native-${i}`,
         time,

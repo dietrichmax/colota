@@ -5,3 +5,4 @@
 - Fixed app freezes on slower devices caused by motion detection.
 - Trip detail: track on the map now matches the trip's title color.
 - Trip detail: switch between trips with prev/next arrows next to the title.
+- Activity Log is now Logging, with a new File tab for persistent bug-report logs.

@@ -19,23 +19,33 @@ object AppLogger {
 
     fun d(tag: String, msg: String) {
         Log.d(PREFIX + tag, msg)
+        AppFileLogger.log("DEBUG", tag, msg)
     }
 
     fun i(tag: String, msg: String) {
         Log.i(PREFIX + tag, msg)
+        AppFileLogger.log("INFO", tag, msg)
     }
 
     fun w(tag: String, msg: String) {
         Log.w(PREFIX + tag, msg)
+        AppFileLogger.log("WARN", tag, msg)
     }
 
     fun e(tag: String, msg: String, throwable: Throwable? = null) {
         val t = PREFIX + tag
         if (throwable != null) Log.e(t, msg, throwable) else Log.e(t, msg)
+        val fileMsg = if (throwable != null) "$msg :: ${throwable.javaClass.simpleName}: ${throwable.message}" else msg
+        AppFileLogger.log("ERROR", tag, fileMsg)
     }
 
     private val sensitiveHeaderPatterns = listOf(
         "authorization", "bearer", "token", "secret", "password", "api-key", "apikey"
+    )
+
+    private val sensitiveQueryRegex = Regex(
+        "(?:^|[-_.])(token|secret|password|api[-_]?key|access[-_]?token|auth)(?:\$|[-_.])",
+        RegexOption.IGNORE_CASE
     )
 
     /**
@@ -46,11 +56,32 @@ object AppLogger {
         val nameLower = headerName.lowercase()
         val isSensitive = sensitiveHeaderPatterns.any { pattern -> nameLower.contains(pattern) }
         if (!isSensitive) return headerValue
+        return maskValue(headerValue)
+    }
 
-        return if (headerValue.length > 4) {
-            "${headerValue.substring(0, 4)}***"
-        } else {
-            "***"
+    /**
+     * Masks sensitive query parameter values inside a URL before logging.
+     * Returns the input unchanged if the URL has no query string or can't be parsed.
+     */
+    fun maskSensitiveUrlValues(url: String): String {
+        return try {
+            val uri = android.net.Uri.parse(url)
+            val names = uri.queryParameterNames
+            if (names.isEmpty()) return url
+
+            val builder = uri.buildUpon().clearQuery()
+            for (name in names) {
+                val isSensitive = sensitiveQueryRegex.containsMatchIn(name)
+                for (value in uri.getQueryParameters(name)) {
+                    builder.appendQueryParameter(name, if (isSensitive) maskValue(value) else value)
+                }
+            }
+            builder.build().toString()
+        } catch (_: Exception) {
+            url
         }
     }
+
+    private fun maskValue(value: String): String =
+        if (value.length > 4) "${value.substring(0, 4)}***" else "***"
 }
