@@ -1,8 +1,8 @@
-- Multi-select trips: long-press a trip in Location History to select.
+- Multi-select trips via long-press in Location History.
 - Tasker support: start/stop tracking via broadcast intent.
-- Battery charging status now shows correctly in the Data tab.
+- Battery charging status now correct in the Data tab.
 - Backup password field switched to hold-to-reveal.
-- Fixed app freezes on slower devices caused by motion detection.
-- Trip detail: track on the map now matches the trip's title color.
-- Trip detail: switch between trips with prev/next arrows next to the title.
-- Activity Log is now Logging, with a new File tab for persistent bug-report logs.
+- Fixed motion-detection freezes on slower devices.
+- Trip detail: map track matches the title color; prev/next arrows switch trips.
+- Activity Log renamed to Logging, with a File tab for bug-report logs.
+- Fixed location import failing on files larger than a few KB.

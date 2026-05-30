@@ -37,15 +37,12 @@ object LocationImporter {
         nowSec: Long = System.currentTimeMillis() / 1000,
     ): PreviewResult {
         val parseStart = System.currentTimeMillis()
-        val (sniffBytes, sniffString) = readSniff(contentResolver, uri)
-        val format = detectFormat(sniffString)
-            ?: throw UnsupportedFormatException("Could not detect file format")
-
-        // Prepend the sniff buffer back so the parser sees the full document without a
-        // second SAF open - some cloud providers charge a network round-trip per open.
-        val parse = openStream(contentResolver, uri).use { rest ->
-            val combined = SequenceInputStream(ByteArrayInputStream(sniffBytes), rest)
-            when (format) {
+        val (format, parse) = openStream(contentResolver, uri).use { stream ->
+            val (sniffBytes, sniffString) = readSniff(stream)
+            val detected = detectFormat(sniffString)
+                ?: throw UnsupportedFormatException("Could not detect file format")
+            val combined = SequenceInputStream(ByteArrayInputStream(sniffBytes), stream)
+            val result = when (detected) {
                 ImportFormat.GEOJSON -> GeoJsonParser.parse(combined, cancelled, nowSec)
                 ImportFormat.GOOGLE_TIMELINE_LEGACY,
                 ImportFormat.GOOGLE_TIMELINE_NEW -> GoogleTimelineParser.parse(combined, cancelled, nowSec)
@@ -53,6 +50,7 @@ object LocationImporter {
                 ImportFormat.KML -> KmlParser.parse(combined, cancelled, nowSec)
                 ImportFormat.CSV -> CsvParser.parse(combined, cancelled, nowSec)
             }
+            detected to result
         }
         val parseMs = System.currentTimeMillis() - parseStart
         val rate = if (parseMs > 0) parse.rows.size * 1000L / parseMs else parse.rows.size.toLong()
@@ -261,18 +259,17 @@ object LocationImporter {
         contentResolver.openInputStream(uri)
             ?: throw IllegalStateException("Could not open input stream for $uri")
 
-    private fun readSniff(contentResolver: ContentResolver, uri: Uri): Pair<ByteArray, String> {
-        openStream(contentResolver, uri).use { stream ->
-            val buf = ByteArray(SNIFF_BYTES)
-            var total = 0
-            while (total < buf.size) {
-                val n = stream.read(buf, total, buf.size - total)
-                if (n <= 0) break
-                total += n
-            }
-            val trimmed = if (total == buf.size) buf else buf.copyOf(total)
-            return trimmed to String(trimmed, Charsets.UTF_8)
+    // Leaves `stream` positioned just past the sniffed bytes so the caller can prepend them.
+    private fun readSniff(stream: InputStream): Pair<ByteArray, String> {
+        val buf = ByteArray(SNIFF_BYTES)
+        var total = 0
+        while (total < buf.size) {
+            val n = stream.read(buf, total, buf.size - total)
+            if (n <= 0) break
+            total += n
         }
+        val trimmed = if (total == buf.size) buf else buf.copyOf(total)
+        return trimmed to String(trimmed, Charsets.UTF_8)
     }
 
     internal fun dedupKey(ts: Long, lat: Double, lon: Double): DedupKey =

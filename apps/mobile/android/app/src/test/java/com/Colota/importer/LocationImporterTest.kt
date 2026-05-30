@@ -469,6 +469,45 @@ class LocationImporterTest {
         assertEquals(1_704_110_500L, preview.dateRangeEndSec)
     }
 
+    @Test
+    fun `preview parses a GPX larger than the sniff buffer without corrupting the stream`() {
+        // Files past the 4KB sniff buffer used to get the sniffed prefix spliced back into
+        // the document; smaller fixtures hid it because the parser stops at the first root close.
+        val pointCount = 200
+        val gpx = buildString {
+            append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+            append("<gpx version=\"1.1\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n")
+            append("<trk><trkseg>\n")
+            for (i in 0 until pointCount) {
+                val lat = 52.5 + i * 0.0001
+                val lon = 13.4 + i * 0.0001
+                val iso = java.time.Instant.ofEpochSecond(1_704_110_400L + i).toString()
+                append("<trkpt lat=\"$lat\" lon=\"$lon\"><ele>30</ele><time>$iso</time></trkpt>\n")
+            }
+            append("</trkseg></trk>\n</gpx>\n")
+        }
+        assertTrue(
+            "fixture must exceed the sniff buffer to exercise the splice",
+            gpx.toByteArray(Charsets.UTF_8).size > 4096,
+        )
+
+        val uri = writeFixture("large.gpx", gpx)
+        val resolver = ApplicationProvider.getApplicationContext<android.content.Context>().contentResolver
+
+        val preview = LocationImporter.preview(
+            contentResolver = resolver,
+            uri = uri,
+            db = db,
+            cancelled = AtomicBoolean(false),
+            nowSec = 1_750_000_000L,
+        )
+
+        assertEquals(ImportFormat.GPX, preview.format)
+        assertEquals(pointCount, preview.totalParsed)
+        assertEquals(0, preview.invalid)
+        assertEquals(pointCount, preview.rowsToCommit.size)
+    }
+
     private fun writeFixture(name: String, content: String): android.net.Uri {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         val file = java.io.File(ctx.cacheDir, name)
