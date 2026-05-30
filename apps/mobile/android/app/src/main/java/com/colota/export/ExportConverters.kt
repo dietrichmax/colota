@@ -50,6 +50,10 @@ object ExportConverters {
 
     const val PAGE_SIZE = 10_000
 
+    /** Filename-safe stamp for export files (e.g. `2026-05-28_1430`). */
+    fun exportFilenameStamp(): String =
+        SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.US).format(Date())
+
     private fun isoTime(unixSeconds: Long): String {
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
         sdf.timeZone = TimeZone.getTimeZone("UTC")

@@ -145,9 +145,9 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     title: "Offline Maps"
   },
   {
-    name: "Activity Log",
+    name: "Logging",
     component: ActivityLogScreen,
-    title: "Activity Log"
+    title: "Logging"
   },
   {
     name: "Backup & Restore",

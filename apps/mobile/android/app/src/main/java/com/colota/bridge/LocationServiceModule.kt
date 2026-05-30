@@ -29,6 +29,7 @@ import com.Colota.util.DeviceInfoHelper
 import com.Colota.export.AutoExportConfig
 import com.Colota.export.AutoExportScheduler
 import com.Colota.export.ExportConverters
+import com.Colota.util.AppFileLogger
 import com.Colota.util.FileOperations
 import com.Colota.util.AppLogger
 import com.Colota.util.SecureStorageHelper
@@ -224,16 +225,19 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     override fun getName(): String = "LocationServiceModule"
 
     override fun onHostResume() {
+        AppLogger.i(TAG, "RN host resumed (app foregrounded)")
         isAppInForeground = true
         registerChargingReceiver()
     }
 
     override fun onHostPause() {
+        AppLogger.i(TAG, "RN host paused (app backgrounded)")
         isAppInForeground = false
         unregisterChargingReceiver()
     }
 
     override fun onHostDestroy() {
+        AppLogger.i(TAG, "RN host destroyed")
         isAppInForeground = false
         unregisterChargingReceiver()
     }
@@ -840,16 +844,66 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getNativeLogs(promise: Promise) = executeAsync(promise) {
-        val process = Runtime.getRuntime().exec(arrayOf("/system/bin/logcat", "-d", "-v", "threadtime"))
-        try {
-            val lines = process.inputStream.bufferedReader().readLines()
-            process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
+        if (AppFileLogger.isEnabled()) {
             Arguments.createArray().apply {
-                lines.filter { "Colota." in it }.forEach { pushString(it) }
+                AppFileLogger.getRecentEntries().forEach { pushString(it) }
             }
-        } finally {
-            process.destroy()
+        } else {
+            val process = Runtime.getRuntime().exec(arrayOf("/system/bin/logcat", "-d", "-v", "threadtime"))
+            try {
+                val lines = process.inputStream.bufferedReader().readLines()
+                process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)
+                Arguments.createArray().apply {
+                    lines.filter { "Colota." in it }.forEach { pushString(it) }
+                }
+            } finally {
+                process.destroy()
+            }
         }
+    }
+
+    @ReactMethod
+    fun setFileLoggingEnabled(enabled: Boolean, promise: Promise) = executeAsync(promise) {
+        dbHelper.saveSetting("debugFileLoggingEnabled", if (enabled) "true" else "false")
+        AppFileLogger.setEnabled(enabled)
+        null
+    }
+
+    @ReactMethod
+    fun clearFileLog(promise: Promise) = executeAsync(promise) {
+        AppFileLogger.clear()
+        null
+    }
+
+    @ReactMethod
+    fun getFileLogSize(promise: Promise) = executeAsync(promise) {
+        AppFileLogger.currentSizeBytes().toDouble()
+    }
+
+    @ReactMethod
+    fun exportFileLogToUri(treeUriString: String, promise: Promise) = executeAsync(promise) {
+        AppFileLogger.flushNow()
+        // Oldest segment first so the exported file reads chronologically.
+        val sources = AppFileLogger.logFiles()
+        if (sources.isEmpty()) return@executeAsync null
+
+        val treeUri = android.net.Uri.parse(treeUriString)
+        val tree = androidx.documentfile.provider.DocumentFile.fromTreeUri(reactApplicationContext, treeUri)
+            ?: throw Exception("Invalid tree URI")
+
+        val timestamp = java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US)
+            .format(java.util.Date())
+        val fileName = "colota-log-$timestamp.txt"
+        val doc = tree.createFile("text/plain", fileName)
+            ?: throw Exception("Could not create document in selected directory")
+
+        reactApplicationContext.contentResolver.openOutputStream(doc.uri)?.use { output ->
+            for (source in sources) {
+                source.inputStream().use { input -> input.copyTo(output) }
+            }
+        } ?: throw Exception("Could not open output stream")
+
+        doc.uri.toString()
     }
 
     // =========================================================================
@@ -946,9 +1000,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun exportToFile(format: String, promise: Promise) = executeAsync(promise) {
         val ext = ExportConverters.extensionFor(format)
-        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd_HHmm", java.util.Locale.US)
-            .format(java.util.Date())
-        val tempFile = java.io.File(reactApplicationContext.cacheDir, "manual_export_$dateStr$ext")
+        val tempFile = java.io.File(reactApplicationContext.cacheDir, "manual_export_${ExportConverters.exportFilenameStamp()}$ext")
 
         val totalRows = ExportConverters.exportToFile(dbHelper, format, tempFile)
 

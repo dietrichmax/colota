@@ -714,12 +714,35 @@ class NativeLocationService {
     return LocationServiceModule.getCacheDirectory()
   }
 
-  /**
-   * Returns native (Kotlin) Logcat entries for the app's process
-   */
+  /** Logcat entries for the app's process, or file-log entries when file logging is enabled. */
   static async getNativeLogs(): Promise<string[]> {
     this.ensureModule()
     return LocationServiceModule.getNativeLogs()
+  }
+
+  // ============================================================================
+  // FILE LOGGING (debug)
+  // ============================================================================
+
+  static async setFileLoggingEnabled(enabled: boolean): Promise<void> {
+    this.ensureModule()
+    await LocationServiceModule.setFileLoggingEnabled(enabled)
+  }
+
+  static async clearFileLog(): Promise<void> {
+    this.ensureModule()
+    await LocationServiceModule.clearFileLog()
+  }
+
+  static async getFileLogSize(): Promise<number> {
+    this.ensureModule()
+    return LocationServiceModule.getFileLogSize()
+  }
+
+  /** Returns null if there are no entries to export. */
+  static async exportFileLogToUri(treeUri: string): Promise<string | null> {
+    this.ensureModule()
+    return LocationServiceModule.exportFileLogToUri(treeUri)
   }
 
   // ============================================================================

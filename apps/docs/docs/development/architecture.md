@@ -361,7 +361,7 @@ Supporting utilities in `mapUtils.ts`:
 
 | Utility | Purpose |
 | --- | --- |
-| `logger` | Environment-aware logging - suppresses debug/info console output in production via `__DEV__`, always logs warn/error to console. All levels are always captured in a ring buffer (2000 entries) for the Activity Log screen |
+| `logger` | Environment-aware logging - suppresses debug/info console output in production via `__DEV__`, always logs warn/error to console. All levels are always captured in a ring buffer (2000 entries) for the Logging screen |
 | `geo` | Haversine distance, speed/distance/duration/time formatting with configurable unit system (metric/imperial) and time format (12h/24h), auto-detected from locale on first use |
 | `exportConverters` | Converts location data to CSV, GeoJSON, GPX, and KML export formats (flat and trip-aware variants) |
 | `trips` | Trip segmentation via time-gap detection (15-min threshold) with distance computation, trip stats (avg speed, elevation gain/loss), and trip color assignment |

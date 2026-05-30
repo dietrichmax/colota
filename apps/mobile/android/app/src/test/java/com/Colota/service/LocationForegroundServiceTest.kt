@@ -1,6 +1,7 @@
 package com.Colota.service
 
 import android.app.NotificationManager
+import android.content.Intent
 import android.location.Location
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
@@ -2244,6 +2245,38 @@ class LocationForegroundServiceTest {
             if (result !== kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED) {
                 cont.resumeWith(Result.success(Unit))
             }
+        }
+    }
+
+    private fun invokeLoadConfigFromIntent(intent: Intent?) {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "loadConfigFromIntent", Intent::class.java
+        )
+        method.isAccessible = true
+        method.invoke(service, intent)
+    }
+
+    @Test
+    fun `loadConfigFromIntent masks endpoint URL when logging config`() {
+        mockkObject(ServiceConfig.Companion)
+        try {
+            every { ServiceConfig.fromDatabase(any()) } returns ServiceConfig(
+                endpoint = "https://example.com/api?token=secret123"
+            )
+            every { AppLogger.maskSensitiveUrlValues(any()) } returns "https://example.com/api?token=secr***"
+
+            val messages = mutableListOf<String>()
+            every { AppLogger.d(any(), capture(messages)) } just Runs
+
+            invokeLoadConfigFromIntent(null)
+
+            val configLine = messages.firstOrNull { it.startsWith("Config loaded:") }
+            assertNotNull("expected a 'Config loaded' log line", configLine)
+            verify { AppLogger.maskSensitiveUrlValues("https://example.com/api?token=secret123") }
+            assertTrue("endpoint must be the masked value", configLine!!.contains("endpoint=https://example.com/api?token=secr***"))
+            assertFalse("raw credential must not be logged", configLine.contains("secret123"))
+        } finally {
+            unmockkObject(ServiceConfig.Companion)
         }
     }
 

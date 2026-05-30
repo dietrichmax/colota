@@ -9,8 +9,9 @@ import { useFocusEffect } from "@react-navigation/native"
 import { fonts } from "../styles/typography"
 import { BarChart2 } from "lucide-react-native"
 import { Container } from "../components"
+import { Tab } from "../components/ui/Tab"
 import { useTheme } from "../hooks/useTheme"
-import { Trip, LocationCoords, ThemeColors } from "../types/global"
+import { Trip, LocationCoords } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { CalendarPicker } from "../components/features/inspector/CalendarPicker"
@@ -23,13 +24,6 @@ import { segmentTrips } from "../utils/trips"
 import { TRIP_CONVERTERS, EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
-
-interface TabProps {
-  label: string
-  active: boolean
-  onPress: () => void
-  colors: ThemeColors
-}
 
 type TabType = "map" | "trips" | "data"
 
@@ -309,22 +303,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   )
 }
 
-const Tab = ({ label, active, onPress, colors }: TabProps) => {
-  const borderBottomColor = active ? colors.primary : "transparent"
-  const textColor = active ? colors.primary : colors.textSecondary
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.tab, { borderBottomColor }, pressed && { opacity: colors.pressedOpacity }]}
-    >
-      <Text style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive, { color: textColor }]}>
-        {label}
-      </Text>
-    </Pressable>
-  )
-}
-
 const styles = StyleSheet.create({
   headerBtn: {
     padding: 8
@@ -351,20 +329,5 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
     marginBottom: 12
-  },
-  tab: {
-    flex: 1,
-    alignItems: "center",
-    padding: 12,
-    borderBottomWidth: 2
-  },
-  tabText: {
-    fontSize: 14
-  },
-  tabTextActive: {
-    ...fonts.bold
-  },
-  tabTextInactive: {
-    ...fonts.regular
   }
 })

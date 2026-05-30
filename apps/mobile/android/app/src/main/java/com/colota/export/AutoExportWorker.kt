@@ -121,9 +121,7 @@ class AutoExportWorker(
 
         val ext = ExportConverters.extensionFor(config.format)
         val dirUri = Uri.parse(config.uri)
-        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd_HHmm", java.util.Locale.US)
-            .format(java.util.Date())
-        val fileName = "colota_export_$dateStr$ext"
+        val fileName = "colota_export_${ExportConverters.exportFilenameStamp()}$ext"
 
         // Write to cache first, then copy to SAF.
         val tempFile = File(appContext.cacheDir, "auto_export_temp$ext")

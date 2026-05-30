@@ -163,7 +163,7 @@ class NetworkManager(private val context: Context) {
     ) {
         if (!BuildConfig.DEBUG) return
         AppLogger.d(TAG, "=== HTTP REQUEST ===")
-        AppLogger.d(TAG, "Endpoint: ${if (isGet) targetUrl else resolvedEndpoint}")
+        AppLogger.d(TAG, "Endpoint: ${AppLogger.maskSensitiveUrlValues(if (isGet) targetUrl.toString() else resolvedEndpoint)}")
         AppLogger.d(TAG, "Method: ${connection.requestMethod}")
         AppLogger.d(TAG, "Headers:")
         connection.requestProperties.forEach { (key, values) ->
@@ -193,12 +193,12 @@ class NetworkManager(private val context: Context) {
         val url = try {
             URL(resolvedEndpoint)
         } catch (e: Exception) {
-            AppLogger.e(TAG, "Invalid URL: $resolvedEndpoint")
+            AppLogger.e(TAG, "Invalid URL: ${AppLogger.maskSensitiveUrlValues(resolvedEndpoint)}")
             return@withContext BatchResult.NetworkError
         }
 
         if (!UrlSafety.isValidProtocol(resolvedEndpoint)) {
-            AppLogger.e(TAG, "Protocol blocked or invalid: $endpoint")
+            AppLogger.e(TAG, "Protocol blocked or invalid: ${AppLogger.maskSensitiveUrlValues(endpoint)}")
             return@withContext BatchResult.NetworkError
         }
 

@@ -49,16 +49,31 @@ If **Test Connection** fails, the message points at the specific layer that brok
 | `Connection timed out` | Network layer: the server didn't respond in time | Check connectivity, firewall, server availability |
 | `Local network access denied` | Permission: Android 16+ blocked the connection to a private IP | Grant Local Network Access (Settings -> Apps -> Colota -> Permissions) |
 
-## Exporting app logs
+## Viewing and exporting logs
 
-You can view and export app logs directly from the device for bug reports:
+**Settings > Logging** shows app log entries in two tabs.
 
-1. Go to **Settings > Activity Log**
-2. Browse logs in the viewer - filter by level or search for keywords
-3. Tap the share button to export a text file with all log entries
-4. The export includes app version, device info and all collected log messages
+### Live tab
 
-Logs are always collected in the background using a fixed-size ring buffer.
+This is the easiest way to view and share recent logs.
+
+1. Open **Settings > Logging** (the Live tab opens by default)
+2. Scroll through recent entries - the chips at the top filter by severity (`DEBUG` / `INFO` / `WARN` / `ERROR`)
+3. Tap the share icon (top right) to save a text file containing the recent entries plus your app version and device info
+
+### File tab
+
+For bugs that take a while to happen:
+
+1. Open **Settings > Logging** and switch to the **File** tab
+2. Turn on **Persistent file logging**
+3. Use the app until the problem happens again
+4. Come back to the **File** tab and tap **Export log file...** - pick where to save it
+5. Open a bug report at [github.com/dietrichmax/colota/issues](https://github.com/dietrichmax/colota/issues/new) and attach the saved `colota-log-*.txt`
+
+**Heads up:** log files can contain your location coordinates. Please check the content of the file before sharing it.
+
+The file grows the whole time logging is on. Tap **Clear log files** on the **File** tab to reset it.
 
 ## Debugging with adb logcat
 
