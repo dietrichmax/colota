@@ -6,6 +6,12 @@ sidebar_position: 3
 
 Merge location history from external files into your Colota database.
 
+:::warning[Back up before a large import]
+
+Imports can't be selectively undone. Colota has no per-point delete - you can only delete a whole trip, all points since N days or wipe everything, so removing an import also takes any genuine points recorded in the same window. Take a [Backup](backup-restore.md) first if you're unsure.
+
+:::
+
 :::tip[Looking for a full archive restore?]
 
 Data Import is **additive**: existing locations are preserved and duplicates are skipped. Use this to recover from a Colota export, migrate from Google Timeline, or pull historical data from another tracker. If you want to **replace everything** on the device from an encrypted Colota archive (locations, settings, credentials), use [Backup & Restore](backup-restore.md).
@@ -105,7 +111,3 @@ Once queued, the rows are uploaded as soon as the next sync runs. Removing them 
 - **CSV without lat/lon/time columns** is rejected with a clear error rather than silently producing zero rows.
 - **Very large files** (500 MB+ Google Timeline exports) parse without loading the full document into memory. Expect the preview phase to take some seconds; the actual commit is fast once you confirm.
 - **The Import + Queue button is greyed out** if you're in offline mode or have no sync endpoint configured - this is intentional, the queue has no destination in that state.
-
-## Tip: back up before importing
-
-Imports can't be selectively undone. If you import the wrong file, removing only the imported rows means finding them by timestamp range - which also kills any legitimate data in that range. Take a [Backup](backup-restore.md) before a large import if you're unsure.
