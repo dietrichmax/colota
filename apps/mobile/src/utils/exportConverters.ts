@@ -4,9 +4,9 @@
  */
 
 import { type LucideIcon } from "lucide-react-native"
-import { Table2, Globe, Activity, Map } from "lucide-react-native"
 import { Trip } from "../types/global"
 import { getTripColor } from "./trips"
+import { FILE_FORMATS, IMPORT_FORMAT_ORDER } from "./fileFormats"
 
 export const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024 // 10 MB
 
@@ -40,7 +40,7 @@ export const getByteSize = (content: string): number => {
 // ============================================================================
 
 export const convertTripsToCSV = (trips: Trip[]): string => {
-  const headers = "trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,battery\n"
+  const headers = "trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery\n"
   const rows = trips
     .flatMap((trip) =>
       trip.locations.map((item, i) => {
@@ -56,6 +56,7 @@ export const convertTripsToCSV = (trips: Trip[]): string => {
           item.accuracy ?? 0,
           item.altitude ?? 0,
           item.speed ?? 0,
+          item.bearing ?? 0,
           item.battery ?? 0
         ].join(",")
       })
@@ -80,6 +81,7 @@ export const convertTripsToGeoJSON = (trips: Trip[]): string => {
           accuracy: item.accuracy,
           altitude: item.altitude,
           speed: item.speed,
+          bearing: item.bearing,
           battery: item.battery,
           time: new Date(ts * 1000).toISOString()
         }
@@ -113,6 +115,7 @@ export const convertTripsToGPX = (trips: Trip[]): string => {
         <extensions>
           <accuracy>${item.accuracy || 0}</accuracy>
           <speed>${item.speed || 0}</speed>
+          <bearing>${item.bearing || 0}</bearing>
           <battery>${item.battery || 0}</battery>
         </extensions>
       </trkpt>`)
@@ -192,7 +195,9 @@ export const TRIP_CONVERTERS: Record<ExportFormat, (trips: Trip[]) => string> = 
 
 export type ExportFormat = "csv" | "geojson" | "gpx" | "kml"
 
-export const EXPORT_FORMAT_KEYS: ExportFormat[] = ["csv", "geojson", "gpx", "kml"]
+export const EXPORT_FORMAT_KEYS: ExportFormat[] = IMPORT_FORMAT_ORDER.filter(
+  (k) => FILE_FORMATS[k].exportable
+) as ExportFormat[]
 
 export interface ExportFormatConfig {
   label: string
@@ -203,37 +208,18 @@ export interface ExportFormatConfig {
   mimeType: string
 }
 
-export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = {
-  csv: {
-    label: "CSV",
-    subtitle: "Spreadsheet Format",
-    description: "Excel, Google Sheets, data analysis",
-    icon: Table2,
-    extension: ".csv",
-    mimeType: "text/csv"
+export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = EXPORT_FORMAT_KEYS.reduce(
+  (acc, key) => {
+    const f = FILE_FORMATS[key]
+    acc[key] = {
+      label: f.label,
+      subtitle: f.subtitle!,
+      description: f.description,
+      icon: f.icon,
+      extension: f.extension,
+      mimeType: f.mimeType!
+    }
+    return acc
   },
-  geojson: {
-    label: "GeoJSON",
-    subtitle: "Geographic Data",
-    description: "Mapbox, Leaflet, QGIS, ArcGIS",
-    icon: Globe,
-    extension: ".geojson",
-    mimeType: "application/json"
-  },
-  gpx: {
-    label: "GPX",
-    subtitle: "GPS Exchange",
-    description: "Garmin, Strava, Google Earth",
-    icon: Activity,
-    extension: ".gpx",
-    mimeType: "application/gpx+xml"
-  },
-  kml: {
-    label: "KML",
-    subtitle: "Keyhole Markup Language",
-    description: "Google Earth, Google Maps, ArcGIS",
-    icon: Map,
-    extension: ".kml",
-    mimeType: "application/vnd.google-earth.kml+xml"
-  }
-}
+  {} as Record<ExportFormat, ExportFormatConfig>
+)

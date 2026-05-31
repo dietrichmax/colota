@@ -5,8 +5,10 @@ import {
   convertTripsToGeoJSON,
   convertTripsToGPX,
   convertTripsToKML,
-  LARGE_FILE_THRESHOLD
+  LARGE_FILE_THRESHOLD,
+  TRIP_CONVERTERS
 } from "../exportConverters"
+import { FILE_FORMATS } from "../fileFormats"
 
 const sampleTrips = [
   {
@@ -165,5 +167,58 @@ describe("convertTripsToKML", () => {
     expect(kml).toContain("Trip 1")
     expect(kml).toContain("Trip 2")
     expect(kml).toContain("<TimeStamp>")
+  })
+})
+
+describe("FILE_FORMATS registry", () => {
+  it("exportable formats are fully wired for export", () => {
+    const exportable = Object.entries(FILE_FORMATS).filter(([, f]) => f.exportable)
+    expect(exportable.map(([key]) => key).sort()).toEqual(Object.keys(TRIP_CONVERTERS).sort())
+    const incomplete = exportable.filter(([, f]) => !f.mimeType || !f.subtitle).map(([key]) => key)
+    expect(incomplete).toEqual([])
+  })
+})
+
+describe("exporters emit every location field", () => {
+  const trip = [
+    {
+      index: 1,
+      locations: [
+        {
+          latitude: 48.1,
+          longitude: 11.5,
+          accuracy: 7,
+          altitude: 333,
+          speed: 4,
+          bearing: 90,
+          battery: 55,
+          timestamp: 1700000000
+        }
+      ],
+      startTime: 1700000000,
+      endTime: 1700000000,
+      distance: 0,
+      locationCount: 1
+    }
+  ]
+
+  it("GeoJSON properties carry every field", () => {
+    const props = JSON.parse(convertTripsToGeoJSON(trip)).features[0].properties
+    expect(props).toMatchObject({ accuracy: 7, altitude: 333, speed: 4, bearing: 90, battery: 55 })
+  })
+
+  it("GPX extensions carry every field", () => {
+    const gpx = convertTripsToGPX(trip)
+    expect(gpx).toContain("<ele>333</ele>")
+    expect(gpx).toContain("<accuracy>7</accuracy>")
+    expect(gpx).toContain("<speed>4</speed>")
+    expect(gpx).toContain("<bearing>90</bearing>")
+    expect(gpx).toContain("<battery>55</battery>")
+  })
+
+  it("CSV columns carry every field", () => {
+    const lines = convertTripsToCSV(trip).split("\n")
+    expect(lines[0]).toBe("trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery")
+    expect(lines[1]).toContain("7,333,4,90,55")
   })
 })
