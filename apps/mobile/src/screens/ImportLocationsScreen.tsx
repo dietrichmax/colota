@@ -5,8 +5,7 @@
 
 import React, { useCallback, useEffect, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
-import { Activity, Database, Download, Globe, Map, MapPin, Table2 } from "lucide-react-native"
-import type { LucideIcon } from "lucide-react-native"
+import { Download } from "lucide-react-native"
 import { fonts } from "../styles/typography"
 import { Button, Card, Container, Divider, LoadingOverlay, SectionTitle } from "../components"
 import { useTheme } from "../hooks/useTheme"
@@ -14,68 +13,21 @@ import NativeLocationService from "../services/NativeLocationService"
 import ImportService, { type ImportFormat, type ImportPreview } from "../services/ImportService"
 import { showAlert, showChoice } from "../services/modalService"
 import { logger } from "../utils/logger"
+import { FILE_FORMATS, IMPORT_FORMAT_ORDER, importDescription } from "../utils/fileFormats"
 import { ScreenProps } from "../types/global"
 import type { ThemeColors } from "../types/global"
 
-const IMPORT_FORMAT_LABELS: Record<ImportFormat, string> = {
-  geojson: "GeoJSON",
-  google_timeline_legacy: "Google Timeline (Records.json)",
-  google_timeline_new: "Google Timeline",
-  gpx: "GPX",
-  kml: "KML",
-  csv: "CSV"
-}
+const IMPORT_FORMAT_LABELS = Object.fromEntries(
+  (Object.keys(FILE_FORMATS) as ImportFormat[]).map((k) => [k, FILE_FORMATS[k].label])
+) as Record<ImportFormat, string>
 
 // Warn before queueing this many points - the backend has to absorb one upload per row.
 const SYNC_WARN_THRESHOLD = 10_000
 
-type FormatEntry = {
-  icon: LucideIcon
-  title: string
-  extension: string
-  description: string
-}
-
-const SUPPORTED_FORMATS: FormatEntry[] = [
-  {
-    icon: Globe,
-    title: "GeoJSON",
-    extension: ".geojson",
-    description: "FeatureCollection of Point features with a time property. Colota's own export round-trips cleanly."
-  },
-  {
-    icon: Database,
-    title: "Google Timeline (legacy)",
-    extension: "Records.json",
-    description:
-      "Older bulk Location History export from Google Takeout. Google removed this from Takeout in late 2024; use this for archived files."
-  },
-  {
-    icon: MapPin,
-    title: "Google Timeline",
-    extension: ".json",
-    description: "On-device export from Android Settings -> Location -> Location services -> Timeline."
-  },
-  {
-    icon: Activity,
-    title: "GPX",
-    extension: ".gpx",
-    description: "GPS Exchange Format. Sport watches, Strava exports, tracking apps."
-  },
-  {
-    icon: Map,
-    title: "KML",
-    extension: ".kml",
-    description:
-      "Keyhole Markup Language. Google Earth, My Maps. Placemarks with TimeStamps only - LineString-only tracks are skipped."
-  },
-  {
-    icon: Table2,
-    title: "CSV",
-    extension: ".csv",
-    description: "Comma-separated table. Header must include latitude, longitude, and a time column."
-  }
-]
+const SUPPORTED_FORMATS = IMPORT_FORMAT_ORDER.map((key) => {
+  const f = FILE_FORMATS[key]
+  return { icon: f.icon, title: f.label, extension: f.extension, description: importDescription(f) }
+})
 
 function formatDate(unixSeconds: number | null): string {
   if (unixSeconds == null) return "-"
@@ -127,7 +79,7 @@ function importErrorMessage(e: unknown): string {
   }
 }
 
-const FormatRow = ({ entry, colors }: { entry: FormatEntry; colors: ThemeColors }) => {
+const FormatRow = ({ entry, colors }: { entry: (typeof SUPPORTED_FORMATS)[number]; colors: ThemeColors }) => {
   const Icon = entry.icon
   return (
     <View style={styles.formatRow}>
