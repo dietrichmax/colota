@@ -182,8 +182,13 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               <ChevronLeft size={24} color={prevTrip ? colors.primary : colors.textDisabled} />
             </Pressable>
             <View style={styles.headerTitleCenter}>
-              <View style={[styles.dot, { backgroundColor: tripColor }]} />
-              <Text style={[styles.title, { color: colors.text }]}>{displayName}</Text>
+              <View style={styles.headerTitleLine}>
+                <View style={[styles.dot, { backgroundColor: tripColor }]} />
+                <Text style={[styles.title, { color: colors.text }]}>{displayName}</Text>
+              </View>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                {formatDate(trip.startTime)} · {formatTime(trip.startTime, true)} - {formatTime(trip.endTime, true)}
+              </Text>
             </View>
             <Pressable
               onPress={() => goToTrip(nextTrip)}
@@ -194,9 +199,6 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               <ChevronRight size={24} color={nextTrip ? colors.primary : colors.textDisabled} />
             </Pressable>
           </View>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {formatDate(trip.startTime)} · {formatTime(trip.startTime, true)} - {formatTime(trip.endTime, true)}
-          </Text>
         </View>
 
         {/* Stats grid */}
@@ -352,15 +354,17 @@ const styles = StyleSheet.create({
   headerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4
+    justifyContent: "space-between"
   },
   headerTitleCenter: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4
+  },
+  headerTitleLine: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    flex: 1,
-    justifyContent: "center"
+    gap: 10
   },
   navBtn: {
     padding: 4
