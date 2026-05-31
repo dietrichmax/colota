@@ -403,10 +403,16 @@ class NetworkManager(private val context: Context) {
         val keys = payload.keys()
         while (keys.hasNext()) {
             val key = keys.next()
-            val value = payload.opt(key)?.toString() ?: continue
+            val raw = payload.opt(key) ?: continue
+            val value = formatQueryValue(raw)
             params.add("${URLEncoder.encode(key, "UTF-8")}=${URLEncoder.encode(value, "UTF-8")}")
         }
         return params.joinToString("&")
+    }
+
+    private fun formatQueryValue(raw: Any): String = when {
+        raw is Double && raw == raw.toLong().toDouble() -> raw.toLong().toString()
+        else -> raw.toString()
     }
 
     /**
