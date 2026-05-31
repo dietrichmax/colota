@@ -48,6 +48,26 @@ class NetworkManagerTest {
     }
 
     @Test
+    fun `buildQueryString renders whole-number doubles as integers`() {
+        // JS numbers cross the RN bridge as doubles, so a Test Connection unix
+        // timestamp serializes as 1.780257432E9. Traccar's OsmAnd endpoint rejects
+        // a scientific-notation timestamp and drops the connection without
+        // replying (okhttp surfaces this as "unexpected end of stream").
+        val payload = JSONObject().apply {
+            put("tst", 1780257432.0)
+            put("acc", 5.0)
+            put("lat", 48.0685105)
+        }
+
+        val result = invokeBuildQueryString(payload)
+
+        assertTrue(result.contains("tst=1780257432"))
+        assertFalse("scientific notation breaks Traccar's parser", result.contains("1.780257432E9"))
+        assertFalse("whole-number doubles must drop the .0", result.contains("acc=5.0"))
+        assertTrue("fractional values keep their decimals", result.contains("lat=48.0685105"))
+    }
+
+    @Test
     fun `buildQueryString URL-encodes special characters`() {
         val payload = JSONObject().put("name", "hello world&more")
 
