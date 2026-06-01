@@ -53,7 +53,8 @@ class ProfileManagerTest {
         name: String = "Charging",
         intervalMs: Long = 10000,
         priority: Int = 10,
-        deactivationDelay: Int = 60
+        deactivationDelay: Int = 60,
+        activationDelay: Int = 0
     ) = ProfileHelper.CachedProfile(
         id = id,
         name = name,
@@ -63,14 +64,16 @@ class ProfileManagerTest {
         priority = priority,
         conditionType = ProfileConstants.CONDITION_CHARGING,
         speedThreshold = null,
-        deactivationDelaySeconds = deactivationDelay
+        deactivationDelaySeconds = deactivationDelay,
+        activationDelaySeconds = activationDelay
     )
 
     private fun carModeProfile(
         id: Int = 2,
         name: String = "Car Mode",
         intervalMs: Long = 3000,
-        priority: Int = 20
+        priority: Int = 20,
+        activationDelay: Int = 0
     ) = ProfileHelper.CachedProfile(
         id = id,
         name = name,
@@ -80,13 +83,15 @@ class ProfileManagerTest {
         priority = priority,
         conditionType = ProfileConstants.CONDITION_ANDROID_AUTO,
         speedThreshold = null,
-        deactivationDelaySeconds = 30
+        deactivationDelaySeconds = 30,
+        activationDelaySeconds = activationDelay
     )
 
     private fun speedAboveProfile(
         id: Int = 3,
         threshold: Float = 13.89f, // ~50 km/h
-        priority: Int = 15
+        priority: Int = 15,
+        activationDelay: Int = 0
     ) = ProfileHelper.CachedProfile(
         id = id,
         name = "Fast",
@@ -96,13 +101,15 @@ class ProfileManagerTest {
         priority = priority,
         conditionType = ProfileConstants.CONDITION_SPEED_ABOVE,
         speedThreshold = threshold,
-        deactivationDelaySeconds = 30
+        deactivationDelaySeconds = 30,
+        activationDelaySeconds = activationDelay
     )
 
     private fun speedBelowProfile(
         id: Int = 4,
         threshold: Float = 5.56f, // ~20 km/h
-        priority: Int = 5
+        priority: Int = 5,
+        activationDelay: Int = 0
     ) = ProfileHelper.CachedProfile(
         id = id,
         name = "Slow",
@@ -112,7 +119,8 @@ class ProfileManagerTest {
         priority = priority,
         conditionType = ProfileConstants.CONDITION_SPEED_BELOW,
         speedThreshold = threshold,
-        deactivationDelaySeconds = 60
+        deactivationDelaySeconds = 60,
+        activationDelaySeconds = activationDelay
     )
 
     private fun mockLocation(speed: Float, hasSpeed: Boolean = true): Location {
@@ -340,6 +348,155 @@ class ProfileManagerTest {
         assertEquals("Charging", switchedProfileName)
     }
 
+    // --- Activation delay ---
+
+    @Test
+    fun `activates immediately when activation delay is zero`() = runTest {
+        val profile = chargingProfile(activationDelay = 0)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+
+        assertEquals("Charging", switchedProfileName)
+        assertEquals(1, switchCount)
+    }
+
+    @Test
+    fun `does not activate until activation delay elapses`() = testScope.runTest {
+        val profile = chargingProfile(activationDelay = 10)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // Condition starts matching — profile must NOT apply yet
+        manager.onChargingStateChanged(true)
+        assertNull(switchedProfileName)
+        assertEquals(0, switchCount)
+
+        // Still within the delay window
+        advanceTimeBy(9_000)
+        assertNull(switchedProfileName)
+
+        // Past the delay — now it applies
+        advanceTimeBy(2_000)
+        assertEquals("Charging", switchedProfileName)
+        assertEquals(1, switchCount)
+    }
+
+    @Test
+    fun `cancels pending activation when condition stops before delay elapses`() = testScope.runTest {
+        val profile = chargingProfile(activationDelay = 30)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // Transient spike: condition matches then drops within the delay
+        manager.onChargingStateChanged(true)
+        advanceTimeBy(10_000)
+        manager.onChargingStateChanged(false)
+
+        // Well past the original delay — must never have activated
+        advanceTimeBy(60_000)
+        assertNull(switchedProfileName)
+        assertEquals(0, switchCount)
+    }
+
+    @Test
+    fun `higher priority profile replaces a pending activation`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 5, activationDelay = 30)
+        val carMode = carModeProfile(id = 2, priority = 20, activationDelay = 5)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+
+        // Charging starts -> charging activation pending (30s)
+        manager.onChargingStateChanged(true)
+        advanceTimeBy(10_000)
+        assertNull(switchedProfileName)
+
+        // Car mode (higher priority) starts -> its 5s activation replaces the pending charging one
+        manager.onCarModeStateChanged(true)
+        advanceTimeBy(6_000)
+        assertEquals("Car Mode", switchedProfileName)
+        assertEquals(1, switchCount)
+
+        // The superseded charging activation must never fire
+        advanceTimeBy(60_000)
+        assertEquals("Car Mode", switchedProfileName)
+        assertEquals(1, switchCount)
+    }
+
+    @Test
+    fun `pending activation does not fire if profile is disabled during the delay`() = testScope.runTest {
+        val profile = chargingProfile(activationDelay = 30)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+        advanceTimeBy(10_000)
+
+        // Profile disabled mid-delay
+        every { profileHelper.getEnabledProfiles() } returns emptyList()
+        manager.invalidateProfiles()
+        manager.evaluate()
+
+        advanceTimeBy(60_000)
+        assertNull(switchedProfileName)
+        assertEquals(0, switchCount)
+    }
+
+    @Test
+    fun `active profile is retained while a higher-priority activation is pending and then cancelled`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 5, activationDelay = 0)
+        val carMode = carModeProfile(id = 2, priority = 20, activationDelay = 30)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+
+        // Charging applies immediately (delay 0)
+        manager.onChargingStateChanged(true)
+        assertEquals("Charging", switchedProfileName)
+        assertEquals(1, switchCount)
+
+        // Car mode starts -> pending activation; charging stays applied during the wait
+        manager.onCarModeStateChanged(true)
+        advanceTimeBy(10_000)
+        assertEquals("Charging", switchedProfileName)
+
+        // Car mode drops before its delay -> charging remains the match, pending activation cancelled
+        manager.onCarModeStateChanged(false)
+        advanceTimeBy(60_000)
+        assertEquals("Charging", switchedProfileName)
+        assertEquals(1, switchCount)
+    }
+
+    @Test
+    fun `repeated evaluation while the condition holds does not restart the activation timer`() = testScope.runTest {
+        val profile = chargingProfile(activationDelay = 30)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // Condition starts matching -> 30s activation pending
+        manager.onChargingStateChanged(true)
+
+        // Re-evaluate repeatedly while the condition keeps holding (mimics the stream of
+        // location updates / broadcasts in production). Each call must hit the already-pending
+        // guard, NOT reset the timer — otherwise the profile would never activate under load.
+        advanceTimeBy(10_000)
+        manager.evaluate()
+        advanceTimeBy(10_000)
+        manager.evaluate()
+        advanceTimeBy(9_000) // 29s elapsed — still inside the ORIGINAL window
+        assertNull(switchedProfileName)
+
+        // Crossing the original 30s deadline fires, proving the timer was never pushed out
+        advanceTimeBy(2_000) // 31s elapsed
+        assertEquals("Charging", switchedProfileName)
+        assertEquals(1, switchCount)
+    }
+
     // --- Config change detection ---
 
     @Test
@@ -512,7 +669,8 @@ class ProfileManagerTest {
         name: String = "Stationary",
         intervalMs: Long = 30000,
         priority: Int = 10,
-        deactivationDelay: Int = 30
+        deactivationDelay: Int = 30,
+        activationDelay: Int = 60
     ) = ProfileHelper.CachedProfile(
         id = id,
         name = name,
@@ -522,7 +680,8 @@ class ProfileManagerTest {
         priority = priority,
         conditionType = ProfileConstants.CONDITION_STATIONARY,
         speedThreshold = null,
-        deactivationDelaySeconds = deactivationDelay
+        deactivationDelaySeconds = deactivationDelay,
+        activationDelaySeconds = activationDelay
     )
 
     @Test
@@ -537,10 +696,42 @@ class ProfileManagerTest {
         assertEquals(0, switchCount)
 
         // Advance past stationary timeout
-        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        advanceTimeBy(60_000L + 100)
 
         assertEquals("Stationary", switchedProfileName)
         assertEquals(30000L, switchedInterval)
+    }
+
+    @Test
+    fun `stationary profile uses its activation delay as the detection timeout`() = testScope.runTest {
+        val profile = stationaryProfile(activationDelay = 30)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.onLocationUpdate(mockLocation(0.1f))
+
+        // Not stationary before the configured 30s
+        advanceTimeBy(29_000)
+        assertNull(switchedProfileName)
+        assertFalse(manager.isStationary)
+
+        // Becomes stationary at its own window, not the built-in 60s
+        advanceTimeBy(2_000)
+        assertEquals("Stationary", switchedProfileName)
+        assertTrue(manager.isStationary)
+    }
+
+    @Test
+    fun `stationary profile with zero activation delay activates immediately`() = testScope.runTest {
+        val profile = stationaryProfile(activationDelay = 0)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.onLocationUpdate(mockLocation(0.1f))
+
+        // 0 = no stillness window, same as every other delay: instant
+        advanceTimeBy(100)
+        assertEquals("Stationary", switchedProfileName)
     }
 
     @Test
@@ -551,7 +742,7 @@ class ProfileManagerTest {
         val manager = createManager()
 
         repeat(5) { manager.onLocationUpdate(mockLocation(5f)) }
-        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        advanceTimeBy(60_000L + 100)
 
         assertNull(switchedProfileName)
     }
@@ -568,7 +759,7 @@ class ProfileManagerTest {
 
         // Become stationary
         manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        advanceTimeBy(60_000L + 100)
         assertEquals("Stationary", switchedProfileName)
 
         // Start moving
@@ -608,7 +799,7 @@ class ProfileManagerTest {
 
         // Location without speed data
         manager.onLocationUpdate(mockLocation(0f, hasSpeed = false))
-        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        advanceTimeBy(60_000L + 100)
 
         assertEquals("Stationary", switchedProfileName)
     }
@@ -622,7 +813,7 @@ class ProfileManagerTest {
         assertFalse(manager.isStationary)
 
         manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        advanceTimeBy(60_000L + 100)
         assertTrue(manager.isStationary)
 
         manager.onLocationUpdate(mockLocation(5f))
@@ -637,7 +828,7 @@ class ProfileManagerTest {
         val manager = createManager()
 
         manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        advanceTimeBy(60_000L + 100)
         assertEquals(true, lastStationaryCallback)
 
         manager.onLocationUpdate(mockLocation(5f))
@@ -656,7 +847,7 @@ class ProfileManagerTest {
 
         // Become stationary
         manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        advanceTimeBy(60_000L + 100)
         assertEquals("Stationary", switchedProfileName)
         assertTrue(manager.isStationary)
 
@@ -692,7 +883,7 @@ class ProfileManagerTest {
 
         // Become stationary first
         manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        advanceTimeBy(60_000L + 100)
         assertEquals("Stationary", switchedProfileName)
 
         // Start charging - higher priority should take over
@@ -713,7 +904,7 @@ class ProfileManagerTest {
 
         // Become stationary
         manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        advanceTimeBy(60_000L + 100)
         assertTrue(manager.isStationary)
 
         // Start charging - charging wins
@@ -735,7 +926,7 @@ class ProfileManagerTest {
 
         // Feed slow locations - should not start stationary timer
         manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(ProfileConstants.STATIONARY_TIMEOUT_MS + 100)
+        advanceTimeBy(60_000L + 100)
 
         assertFalse(manager.isStationary)
     }
@@ -826,7 +1017,8 @@ class ProfileManagerTest {
             priority = 10,
             conditionType = "unknown_condition",
             speedThreshold = null,
-            deactivationDelaySeconds = 30
+            deactivationDelaySeconds = 30,
+            activationDelaySeconds = 0
         )
         every { profileHelper.getEnabledProfiles() } returns listOf(profile)
 

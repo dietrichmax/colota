@@ -20,7 +20,8 @@ import {
   PROFILE_CONDITIONS,
   SYNC_INTERVAL_PRESETS,
   SYNC_INTERVAL_LABELS,
-  STATIONARY_MAX_INTERVAL_SECONDS
+  STATIONARY_MAX_INTERVAL_SECONDS,
+  defaultProfileDelays
 } from "../constants"
 import type { RootScreenProps } from "../types/navigation"
 
@@ -43,7 +44,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     syncInterval: settings.syncInterval,
     priority: 10,
     condition: { type: "charging" },
-    deactivationDelay: 60,
+    ...defaultProfileDelays("charging"),
     enabled: true
   })
   const [speedKmh, setSpeedKmh] = useState("30")
@@ -53,6 +54,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const [intervalStr, setIntervalStr] = useState(String(settings.interval))
   const [distanceStr, setDistanceStr] = useState(String(metersToInput(settings.distance)))
   const [priorityStr, setPriorityStr] = useState("10")
+  const [activationDelayStr, setActivationDelayStr] = useState("0")
   const [delayStr, setDelayStr] = useState("60")
   const [syncIntervalStr, setSyncIntervalStr] = useState(String(settings.syncInterval))
 
@@ -70,12 +72,14 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
             syncInterval: existing.syncInterval,
             priority: existing.priority,
             condition: existing.condition,
+            activationDelay: existing.activationDelay,
             deactivationDelay: existing.deactivationDelay,
             enabled: existing.enabled
           })
           setIntervalStr(String(existing.interval))
           setDistanceStr(String(metersToInput(existing.distance)))
           setPriorityStr(String(existing.priority))
+          setActivationDelayStr(String(existing.activationDelay))
           setDelayStr(String(existing.deactivationDelay))
           setSyncIntervalStr(String(existing.syncInterval))
           if (existing.condition.speedThreshold) {
@@ -105,18 +109,22 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const setConditionType = useCallback(
     (type: ProfileConditionType) => {
       const isSpeed = type === "speed_above" || type === "speed_below"
-      const newDelay = type === "stationary" ? 0 : 60
+      const { activationDelay: defaultActivation, deactivationDelay: defaultDeactivation } = defaultProfileDelays(type)
       setProfile((prev) => ({
         ...prev,
-        deactivationDelay: prev.condition.type !== type ? newDelay : prev.deactivationDelay,
+        deactivationDelay: prev.condition.type !== type ? defaultDeactivation : prev.deactivationDelay,
+        activationDelay: prev.condition.type !== type ? defaultActivation : prev.activationDelay,
         condition: {
           type,
           ...(isSpeed ? { speedThreshold: Number(speedKmh) / MS_TO_KMH } : {})
         }
       }))
-      if (type === "stationary") setDelayStr("0")
+      if (profile.condition.type !== type) {
+        setDelayStr(String(defaultDeactivation))
+        setActivationDelayStr(String(defaultActivation))
+      }
     },
-    [speedKmh]
+    [speedKmh, profile.condition.type]
   )
 
   const handleSpeedChange = useCallback((val: string) => {
@@ -393,23 +401,49 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           )}
         </Card>
 
-        {profile.condition.type === "stationary" ? (
-          <>
-            <SectionTitle style={styles.sectionGap}>Deactivation</SectionTitle>
-            <Card>
-              <Text style={[styles.conditionHint, { color: colors.textLight }]}>
-                Activates after ~60s without movement. Resumes instantly via the hardware motion sensor when the device
-                moves.
-              </Text>
-            </Card>
-          </>
-        ) : (
-          <>
-            <SectionTitle style={styles.sectionGap}>Deactivation</SectionTitle>
-            <Card>
+        <SectionTitle style={styles.sectionGap}>Switching</SectionTitle>
+        <Card>
+          {profile.condition.type === "stationary" ? (
+            <SettingRow
+              label="Activation Delay"
+              hint="How long the device must be still before this profile activates. Resumes instantly via the hardware motion sensor when you move again."
+            >
+              <View style={styles.inputWithUnit}>
+                <TextInput
+                  style={inputStyle}
+                  keyboardType="numeric"
+                  value={activationDelayStr}
+                  onChangeText={(val) => handleNumericChange(setActivationDelayStr, "activationDelay", val, 0)}
+                  placeholder="60"
+                  placeholderTextColor={colors.placeholder}
+                />
+                <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
+              </View>
+            </SettingRow>
+          ) : (
+            <>
+              <SettingRow
+                label="Activation Delay"
+                hint="How long the condition must hold before this profile takes over. Avoids switching on brief, temporary changes. 0 = instant."
+              >
+                <View style={styles.inputWithUnit}>
+                  <TextInput
+                    style={inputStyle}
+                    keyboardType="numeric"
+                    value={activationDelayStr}
+                    onChangeText={(val) => handleNumericChange(setActivationDelayStr, "activationDelay", val, 0)}
+                    placeholder="0"
+                    placeholderTextColor={colors.placeholder}
+                  />
+                  <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
+                </View>
+              </SettingRow>
+
+              <Divider />
+
               <SettingRow
                 label="Deactivation Delay"
-                hint="Wait before reverting to default settings after the condition stops matching. Prevents rapid switching."
+                hint="How long after the condition stops before reverting to your defaults. Prevents rapid back-and-forth switching."
               >
                 <View style={styles.inputWithUnit}>
                   <TextInput
@@ -423,9 +457,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                   <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
                 </View>
               </SettingRow>
-            </Card>
-          </>
-        )}
+            </>
+          )}
+        </Card>
 
         {/* Save Button */}
         <Pressable
@@ -487,7 +521,6 @@ const styles = StyleSheet.create({
   },
   conditionLabel: { fontSize: 13, ...fonts.semiBold },
   conditionDesc: { fontSize: 11, ...fonts.regular, textAlign: "center" },
-  conditionHint: { fontSize: 13, ...fonts.regular, paddingHorizontal: 16, paddingVertical: 12 },
   syncLabelRow: { marginBottom: 8 },
   settingLabel: { fontSize: 16, ...fonts.semiBold, marginBottom: 2 },
   settingHint: { fontSize: 13, ...fonts.regular, lineHeight: 18 },

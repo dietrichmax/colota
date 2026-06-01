@@ -603,6 +603,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             speedThreshold = if (config.hasKey("speedThreshold") && !config.isNull("speedThreshold"))
                 config.getDouble("speedThreshold").toFloat() else null,
             deactivationDelaySeconds = config.getInt("deactivationDelaySeconds"),
+            activationDelaySeconds = config.getInt("activationDelaySeconds"),
         )
         afterProfileMutation(id > 0)
         id
@@ -622,6 +623,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
                 config.getDouble("speedThreshold").toFloat() else null,
             hasSpeedThreshold = config.hasKey("speedThreshold"),
             deactivationDelaySeconds = config.getIntOrNull("deactivationDelaySeconds"),
+            activationDelaySeconds = config.getIntOrNull("activationDelaySeconds"),
             enabled = config.getBooleanOrNull("enabled"),
         )
         afterProfileMutation(changed)

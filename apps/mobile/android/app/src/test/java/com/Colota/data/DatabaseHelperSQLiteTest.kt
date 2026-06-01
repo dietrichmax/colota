@@ -16,6 +16,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import com.Colota.util.AppLogger
 import io.mockk.*
+import java.io.File
 
 /**
  * SQLite integration tests for DatabaseHelper using Robolectric.
@@ -88,6 +89,102 @@ class DatabaseHelperSQLiteTest {
         assertEquals("false", settings["tracking_enabled"])
         assertEquals("POST", settings["httpMethod"])
         assertEquals("custom", settings["apiTemplate"])
+    }
+
+    @Test
+    fun `tracking_profiles table includes activation_delay_seconds column`() {
+        val columns = queryColumnNames("tracking_profiles")
+        assertTrue(columns.contains("activation_delay_seconds"))
+    }
+
+    // ========================================================================
+    // Migration v5 -> v6: activation_delay_seconds
+    // ========================================================================
+
+    @Test
+    fun `migration from v5 backfills activation_delay_seconds (stationary 60, others 0)`() {
+        // Seed a v5-schema candidate DB (tracking_profiles without the activation column)
+        val candidate = File.createTempFile("candidate-v5", ".db").also { it.delete() }
+        SQLiteDatabase.openOrCreateDatabase(candidate, null).use { old ->
+            old.execSQL(
+                """
+                CREATE TABLE tracking_profiles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    interval_ms INTEGER NOT NULL,
+                    min_update_distance REAL NOT NULL,
+                    sync_interval_seconds INTEGER NOT NULL,
+                    priority INTEGER NOT NULL DEFAULT 0,
+                    condition_type TEXT NOT NULL,
+                    speed_threshold REAL,
+                    deactivation_delay_seconds INTEGER NOT NULL DEFAULT 30,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    created_at INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            old.execSQL(
+                """
+                INSERT INTO tracking_profiles
+                    (name, interval_ms, min_update_distance, sync_interval_seconds,
+                     priority, condition_type, deactivation_delay_seconds, created_at)
+                VALUES ('Charging', 10000, 0, 0, 10, 'charging', 60, 0),
+                       ('Parked', 1800000, 0, 0, 40, 'stationary', 0, 0)
+                """.trimIndent()
+            )
+            old.version = 5
+        }
+
+        DatabaseHelper.migrateCandidate(candidate)
+
+        SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
+            assertEquals(6, migrated.version)
+            migrated.rawQuery(
+                "SELECT name, activation_delay_seconds FROM tracking_profiles",
+                null
+            ).use { cursor ->
+                val byName = mutableMapOf<String, Int>()
+                while (cursor.moveToNext()) {
+                    byName[cursor.getString(0)] = cursor.getInt(1)
+                }
+                // Non-stationary keeps the column default (instant); stationary is backfilled to its 60s window
+                assertEquals(0, byName["Charging"])
+                assertEquals(60, byName["Parked"])
+            }
+        }
+
+        candidate.delete()
+    }
+
+    @Test
+    fun `migration from v1 creates profiles then adds activation_delay_seconds without colliding`() {
+        // v1 predates the profiles table, so the < 2 migration creates it; the v6 migration then
+        // ALTERs in activation_delay_seconds. The two must not double-add the column.
+        val candidate = File.createTempFile("candidate-v1", ".db").also { it.delete() }
+        SQLiteDatabase.openOrCreateDatabase(candidate, null).use { old ->
+            // v1 schema: locations without `sent`, geofences without the v4/v5 columns, no profiles
+            old.execSQL("CREATE TABLE locations (id INTEGER PRIMARY KEY AUTOINCREMENT, latitude REAL NOT NULL, longitude REAL NOT NULL, accuracy INTEGER, altitude INTEGER, speed INTEGER, bearing REAL, battery INTEGER, battery_status INTEGER, timestamp INTEGER NOT NULL, endpoint TEXT, created_at INTEGER NOT NULL)")
+            old.execSQL("CREATE TABLE queue (id INTEGER PRIMARY KEY AUTOINCREMENT, location_id INTEGER NOT NULL, payload TEXT NOT NULL, retry_count INTEGER DEFAULT 0, last_error TEXT, created_at INTEGER NOT NULL)")
+            old.execSQL("CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+            old.execSQL("CREATE TABLE geofences (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, latitude REAL NOT NULL, longitude REAL NOT NULL, radius REAL NOT NULL, enabled INTEGER DEFAULT 1, pause_tracking INTEGER DEFAULT 1, notify_enter INTEGER DEFAULT 0, notify_exit INTEGER DEFAULT 0, created_at INTEGER NOT NULL)")
+            old.version = 1
+        }
+
+        // Must not throw (regression guard: the frozen v2 create must omit activation_delay_seconds)
+        DatabaseHelper.migrateCandidate(candidate)
+
+        SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
+            assertEquals(6, migrated.version)
+            migrated.rawQuery("PRAGMA table_info(tracking_profiles)", null).use { cursor ->
+                val cols = mutableSetOf<String>()
+                while (cursor.moveToNext()) {
+                    cols.add(cursor.getString(cursor.getColumnIndexOrThrow("name")))
+                }
+                assertTrue(cols.contains("activation_delay_seconds"))
+            }
+        }
+
+        candidate.delete()
     }
 
     // ========================================================================
