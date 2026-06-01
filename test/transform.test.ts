@@ -11,6 +11,16 @@ test("owntracksToColota maps cog->bear and defaults batt/bs", () => {
   assert.equal(r.bs, 0)
 })
 
+test("owntracksToColota preserves tid so FILTER_TID routing and HA naming work", () => {
+  const r = owntracksToColota({ lat: 1, lon: 2, acc: 5, tst: 100, tid: "ab" })
+  assert.equal(r.tid, "ab")
+})
+
+test("owntracksToColota omits tid when absent or non-string", () => {
+  assert.equal("tid" in owntracksToColota({ lat: 1, lon: 2, acc: 5, tst: 100 }), false)
+  assert.equal("tid" in owntracksToColota({ lat: 1, lon: 2, acc: 5, tst: 100, tid: 123 }), false)
+})
+
 test("overlandFeatureToColota parses a valid Feature", () => {
   const r = overlandFeatureToColota(
     {
