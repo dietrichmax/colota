@@ -231,6 +231,8 @@ TARGET_3_TYPE=owntracks
 
 Targets without `FILTER_TID` receive data from all phones. Targets with `FILTER_TID` only receive data when the payload's `tid` matches.
 
+**Using the OwnTracks app instead of Colota?** The `tid` from OwnTracks `/owntracks` payloads is preserved and routed the same way — but the OwnTracks app limits its Tracker ID (Preferences → Identification) to **2 characters**, so set both the app's TID and `FILTER_TID` to the same short code (e.g. `p1`). The free-form names above (`phone1`, `alice`) only work with the Colota app's custom `tid` field.
+
 ## Security
 
 - Set a strong, random `API_KEY` in your `.env` before going public

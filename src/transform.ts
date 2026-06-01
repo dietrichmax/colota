@@ -23,7 +23,8 @@ export function owntracksToColota(body: Record<string, unknown>): ColotaPayload 
     tst: body.tst as number,
     ...(body.alt !== undefined && { alt: body.alt as number }),
     ...(body.vel !== undefined && { vel: body.vel as number }),
-    ...(body.cog !== undefined && { bear: body.cog as number })
+    ...(body.cog !== undefined && { bear: body.cog as number }),
+    ...(typeof body.tid === "string" && { tid: body.tid })
   }
 }
 
