@@ -45,15 +45,3 @@ jest.mock("react-native/Libraries/AppState/AppState", () => ({
     addEventListener: jest.fn(() => ({ remove: jest.fn() }))
   }
 }))
-
-// Blob polyfill for getByteSize tests (RN test env doesn't have Blob)
-if (typeof global.Blob === "undefined") {
-  global.Blob = class Blob {
-    constructor(parts) {
-      this._content = parts.map((p) => String(p)).join("")
-    }
-    get size() {
-      return Buffer.byteLength(this._content, "utf8")
-    }
-  }
-}

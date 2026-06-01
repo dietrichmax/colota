@@ -8,31 +8,10 @@ import { Trip } from "../types/global"
 import { getTripColor } from "./trips"
 import { FILE_FORMATS, IMPORT_FORMAT_ORDER } from "./fileFormats"
 
-export const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024 // 10 MB
-
 /** Convert hex RGB (#RRGGBB) to KML's ABGR format (ffBBGGRR) */
 function hexToKmlColor(hex: string): string {
   const h = hex.replace("#", "")
   return `ff${h.slice(4, 6)}${h.slice(2, 4)}${h.slice(0, 2)}`
-}
-
-export const getByteSize = (content: string): number => {
-  let bytes = 0
-  for (let i = 0; i < content.length; i++) {
-    const code = content.charCodeAt(i)
-    if (code <= 0x7f) {
-      bytes += 1
-    } else if (code <= 0x7ff) {
-      bytes += 2
-    } else if (code >= 0xd800 && code <= 0xdbff) {
-      // High surrogate - pair encodes a 4-byte UTF-8 character
-      bytes += 4
-      i++ // skip the low surrogate
-    } else {
-      bytes += 3
-    }
-  }
-  return bytes
 }
 
 // ============================================================================

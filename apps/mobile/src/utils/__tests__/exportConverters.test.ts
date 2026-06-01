@@ -1,11 +1,9 @@
 import { formatBytes } from "../format"
 import {
-  getByteSize,
   convertTripsToCSV,
   convertTripsToGeoJSON,
   convertTripsToGPX,
   convertTripsToKML,
-  LARGE_FILE_THRESHOLD,
   TRIP_CONVERTERS
 } from "../exportConverters"
 import { FILE_FORMATS } from "../fileFormats"
@@ -47,27 +45,6 @@ describe("formatBytes", () => {
   it("formats megabytes", () => {
     expect(formatBytes(1048576)).toBe("1.0 MB")
     expect(formatBytes(1572864)).toBe("1.5 MB")
-  })
-})
-
-describe("getByteSize", () => {
-  it("returns correct size for ASCII string", () => {
-    expect(getByteSize("hello")).toBe(5)
-  })
-
-  it("returns correct size for empty string", () => {
-    expect(getByteSize("")).toBe(0)
-  })
-
-  it("handles multi-byte characters", () => {
-    // UTF-8: ö = 2 bytes
-    expect(getByteSize("ö")).toBeGreaterThan(1)
-  })
-})
-
-describe("LARGE_FILE_THRESHOLD", () => {
-  it("is 10 MB", () => {
-    expect(LARGE_FILE_THRESHOLD).toBe(10 * 1024 * 1024)
   })
 })
 
