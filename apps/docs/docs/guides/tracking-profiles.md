@@ -58,9 +58,12 @@ Each profile overrides the default tracking configuration with:
 - **Distance Filter** - Minimum movement required between updates (meters)
 - **Sync Interval** - How often to sync with the server (Instant, 1 min, 5 min, 15 min, or Custom)
 - **Priority** - Determines which profile wins when multiple conditions match simultaneously (higher = wins)
+- **Activation Delay** - How long the condition must keep matching before the profile is applied (seconds, default 0 = immediate). Prevents activating on brief spikes, e.g. a momentary speed reading. For the Stationary condition it instead sets how long the device must be still before the profile activates (default 60s).
 - **Deactivation Delay** - How long to wait after the condition stops matching before reverting to default settings (seconds). Prevents rapid toggling when conditions fluctuate.
 
 When creating a new profile, GPS interval, distance filter, and sync interval are pre-filled with your current values from main Settings. Each field also shows a hint with the default value for reference.
+
+**Choosing delay values:** together the two delays make a profile "sticky" - hard to switch on by accident, hard to switch off by accident. Clean on/off signals like Charging and Android Auto want activation 0 (switch the instant you plug in or connect) plus a small deactivation delay so a brief disconnect or cable wiggle does not drop you. Noisy signals like speed want both: an activation delay to ignore short spikes (a Driving profile won't trigger from one GPS glitch while you walk) and a longer deactivation delay to ride through red lights, traffic and tunnels without flapping. Rule of thumb: if a profile keeps flickering on and off, raise the delays; if it reacts too slowly, lower them. Tracking never stops during either wait - you stay on your defaults through an activation delay, and on the profile through a deactivation delay.
 
 ## Priority
 
@@ -74,12 +77,12 @@ If you use both a Speed Below and a Stationary profile, give Stationary the high
 
 ## Example Configurations
 
-| Profile    | Condition          | Interval | Distance | Priority | Use case                       |
-| ---------- | ------------------ | -------- | -------- | -------- | ------------------------------ |
-| Stationary | Stationary         | 1800s    | 0m       | 40       | Heartbeat while not moving     |
-| Driving    | Car Mode           | 10s      | 1m       | 30       | Detailed route while driving   |
-| Walking    | Speed Below 8 km/h | 60s      | 2m       | 20       | Battery-friendly on foot       |
-| Charging   | Charging           | 15s      | 0m       | 10       | High accuracy while plugged in |
+| Profile | Condition | Interval | Distance | Priority | Activation | Deactivation | Use case |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Stationary | Stationary | 1800s | 0m | 40 | 60s | n/a | Heartbeat while not moving |
+| Driving | Car Mode | 10s | 1m | 30 | 0s | 30s | Detailed route while driving |
+| Walking | Speed Below 8 km/h | 60s | 2m | 20 | 20s | 45s | Battery-friendly on foot |
+| Charging | Charging | 15s | 0m | 10 | 0s | 30s | High accuracy while plugged in |
 
 Note that Stationary has the highest priority so it takes over from Walking when you stop. Charging has the lowest priority so a more specific profile (e.g. Driving) wins when both match.
 
@@ -87,6 +90,7 @@ Note that Stationary has the highest priority so it takes over from Walking when
 
 - When tracking starts, all enabled profiles are evaluated against current conditions
 - The highest-priority matching profile's settings override the defaults
+- If a profile has an activation delay, its condition must keep matching for that long before it is applied; if the condition drops first, or a higher-priority profile takes over, the activation is cancelled
 - When the condition no longer matches, a deactivation delay timer starts
 - If the condition matches again before the delay expires, the timer is cancelled
 - After the delay expires, settings revert to the defaults configured in the Settings screen

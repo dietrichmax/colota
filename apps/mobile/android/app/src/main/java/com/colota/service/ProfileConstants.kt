@@ -28,5 +28,4 @@ object ProfileConstants {
     const val SPEED_BUFFER_SIZE = 5
     const val MIN_INTERVAL_MS = 1000L
     const val STATIONARY_SPEED_THRESHOLD = 0.3f
-    const val STATIONARY_TIMEOUT_MS = 60_000L
 }

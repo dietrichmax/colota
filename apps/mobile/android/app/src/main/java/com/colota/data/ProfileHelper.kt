@@ -29,6 +29,7 @@ class ProfileHelper(private val context: Context) {
         val conditionType: String,
         val speedThreshold: Float?,
         val deactivationDelaySeconds: Int,
+        val activationDelaySeconds: Int,
     )
 
     companion object {
@@ -51,6 +52,7 @@ class ProfileHelper(private val context: Context) {
                     "id", "name", "interval_ms", "min_update_distance",
                     "sync_interval_seconds", "priority", "condition_type",
                     "speed_threshold", "deactivation_delay_seconds",
+                    "activation_delay_seconds",
                 ),
                 "enabled = 1",
                 null, null, null,
@@ -65,6 +67,7 @@ class ProfileHelper(private val context: Context) {
                 val conditionIdx = cursor.getColumnIndexOrThrow("condition_type")
                 val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
                 val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
+                val activationDelayIdx = cursor.getColumnIndexOrThrow("activation_delay_seconds")
 
                 while (cursor.moveToNext()) {
                     profiles.add(CachedProfile(
@@ -77,6 +80,7 @@ class ProfileHelper(private val context: Context) {
                         conditionType = cursor.getString(conditionIdx),
                         speedThreshold = if (cursor.isNull(speedIdx)) null else cursor.getFloat(speedIdx),
                         deactivationDelaySeconds = cursor.getInt(delayIdx),
+                        activationDelaySeconds = cursor.getInt(activationDelayIdx),
                     ))
                 }
             }
@@ -105,6 +109,7 @@ class ProfileHelper(private val context: Context) {
                 val conditionIdx = cursor.getColumnIndexOrThrow("condition_type")
                 val speedIdx = cursor.getColumnIndexOrThrow("speed_threshold")
                 val delayIdx = cursor.getColumnIndexOrThrow("deactivation_delay_seconds")
+                val activationDelayIdx = cursor.getColumnIndexOrThrow("activation_delay_seconds")
                 val enabledIdx = cursor.getColumnIndexOrThrow("enabled")
                 val createdIdx = cursor.getColumnIndexOrThrow("created_at")
 
@@ -123,6 +128,7 @@ class ProfileHelper(private val context: Context) {
                             putDouble("speedThreshold", cursor.getFloat(speedIdx).toDouble())
                         }
                         putInt("deactivationDelaySeconds", cursor.getInt(delayIdx))
+                        putInt("activationDelaySeconds", cursor.getInt(activationDelayIdx))
                         putBoolean("enabled", cursor.getInt(enabledIdx) == 1)
                         putDouble("createdAt", cursor.getLong(createdIdx).toDouble())
                     })
@@ -144,6 +150,7 @@ class ProfileHelper(private val context: Context) {
         conditionType: String,
         speedThreshold: Float?,
         deactivationDelaySeconds: Int,
+        activationDelaySeconds: Int,
     ): Int {
         val values = ContentValues().apply {
             put("name", name)
@@ -154,6 +161,7 @@ class ProfileHelper(private val context: Context) {
             put("condition_type", conditionType)
             if (speedThreshold != null) put("speed_threshold", speedThreshold) else putNull("speed_threshold")
             put("deactivation_delay_seconds", deactivationDelaySeconds)
+            put("activation_delay_seconds", activationDelaySeconds)
             put("enabled", 1)
             put("created_at", System.currentTimeMillis() / 1000)
         }
@@ -179,6 +187,7 @@ class ProfileHelper(private val context: Context) {
         speedThreshold: Float? = null,
         hasSpeedThreshold: Boolean = false,
         deactivationDelaySeconds: Int? = null,
+        activationDelaySeconds: Int? = null,
         enabled: Boolean? = null,
     ): Boolean {
         val values = ContentValues().apply {
@@ -192,6 +201,7 @@ class ProfileHelper(private val context: Context) {
                 if (speedThreshold != null) put("speed_threshold", speedThreshold) else putNull("speed_threshold")
             }
             deactivationDelaySeconds?.let { put("deactivation_delay_seconds", it) }
+            activationDelaySeconds?.let { put("activation_delay_seconds", it) }
             enabled?.let { put("enabled", if (it) 1 else 0) }
         }
 

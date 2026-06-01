@@ -92,7 +92,8 @@ Each entry in the `profiles` array describes one [tracking profile](tracking-pro
 | `condition.type` | string | (required) | `charging`, `android_auto`, `speed_above`, `speed_below`, or `stationary` |
 | `condition.speedThreshold` | number | - | Required for `speed_above` / `speed_below`. Speed in m/s (divide km/h by 3.6) |
 | `priority` | number | `10` | Higher value wins when multiple profiles match |
-| `deactivationDelay` | number | `60` | Seconds to keep the profile active after the condition stops matching |
+| `activationDelay` | number | `0` (stationary: `60`) | Seconds the condition must keep matching before the profile is applied (0 = immediate). For `stationary`, how long the device must be still before activating |
+| `deactivationDelay` | number | `60` (stationary: `0`) | Seconds to keep the profile active after the condition stops matching. Stationary resumes instantly via the motion sensor |
 | `enabled` | boolean | `true` | Profile is active on import |
 
 Imported profiles are appended by default. When both profiles and geofences are present the same "Replace ... with the same name" toggle on the import screen also deletes existing profiles whose names match before creating the incoming ones.

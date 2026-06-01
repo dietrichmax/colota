@@ -49,6 +49,8 @@ class ProfileManager(
     @Volatile private var activeProfile: ProfileHelper.CachedProfile? = null
     // Accessed only inside @Synchronized methods — the intrinsic lock covers visibility.
     private var deactivationJob: Job? = null
+    private var activationJob: Job? = null
+    private var pendingActivationProfileId: Int? = null
 
     // Condition flags: written from broadcast callbacks, each write immediately followed by
     // @Synchronized evaluate() which reads them. @Volatile makes the write visible to readers
@@ -122,6 +124,10 @@ class ProfileManager(
             deactivateToDefault()
         }
 
+        if (pendingActivationProfileId != null && profiles.none { it.id == pendingActivationProfileId }) {
+            cancelActivation()
+        }
+
         if (profiles.isEmpty()) {
             return
         }
@@ -135,6 +141,7 @@ class ProfileManager(
                 cancelDeactivation()
 
                 if (activeProfile?.id == matchingProfile.id) {
+                    cancelActivation()
                     // Same profile still matches — re-apply only if config changed
                     val active = activeProfile!!
                     if (active.intervalMs != matchingProfile.intervalMs ||
@@ -145,13 +152,28 @@ class ProfileManager(
                     return
                 }
 
-                // Different profile or new activation
-                activateProfile(matchingProfile)
+                // Stationary spends its activation delay reaching the stationary state, so it
+                // applies immediately here; the generic delay would double-count it.
+                val activationDelay =
+                    if (matchingProfile.conditionType == ProfileConstants.CONDITION_STATIONARY) 0
+                    else matchingProfile.activationDelaySeconds
+                if (activationDelay <= 0) {
+                    cancelActivation()
+                    activateProfile(matchingProfile)
+                } else {
+                    scheduleActivation(matchingProfile)
+                }
             }
 
             // No profile matches — schedule deactivation if one was active
             activeProfile != null -> {
+                cancelActivation()
                 scheduleDeactivation(activeProfile!!)
+            }
+
+            // Pending activation's condition dropped before its delay elapsed
+            else -> {
+                cancelActivation()
             }
         }
     }
@@ -250,6 +272,47 @@ class ProfileManager(
         deactivationJob = null
     }
 
+    private fun scheduleActivation(profile: ProfileHelper.CachedProfile) {
+        if (activationJob?.isActive == true && pendingActivationProfileId == profile.id) return
+
+        cancelActivation()
+        pendingActivationProfileId = profile.id
+        val scheduledProfileId = profile.id
+        activationJob = scope.launch {
+            delay(profile.activationDelaySeconds * 1000L)
+            ensureActive()
+            activateIfStillMatching(scheduledProfileId)
+        }
+
+        AppLogger.d(TAG, "Scheduled activation of '${profile.name}' in ${profile.activationDelaySeconds}s")
+    }
+
+    /**
+     * Called from the activation coroutine. Re-resolves the highest-priority match
+     * under the lock and activates only if the scheduled profile is still the winner —
+     * the condition may have lapsed or a higher-priority profile may have arrived
+     * during the delay.
+     */
+    @Synchronized
+    private fun activateIfStillMatching(scheduledProfileId: Int) {
+        // Superseded by a newer activation between the delay and the lock: leave its
+        // job/pending fields intact rather than orphaning the newer timer.
+        if (pendingActivationProfileId != scheduledProfileId) return
+        activationJob = null
+        pendingActivationProfileId = null
+
+        val matching = profileHelper.getEnabledProfiles().firstOrNull { matchesCondition(it) }
+        if (matching?.id != scheduledProfileId) return
+        if (activeProfile?.id == scheduledProfileId) return
+        activateProfile(matching)
+    }
+
+    private fun cancelActivation() {
+        activationJob?.cancel()
+        activationJob = null
+        pendingActivationProfileId = null
+    }
+
     private fun evaluateStationaryState(location: android.location.Location) {
         if (ProfileConstants.CONDITION_STATIONARY !in getNeededConditionTypes()) return
 
@@ -267,14 +330,23 @@ class ProfileManager(
         }
 
         if (!isStationary && stationaryJob?.isActive != true) {
+            val timeoutMs = stationaryTimeoutMs()
             stationaryJob = scope.launch {
-                delay(ProfileConstants.STATIONARY_TIMEOUT_MS)
+                delay(timeoutMs)
                 isStationary = true
                 onStationaryChanged?.invoke(true)
-                AppLogger.d(TAG, "Device stationary (speed below threshold for ${ProfileConstants.STATIONARY_TIMEOUT_MS / 1000}s)")
+                AppLogger.d(TAG, "Device stationary (speed below threshold for ${timeoutMs / 1000}s)")
                 evaluate()
             }
         }
+    }
+
+    // Stationary detection window = the profile's activation delay (the "still for this long" time).
+    private fun stationaryTimeoutMs(): Long {
+        val seconds = profileHelper.getEnabledProfiles()
+            .firstOrNull { it.conditionType == ProfileConstants.CONDITION_STATIONARY }
+            ?.activationDelaySeconds ?: 0
+        return seconds * 1000L
     }
 
     private fun deactivateToDefault() {

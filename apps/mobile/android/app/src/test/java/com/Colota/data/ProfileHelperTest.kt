@@ -61,7 +61,8 @@ class ProfileHelperTest {
         val columns = listOf(
             "id", "name", "interval_ms", "min_update_distance",
             "sync_interval_seconds", "priority", "condition_type",
-            "speed_threshold", "deactivation_delay_seconds", "enabled", "created_at"
+            "speed_threshold", "deactivation_delay_seconds", "activation_delay_seconds",
+            "enabled", "created_at"
         )
 
         for ((idx, col) in columns.withIndex()) {
@@ -216,6 +217,46 @@ class ProfileHelperTest {
         assertEquals(1, profiles.size)
         assertEquals(13.89f, profiles[0].speedThreshold!!, 0.01f)
         assertEquals("speed_above", profiles[0].conditionType)
+    }
+
+    @Test
+    fun `getEnabledProfiles reads activation delay`() {
+        val cursor = mockCursorWithProfiles(listOf(
+            mapOf(
+                "id" to 1, "name" to "Fast", "interval_ms" to 2000L,
+                "min_update_distance" to 0f, "sync_interval_seconds" to 0,
+                "priority" to 15, "condition_type" to "speed_above",
+                "speed_threshold" to 13.89f, "deactivation_delay_seconds" to 30,
+                "activation_delay_seconds" to 12
+            )
+        ))
+
+        every { mockDb.query(any(), any(), eq("enabled = 1"), any(), any(), any(), any()) } returns cursor
+
+        val helper = ProfileHelper(mockk(relaxed = true))
+        val profiles = helper.getEnabledProfiles()
+
+        assertEquals(1, profiles.size)
+        assertEquals(12, profiles[0].activationDelaySeconds)
+    }
+
+    @Test
+    fun `getEnabledProfiles defaults activation delay to zero when column is zero`() {
+        val cursor = mockCursorWithProfiles(listOf(
+            mapOf(
+                "id" to 1, "name" to "Charging", "interval_ms" to 10000L,
+                "min_update_distance" to 0f, "sync_interval_seconds" to 0,
+                "priority" to 10, "condition_type" to "charging",
+                "speed_threshold" to null, "deactivation_delay_seconds" to 60
+            )
+        ))
+
+        every { mockDb.query(any(), any(), eq("enabled = 1"), any(), any(), any(), any()) } returns cursor
+
+        val helper = ProfileHelper(mockk(relaxed = true))
+        val profiles = helper.getEnabledProfiles()
+
+        assertEquals(0, profiles[0].activationDelaySeconds)
     }
 
     @Test

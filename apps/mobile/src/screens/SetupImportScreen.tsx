@@ -11,7 +11,7 @@ import { Container, Card, Button, SectionTitle } from "../components"
 import { fonts } from "../styles/typography"
 import { CircleAlert, CircleCheck, Import } from "lucide-react-native"
 import SettingsService from "../services/SettingsService"
-import { OVERLAND_BATCH_MIN, OVERLAND_BATCH_MAX } from "../constants"
+import { OVERLAND_BATCH_MIN, OVERLAND_BATCH_MAX, defaultProfileDelays } from "../constants"
 import { isEndpointAllowed } from "../utils/settingsValidation"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
@@ -361,14 +361,19 @@ function validateConfig(raw: unknown): ValidationResult {
         ? { type: condType, speedThreshold: condRaw.speedThreshold as number }
         : { type: condType }
 
+      const delays = defaultProfileDelays(condType)
       profiles.push({
         name: p.name,
         interval: p.interval,
         distance: p.distance,
         syncInterval: p.syncInterval,
         priority: typeof p.priority === "number" ? p.priority : 10,
+        activationDelay:
+          typeof p.activationDelay === "number" && p.activationDelay >= 0 ? p.activationDelay : delays.activationDelay,
         deactivationDelay:
-          typeof p.deactivationDelay === "number" && p.deactivationDelay >= 0 ? p.deactivationDelay : 60,
+          typeof p.deactivationDelay === "number" && p.deactivationDelay >= 0
+            ? p.deactivationDelay
+            : delays.deactivationDelay,
         enabled: typeof p.enabled === "boolean" ? p.enabled : true,
         condition
       })

@@ -13,6 +13,7 @@ const mockProfiles: TrackingProfile[] = [
     syncInterval: 60,
     priority: 15,
     condition: { type: "speed_above", speedThreshold: 13.89 },
+    activationDelay: 12,
     deactivationDelay: 30,
     enabled: true
   }
@@ -147,10 +148,11 @@ describe("ProfileEditorScreen", () => {
   })
 
   it("pre-fills fields with main settings values", () => {
-    const { getByDisplayValue } = renderNewProfile()
+    const { getByDisplayValue, getAllByDisplayValue } = renderNewProfile()
 
     expect(getByDisplayValue("5")).toBeTruthy() // interval from settings
-    expect(getByDisplayValue("0")).toBeTruthy() // distance from settings
+    // distance from settings is 0; activation delay also defaults to 0
+    expect(getAllByDisplayValue("0").length).toBeGreaterThan(0)
   })
 
   it("shows default hints from main settings", () => {
@@ -314,6 +316,36 @@ describe("ProfileEditorScreen", () => {
     expect(queryByText("Speed Threshold (km/h)")).toBeNull()
   })
 
+  // --- Activation delay ---
+
+  it("shows activation delay for all conditions, and deactivation delay only for non-stationary", () => {
+    const { getByText, queryByText } = renderNewProfile()
+
+    // Charging: both delays
+    expect(getByText("Activation Delay")).toBeTruthy()
+    expect(getByText("Deactivation Delay")).toBeTruthy()
+
+    // Stationary: activation delay only (deactivation is instant via the motion sensor)
+    fireEvent.press(getByText("Stationary"))
+    expect(getByText("Activation Delay")).toBeTruthy()
+    expect(queryByText("Deactivation Delay")).toBeNull()
+  })
+
+  it("defaults stationary activation delay to 60", () => {
+    const { getByText, getByDisplayValue } = renderNewProfile()
+
+    fireEvent.press(getByText("Stationary"))
+    expect(getByDisplayValue("60")).toBeTruthy()
+  })
+
+  it("loads existing activation delay in edit mode", async () => {
+    const { getByDisplayValue } = renderEditProfile()
+
+    await waitFor(() => {
+      expect(getByDisplayValue("12")).toBeTruthy()
+    })
+  })
+
   // --- Numeric input ---
 
   it("updates interval via numeric input", () => {
@@ -376,6 +408,7 @@ describe("ProfileEditorScreen", () => {
           syncInterval: 0,
           priority: 10,
           condition: { type: "stationary" },
+          activationDelay: 0,
           deactivationDelay: 0,
           enabled: true
         }

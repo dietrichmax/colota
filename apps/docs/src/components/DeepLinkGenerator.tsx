@@ -29,6 +29,7 @@ interface ProfileRow {
   distance: string
   syncInterval: string
   priority: string
+  activationDelay: string
   deactivationDelay: string
   enabled: boolean
 }
@@ -196,16 +197,21 @@ export default function DeepLinkGenerator() {
         condition.speedThreshold = Number(p.speedKmh) / 3.6
       }
 
-      pfs.push({
+      const entry: Record<string, unknown> = {
         name: p.name,
         condition,
         interval: Number(p.interval),
         distance: Number(p.distance),
         syncInterval: Number(p.syncInterval),
         priority: p.priority ? Number(p.priority) : 10,
-        deactivationDelay: p.deactivationDelay ? Number(p.deactivationDelay) : 60,
         enabled: p.enabled
-      })
+      }
+      // Stationary hides the delay inputs; omit them so the app applies its own defaults (60 / 0)
+      if (p.conditionType !== "stationary") {
+        entry.activationDelay = p.activationDelay ? Number(p.activationDelay) : 0
+        entry.deactivationDelay = p.deactivationDelay ? Number(p.deactivationDelay) : 60
+      }
+      pfs.push(entry)
     }
     if (pfs.length > 0) obj.profiles = pfs
 
@@ -346,6 +352,7 @@ export default function DeepLinkGenerator() {
         distance: "0",
         syncInterval: "0",
         priority: "10",
+        activationDelay: "0",
         deactivationDelay: "60",
         enabled: true
       }
@@ -879,6 +886,19 @@ export default function DeepLinkGenerator() {
                       onChange={(e) => updateProfile(i, "syncInterval", e.target.value)}
                     />
                   </div>
+                  {!isStationary && (
+                    <div className={styles.field}>
+                      <label className={styles.label}>Activation delay (sec)</label>
+                      <input
+                        className={styles.input}
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={p.activationDelay}
+                        onChange={(e) => updateProfile(i, "activationDelay", e.target.value)}
+                      />
+                    </div>
+                  )}
                   {!isStationary && (
                     <div className={styles.field}>
                       <label className={styles.label}>Deactivation delay (sec)</label>

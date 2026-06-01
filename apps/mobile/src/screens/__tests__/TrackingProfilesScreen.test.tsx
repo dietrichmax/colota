@@ -14,6 +14,7 @@ const mockProfiles: TrackingProfile[] = [
     syncInterval: 0,
     priority: 10,
     condition: { type: "charging" },
+    activationDelay: 0,
     deactivationDelay: 60,
     enabled: true
   },
@@ -25,6 +26,7 @@ const mockProfiles: TrackingProfile[] = [
     syncInterval: 60,
     priority: 20,
     condition: { type: "speed_above", speedThreshold: 13.89 },
+    activationDelay: 15,
     deactivationDelay: 30,
     enabled: false
   }
@@ -322,6 +324,7 @@ describe("TrackingProfilesScreen", () => {
         syncInterval: 0,
         priority: 10,
         condition: { type: "charging" },
+        activationDelay: 0,
         deactivationDelay: 60,
         enabled: true
       })

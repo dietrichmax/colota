@@ -75,6 +75,18 @@ export const PROFILE_CONDITIONS: {
   }
 ]
 
+// Per-condition default switch delays (seconds). Stationary enters via a stillness window
+// (activation) and exits instantly via the hardware motion sensor (deactivation 0); every
+// other condition is the inverse. Single source of truth for both the editor and import.
+export function defaultProfileDelays(conditionType: ProfileConditionType): {
+  activationDelay: number
+  deactivationDelay: number
+} {
+  return conditionType === "stationary"
+    ? { activationDelay: 60, deactivationDelay: 0 }
+    : { activationDelay: 0, deactivationDelay: 60 }
+}
+
 // Sync Interval
 export const SYNC_INTERVAL_PRESETS: readonly number[] = [0, 60, 300, 900]
 

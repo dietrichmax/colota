@@ -401,6 +401,8 @@ export interface TrackingProfile {
   priority: number
   /** The condition that activates this profile */
   condition: ProfileCondition
+  /** Seconds the condition must hold continuously before the profile activates (0 = immediate) */
+  activationDelay: number
   /** Seconds to wait before deactivating after condition stops matching */
   deactivationDelay: number
   /** Whether this profile is enabled */

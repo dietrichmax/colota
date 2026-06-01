@@ -409,6 +409,7 @@ class NativeLocationService {
         type: p.conditionType,
         ...(p.speedThreshold != null ? { speedThreshold: p.speedThreshold } : {})
       },
+      activationDelay: p.activationDelaySeconds,
       deactivationDelay: p.deactivationDelaySeconds,
       enabled: p.enabled,
       createdAt: p.createdAt
@@ -430,7 +431,8 @@ class NativeLocationService {
       priority: profile.priority,
       conditionType: profile.condition.type,
       speedThreshold: profile.condition.speedThreshold ?? null,
-      deactivationDelaySeconds: profile.deactivationDelay
+      deactivationDelaySeconds: profile.deactivationDelay,
+      activationDelaySeconds: profile.activationDelay
     })
   }
 
@@ -452,6 +454,7 @@ class NativeLocationService {
       config.speedThreshold = update.condition.speedThreshold ?? null
     }
     if (update.deactivationDelay !== undefined) config.deactivationDelaySeconds = update.deactivationDelay
+    if (update.activationDelay !== undefined) config.activationDelaySeconds = update.activationDelay
     if (update.enabled !== undefined) config.enabled = update.enabled
 
     return LocationServiceModule.updateProfile(config)

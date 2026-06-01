@@ -503,6 +503,7 @@ describe("SetupImportScreen", () => {
       distance: 5,
       syncInterval: 60,
       priority: 20,
+      activationDelay: 5,
       deactivationDelay: 30,
       enabled: true,
       condition: { type: "speed_above", speedThreshold: 8.33 }
@@ -567,6 +568,7 @@ describe("SetupImportScreen", () => {
         distance: 5,
         syncInterval: 60,
         priority: 20,
+        activationDelay: 5,
         deactivationDelay: 30,
         enabled: true,
         condition: { type: "speed_above", speedThreshold: 8.33 }
@@ -592,6 +594,7 @@ describe("SetupImportScreen", () => {
         expect.objectContaining({
           name: "Charging",
           priority: 10,
+          activationDelay: 0,
           deactivationDelay: 60,
           enabled: true,
           condition: { type: "charging" }
