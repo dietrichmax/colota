@@ -91,12 +91,11 @@ describe("logger", () => {
     })
 
     function loadBuffer() {
+      jest.resetModules()
       const mod = require("../logger")
-      mod.clearLogBuffer()
       return {
         logger: mod.logger,
-        getLogEntries: mod.getLogEntries,
-        clearLogBuffer: mod.clearLogBuffer
+        getLogEntries: mod.getLogEntries
       }
     }
 
@@ -132,15 +131,6 @@ describe("logger", () => {
       const entries = getLogEntries()
       expect(entries.length).toBeLessThanOrEqual(2000)
       expect(entries[entries.length - 1].message).toBe("msg 2099")
-    })
-
-    it("clearLogBuffer empties the buffer", () => {
-      const { logger, getLogEntries, clearLogBuffer } = loadBuffer()
-      logger.info("test")
-      expect(getLogEntries()).toHaveLength(1)
-
-      clearLogBuffer()
-      expect(getLogEntries()).toHaveLength(0)
     })
 
     it("formats Error objects", () => {
