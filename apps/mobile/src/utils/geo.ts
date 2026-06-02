@@ -162,3 +162,17 @@ export function inputToMeters(value: number): number {
 export function metersToInput(meters: number): number {
   return usesMiles() ? Math.round(meters * FEET_PER_METER) : meters
 }
+
+/** Start of `date`'s local day, in Unix seconds. */
+export function startOfDaySec(date: Date): number {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return Math.floor(d.getTime() / 1000)
+}
+
+/** End of `date`'s local day (23:59:59.999), in Unix seconds. */
+export function endOfDaySec(date: Date): number {
+  const d = new Date(date)
+  d.setHours(23, 59, 59, 999)
+  return Math.floor(d.getTime() / 1000)
+}

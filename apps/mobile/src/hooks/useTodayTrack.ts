@@ -9,15 +9,10 @@ import NativeLocationService from "../services/NativeLocationService"
 import type { TrackLocation } from "../components/features/map/mapUtils"
 import type { LocationCoords } from "../types/global"
 import { logger } from "../utils/logger"
+import { startOfDaySec } from "../utils/geo"
 
 /** How often to bump the version counter (ms) to batch GeoJSON rebuilds. */
 const FLUSH_INTERVAL_MS = 5000
-
-function startOfDayUnix(): number {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return Math.floor(d.getTime() / 1000)
-}
 
 function todayDateStr(): string {
   const d = new Date()
@@ -57,7 +52,7 @@ export function useTodayTrack(tracking: boolean, coords: LocationCoords | null) 
   // Load today's locations from DB
   const loadFromDb = useCallback(async (since?: number) => {
     try {
-      const start = since ?? startOfDayUnix()
+      const start = since ?? startOfDaySec(new Date())
       const end = Math.floor(Date.now() / 1000)
       const rows = await NativeLocationService.getLocationsByDateRange(start, end)
       const mapped: TrackLocation[] = (rows || []).map((r: any) => ({
