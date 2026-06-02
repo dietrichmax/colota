@@ -53,10 +53,6 @@ export function getLogEntries(): readonly LogEntry[] {
   return logBuffer
 }
 
-export function clearLogBuffer(): void {
-  logBuffer.length = 0
-}
-
 export const logger = {
   debug: (...args: unknown[]) => {
     pushEntry("DEBUG", args)

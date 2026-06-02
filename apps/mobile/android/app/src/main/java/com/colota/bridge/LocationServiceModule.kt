@@ -327,10 +327,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun getDatabaseSize(promise: Promise) =
-        executeAsync(promise) { dbHelper.getDatabaseSizeMB() }
-
-    @ReactMethod
     fun getStats(promise: Promise) = executeAsync(promise) {
         val stats = dbHelper.getStats()
 

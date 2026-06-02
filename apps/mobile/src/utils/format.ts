@@ -16,13 +16,6 @@ export const clamp = (value: number, min: number, max: number): number => Math.m
 /** Zero-pads a non-negative integer to width 2 (e.g. 7 -> "07"). */
 export const pad2 = (n: number): string => n.toString().padStart(2, "0")
 
-/** Locale-independent YYYY-MM-DD. Empty epoch -> "Never". */
-export const formatExportDate = (epochSeconds: number): string => {
-  if (epochSeconds === 0) return "Never"
-  const d = new Date(epochSeconds * 1000)
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
-
 /** Locale-independent YYYY-MM-DD HH:mm (24h). Empty epoch -> "Never". */
 export const formatExportDateTime = (epochSeconds: number): string => {
   if (epochSeconds === 0) return "Never"
