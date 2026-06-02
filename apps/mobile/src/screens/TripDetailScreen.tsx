@@ -26,7 +26,7 @@ import { TrackMap } from "../components/features/inspector/TrackMap"
 import { InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
 import { getTripColor, computeTripStats } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
-import { TRIP_CONVERTERS, EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
+import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
 import { HIT_SLOP_LG } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
@@ -86,10 +86,13 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   const handleExport = useCallback(
     async (format: ExportFormat) => {
       try {
-        const content = TRIP_CONVERTERS[format]([trip])
         const dateStr = new Date(trip.startTime * 1000).toISOString().slice(0, 10)
         const fileName = `colota_trip${trip.index}_${dateStr}${EXPORT_FORMATS[format].extension}`
-        const filePath = await NativeLocationService.writeFile(fileName, content)
+        const filePath = await NativeLocationService.exportTripsToFile(
+          [{ index: trip.index, color: getTripColor(trip.index), startTs: trip.startTime, endTs: trip.endTime }],
+          format,
+          fileName
+        )
         await NativeLocationService.shareFile(
           filePath,
           EXPORT_FORMATS[format].mimeType,

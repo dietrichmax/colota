@@ -20,8 +20,8 @@ import { TripList } from "../components/features/inspector/TripList"
 import { LocationTable } from "../components/features/inspector/LocationTable"
 import { formatDistance } from "../utils/geo"
 import { pad2 } from "../utils/format"
-import { segmentTrips } from "../utils/trips"
-import { TRIP_CONVERTERS, EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
+import { segmentTrips, getTripColor } from "../utils/trips"
+import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
 
@@ -172,14 +172,22 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     async (format: ExportFormat, tripsToExport: Trip[]) => {
       if (tripsToExport.length === 0) return
       try {
-        const content = TRIP_CONVERTERS[format](tripsToExport)
         const dateStr = mapDate.toISOString().slice(0, 10)
         const isSingle = tripsToExport.length === 1
         const label = isSingle ? `Trip ${tripsToExport[0].index}` : "Trips"
         const fileName = `colota_${isSingle ? `trip${tripsToExport[0].index}` : "trips"}_${dateStr}${
           EXPORT_FORMATS[format].extension
         }`
-        const filePath = await NativeLocationService.writeFile(fileName, content)
+        const filePath = await NativeLocationService.exportTripsToFile(
+          tripsToExport.map((t) => ({
+            index: t.index,
+            color: getTripColor(t.index),
+            startTs: t.startTime,
+            endTs: t.endTime
+          })),
+          format,
+          fileName
+        )
         await NativeLocationService.shareFile(filePath, EXPORT_FORMATS[format].mimeType, `Colota ${label} - ${dateStr}`)
       } catch (error) {
         logger.error("[LocationHistory] Trip export failed:", error)

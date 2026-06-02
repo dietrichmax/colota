@@ -846,6 +846,19 @@ class NativeLocationService {
     return LocationServiceModule.exportToFile(format)
   }
 
+  /**
+   * Exports the given trips as a trip-segmented file (CSV/GeoJSON/GPX/KML).
+   * Rows are queried natively per trip range. Returns the written file path.
+   */
+  static async exportTripsToFile(
+    trips: { index: number; color: string; startTs: number; endTs: number }[],
+    format: string,
+    fileName: string
+  ): Promise<string> {
+    this.ensureModule()
+    return LocationServiceModule.exportTripsToFile(trips, format, fileName)
+  }
+
   // ============================================================================
   // SECURE STORAGE (Auth & Headers)
   // ============================================================================
