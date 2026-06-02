@@ -5,6 +5,14 @@
 
 import type { ThemeColors, Geofence } from "../../../types/global"
 
+/** MapLibre line-layer style for colored track segments (`color` is a per-feature property). */
+export const TRACK_LINE_STYLE: any = {
+  lineColor: ["get", "color"],
+  lineWidth: 3,
+  lineCap: "round",
+  lineJoin: "round"
+}
+
 // ============================================================================
 // SPEED COLOR INTERPOLATION
 // ============================================================================
