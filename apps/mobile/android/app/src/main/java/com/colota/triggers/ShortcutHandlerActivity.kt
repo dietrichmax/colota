@@ -7,12 +7,7 @@ package com.Colota.triggers
 
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
-import com.Colota.bridge.LocationServiceModule
-import com.Colota.data.DatabaseHelper
-import com.Colota.service.LocationForegroundService
-import com.Colota.service.ServiceConfig
 import com.Colota.util.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,20 +47,11 @@ class ShortcutHandlerActivity : Activity() {
 
     private fun handleStart(context: Context) {
         AppLogger.d(TAG, "Shortcut: start tracking")
-        val config = ServiceConfig.fromDatabase(DatabaseHelper.getInstance(context))
-        val serviceIntent = config.toIntent(
-            Intent(context, LocationForegroundService::class.java)
-        )
-        context.startForegroundService(serviceIntent)
-        LocationServiceModule.sendTrackingStartedEvent("Started via shortcut")
+        TrackingControl.start(context, "Started via shortcut")
     }
 
-    private fun handleStop(context: android.content.Context) {
+    private fun handleStop(context: Context) {
         AppLogger.d(TAG, "Shortcut: stop tracking")
-        val stopIntent = Intent(context, LocationForegroundService::class.java).apply {
-            action = LocationForegroundService.ACTION_STOP_REQUEST
-            putExtra(LocationForegroundService.EXTRA_STOP_REASON, "Stopped via shortcut")
-        }
-        context.startService(stopIntent)
+        TrackingControl.stop(context, "Stopped via shortcut")
     }
 }
