@@ -272,7 +272,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `AutoExportAlarmReceiver` | Broadcast receiver fired by AlarmManager at the configured time - hands off to `AutoExportWorker` because the receiver's 10s budget can't run an export |
 | `AutoExportScheduler` | Arms `AlarmManager.setAndAllowWhileIdle` for the next configured wall-clock time. Called on enable, after each worker run, after schedule edits and on boot |
 | `AutoExportConfig` | Typed data class wrapping auto-export settings (interval, time-of-day, weekday, day-of-month, enabledAt) from the SQLite settings table with validation, `isExportDue()` and `nextExportTimestamp()` |
-| `ExportConverters` | Native Kotlin export converters (CSV, GeoJSON, GPX, KML) with in-memory, streaming, and file-based (`exportToFile`) interfaces |
+| `ExportConverters` | Native CSV/GeoJSON/GPX/KML serialization for both "Export all" (flat, streamed via `exportToFile`) and per-trip / multi-select export (trip-segmented via `convertTrips`, reached through the `exportTripsToFile` bridge). In-memory, streaming, and file-based interfaces |
 | `ShortcutHandlerActivity` | Handles app shortcut intents (start/stop tracking) without showing UI - reads config from DB via `ServiceConfig.fromDatabase()` and dispatches to `LocationForegroundService` |
 
 ## React Native Layer
@@ -363,7 +363,7 @@ Supporting utilities in `mapUtils.ts`:
 | --- | --- |
 | `logger` | Environment-aware logging - suppresses debug/info console output in production via `__DEV__`, always logs warn/error to console. All levels are always captured in a ring buffer (2000 entries) for the Logging screen |
 | `geo` | Haversine distance, speed/distance/duration/time formatting with configurable unit system (metric/imperial) and time format (12h/24h), auto-detected from locale on first use |
-| `exportConverters` | Converts location data to CSV, GeoJSON, GPX, and KML export formats (flat and trip-aware variants) |
+| `exportConverters` | Export-format metadata (labels, icons, extensions, MIME types) for the export UI. Serialization itself is native - see `ExportConverters.kt` |
 | `trips` | Trip segmentation via time-gap detection (15-min threshold) with distance computation, trip stats (avg speed, elevation gain/loss), and trip color assignment |
 | `queueStatus` | Maps sync queue size to color indicators for the dashboard |
 | `settingsValidation` | URL validation and security checks for endpoint configuration |
