@@ -11,9 +11,11 @@ class ExportConvertersTest {
     @get:Rule
     val tempFolder = TemporaryFolder()
 
+    // Doubles for REAL columns / Long for INTEGER columns, mirroring real DB cursor types
+    // so the tests exercise the JS-style number formatting (whole doubles drop ".0").
     private val sampleRows: List<Map<String, Any?>> = listOf(
-        mapOf("latitude" to 52.52, "longitude" to 13.405, "accuracy" to 10, "altitude" to 34, "speed" to 1.2, "battery" to 85, "timestamp" to 1700000000L),
-        mapOf("latitude" to 48.8566, "longitude" to 2.3522, "accuracy" to 15, "altitude" to 40, "speed" to 0.5, "battery" to 72, "timestamp" to 1700003600L)
+        mapOf("latitude" to 52.52, "longitude" to 13.405, "accuracy" to 10.0, "altitude" to 34.0, "speed" to 1.2, "bearing" to 180.0, "battery" to 85L, "battery_status" to 2L, "timestamp" to 1700000000L),
+        mapOf("latitude" to 48.8566, "longitude" to 2.3522, "accuracy" to 15.0, "altitude" to 40.0, "speed" to 0.5, "bearing" to 90.0, "battery" to 72L, "battery_status" to 1L, "timestamp" to 1700003600L)
     )
 
     // --- extensionFor ---
@@ -66,7 +68,7 @@ class ExportConvertersTest {
     fun `convert CSV contains header row`() {
         val csv = ExportConverters.convert("csv", sampleRows)
         val lines = csv.lines()
-        assertEquals("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,battery", lines[0])
+        assertEquals("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status", lines[0])
     }
 
     @Test
@@ -189,6 +191,28 @@ class ExportConvertersTest {
         assertTrue(json.contains("line1\\nline2\\ttab"))
     }
 
+    // --- Number formatting (jsNum parity) ---
+
+    @Test
+    fun `whole doubles strip trailing dot-zero and fractional values round-trip`() {
+        // Whole doubles must strip ".0" exactly (deterministic). Fractional values only need to
+        // round-trip; byte-identity with JS for arbitrary doubles is best-effort (Double.toString,
+        // not separately verified on ART).
+        val csv = ExportConverters.convert("csv", listOf(mapOf<String, Any?>(
+            "latitude" to 48.137154123, "longitude" to 11.5761249, "timestamp" to 1700000000L,
+            "accuracy" to 5.0, "altitude" to 100.0, "speed" to 12.0, "bearing" to 359.9,
+            "battery" to 80L, "battery_status" to 2L
+        )))
+        val cols = csv.lines()[1].split(",")
+        // id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status
+        assertEquals("5", cols[5])    // accuracy 5.0  -> no ".0"
+        assertEquals("100", cols[6])  // altitude 100.0 -> no ".0"
+        assertEquals("12", cols[7])   // speed 12.0    -> no ".0"
+        assertEquals(48.137154123, cols[3].toDouble(), 0.0)  // messy lat round-trips
+        assertEquals(11.5761249, cols[4].toDouble(), 0.0)    // messy lon round-trips
+        assertEquals(359.9, cols[8].toDouble(), 0.0)         // fractional bearing round-trips
+    }
+
     // --- Null handling ---
 
     @Test
@@ -226,7 +250,7 @@ class ExportConvertersTest {
     fun `streaming CSV produces header and data rows`() {
         val result = streamToString("csv", sampleRows)
         val lines = result.lines().filter { it.isNotBlank() }
-        assertEquals("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,battery", lines[0])
+        assertEquals("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status", lines[0])
         assertEquals(3, lines.size)
         assertTrue(lines[1].startsWith("0,1700000000,"))
         assertTrue(lines[1].contains("52.52"))
@@ -312,5 +336,90 @@ class ExportConvertersTest {
     @Test(expected = IllegalArgumentException::class)
     fun `writeHeader throws for unknown format`() {
         ExportConverters.writeHeader(StringWriter(), "xml")
+    }
+
+    @Test
+    fun `convert includes bearing and battery_status across formats`() {
+        val csv = ExportConverters.convert("csv", sampleRows)
+        assertTrue(csv.lines()[1].endsWith(",Charging")) // battery_status label, last column
+        val gj = ExportConverters.convert("geojson", sampleRows)
+        assertTrue(gj.contains("\"bearing\": 180")) // whole double -> no trailing ".0"
+        assertTrue(gj.contains("\"battery_status\": \"Charging\""))
+        val gpx = ExportConverters.convert("gpx", sampleRows)
+        assertTrue(gpx.contains("<bearing>180</bearing>"))
+        assertTrue(gpx.contains("<battery_status>Charging</battery_status>"))
+        val kml = ExportConverters.convert("kml", sampleRows)
+        assertTrue(kml.contains("<Data name=\"bearing\"><value>180</value></Data>"))
+        assertTrue(kml.contains("<Data name=\"battery_status\"><value>Charging</value></Data>"))
+    }
+
+    // Golden files in src/test/resources/golden/export/ pin the trip output. Structure/formatting
+    // was captured from the JS serializer before the port; battery_status and KML <ExtendedData>
+    // were added by hand afterwards (PR F) - the JS never emitted those. So: JS-derived-then-
+    // extended, not raw JS output. convertTrips must reproduce them.
+
+    /** Mirrors the original JS golden-capture fixture, plus battery_status. */
+    private val tripFixture = listOf(
+        ExportConverters.TripExport(1, "#3B82F6", listOf(
+            mapOf("latitude" to 48.137154, "longitude" to 11.576124, "timestamp" to 1700000000L, "accuracy" to 8.5, "altitude" to 520.2, "speed" to 1.4, "bearing" to 270.5, "battery" to 91L, "battery_status" to 2L),
+            mapOf("latitude" to 48.138001, "longitude" to 11.577003, "timestamp" to 1700000060L, "accuracy" to 12.0, "altitude" to 525.0, "speed" to 2.0, "bearing" to 275.0, "battery" to 90L, "battery_status" to 3L)
+        )),
+        ExportConverters.TripExport(2, "#10B981", listOf(
+            mapOf("latitude" to 48.14, "longitude" to 11.58, "timestamp" to 1700001000L, "accuracy" to 5.0, "altitude" to 530.0, "speed" to 3.0, "bearing" to 10.0, "battery" to 88L, "battery_status" to 1L),
+            mapOf("latitude" to 48.1405, "longitude" to 11.5811, "timestamp" to 1700001060L, "accuracy" to 6.2, "altitude" to 0.0, "speed" to 0.0, "bearing" to 0.0, "battery" to 87L, "battery_status" to 0L)
+        ))
+    )
+
+    private fun golden(name: String): String =
+        javaClass.getResource("/golden/export/$name")!!.readText()
+
+    /** Normalize CRLF and the non-deterministic GPX <metadata> export time. */
+    private fun norm(s: String): String =
+        s.replace("\r\n", "\n").replace(Regex("(?s)(<metadata>.*?<time>).*?(</time>)"), "$1NORM$2")
+
+    @Test
+    fun `convertTrips csv matches JS golden`() {
+        assertEquals(norm(golden("trip.csv")), norm(ExportConverters.convertTrips("csv", tripFixture)))
+    }
+
+    @Test
+    fun `convertTrips geojson matches JS golden`() {
+        assertEquals(norm(golden("trip.geojson")), norm(ExportConverters.convertTrips("geojson", tripFixture)))
+    }
+
+    @Test
+    fun `convertTrips gpx matches JS golden`() {
+        assertEquals(norm(golden("trip.gpx")), norm(ExportConverters.convertTrips("gpx", tripFixture)))
+    }
+
+    @Test
+    fun `convertTrips kml matches JS golden`() {
+        assertEquals(norm(golden("trip.kml")), norm(ExportConverters.convertTrips("kml", tripFixture)))
+    }
+
+    // --- Trip-export edge cases (no trips / empty trip) ---
+
+    @Test
+    fun `convertTrips with no trips produces valid empty output`() {
+        assertEquals(
+            "trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status",
+            ExportConverters.convertTrips("csv", emptyList()).trim()
+        )
+        assertTrue(ExportConverters.convertTrips("geojson", emptyList()).contains("\"features\": []"))
+        val gpx = ExportConverters.convertTrips("gpx", emptyList())
+        assertTrue(gpx.startsWith("<?xml") && gpx.trimEnd().endsWith("</gpx>"))
+        assertTrue(ExportConverters.convertTrips("kml", emptyList()).trimEnd().endsWith("</kml>"))
+    }
+
+    @Test
+    fun `convertTrips with an empty trip emits no points and stays well-formed`() {
+        val trips = listOf(ExportConverters.TripExport(1, "#3B82F6", emptyList()))
+        assertEquals(1, ExportConverters.convertTrips("csv", trips).lines().filter { it.isNotBlank() }.size)
+        assertTrue(ExportConverters.convertTrips("geojson", trips).contains("\"features\": []"))
+        // GPX/KML still open the trip's track/folder with no points inside; just verify it stays well-formed
+        val gpx = ExportConverters.convertTrips("gpx", trips)
+        assertTrue(gpx.contains("<name>Trip 1</name>") && gpx.trimEnd().endsWith("</gpx>"))
+        val kml = ExportConverters.convertTrips("kml", trips)
+        assertTrue(kml.contains("<name>Trip 1</name>") && kml.trimEnd().endsWith("</kml>"))
     }
 }

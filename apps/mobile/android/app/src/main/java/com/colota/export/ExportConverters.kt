@@ -6,6 +6,7 @@
 package com.Colota.export
 
 import com.Colota.data.DatabaseHelper
+import com.Colota.util.BatteryStatus
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.File
@@ -63,7 +64,16 @@ object ExportConverters {
     private fun jsonValue(value: Any?): String = when (value) {
         null -> "null"
         is String -> "\"${escapeJson(value)}\""
+        is Double, is Float -> jsNum(value)
         else -> value.toString()
+    }
+
+    /** Human-readable battery-status label for exports; null if not recorded. */
+    private fun batteryStatusLabel(v: Any?): String? = when (v) {
+        is Long -> BatteryStatus.toDisplayString(v.toInt())
+        is Int -> BatteryStatus.toDisplayString(v)
+        is Double -> BatteryStatus.toDisplayString(v.toInt())
+        else -> null
     }
 
     private fun escapeJson(s: String): String = buildString(s.length) {
@@ -88,7 +98,9 @@ object ExportConverters {
         val altitude: Any?,
         val accuracy: Any?,
         val speed: Any?,
+        val bearing: Any?,
         val battery: Any?,
+        val batteryStatus: Any?,
     ) {
         companion object {
             fun from(row: Map<String, Any?>): ExportRow = ExportRow(
@@ -98,7 +110,9 @@ object ExportConverters {
                 altitude = row["altitude"],
                 accuracy = row["accuracy"],
                 speed = row["speed"],
+                bearing = row["bearing"],
                 battery = row["battery"],
+                batteryStatus = row["battery_status"],
             )
         }
     }
@@ -116,12 +130,13 @@ object ExportConverters {
 
     private object CsvFormat : FormatWriter(".csv", "text/csv") {
         override fun writeHeader(w: Writer) {
-            w.write("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,battery\n")
+            w.write("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status\n")
         }
         override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
             w.write(listOf(
-                globalIndex, row.ts, isoTime(row.ts), row.lat, row.lon,
-                row.accuracy ?: 0, row.altitude ?: 0, row.speed ?: 0, row.battery ?: 0
+                globalIndex, row.ts, isoTime(row.ts), jsNum(row.lat), jsNum(row.lon),
+                numOrZero(row.accuracy), numOrZero(row.altitude), numOrZero(row.speed), numOrZero(row.bearing), numOrZero(row.battery),
+                batteryStatusLabel(row.batteryStatus) ?: ""
             ).joinToString(","))
             w.write("\n")
         }
@@ -138,14 +153,16 @@ object ExportConverters {
       "type": "Feature",
       "geometry": {
         "type": "Point",
-        "coordinates": [${row.lon}, ${row.lat}]
+        "coordinates": [${jsNum(row.lon)}, ${jsNum(row.lat)}]
       },
       "properties": {
         "id": $globalIndex,
         "accuracy": ${jsonValue(row.accuracy)},
         "altitude": ${jsonValue(row.altitude)},
         "speed": ${jsonValue(row.speed)},
+        "bearing": ${jsonValue(row.bearing)},
         "battery": ${jsonValue(row.battery)},
+        "battery_status": ${jsonValue(batteryStatusLabel(row.batteryStatus))},
         "time": "${isoTime(row.ts)}"
       }
     }""")
@@ -172,12 +189,14 @@ object ExportConverters {
             val lat = String.format(Locale.US, "%.6f", row.lat)
             val lon = String.format(Locale.US, "%.6f", row.lon)
             w.write("""      <trkpt lat="$lat" lon="$lon">
-        <ele>${row.altitude ?: 0}</ele>
+        <ele>${numOrZero(row.altitude)}</ele>
         <time>${isoTime(row.ts)}</time>
         <extensions>
-          <accuracy>${row.accuracy ?: 0}</accuracy>
-          <speed>${row.speed ?: 0}</speed>
-          <battery>${row.battery ?: 0}</battery>
+          <accuracy>${numOrZero(row.accuracy)}</accuracy>
+          <speed>${numOrZero(row.speed)}</speed>
+          <bearing>${numOrZero(row.bearing)}</bearing>
+          <battery>${numOrZero(row.battery)}</battery>
+          <battery_status>${batteryStatusLabel(row.batteryStatus) ?: ""}</battery_status>
         </extensions>
       </trkpt>
 """)
@@ -207,12 +226,20 @@ object ExportConverters {
 """)
         }
         override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
-            kml?.add("${row.lon},${row.lat},${row.altitude ?: 0}")
+            kml?.add("${jsNum(row.lon)},${jsNum(row.lat)},${numOrZero(row.altitude)}")
             w.write("""    <Placemark>
       <TimeStamp><when>${isoTime(row.ts)}</when></TimeStamp>
-      <description>Accuracy: ${row.accuracy ?: 0}m, Speed: ${row.speed ?: 0}m/s</description>
+      <description>Accuracy: ${numOrZero(row.accuracy)}m, Speed: ${numOrZero(row.speed)}m/s</description>
+      <ExtendedData>
+        <Data name="accuracy"><value>${numOrZero(row.accuracy)}</value></Data>
+        <Data name="altitude"><value>${numOrZero(row.altitude)}</value></Data>
+        <Data name="speed"><value>${numOrZero(row.speed)}</value></Data>
+        <Data name="bearing"><value>${numOrZero(row.bearing)}</value></Data>
+        <Data name="battery"><value>${numOrZero(row.battery)}</value></Data>
+        <Data name="battery_status"><value>${batteryStatusLabel(row.batteryStatus) ?: ""}</value></Data>
+      </ExtendedData>
       <Point>
-        <coordinates>${row.lon},${row.lat},${row.altitude ?: 0}</coordinates>
+        <coordinates>${jsNum(row.lon)},${jsNum(row.lat)},${numOrZero(row.altitude)}</coordinates>
       </Point>
     </Placemark>
 """)
@@ -328,5 +355,191 @@ object ExportConverters {
     fun mimeTypeFor(format: String): String = when (format) {
         "csv", "geojson", "gpx", "kml" -> forFormat(format).mimeType
         else -> "text/plain"
+    }
+
+    // Trip-segmented export (one track/folder per trip), separate from the flat
+    // FormatWriter above. Ports the former JS TRIP_CONVERTERS; parity pinned by golden tests.
+
+    /** color is a #RRGGBB hex supplied by JS (getTripColor), not computed here. */
+    data class TripExport(val index: Int, val color: String, val rows: List<Map<String, Any?>>)
+
+    /** Match JS number formatting: whole-valued doubles drop the trailing ".0". */
+    private fun jsNum(v: Any): String = when (v) {
+        is Double -> if (v.isFinite() && v == Math.floor(v) && kotlin.math.abs(v) < 1e15) v.toLong().toString() else v.toString()
+        is Float -> jsNum(v.toDouble())
+        else -> v.toString()
+    }
+
+    /** Numeric field with a `0` default for null (mirrors JS `?? 0` / `|| 0`). */
+    private fun numOrZero(v: Any?): String = if (v == null) "0" else jsNum(v)
+
+    /** GeoJSON property value: `null` stays `null` (JSON), otherwise JS-formatted number. */
+    private fun jsonNum(v: Any?): String = if (v == null) "null" else jsNum(v)
+
+    private fun asDouble(v: Any?): Double = when (v) {
+        is Double -> v
+        is Float -> v.toDouble()
+        is Long -> v.toDouble()
+        is Int -> v.toDouble()
+        else -> 0.0
+    }
+
+    /** Hex RGB (#RRGGBB) -> KML ABGR (ffBBGGRR). */
+    private fun hexToKmlColor(hex: String): String {
+        val h = hex.removePrefix("#")
+        if (h.length < 6) return "ff0000ff"
+        return "ff${h.substring(4, 6)}${h.substring(2, 4)}${h.substring(0, 2)}"
+    }
+
+    private fun rowTs(row: Map<String, Any?>): Long =
+        (row["timestamp"] as? Long) ?: (System.currentTimeMillis() / 1000)
+
+    fun convertTrips(format: String, trips: List<TripExport>): String = when (format) {
+        "csv" -> tripsToCsv(trips)
+        "geojson" -> tripsToGeoJson(trips)
+        "gpx" -> tripsToGpx(trips)
+        "kml" -> tripsToKml(trips)
+        else -> throw IllegalArgumentException("Unknown export format: $format")
+    }
+
+    private fun tripsToCsv(trips: List<TripExport>): String {
+        val sb = StringBuilder("trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status\n")
+        val rows = ArrayList<String>()
+        for (trip in trips) {
+            trip.rows.forEachIndexed { i, row ->
+                val ts = rowTs(row)
+                rows.add(
+                    listOf(
+                        trip.index.toString(), i.toString(), ts.toString(), isoTime(ts),
+                        numOrZero(row["latitude"]), numOrZero(row["longitude"]),
+                        numOrZero(row["accuracy"]), numOrZero(row["altitude"]),
+                        numOrZero(row["speed"]), numOrZero(row["bearing"]), numOrZero(row["battery"]),
+                        batteryStatusLabel(row["battery_status"]) ?: ""
+                    ).joinToString(",")
+                )
+            }
+        }
+        sb.append(rows.joinToString("\n"))
+        return sb.toString()
+    }
+
+    private fun tripsToGeoJson(trips: List<TripExport>): String {
+        val features = ArrayList<String>()
+        for (trip in trips) {
+            trip.rows.forEachIndexed { i, row ->
+                val ts = rowTs(row)
+                features.add(
+                    "    {\n" +
+                    "      \"type\": \"Feature\",\n" +
+                    "      \"geometry\": {\n" +
+                    "        \"type\": \"Point\",\n" +
+                    "        \"coordinates\": [\n" +
+                    "          ${numOrZero(row["longitude"])},\n" +
+                    "          ${numOrZero(row["latitude"])}\n" +
+                    "        ]\n" +
+                    "      },\n" +
+                    "      \"properties\": {\n" +
+                    "        \"trip\": ${trip.index},\n" +
+                    "        \"id\": $i,\n" +
+                    "        \"accuracy\": ${jsonNum(row["accuracy"])},\n" +
+                    "        \"altitude\": ${jsonNum(row["altitude"])},\n" +
+                    "        \"speed\": ${jsonNum(row["speed"])},\n" +
+                    "        \"bearing\": ${jsonNum(row["bearing"])},\n" +
+                    "        \"battery\": ${jsonNum(row["battery"])},\n" +
+                    "        \"battery_status\": ${jsonValue(batteryStatusLabel(row["battery_status"]))},\n" +
+                    "        \"time\": \"${isoTime(ts)}\"\n" +
+                    "      }\n" +
+                    "    }"
+                )
+            }
+        }
+        val featuresBlock = if (features.isEmpty()) "[]" else "[\n${features.joinToString(",\n")}\n  ]"
+        return "{\n  \"type\": \"FeatureCollection\",\n  \"features\": $featuresBlock\n}"
+    }
+
+    private fun tripsToGpx(trips: List<TripExport>): String {
+        val sb = StringBuilder()
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        sb.append("<gpx version=\"1.1\" creator=\"Colota\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n")
+        sb.append("  <metadata>\n")
+        sb.append("    <name>Colota Trip Export</name>\n")
+        sb.append("    <time>${isoTime(System.currentTimeMillis() / 1000)}</time>\n")
+        sb.append("  </metadata>")
+        for (trip in trips) {
+            sb.append("\n  <trk>\n    <name>Trip ${trip.index}</name>\n    <trkseg>")
+            for (row in trip.rows) {
+                val ts = rowTs(row)
+                val lat = String.format(Locale.US, "%.6f", asDouble(row["latitude"]))
+                val lon = String.format(Locale.US, "%.6f", asDouble(row["longitude"]))
+                sb.append("\n      <trkpt lat=\"$lat\" lon=\"$lon\">")
+                sb.append("\n        <ele>${numOrZero(row["altitude"])}</ele>")
+                sb.append("\n        <time>${isoTime(ts)}</time>")
+                sb.append("\n        <extensions>")
+                sb.append("\n          <accuracy>${numOrZero(row["accuracy"])}</accuracy>")
+                sb.append("\n          <speed>${numOrZero(row["speed"])}</speed>")
+                sb.append("\n          <bearing>${numOrZero(row["bearing"])}</bearing>")
+                sb.append("\n          <battery>${numOrZero(row["battery"])}</battery>")
+                sb.append("\n          <battery_status>${batteryStatusLabel(row["battery_status"]) ?: ""}</battery_status>")
+                sb.append("\n        </extensions>")
+                sb.append("\n      </trkpt>")
+            }
+            sb.append("\n    </trkseg>\n  </trk>")
+        }
+        sb.append("\n</gpx>")
+        return sb.toString()
+    }
+
+    private fun tripsToKml(trips: List<TripExport>): String {
+        val sb = StringBuilder()
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        sb.append("<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n")
+        sb.append("  <Document>\n")
+        sb.append("    <name>Colota Trip Export</name>\n")
+        sb.append("    <description>Exported trips from Colota</description>")
+        for (trip in trips) {
+            val styleId = "tripStyle${trip.index}"
+            val coords = trip.rows.joinToString("\n            ") {
+                "${numOrZero(it["longitude"])},${numOrZero(it["latitude"])},${numOrZero(it["altitude"])}"
+            }
+            sb.append("\n    <Style id=\"$styleId\">")
+            sb.append("\n      <LineStyle>")
+            sb.append("\n        <color>${hexToKmlColor(trip.color)}</color>")
+            sb.append("\n        <width>4</width>")
+            sb.append("\n      </LineStyle>")
+            sb.append("\n    </Style>")
+            sb.append("\n    <Folder>")
+            sb.append("\n      <name>Trip ${trip.index}</name>")
+            sb.append("\n      <Placemark>")
+            sb.append("\n        <name>Trip ${trip.index} Path</name>")
+            sb.append("\n        <styleUrl>#$styleId</styleUrl>")
+            sb.append("\n        <LineString>")
+            sb.append("\n          <tessellate>1</tessellate>")
+            sb.append("\n          <coordinates>")
+            sb.append("\n            $coords")
+            sb.append("\n          </coordinates>")
+            sb.append("\n        </LineString>")
+            sb.append("\n      </Placemark>")
+            for (row in trip.rows) {
+                val ts = rowTs(row)
+                sb.append("\n      <Placemark>")
+                sb.append("\n        <TimeStamp><when>${isoTime(ts)}</when></TimeStamp>")
+                sb.append("\n        <description>Trip ${trip.index} - Accuracy: ${numOrZero(row["accuracy"])}m, Speed: ${numOrZero(row["speed"])}m/s</description>")
+                sb.append("\n        <ExtendedData>")
+                sb.append("\n          <Data name=\"accuracy\"><value>${numOrZero(row["accuracy"])}</value></Data>")
+                sb.append("\n          <Data name=\"altitude\"><value>${numOrZero(row["altitude"])}</value></Data>")
+                sb.append("\n          <Data name=\"speed\"><value>${numOrZero(row["speed"])}</value></Data>")
+                sb.append("\n          <Data name=\"bearing\"><value>${numOrZero(row["bearing"])}</value></Data>")
+                sb.append("\n          <Data name=\"battery\"><value>${numOrZero(row["battery"])}</value></Data>")
+                sb.append("\n          <Data name=\"battery_status\"><value>${batteryStatusLabel(row["battery_status"]) ?: ""}</value></Data>")
+                sb.append("\n        </ExtendedData>")
+                sb.append("\n        <Point>")
+                sb.append("\n          <coordinates>${numOrZero(row["longitude"])},${numOrZero(row["latitude"])},${numOrZero(row["altitude"])}</coordinates>")
+                sb.append("\n        </Point>")
+                sb.append("\n      </Placemark>")
+            }
+            sb.append("\n    </Folder>")
+        }
+        sb.append("\n  </Document>\n</kml>")
+        return sb.toString()
     }
 }

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Colota Trip Export</name>
+    <description>Exported trips from Colota</description>
+    <Style id="tripStyle1">
+      <LineStyle>
+        <color>ffF6823B</color>
+        <width>4</width>
+      </LineStyle>
+    </Style>
+    <Folder>
+      <name>Trip 1</name>
+      <Placemark>
+        <name>Trip 1 Path</name>
+        <styleUrl>#tripStyle1</styleUrl>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            11.576124,48.137154,520.2
+            11.577003,48.138001,525
+          </coordinates>
+        </LineString>
+      </Placemark>
+      <Placemark>
+        <TimeStamp><when>2023-11-14T22:13:20.000Z</when></TimeStamp>
+        <description>Trip 1 - Accuracy: 8.5m, Speed: 1.4m/s</description>
+        <ExtendedData>
+          <Data name="accuracy"><value>8.5</value></Data>
+          <Data name="altitude"><value>520.2</value></Data>
+          <Data name="speed"><value>1.4</value></Data>
+          <Data name="bearing"><value>270.5</value></Data>
+          <Data name="battery"><value>91</value></Data>
+          <Data name="battery_status"><value>Charging</value></Data>
+        </ExtendedData>
+        <Point>
+          <coordinates>11.576124,48.137154,520.2</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <TimeStamp><when>2023-11-14T22:14:20.000Z</when></TimeStamp>
+        <description>Trip 1 - Accuracy: 12m, Speed: 2m/s</description>
+        <ExtendedData>
+          <Data name="accuracy"><value>12</value></Data>
+          <Data name="altitude"><value>525</value></Data>
+          <Data name="speed"><value>2</value></Data>
+          <Data name="bearing"><value>275</value></Data>
+          <Data name="battery"><value>90</value></Data>
+          <Data name="battery_status"><value>Full</value></Data>
+        </ExtendedData>
+        <Point>
+          <coordinates>11.577003,48.138001,525</coordinates>
+        </Point>
+      </Placemark>
+    </Folder>
+    <Style id="tripStyle2">
+      <LineStyle>
+        <color>ff81B910</color>
+        <width>4</width>
+      </LineStyle>
+    </Style>
+    <Folder>
+      <name>Trip 2</name>
+      <Placemark>
+        <name>Trip 2 Path</name>
+        <styleUrl>#tripStyle2</styleUrl>
+        <LineString>
+          <tessellate>1</tessellate>
+          <coordinates>
+            11.58,48.14,530
+            11.5811,48.1405,0
+          </coordinates>
+        </LineString>
+      </Placemark>
+      <Placemark>
+        <TimeStamp><when>2023-11-14T22:30:00.000Z</when></TimeStamp>
+        <description>Trip 2 - Accuracy: 5m, Speed: 3m/s</description>
+        <ExtendedData>
+          <Data name="accuracy"><value>5</value></Data>
+          <Data name="altitude"><value>530</value></Data>
+          <Data name="speed"><value>3</value></Data>
+          <Data name="bearing"><value>10</value></Data>
+          <Data name="battery"><value>88</value></Data>
+          <Data name="battery_status"><value>Unplugged/Discharging</value></Data>
+        </ExtendedData>
+        <Point>
+          <coordinates>11.58,48.14,530</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <TimeStamp><when>2023-11-14T22:31:00.000Z</when></TimeStamp>
+        <description>Trip 2 - Accuracy: 6.2m, Speed: 0m/s</description>
+        <ExtendedData>
+          <Data name="accuracy"><value>6.2</value></Data>
+          <Data name="altitude"><value>0</value></Data>
+          <Data name="speed"><value>0</value></Data>
+          <Data name="bearing"><value>0</value></Data>
+          <Data name="battery"><value>87</value></Data>
+          <Data name="battery_status"><value>Unknown</value></Data>
+        </ExtendedData>
+        <Point>
+          <coordinates>11.5811,48.1405,0</coordinates>
+        </Point>
+      </Placemark>
+    </Folder>
+  </Document>
+</kml>

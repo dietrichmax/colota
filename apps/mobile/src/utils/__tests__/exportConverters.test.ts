@@ -1,34 +1,10 @@
 import { formatBytes } from "../format"
-import {
-  convertTripsToCSV,
-  convertTripsToGeoJSON,
-  convertTripsToGPX,
-  convertTripsToKML,
-  TRIP_CONVERTERS
-} from "../exportConverters"
+import { EXPORT_FORMAT_KEYS, EXPORT_FORMATS } from "../exportConverters"
 import { FILE_FORMATS } from "../fileFormats"
 
-const sampleTrips = [
-  {
-    index: 1,
-    locations: [
-      { latitude: 48.137154, longitude: 11.576124, accuracy: 10, altitude: 520, speed: 1.5, timestamp: 1700000000 },
-      { latitude: 48.138, longitude: 11.577, accuracy: 8, altitude: 525, speed: 2.0, timestamp: 1700000005 }
-    ],
-    startTime: 1700000000,
-    endTime: 1700000005,
-    distance: 120,
-    locationCount: 2
-  },
-  {
-    index: 2,
-    locations: [{ latitude: 48.14, longitude: 11.58, accuracy: 12, altitude: 530, speed: 3.0, timestamp: 1700001000 }],
-    startTime: 1700001000,
-    endTime: 1700001000,
-    distance: 0,
-    locationCount: 1
-  }
-]
+// Trip serialization moved to native ExportConverters.kt; parity is covered by
+// the golden-fixture tests in ExportConvertersTest.kt. This file now only covers
+// the byte formatter and the export-format metadata registry.
 
 describe("formatBytes", () => {
   it("formats bytes", () => {
@@ -48,154 +24,16 @@ describe("formatBytes", () => {
   })
 })
 
-describe("convertTripsToCSV", () => {
-  it("includes trip column in header", () => {
-    const csv = convertTripsToCSV([])
-    expect(csv).toContain("trip,id,timestamp")
-  })
-
-  it("includes trip index per row", () => {
-    const csv = convertTripsToCSV(sampleTrips)
-    const lines = csv.split("\n")
-    expect(lines[1]).toMatch(/^1,/) // trip 1
-    expect(lines[3]).toMatch(/^2,/) // trip 2
-  })
-
-  it("flattens all trip locations into rows", () => {
-    const csv = convertTripsToCSV(sampleTrips)
-    const lines = csv.split("\n")
-    expect(lines).toHaveLength(4) // header + 3 locations
-  })
-
-  it("uses Unix seconds for timestamps", () => {
-    const csv = convertTripsToCSV(sampleTrips)
-    expect(csv).toContain("1700000000")
-  })
-})
-
-describe("convertTripsToGeoJSON", () => {
-  it("returns valid FeatureCollection", () => {
-    const result = JSON.parse(convertTripsToGeoJSON(sampleTrips))
-    expect(result.type).toBe("FeatureCollection")
-    expect(result.features).toHaveLength(3)
-  })
-
-  it("includes trip index in properties", () => {
-    const result = JSON.parse(convertTripsToGeoJSON(sampleTrips))
-    expect(result.features[0].properties.trip).toBe(1)
-    expect(result.features[2].properties.trip).toBe(2)
-  })
-
-  it("uses [lon, lat] coordinate order", () => {
-    const result = JSON.parse(convertTripsToGeoJSON(sampleTrips))
-    const coords = result.features[0].geometry.coordinates
-    expect(coords[0]).toBe(11.576124)
-    expect(coords[1]).toBe(48.137154)
-  })
-})
-
-describe("convertTripsToGPX", () => {
-  it("creates separate trk elements per trip", () => {
-    const gpx = convertTripsToGPX(sampleTrips)
-    expect(gpx).toContain("<name>Trip 1</name>")
-    expect(gpx).toContain("<name>Trip 2</name>")
-    const trkCount = (gpx.match(/<trk>/g) || []).length
-    expect(trkCount).toBe(2)
-  })
-
-  it("includes trackpoints with lat/lon", () => {
-    const gpx = convertTripsToGPX(sampleTrips)
-    expect(gpx).toContain('lat="48.137154"')
-    expect(gpx).toContain('lon="11.576124"')
-  })
-
-  it("includes elevation and extensions", () => {
-    const gpx = convertTripsToGPX(sampleTrips)
-    expect(gpx).toContain("<ele>520</ele>")
-    expect(gpx).toContain("<accuracy>10</accuracy>")
-  })
-})
-
-describe("convertTripsToKML", () => {
-  it("creates separate folders per trip", () => {
-    const kml = convertTripsToKML(sampleTrips)
-    expect(kml).toContain("<name>Trip 1</name>")
-    expect(kml).toContain("<name>Trip 2</name>")
-    const folderCount = (kml.match(/<Folder>/g) || []).length
-    expect(folderCount).toBe(2)
-  })
-
-  it("uses per-trip colors", () => {
-    const kml = convertTripsToKML(sampleTrips)
-    // Trip 1: #3B82F6 -> ABGR ffF6823B
-    expect(kml).toContain("ffF6823B")
-    // Trip 2: #10B981 -> ABGR ff81B910
-    expect(kml).toContain("ff81B910")
-  })
-
-  it("includes LineString coordinates per trip", () => {
-    const kml = convertTripsToKML(sampleTrips)
-    expect(kml).toContain("11.576124,48.137154,520")
-    expect(kml).toContain("11.58,48.14,530")
-  })
-
-  it("includes Placemarks with trip labels", () => {
-    const kml = convertTripsToKML(sampleTrips)
-    expect(kml).toContain("Trip 1")
-    expect(kml).toContain("Trip 2")
-    expect(kml).toContain("<TimeStamp>")
-  })
-})
-
-describe("FILE_FORMATS registry", () => {
+describe("export format registry", () => {
   it("exportable formats are fully wired for export", () => {
-    const exportable = Object.entries(FILE_FORMATS).filter(([, f]) => f.exportable)
-    expect(exportable.map(([key]) => key).sort()).toEqual(Object.keys(TRIP_CONVERTERS).sort())
-    const incomplete = exportable.filter(([, f]) => !f.mimeType || !f.subtitle).map(([key]) => key)
-    expect(incomplete).toEqual([])
-  })
-})
-
-describe("exporters emit every location field", () => {
-  const trip = [
-    {
-      index: 1,
-      locations: [
-        {
-          latitude: 48.1,
-          longitude: 11.5,
-          accuracy: 7,
-          altitude: 333,
-          speed: 4,
-          bearing: 90,
-          battery: 55,
-          timestamp: 1700000000
-        }
-      ],
-      startTime: 1700000000,
-      endTime: 1700000000,
-      distance: 0,
-      locationCount: 1
-    }
-  ]
-
-  it("GeoJSON properties carry every field", () => {
-    const props = JSON.parse(convertTripsToGeoJSON(trip)).features[0].properties
-    expect(props).toMatchObject({ accuracy: 7, altitude: 333, speed: 4, bearing: 90, battery: 55 })
-  })
-
-  it("GPX extensions carry every field", () => {
-    const gpx = convertTripsToGPX(trip)
-    expect(gpx).toContain("<ele>333</ele>")
-    expect(gpx).toContain("<accuracy>7</accuracy>")
-    expect(gpx).toContain("<speed>4</speed>")
-    expect(gpx).toContain("<bearing>90</bearing>")
-    expect(gpx).toContain("<battery>55</battery>")
-  })
-
-  it("CSV columns carry every field", () => {
-    const lines = convertTripsToCSV(trip).split("\n")
-    expect(lines[0]).toBe("trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery")
-    expect(lines[1]).toContain("7,333,4,90,55")
+    const exportable = Object.entries(FILE_FORMATS)
+      .filter(([, f]) => f.exportable)
+      .map(([key]) => key)
+      .sort()
+    expect(exportable).toEqual([...EXPORT_FORMAT_KEYS].sort())
+    EXPORT_FORMAT_KEYS.forEach((key) => {
+      expect(EXPORT_FORMATS[key].mimeType).toBeTruthy()
+      expect(EXPORT_FORMATS[key].subtitle).toBeTruthy()
+    })
   })
 })

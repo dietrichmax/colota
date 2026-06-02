@@ -9,14 +9,15 @@ jest.mock("../../services/NativeLocationService", () => ({
     getDaysWithData: jest.fn().mockResolvedValue([]),
     getDailyStats: jest.fn().mockResolvedValue([]),
     getLocationsByDateRange: jest.fn().mockResolvedValue([]),
-    writeFile: jest.fn(),
+    exportTripsToFile: jest.fn().mockResolvedValue("/tmp/export"),
     shareFile: jest.fn(),
     deleteLocationsInRange: jest.fn().mockResolvedValue(0)
   }
 }))
 
 jest.mock("../../utils/trips", () => ({
-  segmentTrips: jest.fn().mockReturnValue([])
+  segmentTrips: jest.fn().mockReturnValue([]),
+  getTripColor: jest.fn().mockReturnValue("#3B82F6")
 }))
 
 jest.mock("../../utils/geo", () => ({
@@ -24,7 +25,6 @@ jest.mock("../../utils/geo", () => ({
 }))
 
 jest.mock("../../utils/exportConverters", () => ({
-  TRIP_CONVERTERS: {},
   EXPORT_FORMATS: {}
 }))
 

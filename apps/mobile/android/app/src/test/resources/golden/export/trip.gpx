@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Colota" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Colota Trip Export</name>
+    <time>2026-06-02T05:32:06.221Z</time>
+  </metadata>
+  <trk>
+    <name>Trip 1</name>
+    <trkseg>
+      <trkpt lat="48.137154" lon="11.576124">
+        <ele>520.2</ele>
+        <time>2023-11-14T22:13:20.000Z</time>
+        <extensions>
+          <accuracy>8.5</accuracy>
+          <speed>1.4</speed>
+          <bearing>270.5</bearing>
+          <battery>91</battery>
+          <battery_status>Charging</battery_status>
+        </extensions>
+      </trkpt>
+      <trkpt lat="48.138001" lon="11.577003">
+        <ele>525</ele>
+        <time>2023-11-14T22:14:20.000Z</time>
+        <extensions>
+          <accuracy>12</accuracy>
+          <speed>2</speed>
+          <bearing>275</bearing>
+          <battery>90</battery>
+          <battery_status>Full</battery_status>
+        </extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+  <trk>
+    <name>Trip 2</name>
+    <trkseg>
+      <trkpt lat="48.140000" lon="11.580000">
+        <ele>530</ele>
+        <time>2023-11-14T22:30:00.000Z</time>
+        <extensions>
+          <accuracy>5</accuracy>
+          <speed>3</speed>
+          <bearing>10</bearing>
+          <battery>88</battery>
+          <battery_status>Unplugged/Discharging</battery_status>
+        </extensions>
+      </trkpt>
+      <trkpt lat="48.140500" lon="11.581100">
+        <ele>0</ele>
+        <time>2023-11-14T22:31:00.000Z</time>
+        <extensions>
+          <accuracy>6.2</accuracy>
+          <speed>0</speed>
+          <bearing>0</bearing>
+          <battery>87</battery>
+          <battery_status>Unknown</battery_status>
+        </extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

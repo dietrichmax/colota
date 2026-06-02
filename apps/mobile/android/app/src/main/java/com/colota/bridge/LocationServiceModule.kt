@@ -1018,6 +1018,22 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    /**
+     * Exports the given trips (each a `{index, color, startTs, endTs}`) as a
+     * trip-segmented file written to cache. Rows are queried per trip by range.
+     * Returns the file path (same contract as `writeFile`).
+     */
+    @ReactMethod
+    fun exportTripsToFile(trips: ReadableArray, format: String, fileName: String, promise: Promise) = executeAsync(promise) {
+        val tripExports = ArrayList<ExportConverters.TripExport>(trips.size())
+        for (i in 0 until trips.size()) {
+            val t = trips.getMap(i) ?: continue
+            val rows = dbHelper.getLocationsByDateRange(t.getDouble("startTs").toLong(), t.getDouble("endTs").toLong())
+            tripExports.add(ExportConverters.TripExport(t.getInt("index"), t.getString("color") ?: "#3B82F6", rows))
+        }
+        fileOps.writeFile(fileName, ExportConverters.convertTrips(format, tripExports))
+    }
+
     @ReactMethod
     fun getExportFiles(promise: Promise) = executeAsync(promise) {
         val config = AutoExportConfig.from(dbHelper)
