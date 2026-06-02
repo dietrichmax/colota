@@ -17,17 +17,11 @@ import {
   buildTrackSegmentsGeoJSON,
   buildTrackPointsGeoJSON,
   computeTrackBounds,
+  TRACK_LINE_STYLE,
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
 import { HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
-
-const trackLineStyle: any = {
-  lineColor: ["get", "color"],
-  lineWidth: 3,
-  lineCap: "round",
-  lineJoin: "round"
-}
 
 const trackPointStyle: any = {
   circleRadius: 4,
@@ -219,7 +213,7 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion }: P
         onMapReady={handleMapReady}
       >
         <GeoJSONSource id="track-segments" data={segmentsGeoJSON}>
-          <Layer id="track-line" type="line" style={trackLineStyle} />
+          <Layer id="track-line" type="line" style={TRACK_LINE_STYLE} />
         </GeoJSONSource>
         <GeoJSONSource
           id="track-points"

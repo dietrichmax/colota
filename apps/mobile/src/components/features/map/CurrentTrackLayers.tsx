@@ -5,15 +5,8 @@
 
 import React, { useMemo } from "react"
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native"
-import { buildTrackSegmentsGeoJSON, type TrackLocation } from "./mapUtils"
+import { buildTrackSegmentsGeoJSON, TRACK_LINE_STYLE, type TrackLocation } from "./mapUtils"
 import type { ThemeColors } from "../../../types/global"
-
-const trackLineStyle: any = {
-  lineColor: ["get", "color"],
-  lineWidth: 3,
-  lineCap: "round",
-  lineJoin: "round"
-}
 
 interface Props {
   locations: TrackLocation[]
@@ -34,7 +27,7 @@ export function CurrentTrackLayers({ locations, version, visible, colors }: Prop
 
   return (
     <GeoJSONSource id="current-track-segments" data={geoJSON}>
-      <Layer id="current-track-line" type="line" style={trackLineStyle} />
+      <Layer id="current-track-line" type="line" style={TRACK_LINE_STYLE} />
     </GeoJSONSource>
   )
 }
