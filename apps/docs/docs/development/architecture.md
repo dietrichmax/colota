@@ -273,7 +273,9 @@ For backups, two `internal` methods support the export/import flow without expos
 | `AutoExportScheduler` | Arms `AlarmManager.setAndAllowWhileIdle` for the next configured wall-clock time. Called on enable, after each worker run, after schedule edits and on boot |
 | `AutoExportConfig` | Typed data class wrapping auto-export settings (interval, time-of-day, weekday, day-of-month, enabledAt) from the SQLite settings table with validation, `isExportDue()` and `nextExportTimestamp()` |
 | `ExportConverters` | Native CSV/GeoJSON/GPX/KML serialization for both "Export all" (flat, streamed via `exportToFile`) and per-trip / multi-select export (trip-segmented via `convertTrips`, reached through the `exportTripsToFile` bridge). In-memory, streaming, and file-based interfaces |
-| `ShortcutHandlerActivity` | Handles app shortcut intents (start/stop tracking) without showing UI - reads config from DB via `ServiceConfig.fromDatabase()` and dispatches to `LocationForegroundService` |
+| `ShortcutHandlerActivity` | Transparent activity handling app shortcut intents (start/stop tracking) without UI. Delegates to the shared `TrackingControl` helper |
+| `TrackingControlReceiver` | Exported broadcast receiver for automation apps - `com.Colota.action.START_TRACKING` / `STOP_TRACKING` start or stop tracking from saved settings. Delegates to `TrackingControl` |
+| `TrackingControl` | Shared start/stop tracking actions used by both triggers above: reads config from DB via `ServiceConfig.fromDatabase()`, starts the foreground service and fires the started event; stop is routed through the service so `stopForegroundServiceWithReason` runs |
 
 ## React Native Layer
 
