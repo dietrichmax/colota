@@ -22,7 +22,7 @@ import { ChipGroup } from "../components/ui/ChipGroup"
 import { useTheme } from "../hooks/useTheme"
 import { DailyStat } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
-import { formatDistance, formatDuration } from "../utils/geo"
+import { formatDistance, formatDuration, startOfDaySec } from "../utils/geo"
 import { fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
 
@@ -52,8 +52,7 @@ function getDateRange(period: Period): { start: number; end: number } {
     startDate.setDate(startDate.getDate() - 29)
   }
 
-  startDate.setHours(0, 0, 0, 0)
-  return { start: Math.floor(startDate.getTime() / 1000), end: endTs }
+  return { start: startOfDaySec(startDate), end: endTs }
 }
 
 /** Animated number that counts up from 0 to target */

@@ -192,7 +192,7 @@ describe("useTodayTrack", () => {
 
       const calls = mockGetLocationsByDateRange.mock.calls
       expect(calls).toHaveLength(2)
-      // Both calls are full loads (startOfDayUnix) - much larger than a typical "since" value
+      // Both calls are full loads (start-of-day) - much larger than a typical "since" value
       expect(calls[0][0]).toBeGreaterThan(1000000)
       expect(calls[1][0]).toBeGreaterThan(1000000)
     })

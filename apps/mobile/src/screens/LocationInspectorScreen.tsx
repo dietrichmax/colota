@@ -18,7 +18,7 @@ import { CalendarPicker } from "../components/features/inspector/CalendarPicker"
 import { TrackMap } from "../components/features/inspector/TrackMap"
 import { TripList } from "../components/features/inspector/TripList"
 import { LocationTable } from "../components/features/inspector/LocationTable"
-import { formatDistance } from "../utils/geo"
+import { formatDistance, startOfDaySec, endOfDaySec } from "../utils/geo"
 import { pad2 } from "../utils/format"
 import { segmentTrips, getTripColor } from "../utils/trips"
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
@@ -119,13 +119,8 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   const fetchTrackData = useCallback(async () => {
     const id = ++fetchTrackIdRef.current
     try {
-      const start = new Date(mapDate)
-      start.setHours(0, 0, 0, 0)
-      const end = new Date(mapDate)
-      end.setHours(23, 59, 59, 999)
-
-      const startTimestamp = Math.floor(start.getTime() / 1000)
-      const endTimestamp = Math.floor(end.getTime() / 1000)
+      const startTimestamp = startOfDaySec(mapDate)
+      const endTimestamp = endOfDaySec(mapDate)
 
       const result = await NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp)
       if (id === fetchTrackIdRef.current) {
