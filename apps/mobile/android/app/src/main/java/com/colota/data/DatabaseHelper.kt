@@ -234,6 +234,7 @@ class DatabaseHelper private constructor(context: Context) :
                 // Stationary profiles existed before this column with a fixed 60s detection window;
                 // backfill that value so they keep behaving the same now that it is a stored field.
                 db.execSQL("UPDATE $TABLE_PROFILES SET activation_delay_seconds = 60 WHERE condition_type = 'stationary'")
+                db.execSQL("ALTER TABLE $TABLE_LOCATIONS ADD COLUMN note TEXT")
             }
         }
 
@@ -263,6 +264,7 @@ class DatabaseHelper private constructor(context: Context) :
                 timestamp INTEGER NOT NULL,
                 endpoint TEXT,
                 sent INTEGER NOT NULL DEFAULT 0,
+                note TEXT,
                 created_at INTEGER NOT NULL
             )
         """)
@@ -687,6 +689,13 @@ class DatabaseHelper private constructor(context: Context) :
         val placeholders = locationIds.joinToString(",") { "?" }
         val args = locationIds.map { it.toString() }.toTypedArray()
         writableDatabase.delete(TABLE_LOCATIONS, "id IN ($placeholders)", args)
+    }
+
+    /** Sets or clears the free-text note on a single location. Pass null to clear. */
+    fun updateLocationNote(id: Long, note: String?) {
+        requireNotRestoring()
+        val values = ContentValues().apply { put("note", note) }
+        writableDatabase.update(TABLE_LOCATIONS, values, "id = ?", arrayOf(id.toString()))
     }
 
     fun incrementRetryCount(queueId: Long, error: String? = null) {

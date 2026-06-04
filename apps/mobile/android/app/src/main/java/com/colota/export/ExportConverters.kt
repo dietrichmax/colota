@@ -76,6 +76,30 @@ object ExportConverters {
         else -> null
     }
 
+    /** Escape free text for XML element content (GPX/KML notes). */
+    private fun xmlEscape(s: String): String = buildString(s.length) {
+        for (c in s) {
+            when (c) {
+                '&' -> append("&amp;")
+                '<' -> append("&lt;")
+                '>' -> append("&gt;")
+                '"' -> append("&quot;")
+                '\'' -> append("&apos;")
+                else -> append(c)
+            }
+        }
+    }
+
+    /** RFC-4180 CSV field: quote+double-escape only when the value contains a delimiter. */
+    private fun csvField(value: Any?): String {
+        val s = value?.toString() ?: return ""
+        return if (s.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
+            "\"" + s.replace("\"", "\"\"") + "\""
+        } else {
+            s
+        }
+    }
+
     private fun escapeJson(s: String): String = buildString(s.length) {
         for (c in s) {
             when (c) {
@@ -101,6 +125,7 @@ object ExportConverters {
         val bearing: Any?,
         val battery: Any?,
         val batteryStatus: Any?,
+        val note: String?,
     ) {
         companion object {
             fun from(row: Map<String, Any?>): ExportRow = ExportRow(
@@ -113,6 +138,7 @@ object ExportConverters {
                 bearing = row["bearing"],
                 battery = row["battery"],
                 batteryStatus = row["battery_status"],
+                note = row["note"] as? String,
             )
         }
     }
@@ -130,13 +156,13 @@ object ExportConverters {
 
     private object CsvFormat : FormatWriter(".csv", "text/csv") {
         override fun writeHeader(w: Writer) {
-            w.write("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status\n")
+            w.write("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status,note\n")
         }
         override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
             w.write(listOf(
                 globalIndex, row.ts, isoTime(row.ts), jsNum(row.lat), jsNum(row.lon),
                 numOrZero(row.accuracy), numOrZero(row.altitude), numOrZero(row.speed), numOrZero(row.bearing), numOrZero(row.battery),
-                batteryStatusLabel(row.batteryStatus) ?: ""
+                batteryStatusLabel(row.batteryStatus) ?: "", csvField(row.note)
             ).joinToString(","))
             w.write("\n")
         }
@@ -163,6 +189,7 @@ object ExportConverters {
         "bearing": ${jsonValue(row.bearing)},
         "battery": ${jsonValue(row.battery)},
         "battery_status": ${jsonValue(batteryStatusLabel(row.batteryStatus))},
+        "note": ${jsonValue(row.note)},
         "time": "${isoTime(row.ts)}"
       }
     }""")
@@ -197,6 +224,7 @@ object ExportConverters {
           <bearing>${numOrZero(row.bearing)}</bearing>
           <battery>${numOrZero(row.battery)}</battery>
           <battery_status>${batteryStatusLabel(row.batteryStatus) ?: ""}</battery_status>
+          <note>${row.note?.let { xmlEscape(it) } ?: ""}</note>
         </extensions>
       </trkpt>
 """)
@@ -237,6 +265,7 @@ object ExportConverters {
         <Data name="bearing"><value>${numOrZero(row.bearing)}</value></Data>
         <Data name="battery"><value>${numOrZero(row.battery)}</value></Data>
         <Data name="battery_status"><value>${batteryStatusLabel(row.batteryStatus) ?: ""}</value></Data>
+        <Data name="note"><value>${row.note?.let { xmlEscape(it) } ?: ""}</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>${jsNum(row.lon)},${jsNum(row.lat)},${numOrZero(row.altitude)}</coordinates>
@@ -403,7 +432,7 @@ object ExportConverters {
     }
 
     private fun tripsToCsv(trips: List<TripExport>): String {
-        val sb = StringBuilder("trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status\n")
+        val sb = StringBuilder("trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status,note\n")
         val rows = ArrayList<String>()
         for (trip in trips) {
             trip.rows.forEachIndexed { i, row ->
@@ -414,7 +443,7 @@ object ExportConverters {
                         numOrZero(row["latitude"]), numOrZero(row["longitude"]),
                         numOrZero(row["accuracy"]), numOrZero(row["altitude"]),
                         numOrZero(row["speed"]), numOrZero(row["bearing"]), numOrZero(row["battery"]),
-                        batteryStatusLabel(row["battery_status"]) ?: ""
+                        batteryStatusLabel(row["battery_status"]) ?: "", csvField(row["note"])
                     ).joinToString(",")
                 )
             }
@@ -447,6 +476,7 @@ object ExportConverters {
                     "        \"bearing\": ${jsonNum(row["bearing"])},\n" +
                     "        \"battery\": ${jsonNum(row["battery"])},\n" +
                     "        \"battery_status\": ${jsonValue(batteryStatusLabel(row["battery_status"]))},\n" +
+                    "        \"note\": ${jsonValue(row["note"])},\n" +
                     "        \"time\": \"${isoTime(ts)}\"\n" +
                     "      }\n" +
                     "    }"
@@ -480,6 +510,7 @@ object ExportConverters {
                 sb.append("\n          <bearing>${numOrZero(row["bearing"])}</bearing>")
                 sb.append("\n          <battery>${numOrZero(row["battery"])}</battery>")
                 sb.append("\n          <battery_status>${batteryStatusLabel(row["battery_status"]) ?: ""}</battery_status>")
+                sb.append("\n          <note>${(row["note"] as? String)?.let { xmlEscape(it) } ?: ""}</note>")
                 sb.append("\n        </extensions>")
                 sb.append("\n      </trkpt>")
             }
@@ -531,6 +562,7 @@ object ExportConverters {
                 sb.append("\n          <Data name=\"bearing\"><value>${numOrZero(row["bearing"])}</value></Data>")
                 sb.append("\n          <Data name=\"battery\"><value>${numOrZero(row["battery"])}</value></Data>")
                 sb.append("\n          <Data name=\"battery_status\"><value>${batteryStatusLabel(row["battery_status"]) ?: ""}</value></Data>")
+                sb.append("\n          <Data name=\"note\"><value>${(row["note"] as? String)?.let { xmlEscape(it) } ?: ""}</value></Data>")
                 sb.append("\n        </ExtendedData>")
                 sb.append("\n        <Point>")
                 sb.append("\n          <coordinates>${numOrZero(row["longitude"])},${numOrZero(row["latitude"])},${numOrZero(row["altitude"])}</coordinates>")

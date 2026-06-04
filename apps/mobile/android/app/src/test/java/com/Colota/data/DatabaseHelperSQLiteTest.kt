@@ -132,6 +132,8 @@ class DatabaseHelperSQLiteTest {
                        ('Parked', 1800000, 0, 0, 40, 'stationary', 0, 0)
                 """.trimIndent()
             )
+            // v5-era locations table (no `note` column yet) for the v6 note ALTER to apply to
+            old.execSQL("CREATE TABLE locations (id INTEGER PRIMARY KEY AUTOINCREMENT, latitude REAL NOT NULL, longitude REAL NOT NULL, accuracy INTEGER, altitude INTEGER, speed INTEGER, bearing REAL, battery INTEGER, battery_status INTEGER, timestamp INTEGER NOT NULL, endpoint TEXT, sent INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)")
             old.version = 5
         }
 
@@ -175,6 +177,13 @@ class DatabaseHelperSQLiteTest {
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
             assertEquals(6, migrated.version)
+            migrated.rawQuery("PRAGMA table_info(locations)", null).use { locCursor ->
+                val locCols = mutableSetOf<String>()
+                while (locCursor.moveToNext()) {
+                    locCols.add(locCursor.getString(locCursor.getColumnIndexOrThrow("name")))
+                }
+                assertTrue(locCols.contains("note"))
+            }
             migrated.rawQuery("PRAGMA table_info(tracking_profiles)", null).use { cursor ->
                 val cols = mutableSetOf<String>()
                 while (cursor.moveToNext()) {
@@ -268,6 +277,24 @@ class DatabaseHelperSQLiteTest {
             assertTrue(cursor.isNull(0))
             assertTrue(cursor.isNull(1))
             assertTrue(cursor.isNull(2))
+        }
+    }
+
+    @Test
+    fun `updateLocationNote sets and clears the note`() {
+        val id = db.saveLocation(latitude = 52.52, longitude = 13.405, timestamp = 1700000000L)
+
+        db.updateLocationNote(id, "saw a deer")
+        val rawDb = db.readableDatabase
+        rawDb.rawQuery("SELECT note FROM ${DatabaseHelper.TABLE_LOCATIONS} WHERE id = ?", arrayOf(id.toString())).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("saw a deer", cursor.getString(0))
+        }
+
+        db.updateLocationNote(id, null)
+        rawDb.rawQuery("SELECT note FROM ${DatabaseHelper.TABLE_LOCATIONS} WHERE id = ?", arrayOf(id.toString())).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.isNull(0))
         }
     }
 

@@ -68,7 +68,7 @@ class ExportConvertersTest {
     fun `convert CSV contains header row`() {
         val csv = ExportConverters.convert("csv", sampleRows)
         val lines = csv.lines()
-        assertEquals("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status", lines[0])
+        assertEquals("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status,note", lines[0])
     }
 
     @Test
@@ -157,6 +157,47 @@ class ExportConvertersTest {
         val kml = ExportConverters.convert("kml", sampleRows)
         val placemarkCount = Regex("<Placemark>").findAll(kml).count()
         assertEquals(3, placemarkCount) // 1 track + 2 point placemarks
+    }
+
+    // --- Note annotation (#257) ---
+
+    // A note with every char that needs escaping in some format (comma, quotes, angle brackets,
+    // ampersand, newline), so a dropped-escaping regression fails here instead of corrupting exports.
+    private val noteRows = listOf(
+        mapOf(
+            "latitude" to 52.52, "longitude" to 13.405, "timestamp" to 1700000000L,
+            "note" to "deer, \"big\" <antlers> & a\nnewline"
+        ),
+        mapOf("latitude" to 48.8566, "longitude" to 2.3522, "timestamp" to 1700003600L)
+    )
+
+    @Test
+    fun `CSV quotes a note containing commas quotes and newlines`() {
+        val csv = ExportConverters.convert("csv", noteRows)
+        assertTrue(csv.contains("\"deer, \"\"big\"\" <antlers> & a\nnewline\""))
+    }
+
+    @Test
+    fun `GeoJSON JSON-escapes the note and emits null when absent`() {
+        val json = ExportConverters.convert("geojson", noteRows)
+        assertTrue(json.contains("\\\"big\\\""))
+        assertTrue(json.contains("\"note\": null")) // the second point has no note
+    }
+
+    @Test
+    fun `GPX writes an XML-escaped note in extensions, empty when absent`() {
+        val gpx = ExportConverters.convert("gpx", noteRows)
+        assertTrue(gpx.contains("<note>deer, &quot;big&quot; &lt;antlers&gt; &amp; a\nnewline</note>"))
+        assertTrue(gpx.contains("<note></note>")) // empty for the point without a note
+        assertEquals(2, Regex("<note>").findAll(gpx).count()) // one per point, like the other extensions
+    }
+
+    @Test
+    fun `KML writes an escaped note Data entry, empty when absent`() {
+        val kml = ExportConverters.convert("kml", noteRows)
+        assertTrue(kml.contains("&lt;antlers&gt;"))
+        // note Data sits in the existing per-point ExtendedData, like battery_status
+        assertEquals(2, Regex("<Data name=\"note\">").findAll(kml).count())
     }
 
     // --- JSON escaping ---
@@ -250,7 +291,7 @@ class ExportConvertersTest {
     fun `streaming CSV produces header and data rows`() {
         val result = streamToString("csv", sampleRows)
         val lines = result.lines().filter { it.isNotBlank() }
-        assertEquals("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status", lines[0])
+        assertEquals("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status,note", lines[0])
         assertEquals(3, lines.size)
         assertTrue(lines[1].startsWith("0,1700000000,"))
         assertTrue(lines[1].contains("52.52"))
@@ -341,7 +382,7 @@ class ExportConvertersTest {
     @Test
     fun `convert includes bearing and battery_status across formats`() {
         val csv = ExportConverters.convert("csv", sampleRows)
-        assertTrue(csv.lines()[1].endsWith(",Charging")) // battery_status label, last column
+        assertTrue(csv.lines()[1].endsWith(",Charging,")) // battery_status label, then empty note (last column)
         val gj = ExportConverters.convert("geojson", sampleRows)
         assertTrue(gj.contains("\"bearing\": 180")) // whole double -> no trailing ".0"
         assertTrue(gj.contains("\"battery_status\": \"Charging\""))
@@ -397,12 +438,34 @@ class ExportConvertersTest {
         assertEquals(norm(golden("trip.kml")), norm(ExportConverters.convertTrips("kml", tripFixture)))
     }
 
+    @Test
+    fun `convertTrips writes the note in every format and escapes per format`() {
+        // Trip serializers are separate from the flat writers and the golden fixture is note-free,
+        // so cover note placement and per-format escaping here.
+        val trips = listOf(ExportConverters.TripExport(1, "#3B82F6", listOf(
+            mapOf("latitude" to 52.52, "longitude" to 13.405, "timestamp" to 1700000000L, "note" to "deer, \"big\" <antlers>"),
+            mapOf("latitude" to 48.8566, "longitude" to 2.3522, "timestamp" to 1700003600L)
+        )))
+        val csv = ExportConverters.convertTrips("csv", trips)
+        assertTrue(csv.contains("\"deer, \"\"big\"\" <antlers>\""))
+        val gj = ExportConverters.convertTrips("geojson", trips)
+        assertTrue(gj.contains("\\\"big\\\""))
+        assertTrue(gj.contains("\"note\": null")) // the second point has no note
+        val gpx = ExportConverters.convertTrips("gpx", trips)
+        assertTrue(gpx.contains("<note>deer, &quot;big&quot; &lt;antlers&gt;</note>"))
+        assertTrue(gpx.contains("<note></note>"))
+        assertEquals(2, Regex("<note>").findAll(gpx).count())
+        val kml = ExportConverters.convertTrips("kml", trips)
+        assertTrue(kml.contains("&lt;antlers&gt;"))
+        assertEquals(2, Regex("<Data name=\"note\">").findAll(kml).count())
+    }
+
     // --- Trip-export edge cases (no trips / empty trip) ---
 
     @Test
     fun `convertTrips with no trips produces valid empty output`() {
         assertEquals(
-            "trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status",
+            "trip,id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status,note",
             ExportConverters.convertTrips("csv", emptyList()).trim()
         )
         assertTrue(ExportConverters.convertTrips("geojson", emptyList()).contains("\"features\": []"))

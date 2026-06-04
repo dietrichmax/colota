@@ -358,6 +358,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
 
     @ReactMethod
+    fun updateLocationNote(id: Double, note: String?, promise: Promise) = executeAsync(promise) {
+        dbHelper.updateLocationNote(id.toLong(), note?.takeIf { it.isNotBlank() })
+        true
+    }
+
+    @ReactMethod
     fun getDaysWithData(startTimestamp: Double, endTimestamp: Double, promise: Promise) =
         executeAsync(promise) {
             val days = dbHelper.getDaysWithData(startTimestamp.toLong(), endTimestamp.toLong())

@@ -4,10 +4,10 @@
  */
 
 import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
-import { View, StyleSheet, Text, Pressable } from "react-native"
+import { View, StyleSheet, Text, Pressable, TextInput } from "react-native"
 import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
 import type { NativeSyntheticEvent } from "react-native"
-import { MapPinOff, X } from "lucide-react-native"
+import { MapPinOff, X, Check } from "lucide-react-native"
 import { ThemeColors, Trip } from "../../../types/global"
 import { getTripColor } from "../../../utils/trips"
 import { fonts } from "../../../styles/typography"
@@ -37,9 +37,11 @@ interface Props {
   trips?: Trip[]
   trackColor: string
   fitVersion?: number
+  /** When provided, the point popup gains an editable note field. Omit for read-only maps. */
+  onPointNoteChange?: (id: number, note: string | null) => void
 }
 
-export function TrackMap({ locations, colors, trips, trackColor, fitVersion }: Props) {
+export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onPointNoteChange }: Props) {
   const mapRef = useRef<ColotaMapRef>(null)
   const [isCentered, setIsCentered] = useState(true)
   const [selectedPoint, setSelectedPoint] = useState<{
@@ -54,8 +56,14 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion }: P
     accuracy: number
     altitude: number
     color: string
+    id: number
+    note: string
   } | null>(null)
+  const [noteDraft, setNoteDraft] = useState("")
   const [mapReady, setMapReady] = useState(false)
+  // Note edits made here, keyed by id; read on press so a note change doesn't rebuild the
+  // points source (and re-render the map). Reset on reload.
+  const noteEditsRef = useRef<Record<number, string>>({})
 
   // Fit map to track bounds when fitVersion changes (date change, trip select)
   const bounds = useMemo(() => computeTrackBounds(locations), [locations])
@@ -77,10 +85,11 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion }: P
 
   const handleMapReady = useCallback(() => setMapReady(true), [])
 
-  // Clear popup and highlight when underlying locations change (new day / different trip)
+  // Clear popup, highlight and session note edits when the locations change (new day / different trip)
   useEffect(() => {
     setPopup(null)
     setSelectedPoint(null)
+    noteEditsRef.current = {}
   }, [locations])
 
   const handleFitTrack = useCallback(() => {
@@ -177,18 +186,34 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion }: P
       const geom = feature.geometry as GeoJSON.Point
       const coord = geom.coordinates as [number, number]
       const color = feature.properties.color ?? trackColor
+      const id = (feature.properties.id as number | undefined) ?? -1
+      // Prefer an edit made this session; the points source keeps the loaded value.
+      const note = id >= 0 && id in noteEditsRef.current ? noteEditsRef.current[id] : (feature.properties.note ?? "")
       setSelectedPoint({ longitude: coord[0], latitude: coord[1], color })
+      setNoteDraft(note)
       setPopup({
         coordinate: coord,
         speed: feature.properties.speed,
         timestamp: feature.properties.timestamp,
         accuracy: feature.properties.accuracy,
         altitude: feature.properties.altitude,
-        color
+        color,
+        id,
+        note
       })
     },
     [trackColor]
   )
+
+  const handleSaveNote = useCallback(() => {
+    if (!popup || popup.id < 0 || !onPointNoteChange) return
+    const saved = noteDraft.trim()
+    onPointNoteChange(popup.id, saved || null)
+    // popup is a snapshot and the points source is unchanged, so reflect the save here; re-taps read the overlay
+    noteEditsRef.current[popup.id] = saved
+    setPopup((p) => (p ? { ...p, note: saved } : p))
+    setNoteDraft(saved)
+  }, [popup, noteDraft, onPointNoteChange])
 
   const handleMapPress = useCallback(() => {
     if (Date.now() - lastPointPressRef.current < 200) return
@@ -291,6 +316,34 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion }: P
             <Text style={[styles.popupLabel, { color: colors.textSecondary }]}>Altitude</Text>
             <Text style={[styles.popupValue, { color: colors.text }]}>{popup.altitude.toFixed(0)}m</Text>
           </View>
+          {popup.id >= 0 && (onPointNoteChange || popup.note !== "") && (
+            <View style={[styles.noteSection, { borderTopColor: colors.border }]}>
+              <Text style={[styles.popupLabel, { color: colors.textSecondary }]}>Note</Text>
+              {onPointNoteChange ? (
+                <View style={styles.noteRow}>
+                  <TextInput
+                    value={noteDraft}
+                    onChangeText={setNoteDraft}
+                    placeholder="Add a note"
+                    placeholderTextColor={colors.textSecondary}
+                    style={[styles.noteInput, { color: colors.text, borderColor: colors.border }]}
+                    multiline
+                  />
+                  {noteDraft.trim() !== popup.note && (
+                    <Pressable
+                      onPress={handleSaveNote}
+                      hitSlop={HIT_SLOP_MD}
+                      style={({ pressed }) => [styles.noteSaveBtn, pressed && { opacity: colors.pressedOpacity }]}
+                    >
+                      <Check size={18} color={colors.primary} />
+                    </Pressable>
+                  )}
+                </View>
+              ) : (
+                <Text style={[styles.popupValue, { color: colors.text }]}>{popup.note}</Text>
+              )}
+            </View>
+          )}
         </View>
       )}
 
@@ -382,6 +435,30 @@ const styles = StyleSheet.create({
   popupValue: {
     fontWeight: "500",
     fontSize: 12
+  },
+  noteSection: {
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth
+  },
+  noteRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 6,
+    marginTop: 4
+  },
+  noteInput: {
+    flex: 1,
+    fontSize: 13,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderRadius: 6,
+    minHeight: 32,
+    maxHeight: 80
+  },
+  noteSaveBtn: {
+    padding: 6
   },
   legend: {
     position: "absolute",

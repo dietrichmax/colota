@@ -32,6 +32,7 @@
           <Data name="bearing"><value>270.5</value></Data>
           <Data name="battery"><value>91</value></Data>
           <Data name="battery_status"><value>Charging</value></Data>
+          <Data name="note"><value></value></Data>
         </ExtendedData>
         <Point>
           <coordinates>11.576124,48.137154,520.2</coordinates>
@@ -47,6 +48,7 @@
           <Data name="bearing"><value>275</value></Data>
           <Data name="battery"><value>90</value></Data>
           <Data name="battery_status"><value>Full</value></Data>
+          <Data name="note"><value></value></Data>
         </ExtendedData>
         <Point>
           <coordinates>11.577003,48.138001,525</coordinates>
@@ -82,6 +84,7 @@
           <Data name="bearing"><value>10</value></Data>
           <Data name="battery"><value>88</value></Data>
           <Data name="battery_status"><value>Unplugged/Discharging</value></Data>
+          <Data name="note"><value></value></Data>
         </ExtendedData>
         <Point>
           <coordinates>11.58,48.14,530</coordinates>
@@ -97,6 +100,7 @@
           <Data name="bearing"><value>0</value></Data>
           <Data name="battery"><value>87</value></Data>
           <Data name="battery_status"><value>Unknown</value></Data>
+          <Data name="note"><value></value></Data>
         </ExtendedData>
         <Point>
           <coordinates>11.5811,48.1405,0</coordinates>
