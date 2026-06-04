@@ -15,7 +15,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Offline Maps** - Download map areas to your device for use without an internet connection.
 - **Scheduled Export** - Automatic daily, weekly or monthly exports to a local directory with file retention management.
 - **Encrypted Backup** - Single password-encrypted archive of locations, settings, geofences and credentials.
-- **Location History** - View daily summaries, trip segmentation, calendar with activity dots and per-trip export.
+- **Location History** - View daily summaries, trip segmentation, calendar with activity dots, per-trip export and notes on individual points.
 - **Reliable Tracking** - Foreground service, auto-start on boot and exponential backoff retry.
 - **Geofencing** - Pause zones that stop recording locations. Optionally stop GPS entirely when on WiFi or when the device is motionless.
 - **Tracking Profiles** - Automatically adjust GPS interval, distance filter and sync settings based on conditions like charging, Android Auto, speed or stationary detection.
@@ -43,7 +43,7 @@ Colota has twenty-two screens, each focused on a specific task:
 | **Offline Maps** | Download map areas to the device for use without an internet connection |
 | **Tracking Profiles** | Create and manage condition-based profiles that automatically adjust tracking settings |
 | **Profile Editor** | Configure profile name, condition trigger, GPS interval, distance filter, sync interval, priority, and deactivation delay |
-| **Location History** | Browse recorded locations on a track map with calendar day picker and trip-colored segments, view segmented trips with per-trip stats |
+| **Location History** | Browse recorded locations on a track map with calendar day picker and trip-colored segments, view segmented trips with per-trip stats; tap a point to add a note |
 | **Trip Detail** | Full trip view with dedicated map, stats grid (distance, duration, avg speed, elevation), speed and elevation profile charts, export, and delete |
 | **Location Summary** | Aggregated stats (total distance, trips, active days, avg distance) for selectable periods with daily breakdown and tap-to-inspect navigation |
 | **Export Data** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
