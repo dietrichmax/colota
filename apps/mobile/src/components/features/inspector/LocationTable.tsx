@@ -19,7 +19,7 @@ interface TableRow extends LocationCoords {
 }
 
 const ROW_HEIGHT = 36
-const TABLE_WIDTH = 730
+const TABLE_WIDTH = 870
 
 function val(v?: number | null, decimals = 0): string {
   if (v == null) return "-"
@@ -74,6 +74,9 @@ const LocationRow = React.memo(
       </Text>
       <Text style={[styles.cell, styles.cellStatus, { color: colors.text }]} numberOfLines={1}>
         {item.battery_status != null ? (BATTERY_STATUS[item.battery_status] ?? String(item.battery_status)) : "-"}
+      </Text>
+      <Text style={[styles.cell, styles.cellNote, { color: colors.text }]} numberOfLines={1}>
+        {item.note ? item.note : "-"}
       </Text>
     </View>
   )
@@ -135,6 +138,7 @@ export function LocationTable({ locations, colors }: Props) {
           <Text style={[styles.cell, styles.cellStatus, styles.headerText, { color: colors.textSecondary }]}>
             Charge
           </Text>
+          <Text style={[styles.cell, styles.cellNote, styles.headerText, { color: colors.textSecondary }]}>Note</Text>
         </View>
 
         <FlatList
@@ -200,6 +204,9 @@ const styles = StyleSheet.create({
   },
   cellStatus: {
     width: 90
+  },
+  cellNote: {
+    width: 140
   },
   tableWrapper: {
     width: TABLE_WIDTH,

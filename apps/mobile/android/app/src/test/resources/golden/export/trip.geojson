@@ -19,6 +19,7 @@
         "bearing": 270.5,
         "battery": 91,
         "battery_status": "Charging",
+        "note": null,
         "time": "2023-11-14T22:13:20.000Z"
       }
     },
@@ -40,6 +41,7 @@
         "bearing": 275,
         "battery": 90,
         "battery_status": "Full",
+        "note": null,
         "time": "2023-11-14T22:14:20.000Z"
       }
     },
@@ -61,6 +63,7 @@
         "bearing": 10,
         "battery": 88,
         "battery_status": "Unplugged/Discharging",
+        "note": null,
         "time": "2023-11-14T22:30:00.000Z"
       }
     },
@@ -82,6 +85,7 @@
         "bearing": 0,
         "battery": 87,
         "battery_status": "Unknown",
+        "note": null,
         "time": "2023-11-14T22:31:00.000Z"
       }
     }

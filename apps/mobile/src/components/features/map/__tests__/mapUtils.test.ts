@@ -221,17 +221,21 @@ describe("buildTrackPointsGeoJSON", () => {
   })
 
   it("includes metadata properties on each point", () => {
-    const locs = [{ latitude: 52.52, longitude: 13.405, speed: 3, timestamp: 1000, accuracy: 5, altitude: 34 }]
+    const locs = [
+      { id: 42, latitude: 52.52, longitude: 13.405, speed: 3, timestamp: 1000, accuracy: 5, altitude: 34, note: "deer" }
+    ]
     const result = buildTrackPointsGeoJSON(locs, colors)
     const props = result.features[0].properties
     expect(props?.speed).toBe(3)
     expect(props?.timestamp).toBe(1000)
     expect(props?.accuracy).toBe(5)
     expect(props?.altitude).toBe(34)
+    expect(props?.id).toBe(42)
+    expect(props?.note).toBe("deer")
     expect(props?.color).toBeDefined()
   })
 
-  it("defaults missing optional fields to 0", () => {
+  it("defaults missing optional fields to 0 (id to -1, note to empty)", () => {
     const locs = [{ latitude: 52.52, longitude: 13.405 }]
     const result = buildTrackPointsGeoJSON(locs, colors)
     const props = result.features[0].properties
@@ -239,6 +243,9 @@ describe("buildTrackPointsGeoJSON", () => {
     expect(props?.timestamp).toBe(0)
     expect(props?.accuracy).toBe(0)
     expect(props?.altitude).toBe(0)
+    // -1 marks a point with no DB row; the popup treats it as non-editable
+    expect(props?.id).toBe(-1)
+    expect(props?.note).toBe("")
   })
 
   it("uses locationColors when provided", () => {

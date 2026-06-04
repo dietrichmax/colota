@@ -21,6 +21,7 @@ export type { ThemeColors, ThemeMode } from "@colota/shared"
 // ============================================================================
 
 export interface LocationCoords {
+  id?: number
   latitude: number
   longitude: number
   altitude?: number
@@ -31,6 +32,8 @@ export interface LocationCoords {
   battery_status?: number
   /** Unix epoch seconds */
   timestamp?: number
+  /** User-entered free-text note (POI annotation). Local-only, not synced. */
+  note?: string
 }
 
 export interface Geofence {

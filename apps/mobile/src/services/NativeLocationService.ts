@@ -183,6 +183,15 @@ class NativeLocationService {
   }
 
   /**
+   * Sets or clears the free-text note on a single location. Pass null to clear.
+   */
+  static async updateLocationNote(id: number, note: string | null): Promise<void> {
+    this.ensureModule()
+    logger.debug(`[NativeLocationService] Updating note for location ${id}`)
+    await LocationServiceModule.updateLocationNote(id, note)
+  }
+
+  /**
    * Gets the most recent location from the database
    */
   static async getMostRecentLocation(): Promise<any | null> {

@@ -83,6 +83,16 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
     [navigation]
   )
 
+  // Just persist: TrackMap overlays the value for re-taps, and export reads the DB.
+  const handlePointNoteChange = useCallback(async (id: number, note: string | null) => {
+    try {
+      await NativeLocationService.updateLocationNote(id, note)
+    } catch (error) {
+      logger.error("[TripDetail] Note update failed:", error)
+      showAlert("Save Failed", "Unable to save note. Please try again.", "error")
+    }
+  }, [])
+
   const handleExport = useCallback(
     async (format: ExportFormat) => {
       try {
@@ -170,7 +180,13 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   return (
     <Container>
       <View style={styles.mapContainer}>
-        <TrackMap locations={trip.locations} colors={colors} trackColor={tripColor} fitVersion={trip.index} />
+        <TrackMap
+          locations={trip.locations}
+          colors={colors}
+          trackColor={tripColor}
+          fitVersion={trip.index}
+          onPointNoteChange={handlePointNoteChange}
+        />
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header */}

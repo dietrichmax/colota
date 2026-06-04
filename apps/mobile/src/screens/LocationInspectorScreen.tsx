@@ -37,6 +37,9 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     return initialDate ? new Date(initialDate) : new Date()
   })
   const [trackLocations, setTrackLocations] = useState<LocationCoords[]>([])
+  // Note edits, kept out of trackLocations so a save doesn't hand the map a new array (which would
+  // re-render it). Used only by the Data tab; the map reads notes through its own overlay.
+  const [noteOverrides, setNoteOverrides] = useState<Record<number, string | undefined>>({})
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [fitVersion, setFitVersion] = useState(0)
 
@@ -125,6 +128,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       const result = await NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp)
       if (id === fetchTrackIdRef.current) {
         setTrackLocations(result || [])
+        setNoteOverrides({})
         setSelectedTrip(null)
         setFitVersion((v) => v + 1)
       }
@@ -132,6 +136,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       logger.error("[LocationHistory] Track fetch error:", err)
       if (id === fetchTrackIdRef.current) {
         setTrackLocations([])
+        setNoteOverrides({})
         setSelectedTrip(null)
         setFitVersion((v) => v + 1)
       }
@@ -227,7 +232,26 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     [mapDate, fetchTrackData, fetchDaysWithData]
   )
 
+  const handlePointNoteChange = useCallback(async (id: number, note: string | null) => {
+    try {
+      await NativeLocationService.updateLocationNote(id, note)
+      setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
+    } catch (error) {
+      logger.error("[LocationHistory] Note update failed:", error)
+      showAlert("Save Failed", "Unable to save note. Please try again.", "error")
+    }
+  }, [])
+
   const mapLocations = selectedTrip ? (selectedTrip.locations as LocationCoords[]) : trackLocations
+
+  // Apply note edits for the Data tab table only; the map reads notes via its own overlay.
+  const tableLocations = useMemo(
+    () =>
+      Object.keys(noteOverrides).length === 0
+        ? trackLocations
+        : trackLocations.map((l) => (l.id != null && l.id in noteOverrides ? { ...l, note: noteOverrides[l.id] } : l)),
+    [trackLocations, noteOverrides]
+  )
 
   const calendarPicker = useMemo(
     () => (
@@ -264,6 +288,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             trips={selectedTrip ? undefined : trips}
             trackColor={colors.primary}
             fitVersion={fitVersion}
+            onPointNoteChange={handlePointNoteChange}
           />
           {selectedTrip && (
             <Pressable
@@ -299,7 +324,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       {activeTab === "data" && (
         <View style={styles.mapContainer}>
           {calendarPicker}
-          <LocationTable locations={trackLocations} colors={colors} />
+          <LocationTable locations={tableLocations} colors={colors} />
         </View>
       )}
     </Container>

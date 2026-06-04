@@ -83,12 +83,14 @@ export function createCirclePolygon(
 // ============================================================================
 
 export interface TrackLocation {
+  id?: number
   latitude: number
   longitude: number
   timestamp?: number
   accuracy?: number
   speed?: number
   altitude?: number
+  note?: string
 }
 
 interface TrackSegmentOptions {
@@ -167,10 +169,12 @@ export function buildTrackPointsGeoJSON(
     features: locations.map((loc, i) => ({
       type: "Feature" as const,
       properties: {
+        id: loc.id ?? -1,
         speed: loc.speed ?? 0,
         timestamp: loc.timestamp ?? 0,
         accuracy: loc.accuracy ?? 0,
         altitude: loc.altitude ?? 0,
+        note: loc.note ?? "",
         color: locationColors ? locationColors[i] : getSpeedColor(loc.speed ?? 0, colors)
       },
       geometry: {

@@ -16,6 +16,7 @@
           <bearing>270.5</bearing>
           <battery>91</battery>
           <battery_status>Charging</battery_status>
+          <note></note>
         </extensions>
       </trkpt>
       <trkpt lat="48.138001" lon="11.577003">
@@ -27,6 +28,7 @@
           <bearing>275</bearing>
           <battery>90</battery>
           <battery_status>Full</battery_status>
+          <note></note>
         </extensions>
       </trkpt>
     </trkseg>
@@ -43,6 +45,7 @@
           <bearing>10</bearing>
           <battery>88</battery>
           <battery_status>Unplugged/Discharging</battery_status>
+          <note></note>
         </extensions>
       </trkpt>
       <trkpt lat="48.140500" lon="11.581100">
@@ -54,6 +57,7 @@
           <bearing>0</bearing>
           <battery>87</battery>
           <battery_status>Unknown</battery_status>
+          <note></note>
         </extensions>
       </trkpt>
     </trkseg>
