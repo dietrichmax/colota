@@ -99,6 +99,10 @@ class LocationForegroundServiceTest {
         every { LocationServiceModule.sendTrackingStoppedEvent(any()) } returns true
         every { LocationServiceModule.sendProfileSwitchEvent(any(), any()) } returns true
 
+        mockkObject(BatteryRecoveryScheduler)
+        every { BatteryRecoveryScheduler.schedule(any()) } just Runs
+        every { BatteryRecoveryScheduler.cancel(any()) } just Runs
+
         mockkStatic(android.os.Looper::class)
         every { android.os.Looper.getMainLooper() } returns mockk(relaxed = true)
 
@@ -118,6 +122,7 @@ class LocationForegroundServiceTest {
         unmockkObject(LocationServiceModule)
         unmockkObject(PayloadBuilder)
         unmockkObject(AppLogger)
+        unmockkObject(BatteryRecoveryScheduler)
         unmockkStatic(android.os.Looper::class)
     }
 
@@ -1590,6 +1595,34 @@ class LocationForegroundServiceTest {
         verify(exactly = 0) { LocationServiceModule.sendProfileSwitchEvent(any(), any()) }
     }
 
+    @Test
+    fun `stopForBattery marks stopped_by_battery so charger can auto-resume`() = testScope.runTest {
+        every { deviceInfoHelper.isBatteryCritical() } returns true
+        val location = mockLocation()
+
+        invokeHandleLocationUpdate(location)
+
+        verify { dbHelper.saveSetting("stopped_by_battery", "true") }
+    }
+
+    @Test
+    fun `stopForBattery arms the charger recovery worker`() = testScope.runTest {
+        every { deviceInfoHelper.isBatteryCritical() } returns true
+        val location = mockLocation()
+
+        invokeHandleLocationUpdate(location)
+
+        verify { BatteryRecoveryScheduler.schedule(any()) }
+    }
+
+    @Test
+    fun `non-battery stop clears stopped_by_battery and does not arm recovery`() {
+        invokeStopWithReason("Location permission missing", stoppedByBattery = false)
+
+        verify { dbHelper.saveSetting("stopped_by_battery", "false") }
+        verify(exactly = 0) { BatteryRecoveryScheduler.schedule(any()) }
+    }
+
     // =========================================================================
     // enterPauseZone - pause flag registration
     // =========================================================================
@@ -1937,6 +1970,14 @@ class LocationForegroundServiceTest {
         )
         method.isAccessible = true
         method.invoke(service, location)
+    }
+
+    private fun invokeStopWithReason(reason: String, stoppedByBattery: Boolean) {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "stopForegroundServiceWithReason", String::class.java, Boolean::class.javaPrimitiveType
+        )
+        method.isAccessible = true
+        method.invoke(service, reason, stoppedByBattery)
     }
 
     private fun invokeEnterPauseZone(geofence: GeofenceHelper.Geofence) {

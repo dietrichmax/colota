@@ -12,9 +12,9 @@ import android.content.Intent
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.SettingsKeys
 import com.Colota.export.AutoExportScheduler
+import com.Colota.service.BatteryRecoveryScheduler
 import com.Colota.service.LocationForegroundService
 import com.Colota.service.NotificationHelper
-import com.Colota.service.ServiceConfig
 import com.Colota.util.AppLogger
 import com.Colota.util.DeviceInfoHelper
 import kotlinx.coroutines.*
@@ -99,32 +99,32 @@ class LocationBootReceiver : BroadcastReceiver() {
             if (!isEnabled) {
                 AppLogger.d(TAG, "Boot detected but tracking disabled")
 
-                // Re-show notification if battery is still critically low
-                val deviceInfo = DeviceInfoHelper(context)
-                if (deviceInfo.isBatteryCritical()) {
-                    AppLogger.d(TAG, "Battery still critical - showing stopped notification")
-                    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    val notificationHelper = NotificationHelper(context, notificationManager)
-                    notificationHelper.createChannel()
-                    notificationManager.notify(
-                        NotificationHelper.STOPPED_NOTIFICATION_ID,
-                        notificationHelper.buildStoppedNotification("Battery below 5% - tracking paused")
-                    )
+                // Charger auto-resume: only if the stop was battery-triggered (not a user stop).
+                val stoppedByBattery = dbHelper.getSetting(SettingsKeys.STOPPED_BY_BATTERY, "false") == "true"
+                if (stoppedByBattery) {
+                    val deviceInfo = DeviceInfoHelper(context)
+                    if (deviceInfo.isPluggedIn()) {
+                        AppLogger.d(TAG, "Stopped by battery and now plugged in - resuming tracking")
+                        LocationForegroundService.startTracking(context, dbHelper, "Charger reconnected on boot")
+                    } else {
+                        AppLogger.d(TAG, "Stopped by battery, still unplugged - arming recovery + showing notification")
+                        BatteryRecoveryScheduler.schedule(context)
+                        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                        val notificationHelper = NotificationHelper(context, notificationManager)
+                        notificationHelper.createChannel()
+                        notificationManager.notify(
+                            NotificationHelper.STOPPED_NOTIFICATION_ID,
+                            notificationHelper.buildStoppedNotification("Battery below 5% - tracking paused")
+                        )
+                    }
                 }
                 return
             }
             
             AppLogger.d(TAG, "Boot detected ($action). Restarting service...")
-            
-            // Load config using ServiceConfig (eliminates duplication)
-            val config = ServiceConfig.fromDatabase(dbHelper)
 
-            // Create service intent with config
-            val serviceIntent = Intent(context, LocationForegroundService::class.java)
-            config.toIntent(serviceIntent)
-            
-            context.startForegroundService(serviceIntent)
-            
+            LocationForegroundService.startTracking(context, dbHelper, "Device rebooted")
+
             AppLogger.d(TAG, "Service start requested successfully")
             
         } catch (e: SecurityException) {
