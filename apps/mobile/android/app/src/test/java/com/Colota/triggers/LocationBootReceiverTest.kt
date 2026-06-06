@@ -9,7 +9,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.Colota.data.DatabaseHelper
+import com.Colota.service.BatteryRecoveryScheduler
+import com.Colota.service.NotificationHelper
 import com.Colota.util.AppLogger
+import com.Colota.util.DeviceInfoHelper
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -46,12 +49,19 @@ class LocationBootReceiverTest {
         every { AppLogger.i(any(), any()) } just Runs
         every { AppLogger.w(any(), any()) } just Runs
         every { AppLogger.e(any(), any(), any()) } just Runs
+
+        // Charger-recovery branch deps; inert for the enabled/disabled paths.
+        mockkObject(BatteryRecoveryScheduler)
+        every { BatteryRecoveryScheduler.schedule(any()) } just Runs
+        mockkConstructor(DeviceInfoHelper::class)
+        mockkConstructor(NotificationHelper::class)
+        every { anyConstructed<NotificationHelper>().createChannel() } just Runs
+        every { anyConstructed<NotificationHelper>().buildStoppedNotification(any()) } returns mockk(relaxed = true)
     }
 
     @After
     fun tearDown() {
-        unmockkObject(AppLogger)
-        unmockkObject(DatabaseHelper.Companion)
+        unmockkAll()
     }
 
     // ========================================================================
@@ -164,6 +174,35 @@ class LocationBootReceiverTest {
         callHandleBootCompleted(mockContext, Intent.ACTION_BOOT_COMPLETED)
 
         verify(exactly = 0) { mockContext.startService(any()) }
+    }
+
+    // ========================================================================
+    // handleBootCompleted — charger auto-resume (#281)
+    // ========================================================================
+
+    @Test
+    fun `handleBootCompleted resumes when battery-stopped and plugged in`() = runTest {
+        mockDbReadyAndDisabled()
+        every { mockDbHelper.getSetting("stopped_by_battery", "false") } returns "true"
+        every { mockDbHelper.getAllSettings() } returns mapOf("endpoint" to "https://example.com")
+        every { anyConstructed<DeviceInfoHelper>().isPluggedIn() } returns true
+
+        callHandleBootCompleted(mockContext, Intent.ACTION_BOOT_COMPLETED)
+
+        verify { mockContext.startForegroundService(any()) }
+        verify(exactly = 0) { BatteryRecoveryScheduler.schedule(any()) }
+    }
+
+    @Test
+    fun `handleBootCompleted arms recovery when battery-stopped and unplugged`() = runTest {
+        mockDbReadyAndDisabled()
+        every { mockDbHelper.getSetting("stopped_by_battery", "false") } returns "true"
+        every { anyConstructed<DeviceInfoHelper>().isPluggedIn() } returns false
+
+        callHandleBootCompleted(mockContext, Intent.ACTION_BOOT_COMPLETED)
+
+        verify { BatteryRecoveryScheduler.schedule(any()) }
+        verify(exactly = 0) { mockContext.startForegroundService(any()) }
     }
 
     // ========================================================================

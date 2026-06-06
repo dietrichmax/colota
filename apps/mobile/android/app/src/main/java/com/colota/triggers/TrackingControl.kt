@@ -7,10 +7,8 @@ package com.Colota.triggers
 
 import android.content.Context
 import android.content.Intent
-import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.service.LocationForegroundService
-import com.Colota.service.ServiceConfig
 
 /**
  * Shared start/stop tracking actions for external triggers (app shortcut,
@@ -19,9 +17,7 @@ import com.Colota.service.ServiceConfig
  */
 object TrackingControl {
     fun start(context: Context, startedReason: String) {
-        val config = ServiceConfig.fromDatabase(DatabaseHelper.getInstance(context))
-        context.startForegroundService(config.toIntent(Intent(context, LocationForegroundService::class.java)))
-        LocationServiceModule.sendTrackingStartedEvent(startedReason)
+        LocationForegroundService.startTracking(context, DatabaseHelper.getInstance(context), startedReason)
     }
 
     // Route stop through the service so stopForegroundServiceWithReason runs - direct

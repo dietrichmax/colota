@@ -17,6 +17,15 @@ sidebar_position: 4
 - Disable battery optimization for Colota (**Settings > Apps > Colota > Battery > Unrestricted**)
 - **Samsung**: Make sure "Pause app activity if unused" is turned off for Colota (**Settings > Apps > Colota > Battery**)
 
+## Tracking stopped on low battery and didn't resume
+
+Colota stops tracking below 5% (when unplugged) and resumes automatically once you connect a charger. If it doesn't:
+
+- **Only battery stops auto-resume, not manual stops** - if you stopped tracking yourself, start it again from the app
+- **Don't force-stop the app** - that cancels the scheduled resume; it recovers on the next launch or reboot
+- **Set the battery to Unrestricted** (**Settings > Apps > Colota > Battery**) so the OS doesn't delay the charge-triggered resume.
+- **A non-charging cable** (data-only, or an already-full battery) may not trigger it; a reboot while plugged in will
+
 ## GPS accuracy is poor
 
 - Wait for GPS lock (can take 30-60 seconds)

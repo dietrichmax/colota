@@ -154,6 +154,20 @@ class LocationForegroundService : Service() {
             ACTION_RECHECK_PROFILES,
             ACTION_STOP_REQUEST
         )
+
+        /**
+         * Start path for triggers the JS bridge didn't initiate (boot, charger recovery,
+         * automation): starts the service and fires onTrackingStarted so a foreground UI
+         * re-attaches its listener. The JS bridge start skips this - JS already knows.
+         * Callers handle exceptions; a background FGS start can throw on Android 12+.
+         */
+        @JvmStatic
+        fun startTracking(context: Context, dbHelper: DatabaseHelper, startedReason: String) {
+            val intent = Intent(context, LocationForegroundService::class.java)
+            ServiceConfig.fromDatabase(dbHelper).toIntent(intent)
+            context.startForegroundService(intent)
+            LocationServiceModule.sendTrackingStartedEvent(startedReason)
+        }
     }
 
     override fun onCreate() {
@@ -286,6 +300,8 @@ class LocationForegroundService : Service() {
 
         if (!isLightweight) {
             dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
+            dbHelper.saveSetting(SettingsKeys.STOPPED_BY_BATTERY, "false")
+            BatteryRecoveryScheduler.cancel(this)
         }
 
         when (action) {
@@ -404,7 +420,7 @@ class LocationForegroundService : Service() {
         if (deviceInfoHelper.isBatteryCritical(threshold = 5)) {
             val (level, _) = deviceInfoHelper.getCachedBatteryStatus()
             AppLogger.d(TAG, "Battery critical ($level%) and unplugged - stopping service")
-            stopForegroundServiceWithReason("Battery below 5% - tracking paused")
+            stopForegroundServiceWithReason("Battery below 5% - tracking paused", stoppedByBattery = true)
             return
         }
 
@@ -687,7 +703,7 @@ class LocationForegroundService : Service() {
 
         if (deviceInfoHelper.isBatteryCritical()) {
             AppLogger.d(TAG, "Battery critical ($battery%) during tracking - stopping")
-            stopForegroundServiceWithReason("Battery below 5% - tracking paused")
+            stopForegroundServiceWithReason("Battery below 5% - tracking paused", stoppedByBattery = true)
             return
         }
 
@@ -1094,7 +1110,7 @@ class LocationForegroundService : Service() {
         )
     }
 
-    private fun stopForegroundServiceWithReason(reason: String) {
+    private fun stopForegroundServiceWithReason(reason: String, stoppedByBattery: Boolean = false) {
         AppLogger.i(TAG, "Stopping: $reason")
 
         // Reset profile indicator in JS UI
@@ -1104,6 +1120,8 @@ class LocationForegroundService : Service() {
 
         LocationServiceModule.sendTrackingStoppedEvent(reason)
         dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "false")
+        dbHelper.saveSetting(SettingsKeys.STOPPED_BY_BATTERY, if (stoppedByBattery) "true" else "false")
+        if (stoppedByBattery) BatteryRecoveryScheduler.schedule(this)
         dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_NAME, "")
         dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_WIFI_ACTIVE, "false")
         dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "false")
