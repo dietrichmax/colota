@@ -23,7 +23,7 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "nodemon": "^3.1.14",
-    "prettier": "^3.8.3",
+    "prettier": "^3.8.4",
     "ts-loader": "^9.5.7",
     "ts-node": "^10.9.2",
     "tsx": "^4.22.3",
