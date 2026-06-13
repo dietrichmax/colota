@@ -57,6 +57,7 @@ class LocationForegroundService : Service() {
     private lateinit var profileHelper: ProfileHelper
     private lateinit var profileManager: ProfileManager
     private lateinit var conditionMonitor: ConditionMonitor
+    private lateinit var batteryMonitor: BatteryMonitor
 
     // ── Service infrastructure ──
     @Volatile private var serviceScope: CoroutineScope? = null
@@ -66,6 +67,10 @@ class LocationForegroundService : Service() {
     @Volatile private var lastFixAtMs: Long = 0L
     @Volatile private var motionDetector: MotionStateDetector? = null
     @Volatile private var lastKnownLocation: Location? = null
+
+    /** Re-entry guard for stopForegroundServiceWithReason: the battery monitor can fire again
+     *  before onDestroy unregisters it. */
+    @Volatile private var isStopping = false
 
     /** Debounces the burst of PROVIDERS_CHANGED broadcasts when system Location toggles (one per provider). */
     @Volatile private var lastBroadcastLocationEnabled: Boolean = true
@@ -180,6 +185,7 @@ class LocationForegroundService : Service() {
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         dbHelper = DatabaseHelper.getInstance(this)
         deviceInfoHelper = DeviceInfoHelper(this)
+        batteryMonitor = BatteryMonitor(this, deviceInfoHelper) { onBatteryCritical() }
         lastBroadcastLocationEnabled = deviceInfoHelper.isLocationEnabled()
         networkManager = NetworkManager(this)
         geofenceHelper = GeofenceHelper(this)
@@ -302,6 +308,7 @@ class LocationForegroundService : Service() {
             dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
             dbHelper.saveSetting(SettingsKeys.STOPPED_BY_BATTERY, "false")
             BatteryRecoveryScheduler.cancel(this)
+            batteryMonitor.start()
         }
 
         when (action) {
@@ -384,6 +391,7 @@ class LocationForegroundService : Service() {
             cancelHeartbeat()
             unregisterLocationProvidersReceiver()
             unregisterDebugMotionReceiver()
+            batteryMonitor.stop()
             conditionMonitor.stop()
             stopLocationUpdates()
             syncManager.stopPeriodicSync()
@@ -417,7 +425,7 @@ class LocationForegroundService : Service() {
         locationUpdateCallback = callback
         lastFixAtMs = SystemClock.elapsedRealtime()
 
-        if (deviceInfoHelper.isBatteryCritical(threshold = 5)) {
+        if (deviceInfoHelper.isBatteryCritical()) {
             val (level, _) = deviceInfoHelper.getCachedBatteryStatus()
             AppLogger.d(TAG, "Battery critical ($level%) and unplugged - stopping service")
             stopForegroundServiceWithReason("Battery below 5% - tracking paused", stoppedByBattery = true)
@@ -700,12 +708,6 @@ class LocationForegroundService : Service() {
         val anchorJob = applyZoneTransition(zone)
 
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
-
-        if (deviceInfoHelper.isBatteryCritical()) {
-            AppLogger.d(TAG, "Battery critical ($battery%) during tracking - stopping")
-            stopForegroundServiceWithReason("Battery below 5% - tracking paused", stoppedByBattery = true)
-            return
-        }
 
         val timestampSec = location.time / 1000
 
@@ -1110,7 +1112,15 @@ class LocationForegroundService : Service() {
         )
     }
 
+    /** Fired by [batteryMonitor] on a critical-battery broadcast. */
+    private fun onBatteryCritical() {
+        AppLogger.i(TAG, "Battery critical and unplugged - stopping (battery monitor)")
+        stopForegroundServiceWithReason("Battery below 5% - tracking paused", stoppedByBattery = true)
+    }
+
     private fun stopForegroundServiceWithReason(reason: String, stoppedByBattery: Boolean = false) {
+        if (isStopping) return
+        isStopping = true
         AppLogger.i(TAG, "Stopping: $reason")
 
         // Reset profile indicator in JS UI

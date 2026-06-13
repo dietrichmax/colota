@@ -12,7 +12,7 @@ import org.junit.After
 
 /**
  * Tests for DeviceInfoHelper using a real instance:
- * - isBatteryCritical (via spyk + stubbed getCachedBatteryStatus)
+ * - isBatteryCritical (via mocked battery intent)
  * - getBatteryStatusString (via spyk + stubbed getCachedBatteryStatus)
  * - getBatteryStatus (via mocked battery intent)
  */
@@ -41,66 +41,74 @@ class DeviceInfoHelperTest {
     // --- isBatteryCritical ---
 
     @Test
-    fun `battery at 4 percent discharging is critical`() {
-        every { helper.getCachedBatteryStatus() } returns Pair(4, 1)
+    fun `low battery while unplugged is critical`() {
+        mockBatteryIntent(level = 4, scale = 100, status = BatteryManager.BATTERY_STATUS_DISCHARGING, plugged = 0)
         assertTrue(helper.isBatteryCritical(5))
     }
 
     @Test
-    fun `battery at 5 percent discharging is not critical`() {
-        every { helper.getCachedBatteryStatus() } returns Pair(5, 1)
+    fun `battery exactly at threshold while unplugged is not critical`() {
+        mockBatteryIntent(level = 5, scale = 100, status = BatteryManager.BATTERY_STATUS_DISCHARGING, plugged = 0)
         assertFalse(helper.isBatteryCritical(5))
     }
 
     @Test
-    fun `battery at 1 percent discharging is critical`() {
-        every { helper.getCachedBatteryStatus() } returns Pair(1, 1)
+    fun `battery at 1 percent while unplugged is critical`() {
+        mockBatteryIntent(level = 1, scale = 100, status = BatteryManager.BATTERY_STATUS_DISCHARGING, plugged = 0)
         assertTrue(helper.isBatteryCritical(5))
     }
 
     @Test
-    fun `battery at 0 percent discharging is critical`() {
-        every { helper.getCachedBatteryStatus() } returns Pair(0, 1)
+    fun `battery at 0 percent while unplugged is critical`() {
+        mockBatteryIntent(level = 0, scale = 100, status = BatteryManager.BATTERY_STATUS_DISCHARGING, plugged = 0)
         assertTrue(helper.isBatteryCritical(5))
     }
 
     @Test
-    fun `battery at 4 percent charging is not critical`() {
-        every { helper.getCachedBatteryStatus() } returns Pair(4, 2)
+    fun `low battery plugged via AC is not critical`() {
+        mockBatteryIntent(level = 4, scale = 100, status = BatteryManager.BATTERY_STATUS_CHARGING, plugged = BatteryManager.BATTERY_PLUGGED_AC)
         assertFalse(helper.isBatteryCritical(5))
     }
 
     @Test
-    fun `battery at 4 percent full is not critical`() {
-        every { helper.getCachedBatteryStatus() } returns Pair(4, 3)
+    fun `low battery plugged via USB is not critical`() {
+        mockBatteryIntent(level = 4, scale = 100, status = BatteryManager.BATTERY_STATUS_CHARGING, plugged = BatteryManager.BATTERY_PLUGGED_USB)
         assertFalse(helper.isBatteryCritical(5))
     }
 
     @Test
-    fun `battery at 4 percent unknown status is not critical`() {
-        every { helper.getCachedBatteryStatus() } returns Pair(4, 0)
+    fun `low battery plugged in but reported not charging is not critical`() {
+        // Plugged but NOT_CHARGING (charge-limited / thermal) - must not stop.
+        mockBatteryIntent(level = 4, scale = 100, status = BatteryManager.BATTERY_STATUS_NOT_CHARGING, plugged = BatteryManager.BATTERY_PLUGGED_AC)
         assertFalse(helper.isBatteryCritical(5))
     }
 
     @Test
-    fun `battery at 50 percent discharging is not critical`() {
-        every { helper.getCachedBatteryStatus() } returns Pair(50, 1)
+    fun `low battery with unknown status while unplugged is critical`() {
+        // Gated on plugged state, not status - so unknown+unplugged still stops.
+        mockBatteryIntent(level = 4, scale = 100, status = BatteryManager.BATTERY_STATUS_UNKNOWN, plugged = 0)
+        assertTrue(helper.isBatteryCritical(5))
+    }
+
+    @Test
+    fun `healthy battery while unplugged is not critical`() {
+        mockBatteryIntent(level = 50, scale = 100, status = BatteryManager.BATTERY_STATUS_DISCHARGING, plugged = 0)
         assertFalse(helper.isBatteryCritical(5))
     }
 
     @Test
     fun `custom threshold 10 percent works`() {
-        every { helper.getCachedBatteryStatus() } returns Pair(9, 1)
+        mockBatteryIntent(level = 9, scale = 100, status = BatteryManager.BATTERY_STATUS_DISCHARGING, plugged = 0)
         assertTrue(helper.isBatteryCritical(10))
-        every { helper.getCachedBatteryStatus() } returns Pair(10, 1)
+        mockBatteryIntent(level = 10, scale = 100, status = BatteryManager.BATTERY_STATUS_DISCHARGING, plugged = 0)
         assertFalse(helper.isBatteryCritical(10))
     }
 
     @Test
     fun `custom threshold 1 percent works`() {
-        every { helper.getCachedBatteryStatus() } returns Pair(0, 1)
+        mockBatteryIntent(level = 0, scale = 100, status = BatteryManager.BATTERY_STATUS_DISCHARGING, plugged = 0)
         assertTrue(helper.isBatteryCritical(1))
-        every { helper.getCachedBatteryStatus() } returns Pair(1, 1)
+        mockBatteryIntent(level = 1, scale = 100, status = BatteryManager.BATTERY_STATUS_DISCHARGING, plugged = 0)
         assertFalse(helper.isBatteryCritical(1))
     }
 
