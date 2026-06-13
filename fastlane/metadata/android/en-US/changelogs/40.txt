@@ -1,2 +1,3 @@
 - Add notes to individual points. Tap a point on the map in Location History or a trip to annotate it.
 - Exports now include bearing and battery status for every point, in all formats.
+- Tracking now auto-resumes when you connect a charger after a low-battery stop.

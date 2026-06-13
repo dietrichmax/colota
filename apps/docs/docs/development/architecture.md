@@ -150,7 +150,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Pause zone detection (geofencing)
 - Geofence entry delay - keeps recording for 3.5× the tracking interval before pausing on zone entry, logging real arrival points for backends like GeoPulse
 - Anchor points - a synthetic location saved on zone exit as a clean start point for the departing trip, timestamped 1s before the first real GPS fix
-- Battery critical shutdown (below 5% while discharging)
+- Battery critical shutdown (below 5% while unplugged), detected via a battery-broadcast receiver so it fires even while GPS is paused in a zone
 - Location accuracy filtering
 - Stationary detection - pauses GPS after 60s without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). Suspended during entry delay and inside geofence pause zones.
 - Queuing data for server sync
