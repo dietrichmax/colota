@@ -1,45 +1,52 @@
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
+
+exclude-labels:
+  - skip-changelog
+
 version-resolver:
   major:
-    labels:
-      - major
-      - breaking
+    labels: [major, breaking]
   minor:
-    labels:
-      - enhancement
-      - feature
+    labels: [feature, enhancement]
   patch:
-    labels:
-      - bug
-      - fix
-      - refactor
-      - maintenance
-      - tests
-      - documentation
+    labels: [fix, bug, maintenance, refactor, documentation, dependencies]
   default: patch
+
+autolabeler:
+  - label: skip-changelog
+    title: ['/^chore\(release\):/i']
+  - label: breaking
+    title: ['/^\w+(\(.+\))?!:/i']
+  - label: dependencies
+    title: ['/^(chore|fix|build)\(deps\)/i']
+  - label: feature
+    title: ['/^feat(\(.+\))?!?:/i']
+  - label: fix
+    title: ['/^fix(\(.+\))?!?:/i']
+  - label: documentation
+    title: ['/^docs(\(.+\))?:/i']
+  - label: maintenance
+    title: ['/^(chore|refactor|perf|style|ci|build|test)(\((?!deps\))[^)]*\))?!?:/i']
+
 categories:
   - title: 'New Features'
-    labels:
-      - enhancement
-      - feature
+    labels: [feature, enhancement]
   - title: 'Bug Fixes'
-    labels:
-      - bug
-      - fix
+    labels: [fix, bug]
   - title: 'Maintenance'
-    labels:
-      - refactor
-      - maintenance
+    labels: [maintenance, refactor]
   - title: 'Documentation'
-    labels:
-      - documentation
-  - title: 'Tests'
-    labels:
-      - tests
+    labels: [documentation]
+  - title: 'Dependencies'
+    labels: [dependencies, deps]
+    collapse-after: 3
+
 change-template: '- $TITLE (#$NUMBER)'
 no-changes-template: '- No changes'
-template: |
-  ## What's new
+category-template: '## $TITLE'
 
+template: |
   $CHANGES
+
+  **Full Changelog**: https://github.com/dietrichmax/colota/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
