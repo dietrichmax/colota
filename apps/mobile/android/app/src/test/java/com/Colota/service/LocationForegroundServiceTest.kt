@@ -44,6 +44,7 @@ class LocationForegroundServiceTest {
     private lateinit var notificationHelper: NotificationHelper
     private lateinit var profileManager: ProfileManager
     private lateinit var conditionMonitor: ConditionMonitor
+    private lateinit var batteryMonitor: BatteryMonitor
     private lateinit var secureStorage: SecureStorageHelper
     private lateinit var networkManager: NetworkManager
     private lateinit var androidNotificationManager: NotificationManager
@@ -63,6 +64,7 @@ class LocationForegroundServiceTest {
         notificationHelper = mockk(relaxed = true)
         profileManager = mockk(relaxed = true)
         conditionMonitor = mockk(relaxed = true)
+        batteryMonitor = mockk(relaxed = true)
         secureStorage = mockk(relaxed = true)
         networkManager = mockk(relaxed = true)
         androidNotificationManager = mockk(relaxed = true)
@@ -135,6 +137,7 @@ class LocationForegroundServiceTest {
         setField("notificationHelper", notificationHelper)
         setField("profileManager", profileManager)
         setField("conditionMonitor", conditionMonitor)
+        setField("batteryMonitor", batteryMonitor)
         setField("secureStorage", secureStorage)
         setField("networkManager", networkManager)
         setField("notificationManager", androidNotificationManager)
@@ -555,16 +558,6 @@ class LocationForegroundServiceTest {
         invokeHandleLocationUpdate(location)
 
         verify { location.setSpeed(2.0f) }
-    }
-
-    @Test
-    fun `handleLocationUpdate stops service when battery critical during tracking`() = testScope.runTest {
-        every { deviceInfoHelper.isBatteryCritical() } returns true
-        val location = mockLocation()
-
-        invokeHandleLocationUpdate(location)
-
-        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -1554,63 +1547,47 @@ class LocationForegroundServiceTest {
     // =========================================================================
 
     @Test
-    fun `stopForBattery clears active profile event`() = testScope.runTest {
+    fun `stopForBattery clears active profile event`() {
         every { profileManager.getActiveProfileName() } returns "Charging"
-        every { deviceInfoHelper.isBatteryCritical() } returns true
-        val location = mockLocation()
 
-        invokeHandleLocationUpdate(location)
+        invokeOnBatteryCritical()
 
         verify { LocationServiceModule.sendProfileSwitchEvent(null, null) }
     }
 
     @Test
-    fun `stopForBattery sends tracking stopped event`() = testScope.runTest {
-        every { deviceInfoHelper.isBatteryCritical() } returns true
-        val location = mockLocation()
-
-        invokeHandleLocationUpdate(location)
+    fun `stopForBattery sends tracking stopped event`() {
+        invokeOnBatteryCritical()
 
         verify { LocationServiceModule.sendTrackingStoppedEvent("Battery below 5% - tracking paused") }
     }
 
     @Test
-    fun `stopForBattery saves tracking_enabled false`() = testScope.runTest {
-        every { deviceInfoHelper.isBatteryCritical() } returns true
-        val location = mockLocation()
-
-        invokeHandleLocationUpdate(location)
+    fun `stopForBattery saves tracking_enabled false`() {
+        invokeOnBatteryCritical()
 
         verify { dbHelper.saveSetting("tracking_enabled", "false") }
     }
 
     @Test
-    fun `stopForBattery does not send profile event when no active profile`() = testScope.runTest {
+    fun `stopForBattery does not send profile event when no active profile`() {
         every { profileManager.getActiveProfileName() } returns null
-        every { deviceInfoHelper.isBatteryCritical() } returns true
-        val location = mockLocation()
 
-        invokeHandleLocationUpdate(location)
+        invokeOnBatteryCritical()
 
         verify(exactly = 0) { LocationServiceModule.sendProfileSwitchEvent(any(), any()) }
     }
 
     @Test
-    fun `stopForBattery marks stopped_by_battery so charger can auto-resume`() = testScope.runTest {
-        every { deviceInfoHelper.isBatteryCritical() } returns true
-        val location = mockLocation()
-
-        invokeHandleLocationUpdate(location)
+    fun `stopForBattery marks stopped_by_battery so charger can auto-resume`() {
+        invokeOnBatteryCritical()
 
         verify { dbHelper.saveSetting("stopped_by_battery", "true") }
     }
 
     @Test
-    fun `stopForBattery arms the charger recovery worker`() = testScope.runTest {
-        every { deviceInfoHelper.isBatteryCritical() } returns true
-        val location = mockLocation()
-
-        invokeHandleLocationUpdate(location)
+    fun `stopForBattery arms the charger recovery worker`() {
+        invokeOnBatteryCritical()
 
         verify { BatteryRecoveryScheduler.schedule(any()) }
     }
@@ -1621,6 +1598,17 @@ class LocationForegroundServiceTest {
 
         verify { dbHelper.saveSetting("stopped_by_battery", "false") }
         verify(exactly = 0) { BatteryRecoveryScheduler.schedule(any()) }
+    }
+
+    @Test
+    fun `battery critical via monitor stops and arms recovery even while wifi paused`() {
+        // GPS is off while wifi-paused, so the stop has to come from the battery monitor.
+        setField("isWifiPaused", true)
+
+        invokeOnBatteryCritical()
+
+        verify { dbHelper.saveSetting("stopped_by_battery", "true") }
+        verify { BatteryRecoveryScheduler.schedule(any()) }
     }
 
     // =========================================================================
@@ -1978,6 +1966,12 @@ class LocationForegroundServiceTest {
         )
         method.isAccessible = true
         method.invoke(service, reason, stoppedByBattery)
+    }
+
+    private fun invokeOnBatteryCritical() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("onBatteryCritical")
+        method.isAccessible = true
+        method.invoke(service)
     }
 
     private fun invokeEnterPauseZone(geofence: GeofenceHelper.Geofence) {

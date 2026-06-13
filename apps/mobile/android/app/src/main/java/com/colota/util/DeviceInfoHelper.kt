@@ -34,6 +34,9 @@ class DeviceInfoHelper(private val context: Context) {
 
     companion object {
         private const val TAG = "DeviceInfoHelper"
+
+        /** Battery percentage below which tracking stops to preserve the remaining charge. */
+        const val CRITICAL_BATTERY_PERCENT = 5
     }
 
     fun getDeviceInfo(): WritableMap {
@@ -53,8 +56,8 @@ class DeviceInfoHelper(private val context: Context) {
     fun getCachedBatteryStatus(): Pair<Int, Int> = batteryCache.get()
 
     fun getBatteryStatus(): Pair<Int, Int> {
-        val snap = readBatterySticky()
-        return Pair(snap.level, snap.status)
+        val battery = readBatterySticky()
+        return Pair(battery.level, battery.status)
     }
 
     fun getBatteryStatusString(): String {
@@ -62,9 +65,9 @@ class DeviceInfoHelper(private val context: Context) {
         return "$level% (${BatteryStatus.toDisplayString(status)})"
     }
 
-    fun isBatteryCritical(threshold: Int = 5): Boolean {
-        val (level, status) = getCachedBatteryStatus()
-        return level < threshold && status == BatteryStatus.DISCHARGING
+    fun isBatteryCritical(threshold: Int = CRITICAL_BATTERY_PERCENT): Boolean {
+        val battery = readBatterySticky()
+        return battery.level < threshold && !battery.isPlugged
     }
 
     /** True when device is connected to any power source (AC, USB, wireless). */
