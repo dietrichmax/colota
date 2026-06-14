@@ -30,9 +30,9 @@ autolabeler:
     title: ['/^(chore|refactor|perf|style|ci|build|test)(\((?!deps\))[^)]*\))?!?:/i']
 
 categories:
-  - title: "New Features"
+  - title: "What's new"
     labels: [feature, enhancement]
-  - title: "Bug Fixes"
+  - title: "Fixes"
     labels: [fix, bug]
   - title: "Maintenance"
     labels: [maintenance, refactor, documentation]
