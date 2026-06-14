@@ -1,5 +1,5 @@
-name-template: 'v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
 
 exclude-labels:
   - skip-changelog
@@ -30,19 +30,19 @@ autolabeler:
     title: ['/^(chore|refactor|perf|style|ci|build|test)(\((?!deps\))[^)]*\))?!?:/i']
 
 categories:
-  - title: 'New Features'
+  - title: "New Features"
     labels: [feature, enhancement]
-  - title: 'Bug Fixes'
+  - title: "Bug Fixes"
     labels: [fix, bug]
-  - title: 'Maintenance'
+  - title: "Maintenance"
     labels: [maintenance, refactor, documentation]
-  - title: 'Dependencies'
+  - title: "Dependencies"
     labels: [dependencies, deps]
     collapse-after: 3
 
-change-template: '- $TITLE (#$NUMBER)'
-no-changes-template: '- No changes'
-category-template: '## $TITLE'
+change-template: "- $TITLE (#$NUMBER)"
+no-changes-template: "- No changes"
+category-template: "## $TITLE"
 
 template: |
   $CHANGES
