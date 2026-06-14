@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { isFiniteNumber, hasFiniteNumbers, maskUrl } from "../src/utils"
+import { isFiniteNumber, hasFiniteNumbers, maskUrl, sanitizeLogValue } from "../src/utils"
 
 test("isFiniteNumber rejects NaN, Infinity and non-numbers", () => {
   assert.equal(isFiniteNumber(5), true)
@@ -24,4 +24,10 @@ test("maskUrl hides api_key and token", () => {
 
 test("maskUrl returns the input unchanged when it isn't a URL", () => {
   assert.equal(maskUrl("not a url"), "not a url")
+})
+
+test("sanitizeLogValue removes CR/LF so user input can't forge log lines", () => {
+  assert.equal(sanitizeLogValue("GET /path"), "GET /path")
+  // a forged second line is flattened back onto one line
+  assert.equal(sanitizeLogValue("GET /a\r\n[INFO] User: Admin"), "GET /a[INFO] User: Admin")
 })

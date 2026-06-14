@@ -3,7 +3,7 @@ import crypto from "crypto"
 import { loadTargets } from "./targets"
 import { forwardToAll, forwardBatch } from "./forwarder"
 import { owntracksToColota, overlandFeatureToColota, type ColotaPayload } from "./transform"
-import { maskUrl, hasFiniteNumbers } from "./utils"
+import { maskUrl, hasFiniteNumbers, sanitizeLogValue } from "./utils"
 
 export const app: Application = express()
 const API_KEY = process.env.API_KEY
@@ -27,7 +27,8 @@ app.use((req: Request, _res: Response, next: NextFunction): void => {
   if (req.method === "GET") return next()
   const url = new URL(req.originalUrl, "http://localhost")
   url.searchParams.delete("api_key")
-  console.log(`[${new Date().toISOString()}] ${req.method} ${url.pathname}${url.search} from IP=${req.ip}`)
+  const reqLine = sanitizeLogValue(`${req.method} ${url.pathname}${url.search}`)
+  console.log(`[${new Date().toISOString()}] ${reqLine} from IP=${sanitizeLogValue(req.ip ?? "")}`)
   next()
 })
 
@@ -133,7 +134,7 @@ app.post("/overland", authenticate, async (req: Request, res: Response): Promise
     }
   }
   if (skipped > 0) {
-    console.warn(`[overland] ${skipped}/${body.locations.length} Features skipped`)
+    console.warn(`[overland] ${skipped}/${payloads.length + skipped} Features skipped`)
   }
 
   forwardBatch(targets, { locations: body.locations, device_id: deviceId }, payloads)
@@ -145,7 +146,8 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     (err as { status?: number; statusCode?: number }).status ?? (err as { statusCode?: number }).statusCode ?? 500
   const errUrl = new URL(req.originalUrl, "http://localhost")
   errUrl.searchParams.delete("api_key")
-  if (status >= 500) console.error(`[ERROR] ${req.method} ${errUrl.pathname}${errUrl.search}:`, err)
-  else console.warn(`[${status}] ${req.method} ${errUrl.pathname}${errUrl.search}: ${err.message}`)
+  const reqLine = sanitizeLogValue(`${req.method} ${errUrl.pathname}${errUrl.search}`)
+  if (status >= 500) console.error("[ERROR] %s:", reqLine, err)
+  else console.warn(`[${status}] ${reqLine}: ${sanitizeLogValue(err.message)}`)
   res.status(status).json({ error: status >= 500 ? "Internal Server Error" : "Bad Request" })
 })

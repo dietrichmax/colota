@@ -21,3 +21,7 @@ export function maskUrl(url: string): string {
     return url
   }
 }
+
+export function sanitizeLogValue(value: string): string {
+  return value.replace(/[\r\n]/g, "")
+}
