@@ -1,0 +1,58 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+exclude-labels:
+  - skip-changelog
+
+version-resolver:
+  major:
+    labels: [major, breaking]
+  minor:
+    labels: [feature, enhancement]
+  patch:
+    labels: [fix, bug, maintenance, refactor, documentation, dependencies]
+  default: patch
+
+autolabeler:
+  - label: skip-changelog
+    title: ['/^chore\(release\):/i']
+  - label: breaking
+    title: ['/^\w+(\(.+\))?!:/i']
+  - label: dependencies
+    title: ['/^(chore|fix|build)\(deps\)/i']
+  - label: feature
+    title: ['/^feat(\(.+\))?!?:/i']
+  - label: fix
+    title: ['/^fix(\(.+\))?!?:/i']
+  - label: documentation
+    title: ['/^docs(\(.+\))?:/i']
+  - label: maintenance
+    title: ['/^(chore|refactor|perf|style|ci|build|test)(\((?!deps\))[^)]*\))?!?:/i']
+
+categories:
+  - title: 'New Features'
+    labels: [feature, enhancement]
+  - title: 'Bug Fixes'
+    labels: [fix, bug]
+  - title: 'Maintenance'
+    labels: [maintenance, refactor, documentation]
+  - title: 'Dependencies'
+    labels: [dependencies, deps]
+    collapse-after: 3
+
+change-template: '- $TITLE (#$NUMBER)'
+no-changes-template: '- No changes'
+category-template: '## $TITLE'
+
+template: |
+  $CHANGES
+
+  ## Image
+
+  ```sh
+  docker pull mxdcodes/colota-forwarder:v$RESOLVED_VERSION
+  # or follow main:
+  docker pull mxdcodes/colota-forwarder:latest
+  ```
+
+  **Full Changelog**: https://github.com/dietrichmax/colota-forwarder/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
