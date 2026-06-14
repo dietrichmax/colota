@@ -31,6 +31,7 @@ import {
   TrackingProfilesScreen,
   ProfileEditorScreen,
   SetupImportScreen,
+  ShareSetupScreen,
   TripDetailScreen,
   OfflineMapsScreen,
   AppearanceScreen,
@@ -133,6 +134,11 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     name: "Setup Import",
     component: SetupImportScreen,
     title: "Import Configuration"
+  },
+  {
+    name: "Share Setup",
+    component: ShareSetupScreen,
+    title: "Share Setup"
   },
   {
     name: "Trip Detail",

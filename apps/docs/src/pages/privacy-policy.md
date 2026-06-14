@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-**Last updated: May 25, 2026**
+**Last updated: June 14, 2026**
 
 Colota ("the App") is a self-hosted GPS tracking application for Android, developed by Max Dietrich. This privacy policy explains what data the App collects, how it is used, and your rights regarding that data.
 
@@ -75,6 +75,8 @@ Backups are written to a destination you choose via the Android file picker. If 
 Restoring a backup overwrites the current database and credentials.
 
 The App supports configuration via `colota://setup` deep links. These links can include server endpoints and authentication credentials. You must explicitly confirm before any configuration is applied. Only open setup links from sources you trust.
+
+You can also generate a setup link to share your own configuration (Settings -> Share Setup). Credentials are excluded by default; if you choose to include them they appear in the link in plain text, so only share it over a trusted channel.
 
 ## Data Transmission
 

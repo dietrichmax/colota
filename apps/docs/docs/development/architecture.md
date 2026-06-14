@@ -305,6 +305,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
 | `BackupRestoreScreen` | Create or restore a password-encrypted `.colota` archive of all data, with strength meter and no-recovery confirmation |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
+| `ShareSetupScreen` | Bundles selected config categories into a `colota://setup` link to share; credentials opt-in |
 | `ActivityLogScreen` | In-app log viewer with level filtering, search, and export |
 | `AboutScreen` | App version, device info, links to repository and privacy policy |
 

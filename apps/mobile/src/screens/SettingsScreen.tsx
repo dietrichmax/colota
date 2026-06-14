@@ -26,7 +26,8 @@ import {
   ShieldCheck,
   Info,
   Heart,
-  Clock
+  Clock,
+  Share2
 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 
@@ -206,6 +207,14 @@ export function SettingsScreen({ navigation }: Props) {
               label="Backup & Restore"
               sub="Encrypted backup of all your data"
               onPress={() => navigation.navigate("Backup & Restore")}
+            />
+            <Divider />
+            <ListItem
+              testID="nav-share-setup"
+              icon={Share2}
+              label="Share Setup"
+              sub="Share your settings, geofences and profiles as a link"
+              onPress={() => navigation.navigate("Share Setup")}
             />
             <Divider />
             <ListItem

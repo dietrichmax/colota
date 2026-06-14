@@ -14,6 +14,14 @@ Fill in the settings you want to configure. Only the fields you set will be incl
 
 <DeepLinkGenerator />
 
+## Sharing From the App
+
+You can also generate a setup link straight from an existing installation, without the browser generator. Open **Settings -> Share Setup**, tick which categories to include - Tracking, Sync, API, Geofences, Profiles and Credentials - and tap **Share** to send the `colota://setup` link through any app.
+
+Credentials are off by default. Enabling them puts your username, password, bearer token or custom headers into the link in plain text, so only share it over a trusted channel.
+
+Geofences and tracking profiles can also be shared on their own from the [Geofences](geofencing.md#sharing-zones) and Tracking Profiles screens.
+
 ## How It Works
 
 1. User taps the link or scans a QR code

@@ -28,6 +28,7 @@ import { GeofenceLayers } from "../components/features/map/GeofenceLayers"
 import { UserLocationOverlay } from "../components/features/map/UserLocationOverlay"
 import { logger } from "../utils/logger"
 import { formatShortDistance, shortDistanceUnit, inputToMeters } from "../utils/geo"
+import { buildGeofencesLink } from "../utils/setupLink"
 
 const GeofenceMap = React.memo(function GeofenceMap({
   tracking,
@@ -232,10 +233,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
   const handleShareGeofences = useCallback(async () => {
     if (geofences.length === 0) return
     try {
-      const exportable = geofences.map(({ id: _id, createdAt: _createdAt, enabled: _enabled, ...rest }) => rest)
-      const encoded = btoa(JSON.stringify({ geofences: exportable }))
-      const link = `colota://setup?config=${encoded}`
-      await Share.share({ message: link })
+      await Share.share({ message: buildGeofencesLink(geofences) })
     } catch (err) {
       logger.error("[GeofenceScreen] Failed to share geofences:", err)
       showAlert("Error", "Failed to share geofences.", "error")
