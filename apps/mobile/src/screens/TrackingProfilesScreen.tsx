@@ -14,6 +14,7 @@ import { fonts } from "../styles/typography"
 import { Container, SectionTitle, Card } from "../components"
 import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
+import { buildProfilesLink } from "../utils/setupLink"
 import { PROFILE_CONDITIONS, MS_TO_KMH, HIT_SLOP_MD } from "../constants"
 
 function formatCondition(profile: SavedTrackingProfile): string {
@@ -76,10 +77,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
   const handleShareProfiles = useCallback(async () => {
     if (profiles.length === 0) return
     try {
-      const exportable = profiles.map(({ id: _id, createdAt: _createdAt, ...rest }) => rest)
-      const encoded = btoa(JSON.stringify({ profiles: exportable }))
-      const link = `colota://setup?config=${encoded}`
-      await Share.share({ message: link })
+      await Share.share({ message: buildProfilesLink(profiles) })
     } catch (err) {
       logger.error("[TrackingProfilesScreen] Failed to share profiles:", err)
       showAlert("Error", "Failed to share profiles.", "error")

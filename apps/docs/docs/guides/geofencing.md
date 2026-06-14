@@ -68,6 +68,8 @@ When the recipient opens the link, Colota shows the import confirmation screen l
 
 The share button is all-or-nothing - every zone in the list is included. The `id`, `createdAt` and `enabled` fields are stripped, so imported zones always start enabled and get fresh database entries on the recipient's device.
 
+To share zones together with your tracking, sync and API settings in a single link, use **Settings -> Share Setup** instead (see [Deep Link Setup](deep-link-setup.md#sharing-from-the-app)).
+
 See the [Deep Link Setup](deep-link-setup.md#geofences) guide for the full payload format.
 
 ## How It Works
