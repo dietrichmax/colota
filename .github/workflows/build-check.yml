@@ -17,7 +17,7 @@ on:
       - 'package-lock.json'
 
 concurrency:
-  group: build-check-${{ github.head_ref }}
+  group: build-check-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 permissions:
@@ -32,24 +32,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build shared package
-        run: npm run build -w @colota/shared
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build
 
       - name: Run ESLint
         run: npm run lint -w @colota/mobile
@@ -75,24 +59,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build shared package
-        run: npm run build -w @colota/shared
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build
 
       - name: Build GMS Debug APK
         run: |
@@ -109,24 +77,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build shared package
-        run: npm run build -w @colota/shared
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build
 
       - name: Build FOSS Debug APK
         run: |
