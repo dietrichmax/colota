@@ -49,4 +49,14 @@ category-template: '## $TITLE'
 template: |
   $CHANGES
 
+  ## Which APK should I download?
+
+  Pick the build that matches your device:
+
+  - **arm64-v8a** - almost every phone from the last several years (recommended)
+  - **armeabi-v7a** - older 32-bit devices
+  - **universal** - one larger APK that runs on any device, if you are unsure
+
+  Choose a **gms** build if you use Google Play Services (better for most users) or a **foss** build for no Google dependencies.
+
   **Full Changelog**: https://github.com/dietrichmax/colota/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION

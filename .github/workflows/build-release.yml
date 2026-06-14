@@ -23,17 +23,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
-      - run: npm ci
-      - run: npm run build -w @colota/shared
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build
       - run: npm run lint -w @colota/mobile
       - run: npx -w @colota/mobile tsc --noEmit
       - run: npm test -w @colota/mobile
