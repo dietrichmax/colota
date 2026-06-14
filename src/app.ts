@@ -145,7 +145,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     (err as { status?: number; statusCode?: number }).status ?? (err as { statusCode?: number }).statusCode ?? 500
   const errUrl = new URL(req.originalUrl, "http://localhost")
   errUrl.searchParams.delete("api_key")
-  if (status >= 500) console.error(`[ERROR] ${req.method} ${errUrl.pathname}${errUrl.search}:`, err)
+  if (status >= 500) console.error("[ERROR] %s %s%s:", req.method, errUrl.pathname, errUrl.search, err)
   else console.warn(`[${status}] ${req.method} ${errUrl.pathname}${errUrl.search}: ${err.message}`)
   res.status(status).json({ error: status >= 500 ? "Internal Server Error" : "Bad Request" })
 })
