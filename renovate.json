@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "description": "Bump react-native and its @react-native/* tooling in one PR.",
+      "groupName": "react-native monorepo",
+      "matchPackageNames": [
+        "react-native",
+        "@react-native/babel-preset",
+        "@react-native/eslint-config",
+        "@react-native/jest-preset",
+        "@react-native/metro-config",
+        "@react-native/typescript-config"
+      ]
+    }
+  ]
+}
