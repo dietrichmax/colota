@@ -99,13 +99,14 @@
             android:foregroundServiceType="shortService"
             android:exported="false" />
 
-        <!-- Boot Receiver -->
+        <!-- Tracking restart receiver (boot / app update) -->
         <receiver
             android:name=".triggers.LocationBootReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <category android:name="android.intent.CATEGORY_DEFAULT" />
             </intent-filter>
         </receiver>

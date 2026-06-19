@@ -20,15 +20,15 @@ import com.Colota.util.DeviceInfoHelper
 import kotlinx.coroutines.*
 
 /**
- * Receiver responsible for restarting the location tracking service after device reboot.
+ * Receiver responsible for restarting the location tracking service after a device
+ * reboot or after the app is updated.
  */
 class LocationBootReceiver : BroadcastReceiver() {
-    
     companion object {
         private const val TAG = "BootReceiver"
-        
-        private val BOOT_ACTIONS = setOf(
-            Intent.ACTION_BOOT_COMPLETED
+        private val HANDLED_ACTIONS = setOf(
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED
         )
         
         private const val MAX_DB_RETRIES = 3
@@ -38,8 +38,7 @@ class LocationBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
         
-        // Check if this is a boot-related action
-        if (action !in BOOT_ACTIONS) return
+        if (action !in HANDLED_ACTIONS) return
         
         // Use goAsync() to prevent ANR during database access
         val pendingResult = goAsync()
@@ -97,7 +96,7 @@ class LocationBootReceiver : BroadcastReceiver() {
             val isEnabled = dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
             
             if (!isEnabled) {
-                AppLogger.d(TAG, "Boot detected but tracking disabled")
+                AppLogger.d(TAG, "Trigger received but tracking disabled")
 
                 // Charger auto-resume: only if the stop was battery-triggered (not a user stop).
                 val stoppedByBattery = dbHelper.getSetting(SettingsKeys.STOPPED_BY_BATTERY, "false") == "true"
@@ -121,9 +120,10 @@ class LocationBootReceiver : BroadcastReceiver() {
                 return
             }
             
-            AppLogger.d(TAG, "Boot detected ($action). Restarting service...")
+            AppLogger.d(TAG, "Trigger received ($action). Restarting service...")
 
-            LocationForegroundService.startTracking(context, dbHelper, "Device rebooted")
+            val reason = if (action == Intent.ACTION_MY_PACKAGE_REPLACED) "App updated" else "Device rebooted"
+            LocationForegroundService.startTracking(context, dbHelper, reason)
 
             AppLogger.d(TAG, "Service start requested successfully")
             
