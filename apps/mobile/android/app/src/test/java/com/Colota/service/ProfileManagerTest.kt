@@ -293,6 +293,56 @@ class ProfileManagerTest {
         assertEquals(2, switchedProfileId)
     }
 
+    /**
+     * several "speed above" bands match at once (a lower threshold matches every
+     * higher speed). With priorities ascending with the threshold, the most-specific band
+     * (highest threshold still below the current speed) must win at every speed.
+     */
+    @Test
+    fun `monotonic priorities select the most specific speed band`() = runTest {
+        fun band(id: Int, kmh: Int, priority: Int) = ProfileHelper.CachedProfile(
+            id = id,
+            name = "above $kmh",
+            intervalMs = 1000L * id,
+            minUpdateDistance = 0f,
+            syncIntervalSeconds = 0,
+            priority = priority,
+            conditionType = ProfileConstants.CONDITION_SPEED_ABOVE,
+            speedThreshold = kmh / 3.6f, // km/h -> m/s
+            deactivationDelaySeconds = 60,
+            activationDelaySeconds = 0
+        )
+        // getEnabledProfiles returns sorted by priority DESC (as the SQL query does)
+        every { profileHelper.getEnabledProfiles() } returns listOf(
+            band(6, 100, 60),
+            band(5, 50, 50),
+            band(4, 30, 40),
+            band(3, 10, 30),
+            band(2, 5, 20),
+            band(1, 3, 10),
+        )
+
+        val manager = createManager()
+
+        // speed in m/s (km/h in comment) -> expected winning band
+        val cases = listOf(
+            1.0f to "above 3",     // 3.6 km/h
+            2.0f to "above 5",     // 7.2 km/h
+            5.0f to "above 10",    // 18 km/h
+            9.72f to "above 30",   // 35 km/h
+            16.67f to "above 50",  // 60 km/h
+            33.33f to "above 100", // 120 km/h
+        )
+
+        for ((speed, expected) in cases) {
+            // Fill the 5-slot rolling buffer so the average equals this speed exactly
+            repeat(ProfileConstants.SPEED_BUFFER_SIZE) {
+                manager.onLocationUpdate(mockLocation(speed))
+            }
+            assertEquals("at $speed m/s", expected, switchedProfileName)
+        }
+    }
+
     // --- Deactivation delay ---
 
     @Test
