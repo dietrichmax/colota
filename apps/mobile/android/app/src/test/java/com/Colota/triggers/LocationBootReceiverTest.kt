@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import com.Colota.data.DatabaseHelper
 import com.Colota.service.BatteryRecoveryScheduler
+import com.Colota.service.LocationForegroundService
 import com.Colota.service.NotificationHelper
 import com.Colota.util.AppLogger
 import com.Colota.util.DeviceInfoHelper
@@ -24,7 +25,7 @@ import kotlin.coroutines.Continuation
 
 /**
  * Tests for LocationBootReceiver:
- * - onReceive action filtering (null, unknown, valid boot actions)
+ * - onReceive action filtering (null, unknown, boot and app-update actions)
  * - handleBootCompleted logic (tracking disabled/enabled, DB not ready, SecurityException)
  * - waitForDatabaseReady retry logic
  */
@@ -101,6 +102,22 @@ class LocationBootReceiverTest {
     }
 
     @Test
+    fun `onReceive calls goAsync for ACTION_MY_PACKAGE_REPLACED`() {
+        val spy = spyk(receiver)
+        val pendingResult = mockk<BroadcastReceiver.PendingResult>(relaxed = true)
+        every { spy.goAsync() } returns pendingResult
+        every { mockContext.applicationContext } returns mockContext
+        mockDbReadyAndDisabled()
+
+        val intent = mockk<Intent> { every { action } returns Intent.ACTION_MY_PACKAGE_REPLACED }
+        spy.onReceive(mockContext, intent)
+        Thread.sleep(500)
+
+        verify { spy.goAsync() }
+        verify { pendingResult.finish() }
+    }
+
+    @Test
     fun `onReceive always calls finish even on error`() {
         val spy = spyk(receiver)
         val pendingResult = mockk<BroadcastReceiver.PendingResult>(relaxed = true)
@@ -136,6 +153,28 @@ class LocationBootReceiverTest {
         callHandleBootCompleted(mockContext, Intent.ACTION_BOOT_COMPLETED)
 
         verify { mockContext.startForegroundService(any()) }
+    }
+
+    @Test
+    fun `handleBootCompleted passes 'App updated' reason on app update`() = runTest {
+        mockkObject(LocationForegroundService.Companion)
+        every { LocationForegroundService.startTracking(any(), any(), any()) } just Runs
+        mockDbReadyAndEnabled()
+
+        callHandleBootCompleted(mockContext, Intent.ACTION_MY_PACKAGE_REPLACED)
+
+        verify { LocationForegroundService.startTracking(any(), any(), "App updated") }
+    }
+
+    @Test
+    fun `handleBootCompleted passes 'Device rebooted' reason on boot`() = runTest {
+        mockkObject(LocationForegroundService.Companion)
+        every { LocationForegroundService.startTracking(any(), any(), any()) } just Runs
+        mockDbReadyAndEnabled()
+
+        callHandleBootCompleted(mockContext, Intent.ACTION_BOOT_COMPLETED)
+
+        verify { LocationForegroundService.startTracking(any(), any(), "Device rebooted") }
     }
 
     @Test

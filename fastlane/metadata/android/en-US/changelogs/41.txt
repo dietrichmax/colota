@@ -1,1 +1,2 @@
 - Share your setup as a link: pick which settings, geofences and profiles to include from the new Share Setup screen in Settings.
+- Fixed tracking stopping after an app update.
