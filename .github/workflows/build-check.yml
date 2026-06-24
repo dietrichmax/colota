@@ -8,6 +8,8 @@ on:
       - '!fastlane/**'
       - 'packages/shared/**'
       - 'package-lock.json'
+      - '.github/workflows/build-check.yml'
+      - '.github/actions/setup-build/**'
   pull_request:
     branches: [main]
     paths:
@@ -15,6 +17,8 @@ on:
       - '!fastlane/**'
       - 'packages/shared/**'
       - 'package-lock.json'
+      - '.github/workflows/build-check.yml'
+      - '.github/actions/setup-build/**'
 
 concurrency:
   group: build-check-${{ github.head_ref || github.run_id }}

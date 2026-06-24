@@ -8,6 +8,7 @@ on:
     paths:
       - 'apps/docs/**'
       - 'packages/shared/**'
+      - '.github/workflows/docs-check.yml'
   workflow_dispatch:
 
 jobs:
