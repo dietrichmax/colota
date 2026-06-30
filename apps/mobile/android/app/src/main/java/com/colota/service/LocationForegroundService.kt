@@ -68,6 +68,11 @@ class LocationForegroundService : Service() {
     @Volatile private var motionDetector: MotionStateDetector? = null
     @Volatile private var lastKnownLocation: Location? = null
 
+    // Rate-limit the fresh-fix probe so repeated rechecks/resumes don't spin up GNSS. Main-thread only.
+    @Volatile private var lastFreshProbeAtMs: Long? = null
+    @Volatile private var freshProbeInFlight = false
+    @Volatile private var pauseWatchdogJob: Job? = null
+
     /** Re-entry guard for stopForegroundServiceWithReason: the battery monitor can fire again
      *  before onDestroy unregisters it. */
     @Volatile private var isStopping = false
@@ -141,6 +146,18 @@ class LocationForegroundService : Service() {
         /** Gaps above this bypass the filter so post-resume fixes aren't dropped. */
         private const val POSITION_JUMP_FILTER_WINDOW_MS = 300_000L
 
+        /** Timeout for the active fresh-fix probe (ms). */
+        private const val FRESH_FIX_TIMEOUT_MS = 30_000L
+        /** Minimum spacing between fresh-fix probes; throttled callers get the last-known fix. */
+        private const val FRESH_PROBE_MIN_INTERVAL_MS = 60_000L
+        /** A fix older than this by the monotonic clock isn't trusted to hold a pause - usually a stale/replayed fix. */
+        private const val STALE_FIX_THRESHOLD_MS = 5 * 60_000L
+        /** Paused-watchdog tick cadence and the floor for its stall threshold (#444). */
+        private const val PAUSE_WATCHDOG_INTERVAL_MS = 10 * 60_000L
+        /** The stream counts as stalled after this many tracking intervals without a fix (floored at
+         *  [PAUSE_WATCHDOG_INTERVAL_MS]), so a long interval isn't probed more often than configured. */
+        private const val PAUSE_WATCHDOG_STALL_INTERVALS = 2
+
         const val ACTION_MANUAL_FLUSH = "com.Colota.ACTION_MANUAL_FLUSH"
         const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
         const val ACTION_REFRESH_NOTIFICATION = "com.Colota.REFRESH_NOTIFICATION"
@@ -148,6 +165,8 @@ class LocationForegroundService : Service() {
         /** Internal stop request from triggers (broadcast receiver, shortcut activity). */
         const val ACTION_STOP_REQUEST = "com.Colota.ACTION_STOP_REQUEST"
         const val EXTRA_STOP_REASON = "stop_reason"
+        /** Set by the bridge on an explicit user start so the restored-pause path can force-exit on no fix. */
+        const val EXTRA_USER_INITIATED = "user_initiated"
         /** Debug-only: directly inject a MotionState transition. `--es state STATIONARY|MOVING`. */
         const val ACTION_DEBUG_FORCE_MOTION = "com.Colota.DEBUG_FORCE_MOTION"
 
@@ -319,7 +338,7 @@ class LocationForegroundService : Service() {
             ACTION_STOP_REQUEST -> stopForegroundServiceWithReason(
                 intent.getStringExtra(EXTRA_STOP_REASON) ?: "Stopped"
             )
-            else -> handleStart()
+            else -> handleStart(intent?.getBooleanExtra(EXTRA_USER_INITIATED, false) ?: false)
         }
 
         return START_STICKY
@@ -355,14 +374,14 @@ class LocationForegroundService : Service() {
         }
     }
 
-    private fun handleStart() {
+    private fun handleStart(userInitiated: Boolean) {
         locationRestartJob?.cancel()
         locationRestartJob = serviceScope?.launch {
             withContext(Dispatchers.Main) {
                 stopLocationUpdates()
                 syncManager.stopPeriodicSync()
 
-                setupLocationUpdates()
+                setupLocationUpdates(userInitiated)
                 syncManager.startPeriodicSync()
 
                 // Start after setup so profile evaluations don't race
@@ -413,7 +432,7 @@ class LocationForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun setupLocationUpdates() {
+    private fun setupLocationUpdates(userInitiatedStart: Boolean = false) {
         if (isWifiPaused || isMotionlessPaused) return  // GPS intentionally stopped by a zone pause hold
 
         val callback = object : LocationUpdateCallback {
@@ -446,21 +465,39 @@ class LocationForegroundService : Service() {
             )
             lastRequestedBypassOsFilter = bypassOsFilter
 
-            locationProvider.getLastLocation(
-                onSuccess = { location ->
-                    location?.let {
-                        lastKnownLocation = it
-                        geofenceHelper.getPauseZone(it)?.let { zone ->
-                            enterPauseZone(zone)
-                        } ?: run {
-                            updateNotification(it.latitude, it.longitude, forceUpdate = true)
-                        }
+            // A restored pause must be re-checked against a fresh fix: a cached fix can only
+            // re-enter, never exit, so a departed user would stay latched. On no usable fix an
+            // explicit user start forces exit (stop/start "kick it loose"); an OS auto-restart stays
+            // put so a restart while genuinely at home doesn't record a false point. Cold start keeps last-known.
+            val restoredPause = insidePauseZone
+            if (restoredPause) {
+                requestFreshOrLastLocation { location, _ ->
+                    if (location != null) {
+                        lastKnownLocation = location
+                        recheckZoneWithLocation(location)
+                    } else if (userInitiatedStart) {
+                        AppLogger.d(TAG, "User-initiated start with no usable fix - forcing exit from zone")
+                        exitPauseZone()
                     }
-                },
-                onFailure = { /* initial location unavailable, updates will arrive */ }
-            )
+                }
+            } else {
+                locationProvider.getLastLocation(
+                    onSuccess = { location ->
+                        location?.let {
+                            lastKnownLocation = it
+                            geofenceHelper.getPauseZone(it)?.let { zone ->
+                                enterPauseZone(zone)
+                            } ?: run {
+                                updateNotification(it.latitude, it.longitude, forceUpdate = true)
+                            }
+                        }
+                    },
+                    onFailure = { /* initial location unavailable, updates will arrive */ }
+                )
+            }
 
             startTrackingHeartbeatLogger()
+            startPauseWatchdog()
         } catch (e: SecurityException) {
             AppLogger.e(TAG, "Location permission missing", e)
             stopForegroundServiceWithReason("Location permission missing")
@@ -472,6 +509,7 @@ class LocationForegroundService : Service() {
 
     private fun stopLocationUpdates() {
         cancelTrackingHeartbeatLogger()
+        stopPauseWatchdog()
         locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
         locationUpdateCallback = null
     }
@@ -524,7 +562,117 @@ class LocationForegroundService : Service() {
         trackingHeartbeatJob = null
     }
 
+    /**
+     * Fresh fix (no cached locations), falling back to last-known on timeout. Rate-limited to one
+     * probe in flight and one per [FRESH_PROBE_MIN_INTERVAL_MS]; throttled callers get last-known.
+     * The callback's second arg is true only when a fresh probe actually ran (false when throttled),
+     * so a caller won't force-exit on a throttled stale fallback. Main-thread only, so it's race-free.
+     */
+    private fun requestFreshOrLastLocation(onResult: (Location?, Boolean) -> Unit) {
+        val now = SystemClock.elapsedRealtime()
+        val last = lastFreshProbeAtMs
+        if (freshProbeInFlight || (last != null && now - last < FRESH_PROBE_MIN_INTERVAL_MS)) {
+            AppLogger.d(TAG, "Fresh-fix probe throttled (inFlight=$freshProbeInFlight) - using last-known")
+            deliverLastKnownIfFresh { onResult(it, false) }
+            return
+        }
+
+        freshProbeInFlight = true
+        lastFreshProbeAtMs = now
+        locationProvider.getCurrentLocation(FRESH_FIX_TIMEOUT_MS) { fresh ->
+            freshProbeInFlight = false
+            if (fresh != null && isFixFresh(fresh)) {
+                onResult(fresh, true)
+            } else {
+                // A non-null but stale probe (some chips replay a cached fix on a refreshed timestamp
+                // despite maxUpdateAge=0) must not re-confirm the pause - fall through to last-known.
+                deliverLastKnownIfFresh { onResult(it, true) }
+            }
+        }
+    }
+
+    /**
+     * Serves the last-known fix only if recent. A stale one is usually the in-zone fix that latched
+     * the pause, so it's reported as null - letting paused callers force-exit instead of re-latching.
+     */
+    private fun deliverLastKnownIfFresh(onResult: (Location?) -> Unit) {
+        locationProvider.getLastLocation(
+            onSuccess = { location ->
+                if (location != null && isFixFresh(location)) {
+                    onResult(location)
+                } else {
+                    if (location != null) AppLogger.d(TAG, "Last-known fix is stale - treating as no fix")
+                    onResult(null)
+                }
+            },
+            onFailure = { onResult(null) }
+        )
+    }
+
+    /**
+     * Freshness by the monotonic clock (elapsedRealtimeNanos), which a chip cannot refresh when it
+     * replays a cached fix - unlike wall-clock time. Used to reject a stale fix on any recovery path.
+     */
+    private fun isFixFresh(location: Location): Boolean {
+        val ageMs = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) / 1_000_000L
+        return ageMs < STALE_FIX_THRESHOLD_MS
+    }
+
+    /**
+     * Periodically re-evaluates the pause zone against a fresh fix so a departure resumes without
+     * the user opening the app. Tied to the GPS-stream lifecycle like the heartbeat logger; each
+     * tick self-gates (see [runPauseWatchdogTick]).
+     */
+    private fun startPauseWatchdog() {
+        pauseWatchdogJob?.cancel()
+        val scope = serviceScope ?: return
+        pauseWatchdogJob = scope.launch {
+            while (isActive) {
+                delay(PAUSE_WATCHDOG_INTERVAL_MS)
+                withContext(Dispatchers.Main) { runPauseWatchdogTick() }
+            }
+        }
+    }
+
+    private fun stopPauseWatchdog() {
+        pauseWatchdogJob?.cancel()
+        pauseWatchdogJob = null
+    }
+
+    private fun runPauseWatchdogTick() {
+        // Wifi/motionless holds stop GPS and own their own resume - don't probe over them.
+        if (!insidePauseZone || isWifiPaused || isMotionlessPaused) return
+        // Only probe once the stream has been quiet longer than the interval would explain (a real stall).
+        val sinceLastFix = SystemClock.elapsedRealtime() - lastFixAtMs
+        val quietThresholdMs = maxOf(PAUSE_WATCHDOG_INTERVAL_MS, config.interval * PAUSE_WATCHDOG_STALL_INTERVALS)
+        if (sinceLastFix < quietThresholdMs) return
+        AppLogger.i(TAG, "Pause watchdog: stream quiet ${sinceLastFix / 1000}s - re-evaluating zone")
+        requestFreshOrLastLocation { location, _ ->
+            // Act only on a usable fix - a stale/absent one leaves the pause untouched (no home false-exits).
+            location?.let {
+                lastKnownLocation = it
+                recheckZoneWithLocation(it)
+            }
+        }
+    }
+
     private fun handleZoneRecheckAction() {
+        // A cached fix while paused is usually the stale home fix - force a fresh one so a departure exits.
+        if (insidePauseZone) {
+            requestFreshOrLastLocation { location, probed ->
+                if (location != null) {
+                    lastKnownLocation = location
+                    recheckZoneWithLocation(location)
+                } else if (probed) {
+                    // Only a genuine probe that found nothing exits. A throttled stale fallback must
+                    // not fabricate a departure while genuinely at home (eg an edit right after a watchdog probe).
+                    AppLogger.d(TAG, "No location for recheck, forcing exit from zone")
+                    exitPauseZone()
+                }
+            }
+            return
+        }
+
         val cachedLoc = lastKnownLocation
         val now = System.currentTimeMillis()
 
@@ -536,18 +684,10 @@ class LocationForegroundService : Service() {
                     if (location != null) {
                         lastKnownLocation = location
                         recheckZoneWithLocation(location)
-                    } else {
-                        if (insidePauseZone) {
-                            AppLogger.d(TAG, "No location for recheck, forcing exit from zone")
-                            exitPauseZone()
-                        }
                     }
                 },
                 onFailure = { e ->
                     AppLogger.e(TAG, "Recheck error", e)
-                    if (insidePauseZone) {
-                        exitPauseZone()
-                    }
                 }
             )
         }
@@ -665,6 +805,8 @@ class LocationForegroundService : Service() {
         }
 
         // Position-jump filter: chip-reported and implied speed are independent signals; large disagreement means the chip hallucinated position.
+        // Kept active while paused too: a real departure passes it anyway (implied speed agrees with
+        // chip, or is below the floor), but one hallucinated jump must not fake a departure.
         if (prev != null && location.hasSpeed()) {
             val dt = location.time - prev.time
             if (dt in 1000..POSITION_JUMP_FILTER_WINDOW_MS) {
@@ -685,8 +827,9 @@ class LocationForegroundService : Service() {
 
         // Software-side distance filter. Enforces config.minUpdateDistance for DB/sync
         // regardless of the OS filter (which passes 0m to when a location-dependent
-        // profile is enabled). Bypassed during entry delay so arrival points get logged.
-        if (pendingPauseZone == null && config.minUpdateDistance > 0f && prev != null) {
+        // profile is enabled). Bypassed during entry delay so arrival points get logged, and while
+        // paused so a small step across the radius reaches the zone-exit check (the radius still gates it).
+        if (!insidePauseZone && pendingPauseZone == null && config.minUpdateDistance > 0f && prev != null) {
             val distance = prev.distanceTo(location)
             if (distance < config.minUpdateDistance) {
                 AppLogger.d(TAG, "Location filtered: distance ${String.format(Locale.US, "%.1f", distance)}m < threshold ${config.minUpdateDistance}m")

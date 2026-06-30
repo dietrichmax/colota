@@ -44,6 +44,17 @@ interface LocationProvider {
         onSuccess: (Location?) -> Unit,
         onFailure: (Exception) -> Unit
     )
+
+    /**
+     * Actively acquire one fresh fix, forbidding cached locations.
+     *
+     * @param timeoutMs Max time to wait for the fix.
+     * @param onResult  Called once with the fix, or null on timeout/failure.
+     */
+    fun getCurrentLocation(
+        timeoutMs: Long,
+        onResult: (Location?) -> Unit
+    )
 }
 
 /**

@@ -11,8 +11,14 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.CancellationSignal
+import android.os.Handler
 import android.os.Looper
+import androidx.core.location.LocationManagerCompat
+import androidx.core.util.Consumer
 import com.Colota.util.AppLogger
+import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * LocationManager-based GPS provider for FOSS flavor (no Google Play Services).
@@ -77,6 +83,40 @@ class NativeLocationProvider(context: Context) : LocationProvider {
             onSuccess(locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER))
         } catch (e: SecurityException) {
             onFailure(e)
+        }
+    }
+
+    override fun getCurrentLocation(timeoutMs: Long, onResult: (Location?) -> Unit) {
+        // Guard delivery so the timeout and the consumer can't both fire onResult.
+        val delivered = AtomicBoolean(false)
+        fun deliver(location: Location?) {
+            if (delivered.compareAndSet(false, true)) onResult(location)
+        }
+
+        val handler = Handler(Looper.getMainLooper())
+        val cancellationSignal = CancellationSignal()
+        val timeoutRunnable = Runnable {
+            cancellationSignal.cancel()
+            deliver(null)
+        }
+
+        try {
+            LocationManagerCompat.getCurrentLocation(
+                locationManager,
+                LocationManager.GPS_PROVIDER,
+                cancellationSignal,
+                Executor { handler.post(it) },
+                Consumer { location ->
+                    handler.removeCallbacks(timeoutRunnable)
+                    deliver(location)
+                }
+            )
+            handler.postDelayed(timeoutRunnable, timeoutMs)
+            AppLogger.d(TAG, "Requested fresh GPS_PROVIDER fix (timeout=${timeoutMs}ms)")
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Fresh GPS_PROVIDER fix failed: ${e.message}")
+            handler.removeCallbacks(timeoutRunnable)
+            deliver(null)
         }
     }
 }
