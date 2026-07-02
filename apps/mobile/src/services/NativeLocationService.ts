@@ -213,6 +213,19 @@ class NativeLocationService {
   }
 
   /**
+   * Returns date strings (YYYY-MM-DD) in the range that have at least one annotated point.
+   * Used by the calendar view to flag days with notes.
+   */
+  static async getDaysWithNotes(startTimestamp: number, endTimestamp: number): Promise<string[]> {
+    this.ensureModule()
+    return this.safeExecute(
+      () => LocationServiceModule.getDaysWithNotes(startTimestamp, endTimestamp),
+      [],
+      "getDaysWithNotes failed"
+    )
+  }
+
+  /**
    * Returns per-day aggregated stats for a date range.
    * Each entry: { day, count, startTime, endTime, distanceMeters, tripCount }
    */

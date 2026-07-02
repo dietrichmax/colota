@@ -829,6 +829,36 @@ class DatabaseHelperSQLiteTest {
     }
 
     // ========================================================================
+    // getDaysWithNotes
+    // ========================================================================
+
+    @Test
+    fun `getDaysWithNotes returns only days with non-empty notes`() {
+        val annotated = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1708344000L) // day A, midday
+        db.saveLocation(latitude = 52.1, longitude = 13.1, timestamp = 1708344060L) // day A, no note
+        db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 1708430400L) // day B (+1 day), no note
+        db.updateLocationNote(annotated, "lunch spot")
+
+        // Full range: only day A carries a note
+        assertEquals(1, db.getDaysWithNotes(1708300000L, 1708500000L).size)
+        // Narrowed to day A: the annotated day is returned
+        assertEquals(1, db.getDaysWithNotes(1708300000L, 1708387200L).size)
+        // Narrowed to day B: has points but none annotated
+        assertTrue(db.getDaysWithNotes(1708387200L, 1708500000L).isEmpty())
+    }
+
+    @Test
+    fun `getDaysWithNotes excludes empty and cleared notes`() {
+        val emptied = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1708344000L)
+        val cleared = db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 1708430400L)
+        db.updateLocationNote(emptied, "") // empty string
+        db.updateLocationNote(cleared, null) // cleared back to null
+
+        val days = db.getDaysWithNotes(1708300000L, 1708500000L)
+        assertTrue(days.isEmpty())
+    }
+
+    // ========================================================================
     // getDailyStats
     // ========================================================================
 

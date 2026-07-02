@@ -945,6 +945,32 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     /**
+     * Returns date strings (YYYY-MM-DD) in the range with at least one annotated
+     * location (non-empty note). Used by the calendar to flag days that have notes.
+     */
+    fun getDaysWithNotes(startTimestamp: Long, endTimestamp: Long): List<String> {
+        val days = mutableListOf<String>()
+        try {
+            readableDatabase.rawQuery(
+                """
+                SELECT DISTINCT strftime('%Y-%m-%d', timestamp, 'unixepoch', 'localtime') as day
+                FROM $TABLE_LOCATIONS
+                WHERE timestamp >= ? AND timestamp <= ? AND note IS NOT NULL AND note != ''
+                ORDER BY day ASC
+                """.trimIndent(),
+                arrayOf(startTimestamp.toString(), endTimestamp.toString())
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    days.add(cursor.getString(0))
+                }
+            }
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error getting days with notes", e)
+        }
+        return days
+    }
+
+    /**
      * Returns per-day aggregated stats for a date range in a single query.
      * Computes distance (haversine) and trip count (15-min gap threshold) inline
      * to avoid nested cursors.

@@ -45,7 +45,9 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
 
   // Calendar state
   const [daysWithData, setDaysWithData] = useState<Set<string>>(new Set())
+  const [daysWithNotes, setDaysWithNotes] = useState<Set<string>>(new Set())
   const daysCache = useRef<Map<string, Set<string>>>(new Map())
+  const notesCache = useRef<Map<string, Set<string>>>(new Map())
   const distanceCache = useRef<Map<string, Map<string, number>>>(new Map())
 
   // Trip segmentation from already-fetched day data
@@ -86,12 +88,14 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       const end = new Date(year, month + 1, 0, 23, 59, 59)
       const startTs = Math.floor(start.getTime() / 1000)
       const endTs = Math.floor(end.getTime() / 1000)
-      const [days, stats] = await Promise.all([
+      const [days, stats, noteDays] = await Promise.all([
         NativeLocationService.getDaysWithData(startTs, endTs),
-        NativeLocationService.getDailyStats(startTs, endTs)
+        NativeLocationService.getDailyStats(startTs, endTs),
+        NativeLocationService.getDaysWithNotes(startTs, endTs)
       ])
       const daySet = new Set(days)
       daysCache.current.set(key, daySet)
+      notesCache.current.set(key, new Set(noteDays))
       const distances = new Map<string, number>()
       for (const stat of stats) {
         if (stat.distanceMeters > 0) distances.set(stat.day, stat.distanceMeters)
@@ -109,6 +113,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     async (year: number, month: number) => {
       const daySet = await prefetchMonth(year, month)
       setDaysWithData(daySet)
+      setDaysWithNotes(notesCache.current.get(`${year}-${pad2(month + 1)}`) ?? new Set())
     },
     [prefetchMonth]
   )
@@ -153,6 +158,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     useCallback(() => {
       const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
       daysCache.current.delete(key)
+      notesCache.current.delete(key)
       distanceCache.current.delete(key)
       fetchTrackData()
       fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
@@ -221,6 +227,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         )
         const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
         daysCache.current.delete(key)
+        notesCache.current.delete(key)
         distanceCache.current.delete(key)
         await fetchTrackData()
         await fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
@@ -232,15 +239,22 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     [mapDate, fetchTrackData, fetchDaysWithData]
   )
 
-  const handlePointNoteChange = useCallback(async (id: number, note: string | null) => {
-    try {
-      await NativeLocationService.updateLocationNote(id, note)
-      setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
-    } catch (error) {
-      logger.error("[LocationHistory] Note update failed:", error)
-      showAlert("Save Failed", "Unable to save note. Please try again.", "error")
-    }
-  }, [])
+  const handlePointNoteChange = useCallback(
+    async (id: number, note: string | null) => {
+      try {
+        await NativeLocationService.updateLocationNote(id, note)
+        setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
+        const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
+        daysCache.current.delete(key)
+        notesCache.current.delete(key)
+        fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
+      } catch (error) {
+        logger.error("[LocationHistory] Note update failed:", error)
+        showAlert("Save Failed", "Unable to save note. Please try again.", "error")
+      }
+    },
+    [mapDate, fetchDaysWithData]
+  )
 
   const mapLocations = selectedTrip ? (selectedTrip.locations as LocationCoords[]) : trackLocations
 
@@ -262,12 +276,22 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         distance={dailyDistance}
         colors={colors}
         daysWithData={daysWithData}
+        daysWithNotes={daysWithNotes}
         dayDistances={distanceCache.current.get(`${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`)}
         onMonthChange={fetchDaysWithData}
         onPrefetchMonth={prefetchMonth}
       />
     ),
-    [mapDate, trackLocations.length, dailyDistance, colors, daysWithData, fetchDaysWithData, prefetchMonth]
+    [
+      mapDate,
+      trackLocations.length,
+      dailyDistance,
+      colors,
+      daysWithData,
+      daysWithNotes,
+      fetchDaysWithData,
+      prefetchMonth
+    ]
   )
 
   return (

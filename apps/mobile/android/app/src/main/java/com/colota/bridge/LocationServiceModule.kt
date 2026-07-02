@@ -374,6 +374,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
 
     @ReactMethod
+    fun getDaysWithNotes(startTimestamp: Double, endTimestamp: Double, promise: Promise) =
+        executeAsync(promise) {
+            val days = dbHelper.getDaysWithNotes(startTimestamp.toLong(), endTimestamp.toLong())
+            Arguments.createArray().apply {
+                days.forEach { pushString(it) }
+            }
+        }
+
+    @ReactMethod
     fun getDailyStats(startTimestamp: Double, endTimestamp: Double, promise: Promise) =
         executeAsync(promise) {
             val stats = dbHelper.getDailyStats(startTimestamp.toLong(), endTimestamp.toLong())
