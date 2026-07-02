@@ -19,6 +19,7 @@ interface CalendarPickerProps {
   distance?: string
   colors: ThemeColors
   daysWithData: Set<string>
+  daysWithNotes?: Set<string>
   dayDistances?: Map<string, number>
   onMonthChange: (year: number, month: number) => void
   onPrefetchMonth?: (year: number, month: number) => void
@@ -41,6 +42,7 @@ export function CalendarPicker({
   distance,
   colors,
   daysWithData,
+  daysWithNotes,
   dayDistances,
   onMonthChange,
   onPrefetchMonth
@@ -251,6 +253,7 @@ export function CalendarPicker({
 
               const dateKey = formatDateKey(viewYear, viewMonth, cell.day)
               const hasData = daysWithData.has(dateKey)
+              const hasNote = daysWithNotes?.has(dateKey) ?? false
               const dist = dayDistances?.get(dateKey)
               const cellDate = new Date(viewYear, viewMonth, cell.day)
               const isSelected = isSameDay(cellDate, date)
@@ -274,6 +277,9 @@ export function CalendarPicker({
                     >
                       {cell.day}
                     </Text>
+                    {hasNote && (
+                      <View style={[styles.noteDot, { backgroundColor: colors.primary, borderColor: colors.card }]} />
+                    )}
                   </View>
                   {dist != null && dist > 0 ? (
                     <Text
@@ -409,5 +415,14 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     marginTop: 2
+  },
+  noteDot: {
+    position: "absolute",
+    top: 1,
+    right: 1,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    borderWidth: 1
   }
 })

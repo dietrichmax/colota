@@ -23,12 +23,13 @@ import {
 import { getSpeedUnit } from "../../../utils/geo"
 import { HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
 
+const HAS_NOTE = ["!=", ["get", "note"], ""]
 const trackPointStyle: any = {
-  circleRadius: 4,
+  circleRadius: ["case", HAS_NOTE, 5, 4],
   circleColor: ["get", "color"],
-  circleOpacity: 0.4,
+  circleOpacity: ["case", HAS_NOTE, 1, 0.4],
   circleStrokeColor: ["get", "color"],
-  circleStrokeWidth: 1.5
+  circleStrokeWidth: ["case", HAS_NOTE, 2, 1.5]
 }
 
 interface Props {
@@ -61,9 +62,7 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
   } | null>(null)
   const [noteDraft, setNoteDraft] = useState("")
   const [mapReady, setMapReady] = useState(false)
-  // Note edits made here, keyed by id; read on press so a note change doesn't rebuild the
-  // points source (and re-render the map). Reset on reload.
-  const noteEditsRef = useRef<Record<number, string>>({})
+  const [noteEdits, setNoteEdits] = useState<Record<number, string>>({})
 
   // Fit map to track bounds when fitVersion changes (date change, trip select)
   const bounds = useMemo(() => computeTrackBounds(locations), [locations])
@@ -89,7 +88,7 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
   useEffect(() => {
     setPopup(null)
     setSelectedPoint(null)
-    noteEditsRef.current = {}
+    setNoteEdits({})
   }, [locations])
 
   const handleFitTrack = useCallback(() => {
@@ -143,10 +142,13 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
     () => buildTrackSegmentsGeoJSON(locations, colors, { skipIndices, locationColors }),
     [locations, colors, skipIndices, locationColors]
   )
-  const pointsGeoJSON = useMemo(
-    () => buildTrackPointsGeoJSON(locations, colors, locationColors),
-    [locations, colors, locationColors]
-  )
+  const pointsGeoJSON = useMemo(() => {
+    const locs =
+      Object.keys(noteEdits).length === 0
+        ? locations
+        : locations.map((l) => (l.id != null && l.id in noteEdits ? { ...l, note: noteEdits[l.id] } : l))
+    return buildTrackPointsGeoJSON(locs, colors, locationColors)
+  }, [locations, colors, locationColors, noteEdits])
 
   // Highlight GeoJSON for selected point
   const highlightGeoJSON = useMemo(() => {
@@ -187,8 +189,7 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
       const coord = geom.coordinates as [number, number]
       const color = feature.properties.color ?? trackColor
       const id = (feature.properties.id as number | undefined) ?? -1
-      // Prefer an edit made this session; the points source keeps the loaded value.
-      const note = id >= 0 && id in noteEditsRef.current ? noteEditsRef.current[id] : (feature.properties.note ?? "")
+      const note = feature.properties.note ?? ""
       setSelectedPoint({ longitude: coord[0], latitude: coord[1], color })
       setNoteDraft(note)
       setPopup({
@@ -209,8 +210,7 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
     if (!popup || popup.id < 0 || !onPointNoteChange) return
     const saved = noteDraft.trim()
     onPointNoteChange(popup.id, saved || null)
-    // popup is a snapshot and the points source is unchanged, so reflect the save here; re-taps read the overlay
-    noteEditsRef.current[popup.id] = saved
+    setNoteEdits((prev) => ({ ...prev, [popup.id]: saved }))
     setPopup((p) => (p ? { ...p, note: saved } : p))
     setNoteDraft(saved)
   }, [popup, noteDraft, onPointNoteChange])

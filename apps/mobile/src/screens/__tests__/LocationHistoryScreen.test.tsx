@@ -7,6 +7,7 @@ jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
   default: {
     getDaysWithData: jest.fn().mockResolvedValue([]),
+    getDaysWithNotes: jest.fn().mockResolvedValue([]),
     getDailyStats: jest.fn().mockResolvedValue([]),
     getLocationsByDateRange: jest.fn().mockResolvedValue([]),
     exportTripsToFile: jest.fn().mockResolvedValue("/tmp/export"),
