@@ -79,6 +79,11 @@ class LocationForegroundServiceTest {
         every { deviceInfoHelper.isBatteryCritical() } returns false
         every { deviceInfoHelper.isLocationEnabled() } returns true
         every { geofenceHelper.getPauseZone(any()) } returns null
+        // Default the fresh-fix probe to a timeout (null) so requestFreshOrLastLocation falls
+        // back to getLastLocation, preserving prior recheck-test behavior. Fresh-path tests override.
+        every { locationProvider.getCurrentLocation(any(), any()) } answers {
+            secondArg<(Location?) -> Unit>()(null)
+        }
         mockkObject(PayloadBuilder)
         every { PayloadBuilder.buildLocationPayload(any(), any(), any(), any(), any(), any(), any()) } returns JSONObject()
         every { PayloadBuilder.parseFieldMap(any()) } returns null
@@ -186,6 +191,7 @@ class LocationForegroundServiceTest {
         bearing: Float = 90f,
         hasBearing: Boolean = true,
         time: Long = System.currentTimeMillis(),
+        elapsedNanos: Long = 0L,
         distanceTo: Float = 0f
     ): Location = mockk {
         every { latitude } returns lat
@@ -198,6 +204,7 @@ class LocationForegroundServiceTest {
         every { this@mockk.bearing } returns bearing
         every { hasBearing() } returns hasBearing
         every { this@mockk.time } returns time
+        every { elapsedRealtimeNanos } returns elapsedNanos
         every { provider } returns "gps"
         every { distanceTo(any()) } returns distanceTo
         every { setSpeed(any()) } just Runs
@@ -776,6 +783,296 @@ class LocationForegroundServiceTest {
         invokeHandleZoneRecheckAction()
 
         assertEquals(freshLocation, getField<Location?>("lastKnownLocation"))
+    }
+
+    // =========================================================================
+    // #444 - restored / paused zone recheck against a fresh fix
+    // =========================================================================
+
+    @Test
+    fun `recheck while paused forces a fresh fix and exits when it lands outside`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        val fresh = mockLocation(lat = 48.0, lon = 11.0)
+        every { geofenceHelper.getPauseZone(fresh) } returns null
+        every { locationProvider.getCurrentLocation(any(), any()) } answers {
+            secondArg<(Location?) -> Unit>()(fresh)
+        }
+
+        invokeHandleZoneRecheckAction()
+
+        verify { locationProvider.getCurrentLocation(any(), any()) }
+        assertFalse(getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `recheck while paused stays paused when the fresh fix is still inside`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        val fresh = mockLocation(lat = 52.50, lon = 13.40)
+        every { geofenceHelper.getPauseZone(fresh) } returns homeGeofence
+        every { locationProvider.getCurrentLocation(any(), any()) } answers {
+            secondArg<(Location?) -> Unit>()(fresh)
+        }
+
+        invokeHandleZoneRecheckAction()
+
+        assertTrue(getField("insidePauseZone"))
+        assertEquals("Home", getField<String?>("currentZoneName"))
+    }
+
+    @Test
+    fun `recheck while paused falls back to last-known when the fresh fix times out`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        val lastKnown = mockLocation(lat = 48.0, lon = 11.0)
+        every { geofenceHelper.getPauseZone(lastKnown) } returns null
+        // getCurrentLocation defaults to null (timeout) from setUp.
+        every { locationProvider.getLastLocation(any(), any()) } answers {
+            firstArg<(Location?) -> Unit>()(lastKnown)
+        }
+
+        invokeHandleZoneRecheckAction()
+
+        verify { locationProvider.getLastLocation(any(), any()) }
+        assertFalse(getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `paused recheck throttles a second fresh probe within the min interval`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        val fresh = mockLocation(lat = 52.50, lon = 13.40)   // still inside -> stays paused
+        every { geofenceHelper.getPauseZone(fresh) } returns homeGeofence
+        every { locationProvider.getCurrentLocation(any(), any()) } answers {
+            secondArg<(Location?) -> Unit>()(fresh)
+        }
+        every { locationProvider.getLastLocation(any(), any()) } answers {
+            firstArg<(Location?) -> Unit>()(fresh)
+        }
+
+        invokeHandleZoneRecheckAction()   // first: spins the fresh probe
+        invokeHandleZoneRecheckAction()   // second: throttled -> serves last-known instead
+
+        verify(exactly = 1) { locationProvider.getCurrentLocation(any(), any()) }
+        verify { locationProvider.getLastLocation(any(), any()) }
+    }
+
+    @Test
+    fun `recheck while paused force-exits when the only available fix is a stale in-zone fix`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        // Probe times out (default getCurrentLocation stub -> null), and the last-known fix is the
+        // old in-zone home fix (stale by the monotonic clock). getPauseZone returns Home for it, so
+        // without the staleness guard it would re-confirm the pause - the guard must force exit instead.
+        val stale = mockLocation(lat = 52.50, lon = 13.40, elapsedNanos = -(10L * 60_000L) * 1_000_000L)
+        every { geofenceHelper.getPauseZone(stale) } returns homeGeofence
+        every { locationProvider.getLastLocation(any(), any()) } answers {
+            firstArg<(Location?) -> Unit>()(stale)
+        }
+
+        invokeHandleZoneRecheckAction()
+
+        assertFalse("a stale in-zone fix must not re-confirm the pause", getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `recheck while paused force-exits when the probe returns a stale replayed fix`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        // A chip replays the cached in-zone fix - non-null but old by the monotonic clock - and
+        // getPauseZone returns Home for it, so without the guard it would re-confirm the pause.
+        val staleProbe = mockLocation(lat = 52.50, lon = 13.40, elapsedNanos = -(6L * 60_000L) * 1_000_000L)
+        every { geofenceHelper.getPauseZone(staleProbe) } returns homeGeofence
+        every { locationProvider.getCurrentLocation(any(), any()) } answers {
+            secondArg<(Location?) -> Unit>()(staleProbe)
+        }
+        every { locationProvider.getLastLocation(any(), any()) } answers {
+            firstArg<(Location?) -> Unit>()(null)
+        }
+
+        invokeHandleZoneRecheckAction()
+
+        assertFalse("a stale replayed probe fix must not re-confirm the pause", getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `throttled paused recheck does not fabricate a departure on a stale last-known`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        // A fresh probe ran moments ago (SystemClock.elapsedRealtime()=0 in tests), so this recheck is
+        // throttled to the stale last-known home fix. It must STAY paused, not fabricate a departure.
+        setField("lastFreshProbeAtMs", 0L)
+        val staleHome = mockLocation(lat = 52.50, lon = 13.40, elapsedNanos = -(10L * 60_000L) * 1_000_000L)
+        every { locationProvider.getLastLocation(any(), any()) } answers {
+            firstArg<(Location?) -> Unit>()(staleHome)
+        }
+
+        invokeHandleZoneRecheckAction()
+
+        verify(exactly = 0) { locationProvider.getCurrentLocation(any(), any()) }
+        assertTrue("a throttled recheck with a stale fix must not force a departure", getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `user-initiated start force-exits a restored pause when there is no usable fix`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        // Fresh probe times out (default stub -> null) and last-known is unavailable.
+        every { locationProvider.getLastLocation(any(), any()) } answers {
+            firstArg<(Location?) -> Unit>()(null)
+        }
+
+        invokeSetupLocationUpdates(userInitiated = true)
+
+        assertFalse("explicit stop/start must kick a stuck pause loose", getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `os auto-restart leaves a restored pause untouched when there is no usable fix`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        every { locationProvider.getLastLocation(any(), any()) } answers {
+            firstArg<(Location?) -> Unit>()(null)
+        }
+
+        invokeSetupLocationUpdates(userInitiated = false)
+
+        assertTrue("an OS restart at home with no fix must not record a false exit", getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `pause watchdog does not probe while the live stream is still delivering fixes`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", homeGeofence)
+        setField("lastFixAtMs", 0L)   // SystemClock.elapsedRealtime()=0 in tests -> stream "just delivered"
+
+        invokeRunPauseWatchdogTick()
+
+        verify(exactly = 0) { locationProvider.getCurrentLocation(any(), any()) }
+    }
+
+    @Test
+    fun `pause watchdog probes and exits when the stream is quiet and the fresh fix is outside`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        setField("lastFixAtMs", -700_000L)   // sinceLastFix > 10min interval -> stream quiet
+        val fresh = mockLocation(lat = 48.0, lon = 11.0)
+        every { geofenceHelper.getPauseZone(fresh) } returns null
+        every { locationProvider.getCurrentLocation(any(), any()) } answers {
+            secondArg<(Location?) -> Unit>()(fresh)
+        }
+
+        invokeRunPauseWatchdogTick()
+
+        verify { locationProvider.getCurrentLocation(any(), any()) }
+        assertFalse(getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `pause watchdog stays paused when the quiet-stream probe is still inside`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        setField("lastFixAtMs", -700_000L)
+        val fresh = mockLocation(lat = 52.50, lon = 13.40)
+        every { geofenceHelper.getPauseZone(fresh) } returns homeGeofence
+        every { locationProvider.getCurrentLocation(any(), any()) } answers {
+            secondArg<(Location?) -> Unit>()(fresh)
+        }
+
+        invokeRunPauseWatchdogTick()
+
+        assertTrue(getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `pause watchdog skips probing while a motionless hold has GPS stopped`() {
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", homeGeofence)
+        setField("isMotionlessPaused", true)
+        setField("lastFixAtMs", -700_000L)
+
+        invokeRunPauseWatchdogTick()
+
+        verify(exactly = 0) { locationProvider.getCurrentLocation(any(), any()) }
+    }
+
+    @Test
+    fun `pause watchdog stall threshold scales with the configured interval`() {
+        // 30-min interval -> stall threshold max(10min, 60min) = 60min, so an 11-min gap that would
+        // trip the fixed 10-min floor must NOT probe; the watchdog respects the user's interval.
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 30 * 60_000L,
+            accuracyThreshold = 50f,
+            filterInaccurateLocations = true,
+            syncIntervalSeconds = 0
+        ))
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", homeGeofence)
+        setField("lastFixAtMs", -700_000L)   // ~11.6 min: past the 10-min floor, well under 60min
+
+        invokeRunPauseWatchdogTick()
+
+        verify(exactly = 0) { locationProvider.getCurrentLocation(any(), any()) }
+    }
+
+    @Test
+    fun `handleLocationUpdate while paused rejects a hallucinated outlier instead of fabricating an exit`() = testScope.runTest {
+        // A teleport-signature fix (huge implied speed, ~0 chip speed) lands outside the radius but
+        // must not fake a departure - the jump filter stays active while paused.
+        val prev = mockLocation(lat = 52.50, lon = 13.40, time = 1_000_000L, distanceTo = 2000f)
+        setField("lastKnownLocation", prev)
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+
+        val outlier = mockLocation(lat = 48.0, lon = 11.0, speed = 1f, hasSpeed = true, time = 1_002_000L)
+        every { geofenceHelper.getPauseZone(outlier) } returns null
+
+        invokeHandleLocationUpdate(outlier)
+
+        assertTrue("paused zone must not exit on a single hallucinated outlier", getField("insidePauseZone"))
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `handleLocationUpdate while paused exits on a genuine departure the min-distance filter would drop`() = testScope.runTest {
+        // While paused the min-distance filter is bypassed so a small step across the radius still
+        // reaches the zone-exit check; getPauseZone enforces the actual radius (#444).
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            minUpdateDistance = 50f,
+            accuracyThreshold = 50f,
+            filterInaccurateLocations = true,
+            syncIntervalSeconds = 0
+        ))
+        val prev = mockLocation(lat = 52.50, lon = 13.40, time = 1_000_000L, distanceTo = 30f)
+        setField("lastKnownLocation", prev)
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+
+        // 30m step (< 50m min-distance) just outside the radius, no chip speed -> jump filter N/A.
+        val departing = mockLocation(lat = 52.49, lon = 13.39, hasSpeed = false, time = 1_020_000L)
+        every { geofenceHelper.getPauseZone(departing) } returns null
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(departing)
+
+        assertFalse("a sub-min-distance departure must still exit while paused", getField("insidePauseZone"))
     }
 
     // =========================================================================
@@ -2017,11 +2314,18 @@ class LocationForegroundServiceTest {
         method.invoke(service)
     }
 
-    private fun invokeSetupLocationUpdates() {
+    private fun invokeRunPauseWatchdogTick() {
         val method = LocationForegroundService::class.java
-            .getDeclaredMethod("setupLocationUpdates")
+            .getDeclaredMethod("runPauseWatchdogTick")
         method.isAccessible = true
         method.invoke(service)
+    }
+
+    private fun invokeSetupLocationUpdates(userInitiated: Boolean = false) {
+        val method = LocationForegroundService::class.java
+            .getDeclaredMethod("setupLocationUpdates", Boolean::class.javaPrimitiveType)
+        method.isAccessible = true
+        method.invoke(service, userInitiated)
     }
 
     private fun invokeHandleRecheckProfiles() {

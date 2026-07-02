@@ -69,4 +69,24 @@ class GmsLocationProvider(context: Context) : LocationProvider {
             onFailure(e)
         }
     }
+
+    override fun getCurrentLocation(timeoutMs: Long, onResult: (Location?) -> Unit) {
+        // setMaxUpdateAgeMillis(0) forbids the cached fix, forcing a real GNSS acquisition.
+        val request = CurrentLocationRequest.Builder()
+            .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+            .setMaxUpdateAgeMillis(0)
+            .setDurationMillis(timeoutMs)
+            .build()
+        try {
+            fusedClient.getCurrentLocation(request, null)
+                .addOnSuccessListener { onResult(it) }
+                .addOnFailureListener { onResult(null) }
+            AppLogger.d(TAG, "Requested fresh fused fix (maxAge=0, timeout=${timeoutMs}ms)")
+        } catch (e: Exception) {
+            // Broad: a synchronous throw before the Task is wired must still deliver, or the caller's
+            // in-flight guard latches and every future probe is throttled. Mirrors the FOSS provider.
+            AppLogger.w(TAG, "Fresh fused fix failed: ${e.message}")
+            onResult(null)
+        }
+    }
 }

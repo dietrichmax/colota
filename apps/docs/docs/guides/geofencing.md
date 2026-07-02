@@ -81,6 +81,7 @@ See the [Deep Link Setup](deep-link-setup.md#geofences) guide for the full paylo
 - If you leave before the entry delay completes, the delay is cancelled and tracking continues uninterrupted
 - Stationary detection is suspended inside zones so GPS is never stopped by the stationary timer while zone exit needs to be detected
 - When exiting the zone, tracking automatically resumes
+- If GPS goes quiet while paused (for example, indoors for a long stretch), Colota periodically requests a fresh position to check whether you have left
 - Zone checks happen every location update with minimal overhead
 - You can create unlimited geofence zones
 
