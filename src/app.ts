@@ -20,7 +20,7 @@ if (!REQUIRE_AUTH) {
 app.set("trust proxy", 1)
 app.disable("x-powered-by")
 
-app.use(express.json({ limit: "1mb", strict: true }))
+const jsonParser = express.json({ limit: "1mb", strict: true })
 
 app.use((req: Request, _res: Response, next: NextFunction): void => {
   if (req.path === "/health") return next()
@@ -61,7 +61,7 @@ function authenticate(req: Request, res: Response, next: NextFunction): void {
 }
 
 // OwnTracks HTTP receiver — accepts OwnTracks app payloads and forwards to all targets
-app.post("/owntracks", authenticate, async (req: Request, res: Response): Promise<void> => {
+app.post("/owntracks", authenticate, jsonParser, async (req: Request, res: Response): Promise<void> => {
   const body = req.body as Record<string, unknown>
 
   if (body._type !== "location") {
@@ -80,7 +80,7 @@ app.post("/owntracks", authenticate, async (req: Request, res: Response): Promis
 })
 
 // Colota HTTP receiver — accepts any JSON payload and fans out to all targets
-app.post("/locations", authenticate, async (req: Request, res: Response): Promise<void> => {
+app.post("/locations", authenticate, jsonParser, async (req: Request, res: Response): Promise<void> => {
   if (!req.is("application/json")) {
     res.status(400).json({ error: "Invalid content type" })
     return
@@ -104,7 +104,7 @@ app.post("/locations", authenticate, async (req: Request, res: Response): Promis
   forwardToAll(targets, payload)
 })
 
-app.post("/overland", authenticate, async (req: Request, res: Response): Promise<void> => {
+app.post("/overland", authenticate, jsonParser, async (req: Request, res: Response): Promise<void> => {
   if (!req.is("application/json")) {
     res.status(400).json({ error: "Invalid content type" })
     return

@@ -1,11 +1,13 @@
 services:
   colota-forwarder:
-    image: mxdcodes/colota-forwarder
+    image: mxdcodes/colota-forwarder:v0.2.2
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
     env_file: .env
     read_only: true
+    cap_drop:
+      - ALL
     security_opt:
       - no-new-privileges:true
     mem_limit: 128m
