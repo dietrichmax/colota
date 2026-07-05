@@ -144,7 +144,7 @@ object LocationImporter {
             location = location,
             timestamp = row.timestamp,
             batteryLevel = row.battery ?: 0,
-            batteryStatus = 0,
+            batteryStatus = row.batteryStatus ?: 0,
             fieldMap = options.fieldMap,
             customFields = options.customFields,
             apiFormat = options.apiFormat,

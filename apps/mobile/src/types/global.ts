@@ -110,14 +110,7 @@ export type HttpMethod = "POST" | "GET"
 export type SyncCondition = "any" | "wifi_any" | "wifi_ssid" | "vpn"
 
 export type ApiTemplateName =
-  | "custom"
-  | "dawarich"
-  | "geopulse"
-  | "overland"
-  | "owntracks"
-  | "phonetrack"
-  | "reitti"
-  | "traccar"
+  "custom" | "dawarich" | "geopulse" | "overland" | "owntracks" | "phonetrack" | "reitti" | "traccar"
 
 export type DawarichMode = "single" | "batch"
 
@@ -464,8 +457,7 @@ export type ClientCertInfo = {
 export type ClientCertSource = "keychain" | "p12"
 
 export type ClientCertInfoResult =
-  | { configured: false }
-  | ({ configured: true; error?: string; source?: ClientCertSource } & Partial<ClientCertInfo>)
+  { configured: false } | ({ configured: true; error?: string; source?: ClientCertSource } & Partial<ClientCertInfo>)
 
 export type KeyChainPickResult = Extract<ClientCertInfoResult, { configured: true }>
 

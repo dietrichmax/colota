@@ -402,8 +402,8 @@ class DatabaseHelper private constructor(context: Context) :
         val db = writableDatabase
         val locationSql = """
             INSERT INTO $TABLE_LOCATIONS
-            (latitude, longitude, accuracy, altitude, speed, bearing, battery, timestamp, sent, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (latitude, longitude, accuracy, altitude, speed, bearing, battery, battery_status, note, timestamp, sent, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         val queueSql = """
             INSERT INTO $TABLE_QUEUE
@@ -427,9 +427,11 @@ class DatabaseHelper private constructor(context: Context) :
                     if (row.speed != null) locationStmt.bindLong(5, row.speed.toLong()) else locationStmt.bindNull(5)
                     if (row.bearing != null) locationStmt.bindDouble(6, row.bearing) else locationStmt.bindNull(6)
                     if (row.battery != null) locationStmt.bindLong(7, row.battery.toLong()) else locationStmt.bindNull(7)
-                    locationStmt.bindLong(8, row.timestamp)
-                    locationStmt.bindLong(9, sentFlag)
-                    locationStmt.bindLong(10, nowSec)
+                    if (row.batteryStatus != null) locationStmt.bindLong(8, row.batteryStatus.toLong()) else locationStmt.bindNull(8)
+                    if (row.note != null) locationStmt.bindString(9, row.note) else locationStmt.bindNull(9)
+                    locationStmt.bindLong(10, row.timestamp)
+                    locationStmt.bindLong(11, sentFlag)
+                    locationStmt.bindLong(12, nowSec)
                     val locationId = locationStmt.executeInsert()
                     if (locationId == -1L) continue
                     inserted++
