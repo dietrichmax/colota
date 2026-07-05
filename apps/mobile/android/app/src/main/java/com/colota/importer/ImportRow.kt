@@ -15,4 +15,6 @@ data class ImportRow(
     val speed: Int?,
     val bearing: Double?,
     val battery: Int?,
+    val note: String? = null,
+    val batteryStatus: Int? = null,
 )

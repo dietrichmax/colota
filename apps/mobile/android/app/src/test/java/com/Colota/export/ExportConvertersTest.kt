@@ -91,25 +91,37 @@ class ExportConvertersTest {
     // --- GeoJSON ---
 
     @Test
-    fun `convert GeoJSON produces valid structure`() {
+    fun `convert GeoJSON produces a single columnar MultiPoint feature`() {
         val json = ExportConverters.convert("geojson", sampleRows)
         assertTrue(json.contains("\"type\": \"FeatureCollection\""))
         assertTrue(json.contains("\"type\": \"Feature\""))
-        assertTrue(json.contains("\"type\": \"Point\""))
+        assertTrue(json.contains("\"type\": \"MultiPoint\""))
+        // Exactly one Feature for the whole export (columnar), not one per point.
+        assertEquals(1, Regex("\"type\": \"Feature\"").findAll(json).count())
+        assertFalse(json.contains("\"type\": \"Point\""))
     }
 
     @Test
     fun `convert GeoJSON contains coordinates in lon-lat order`() {
         val json = ExportConverters.convert("geojson", sampleRows)
         assertTrue(json.contains("[13.405, 52.52]"))
+        assertTrue(json.contains("[2.3522, 48.8566]"))
     }
 
     @Test
-    fun `convert GeoJSON contains properties`() {
+    fun `convert GeoJSON emits properties as parallel arrays aligned to coordinates`() {
         val json = ExportConverters.convert("geojson", sampleRows)
-        assertTrue(json.contains("\"accuracy\": 10"))
-        assertTrue(json.contains("\"speed\": 1.2"))
-        assertTrue(json.contains("\"battery\": 85"))
+        assertTrue(json.contains("\"accuracy\": [10, 15]"))
+        assertTrue(json.contains("\"speed\": [1.2, 0.5]"))
+        assertTrue(json.contains("\"battery\": [85, 72]"))
+        assertTrue(json.contains("\"time\": [\""))
+    }
+
+    @Test
+    fun `convert GeoJSON keeps a single point as a MultiPoint`() {
+        val json = ExportConverters.convert("geojson", listOf(sampleRows[0]))
+        assertTrue(json.contains("\"type\": \"MultiPoint\""))
+        assertTrue(json.contains("\"accuracy\": [10]")) // length-1 array, not a scalar
     }
 
     // --- GPX ---
@@ -181,7 +193,7 @@ class ExportConvertersTest {
     fun `GeoJSON JSON-escapes the note and emits null when absent`() {
         val json = ExportConverters.convert("geojson", noteRows)
         assertTrue(json.contains("\\\"big\\\""))
-        assertTrue(json.contains("\"note\": null")) // the second point has no note
+        assertTrue(json.contains(", null]")) // the note column ends with null for the second point
     }
 
     @Test
@@ -270,19 +282,19 @@ class ExportConvertersTest {
 
     private fun streamToString(format: String, rows: List<Map<String, Any?>>, chunks: List<List<Map<String, Any?>>>? = null): String {
         val writer = StringWriter()
-        val coordsCollector = if (format == "kml") KmlCoordsCollector(tempFolder.root) else null
-        coordsCollector.use {
+        val sink = ExportConverters.newSideChannel(format, tempFolder.root)
+        sink.use {
             ExportConverters.writeHeader(writer, format)
             if (chunks != null) {
                 var offset = 0
                 for (chunk in chunks) {
-                    ExportConverters.writeRows(writer, format, chunk, offset, coordsCollector)
+                    ExportConverters.writeRows(writer, format, chunk, offset, sink)
                     offset += chunk.size
                 }
             } else {
-                ExportConverters.writeRows(writer, format, rows, 0, coordsCollector)
+                ExportConverters.writeRows(writer, format, rows, 0, sink)
             }
-            ExportConverters.writeFooter(writer, format, coordsCollector)
+            ExportConverters.writeFooter(writer, format, sink)
         }
         return writer.toString()
     }
@@ -338,8 +350,10 @@ class ExportConvertersTest {
         assertTrue(csvLines[2].startsWith("1,"))
 
         val geojsonResult = streamToString("geojson", emptyList(), chunks = listOf(chunk1, chunk2))
-        assertTrue(geojsonResult.contains("\"id\": 0"))
-        assertTrue(geojsonResult.contains("\"id\": 1"))
+        // Both chunks fold into one MultiPoint feature.
+        assertTrue(geojsonResult.contains("[13.405, 52.52]"))
+        assertTrue(geojsonResult.contains("[2.3522, 48.8566]"))
+        assertEquals(1, Regex("\"type\": \"Feature\"").findAll(geojsonResult).count())
 
         val gpxResult = streamToString("gpx", emptyList(), chunks = listOf(chunk1, chunk2))
         assertTrue(gpxResult.contains("lat=\"52.520000\""))
@@ -363,6 +377,8 @@ class ExportConvertersTest {
 
         val geojsonResult = streamToString("geojson", emptyList())
         assertTrue(geojsonResult.contains("FeatureCollection"))
+        assertTrue("empty export is an empty FeatureCollection, not an empty MultiPoint", geojsonResult.contains("\"features\": []"))
+        assertFalse(geojsonResult.contains("MultiPoint"))
     }
 
     @Test
@@ -384,8 +400,8 @@ class ExportConvertersTest {
         val csv = ExportConverters.convert("csv", sampleRows)
         assertTrue(csv.lines()[1].endsWith(",Charging,")) // battery_status label, then empty note (last column)
         val gj = ExportConverters.convert("geojson", sampleRows)
-        assertTrue(gj.contains("\"bearing\": 180")) // whole double -> no trailing ".0"
-        assertTrue(gj.contains("\"battery_status\": \"Charging\""))
+        assertTrue(gj.contains("\"bearing\": [180")) // whole double -> no trailing ".0"
+        assertTrue(gj.contains("\"battery_status\": [\"Charging\""))
         val gpx = ExportConverters.convert("gpx", sampleRows)
         assertTrue(gpx.contains("<bearing>180</bearing>"))
         assertTrue(gpx.contains("<battery_status>Charging</battery_status>"))
@@ -450,7 +466,7 @@ class ExportConvertersTest {
         assertTrue(csv.contains("\"deer, \"\"big\"\" <antlers>\""))
         val gj = ExportConverters.convertTrips("geojson", trips)
         assertTrue(gj.contains("\\\"big\\\""))
-        assertTrue(gj.contains("\"note\": null")) // the second point has no note
+        assertTrue(gj.contains(", null]")) // the note column ends with null for the second point
         val gpx = ExportConverters.convertTrips("gpx", trips)
         assertTrue(gpx.contains("<note>deer, &quot;big&quot; &lt;antlers&gt;</note>"))
         assertTrue(gpx.contains("<note></note>"))

@@ -4,89 +4,43 @@
     {
       "type": "Feature",
       "geometry": {
-        "type": "Point",
+        "type": "MultiPoint",
         "coordinates": [
-          11.576124,
-          48.137154
+          [11.576124, 48.137154],
+          [11.577003, 48.138001]
         ]
       },
       "properties": {
         "trip": 1,
-        "id": 0,
-        "accuracy": 8.5,
-        "altitude": 520.2,
-        "speed": 1.4,
-        "bearing": 270.5,
-        "battery": 91,
-        "battery_status": "Charging",
-        "note": null,
-        "time": "2023-11-14T22:13:20.000Z"
+        "accuracy": [8.5, 12],
+        "altitude": [520.2, 525],
+        "speed": [1.4, 2],
+        "bearing": [270.5, 275],
+        "battery": [91, 90],
+        "battery_status": ["Charging", "Full"],
+        "note": [null, null],
+        "time": ["2023-11-14T22:13:20.000Z", "2023-11-14T22:14:20.000Z"]
       }
     },
     {
       "type": "Feature",
       "geometry": {
-        "type": "Point",
+        "type": "MultiPoint",
         "coordinates": [
-          11.577003,
-          48.138001
-        ]
-      },
-      "properties": {
-        "trip": 1,
-        "id": 1,
-        "accuracy": 12,
-        "altitude": 525,
-        "speed": 2,
-        "bearing": 275,
-        "battery": 90,
-        "battery_status": "Full",
-        "note": null,
-        "time": "2023-11-14T22:14:20.000Z"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          11.58,
-          48.14
+          [11.58, 48.14],
+          [11.5811, 48.1405]
         ]
       },
       "properties": {
         "trip": 2,
-        "id": 0,
-        "accuracy": 5,
-        "altitude": 530,
-        "speed": 3,
-        "bearing": 10,
-        "battery": 88,
-        "battery_status": "Unplugged/Discharging",
-        "note": null,
-        "time": "2023-11-14T22:30:00.000Z"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          11.5811,
-          48.1405
-        ]
-      },
-      "properties": {
-        "trip": 2,
-        "id": 1,
-        "accuracy": 6.2,
-        "altitude": 0,
-        "speed": 0,
-        "bearing": 0,
-        "battery": 87,
-        "battery_status": "Unknown",
-        "note": null,
-        "time": "2023-11-14T22:31:00.000Z"
+        "accuracy": [5, 6.2],
+        "altitude": [530, 0],
+        "speed": [3, 0],
+        "bearing": [10, 0],
+        "battery": [88, 87],
+        "battery_status": ["Unplugged/Discharging", "Unknown"],
+        "note": [null, null],
+        "time": ["2023-11-14T22:30:00.000Z", "2023-11-14T22:31:00.000Z"]
       }
     }
   ]

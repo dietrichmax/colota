@@ -28,8 +28,7 @@ function errMsg(map: Record<string, string>, err: any, fallback: string): string
 }
 
 type ImportState =
-  | { kind: "idle" }
-  | { kind: "picked"; b64: string; password: string; importing: boolean; error: string | null }
+  { kind: "idle" } | { kind: "picked"; b64: string; password: string; importing: boolean; error: string | null }
 
 export function MtlsSection() {
   const { colors } = useTheme()

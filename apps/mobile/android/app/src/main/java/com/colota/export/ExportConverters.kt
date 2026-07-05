@@ -47,6 +47,49 @@ class KmlCoordsCollector(cacheDir: File) : AutoCloseable {
     }
 }
 
+/** Spools the property columns to temp files (they trail the coords in the JSON) so large exports stay O(1) memory, like [KmlCoordsCollector]. */
+class GeoJsonColumnSpooler(cacheDir: File, private val columns: List<String>) : AutoCloseable {
+    // Per-instance name so two exports in the same dir don't share temp files.
+    private val files = columns.associateWith { File(cacheDir, "geojson_col_${System.identityHashCode(this)}_$it.txt") }
+    private val writers = files.mapValues { BufferedWriter(FileWriter(it.value)) }
+    var count = 0
+        private set
+
+    /** `tokens`: pre-formatted JSON values, one per column in [columns] order. */
+    fun addRow(tokens: List<String>) {
+        columns.forEachIndexed { i, name ->
+            val w = writers.getValue(name)
+            w.write(tokens[i])
+            w.newLine()
+        }
+        count++
+    }
+
+    fun writeProperties(w: Writer) {
+        writers.values.forEach { it.close() }
+        columns.forEachIndexed { idx, name ->
+            // Stream each token straight to the output (like KmlCoordsCollector.writeTo) rather than
+            // building the whole column string first, so peak memory is one token, not one column.
+            w.write("        \"$name\": [")
+            var first = true
+            BufferedReader(FileReader(files.getValue(name))).use { reader ->
+                reader.forEachLine { line ->
+                    if (!first) w.write(", ")
+                    w.write(line)
+                    first = false
+                }
+            }
+            w.write("]")
+            w.write(if (idx < columns.size - 1) ",\n" else "\n")
+        }
+    }
+
+    override fun close() {
+        writers.values.forEach { try { it.close() } catch (_: Exception) {} }
+        files.values.forEach { it.delete() }
+    }
+}
+
 object ExportConverters {
 
     const val PAGE_SIZE = 10_000
@@ -145,12 +188,13 @@ object ExportConverters {
 
     private sealed class FormatWriter(val extension: String, val mimeType: String) {
         abstract fun writeHeader(w: Writer)
-        abstract fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?)
-        abstract fun writeFooter(w: Writer, kml: KmlCoordsCollector?)
-        open val usesKmlCoords: Boolean = false
+        abstract fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, sink: AutoCloseable?)
+        abstract fun writeFooter(w: Writer, sink: AutoCloseable?)
+        /** Disk side channel for formats that spool (KML coords, GeoJSON columns); null otherwise. */
+        open fun newSideChannel(cacheDir: File): AutoCloseable? = null
 
-        fun writeRows(w: Writer, rows: List<ExportRow>, globalOffset: Int, kml: KmlCoordsCollector?) {
-            rows.forEachIndexed { i, row -> writeRow(w, row, globalOffset + i, kml) }
+        fun writeRows(w: Writer, rows: List<ExportRow>, globalOffset: Int, sink: AutoCloseable?) {
+            rows.forEachIndexed { i, row -> writeRow(w, row, globalOffset + i, sink) }
         }
     }
 
@@ -158,7 +202,7 @@ object ExportConverters {
         override fun writeHeader(w: Writer) {
             w.write("id,timestamp,iso_time,latitude,longitude,accuracy,altitude,speed,bearing,battery,battery_status,note\n")
         }
-        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
+        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, sink: AutoCloseable?) {
             w.write(listOf(
                 globalIndex, row.ts, isoTime(row.ts), jsNum(row.lat), jsNum(row.lon),
                 numOrZero(row.accuracy), numOrZero(row.altitude), numOrZero(row.speed), numOrZero(row.bearing), numOrZero(row.battery),
@@ -166,36 +210,48 @@ object ExportConverters {
             ).joinToString(","))
             w.write("\n")
         }
-        override fun writeFooter(w: Writer, kml: KmlCoordsCollector?) {}
+        override fun writeFooter(w: Writer, sink: AutoCloseable?) {}
     }
 
+    // The whole export is one MultiPoint feature: coords stream inline while the property columns
+    // (parallel arrays, index-aligned to coords) spool to disk and splice in at the footer, keeping memory O(1).
     private object GeoJsonFormat : FormatWriter(".geojson", "application/json") {
+        private val COLUMNS = listOf("accuracy", "altitude", "speed", "bearing", "battery", "battery_status", "note", "time")
+
+        override fun newSideChannel(cacheDir: File): AutoCloseable = GeoJsonColumnSpooler(cacheDir, COLUMNS)
+
         override fun writeHeader(w: Writer) {
-            w.write("{\n  \"type\": \"FeatureCollection\",\n  \"features\": [\n")
+            w.write("{\n  \"type\": \"FeatureCollection\",\n  \"features\": [")
         }
-        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
-            if (globalIndex > 0) w.write(",\n")
-            w.write("""    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [${jsNum(row.lon)}, ${jsNum(row.lat)}]
-      },
-      "properties": {
-        "id": $globalIndex,
-        "accuracy": ${jsonValue(row.accuracy)},
-        "altitude": ${jsonValue(row.altitude)},
-        "speed": ${jsonValue(row.speed)},
-        "bearing": ${jsonValue(row.bearing)},
-        "battery": ${jsonValue(row.battery)},
-        "battery_status": ${jsonValue(batteryStatusLabel(row.batteryStatus))},
-        "note": ${jsonValue(row.note)},
-        "time": "${isoTime(row.ts)}"
-      }
-    }""")
+        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, sink: AutoCloseable?) {
+            val coord = "[${jsNum(row.lon)}, ${jsNum(row.lat)}]"
+            if (globalIndex == 0) {
+                w.write("\n    {\n      \"type\": \"Feature\",\n      \"geometry\": {\n        \"type\": \"MultiPoint\",\n        \"coordinates\": [\n          $coord")
+            } else {
+                w.write(",\n          $coord")
+            }
+            // Order must match COLUMNS.
+            (sink as? GeoJsonColumnSpooler)?.addRow(listOf(
+                jsonValue(row.accuracy),
+                jsonValue(row.altitude),
+                jsonValue(row.speed),
+                jsonValue(row.bearing),
+                jsonValue(row.battery),
+                jsonValue(batteryStatusLabel(row.batteryStatus)),
+                jsonValue(row.note),
+                "\"${isoTime(row.ts)}\"",
+            ))
         }
-        override fun writeFooter(w: Writer, kml: KmlCoordsCollector?) {
-            w.write("\n  ]\n}\n")
+        override fun writeFooter(w: Writer, sink: AutoCloseable?) {
+            val spool = sink as? GeoJsonColumnSpooler
+            if (spool == null || spool.count == 0) {
+                // No points: keep it a valid, empty FeatureCollection rather than an empty MultiPoint.
+                w.write("]\n}\n")
+                return
+            }
+            w.write("\n        ]\n      },\n      \"properties\": {\n")
+            spool.writeProperties(w)
+            w.write("      }\n    }\n  ]\n}\n")
         }
     }
 
@@ -212,7 +268,7 @@ object ExportConverters {
     <trkseg>
 """)
         }
-        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
+        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, sink: AutoCloseable?) {
             val lat = String.format(Locale.US, "%.6f", row.lat)
             val lon = String.format(Locale.US, "%.6f", row.lon)
             w.write("""      <trkpt lat="$lat" lon="$lon">
@@ -229,7 +285,7 @@ object ExportConverters {
       </trkpt>
 """)
         }
-        override fun writeFooter(w: Writer, kml: KmlCoordsCollector?) {
+        override fun writeFooter(w: Writer, sink: AutoCloseable?) {
             w.write("""    </trkseg>
   </trk>
 </gpx>
@@ -238,7 +294,7 @@ object ExportConverters {
     }
 
     private object KmlFormat : FormatWriter(".kml", "application/vnd.google-earth.kml+xml") {
-        override val usesKmlCoords: Boolean = true
+        override fun newSideChannel(cacheDir: File): AutoCloseable = KmlCoordsCollector(cacheDir)
         override fun writeHeader(w: Writer) {
             w.write("""<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
@@ -253,8 +309,8 @@ object ExportConverters {
     </Style>
 """)
         }
-        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, kml: KmlCoordsCollector?) {
-            kml?.add("${jsNum(row.lon)},${jsNum(row.lat)},${numOrZero(row.altitude)}")
+        override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, sink: AutoCloseable?) {
+            (sink as? KmlCoordsCollector)?.add("${jsNum(row.lon)},${jsNum(row.lat)},${numOrZero(row.altitude)}")
             w.write("""    <Placemark>
       <TimeStamp><when>${isoTime(row.ts)}</when></TimeStamp>
       <description>Accuracy: ${numOrZero(row.accuracy)}m, Speed: ${numOrZero(row.speed)}m/s</description>
@@ -273,7 +329,7 @@ object ExportConverters {
     </Placemark>
 """)
         }
-        override fun writeFooter(w: Writer, kml: KmlCoordsCollector?) {
+        override fun writeFooter(w: Writer, sink: AutoCloseable?) {
             w.write("""    <Placemark>
       <name>Track Path</name>
       <styleUrl>#pathStyle</styleUrl>
@@ -281,7 +337,7 @@ object ExportConverters {
         <tessellate>1</tessellate>
         <coordinates>
           """)
-            kml?.writeTo(w)
+            (sink as? KmlCoordsCollector)?.writeTo(w)
             w.write("""
         </coordinates>
       </LineString>
@@ -313,12 +369,12 @@ object ExportConverters {
         fetchPage: (limit: Int, offset: Int) -> List<Map<String, Any?>>
     ): Int {
         val writer = forFormat(format)
-        val coordsCollector = if (writer.usesKmlCoords) KmlCoordsCollector(outputFile.parentFile!!) else null
+        val sink = writer.newSideChannel(outputFile.parentFile!!)
         var totalRows = 0
         var offset = 0
         var cancelled = false
 
-        coordsCollector.use {
+        sink.use {
             OutputStreamWriter(outputFile.outputStream(), Charsets.UTF_8).use { w ->
                 writer.writeHeader(w)
 
@@ -326,12 +382,12 @@ object ExportConverters {
                     if (shouldCancel()) { cancelled = true; break }
                     val page = fetchPage(pageSize, offset)
                     if (page.isEmpty()) break
-                    writer.writeRows(w, page.map(ExportRow::from), offset, coordsCollector)
+                    writer.writeRows(w, page.map(ExportRow::from), offset, sink)
                     totalRows += page.size
                     offset += pageSize
                 }
 
-                if (!cancelled) writer.writeFooter(w, coordsCollector)
+                if (!cancelled) writer.writeFooter(w, sink)
             }
         }
         return totalRows
@@ -346,32 +402,34 @@ object ExportConverters {
         forFormat(format).writeHeader(writer)
     }
 
-    /** `coordsCollector` is required for KML (spills LineString coords to disk). */
+    /** Opens the disk side channel for [format]; null for formats that don't spool. */
+    fun newSideChannel(format: String, cacheDir: File): AutoCloseable? =
+        forFormat(format).newSideChannel(cacheDir)
+
+    /** `sink` comes from [newSideChannel]; null for formats that don't spool. */
     fun writeRows(
         writer: Writer,
         format: String,
         rows: List<Map<String, Any?>>,
         globalOffset: Int,
-        coordsCollector: KmlCoordsCollector?
+        sink: AutoCloseable?
     ) {
-        forFormat(format).writeRows(writer, rows.map(ExportRow::from), globalOffset, coordsCollector)
+        forFormat(format).writeRows(writer, rows.map(ExportRow::from), globalOffset, sink)
     }
 
-    fun writeFooter(writer: Writer, format: String, coordsCollector: KmlCoordsCollector?) {
-        forFormat(format).writeFooter(writer, coordsCollector)
+    fun writeFooter(writer: Writer, format: String, sink: AutoCloseable?) {
+        forFormat(format).writeFooter(writer, sink)
     }
 
     fun convert(format: String, rows: List<Map<String, Any?>>): String {
         val writer = forFormat(format)
         val sw = java.io.StringWriter()
-        val coordsCollector = if (writer.usesKmlCoords) {
-            KmlCoordsCollector(java.io.File(System.getProperty("java.io.tmpdir")!!))
-        } else null
+        val sink = writer.newSideChannel(java.io.File(System.getProperty("java.io.tmpdir")!!))
 
-        coordsCollector.use {
+        sink.use {
             writer.writeHeader(sw)
-            writer.writeRows(sw, rows.map(ExportRow::from), 0, coordsCollector)
-            writer.writeFooter(sw, coordsCollector)
+            writer.writeRows(sw, rows.map(ExportRow::from), 0, sink)
+            writer.writeFooter(sw, sink)
         }
         return sw.toString()
     }
@@ -452,36 +510,37 @@ object ExportConverters {
         return sb.toString()
     }
 
+    // One MultiPoint feature per trip. In-memory (not spooled like the flat export) is fine - trips are day-sized.
     private fun tripsToGeoJson(trips: List<TripExport>): String {
         val features = ArrayList<String>()
         for (trip in trips) {
-            trip.rows.forEachIndexed { i, row ->
-                val ts = rowTs(row)
-                features.add(
-                    "    {\n" +
-                    "      \"type\": \"Feature\",\n" +
-                    "      \"geometry\": {\n" +
-                    "        \"type\": \"Point\",\n" +
-                    "        \"coordinates\": [\n" +
-                    "          ${numOrZero(row["longitude"])},\n" +
-                    "          ${numOrZero(row["latitude"])}\n" +
-                    "        ]\n" +
-                    "      },\n" +
-                    "      \"properties\": {\n" +
-                    "        \"trip\": ${trip.index},\n" +
-                    "        \"id\": $i,\n" +
-                    "        \"accuracy\": ${jsonNum(row["accuracy"])},\n" +
-                    "        \"altitude\": ${jsonNum(row["altitude"])},\n" +
-                    "        \"speed\": ${jsonNum(row["speed"])},\n" +
-                    "        \"bearing\": ${jsonNum(row["bearing"])},\n" +
-                    "        \"battery\": ${jsonNum(row["battery"])},\n" +
-                    "        \"battery_status\": ${jsonValue(batteryStatusLabel(row["battery_status"]))},\n" +
-                    "        \"note\": ${jsonValue(row["note"])},\n" +
-                    "        \"time\": \"${isoTime(ts)}\"\n" +
-                    "      }\n" +
-                    "    }"
-                )
+            if (trip.rows.isEmpty()) continue
+            val coords = trip.rows.joinToString(",\n          ") {
+                "[${numOrZero(it["longitude"])}, ${numOrZero(it["latitude"])}]"
             }
+            fun col(transform: (Map<String, Any?>) -> String) = trip.rows.joinToString(", ", transform = transform)
+            features.add(
+                "    {\n" +
+                "      \"type\": \"Feature\",\n" +
+                "      \"geometry\": {\n" +
+                "        \"type\": \"MultiPoint\",\n" +
+                "        \"coordinates\": [\n" +
+                "          $coords\n" +
+                "        ]\n" +
+                "      },\n" +
+                "      \"properties\": {\n" +
+                "        \"trip\": ${trip.index},\n" +
+                "        \"accuracy\": [${col { jsonNum(it["accuracy"]) }}],\n" +
+                "        \"altitude\": [${col { jsonNum(it["altitude"]) }}],\n" +
+                "        \"speed\": [${col { jsonNum(it["speed"]) }}],\n" +
+                "        \"bearing\": [${col { jsonNum(it["bearing"]) }}],\n" +
+                "        \"battery\": [${col { jsonNum(it["battery"]) }}],\n" +
+                "        \"battery_status\": [${col { jsonValue(batteryStatusLabel(it["battery_status"])) }}],\n" +
+                "        \"note\": [${col { jsonValue(it["note"]) }}],\n" +
+                "        \"time\": [${col { "\"${isoTime(rowTs(it))}\"" }}]\n" +
+                "      }\n" +
+                "    }"
+            )
         }
         val featuresBlock = if (features.isEmpty()) "[]" else "[\n${features.joinToString(",\n")}\n  ]"
         return "{\n  \"type\": \"FeatureCollection\",\n  \"features\": $featuresBlock\n}"

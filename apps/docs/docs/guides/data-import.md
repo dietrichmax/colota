@@ -18,7 +18,7 @@ The format is detected automatically from the file content; you don't pick it.
 
 | Format | Extension | Source |
 | --- | --- | --- |
-| **GeoJSON** | `.geojson` | Colota's own export. Any FeatureCollection of Point features with a `time` property also works. |
+| **GeoJSON** | `.geojson` | Colota's own export. Any FeatureCollection of Point or MultiPoint features with a `time` property also works. |
 | **Google Timeline (legacy)** | `Records.json` | Older bulk Location History export from [Google Takeout](https://takeout.google.com). Google removed Location History from Takeout in late 2024 - use this format for files exported before then. |
 | **Google Timeline (new)** | `.json` | On-device export from **Android Settings → Location → Location services → Timeline → Export Timeline data**. |
 | **GPX** | `.gpx` | GPS Exchange Format. Sport watches (Garmin TrackPointExtension supported), Strava, generic trackers. |
@@ -64,7 +64,7 @@ Rows are dropped silently as "invalid" when any of the following hold:
 - Missing latitude, longitude, or timestamp
 - Coordinates out of range (latitude not in [-90, 90] or longitude not in [-180, 180])
 - Timestamp more than 5 minutes in the future
-- Geometry type isn't a single Point (LineString-only KML Placemarks for example)
+- Geometry type isn't a Point or MultiPoint (LineString-only KML Placemarks for example)
 
 The preview shows the invalid count so you can decide whether to proceed.
 
