@@ -1,3 +1,4 @@
 - Share your setup as a link: pick which settings, geofences and profiles to include from the new Share Setup screen in Settings.
 - Fixed tracking stopping after an app update.
-- GeoJSON export is now a compact format (~40% smaller) that re-imports into Colota without losing notes or battery status. Older GeoJSON files still import. (breaking)
+- GeoJSON export is now using MultiPoint instead of Point
+- update com.google.android.gms:play-services-location to v21.4.0
