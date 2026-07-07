@@ -20,7 +20,9 @@ No, but you can use [Dawarich](/docs/integrations/dawarich) or a custom backend 
 
 Yes. The **FOSS variant** (available on F-Droid, IzzyOnDroid and GitHub Releases) uses Android's native `LocationManager` and has no Google Play Services dependency. It works on LineageOS, GrapheneOS, CalyxOS and any ROM without Google services.
 
-The Google Play variant uses `FusedLocationProvider` for potentially better location accuracy through Wi-Fi and cell tower fusion.
+On Android 12+ the FOSS variant requests the platform's built-in fused location provider (an AOSP API, not Google Play Services), which adds Wi-Fi and cell tower fusion on ROMs that provide a network location backend. Without such a backend, or on Android 11 and older, it transparently uses raw GPS.
+
+The Google Play variant uses `FusedLocationProvider` from Google Play Services for the same Wi-Fi and cell tower fusion on any Android version.
 
 **GrapheneOS users:** You can use the GMS variant with sandboxed Google Play. GrapheneOS reroutes location requests to its own reimplementation of the Play geolocation service, so you get the accuracy benefits of `FusedLocationProvider` without sending location data to Google.
 
@@ -28,7 +30,7 @@ The Google Play variant uses `FusedLocationProvider` for potentially better loca
 
 The **Google Play variant** is generally the better choice for most users. `FusedLocationProvider` combines GPS, Wi-Fi, cell towers and motion sensors to deliver faster fixes and better battery efficiency, especially indoors and in dense urban areas.
 
-The **FOSS variant** uses Android's raw `LocationManager` with GPS as primary and network as fallback. It works reliably outdoors, but cold-start fixes can be slower and indoor accuracy is weaker without Wi-Fi and cell tower fusion.
+The **FOSS variant** uses the platform's fused location provider on Android 12+, which delivers comparable accuracy on stock ROMs. On de-Googled ROMs without a network location backend and on Android 11 or older it falls back to raw GPS - reliable outdoors, but cold-start fixes can be slower and indoor accuracy is weaker without Wi-Fi and cell tower fusion.
 
 If avoiding (sandboxed) Play Services is a priority, the FOSS variant is a perfectly fine option. On GrapheneOS with sandboxed Google Play, the GMS variant gives you the accuracy benefits without sending location data to Google (see above).
 

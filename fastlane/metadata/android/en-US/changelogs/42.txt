@@ -1,0 +1,1 @@
+- FOSS variant: faster and more accurate fixes on Android 12+ via the platform fused location provider, with GPS fallback on older versions
