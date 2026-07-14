@@ -21,7 +21,7 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
-import { HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
+import { HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
 
 const HAS_NOTE = ["!=", ["get", "note"], ""]
 const trackPointStyle: any = {
@@ -233,6 +233,7 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
         ref={mapRef}
         initialCenter={initialCenter}
         initialZoom={2}
+        maxZoom={MAX_MAP_ZOOM}
         onPress={handleMapPress}
         onRegionDidChange={handleRegionChange}
         onMapReady={handleMapReady}

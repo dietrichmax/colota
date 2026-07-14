@@ -1,8 +1,10 @@
 import React from "react"
 import { render, act } from "@testing-library/react-native"
 import { TrackMap } from "../TrackMap"
+import { MAX_MAP_ZOOM } from "../../../../constants"
 
 const mockFitBounds = jest.fn()
+const mockMapViewProps = jest.fn()
 
 jest.mock("../../map/ColotaMapView", () => {
   const R = require("react")
@@ -10,6 +12,7 @@ jest.mock("../../map/ColotaMapView", () => {
   return {
     __esModule: true,
     ColotaMapView: R.forwardRef(function MockColotaMapView(props: any, ref: any) {
+      mockMapViewProps(props)
       const onMapReady = props.onMapReady
       R.useImperativeHandle(ref, () => ({
         camera: { fitBounds: mockFitBounds },
@@ -78,6 +81,7 @@ const loc = (lat: number, lon: number) => ({
 describe("TrackMap auto-fit", () => {
   beforeEach(() => {
     mockFitBounds.mockClear()
+    mockMapViewProps.mockClear()
     jest.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb: any) => {
       cb(0)
       return 0
@@ -106,5 +110,10 @@ describe("TrackMap auto-fit", () => {
       rerender(<TrackMap locations={locsB} colors={colors} trackColor="#000" fitVersion={3} />)
     })
     expect(mockFitBounds).toHaveBeenCalledTimes(2)
+  })
+
+  it("caps the map's zoom so a single point can't over-zoom", () => {
+    render(<TrackMap locations={[loc(52.5, 13.4)]} colors={colors} trackColor="#000" fitVersion={1} />)
+    expect(mockMapViewProps).toHaveBeenCalledWith(expect.objectContaining({ maxZoom: MAX_MAP_ZOOM }))
   })
 })
