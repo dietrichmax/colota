@@ -63,7 +63,6 @@ export interface RegionChangePayload {
 interface Props {
   initialCenter: [number, number] // [lon, lat]
   initialZoom?: number
-  maxZoom?: number
   onPress?: (coords: { latitude: number; longitude: number }) => void
   onRegionDidChange?: (payload: RegionChangePayload) => void
   onMapReady?: () => void
@@ -72,7 +71,7 @@ interface Props {
 }
 
 export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapView(
-  { initialCenter, initialZoom = DEFAULT_MAP_ZOOM, maxZoom, onPress, onRegionDidChange, onMapReady, style, children },
+  { initialCenter, initialZoom = DEFAULT_MAP_ZOOM, onPress, onRegionDidChange, onMapReady, style, children },
   ref
 ) {
   const cameraRef = useRef<CameraRef>(null)
@@ -184,7 +183,6 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
       >
         <Camera
           ref={cameraRef}
-          maxZoom={maxZoom}
           initialViewState={{
             center: initialCenter,
             zoom: initialZoom
