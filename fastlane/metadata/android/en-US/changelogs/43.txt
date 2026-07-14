@@ -1,0 +1,1 @@
+- Fixed the history map zooming in too close when a day has only one recorded point
