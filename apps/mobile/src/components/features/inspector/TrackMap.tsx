@@ -21,7 +21,7 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
-import { HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
+import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
 
 const HAS_NOTE = ["!=", ["get", "note"], ""]
 const trackPointStyle: any = {
@@ -73,12 +73,17 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
     if (fitVersion === fittedVersionRef.current) return
     // Defer to next frame so the map's GL context is fully ready after onDidFinishLoadingMap
     requestAnimationFrame(() => {
-      if (!mapRef.current?.camera) return
+      const camera = mapRef.current?.camera
+      if (!camera) return
       fittedVersionRef.current = fitVersion ?? 0
-      mapRef.current.camera.fitBounds([bounds.sw[0], bounds.sw[1], bounds.ne[0], bounds.ne[1]], {
-        padding: { top: 60, right: 60, bottom: 60, left: 60 },
-        duration: MAP_ANIMATION_DURATION_MS
-      })
+      if (bounds.sw[0] === bounds.ne[0] && bounds.sw[1] === bounds.ne[1]) {
+        camera.setStop({ center: bounds.sw, zoom: DEFAULT_MAP_ZOOM, duration: MAP_ANIMATION_DURATION_MS })
+      } else {
+        camera.fitBounds([bounds.sw[0], bounds.sw[1], bounds.ne[0], bounds.ne[1]], {
+          padding: { top: 60, right: 60, bottom: 60, left: 60 },
+          duration: MAP_ANIMATION_DURATION_MS
+        })
+      }
     })
   }, [bounds, mapReady, fitVersion])
 

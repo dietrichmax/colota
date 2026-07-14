@@ -1,8 +1,10 @@
 import React from "react"
 import { render, act } from "@testing-library/react-native"
 import { TrackMap } from "../TrackMap"
+import { DEFAULT_MAP_ZOOM } from "../../../../constants"
 
 const mockFitBounds = jest.fn()
+const mockSetStop = jest.fn()
 
 jest.mock("../../map/ColotaMapView", () => {
   const R = require("react")
@@ -12,7 +14,7 @@ jest.mock("../../map/ColotaMapView", () => {
     ColotaMapView: R.forwardRef(function MockColotaMapView(props: any, ref: any) {
       const onMapReady = props.onMapReady
       R.useImperativeHandle(ref, () => ({
-        camera: { fitBounds: mockFitBounds },
+        camera: { fitBounds: mockFitBounds, setStop: mockSetStop },
         mapView: null
       }))
       R.useEffect(() => {
@@ -78,6 +80,7 @@ const loc = (lat: number, lon: number) => ({
 describe("TrackMap auto-fit", () => {
   beforeEach(() => {
     mockFitBounds.mockClear()
+    mockSetStop.mockClear()
     jest.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb: any) => {
       cb(0)
       return 0
@@ -106,5 +109,13 @@ describe("TrackMap auto-fit", () => {
       rerender(<TrackMap locations={locsB} colors={colors} trackColor="#000" fitVersion={3} />)
     })
     expect(mockFitBounds).toHaveBeenCalledTimes(2)
+  })
+
+  it("centers a single point at a fixed zoom instead of fitting bounds", () => {
+    render(<TrackMap locations={[loc(52.5, 13.4)]} colors={colors} trackColor="#000" fitVersion={1} />)
+
+    // A zero-extent bounds would make fitBounds zoom to the max level, so a lone point must not fit
+    expect(mockFitBounds).not.toHaveBeenCalled()
+    expect(mockSetStop).toHaveBeenCalledWith(expect.objectContaining({ center: [13.4, 52.5], zoom: DEFAULT_MAP_ZOOM }))
   })
 })
