@@ -26,7 +26,7 @@ Receives location updates from the [Colota](https://colota.app) app or any OwnTr
 ```yaml
 services:
   colota-forwarder:
-    image: mxdcodes/colota-forwarder:latest
+    image: mxdcodes/colota-forwarder:v0.3.0
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
@@ -107,9 +107,19 @@ TARGET_2_TYPE=owntracks
 
 ### GeoPulse
 
+GeoPulse protects its `/api/colota` endpoint with HTTP **Basic auth**, so this target needs `TARGET_n_AUTH`:
+
 ```env
 TARGET_3_URL=https://geopulse.example.com/api/colota
 TARGET_3_TYPE=geopulse
+TARGET_3_AUTH=Basic <base64 of user:password>
+```
+
+The username and password are **not** your GeoPulse login. In GeoPulse open **Location Sources → Add source → Colota**, set a username and password there, and make sure the source is **enabled**. Then base64-encode those exact credentials:
+
+```sh
+printf '%s' 'youruser:yourpassword' | base64   # → eW91cnVzZXI6…
+# TARGET_3_AUTH=Basic eW91cnVzZXI6…
 ```
 
 ### Traccar
@@ -200,7 +210,7 @@ When the Colota app uses the **Overland** template (or **Dawarich** + Batch mode
 | `TARGET_n_URL` | - | Forward destination (n = 1-20, must be consecutive) |
 | `TARGET_n_TYPE` | `raw` | `owntracks`, `geopulse`, `traccar`, `colota`, `overland`, or `raw` |
 | `TARGET_n_METHOD` | auto | `GET` or `POST` - overrides the default method for the target type |
-| `TARGET_n_AUTH` | - | Full `Authorization` header value (e.g. `Bearer your-token`) |
+| `TARGET_n_AUTH` | - | Full `Authorization` header value — e.g. `Bearer your-token`, or `Basic <base64 of user:pass>` for GeoPulse. Sent verbatim as the `Authorization` header (targets that read `?api_key=` instead should put the key in `TARGET_n_URL`) |
 | `TARGET_n_TID` | `CL` (owntracks) / `colota` (traccar) | Tracker ID for `owntracks` targets / device ID for `traccar` targets |
 | `TARGET_n_USER` | `colota` | `X-Limit-U` header for `owntracks` targets |
 | `TARGET_n_DEVICE` | `phone` | `X-Limit-D` fallback for `owntracks` targets - overridden by the payload's `tid` field when present |
