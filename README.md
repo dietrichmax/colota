@@ -52,7 +52,7 @@ TARGET_2_URL=https://dawarich.example.com/api/v1/owntracks/points?api_key=your-k
 TARGET_2_TYPE=owntracks
 ```
 
-Targets are numbered consecutively starting at 1. If a number is skipped, everything after it is ignored.
+Targets are numbered consecutively starting at 1. If a number is skipped, everything after it is ignored. See [Target types](#target-types) for the available `TARGET_n_TYPE` values.
 
 **3. Start**
 
@@ -157,16 +157,41 @@ TARGET_6_URL=http://recorder:8083/pub
 TARGET_6_TYPE=owntracks
 ```
 
-## Target types
+## Reference
+
+### Target types
 
 | Type | Use for | Notes |
 | --- | --- | --- |
 | `owntracks` | Home Assistant (built-in OwnTracks integration), Dawarich, Reitti, OwnTracks Recorder | Converts to OwnTracks format, adds `X-Limit-U` / `X-Limit-D` headers |
 | `traccar` | Traccar | GET (OsmAnd protocol) by default; set `METHOD=POST` for the Traccar JSON API |
-| `overland` | Dawarich (native batch endpoint), any Overland-compatible server | Forwards the **whole** Overland batch unchanged. Point the URL at the destination's batch endpoint (Dawarich: `/api/v1/overland/batches` |
+| `overland` | Dawarich (native batch endpoint), any Overland-compatible server | Forwards the **whole** Overland batch unchanged. Point the URL at the destination's batch endpoint (Dawarich: `/api/v1/overland/batches`) |
 | `geopulse` / `colota` / `raw` | Home Assistant ([Colota integration](https://github.com/dietrichmax/colota-home-assistant)), GeoPulse, Colota-native services, custom endpoints | Passes the Colota payload through unchanged — names exist for documentation only |
 
-## Batch handling
+### Environment variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `3000` | Port to listen on |
+| `API_KEY` | - | If set, requests must include it via `x-api-key` header, `?api_key=` query param, or `Authorization: Bearer` |
+| `FORWARD_TIMEOUT_MS` | `30000` | Per-target HTTP timeout in milliseconds |
+| `SPLIT_CONCURRENCY` | `1` | Default max in-flight requests per target when splitting a batch (non-`overland` targets) |
+| `SPLIT_DELAY_MS` | `0` | Default delay between requests per target when splitting a batch |
+| `TARGET_n_URL` | - | Forward destination (n = 1-20, must be consecutive) |
+| `TARGET_n_TYPE` | `raw` | `owntracks`, `geopulse`, `traccar`, `colota`, `overland`, or `raw` |
+| `TARGET_n_METHOD` | auto | `GET` or `POST` - overrides the default method for the target type |
+| `TARGET_n_AUTH` | - | Full `Authorization` header value — e.g. `Bearer your-token`, or `Basic <base64 of user:pass>` for GeoPulse. Sent verbatim as the `Authorization` header (targets that read `?api_key=` instead should put the key in `TARGET_n_URL`) |
+| `TARGET_n_TID` | `CL` (owntracks) / `colota` (traccar) | Tracker ID for `owntracks` targets / device ID for `traccar` targets |
+| `TARGET_n_USER` | `colota` | `X-Limit-U` header for `owntracks` targets |
+| `TARGET_n_DEVICE` | `phone` | `X-Limit-D` fallback for `owntracks` targets - overridden by the payload's `tid` field when present |
+| `TARGET_n_FILTER_TID` | - | Only forward to this target when payload `tid` matches this value |
+| `TARGET_n_BATCH_MODE` | `split` | How a batch upload is handled: `split` (one request per point) or `latest` (newest point only) |
+| `TARGET_n_SPLIT_CONCURRENCY` | (global) | Per-target override of `SPLIT_CONCURRENCY` |
+| `TARGET_n_SPLIT_DELAY_MS` | (global) | Per-target override of `SPLIT_DELAY_MS` |
+
+## Advanced
+
+### Batch handling
 
 When the Colota app uses the **Overland** template (or **Dawarich** + Batch mode), it uploads multiple points in one request to `/overland`. The forwarder handles each target according to its type and `BATCH_MODE`:
 
@@ -198,28 +223,7 @@ When the Colota app uses the **Overland** template (or **Dawarich** + Batch mode
   TARGET_3_SPLIT_DELAY_MS=200
   ```
 
-## Environment variables
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `PORT` | `3000` | Port to listen on |
-| `API_KEY` | - | If set, requests must include it via `x-api-key` header, `?api_key=` query param, or `Authorization: Bearer` |
-| `FORWARD_TIMEOUT_MS` | `30000` | Per-target HTTP timeout in milliseconds |
-| `SPLIT_CONCURRENCY` | `1` | Default max in-flight requests per target when splitting a batch (non-`overland` targets) |
-| `SPLIT_DELAY_MS` | `0` | Default delay between requests per target when splitting a batch |
-| `TARGET_n_URL` | - | Forward destination (n = 1-20, must be consecutive) |
-| `TARGET_n_TYPE` | `raw` | `owntracks`, `geopulse`, `traccar`, `colota`, `overland`, or `raw` |
-| `TARGET_n_METHOD` | auto | `GET` or `POST` - overrides the default method for the target type |
-| `TARGET_n_AUTH` | - | Full `Authorization` header value — e.g. `Bearer your-token`, or `Basic <base64 of user:pass>` for GeoPulse. Sent verbatim as the `Authorization` header (targets that read `?api_key=` instead should put the key in `TARGET_n_URL`) |
-| `TARGET_n_TID` | `CL` (owntracks) / `colota` (traccar) | Tracker ID for `owntracks` targets / device ID for `traccar` targets |
-| `TARGET_n_USER` | `colota` | `X-Limit-U` header for `owntracks` targets |
-| `TARGET_n_DEVICE` | `phone` | `X-Limit-D` fallback for `owntracks` targets - overridden by the payload's `tid` field when present |
-| `TARGET_n_FILTER_TID` | - | Only forward to this target when payload `tid` matches this value |
-| `TARGET_n_BATCH_MODE` | `split` | How a batch upload is handled: `split` (one request per point) or `latest` (newest point only) |
-| `TARGET_n_SPLIT_CONCURRENCY` | (global) | Per-target override of `SPLIT_CONCURRENCY` |
-| `TARGET_n_SPLIT_DELAY_MS` | (global) | Per-target override of `SPLIT_DELAY_MS` |
-
-## Multi-user / TID routing
+### Multi-user / TID routing
 
 When multiple phones share one forwarder instance, use `FILTER_TID` to route each phone's data to the correct target. Set a unique `tid` custom field in each phone's Colota app (Settings → API Settings → Custom Fields → add key `tid`), then configure targets with `FILTER_TID` to match. Unlike OwnTracks' two-character TID convention, the forwarder treats `tid` as a free-form string — `phone1`, `iphone15` or `alice` all work.
 
