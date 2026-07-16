@@ -92,14 +92,17 @@ class NativeLocationProvider(context: Context) : LocationProvider {
         onSuccess: (Location?) -> Unit,
         onFailure: (Exception) -> Unit
     ) {
-        try {
-            onSuccess(locationManager.getLastKnownLocation(provider))
+        val location = try {
+            locationManager.getLastKnownLocation(provider)
         } catch (e: SecurityException) {
             onFailure(e)
+            return
         } catch (e: IllegalArgumentException) {
             // The selected provider can be absent (GPS-less device, or deregistered mid-session).
             onFailure(e)
+            return
         }
+        onSuccess(location)
     }
 
     override fun getCurrentLocation(timeoutMs: Long, onResult: (Location?) -> Unit) {
