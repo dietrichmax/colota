@@ -10,6 +10,7 @@ import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.location.LocationRequest
 import android.os.Build
 import android.os.CancellationSignal
 import android.os.Handler
@@ -95,6 +96,9 @@ class NativeLocationProvider(context: Context) : LocationProvider {
             onSuccess(locationManager.getLastKnownLocation(provider))
         } catch (e: SecurityException) {
             onFailure(e)
+        } catch (e: IllegalArgumentException) {
+            // The selected provider can be absent (GPS-less device, or deregistered mid-session).
+            onFailure(e)
         }
     }
 
@@ -111,18 +115,36 @@ class NativeLocationProvider(context: Context) : LocationProvider {
             cancellationSignal.cancel()
             deliver(null)
         }
+        val executor = Executor { handler.post(it) }
+        fun onFix(location: Location?) {
+            handler.removeCallbacks(timeoutRunnable)
+            deliver(location)
+        }
 
         try {
-            LocationManagerCompat.getCurrentLocation(
-                locationManager,
-                provider,
-                cancellationSignal,
-                Executor { handler.post(it) },
-                Consumer { location ->
-                    handler.removeCallbacks(timeoutRunnable)
-                    deliver(location)
-                }
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Compat's getCurrentLocation has no request param and defaults to balanced power, which can
+                // keep the fused provider from engaging GNSS; the platform overload forces high accuracy.
+                val request = LocationRequest.Builder(0)
+                    .setQuality(LocationRequest.QUALITY_HIGH_ACCURACY)
+                    .setDurationMillis(timeoutMs)
+                    .build()
+                locationManager.getCurrentLocation(
+                    provider,
+                    request,
+                    cancellationSignal,
+                    executor,
+                    java.util.function.Consumer { onFix(it) }
+                )
+            } else {
+                LocationManagerCompat.getCurrentLocation(
+                    locationManager,
+                    provider,
+                    cancellationSignal,
+                    executor,
+                    Consumer { onFix(it) }
+                )
+            }
             handler.postDelayed(timeoutRunnable, timeoutMs)
             AppLogger.d(TAG, "Requested fresh $provider fix (timeout=${timeoutMs}ms)")
         } catch (e: Exception) {
