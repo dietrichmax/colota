@@ -468,7 +468,8 @@ class LocationForegroundService : Service() {
             // A restored pause must be re-checked against a fresh fix: a cached fix can only
             // re-enter, never exit, so a departed user would stay latched. On no usable fix an
             // explicit user start forces exit (stop/start "kick it loose"); an OS auto-restart stays
-            // put so a restart while genuinely at home doesn't record a false point. Cold start keeps last-known.
+            // put so a restart while genuinely at home doesn't record a false point. Cold start latches
+            // a pause only from a fresh last-known fix.
             val restoredPause = insidePauseZone
             if (restoredPause) {
                 requestFreshOrLastLocation { location, _ ->
@@ -483,12 +484,12 @@ class LocationForegroundService : Service() {
             } else {
                 locationProvider.getLastLocation(
                     onSuccess = { location ->
-                        location?.let {
-                            lastKnownLocation = it
-                            geofenceHelper.getPauseZone(it)?.let { zone ->
+                        if (location != null && isFixFresh(location)) {
+                            lastKnownLocation = location
+                            geofenceHelper.getPauseZone(location)?.let { zone ->
                                 enterPauseZone(zone)
                             } ?: run {
-                                updateNotification(it.latitude, it.longitude, forceUpdate = true)
+                                updateNotification(location.latitude, location.longitude, forceUpdate = true)
                             }
                         }
                     },
