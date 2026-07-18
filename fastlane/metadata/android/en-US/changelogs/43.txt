@@ -1,1 +1,3 @@
-- Fixed the history map zooming in too close when a day has only one recorded point
+- Map no longer over-zooms on single-point days
+- Fixed a false pause at a stale location on startup
+- FOSS: more reliable GPS on Android 12+ and a crash fix on GPS-less devices
