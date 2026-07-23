@@ -1334,6 +1334,8 @@ class LocationForegroundService : Service() {
 
     private fun handleStationaryChanged(stationary: Boolean) {
         ensureMotionDetectorRunning()
+        // Reset the edge-triggered detector so continuing motion re-fires a MOVING edge.
+        if (stationary) (motionDetector as? RawSensorMotionDetector)?.resyncStationaryBaseline()
     }
 
     // ── Debug-only motion injection (BuildConfig.DEBUG) ───────────────────

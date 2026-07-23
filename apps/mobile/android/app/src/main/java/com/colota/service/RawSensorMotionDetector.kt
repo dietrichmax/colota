@@ -136,6 +136,17 @@ class RawSensorMotionDetector(
         }
     }
 
+    /** Reset to STATIONARY so the next sustained motion re-fires a MOVING edge. */
+    fun resyncStationaryBaseline() {
+        val handler = sensorHandler ?: return
+        handler.post {
+            if (BuildConfig.DEBUG) AppLogger.d(TAG, "Resynced to STATIONARY (was $currentState)")
+            currentState = MotionState.STATIONARY
+            aboveThresholdSinceMs = 0L
+            belowThresholdSinceMs = 0L
+        }
+    }
+
     private fun processSample(nowMs: Long, magnitude: Double) {
         sampleWindow.addLast(Sample(nowMs, magnitude))
         while (sampleWindow.isNotEmpty() && nowMs - sampleWindow.first().timestampMs > VARIANCE_WINDOW_MS) {
