@@ -922,32 +922,20 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `user-initiated start force-exits a restored pause when there is no usable fix`() {
+    fun `a restored pause with no usable fix holds and waits for the watchdog`() {
         setField("insidePauseZone", true)
         setField("currentZoneName", "Home")
         setField("currentZoneGeofence", homeGeofence)
-        // Fresh probe times out (default stub -> null) and last-known is unavailable.
+        // Fresh probe times out (default stub -> null) and last-known is unavailable, so no fix can
+        // confirm a departure. The pause must hold, not force a false exit - previously a user-initiated
+        // start force-exited here, unpausing at a poor-GPS home zone after a backup restore.
         every { locationProvider.getLastLocation(any(), any()) } answers {
             firstArg<(Location?) -> Unit>()(null)
         }
 
-        invokeSetupLocationUpdates(userInitiated = true)
+        invokeSetupLocationUpdates()
 
-        assertFalse("explicit stop/start must kick a stuck pause loose", getField("insidePauseZone"))
-    }
-
-    @Test
-    fun `os auto-restart leaves a restored pause untouched when there is no usable fix`() {
-        setField("insidePauseZone", true)
-        setField("currentZoneName", "Home")
-        setField("currentZoneGeofence", homeGeofence)
-        every { locationProvider.getLastLocation(any(), any()) } answers {
-            firstArg<(Location?) -> Unit>()(null)
-        }
-
-        invokeSetupLocationUpdates(userInitiated = false)
-
-        assertTrue("an OS restart at home with no fix must not record a false exit", getField("insidePauseZone"))
+        assertTrue("no usable fix must hold the pause, not force a false exit", getField("insidePauseZone"))
     }
 
     @Test
@@ -2343,11 +2331,11 @@ class LocationForegroundServiceTest {
         method.invoke(service)
     }
 
-    private fun invokeSetupLocationUpdates(userInitiated: Boolean = false) {
+    private fun invokeSetupLocationUpdates() {
         val method = LocationForegroundService::class.java
-            .getDeclaredMethod("setupLocationUpdates", Boolean::class.javaPrimitiveType)
+            .getDeclaredMethod("setupLocationUpdates")
         method.isAccessible = true
-        method.invoke(service, userInitiated)
+        method.invoke(service)
     }
 
     private fun invokeHandleRecheckProfiles() {

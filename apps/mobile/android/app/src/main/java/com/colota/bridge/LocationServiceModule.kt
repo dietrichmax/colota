@@ -301,7 +301,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         val serviceConfig = ServiceConfig.fromReadableMap(config, dbHelper)
         val serviceIntent = Intent(reactApplicationContext, LocationForegroundService::class.java)
         serviceConfig.toIntent(serviceIntent)
-        serviceIntent.putExtra(LocationForegroundService.EXTRA_USER_INITIATED, true)
 
         try {
             reactApplicationContext.startForegroundService(serviceIntent)

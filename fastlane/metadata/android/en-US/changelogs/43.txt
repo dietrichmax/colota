@@ -1,4 +1,5 @@
 - Map no longer over-zooms on single-point days
 - Fixed a false pause at a stale location on startup
 - FOSS: more reliable GPS on Android 12+ and a crash fix on GPS-less devices
+- Fixed a paused geofence wrongly resuming after a restart
 - Fixed the Stationary profile getting stuck active while still driving

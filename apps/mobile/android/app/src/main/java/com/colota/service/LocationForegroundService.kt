@@ -165,8 +165,6 @@ class LocationForegroundService : Service() {
         /** Internal stop request from triggers (broadcast receiver, shortcut activity). */
         const val ACTION_STOP_REQUEST = "com.Colota.ACTION_STOP_REQUEST"
         const val EXTRA_STOP_REASON = "stop_reason"
-        /** Set by the bridge on an explicit user start so the restored-pause path can force-exit on no fix. */
-        const val EXTRA_USER_INITIATED = "user_initiated"
         /** Debug-only: directly inject a MotionState transition. `--es state STATIONARY|MOVING`. */
         const val ACTION_DEBUG_FORCE_MOTION = "com.Colota.DEBUG_FORCE_MOTION"
 
@@ -338,7 +336,7 @@ class LocationForegroundService : Service() {
             ACTION_STOP_REQUEST -> stopForegroundServiceWithReason(
                 intent.getStringExtra(EXTRA_STOP_REASON) ?: "Stopped"
             )
-            else -> handleStart(intent?.getBooleanExtra(EXTRA_USER_INITIATED, false) ?: false)
+            else -> handleStart()
         }
 
         return START_STICKY
@@ -374,14 +372,14 @@ class LocationForegroundService : Service() {
         }
     }
 
-    private fun handleStart(userInitiated: Boolean) {
+    private fun handleStart() {
         locationRestartJob?.cancel()
         locationRestartJob = serviceScope?.launch {
             withContext(Dispatchers.Main) {
                 stopLocationUpdates()
                 syncManager.stopPeriodicSync()
 
-                setupLocationUpdates(userInitiated)
+                setupLocationUpdates()
                 syncManager.startPeriodicSync()
 
                 // Start after setup so profile evaluations don't race
@@ -432,7 +430,7 @@ class LocationForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun setupLocationUpdates(userInitiatedStart: Boolean = false) {
+    private fun setupLocationUpdates() {
         if (isWifiPaused || isMotionlessPaused) return  // GPS intentionally stopped by a zone pause hold
 
         val callback = object : LocationUpdateCallback {
@@ -465,20 +463,16 @@ class LocationForegroundService : Service() {
             )
             lastRequestedBypassOsFilter = bypassOsFilter
 
-            // A restored pause must be re-checked against a fresh fix: a cached fix can only
-            // re-enter, never exit, so a departed user would stay latched. On no usable fix an
-            // explicit user start forces exit (stop/start "kick it loose"); an OS auto-restart stays
-            // put so a restart while genuinely at home doesn't record a false point. Cold start latches
-            // a pause only from a fresh last-known fix.
+            // A restored pause must be re-checked against a fresh fix: a cached fix can only re-enter,
+            // never exit, so a departed user would stay latched. A usable fix resumes only if it places
+            // us outside the zone (via recheck); with no usable fix, hold the pause - the watchdog resumes
+            // once a real fix confirms a departure. Cold start latches a pause only from a fresh last-known fix.
             val restoredPause = insidePauseZone
             if (restoredPause) {
                 requestFreshOrLastLocation { location, _ ->
                     if (location != null) {
                         lastKnownLocation = location
                         recheckZoneWithLocation(location)
-                    } else if (userInitiatedStart) {
-                        AppLogger.d(TAG, "User-initiated start with no usable fix - forcing exit from zone")
-                        exitPauseZone()
                     }
                 }
             } else {
