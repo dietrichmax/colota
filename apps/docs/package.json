@@ -32,7 +32,7 @@
     "@docusaurus/tsconfig": "3.10.1",
     "@docusaurus/types": "3.10.1",
     "@types/qrcode": "^1.5.6",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.0"
   },
   "browserslist": {
     "production": [
