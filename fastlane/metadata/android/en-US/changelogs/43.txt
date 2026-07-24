@@ -1,3 +1,4 @@
 - Map no longer over-zooms on single-point days
 - Fixed a false pause at a stale location on startup
 - FOSS: more reliable GPS on Android 12+ and a crash fix on GPS-less devices
+- Fixed the Stationary profile getting stuck active while still driving
