@@ -15,10 +15,10 @@ jobs:
     if: github.event.pull_request.base.repo.full_name == 'dietrichmax/colota'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Apply Labels
-        uses: actions/labeler@v6
+        uses: actions/labeler@b8dd2d9be0f68b860e7dae5dae7d772984eacd6d # v6
         with:
           repo-token: ${{ github.token }}
           configuration-path: .github/labeler.yml
