@@ -50,7 +50,7 @@
     "eslint": "^9.39.4",
     "jest": "^30.3.0",
     "react-test-renderer": "19.2.7",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.0"
   },
   "engines": {
     "node": ">=22"
