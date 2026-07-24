@@ -365,4 +365,51 @@ class RawSensorMotionDetectorTest {
 
         assertEquals(listOf(MotionState.STATIONARY), received)
     }
+
+    @Test
+    fun `resyncStationaryBaseline re-arms a fresh MOVING edge after currentState is already MOVING`() {
+        val received = mutableListOf<MotionState>()
+        val detector = makeDetector()
+        detector.start { received += it }
+        // Already MOVING: high-variance samples produce no edge (the deadlock).
+        var t = 0L
+        var hi = true
+        while (t <= 4_000L) {
+            feedSample(magnitude = if (hi) 0.6 else -0.6, atMs = t)
+            hi = !hi
+            t += 100L
+        }
+        assertTrue("MOVING edge must not fire while already MOVING", received.isEmpty())
+
+        detector.resyncStationaryBaseline()
+
+        // Continuing motion now re-fires a fresh MOVING edge (dwell = 3000ms).
+        while (t <= 8_000L) {
+            feedSample(magnitude = if (hi) 0.6 else -0.6, atMs = t)
+            hi = !hi
+            t += 100L
+        }
+
+        assertEquals(listOf(MotionState.MOVING), received)
+    }
+
+    @Test
+    fun `resyncStationaryBaseline emits no listener callback itself`() {
+        val received = mutableListOf<MotionState>()
+        val detector = makeDetector()
+        detector.start { received += it }
+        received.clear()
+
+        detector.resyncStationaryBaseline()
+
+        assertTrue(received.isEmpty())
+    }
+
+    @Test
+    fun `resyncStationaryBaseline before start is a no-op`() {
+        val received = mutableListOf<MotionState>()
+        val detector = makeDetector()
+        detector.resyncStationaryBaseline()
+        assertTrue(received.isEmpty())
+    }
 }

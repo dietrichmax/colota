@@ -2131,6 +2131,28 @@ class LocationForegroundServiceTest {
         verify { detector.stop() }
     }
 
+    @Test
+    fun `handleStationaryChanged true resyncs detector baseline`() {
+        val detector = mockk<RawSensorMotionDetector>(relaxed = true)
+        setField("motionDetector", detector)
+        every { profileManager.isStationary } returns true
+
+        invokeHandleStationaryChanged(true)
+
+        verify { detector.resyncStationaryBaseline() }
+    }
+
+    @Test
+    fun `handleStationaryChanged false does not resync`() {
+        val detector = mockk<RawSensorMotionDetector>(relaxed = true)
+        setField("motionDetector", detector)
+        every { profileManager.isStationary } returns false
+
+        invokeHandleStationaryChanged(false)
+
+        verify(exactly = 0) { detector.resyncStationaryBaseline() }
+    }
+
     // =========================================================================
     // maybeResumeGps - dual hold logic
     // =========================================================================
@@ -2536,6 +2558,14 @@ class LocationForegroundServiceTest {
         val method = LocationForegroundService::class.java.getDeclaredMethod("ensureMotionDetectorRunning")
         method.isAccessible = true
         method.invoke(service)
+    }
+
+    private fun invokeHandleStationaryChanged(stationary: Boolean) {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "handleStationaryChanged", Boolean::class.javaPrimitiveType
+        )
+        method.isAccessible = true
+        method.invoke(service, stationary)
     }
 
     private fun invokeMaybeResumeGps() {
