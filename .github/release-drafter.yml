@@ -42,12 +42,16 @@ categories:
     labels: [dependencies, deps]
     collapse-after: 3
 
-change-template: '- $TITLE (#$NUMBER)'
+change-template: '- $TITLE by @$AUTHOR (#$NUMBER)'
 no-changes-template: '- No changes'
 category-template: '## $TITLE'
 
 template: |
   $CHANGES
+
+  ## New Contributors
+
+  $NEW_CONTRIBUTORS
 
   ## Which APK should I download?
 
