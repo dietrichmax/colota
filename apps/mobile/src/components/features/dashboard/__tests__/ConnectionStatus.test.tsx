@@ -1,5 +1,6 @@
 import React from "react"
-import { render, waitFor } from "@testing-library/react-native"
+import { render, waitFor, act } from "@testing-library/react-native"
+import { DeviceEventEmitter } from "react-native"
 
 jest.mock("../../../../hooks/useTheme", () => ({
   useTheme: () => ({
@@ -11,26 +12,22 @@ jest.mock("../../../../hooks/useTheme", () => ({
       textLight: "#9ca3af",
       text: "#000",
       card: "#fff",
-      border: "#e5e7eb"
+      border: "#e5e7eb",
+      pressedOpacity: 0.6
     }
   })
 }))
 
-const mockSettings = {
-  isOfflineMode: false,
-  apiTemplate: "custom" as const
-}
+const mockSettings = { isOfflineMode: false }
 jest.mock("../../../../contexts/TrackingProvider", () => ({
-  useTracking: () => ({
-    settings: mockSettings
-  })
+  useTracking: () => ({ settings: mockSettings })
 }))
 
 const mockIsNetworkAvailable = jest.fn().mockResolvedValue(true)
-const mockGetAuthHeaders = jest.fn().mockResolvedValue({})
+const mockGetStats = jest.fn()
 jest.mock("../../../../services/NativeLocationService", () => ({
   isNetworkAvailable: (...args: any[]) => mockIsNetworkAvailable(...args),
-  getAuthHeaders: (...args: any[]) => mockGetAuthHeaders(...args)
+  getStats: (...args: any[]) => mockGetStats(...args)
 }))
 
 jest.mock("@react-navigation/native", () => ({
@@ -43,174 +40,132 @@ jest.mock("@react-navigation/native", () => ({
   }
 }))
 
+// #546: the chip must never issue its own request - a JS fetch bypasses the native TLS
+// trust and breaks custom-CA / mTLS users.
 const mockFetch = jest.fn()
 ;(globalThis as any).fetch = mockFetch
 
 import { ConnectionStatus } from "../ConnectionStatus"
 
 const mockNavigation = { navigate: jest.fn() }
+const stats = (queued: number, sent: number) => ({ queued, sent, total: sent, today: 0, databaseSizeMB: 0 })
+const emit = (event: string, payload: object) =>
+  act(() => {
+    DeviceEventEmitter.emit(event, payload)
+  })
 
 beforeEach(() => {
   jest.clearAllMocks()
-  jest.useFakeTimers()
   mockSettings.isOfflineMode = false
   mockIsNetworkAvailable.mockResolvedValue(true)
-  mockGetAuthHeaders.mockResolvedValue({})
-})
-
-afterEach(() => {
-  jest.useRealTimers()
+  mockGetStats.mockResolvedValue(stats(0, 0))
 })
 
 describe("ConnectionStatus", () => {
-  it("shows 'Checking' initially before server check completes", () => {
-    mockFetch.mockReturnValue(new Promise(() => {}))
+  const url = "https://example.com/api/locations"
 
-    const { getByText } = render(
-      <ConnectionStatus endpoint="https://example.com/api/locations" navigation={mockNavigation} />
-    )
+  it("shows 'Checking' until a sync result is known", async () => {
+    const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
+    expect(getByText("Checking")).toBeTruthy()
+    await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
     expect(getByText("Checking")).toBeTruthy()
   })
 
-  it("shows 'Connected' when server responds OK", async () => {
-    mockFetch.mockResolvedValue({ ok: true, status: 200 })
+  it("shows 'Connected' when the queue is empty and locations have synced", async () => {
+    mockGetStats.mockResolvedValue(stats(0, 5))
 
-    const { getByText } = render(
-      <ConnectionStatus endpoint="https://example.com/api/locations" navigation={mockNavigation} />
-    )
+    const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => {
-      expect(getByText("Connected")).toBeTruthy()
-    })
+    await waitFor(() => expect(getByText("Connected")).toBeTruthy())
   })
 
-  it("shows 'Unreachable' when fetch throws", async () => {
-    mockFetch.mockRejectedValue(new Error("Network error"))
+  it("stays 'Checking' on a backlog with no sync event yet (does not fabricate a status)", async () => {
+    mockGetStats.mockResolvedValue(stats(3, 0))
 
-    const { getByText } = render(
-      <ConnectionStatus endpoint="https://example.com/api/locations" navigation={mockNavigation} />
-    )
+    const { getByText, queryByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => {
-      expect(getByText("Unreachable")).toBeTruthy()
-    })
+    await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
+    expect(getByText("Checking")).toBeTruthy()
+    expect(queryByText("Connected")).toBeNull()
+    expect(queryByText("Unreachable")).toBeNull()
+  })
+
+  it("shows 'Unreachable' on a sync error event", async () => {
+    const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
+    await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
+
+    emit("onSyncError", { message: "send failed", queuedCount: 3 })
+
+    await waitFor(() => expect(getByText("Unreachable")).toBeTruthy())
+  })
+
+  it("never performs a network request itself", async () => {
+    mockGetStats.mockResolvedValue(stats(0, 5))
+
+    render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
+
+    await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it("a stale run from before the endpoint loaded does not clobber Connected", async () => {
+    // The empty-endpoint run resolves after the endpoint loads; it must not flip back to "No endpoint".
+    let resolveStale: (v: boolean) => void = () => {}
+    mockIsNetworkAvailable
+      .mockImplementationOnce(() => new Promise<boolean>((r) => (resolveStale = r)))
+      .mockResolvedValue(true)
+    mockGetStats.mockResolvedValue(stats(0, 5))
+
+    const { getByText, rerender } = render(<ConnectionStatus endpoint="" navigation={mockNavigation} />)
+    rerender(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
+
+    await waitFor(() => expect(getByText("Connected")).toBeTruthy())
+    await act(async () => resolveStale(true))
+    expect(getByText("Connected")).toBeTruthy()
   })
 
   it("shows 'No endpoint' when endpoint is empty", async () => {
     const { getByText } = render(<ConnectionStatus endpoint="" navigation={mockNavigation} />)
 
-    await waitFor(() => {
-      expect(getByText("No endpoint")).toBeTruthy()
-    })
+    await waitFor(() => expect(getByText("No endpoint")).toBeTruthy())
   })
 
   it("shows 'No endpoint' when endpoint is null", async () => {
     const { getByText } = render(<ConnectionStatus endpoint={null} navigation={mockNavigation} />)
 
-    await waitFor(() => {
-      expect(getByText("No endpoint")).toBeTruthy()
-    })
+    await waitFor(() => expect(getByText("No endpoint")).toBeTruthy())
   })
 
   it("shows 'Offline Mode' when offline mode is enabled", async () => {
     mockSettings.isOfflineMode = true
 
-    const { getByText } = render(
-      <ConnectionStatus endpoint="https://example.com/api/locations" navigation={mockNavigation} />
-    )
+    const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => {
-      expect(getByText("Offline Mode")).toBeTruthy()
-    })
+    await waitFor(() => expect(getByText("Offline Mode")).toBeTruthy())
   })
 
-  it("shows 'Device offline' when network is unavailable", async () => {
+  it("shows 'Device offline' when the device has no network", async () => {
     mockIsNetworkAvailable.mockResolvedValue(false)
 
-    const { getByText } = render(
-      <ConnectionStatus endpoint="https://example.com/api/locations" navigation={mockNavigation} />
-    )
+    const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => {
-      expect(getByText("Device offline")).toBeTruthy()
-    })
-  })
-
-  it("falls back to endpoint URL when /health returns 404", async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: false, status: 404 }) // /health
-      .mockResolvedValueOnce({ ok: true, status: 200 }) // original endpoint
-
-    const { getByText } = render(
-      <ConnectionStatus endpoint="https://example.com/api/locations" navigation={mockNavigation} />
-    )
-
-    await waitFor(() => {
-      expect(getByText("Connected")).toBeTruthy()
-    })
-
-    expect(mockFetch).toHaveBeenCalledTimes(2)
-  })
-
-  it("falls back to origin when /health returns 404", async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: false, status: 404 }) // origin/health
-      .mockResolvedValueOnce({ ok: true, status: 200 }) // origin
-
-    const { getByText } = render(
-      <ConnectionStatus endpoint="https://example.com/api/locations" navigation={mockNavigation} />
-    )
-
-    await waitFor(() => {
-      expect(getByText("Connected")).toBeTruthy()
-    })
-
-    expect(mockFetch).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(getByText("Device offline")).toBeTruthy())
   })
 
   it("displays the host portion of the endpoint URL", async () => {
-    mockFetch.mockResolvedValue({ ok: true, status: 200 })
-
     const { getByText } = render(
       <ConnectionStatus endpoint="https://my-server.com/api/locations" navigation={mockNavigation} />
     )
 
     expect(getByText("my-server.com")).toBeTruthy()
+    await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
   })
 
-  it("displays 'Server' when endpoint is empty", () => {
+  it("displays 'Server' when endpoint is empty", async () => {
     const { getByText } = render(<ConnectionStatus endpoint="" navigation={mockNavigation} />)
 
     expect(getByText("Server")).toBeTruthy()
-  })
-
-  it("includes auth headers in health check", async () => {
-    mockGetAuthHeaders.mockResolvedValue({ Authorization: "Bearer token123" })
-    mockFetch.mockResolvedValue({ ok: true, status: 200 })
-
-    render(<ConnectionStatus endpoint="https://example.com/api/locations" navigation={mockNavigation} />)
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          headers: { Authorization: "Bearer token123" }
-        })
-      )
-    })
-  })
-
-  it("proceeds without auth headers if getAuthHeaders fails", async () => {
-    mockGetAuthHeaders.mockRejectedValue(new Error("no credentials"))
-    mockFetch.mockResolvedValue({ ok: true, status: 200 })
-
-    const { getByText } = render(
-      <ConnectionStatus endpoint="https://example.com/api/locations" navigation={mockNavigation} />
-    )
-
-    await waitFor(() => {
-      expect(getByText("Connected")).toBeTruthy()
-    })
+    await waitFor(() => expect(getByText("No endpoint")).toBeTruthy())
   })
 })

@@ -3,8 +3,8 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useMemo, useRef } from "react"
-import { StyleSheet, View, Text, Pressable } from "react-native"
+import React, { useState, useCallback, useMemo } from "react"
+import { StyleSheet, View, Text, Pressable, DeviceEventEmitter } from "react-native"
 import { ChevronRight } from "lucide-react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
@@ -12,8 +12,6 @@ import { useTracking } from "../../../contexts/TrackingProvider"
 import { ServerStatus, ConnectionStatusProps } from "../../../types/global"
 import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { SERVER_TIMEOUT, SERVER_CHECK_INTERVAL } from "../../../constants"
-import { resolveHealthUrls } from "../../../utils/healthCheck"
 
 export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps) {
   const { colors } = useTheme()
@@ -22,67 +20,48 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
 
   const [serverStatus, setServerStatus] = useState<ServerStatus | "offline" | "deviceOffline" | null>(null)
 
-  const hasChecked = useRef(false)
-
-  const checkServer = useCallback(async () => {
-    if (isOffline) {
-      setServerStatus("offline")
-      hasChecked.current = true
-      return
-    }
-
-    const networkAvailable = await NativeLocationService.isNetworkAvailable()
-    if (!networkAvailable) {
-      setServerStatus("deviceOffline")
-      hasChecked.current = true
-      return
-    }
-
-    if (!endpoint) {
-      setServerStatus("notConfigured")
-      hasChecked.current = true
-      return
-    }
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), SERVER_TIMEOUT)
-
-    try {
-      let authHeaders: Record<string, string> = {}
-      try {
-        authHeaders = await NativeLocationService.getAuthHeaders()
-      } catch {
-        // proceed without auth headers
-      }
-
-      const healthUrls = resolveHealthUrls(endpoint, settings.apiTemplate)
-      let response!: Response
-      for (const url of healthUrls) {
-        response = await fetch(url, {
-          method: "HEAD",
-          signal: controller.signal,
-          headers: authHeaders
-        })
-        if (response.ok || (response.status !== 404 && response.status !== 405)) break
-      }
-
-      const reachable = response.ok || response.status === 405
-      setServerStatus(reachable ? "connected" : "error")
-      hasChecked.current = true
-    } catch {
-      setServerStatus("error")
-      hasChecked.current = true
-    } finally {
-      clearTimeout(timeoutId)
-    }
-  }, [endpoint, isOffline, settings.apiTemplate])
-
   useFocusEffect(
     useCallback(() => {
-      checkServer()
-      const timer = setInterval(checkServer, SERVER_CHECK_INTERVAL)
-      return () => clearInterval(timer)
-    }, [checkServer])
+      // A stale run (e.g. one started before the endpoint loaded) must not overwrite a newer status.
+      let cancelled = false
+
+      const refresh = async () => {
+        if (isOffline) {
+          setServerStatus("offline")
+          return
+        }
+
+        const networkAvailable = await NativeLocationService.isNetworkAvailable()
+        if (cancelled) return
+        if (!networkAvailable) {
+          setServerStatus("deviceOffline")
+          return
+        }
+
+        if (!endpoint) {
+          setServerStatus("notConfigured")
+          return
+        }
+
+        try {
+          const stats = await NativeLocationService.getStats()
+          if (cancelled) return
+          // Empty queue plus a prior successful send (sent = retained synced rows) means caught up.
+          if (stats.queued === 0 && stats.sent > 0) {
+            setServerStatus("connected")
+          }
+        } catch {
+          // getStats is a local DB read; a failure here says nothing about the server.
+        }
+      }
+
+      refresh()
+      const sub = DeviceEventEmitter.addListener("onSyncError", () => setServerStatus("error"))
+      return () => {
+        cancelled = true
+        sub.remove()
+      }
+    }, [endpoint, isOffline])
   )
 
   const displayUrl = endpoint ? endpoint.replace(/^https?:\/\//, "").split("/")[0] : ""

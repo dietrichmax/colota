@@ -89,6 +89,8 @@ Toggle offline mode off in Settings to return to online mode. If you had an endp
 
 ## Retry Behavior
 
+A location counts as delivered only when your server responds with a `2xx` status - any other status or a network error is treated as a failure and retried. For custom endpoints, make sure your script or webhook returns `2xx` on success.
+
 When sync attempts fail, Colota uses exponential backoff:
 
 ```

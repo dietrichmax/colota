@@ -83,7 +83,7 @@ You can also generate a setup link to share your own configuration (Settings -> 
 The App **only transmits data to a server endpoint that you configure**. No data is sent anywhere by default.
 
 - Data is sent via HTTPS (HTTP is only allowed for local/private network addresses). Self-signed or private-CA TLS certificates are supported by importing the CA in the in-app mTLS Settings (Trusted Server CA). Trust is scoped to Colota only
-- When a server is configured, the App may send health check requests to backend-specific endpoints to verify connectivity. These requests go only to your own server
+- The **Test Connection** button sends a request to your configured endpoint to verify it works. These requests go only to your own server
 - No analytics, tracking pixels, or advertising networks are used
 - No data is shared with the developer, advertisers or analytics providers
 
