@@ -1828,6 +1828,92 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
+    // Destroyed instance must not keep receiving fixes
+    // =========================================================================
+
+    @Test
+    fun `onDestroy removes location updates even when an earlier teardown step throws`() {
+        val callback = mockk<LocationUpdateCallback>(relaxed = true)
+        setField("locationUpdateCallback", callback)
+        every { conditionMonitor.stop() } throws IllegalStateException("db closed during restore")
+
+        invokeOnDestroy()
+
+        // The scope is cancelled either way, so a skipped unregister leaves a dead instance
+        // receiving fixes it can no longer save.
+        verify { locationProvider.removeLocationUpdates(callback) }
+        verify { syncManager.stopPeriodicSync() }
+        assertNull(getField<CoroutineScope?>("serviceScope"))
+    }
+
+    @Test
+    fun `onDestroy removes location updates when the providers receiver was never registered`() {
+        val callback = mockk<LocationUpdateCallback>(relaxed = true)
+        setField("locationUpdateCallback", callback)
+        every { service.unregisterReceiver(any()) } throws IllegalArgumentException("Receiver not registered")
+
+        invokeOnDestroy()
+
+        verify { locationProvider.removeLocationUpdates(callback) }
+    }
+
+    @Test
+    fun `location callback sheds its registration once the service scope is gone`() {
+        val registered = slot<LocationUpdateCallback>()
+        every { locationProvider.requestLocationUpdates(any(), any(), any(), capture(registered)) } just Runs
+        invokeSetupLocationUpdates()
+        setField("serviceScope", null)
+
+        registered.captured.onLocationUpdate(mockLocation())
+
+        // A dead instance can't persist anything, so it must let go instead of holding GNSS open.
+        verify { locationProvider.removeLocationUpdates(registered.captured) }
+        verify(exactly = 0) {
+            dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `setupLocationUpdates drops the previous registration before replacing it`() {
+        val orphan = mockk<LocationUpdateCallback>(relaxed = true)
+        setField("locationUpdateCallback", orphan)
+
+        invokeSetupLocationUpdates()
+
+        // Without this the old callback is orphaned and nothing can unregister it again.
+        verify { locationProvider.removeLocationUpdates(orphan) }
+    }
+
+    // =========================================================================
+    // trackingStateLabel - heartbeat diagnostics
+    // =========================================================================
+
+    @Test
+    fun `trackingStateLabel reports a zone pause instead of ACTIVE`() {
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+        setField("insidePauseZone", true)
+
+        // ACTIVE here leaves an exported log ambiguous about whether the zone is still latched.
+        assertEquals("PAUSED(zone)", invokeTrackingStateLabel())
+    }
+
+    @Test
+    fun `trackingStateLabel reports the wifi hold ahead of the zone pause`() {
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+        setField("insidePauseZone", true)
+        setField("isWifiPaused", true)
+
+        assertEquals("PAUSED(wifi)", invokeTrackingStateLabel())
+    }
+
+    @Test
+    fun `trackingStateLabel reports ACTIVE while tracking outside every zone`() {
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+
+        assertEquals("ACTIVE", invokeTrackingStateLabel())
+    }
+
+    // =========================================================================
     // stopForegroundServiceWithReason - battery critical path
     // =========================================================================
 
@@ -2309,6 +2395,12 @@ class LocationForegroundServiceTest {
         )
         method.isAccessible = true
         method.invoke(service, interval, distance, syncInterval)
+    }
+
+    private fun invokeTrackingStateLabel(): String {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("trackingStateLabel")
+        method.isAccessible = true
+        return method.invoke(service) as String
     }
 
     private fun invokeOnDestroy() {
