@@ -239,7 +239,7 @@ class LocationForegroundService : Service() {
     }
 
     private fun unregisterLocationProvidersReceiver() {
-        unregisterReceiver(locationProvidersReceiver)
+        try { unregisterReceiver(locationProvidersReceiver) } catch (_: IllegalArgumentException) {}
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -397,27 +397,23 @@ class LocationForegroundService : Service() {
     override fun onDestroy() {
         AppLogger.d(TAG, "Service destroyed")
 
-        // Teardown DB writes throw during a restore; swallow so the throw can't
-        // bubble out of onDestroy and kill the process. State is overwritten by the swap.
-        try {
-            motionDetector?.stop()
+        // Isolated per step: a skipped stopLocationUpdates leaves this instance receiving fixes
+        // the cancelled scope below can no longer save.
+        teardownStep("motionDetector") { motionDetector?.stop() }
+        teardownStep("entryDelay") {
             entryDelayJob?.cancel()
             entryDelayJob = null
             pendingPauseZone = null
-            unregisterWifiPause()
-            cancelHeartbeat()
-            unregisterLocationProvidersReceiver()
-            unregisterDebugMotionReceiver()
-            batteryMonitor.stop()
-            conditionMonitor.stop()
-            stopLocationUpdates()
-            syncManager.stopPeriodicSync()
-            networkManager.destroy()
-        } catch (e: IllegalStateException) {
-            AppLogger.w(TAG, "Teardown step skipped: ${e.message}")
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "Unexpected error during service teardown", e)
         }
+        teardownStep("wifiPause") { unregisterWifiPause() }
+        teardownStep("heartbeat") { cancelHeartbeat() }
+        teardownStep("locationProvidersReceiver") { unregisterLocationProvidersReceiver() }
+        teardownStep("debugMotionReceiver") { unregisterDebugMotionReceiver() }
+        teardownStep("batteryMonitor") { batteryMonitor.stop() }
+        teardownStep("conditionMonitor") { conditionMonitor.stop() }
+        teardownStep("locationUpdates") { stopLocationUpdates() }
+        teardownStep("periodicSync") { syncManager.stopPeriodicSync() }
+        teardownStep("networkManager") { networkManager.destroy() }
 
         // Critical teardown: must run so pauseAllDbWriters' poll loop sees isRunning=false.
         serviceScope?.cancel()
@@ -428,13 +424,35 @@ class LocationForegroundService : Service() {
         super.onDestroy()
     }
 
+    /** Teardown DB writes throw during a restore; the state is overwritten by the swap anyway. */
+    private fun teardownStep(name: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (e: IllegalStateException) {
+            AppLogger.w(TAG, "Teardown step '$name' skipped: ${e.message}")
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Unexpected error during teardown step '$name'", e)
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun setupLocationUpdates() {
         if (isWifiPaused || isMotionlessPaused) return  // GPS intentionally stopped by a zone pause hold
 
+        // The resume paths reach here without a stop, and the assignment below would orphan the old
+        // callback with no reference left to unregister it.
+        locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
+
         val callback = object : LocationUpdateCallback {
             override fun onLocationUpdate(location: Location) {
+                // Only onDestroy nulls the scope, so this instance is dead and the OS is still
+                // feeding it - every fix below would be discarded silently.
+                if (serviceScope == null) {
+                    AppLogger.e(TAG, "Location received after destroy - removing leaked location updates")
+                    locationProvider.removeLocationUpdates(this)
+                    return
+                }
                 lastFixAtMs = SystemClock.elapsedRealtime()
                 handleLocationUpdate(location)
             }
@@ -530,13 +548,7 @@ class LocationForegroundService : Service() {
                 delay(TRACKING_HEARTBEAT_INTERVAL_MS)
                 // Catch here so a DB or system-service hiccup doesn't kill the heartbeat loop.
                 try {
-                    val state = when {
-                        locationUpdateCallback == null -> "STOPPED"
-                        isWifiPaused && isMotionlessPaused -> "PAUSED(wifi+motionless)"
-                        isWifiPaused -> "PAUSED(wifi)"
-                        isMotionlessPaused -> "PAUSED(motionless)"
-                        else -> "ACTIVE"
-                    }
+                    val state = trackingStateLabel()
                     val sinceLastFix = SystemClock.elapsedRealtime() - lastFixAtMs
                     val (battery, _) = deviceInfoHelper.getCachedBatteryStatus()
                     val doze = (getSystemService(POWER_SERVICE) as? PowerManager)?.isDeviceIdleMode ?: false
@@ -550,6 +562,17 @@ class LocationForegroundService : Service() {
                 }
             }
         }
+    }
+
+    /** Wifi and motionless are holds inside a zone pause, so they're checked first. Without
+     *  PAUSED(zone) a latched pause reads as ACTIVE in an exported log. */
+    private fun trackingStateLabel(): String = when {
+        locationUpdateCallback == null -> "STOPPED"
+        isWifiPaused && isMotionlessPaused -> "PAUSED(wifi+motionless)"
+        isWifiPaused -> "PAUSED(wifi)"
+        isMotionlessPaused -> "PAUSED(motionless)"
+        insidePauseZone -> "PAUSED(zone)"
+        else -> "ACTIVE"
     }
 
     private fun cancelTrackingHeartbeatLogger() {
