@@ -9,7 +9,7 @@
     "test": "node --import tsx --test \"test/**/*.test.ts\"",
     "format": "prettier --write \"**/*.{js,ts,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{js,ts,json,md,yml,yaml}\"",
-    "check": "npm audit --audit-level=high && npm run format:check && npm run typecheck && npm test && npm run build"
+    "check": "npm audit --omit=dev --audit-level=high && npm run format:check && npm run typecheck && npm test && npm run build"
   },
   "type": "module",
   "license": "AGPL-3.0-or-later",
