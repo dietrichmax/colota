@@ -228,7 +228,7 @@ Each geofence supports three independent GPS pause modes, configured per zone:
 
 A per-zone **stationary heartbeat** can send periodic location updates while paused. It sends the geofence center as a synthetic anchor point - no GPS wake required - bypassing sync conditions. Configured via `heartbeatEnabled` and `heartbeatIntervalMinutes` per geofence.
 
-Separately, a **Stationary tracking profile** drives its own heartbeat via `StationaryHeartbeatScheduler` (an allow-while-idle alarm): a still device produces no passive fixes, so it wakes at the profile's interval, requests a real GPS fix, and records it through the normal path.
+Separately, a **Stationary tracking profile** drives its own heartbeat via `StationaryHeartbeatScheduler` (an allow-while-idle alarm delivered through `StationaryHeartbeatReceiver`): a still device produces no passive fixes, so it wakes at the profile's interval, requests a real GPS fix and records it through the normal path.
 
 When both WiFi and motionless pause are enabled, GPS only resumes when both conditions clear - WiFi disconnected **and** motion detected. Changes made in the editor take effect immediately even when already inside the zone, via `applyZoneSettingsIfChanged` on the next zone recheck.
 

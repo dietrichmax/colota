@@ -15,7 +15,7 @@ import com.Colota.util.AppLogger
  * Schedules the stationary-profile heartbeat alarm. Uses setAndAllowWhileIdle (like
  * AutoExportScheduler) so it fires through Doze without the SCHEDULE_EXACT_ALARM permission;
  * the OS floors it to ~9min while idle, which suits a stationary cadence. Delivered to
- * [LocationForegroundService] as ACTION_STATIONARY_HEARTBEAT.
+ * [StationaryHeartbeatReceiver], which forwards it to [LocationForegroundService].
  */
 object StationaryHeartbeatScheduler {
 
@@ -42,11 +42,10 @@ object StationaryHeartbeatScheduler {
     }
 
     private fun pendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, LocationForegroundService::class.java).apply {
-            action = LocationForegroundService.ACTION_STATIONARY_HEARTBEAT
+        val intent = Intent(context, StationaryHeartbeatReceiver::class.java).apply {
             setPackage(context.packageName)
         }
-        return PendingIntent.getForegroundService(
+        return PendingIntent.getBroadcast(
             context,
             REQUEST_CODE,
             intent,
