@@ -8,20 +8,21 @@ These are the permissions Colota uses and why. None are related to analytics, ad
 
 ## Permission Overview
 
-| Permission                     | Required    | Why                                               |
-| ------------------------------ | ----------- | ------------------------------------------------- |
-| Fine Location                  | Yes         | GPS-based location tracking                       |
-| Coarse Location                | Yes         | Network-based location fallback                   |
-| Background Location            | Yes         | Track while app is in the background              |
-| Foreground Service             | Yes         | Required by Android for background services       |
-| Foreground Service (Data Sync) | Yes         | Auto-export background processing                 |
-| Internet                       | Yes         | Send locations to your server                     |
-| Network State                  | Yes         | Check connectivity before syncing                 |
-| Wi-Fi State                    | Yes         | Detect current SSID for sync condition filtering  |
-| Boot Completed                 | Yes         | Auto-restart tracking after device reboot         |
-| Notifications                  | Android 13+ | Display the foreground service notification       |
-| Local Network Access           | Android 17+ | Access local network servers (self-hosted)        |
-| Battery Optimization Exemption | Optional    | Prevent Android from killing the tracking service |
+| Permission                     | Required    | Why                                                                   |
+| ------------------------------ | ----------- | --------------------------------------------------------------------- |
+| Fine Location                  | Yes         | GPS-based location tracking                                           |
+| Coarse Location                | Yes         | Network-based location fallback                                       |
+| Background Location            | Yes         | Track while app is in the background                                  |
+| Foreground Service             | Yes         | Required by Android for background services                           |
+| Foreground Service (Data Sync) | Yes         | Auto-export background processing                                     |
+| Internet                       | Yes         | Send locations to your server                                         |
+| Network State                  | Yes         | Check connectivity before syncing                                     |
+| Wi-Fi State                    | Yes         | Detect current SSID for sync condition filtering                      |
+| Boot Completed                 | Yes         | Auto-restart tracking after device reboot                             |
+| Notifications                  | Android 13+ | Display the foreground service notification                           |
+| Local Network Access           | Android 17+ | Access local network servers (self-hosted)                            |
+| Battery Optimization Exemption | Optional    | Prevent Android from killing the tracking service                     |
+| Wake Lock                      | Yes         | Briefly wake the CPU for the stationary heartbeat and background jobs |
 
 ## Permission Request Flow
 
@@ -105,6 +106,14 @@ android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
 ```
 
 This allows Colota to show the system dialog asking to exempt the app from battery optimization (Doze mode). When exempted, Android is less likely to kill the tracking service during idle periods. This is optional - tracking works without it, but may be less reliable on some devices.
+
+### Wake Lock
+
+```
+android.permission.WAKE_LOCK
+```
+
+Lets Colota briefly hold the CPU awake while it acquires a location fix for a stationary-profile heartbeat during Doze, and is used internally by WorkManager for auto-export and battery-recovery jobs. A normal permission - granted automatically, with no access to personal data.
 
 ## Revoking Permissions
 

@@ -37,6 +37,7 @@ class ProfileManager(
         val syncInterval: Int,
         val profileName: String?,
         val profileId: Int?,
+        val conditionType: String,
     )
 
     // Default config (written externally by the service, read inside @Synchronized deactivateToDefault)
@@ -239,6 +240,7 @@ class ProfileManager(
             syncInterval = profile.syncIntervalSeconds,
             profileName = profile.name,
             profileId = profile.id,
+            conditionType = profile.conditionType,
         ))
     }
 
@@ -366,6 +368,7 @@ class ProfileManager(
             syncInterval = defaultSyncInterval,
             profileName = null,
             profileId = null,
+            conditionType = "",
         ))
     }
 }

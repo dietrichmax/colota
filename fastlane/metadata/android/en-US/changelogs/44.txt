@@ -1,0 +1,1 @@
+- The Stationary profile now records a point at each interval while the device is still

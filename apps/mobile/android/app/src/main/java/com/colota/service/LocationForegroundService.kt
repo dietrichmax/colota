@@ -110,6 +110,7 @@ class LocationForegroundService : Service() {
     @Volatile private var pendingPauseZone: GeofenceHelper.Geofence? = null
     @Volatile private var entryDelayJob: Job? = null
     @Volatile private var heartbeatJob: Job? = null
+    @Volatile private var stationaryHeartbeatArmed = false
 
     // WiFi pause sub-state (same Main-only mutation contract as above)
     @Volatile private var isWifiPaused = false
@@ -148,6 +149,8 @@ class LocationForegroundService : Service() {
 
         /** Timeout for the active fresh-fix probe (ms). */
         private const val FRESH_FIX_TIMEOUT_MS = 30_000L
+        /** Safety cap on the heartbeat wakelock; must outlast the fix acquisition. */
+        private const val HEARTBEAT_WAKELOCK_TIMEOUT_MS = FRESH_FIX_TIMEOUT_MS + 5_000L
         /** Minimum spacing between fresh-fix probes; throttled callers get the last-known fix. */
         private const val FRESH_PROBE_MIN_INTERVAL_MS = 60_000L
         /** A fix older than this by the monotonic clock isn't trusted to hold a pause - usually a stale/replayed fix. */
@@ -167,6 +170,8 @@ class LocationForegroundService : Service() {
         const val EXTRA_STOP_REASON = "stop_reason"
         /** Debug-only: directly inject a MotionState transition. `--es state STATIONARY|MOVING`. */
         const val ACTION_DEBUG_FORCE_MOTION = "com.Colota.DEBUG_FORCE_MOTION"
+        /** Alarm delivery for the stationary-profile heartbeat; see [StationaryHeartbeatScheduler]. */
+        const val ACTION_STATIONARY_HEARTBEAT = "com.Colota.STATIONARY_HEARTBEAT"
 
         /** Actions that skip config reload and preserve current notification state. */
         private val LIGHTWEIGHT_ACTIONS = setOf(
@@ -174,7 +179,8 @@ class LocationForegroundService : Service() {
             ACTION_RECHECK_ZONE,
             ACTION_REFRESH_NOTIFICATION,
             ACTION_RECHECK_PROFILES,
-            ACTION_STOP_REQUEST
+            ACTION_STOP_REQUEST,
+            ACTION_STATIONARY_HEARTBEAT
         )
 
         /**
@@ -212,7 +218,7 @@ class LocationForegroundService : Service() {
         profileManager = ProfileManager(
             profileHelper, serviceScope!!,
             onConfigSwitch = { config ->
-                applyProfileConfig(config.interval, config.distance, config.syncInterval)
+                applyProfileConfig(config.interval, config.distance, config.syncInterval, config.conditionType)
             },
             onStationaryChanged = ::handleStationaryChanged
         )
@@ -333,6 +339,7 @@ class LocationForegroundService : Service() {
             ACTION_RECHECK_ZONE -> handleZoneRecheckAction()
             ACTION_RECHECK_PROFILES -> handleRecheckProfiles()
             ACTION_MANUAL_FLUSH -> handleManualFlush()
+            ACTION_STATIONARY_HEARTBEAT -> handleStationaryHeartbeatFired()
             ACTION_STOP_REQUEST -> stopForegroundServiceWithReason(
                 intent.getStringExtra(EXTRA_STOP_REASON) ?: "Stopped"
             )
@@ -407,6 +414,7 @@ class LocationForegroundService : Service() {
         }
         teardownStep("wifiPause") { unregisterWifiPause() }
         teardownStep("heartbeat") { cancelHeartbeat() }
+        teardownStep("stationaryHeartbeat") { cancelStationaryHeartbeat() }
         teardownStep("locationProvidersReceiver") { unregisterLocationProvidersReceiver() }
         teardownStep("debugMotionReceiver") { unregisterDebugMotionReceiver() }
         teardownStep("batteryMonitor") { batteryMonitor.stop() }
@@ -1390,10 +1398,12 @@ class LocationForegroundService : Service() {
     // ── Profile hot-swap ────────────────────────────────────────────────
 
     /** Hot-swaps GPS interval and sync config on profile change. */
-    private fun applyProfileConfig(interval: Long, distance: Float, syncInterval: Int) {
+    private fun applyProfileConfig(interval: Long, distance: Float, syncInterval: Int, conditionType: String) {
+        val isStationary = conditionType == ProfileConstants.CONDITION_STATIONARY
         config = config.copy(
             interval = interval,
-            minUpdateDistance = distance,
+            // A distance filter would drop every stationary point (each ~0m from the last), defeating the heartbeat.
+            minUpdateDistance = if (isStationary) 0f else distance,
             syncIntervalSeconds = syncInterval
         )
 
@@ -1407,9 +1417,45 @@ class LocationForegroundService : Service() {
         stopLocationUpdates()
         setupLocationUpdates()
 
+        // A stationary device gets no OS-pushed fixes, so drive it with an active heartbeat instead.
+        if (isStationary) scheduleStationaryHeartbeat() else cancelStationaryHeartbeat()
+
         refreshNotificationForCurrentState()
 
         AppLogger.i(TAG, "Profile config applied: ${profileManager.getActiveProfileName() ?: "default"} - interval=${interval}ms, distance=${distance}m, sync=${syncInterval}s")
+    }
+
+    private fun scheduleStationaryHeartbeat() {
+        stationaryHeartbeatArmed = true
+        StationaryHeartbeatScheduler.schedule(this, config.interval)
+    }
+
+    private fun cancelStationaryHeartbeat() {
+        if (!stationaryHeartbeatArmed) return
+        stationaryHeartbeatArmed = false
+        StationaryHeartbeatScheduler.cancel(this)
+    }
+
+    private fun handleStationaryHeartbeatFired() {
+        if (!stationaryHeartbeatArmed) return
+        // A pause hold (WiFi / motionless / zone) owns its own recording - don't double-log over it.
+        if (!isWifiPaused && !isMotionlessPaused && !insidePauseZone) {
+            // Wakelock holds the CPU across the async fix - the alarm's wake window ends here, and a foreground service won't.
+            val wakeLock = acquireHeartbeatWakeLock()
+            requestFreshOrLastLocation { location, _ ->
+                if (location != null) handleLocationUpdate(location)
+                else AppLogger.d(TAG, "Stationary heartbeat: no usable fix")
+                if (wakeLock?.isHeld == true) wakeLock.release()
+            }
+        }
+        scheduleStationaryHeartbeat()
+    }
+
+    private fun acquireHeartbeatWakeLock(): PowerManager.WakeLock? {
+        val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return null
+        return pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "colota:stationary-heartbeat").apply {
+            acquire(HEARTBEAT_WAKELOCK_TIMEOUT_MS)
+        }
     }
 
     private fun pushConfigToSyncManager() {

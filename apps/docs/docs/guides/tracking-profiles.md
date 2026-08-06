@@ -40,7 +40,7 @@ Speed conditions use a rolling average of the last 5 GPS readings to avoid trigg
 
 :::tip
 
-Stationary profile When the device becomes stationary, the motion detector is started. It uses batched accelerometer variance plus the hardware significant motion sensor in parallel, so the profile deactivates within seconds of real movement regardless of the configured GPS interval (e.g. 30 min). The deactivation delay setting is not shown for stationary profiles since the motion detector handles instant resume. Set the distance filter to **0m** so points are recorded at every interval regardless of GPS drift.
+Stationary profile When the device becomes stationary, the motion detector is started. It uses batched accelerometer variance plus the hardware significant motion sensor in parallel, so the profile deactivates within seconds of real movement regardless of the configured GPS interval (e.g. 30 min). The deactivation delay setting is not shown for stationary profiles since the motion detector handles instant resume. The distance filter is forced to **0m** for stationary profiles so a point is recorded at every interval regardless of GPS drift - any other value would drop every stationary point.
 
 :::
 

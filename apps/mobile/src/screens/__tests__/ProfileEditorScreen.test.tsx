@@ -331,6 +331,18 @@ describe("ProfileEditorScreen", () => {
     expect(queryByText("Deactivation Delay")).toBeNull()
   })
 
+  it("hides the movement threshold for a stationary profile and shows a note instead", () => {
+    const { getByText, queryByText } = renderNewProfile()
+
+    // Default (charging): the field is shown
+    expect(getByText("Movement Threshold")).toBeTruthy()
+
+    // Stationary: field hidden (the distance filter is forced to 0), note shown instead
+    fireEvent.press(getByText("Stationary"))
+    expect(queryByText("Movement Threshold")).toBeNull()
+    expect(getByText(/Movement threshold does not apply/)).toBeTruthy()
+  })
+
   it("defaults stationary activation delay to 60", () => {
     const { getByText, getByDisplayValue } = renderNewProfile()
 

@@ -109,9 +109,12 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const setConditionType = useCallback(
     (type: ProfileConditionType) => {
       const isSpeed = type === "speed_above" || type === "speed_below"
+      const isStationary = type === "stationary"
       const { activationDelay: defaultActivation, deactivationDelay: defaultDeactivation } = defaultProfileDelays(type)
       setProfile((prev) => ({
         ...prev,
+        // A distance filter is ignored for a stationary profile; store 0 so UI, DB and runtime agree.
+        distance: isStationary ? 0 : prev.distance,
         deactivationDelay: prev.condition.type !== type ? defaultDeactivation : prev.deactivationDelay,
         activationDelay: prev.condition.type !== type ? defaultActivation : prev.activationDelay,
         condition: {
@@ -119,6 +122,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           ...(isSpeed ? { speedThreshold: Number(speedKmh) / MS_TO_KMH } : {})
         }
       }))
+      if (isStationary) setDistanceStr("0")
       if (profile.condition.type !== type) {
         setDelayStr(String(defaultDeactivation))
         setActivationDelayStr(String(defaultActivation))
@@ -296,22 +300,28 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 
           <Divider />
 
-          <SettingRow
-            label="Movement Threshold"
-            hint={`Default: ${metersToInput(settings.distance)} ${shortDistanceUnit()}`}
-          >
-            <View style={styles.inputWithUnit}>
-              <TextInput
-                style={inputStyle}
-                keyboardType="numeric"
-                value={distanceStr}
-                onChangeText={(val) => handleNumericChange(setDistanceStr, "distance", val, 0)}
-                placeholder="0"
-                placeholderTextColor={colors.placeholder}
-              />
-              <Text style={[styles.unit, { color: colors.textSecondary }]}>{shortDistanceUnit()}</Text>
-            </View>
-          </SettingRow>
+          {profile.condition.type === "stationary" ? (
+            <FieldMessage>
+              Movement threshold does not apply to a stationary profile - a point is recorded at every interval.
+            </FieldMessage>
+          ) : (
+            <SettingRow
+              label="Movement Threshold"
+              hint={`Default: ${metersToInput(settings.distance)} ${shortDistanceUnit()}`}
+            >
+              <View style={styles.inputWithUnit}>
+                <TextInput
+                  style={inputStyle}
+                  keyboardType="numeric"
+                  value={distanceStr}
+                  onChangeText={(val) => handleNumericChange(setDistanceStr, "distance", val, 0)}
+                  placeholder="0"
+                  placeholderTextColor={colors.placeholder}
+                />
+                <Text style={[styles.unit, { color: colors.textSecondary }]}>{shortDistanceUnit()}</Text>
+              </View>
+            </SettingRow>
+          )}
 
           {!settings.isOfflineMode && (
             <>

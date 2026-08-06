@@ -1549,6 +1549,44 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `applyProfileConfig arms the stationary heartbeat for a stationary profile`() {
+        invokeApplyProfileConfig(
+            interval = 2000L, distance = 0f, syncInterval = 0,
+            conditionType = ProfileConstants.CONDITION_STATIONARY
+        )
+
+        assertTrue(getField("stationaryHeartbeatArmed"))
+    }
+
+    @Test
+    fun `applyProfileConfig forces the distance filter to 0 for a stationary profile`() {
+        invokeApplyProfileConfig(
+            interval = 2000L, distance = 5f, syncInterval = 0,
+            conditionType = ProfileConstants.CONDITION_STATIONARY
+        )
+
+        assertEquals(0f, getField<ServiceConfig>("config").minUpdateDistance)
+    }
+
+    @Test
+    fun `applyProfileConfig disarms the stationary heartbeat for a non-stationary profile`() {
+        invokeApplyProfileConfig(
+            interval = 2000L, distance = 0f, syncInterval = 0,
+            conditionType = ProfileConstants.CONDITION_STATIONARY
+        )
+        invokeApplyProfileConfig(interval = 5000L, distance = 0f, syncInterval = 0, conditionType = "")
+
+        assertFalse(getField("stationaryHeartbeatArmed"))
+    }
+
+    @Test
+    fun `stationary heartbeat fired is a no-op when not armed`() {
+        invokeStationaryHeartbeatFired()
+
+        assertFalse(getField("stationaryHeartbeatArmed"))
+    }
+
+    @Test
     fun `applyProfileConfig preserves non-profile config fields`() {
         setField("config", ServiceConfig(
             endpoint = "https://my-server.com",
@@ -2389,12 +2427,18 @@ class LocationForegroundServiceTest {
         method.invoke(service, location)
     }
 
-    private fun invokeApplyProfileConfig(interval: Long, distance: Float, syncInterval: Int) {
+    private fun invokeApplyProfileConfig(interval: Long, distance: Float, syncInterval: Int, conditionType: String = "") {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
-            "applyProfileConfig", Long::class.java, Float::class.java, Int::class.java
+            "applyProfileConfig", Long::class.java, Float::class.java, Int::class.java, String::class.java
         )
         method.isAccessible = true
-        method.invoke(service, interval, distance, syncInterval)
+        method.invoke(service, interval, distance, syncInterval, conditionType)
+    }
+
+    private fun invokeStationaryHeartbeatFired() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("handleStationaryHeartbeatFired")
+        method.isAccessible = true
+        method.invoke(service)
     }
 
     private fun invokeTrackingStateLabel(): String {
