@@ -49,7 +49,7 @@ object StationaryHeartbeatScheduler {
             context,
             REQUEST_CODE,
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE
         )
     }
 }
