@@ -54,6 +54,7 @@ no-changes-template: '- No changes'
 category-template: '### $TITLE'
 
 template: |
+
   ## All changes
 
   $CHANGES
