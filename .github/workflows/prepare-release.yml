@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request:
+  pull_request_target:
     types: [opened, reopened, synchronize]
 
 permissions:
@@ -14,13 +14,28 @@ permissions:
 jobs:
   update_release_draft:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.base.repo.full_name == 'dietrichmax/colota'
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Read release summary
+        id: summary
+        run: |
+          f=$(ls fastlane/metadata/android/en-US/changelogs/*.txt 2>/dev/null | sort -V | tail -1)
+          {
+            echo 'text<<COLOTA_EOF'
+            if [ -s "$f" ]; then cat "$f"; else echo '_Not written yet._'; fi
+            echo 'COLOTA_EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Update Release Draft
         uses: release-drafter/release-drafter@34d80673e067bdc0c24568d3af899c216adcfaa9 # v7
         with:
           config-name: release-drafter.yml
+          header: |
+            ## Highlights
+
+            ${{ steps.summary.outputs.text }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
