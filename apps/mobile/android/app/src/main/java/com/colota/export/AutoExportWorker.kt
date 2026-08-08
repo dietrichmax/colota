@@ -24,6 +24,7 @@ import com.Colota.data.DatabaseHelper
 import com.Colota.util.AppLogger
 import java.io.File
 import java.io.IOException
+import java.util.Date
 
 /**
  * Performs the actual export. Triggered by AutoExportAlarmReceiver when the
@@ -121,14 +122,20 @@ class AutoExportWorker(
 
         val ext = ExportConverters.extensionFor(config.format)
         val dirUri = Uri.parse(config.uri)
-        val fileName = "colota_export_${ExportConverters.exportFilenameStamp()}$ext"
+
+        // Used for the incremental upper bound, the saved lastExport and the filename stamp, so
+        // points written mid-export aren't dropped and the name matches the range it covers.
+        val exportStartSec = System.currentTimeMillis() / 1000
+
+        val fileName = ExportConverters.renderExportFilename(
+            config.filenameTemplate,
+            config.format,
+            Build.MODEL,
+            Date(exportStartSec * 1000)
+        )
 
         // Write to cache first, then copy to SAF.
         val tempFile = File(appContext.cacheDir, "auto_export_temp$ext")
-
-        // Used for both the incremental upper bound and the saved lastExport,
-        // so points written mid-export aren't dropped.
-        val exportStartSec = System.currentTimeMillis() / 1000
 
         return try {
             val rowCount = if (config.mode == "incremental" && config.lastExportTimestamp > 0) {
@@ -151,7 +158,7 @@ class AutoExportWorker(
                 tempFile.delete()
                 AppLogger.i(TAG, "No locations to export")
                 showNotification("Auto-Export", "No new locations to export.")
-                cleanupOldExports(dirUri, config.retentionCount)
+                cleanupOldExports(dirUri, config)
                 return Result.success()
             }
 
@@ -171,16 +178,23 @@ class AutoExportWorker(
 
             config.saveLastExportTimestamp(db, exportStartSec)
 
-            cleanupOldExports(dirUri, config.retentionCount)
+            cleanupOldExports(dirUri, config)
 
-            AppLogger.i(TAG, "Auto-export complete: $fileName ($rowCount locations)")
-            config.saveLastResult(db, fileName, rowCount)
+            // SAF renames on collision (foo.gpx -> "foo (1).gpx"), so report what it created.
+            val savedName = destDocFile.name ?: fileName
+            // A name cleanup cannot match would sit in the directory forever; say so rather than
+            // leaving the retention limit quietly broken.
+            if (ExportConverters.exportFileMatchers(config.filenameTemplate, Build.MODEL).none { it.matches(savedName) }) {
+                AppLogger.w(TAG, "Saved as '$savedName', which retention will not recognise")
+            }
+            AppLogger.i(TAG, "Auto-export complete: $savedName ($rowCount locations)")
+            config.saveLastResult(db, savedName, rowCount)
             showNotification(
                 "Auto-Export Complete",
-                "Exported $rowCount locations to $fileName",
+                "Exported $rowCount locations to $savedName",
                 dirUri
             )
-            LocationServiceModule.sendAutoExportEvent(true, fileName, rowCount, null)
+            LocationServiceModule.sendAutoExportEvent(true, savedName, rowCount, null)
             Result.success()
         } catch (e: SecurityException) {
             config.saveEnabled(db, false)
@@ -267,25 +281,45 @@ class AutoExportWorker(
         return docFile
     }
 
-    private fun cleanupOldExports(dirUri: Uri, retentionCount: Int) {
-        if (retentionCount <= 0) return // 0 = unlimited
+    /**
+     * Deletes only files the configured template could have produced, so subfolders and sync
+     * artifacts are left alone. Selection lives in [ExportConverters.selectForDeletion] so it is
+     * testable without SAF.
+     */
+    private fun cleanupOldExports(dirUri: Uri, config: AutoExportConfig) {
+        if (config.retentionCount <= 0) return // 0 = unlimited
 
         try {
             val dir = DocumentFile.fromTreeUri(appContext, dirUri) ?: return
-            // File names embed a sortable timestamp, so lexicographic == chronological.
-            val exportFiles = dir.listFiles()
-                .filter { it.name?.startsWith("colota_export_") == true }
-                .sortedBy { it.name }
+            val matchers = ExportConverters.exportFileMatchers(config.filenameTemplate, Build.MODEL)
 
-            val toDelete = exportFiles.size - retentionCount
-            if (toDelete <= 0) return
+            // Each DocumentFile getter is its own query, so only the names that already match pay
+            // for lastModified and isFile. A shared folder can hold far more files than ours.
+            val candidates = dir.listFiles()
+                .map { it to it.name.orEmpty() }
+                .filter { (_, name) -> matchers.any { it.matches(name) } }
+                .map { (file, name) ->
+                    file to ExportConverters.ExportEntry(name, file.lastModified(), file.isFile)
+                }
+            val doomed = ExportConverters
+                .selectForDeletion(candidates.map { it.second }, config.retentionCount, matchers)
+                .map { it.name }
+                .toMutableList()
+            if (doomed.isEmpty()) return
 
-            exportFiles.take(toDelete).forEach { file ->
-                file.delete()
-                AppLogger.d(TAG, "Cleaned up old export: ${file.name}")
+            var deleted = 0
+            candidates.forEach { (file, entry) ->
+                // Re-checked here because the match is by display name: a directory sharing a name
+                // with a selected file would otherwise be deleted, recursively.
+                // remove() rather than contains() so duplicate display names delete one apiece.
+                if (entry.isFile && doomed.remove(entry.name)) {
+                    file.delete()
+                    deleted++
+                    AppLogger.d(TAG, "Cleaned up old export: ${entry.name}")
+                }
             }
 
-            AppLogger.i(TAG, "Cleaned up $toDelete old export files (keeping $retentionCount)")
+            AppLogger.i(TAG, "Cleaned up $deleted old export files (keeping ${config.retentionCount})")
         } catch (e: Exception) {
             AppLogger.w(TAG, "Export cleanup failed (non-critical): ${e.message}")
         }

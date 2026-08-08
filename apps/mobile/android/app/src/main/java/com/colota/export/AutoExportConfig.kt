@@ -6,6 +6,7 @@
 package com.Colota.export
 
 import com.Colota.data.DatabaseHelper
+import com.Colota.util.AppLogger
 import java.util.Calendar
 import java.util.TimeZone
 
@@ -28,9 +29,12 @@ data class AutoExportConfig(
     val timeOfDay: String = "00:00",
     val weeklyDow: Int = 1,
     val monthlyDom: Int = 1,
-    val enabledAt: Long = 0L
+    val enabledAt: Long = 0L,
+    val filenameTemplate: String = ExportConverters.DEFAULT_FILENAME_TEMPLATE
 ) {
     companion object {
+        private const val TAG = "AutoExportConfig"
+
         private const val KEY_ENABLED = "autoExportEnabled"
         private const val KEY_FORMAT = "autoExportFormat"
         private const val KEY_INTERVAL = "autoExportInterval"
@@ -46,6 +50,7 @@ data class AutoExportConfig(
         private const val KEY_WEEKLY_DOW = "autoExportWeeklyDow"
         private const val KEY_MONTHLY_DOM = "autoExportMonthlyDom"
         private const val KEY_ENABLED_AT = "autoExportEnabledAt"
+        private const val KEY_FILENAME_TEMPLATE = "autoExportFilenameTemplate"
 
         private val VALID_FORMATS = setOf("csv", "geojson", "gpx", "kml")
         private val VALID_INTERVALS = setOf("daily", "weekly", "monthly")
@@ -75,6 +80,22 @@ data class AutoExportConfig(
             val monthlyDom = rawDom?.coerceIn(1, 31)
                 ?: derived.monthlyDom.also { if (shouldPersistMigration) db.saveSetting(KEY_MONTHLY_DOM, it.toString()) }
 
+            // Restore or version skew can leave a template the settings screen would have
+            // rejected; write the correction back so the UI stops showing one the exporter never
+            // uses. Best-effort, since saveSetting throws mid-restore.
+            val rawTemplate = db.getSetting(KEY_FILENAME_TEMPLATE)
+            val filenameTemplate = rawTemplate?.takeIf { ExportConverters.isValidFilenameTemplate(it) }
+                ?: ExportConverters.DEFAULT_FILENAME_TEMPLATE.also {
+                    if (rawTemplate != null) {
+                        AppLogger.w(TAG, "Filename template '$rawTemplate' is not usable, reset to default")
+                        try {
+                            db.saveSetting(KEY_FILENAME_TEMPLATE, it)
+                        } catch (e: Exception) {
+                            AppLogger.w(TAG, "Could not persist template reset: ${e.message}")
+                        }
+                    }
+                }
+
             return AutoExportConfig(
                 enabled = db.getSetting(KEY_ENABLED, "false") == "true",
                 format = if (format in VALID_FORMATS) format else "geojson",
@@ -90,7 +111,8 @@ data class AutoExportConfig(
                 timeOfDay = timeOfDay,
                 weeklyDow = weeklyDow,
                 monthlyDom = monthlyDom,
-                enabledAt = db.getSetting(KEY_ENABLED_AT, "0")?.toLongOrNull() ?: 0L
+                enabledAt = db.getSetting(KEY_ENABLED_AT, "0")?.toLongOrNull() ?: 0L,
+                filenameTemplate = filenameTemplate
             )
         }
 

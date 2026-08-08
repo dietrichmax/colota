@@ -50,7 +50,11 @@ All data is stored **locally on your device** and is never sent anywhere unless 
 
 Collected data is stored in a local SQLite database on your device. The data is not accessible to other apps. The App checks available device storage before downloading offline map packs.
 
-If you configure auto-export, the App will write export files (CSV, GeoJSON, GPX, or KML) to a directory you select on your device. No data leaves your device as part of this process.
+If you configure auto-export, the App will write export files (CSV, GeoJSON, GPX, or KML) to a directory you select on your device. If you pick a cloud-synced folder, those files leave your device through that provider.
+
+To enforce the file-retention limit you configure, the App also deletes export files from that directory. It only ever deletes files whose names match its own export naming pattern; other files and subfolders in the directory are left untouched.
+
+The export file name is configurable and may include a `{device}` placeholder, which inserts your device model (for example `Pixel7`). If you use it and the directory is cloud-synced, your device model is visible to that provider and to anyone with access to the folder. It is not included unless you add the placeholder.
 
 If you enable persistent file logging in Logging -> File, the App writes diagnostic log entries (which may include location coordinates and other sensitive information) to a private file in app storage. The file is removed when the App is uninstalled. Logs are never sent automatically; sharing them requires explicit user action via the "Export log file..." flow.
 

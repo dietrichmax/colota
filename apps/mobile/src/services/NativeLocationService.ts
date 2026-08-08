@@ -834,13 +834,16 @@ class NativeLocationService {
     timeOfDay: string
     weeklyDow: number
     monthlyDom: number
+    filenameTemplate: string
+    deviceModel: string
   }> {
     this.ensureModule()
     return LocationServiceModule.getAutoExportStatus()
   }
 
   /**
-   * Returns list of export files in the export directory, sorted newest first.
+   * Returns export files matching the configured filename template, newest first by the
+   * timestamp embedded in the name.
    */
   static async getExportFiles(): Promise<{ name: string; size: number; lastModified: number; uri: string }[]> {
     this.ensureModule()

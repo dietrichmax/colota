@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
-import { Text, StyleSheet, Switch, View, ScrollView, Pressable, DeviceEventEmitter } from "react-native"
+import { Text, StyleSheet, Switch, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
 import { FolderOpen, CheckCircle, Share2, AlertTriangle } from "lucide-react-native"
 import {
   Container,
@@ -25,7 +25,15 @@ import { useTheme } from "../hooks/useTheme"
 import { useTimeout } from "../hooks/useTimeout"
 import { ScreenProps } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
-import { ExportFormat, EXPORT_FORMATS } from "../utils/exportConverters"
+import {
+  ExportFormat,
+  EXPORT_FORMATS,
+  DEFAULT_FILENAME_TEMPLATE,
+  FILENAME_TOKENS,
+  filenameTokenValues,
+  isValidFilenameTemplate,
+  renderFilenamePreview
+} from "../utils/exportConverters"
 import { fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
 import { formatExportDateTime, formatBytes } from "../utils/format"
@@ -83,6 +91,9 @@ export function AutoExportScreen(_props: ScreenProps) {
   const [weeklyDow, setWeeklyDow] = useState<number>(1)
   const [monthlyDom, setMonthlyDom] = useState<number>(1)
   const [monthlyDomInput, setMonthlyDomInput] = useState<string>("1")
+  const [filenameTemplate, setFilenameTemplate] = useState<string>(DEFAULT_FILENAME_TEMPLATE)
+  const [filenameTemplateInput, setFilenameTemplateInput] = useState<string>(DEFAULT_FILENAME_TEMPLATE)
+  const [deviceModel, setDeviceModel] = useState<string>("")
   const [exportFiles, setExportFiles] = useState<ExportFile[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
@@ -110,6 +121,9 @@ export function AutoExportScreen(_props: ScreenProps) {
       setWeeklyDow(status.weeklyDow || 1)
       setMonthlyDom(status.monthlyDom || 1)
       setMonthlyDomInput((status.monthlyDom || 1).toString())
+      setFilenameTemplate(status.filenameTemplate || DEFAULT_FILENAME_TEMPLATE)
+      setFilenameTemplateInput(status.filenameTemplate || DEFAULT_FILENAME_TEMPLATE)
+      setDeviceModel(status.deviceModel || "")
 
       const permissionLost = await NativeLocationService.getSetting("autoExportPermissionLost")
       if (permissionLost === "true") {
@@ -278,6 +292,30 @@ export function AutoExportScreen(_props: ScreenProps) {
     await loadStatus()
   }, [monthlyDomInput, monthlyDom, saveSetting, loadStatus, reschedule])
 
+  const handleFilenameTemplateChange = useCallback((text: string) => {
+    setFilenameTemplateInput(text)
+  }, [])
+
+  const handleFilenameTemplateBlur = useCallback(async () => {
+    const next = filenameTemplateInput.trim()
+    if (next === filenameTemplate) return
+    if (!isValidFilenameTemplate(next)) {
+      setFilenameTemplateInput(filenameTemplate)
+      showAlert(
+        "Invalid Template",
+        "The template must contain colota_export, {date} and {time}. The marker lets Colota recognise its own files during cleanup, and the date and time keep every export uniquely named and correctly ordered. Matching is case-sensitive.",
+        "warning"
+      )
+      return
+    }
+    setFilenameTemplate(next)
+    setFilenameTemplateInput(next)
+    await saveSetting("autoExportFilenameTemplate", next)
+    // The file list and count are matched against the template natively, so both go stale here.
+    await loadStatus()
+    await loadExportFiles()
+  }, [filenameTemplateInput, filenameTemplate, saveSetting, loadStatus, loadExportFiles])
+
   const handleRetentionChange = useCallback((text: string) => {
     setRetentionInput(text.replace(/\D/g, ""))
   }, [])
@@ -343,6 +381,8 @@ export function AutoExportScreen(_props: ScreenProps) {
       </Container>
     )
 
+  const tokenValues = filenameTokenValues(deviceModel)
+
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -396,6 +436,40 @@ export function AutoExportScreen(_props: ScreenProps) {
           <SectionTitle>Format</SectionTitle>
           <Card>
             <FormatSelector selectedFormat={format} onSelectFormat={handleFormatChange} />
+          </Card>
+        </View>
+
+        {/* File Name */}
+        <View style={styles.section}>
+          <SectionTitle>File Name</SectionTitle>
+          <Card>
+            <TextInput
+              style={[styles.templateInput, { color: colors.text, borderColor: colors.border }]}
+              value={filenameTemplateInput}
+              onChangeText={handleFilenameTemplateChange}
+              onBlur={handleFilenameTemplateBlur}
+              placeholder={DEFAULT_FILENAME_TEMPLATE}
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {FILENAME_TOKENS.map((token) => (
+              <View key={token} style={styles.templateTokenRow}>
+                <Text style={[styles.templateToken, { color: colors.text }]}>{`{${token}}`}</Text>
+                <Text style={[styles.templateHint, { color: colors.textSecondary }]}>{tokenValues[token]}</Text>
+              </View>
+            ))}
+            <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
+              Must contain colota_export, {"{date}"} and {"{time}"}. The extension is added automatically.
+            </Text>
+            <Text style={[styles.templatePreview, { color: colors.textSecondary }]}>
+              Preview:{" "}
+              {renderFilenamePreview(
+                isValidFilenameTemplate(filenameTemplateInput) ? filenameTemplateInput : filenameTemplate,
+                format,
+                deviceModel
+              )}
+            </Text>
           </Card>
         </View>
 
@@ -477,7 +551,11 @@ export function AutoExportScreen(_props: ScreenProps) {
               placeholder="10"
               min={0}
               colors={colors}
-              hint="Set to 0 for unlimited"
+              hint={
+                filenameTemplate.includes("{device}")
+                  ? "Set to 0 for unlimited. Counts only exports named for this device model, so other models sharing the folder are untouched."
+                  : "Set to 0 for unlimited. Counts every Colota export in the folder. Add {device} to the file name to keep files per device instead."
+              }
             />
           </Card>
         </View>
@@ -685,5 +763,34 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: 12,
     marginBottom: 8
+  },
+  templateInput: {
+    fontSize: 15,
+    ...fonts.regular,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  templateHint: {
+    fontSize: 13,
+    ...fonts.regular,
+    marginTop: 8
+  },
+  templateTokenRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8
+  },
+  templateToken: {
+    fontSize: 13,
+    ...fonts.semiBold,
+    marginTop: 8,
+    minWidth: 72
+  },
+  templatePreview: {
+    fontSize: 13,
+    ...fonts.semiBold,
+    marginTop: 8
   }
 })

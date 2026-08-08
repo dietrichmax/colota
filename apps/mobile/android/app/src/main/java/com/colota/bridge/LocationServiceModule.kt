@@ -989,7 +989,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun getAutoExportStatus(promise: Promise) = executeAsync(promise) {
         val config = AutoExportConfig.from(dbHelper)
-        val fileCount = config.uri?.let { countExportFiles(it) } ?: 0
+        val fileCount = if (config.uri != null) countExportFiles(config) else 0
 
         Arguments.createMap().apply {
             putBoolean("enabled", config.enabled)
@@ -1007,6 +1007,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             putString("timeOfDay", config.timeOfDay)
             putInt("weeklyDow", config.weeklyDow)
             putInt("monthlyDom", config.monthlyDom)
+            putString("filenameTemplate", config.filenameTemplate)
+            putString("deviceModel", android.os.Build.MODEL)
         }
     }
 
@@ -1053,18 +1055,30 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         } else {
             val dirUri = android.net.Uri.parse(config.uri)
             val dir = androidx.documentfile.provider.DocumentFile.fromTreeUri(reactApplicationContext, dirUri)
+            val matchers = ExportConverters.exportFileMatchers(config.filenameTemplate, android.os.Build.MODEL)
+            // Every DocumentFile getter is a separate query, so read each file once up front
+            // rather than once per sort comparison. Ordering uses the stamp in the name, since a
+            // device prefix would break plain name order.
             val files = dir?.listFiles()
-                ?.filter { it.name?.startsWith("colota_export_") == true }
-                ?.sortedByDescending { it.name }
+                ?.mapNotNull { file ->
+                    val name = file.name.orEmpty()
+                    if (matchers.none { it.matches(name) }) null
+                    else ExportFileInfo(name, file.length(), file.lastModified(), file.uri.toString())
+                }
+                ?.sortedWith(
+                    compareByDescending<ExportFileInfo> { ExportConverters.stampOf(it.name, matchers) }
+                        .thenByDescending { it.lastModified }
+                        .thenByDescending { it.name }
+                )
                 ?: emptyList()
 
             Arguments.createArray().apply {
                 for (file in files) {
                     pushMap(Arguments.createMap().apply {
                         putString("name", file.name)
-                        putDouble("size", file.length().toDouble())
-                        putDouble("lastModified", (file.lastModified() / 1000).toDouble())
-                        putString("uri", file.uri.toString())
+                        putDouble("size", file.size.toDouble())
+                        putDouble("lastModified", (file.lastModified / 1000).toDouble())
+                        putString("uri", file.uri)
                     })
                 }
             }
@@ -1090,11 +1104,16 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    private fun countExportFiles(uriString: String): Int {
+    private data class ExportFileInfo(val name: String, val size: Long, val lastModified: Long, val uri: String)
+
+    private fun countExportFiles(config: AutoExportConfig): Int {
         return try {
-            val dirUri = android.net.Uri.parse(uriString)
+            val dirUri = android.net.Uri.parse(config.uri)
             val dir = androidx.documentfile.provider.DocumentFile.fromTreeUri(reactApplicationContext, dirUri)
-            dir?.listFiles()?.count { it.name?.startsWith("colota_export_") == true } ?: 0
+            val matchers = ExportConverters.exportFileMatchers(config.filenameTemplate, android.os.Build.MODEL)
+            dir?.listFiles()?.count { file ->
+                matchers.any { it.matches(file.name.orEmpty()) }
+            } ?: 0
         } catch (e: Exception) {
             AppLogger.w(TAG, "Could not count export files: ${e.message}")
             0

@@ -44,7 +44,9 @@ const mockGetAutoExportStatus = jest.fn().mockResolvedValue({
   lastError: null,
   timeOfDay: "00:00",
   weeklyDow: 1,
-  monthlyDom: 1
+  monthlyDom: 1,
+  filenameTemplate: "colota_export_{date}_{time}",
+  deviceModel: "Pixel 7"
 })
 const mockSaveSetting = jest.fn().mockResolvedValue(undefined)
 const mockScheduleAutoExport = jest.fn().mockResolvedValue(true)
@@ -109,6 +111,8 @@ jest.mock("../../utils/exportConverters", () => {
   const { View } = require("react-native")
   const icon = () => R.createElement(View, null)
   return {
+    // Real template helpers so the preview assertion exercises the shipped renderer, not a stub.
+    ...jest.requireActual("../../utils/exportConverters"),
     EXPORT_FORMAT_KEYS: ["csv", "geojson", "gpx", "kml"],
     EXPORT_FORMATS: {
       csv: { label: "CSV", extension: ".csv", subtitle: "Spreadsheet", description: "desc", icon },
@@ -230,7 +234,9 @@ describe("AutoExportScreen", () => {
       lastError: null,
       timeOfDay: "00:00",
       weeklyDow: 1,
-      monthlyDom: 1
+      monthlyDom: 1,
+      filenameTemplate: "colota_export_{date}_{time}",
+      deviceModel: "Pixel 7"
     })
     mockGetExportFiles.mockResolvedValue([])
   })
@@ -496,7 +502,7 @@ describe("AutoExportScreen", () => {
     const { getByTestId, getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Set to 0 for unlimited")).toBeTruthy()
+      expect(getByText(/Set to 0 for unlimited/)).toBeTruthy()
     })
 
     const input = getByTestId("numeric-input-Files to keep")
@@ -505,6 +511,99 @@ describe("AutoExportScreen", () => {
 
     await waitFor(() => {
       expect(mockSaveSetting).toHaveBeenCalledWith("autoExportRetentionCount", "0")
+    })
+  })
+
+  it("saves a valid filename template on blur", async () => {
+    const { getByDisplayValue } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByDisplayValue("colota_export_{date}_{time}")).toBeTruthy()
+    })
+
+    const input = getByDisplayValue("colota_export_{date}_{time}")
+    fireEvent.changeText(input, "{device}_colota_export-{date}_{time}")
+    fireEvent(input, "blur")
+
+    await waitFor(() => {
+      expect(mockSaveSetting).toHaveBeenCalledWith("autoExportFilenameTemplate", "{device}_colota_export-{date}_{time}")
+    })
+  })
+
+  it("rejects a filename template without the marker and reverts the field", async () => {
+    const { getByDisplayValue } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByDisplayValue("colota_export_{date}_{time}")).toBeTruthy()
+    })
+
+    const input = getByDisplayValue("colota_export_{date}_{time}")
+    fireEvent.changeText(input, "backup_{date}_{time}")
+    fireEvent(input, "blur")
+
+    await waitFor(() => {
+      expect(mockShowAlert).toHaveBeenCalledWith("Invalid Template", expect.any(String), "warning")
+    })
+    expect(mockSaveSetting).not.toHaveBeenCalledWith("autoExportFilenameTemplate", "backup_{date}_{time}")
+    expect(getByDisplayValue("colota_export_{date}_{time}")).toBeTruthy()
+  })
+
+  it("rejects a filename template missing the time token", async () => {
+    const { getByDisplayValue } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByDisplayValue("colota_export_{date}_{time}")).toBeTruthy()
+    })
+
+    const input = getByDisplayValue("colota_export_{date}_{time}")
+    fireEvent.changeText(input, "colota_export_{date}")
+    fireEvent(input, "blur")
+
+    await waitFor(() => {
+      expect(mockShowAlert).toHaveBeenCalledWith("Invalid Template", expect.any(String), "warning")
+    })
+    expect(mockSaveSetting).not.toHaveBeenCalledWith("autoExportFilenameTemplate", "colota_export_{date}")
+  })
+
+  it("previews the filename the exporter will actually write", async () => {
+    // Pins the JS mirror to the native renderer; drift would otherwise be invisible.
+    jest.useFakeTimers().setSystemTime(new Date(2026, 4, 20, 8, 15, 0))
+    try {
+      const { getByText } = render(<AutoExportScreen {...mockProps} />)
+
+      await waitFor(() => {
+        expect(getByText("Preview: colota_export_2026-05-20_0815.geojson")).toBeTruthy()
+      })
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it("retention hint reflects per-device scope when the template has a device token", async () => {
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: false,
+      format: "geojson",
+      interval: "daily",
+      uri: null,
+      mode: "all",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0,
+      retentionCount: 10,
+      lastFileName: null,
+      lastRowCount: 0,
+      lastError: null,
+      timeOfDay: "00:00",
+      weeklyDow: 1,
+      monthlyDom: 1,
+      filenameTemplate: "{device}_colota_export-{date}_{time}",
+      deviceModel: "Pixel 7"
+    })
+
+    const { getByText } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByText(/Counts only exports named for this device model/)).toBeTruthy()
     })
   })
 

@@ -183,6 +183,57 @@ class AutoExportConfigTest {
         assertEquals(0L, config.enabledAt)
     }
 
+    // --- filename template ---
+
+    private fun dbWith(template: String?) = mockk<com.Colota.data.DatabaseHelper>(relaxed = true).also { db ->
+        every { db.getSetting(any(), any()) } answers {
+            when (firstArg<String>()) {
+                "autoExportEnabled" -> "false"
+                "autoExportFormat" -> "geojson"
+                "autoExportInterval" -> "daily"
+                "autoExportMode" -> "all"
+                "lastAutoExportTimestamp" -> "0"
+                "autoExportPermissionLost" -> "false"
+                "autoExportRetentionCount" -> "10"
+                "autoExportLastRowCount" -> "0"
+                "autoExportFilenameTemplate" -> template
+                else -> null
+            }
+        }
+    }
+
+    @Test
+    fun `from defaults the filename template when unset`() {
+        val db = dbWith(null)
+        assertEquals(ExportConverters.DEFAULT_FILENAME_TEMPLATE, AutoExportConfig.from(db).filenameTemplate)
+        verify(exactly = 0) { db.saveSetting("autoExportFilenameTemplate", any()) }
+    }
+
+    @Test
+    fun `from keeps a valid custom filename template`() {
+        val custom = "{device}_colota_export-{date}_{time}"
+        assertEquals(custom, AutoExportConfig.from(dbWith(custom)).filenameTemplate)
+    }
+
+    @Test
+    fun `from repairs a template that reached the DB without the marker`() {
+        // Restore or version skew can write one the settings screen would have rejected.
+        val db = dbWith("backup_{date}_{time}")
+        assertEquals(ExportConverters.DEFAULT_FILENAME_TEMPLATE, AutoExportConfig.from(db).filenameTemplate)
+        verify {
+            db.saveSetting("autoExportFilenameTemplate", ExportConverters.DEFAULT_FILENAME_TEMPLATE)
+        }
+    }
+
+    @Test
+    fun `from repairs a template missing the time tokens`() {
+        // Without both tokens two exports in a day collide and retention cannot order them.
+        assertEquals(
+            ExportConverters.DEFAULT_FILENAME_TEMPLATE,
+            AutoExportConfig.from(dbWith("colota_export_{date}")).filenameTemplate
+        )
+    }
+
     // --- migration: from() derives schedule from lastExportTimestamp ---
 
     @Test
