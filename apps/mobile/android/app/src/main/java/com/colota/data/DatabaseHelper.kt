@@ -47,6 +47,7 @@ class DatabaseHelper private constructor(context: Context) :
 
         private const val TAG = "LocationDB"
         private const val TRIP_GAP_SECONDS = 900L // 15 min, matches JS segmentTrips
+        private const val MIN_TRIP_EXTENT_METERS = 100.0 // bbox diagonal, matches JS segmentTrips
 
         private const val CREATE_PROFILES_TABLE = """
             CREATE TABLE IF NOT EXISTS $TABLE_PROFILES (
@@ -997,10 +998,26 @@ class DatabaseHelper private constructor(context: Context) :
                 var endTime = 0L
                 var distance = 0.0
                 var tripCount = 0
-                var segmentSize = 0
                 var prevLat = 0.0
                 var prevLon = 0.0
                 var prevTs = 0L
+
+                // Distance is buffered until the segment qualifies as a trip
+                var segMinLat = 0.0
+                var segMaxLat = 0.0
+                var segMinLon = 0.0
+                var segMaxLon = 0.0
+                var segDistance = 0.0
+                var segCounted = false
+
+                fun startSegment(lat: Double, lon: Double) {
+                    segMinLat = lat
+                    segMaxLat = lat
+                    segMinLon = lon
+                    segMaxLon = lon
+                    segDistance = 0.0
+                    segCounted = false
+                }
 
                 fun emitDay() {
                     if (currentDay != null) {
@@ -1029,7 +1046,7 @@ class DatabaseHelper private constructor(context: Context) :
                         endTime = ts
                         distance = 0.0
                         tripCount = 0
-                        segmentSize = 1
+                        startSegment(lat, lon)
                         prevLat = lat
                         prevLon = lon
                         prevTs = ts
@@ -1037,11 +1054,23 @@ class DatabaseHelper private constructor(context: Context) :
                         count++
                         endTime = ts
                         if (ts - prevTs >= TRIP_GAP_SECONDS) {
-                            segmentSize = 1
+                            startSegment(lat, lon)
                         } else {
-                            segmentSize++
-                            if (segmentSize == 2) tripCount++
-                            distance += haversineDistance(prevLat, prevLon, lat, lon)
+                            segDistance += haversineDistance(prevLat, prevLon, lat, lon)
+                            if (lat < segMinLat) segMinLat = lat
+                            if (lat > segMaxLat) segMaxLat = lat
+                            if (lon < segMinLon) segMinLon = lon
+                            if (lon > segMaxLon) segMaxLon = lon
+                            if (!segCounted &&
+                                haversineDistance(segMinLat, segMinLon, segMaxLat, segMaxLon) >= MIN_TRIP_EXTENT_METERS
+                            ) {
+                                tripCount++
+                                segCounted = true
+                            }
+                            if (segCounted) {
+                                distance += segDistance
+                                segDistance = 0.0
+                            }
                         }
                     }
                     prevLat = lat

@@ -83,7 +83,8 @@ function makeTrip(index: number, distance = 1000): Trip {
     startTime: index * 100,
     endTime: index * 100 + 60,
     distance,
-    locationCount: 5
+    locationCount: 5,
+    startIndex: (index - 1) * 5
   }
 }
 

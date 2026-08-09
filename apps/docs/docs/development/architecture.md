@@ -369,7 +369,7 @@ Supporting utilities in `mapUtils.ts`:
 | `logger` | Environment-aware logging - suppresses debug/info console output in production via `__DEV__`, always logs warn/error to console. All levels are always captured in a ring buffer (2000 entries) for the Logging screen |
 | `geo` | Haversine distance, speed/distance/duration/time formatting with configurable unit system (metric/imperial) and time format (12h/24h), auto-detected from locale on first use |
 | `exportConverters` | Export-format metadata (labels, icons, extensions, MIME types) for the export UI. Serialization itself is native - see `ExportConverters.kt` |
-| `trips` | Trip segmentation via time-gap detection (15-min threshold) with distance computation, trip stats (avg speed, elevation gain/loss), and trip color assignment |
+| `trips` | Trip segmentation via time-gap detection (15-min threshold), dropping segments whose bounding box spans under 100 m so stationary heartbeat runs do not become trips, plus distance computation, trip stats (avg speed, elevation gain/loss), and trip color assignment. `getDailyStats` in `DatabaseHelper.kt` mirrors both thresholds for the calendar and summary |
 | `queueStatus` | Maps sync queue size to color indicators for the dashboard |
 | `settingsValidation` | URL validation and security checks for endpoint configuration |
 

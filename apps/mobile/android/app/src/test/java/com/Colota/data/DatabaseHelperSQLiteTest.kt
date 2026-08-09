@@ -901,6 +901,53 @@ class DatabaseHelperSQLiteTest {
     }
 
     @Test
+    fun `getDailyStats ignores a stationary run at a single coordinate`() {
+        // Heartbeat points at the zone centre, 10 min apart so they chain into one segment
+        repeat(10) { i ->
+            db.saveLocation(latitude = 52.52, longitude = 13.405, timestamp = 1708344000L + i * 600L)
+        }
+
+        val stats = db.getDailyStats(1708300000L, 1708400000L)
+        assertEquals(1, stats.size)
+        assertEquals(10, stats[0]["count"])
+        assertEquals(0, stats[0]["tripCount"])
+        assertEquals(0.0, stats[0]["distanceMeters"] as Double, 0.001)
+    }
+
+    @Test
+    fun `getDailyStats ignores a jittering stationary run despite its total distance`() {
+        // Real fixes, so every point moves - total distance passes 200m while the bbox stays ~60m
+        val offsets = listOf(0.0, 0.0002, -0.0001, 0.00025, -0.00022, 0.0001, -0.00025, 0.00018, -0.00015, 0.00022)
+        offsets.forEachIndexed { i, d ->
+            db.saveLocation(
+                latitude = 52.52 + d,
+                longitude = 13.405 + if (i % 2 == 0) d else -d,
+                timestamp = 1708344000L + i * 600L
+            )
+        }
+
+        val stats = db.getDailyStats(1708300000L, 1708400000L)
+        assertEquals(1, stats.size)
+        assertEquals(0, stats[0]["tripCount"])
+        assertEquals(0.0, stats[0]["distanceMeters"] as Double, 0.001)
+    }
+
+    @Test
+    fun `getDailyStats counts a real trip that follows a stationary run`() {
+        // Stationary run followed by a real trip
+        repeat(5) { i ->
+            db.saveLocation(latitude = 52.52, longitude = 13.405, timestamp = 1708344000L + i * 600L)
+        }
+        db.saveLocation(latitude = 52.6, longitude = 13.405, timestamp = 1708348000L)
+        db.saveLocation(latitude = 52.61, longitude = 13.405, timestamp = 1708348060L)
+
+        val stats = db.getDailyStats(1708300000L, 1708400000L)
+        assertEquals(1, stats.size)
+        assertEquals(1, stats[0]["tripCount"])
+        assertTrue((stats[0]["distanceMeters"] as Double) > 1000)
+    }
+
+    @Test
     fun `getDailyStats returns empty for no data`() {
         val stats = db.getDailyStats(1708300000L, 1708400000L)
         assertTrue(stats.isEmpty())

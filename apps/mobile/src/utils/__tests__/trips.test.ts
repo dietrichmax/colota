@@ -1,5 +1,5 @@
 import { segmentTrips, getTripColor, TRIP_COLORS, computeTripStats } from "../trips"
-import { formatDuration, formatTime, formatDate } from "../geo"
+import { formatDuration, formatTime, formatDate, computeTotalDistance } from "../geo"
 
 describe("segmentTrips", () => {
   it("returns empty array for empty input", () => {
@@ -86,6 +86,58 @@ describe("segmentTrips", () => {
     const trips = segmentTrips(locations)
     expect(trips[0].distance).toBeGreaterThan(1000)
     expect(trips[0].distance).toBeLessThan(1200)
+  })
+
+  it("drops a stationary run at a single coordinate", () => {
+    // Heartbeat points at the zone centre
+    const locations = Array.from({ length: 20 }, (_, i) => ({
+      latitude: 52.52,
+      longitude: 13.405,
+      timestamp: 1000 + i * 600
+    }))
+    expect(segmentTrips(locations)).toHaveLength(0)
+  })
+
+  it("drops a jittering stationary run even though its total distance is long", () => {
+    // Real fixes, so every point moves - total distance passes 200m while the bbox stays ~60m
+    const offsets = [0, 0.0002, -0.0001, 0.00025, -0.00022, 0.0001, -0.00025, 0.00018, -0.00015, 0.00022]
+    const locations = offsets.map((d, i) => ({
+      latitude: 52.52 + d,
+      longitude: 13.405 + (i % 2 === 0 ? d : -d),
+      timestamp: 1000 + i * 600
+    }))
+    expect(computeTotalDistance(locations)).toBeGreaterThan(200)
+    expect(segmentTrips(locations)).toHaveLength(0)
+  })
+
+  it("keeps a round trip that returns to its start", () => {
+    // start == end, but the track reaches ~330m away
+    const locations = [
+      { latitude: 52.52, longitude: 13.405, timestamp: 1000 },
+      { latitude: 52.521, longitude: 13.405, timestamp: 1100 },
+      { latitude: 52.523, longitude: 13.405, timestamp: 1200 },
+      { latitude: 52.521, longitude: 13.405, timestamp: 1300 },
+      { latitude: 52.52, longitude: 13.405, timestamp: 1400 }
+    ]
+    expect(segmentTrips(locations)).toHaveLength(1)
+  })
+
+  it("reports each trip's offset into the full location array", () => {
+    // TrackMap indexes point colors by this offset
+    const locations = [
+      { latitude: 52.52, longitude: 13.405, timestamp: 1000 },
+      { latitude: 52.522, longitude: 13.405, timestamp: 1005 },
+      // stationary run, dropped
+      { latitude: 52.6, longitude: 13.405, timestamp: 2000 },
+      { latitude: 52.6, longitude: 13.405, timestamp: 2600 },
+      { latitude: 52.6, longitude: 13.405, timestamp: 3200 },
+      { latitude: 52.7, longitude: 13.405, timestamp: 4200 },
+      { latitude: 52.702, longitude: 13.405, timestamp: 4205 }
+    ]
+    const trips = segmentTrips(locations)
+    expect(trips).toHaveLength(2)
+    expect(trips[0].startIndex).toBe(0)
+    expect(trips[1].startIndex).toBe(5)
   })
 
   it("respects custom gap threshold", () => {

@@ -441,6 +441,7 @@ export interface Trip {
   endTime: number // Unix seconds
   distance: number // meters
   locationCount: number
+  startIndex: number // offset into the day's location array
 }
 
 // ============================================================================

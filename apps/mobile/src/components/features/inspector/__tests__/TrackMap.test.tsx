@@ -2,9 +2,22 @@ import React from "react"
 import { render, act } from "@testing-library/react-native"
 import { TrackMap } from "../TrackMap"
 import { DEFAULT_MAP_ZOOM } from "../../../../constants"
+import type { Trip } from "../../../../types/global"
 
 const mockFitBounds = jest.fn()
 const mockSetStop = jest.fn()
+const mockBuildSegments = jest.fn()
+
+jest.mock("../../map/mapUtils", () => {
+  const actual = jest.requireActual("../../map/mapUtils")
+  return {
+    ...actual,
+    buildTrackSegmentsGeoJSON: (...args: any[]) => {
+      mockBuildSegments(...args)
+      return actual.buildTrackSegmentsGeoJSON(...args)
+    }
+  }
+})
 
 jest.mock("../../map/ColotaMapView", () => {
   const R = require("react")
@@ -52,7 +65,7 @@ jest.mock("../../../../utils/geo", () => ({
 }))
 
 jest.mock("../../../../utils/trips", () => ({
-  getTripColor: () => "#000"
+  getTripColor: (index: number) => `#trip${index}`
 }))
 
 const colors = {
@@ -117,5 +130,24 @@ describe("TrackMap auto-fit", () => {
     // A zero-extent bounds would make fitBounds zoom to the max level, so a lone point must not fit
     expect(mockFitBounds).not.toHaveBeenCalled()
     expect(mockSetStop).toHaveBeenCalledWith(expect.objectContaining({ center: [13.4, 52.5], zoom: DEFAULT_MAP_ZOOM }))
+  })
+})
+
+describe("TrackMap trip coloring", () => {
+  beforeEach(() => mockBuildSegments.mockClear())
+
+  it("keeps points aligned with their trip when segmentTrips dropped a segment", () => {
+    // Points 2-4 were dropped by segmentTrips
+    const locations = [loc(52.5, 13.4), loc(52.51, 13.4), loc(52.6, 13.4), loc(52.6, 13.4), loc(52.6, 13.4), loc(52.7, 13.4), loc(52.71, 13.4)] // prettier-ignore
+    const trips: Trip[] = [
+      { index: 1, locations: [], startTime: 0, endTime: 0, distance: 1000, locationCount: 2, startIndex: 0 },
+      { index: 2, locations: [], startTime: 0, endTime: 0, distance: 1000, locationCount: 2, startIndex: 5 }
+    ]
+
+    render(<TrackMap locations={locations} colors={colors} trips={trips} trackColor="#track" fitVersion={1} />)
+
+    const options = mockBuildSegments.mock.calls[0][2]
+    expect(options.locationColors).toEqual(["#trip1", "#trip1", "#track", "#track", "#track", "#trip2", "#trip2"])
+    expect([...options.skipIndices].sort((a: number, b: number) => a - b)).toEqual([2, 3, 4, 5])
   })
 })

@@ -68,14 +68,10 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
   const bounds = useMemo(() => computeTrackBounds(locations), [locations])
   const fittedVersionRef = useRef(-1)
 
-  useEffect(() => {
-    if (!bounds || !mapReady || !mapRef.current?.camera) return
-    if (fitVersion === fittedVersionRef.current) return
-    // Defer to next frame so the map's GL context is fully ready after onDidFinishLoadingMap
-    requestAnimationFrame(() => {
-      const camera = mapRef.current?.camera
-      if (!camera) return
-      fittedVersionRef.current = fitVersion ?? 0
+  // Zero-extent bounds would make fitBounds zoom past the deepest tile level
+  const fitCamera = useCallback(
+    (camera: NonNullable<ColotaMapRef["camera"]>) => {
+      if (!bounds) return
       if (bounds.sw[0] === bounds.ne[0] && bounds.sw[1] === bounds.ne[1]) {
         camera.setStop({ center: bounds.sw, zoom: DEFAULT_MAP_ZOOM, duration: MAP_ANIMATION_DURATION_MS })
       } else {
@@ -84,8 +80,21 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
           duration: MAP_ANIMATION_DURATION_MS
         })
       }
+    },
+    [bounds]
+  )
+
+  useEffect(() => {
+    if (!bounds || !mapReady || !mapRef.current?.camera) return
+    if (fitVersion === fittedVersionRef.current) return
+    // Defer to next frame so the map's GL context is fully ready after onDidFinishLoadingMap
+    requestAnimationFrame(() => {
+      const camera = mapRef.current?.camera
+      if (!camera) return
+      fittedVersionRef.current = fitVersion ?? 0
+      fitCamera(camera)
     })
-  }, [bounds, mapReady, fitVersion])
+  }, [bounds, mapReady, fitVersion, fitCamera])
 
   const handleMapReady = useCallback(() => setMapReady(true), [])
 
@@ -98,13 +107,10 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
 
   const handleFitTrack = useCallback(() => {
     if (bounds && mapRef.current?.camera) {
-      mapRef.current.camera.fitBounds([bounds.sw[0], bounds.sw[1], bounds.ne[0], bounds.ne[1]], {
-        padding: { top: 60, right: 60, bottom: 60, left: 60 },
-        duration: MAP_ANIMATION_DURATION_MS
-      })
+      fitCamera(mapRef.current.camera)
       setIsCentered(true)
     }
-  }, [bounds])
+  }, [bounds, fitCamera])
 
   const handleRegionChange = useCallback((payload: { isUserInteraction: boolean }) => {
     if (payload.isUserInteraction) {
@@ -112,35 +118,33 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
     }
   }, [])
 
-  // Trip boundary indices to avoid drawing lines between trips
+  // Owning trip per point, -1 when segmentTrips dropped the segment. Keyed on startIndex,
+  // since a running locationCount sum skips over dropped segments
+  const tripIdByPoint = useMemo(() => {
+    if (!trips) return undefined
+    const ids = new Int32Array(locations.length).fill(-1)
+    trips.forEach((trip, tripId) => {
+      const end = Math.min(trip.startIndex + trip.locationCount, locations.length)
+      for (let i = trip.startIndex; i < end; i++) ids[i] = tripId
+    })
+    return ids
+  }, [trips, locations])
+
+  // Line breaks between trips, and on both sides of every dropped point
   const skipIndices = useMemo(() => {
-    if (!trips || trips.length <= 1) return undefined
+    if (!tripIdByPoint) return undefined
     const indices = new Set<number>()
-    let offset = 0
-    for (const trip of trips) {
-      if (offset > 0) indices.add(offset)
-      offset += trip.locationCount
+    for (let i = 1; i < tripIdByPoint.length; i++) {
+      if (tripIdByPoint[i] < 0 || tripIdByPoint[i] !== tripIdByPoint[i - 1]) indices.add(i)
     }
     return indices
-  }, [trips])
+  }, [tripIdByPoint])
 
   // Per-location colors
   const locationColors = useMemo(() => {
-    if (trips) {
-      const arr: string[] = []
-      for (const trip of trips) {
-        const tripColor = getTripColor(trip.index)
-        for (let j = 0; j < trip.locationCount; j++) {
-          arr.push(tripColor)
-        }
-      }
-      while (arr.length < locations.length) {
-        arr.push(trackColor)
-      }
-      return arr
-    }
-    return locations.map(() => trackColor)
-  }, [trips, locations, trackColor])
+    if (!tripIdByPoint || !trips) return locations.map(() => trackColor)
+    return Array.from(tripIdByPoint, (tripId) => (tripId < 0 ? trackColor : getTripColor(trips[tripId].index)))
+  }, [tripIdByPoint, trips, locations, trackColor])
 
   // GeoJSON data
   const segmentsGeoJSON = useMemo(

@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { computeTotalDistance } from "./geo"
+import { computeTotalDistance, haversine } from "./geo"
 import type { Trip, LocationCoords } from "../types/global"
 
 export const TRIP_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"]
@@ -13,7 +13,8 @@ export function getTripColor(index: number): string {
 }
 
 const DEFAULT_GAP_SECONDS = 900 // 15 minutes
-const MIN_TRIP_POINTS = 2
+// Total distance is no use here - stationary fixes accumulate it without moving
+const MIN_TRIP_EXTENT_METERS = 100 // bbox diagonal, matches DatabaseHelper.getDailyStats
 
 /**
  * Segments a chronologically-sorted array of locations into trips.
@@ -24,6 +25,7 @@ export function segmentTrips(locations: LocationCoords[], gapThresholdSeconds: n
   if (locations.length === 0) return []
 
   const trips: Trip[] = []
+  let startIndex = 0
   let currentTripLocations: LocationCoords[] = [locations[0]]
 
   for (let i = 1; i < locations.length; i++) {
@@ -31,7 +33,8 @@ export function segmentTrips(locations: LocationCoords[], gapThresholdSeconds: n
     const currTs = locations[i].timestamp ?? 0
 
     if (currTs - prevTs >= gapThresholdSeconds) {
-      trips.push(buildTrip(currentTripLocations))
+      trips.push(buildTrip(currentTripLocations, startIndex))
+      startIndex = i
       currentTripLocations = [locations[i]]
     } else {
       currentTripLocations.push(locations[i])
@@ -39,23 +42,40 @@ export function segmentTrips(locations: LocationCoords[], gapThresholdSeconds: n
   }
 
   if (currentTripLocations.length > 0) {
-    trips.push(buildTrip(currentTripLocations))
+    trips.push(buildTrip(currentTripLocations, startIndex))
   }
 
-  // Filter out single-point "trips" (stray GPS fixes during long stops)
-  const filtered = trips.filter((t) => t.locationCount >= MIN_TRIP_POINTS)
+  // Drops stray fixes during long stops as well as stationary runs
+  const filtered = trips.filter((t) => trackExtent(t.locations) >= MIN_TRIP_EXTENT_METERS)
   // Re-index after filtering
   return filtered.map((t, i) => ({ ...t, index: i + 1 }))
 }
 
-function buildTrip(locations: LocationCoords[]): Trip {
+/** Bounding box diagonal, in meters. */
+function trackExtent(locations: LocationCoords[]): number {
+  if (locations.length === 0) return 0
+  let minLat = locations[0].latitude
+  let maxLat = locations[0].latitude
+  let minLon = locations[0].longitude
+  let maxLon = locations[0].longitude
+  for (const loc of locations) {
+    if (loc.latitude < minLat) minLat = loc.latitude
+    if (loc.latitude > maxLat) maxLat = loc.latitude
+    if (loc.longitude < minLon) minLon = loc.longitude
+    if (loc.longitude > maxLon) maxLon = loc.longitude
+  }
+  return haversine(minLat, minLon, maxLat, maxLon)
+}
+
+function buildTrip(locations: LocationCoords[], startIndex: number): Trip {
   return {
     index: 0,
     locations,
     startTime: locations[0].timestamp ?? 0,
     endTime: locations[locations.length - 1].timestamp ?? 0,
     distance: computeTotalDistance(locations),
-    locationCount: locations.length
+    locationCount: locations.length,
+    startIndex
   }
 }
 
