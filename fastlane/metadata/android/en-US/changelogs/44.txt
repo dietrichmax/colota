@@ -1,4 +1,5 @@
 - The Stationary profile now records a point at each interval while the device is still
 - Auto-export file names are now customisable with {date}, {time} and {device} placeholders
 - Add {device} to the file name to keep retention per device model when several phones share an export folder
-- Stationary heartbeat points no longer show up as 0 m trips in the history - a run of points now has to cover at least 100 m to count as a trip
+- Stationary heartbeat points no longer show up as 0 m trips in the history
+- Delete a single point by tapping it on the map and using the trash icon in its popup

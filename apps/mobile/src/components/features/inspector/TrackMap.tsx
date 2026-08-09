@@ -7,7 +7,7 @@ import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
 import { View, StyleSheet, Text, Pressable, TextInput } from "react-native"
 import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
 import type { NativeSyntheticEvent } from "react-native"
-import { MapPinOff, X, Check } from "lucide-react-native"
+import { MapPinOff, X, Check, Trash2 } from "lucide-react-native"
 import { ThemeColors, Trip } from "../../../types/global"
 import { getTripColor } from "../../../utils/trips"
 import { fonts } from "../../../styles/typography"
@@ -40,9 +40,19 @@ interface Props {
   fitVersion?: number
   /** When provided, the point popup gains an editable note field. Omit for read-only maps. */
   onPointNoteChange?: (id: number, note: string | null) => void
+  /** When provided, the point popup gains a delete action. Omit for read-only maps. */
+  onPointDelete?: (id: number) => void
 }
 
-export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onPointNoteChange }: Props) {
+export function TrackMap({
+  locations,
+  colors,
+  trips,
+  trackColor,
+  fitVersion,
+  onPointNoteChange,
+  onPointDelete
+}: Props) {
   const mapRef = useRef<ColotaMapRef>(null)
   const [isCentered, setIsCentered] = useState(true)
   const [selectedPoint, setSelectedPoint] = useState<{
@@ -297,16 +307,30 @@ export function TrackMap({ locations, colors, trips, trackColor, fitVersion, onP
             <Text style={[styles.popupTime, { color: colors.text }]}>
               {popup.timestamp ? new Date(popup.timestamp * 1000).toLocaleTimeString() : "-"}
             </Text>
-            <Pressable
-              onPress={() => {
-                setPopup(null)
-                setSelectedPoint(null)
-              }}
-              hitSlop={HIT_SLOP_MD}
-              style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
-            >
-              <X size={16} color={colors.textSecondary} />
-            </Pressable>
+            <View style={styles.popupActions}>
+              {onPointDelete && popup.id >= 0 && (
+                <Pressable
+                  testID="popup-delete-point"
+                  onPress={() => onPointDelete(popup.id)}
+                  hitSlop={HIT_SLOP_MD}
+                  style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete this point"
+                >
+                  <Trash2 size={16} color={colors.error} />
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => {
+                  setPopup(null)
+                  setSelectedPoint(null)
+                }}
+                hitSlop={HIT_SLOP_MD}
+                style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+              >
+                <X size={16} color={colors.textSecondary} />
+              </Pressable>
+            </View>
           </View>
           <View style={styles.popupRow}>
             <Text style={[styles.popupLabel, { color: colors.textSecondary }]}>Speed</Text>
@@ -427,6 +451,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 4
+  },
+  popupActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    // Both icons carry HIT_SLOP_MD, so a smaller gap overlaps delete with close
+    gap: 20
   },
   popupTime: {
     fontWeight: "600",

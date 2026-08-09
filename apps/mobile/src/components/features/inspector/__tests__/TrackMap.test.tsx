@@ -1,5 +1,5 @@
 import React from "react"
-import { render, act } from "@testing-library/react-native"
+import { render, act, fireEvent } from "@testing-library/react-native"
 import { TrackMap } from "../TrackMap"
 import { DEFAULT_MAP_ZOOM } from "../../../../constants"
 import type { Trip } from "../../../../types/global"
@@ -42,7 +42,8 @@ jest.mock("@maplibre/maplibre-react-native", () => {
   const R = require("react")
   const { View } = require("react-native")
   const stub = (name: string) => {
-    const Stub = (props: any) => R.createElement(View, { testID: name }, props.children)
+    const Stub = (props: any) =>
+      R.createElement(View, { testID: props.id ?? name, onPress: props.onPress }, props.children)
     Stub.displayName = name
     return Stub
   }
@@ -90,18 +91,22 @@ const loc = (lat: number, lon: number) => ({
   battery_status: 2
 })
 
+// Run the auto-fit synchronously, otherwise it lands after the test has torn down
+beforeEach(() => {
+  jest.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb: any) => {
+    cb(0)
+    return 0
+  })
+})
+
+afterEach(() => {
+  jest.restoreAllMocks()
+})
+
 describe("TrackMap auto-fit", () => {
   beforeEach(() => {
     mockFitBounds.mockClear()
     mockSetStop.mockClear()
-    jest.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb: any) => {
-      cb(0)
-      return 0
-    })
-  })
-
-  afterEach(() => {
-    jest.restoreAllMocks()
   })
 
   it("fits bounds when switching from empty day to non-empty day", () => {
@@ -130,6 +135,52 @@ describe("TrackMap auto-fit", () => {
     // A zero-extent bounds would make fitBounds zoom to the max level, so a lone point must not fit
     expect(mockFitBounds).not.toHaveBeenCalled()
     expect(mockSetStop).toHaveBeenCalledWith(expect.objectContaining({ center: [13.4, 52.5], zoom: DEFAULT_MAP_ZOOM }))
+  })
+})
+
+describe("TrackMap point deletion", () => {
+  const tapPoint = (points: any, id: number) =>
+    fireEvent(points, "press", {
+      nativeEvent: {
+        features: [
+          {
+            properties: { id, color: "#000", speed: 0, timestamp: 1000, accuracy: 5, altitude: 10, note: "" },
+            geometry: { type: "Point", coordinates: [13.4, 52.5] }
+          }
+        ]
+      }
+    })
+
+  it("reports the tapped point's id to the delete handler", () => {
+    const onPointDelete = jest.fn()
+    const { getByTestId } = render(
+      <TrackMap locations={[loc(52.5, 13.4)]} colors={colors} trackColor="#000" onPointDelete={onPointDelete} />
+    )
+
+    tapPoint(getByTestId("track-points"), 42)
+    fireEvent.press(getByTestId("popup-delete-point"))
+
+    expect(onPointDelete).toHaveBeenCalledWith(42)
+  })
+
+  it("offers no delete action on a read-only map", () => {
+    const { getByTestId, queryByTestId } = render(
+      <TrackMap locations={[loc(52.5, 13.4)]} colors={colors} trackColor="#000" />
+    )
+
+    tapPoint(getByTestId("track-points"), 42)
+
+    expect(queryByTestId("popup-delete-point")).toBeNull()
+  })
+
+  it("offers no delete action for a point with no row id", () => {
+    const { getByTestId, queryByTestId } = render(
+      <TrackMap locations={[loc(52.5, 13.4)]} colors={colors} trackColor="#000" onPointDelete={jest.fn()} />
+    )
+
+    tapPoint(getByTestId("track-points"), -1)
+
+    expect(queryByTestId("popup-delete-point")).toBeNull()
   })
 })
 

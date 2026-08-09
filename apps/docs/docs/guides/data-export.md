@@ -41,11 +41,7 @@ For a single trip you can also tap the card to open **Trip Detail**, then use th
 
 Trip exports include a `trip` column/property so each location is tagged with its trip number. Custom selections produce a single file containing only the chosen trips.
 
-### Delete Trips
-
-From the **Trips** tab, long-press a trip card to enter selection mode, add any other trips you want to remove, then tap the trash icon in the selection header. You'll be asked to confirm before the underlying location points are permanently deleted from the device.
-
-Single-trip delete is also available from the **Trip Detail** screen via the trash icon in the header.
+To remove trips or single points instead of exporting them, see [Data Management](data-management.md#deleting-from-location-history).
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 

@@ -1,5 +1,5 @@
 import React from "react"
-import { render, fireEvent } from "@testing-library/react-native"
+import { render, fireEvent, waitFor } from "@testing-library/react-native"
 
 // --- Mocks ---
 
@@ -12,7 +12,8 @@ jest.mock("../../services/NativeLocationService", () => ({
     getLocationsByDateRange: jest.fn().mockResolvedValue([]),
     exportTripsToFile: jest.fn().mockResolvedValue("/tmp/export"),
     shareFile: jest.fn(),
-    deleteLocationsInRange: jest.fn().mockResolvedValue(0)
+    deleteLocationsInRange: jest.fn().mockResolvedValue(0),
+    deleteLocationsByIds: jest.fn().mockResolvedValue(0)
   }
 }))
 
@@ -82,9 +83,16 @@ jest.mock("../../components/features/inspector/CalendarPicker", () => {
 
 jest.mock("../../components/features/inspector/TrackMap", () => {
   const R = require("react")
-  const { View } = require("react-native")
+  const { View, Pressable } = require("react-native")
   return {
-    TrackMap: (_props: any) => R.createElement(View, { testID: "TrackMap" })
+    TrackMap: (props: any) =>
+      R.createElement(
+        View,
+        { testID: "TrackMap" },
+        props.onPointDelete
+          ? R.createElement(Pressable, { testID: "trigger-point-delete", onPress: () => props.onPointDelete(7) })
+          : null
+      )
   }
 })
 
@@ -117,6 +125,8 @@ jest.mock("@react-navigation/native", () => ({
 }))
 
 import { LocationHistoryScreen } from "../LocationInspectorScreen"
+import NativeLocationService from "../../services/NativeLocationService"
+import { showConfirm } from "../../services/modalService"
 
 const createProps = () =>
   ({
@@ -152,6 +162,16 @@ describe("LocationHistoryScreen", () => {
     // Trips and Data content should not be visible
     expect(queryByTestId("TripList")).toBeNull()
     expect(queryByTestId("LocationTable")).toBeNull()
+  })
+
+  it("deletes nothing when the point delete confirm is dismissed", async () => {
+    const props = createProps()
+    const { getByTestId } = render(<LocationHistoryScreen {...props} />)
+
+    fireEvent.press(getByTestId("trigger-point-delete"))
+
+    await waitFor(() => expect(showConfirm).toHaveBeenCalled())
+    expect(NativeLocationService.deleteLocationsByIds).not.toHaveBeenCalled()
   })
 
   it("switches to Trips tab on press", () => {

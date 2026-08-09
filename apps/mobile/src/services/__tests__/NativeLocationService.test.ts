@@ -20,6 +20,7 @@ jest.mock("react-native", () => ({
       clearAllLocations: jest.fn().mockResolvedValue(50),
       deleteOlderThan: jest.fn().mockResolvedValue(25),
       deleteLocationsInRange: jest.fn().mockResolvedValue(7),
+      deleteLocationsByIds: jest.fn().mockResolvedValue(1),
       vacuumDatabase: jest.fn().mockResolvedValue(undefined),
       getGeofences: jest.fn().mockResolvedValue([]),
       createGeofence: jest.fn().mockResolvedValue(1),
@@ -338,6 +339,20 @@ describe("NativeLocationService", () => {
       nativeMock.getActiveProfile.mockRejectedValueOnce(new Error("Native error"))
       const name = await NativeLocationService.getActiveProfileName()
       expect(name).toBeNull()
+    })
+  })
+
+  describe("deleteLocationsByIds", () => {
+    it("passes the ids to the native module", async () => {
+      const deleted = await NativeLocationService.deleteLocationsByIds([12, 34])
+      expect(deleted).toBe(1)
+      expect(nativeMock.deleteLocationsByIds).toHaveBeenCalledWith([12, 34])
+    })
+
+    it("skips the bridge call for an empty list", async () => {
+      const deleted = await NativeLocationService.deleteLocationsByIds([])
+      expect(deleted).toBe(0)
+      expect(nativeMock.deleteLocationsByIds).not.toHaveBeenCalled()
     })
   })
 

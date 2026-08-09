@@ -8,7 +8,7 @@ Merge location history from external files into your Colota database. Data Impor
 
 :::warning[Back up before a large import]
 
-Imports can't be selectively undone. Colota has no per-point delete - you can only delete a whole trip, all points since N days or wipe everything, so removing an import also takes any genuine points recorded in the same window. Take a [Backup](backup-restore.md) first if you're unsure.
+Imports can't be selectively undone. Points can only be removed one at a time, by trip, by age or all at once, so unpicking a large import means clearing a window that also holds genuine points. Take a [Backup](backup-restore.md) first if you're unsure.
 
 :::
 

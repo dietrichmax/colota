@@ -446,7 +446,17 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
         deleteThenVacuum(refresh = true) { dbHelper.deleteInRanges(pairs) }
     }
-    
+
+    @ReactMethod
+    fun deleteLocationsByIds(ids: ReadableArray, promise: Promise) = executeAsync(promise) {
+        val locationIds = (0 until ids.size()).map { ids.getDouble(it).toLong() }
+        val deleted = dbHelper.deleteLocations(locationIds)
+        if (deleted > 0) refreshNotificationIfTracking()
+        // No vacuum here: a few rows are not worth rewriting the database, and this delete gets
+        // repeated. Data Management has an explicit Vacuum action.
+        deleted
+    }
+
     @ReactMethod
     fun vacuumDatabase(promise: Promise) = executeAsync(promise) { 
         dbHelper.vacuum()

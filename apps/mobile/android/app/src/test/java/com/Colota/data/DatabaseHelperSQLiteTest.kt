@@ -330,6 +330,15 @@ class DatabaseHelperSQLiteTest {
     }
 
     @Test
+    fun `deleteLocations returns the number of rows removed`() {
+        val id1 = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L)
+        val id2 = db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 2000L)
+
+        assertEquals(2, db.deleteLocations(listOf(id1, id2)))
+        assertEquals(0, db.deleteLocations(listOf(id1)))
+    }
+
+    @Test
     fun `deleteLocations is no-op for empty list`() {
         db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L)
         db.deleteLocations(emptyList())
@@ -480,14 +489,18 @@ class DatabaseHelperSQLiteTest {
     @Test
     fun `deleting location cascades to queue entries`() {
         val locId = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L)
+        val keptId = db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = 2000L)
         db.addToQueue(locId, """{"lat":52.0}""")
         db.addToQueue(locId, """{"lat":52.0,"v":2}""")
-        assertEquals(2, db.getQueuedCount())
+        db.addToQueue(keptId, """{"lat":53.0}""")
+        assertEquals(3, db.getQueuedCount())
 
-        // Delete the location — should cascade to queue
+        // Delete the location - should cascade to queue, leaving other points queued
         db.deleteLocations(listOf(locId))
 
-        assertEquals(0, db.getQueuedCount())
+        val queued = db.getQueuedLocations(10)
+        assertEquals(1, queued.size)
+        assertEquals(keptId, queued[0].locationId)
     }
 
     @Test

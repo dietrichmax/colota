@@ -18,7 +18,7 @@ import { CalendarPicker } from "../components/features/inspector/CalendarPicker"
 import { TrackMap } from "../components/features/inspector/TrackMap"
 import { TripList } from "../components/features/inspector/TripList"
 import { LocationTable } from "../components/features/inspector/LocationTable"
-import { formatDistance, startOfDaySec, endOfDaySec } from "../utils/geo"
+import { formatDistance, formatTime, startOfDaySec, endOfDaySec } from "../utils/geo"
 import { pad2 } from "../utils/format"
 import { segmentTrips, getTripColor } from "../utils/trips"
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
@@ -61,6 +61,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   }, [trips])
 
   const fetchTrackIdRef = useRef(0)
+  const deletingPointRef = useRef(false)
 
   // Summary navigation button
   const headerRight = useCallback(
@@ -208,6 +209,15 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     setFitVersion((v) => v + 1)
   }, [])
 
+  const refreshAfterDelete = useCallback(async () => {
+    const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
+    daysCache.current.delete(key)
+    notesCache.current.delete(key)
+    distanceCache.current.delete(key)
+    await fetchTrackData()
+    await fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
+  }, [mapDate, fetchTrackData, fetchDaysWithData])
+
   const handleDeleteTrips = useCallback(
     async (toDelete: Trip[]) => {
       if (toDelete.length === 0) return
@@ -225,18 +235,41 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         await NativeLocationService.deleteLocationsInRanges(
           toDelete.map((t) => ({ start: t.startTime, end: t.endTime }))
         )
-        const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
-        daysCache.current.delete(key)
-        notesCache.current.delete(key)
-        distanceCache.current.delete(key)
-        await fetchTrackData()
-        await fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
+        await refreshAfterDelete()
       } catch (error) {
         logger.error("[LocationHistory] Trip delete failed:", error)
         showAlert("Delete Failed", "Unable to delete selection. Please try again.", "error")
       }
     },
-    [mapDate, fetchTrackData, fetchDaysWithData]
+    [refreshAfterDelete]
+  )
+
+  const handlePointDelete = useCallback(
+    async (id: number) => {
+      if (deletingPointRef.current) return
+      // The confirm covers the popup, so name the point in it
+      const point = trackLocations.find((l) => l.id === id)
+      const at = point?.timestamp ? formatTime(point.timestamp, true) : null
+      const confirmed = await showConfirm({
+        title: at ? `Delete the point at ${at}?` : "Delete Point?",
+        message:
+          "Removes this point from this device only. If it has already synced it stays on your server, and if it has not it will never be uploaded.",
+        confirmText: "Delete",
+        destructive: true
+      })
+      if (!confirmed) return
+      deletingPointRef.current = true
+      try {
+        await NativeLocationService.deleteLocationsByIds([id])
+        await refreshAfterDelete()
+      } catch (error) {
+        logger.error("[LocationHistory] Point delete failed:", error)
+        showAlert("Delete Failed", "Unable to delete point. Please try again.", "error")
+      } finally {
+        deletingPointRef.current = false
+      }
+    },
+    [trackLocations, refreshAfterDelete]
   )
 
   const handlePointNoteChange = useCallback(
@@ -313,6 +346,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             trackColor={colors.primary}
             fitVersion={fitVersion}
             onPointNoteChange={handlePointNoteChange}
+            onPointDelete={handlePointDelete}
           />
           {selectedTrip && (
             <Pressable

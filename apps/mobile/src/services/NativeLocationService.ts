@@ -310,6 +310,17 @@ class NativeLocationService {
   }
 
   /**
+   * Deletes individual locations by row id
+   * @returns Count of deleted records
+   */
+  static async deleteLocationsByIds(ids: number[]): Promise<number> {
+    this.ensureModule()
+    if (ids.length === 0) return 0
+    logger.debug(`[NativeLocationService] Deleting ${ids.length} locations by id`)
+    return LocationServiceModule.deleteLocationsByIds(ids)
+  }
+
+  /**
    * Runs SQLite VACUUM to reclaim disk space
    */
   static async vacuumDatabase(): Promise<void> {

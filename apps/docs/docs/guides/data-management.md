@@ -26,6 +26,24 @@ In [offline mode](/docs/configuration/server-settings#offline-mode), sync-relate
 
 For a full archive of locations, settings and credentials in a single password-encrypted file, use **Settings → Backup & Restore** - see [Backup & Restore](backup-restore.md).
 
+## Deleting from Location History
+
+The actions above work on the whole database. To remove specific recordings, use the **Location History** screen.
+
+### Trips
+
+From the **Trips** tab, long-press a trip card to enter selection mode, add any other trips you want to remove, then tap the trash icon in the selection header. You'll be asked to confirm before the underlying location points are permanently deleted from the device.
+
+Single-trip delete is also available from the **Trip Detail** screen via the trash icon in the header.
+
+### Single points
+
+A stray fix can land far from where you actually were, which drags the track and the day's distance with it. On the **Map** tab, tap the point to open its popup, check the time and accuracy to make sure it is the one you mean, then tap the trash icon next to the close button. You'll be asked to confirm.
+
+Only that one point is removed, so the rest of the trip stays intact. If the point had not synced yet, its pending upload is dropped with it.
+
+Deleting locally does not remove anything already uploaded to your server.
+
 ## Imported locations and the queue
 
 Locations brought in via [Data Import](data-import.md) are marked as already synced by default, so they **do not show up in the queue counter** and don't get re-uploaded to your backend. If you used the **Import + Queue for Sync** button on the import dialog instead (the "migration" path), the imported rows do land in the queue and the next sync drains them - the counters here will reflect that until they finish uploading.

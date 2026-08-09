@@ -686,12 +686,12 @@ class DatabaseHelper private constructor(context: Context) :
         }
     }
 
-    fun deleteLocations(locationIds: List<Long>) {
+    fun deleteLocations(locationIds: List<Long>): Int {
         requireNotRestoring()
-        if (locationIds.isEmpty()) return
+        if (locationIds.isEmpty()) return 0
         val placeholders = locationIds.joinToString(",") { "?" }
         val args = locationIds.map { it.toString() }.toTypedArray()
-        writableDatabase.delete(TABLE_LOCATIONS, "id IN ($placeholders)", args)
+        return writableDatabase.delete(TABLE_LOCATIONS, "id IN ($placeholders)", args)
     }
 
     /** Sets or clears the free-text note on a single location. Pass null to clear. */
