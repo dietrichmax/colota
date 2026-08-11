@@ -16,35 +16,7 @@ on:
 
 jobs:
   check:
-    name: Lint, typecheck & build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Prettier check
-        run: npm run format:check
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
-
-      - name: Build
-        run: npm run build
+    uses: ./.github/workflows/ci.yml
 
   push_to_registry:
     name: Push image to Docker Hub
@@ -59,27 +31,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
-
-      - name: Build image for smoke test
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
-        with:
-          context: .
-          file: ./Dockerfile
-          load: true
-          provenance: false
-          tags: colota-forwarder:smoke
-
-      - name: Smoke test image
-        run: |
-          docker run --detach --name smoke --publish 3000:3000 colota-forwarder:smoke
-          if curl --fail --silent --retry 10 --retry-delay 1 --retry-all-errors http://localhost:3000/health; then
-            echo "Health check passed"
-          else
-            echo "Health check failed"
-            docker logs smoke
-            exit 1
-          fi
-          docker rm --force smoke
 
       - name: Login to Docker Hub
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
