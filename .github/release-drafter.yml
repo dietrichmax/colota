@@ -23,7 +23,7 @@ autolabeler:
   - label: feature
     title: ['/^feat(\(.+\))?!?:/i']
   - label: fix
-    title: ['/^fix(\(.+\))?!?:/i']
+    title: ['/^fix(\((?!deps\))[^)]*\))?!?:/i']
   - label: documentation
     title: ['/^docs(\(.+\))?:/i']
   - label: maintenance

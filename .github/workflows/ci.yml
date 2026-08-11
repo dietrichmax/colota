@@ -3,6 +3,7 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  workflow_call:
 
 jobs:
   check:
@@ -18,7 +19,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
@@ -38,3 +39,37 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  image:
+    name: Build image & smoke test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Build image for smoke test
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          provenance: false
+          tags: colota-forwarder:smoke
+
+      - name: Smoke test image
+        run: |
+          docker run --detach --name smoke --publish 3000:3000 colota-forwarder:smoke
+          if curl --fail --silent --retry 10 --retry-delay 1 --retry-all-errors http://localhost:3000/health; then
+            echo "Health check passed"
+          else
+            echo "Health check failed"
+            docker logs smoke
+            exit 1
+          fi
+          docker rm --force smoke
