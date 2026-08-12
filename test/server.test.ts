@@ -74,6 +74,12 @@ test("GET /health keeps its documented shape but hides delivery detail without t
   assert.equal(body.delivery, undefined) // how healthy your targets are is not public
 })
 
+test("GET /health ignores ?api_key= — a key in a GET URL ends up in proxy logs", async () => {
+  const body = (await (await fetch(`${base}/health?api_key=secret`)).json()) as Record<string, unknown>
+  assert.equal(body.status, "ok")
+  assert.equal(body.delivery, undefined) // header only, even though the key is correct
+})
+
 test("GET /health with the key reports every target's delivery counts", async () => {
   const body = (await (await fetch(base + "/health", { headers: withKey })).json()) as {
     delivery: { target: number; host: string; ok: number; failed: number }[]

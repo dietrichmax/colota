@@ -46,17 +46,23 @@ app.use((req: Request, _res: Response, next: NextFunction): void => {
 // Health check. Delivery counts need the key; { status, uptime, targets } stays public.
 app.get("/health", (req: Request, res: Response) => {
   const health = { status: "ok", uptime: process.uptime(), targets: targets.length }
-  if (!REQUIRE_AUTH || keyMatches(providedKey(req))) {
+  if (!REQUIRE_AUTH || keyMatches(headerKey(req))) {
     res.status(200).json({ ...health, delivery: getDeliveryStats(targets) })
     return
   }
   res.status(200).json(health)
 })
 
-function providedKey(req: Request): string | undefined {
+function headerKey(req: Request): string | undefined {
   const auth = req.header("authorization")
   const bearer = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined
-  return req.header("x-api-key") ?? bearer ?? (typeof req.query.api_key === "string" ? req.query.api_key : undefined)
+  return req.header("x-api-key") ?? bearer
+}
+
+// POST routes also accept ?api_key= for clients that can't set headers. GET routes must not:
+// a key in a GET URL reaches proxy logs, bookmarks and Referer headers.
+function providedKey(req: Request): string | undefined {
+  return headerKey(req) ?? (typeof req.query.api_key === "string" ? req.query.api_key : undefined)
 }
 
 /** True when the request carries the API key, without rejecting when it doesn't. */
