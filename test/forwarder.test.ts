@@ -97,6 +97,15 @@ test("traccar target sends a GET with OsmAnd query params and no body", async ()
   assert.match(c.url, /[?&]timestamp=100\b/)
 })
 
+test("traccar GET keeps a query string the target URL already has", async () => {
+  // concatenating "?" would make the token's value "abc?id=dev1", so auth would fail
+  const targets: Target[] = [{ url: "http://trc/ingest?token=abc", type: "traccar", tid: "dev1" }]
+  await forwardToAll(targets, pt(100))
+  const url = new URL(calls[0].url)
+  assert.equal(url.searchParams.get("token"), "abc")
+  assert.equal(url.searchParams.get("id"), "dev1")
+})
+
 test("traccar POST target sends Traccar JSON, no X-Limit headers", async () => {
   const targets: Target[] = [{ url: "http://trc", type: "traccar", method: "POST", tid: "dev1" }]
   await forwardToAll(targets, pt(100))

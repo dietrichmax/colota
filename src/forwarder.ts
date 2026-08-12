@@ -44,8 +44,9 @@ async function sendToTarget(target: Target, payload: ColotaPayload): Promise<voi
 
   let url = target.url
   if (isGet) {
-    const params = new URLSearchParams(Object.entries(transformed).map(([k, v]) => [k, String(v)]))
-    url = `${target.url}?${params}`
+    const parsed = new URL(target.url)
+    for (const [k, v] of Object.entries(transformed)) parsed.searchParams.set(k, String(v))
+    url = parsed.toString()
   }
 
   await dispatch(target, url, {
