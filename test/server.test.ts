@@ -1,6 +1,7 @@
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
 import { createServer, type Server } from "node:http"
+import { spawnSync } from "node:child_process"
 import type { AddressInfo, Socket } from "node:net"
 
 // A target that accepts connections but never replies, so a batch stays in flight
@@ -64,6 +65,16 @@ test("POST /overland with a valid batch is accepted (201)", async () => {
 
 test("GET /health needs no auth (200)", async () => {
   assert.equal((await fetch(base + "/health")).status, 200)
+})
+
+test("refuses to start while API_KEY is still the example value", () => {
+  const run = spawnSync(process.execPath, ["--import", "tsx", "src/server.ts"], {
+    env: { ...process.env, API_KEY: "your-secret-key" },
+    encoding: "utf8",
+    timeout: 30_000
+  })
+  assert.equal(run.status, 1)
+  assert.match(run.stderr, /example value/)
 })
 
 const overlandPoint = { geometry: { coordinates: [1, 2] } }
