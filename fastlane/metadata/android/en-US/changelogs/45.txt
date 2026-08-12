@@ -1,0 +1,1 @@
+- Large point counts stay on one line in the settings summary, shown as 123K or 2.0M

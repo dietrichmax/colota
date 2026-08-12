@@ -63,6 +63,13 @@ describe("StatsCard", () => {
       expect(getByText("Interval")).toBeTruthy()
     })
 
+    it("abbreviates a multi-million sent count so the fixed-width column stays one line", () => {
+      const { getByText, queryByText } = render(<StatsCard {...baseProps} sentCount={2_000_000} />)
+
+      expect(getByText("2.0M")).toBeTruthy()
+      expect(queryByText("2,000,000")).toBeNull()
+    })
+
     it("does not show Today stat", () => {
       const { queryByText } = render(<StatsCard {...baseProps} />)
 

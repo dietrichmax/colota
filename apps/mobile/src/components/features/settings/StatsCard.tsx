@@ -8,6 +8,7 @@ import { AlertTriangle, ChevronRight } from "lucide-react-native"
 import { useTracking } from "../../../contexts/TrackingProvider"
 import { useTheme } from "../../../hooks/useTheme"
 import { getQueueColor } from "../../../utils/queueStatus"
+import { formatCount } from "../../../utils/format"
 import { fonts } from "../../../styles/typography"
 import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../constants"
 
@@ -88,7 +89,9 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
             {/* Today */}
             <View style={styles.statItem}>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Today</Text>
-              <Text style={[styles.statValue, { color: colors.info }]}>{(todayCount ?? 0).toLocaleString()}</Text>
+              <Text numberOfLines={1} style={[styles.statValue, { color: colors.info }]}>
+                {formatCount(todayCount ?? 0)}
+              </Text>
             </View>
 
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -98,7 +101,9 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
             {/* Queued */}
             <View style={styles.statItem}>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Queued</Text>
-              <Text style={[styles.statValue, { color: queuedColor }]}>{queueCount.toLocaleString()}</Text>
+              <Text numberOfLines={1} style={[styles.statValue, { color: queuedColor }]}>
+                {formatCount(queueCount)}
+              </Text>
             </View>
 
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -106,7 +111,9 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
             {/* Sent */}
             <View style={styles.statItem}>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sent</Text>
-              <Text style={[styles.statValue, { color: colors.success }]}>{sentCount.toLocaleString()}</Text>
+              <Text numberOfLines={1} style={[styles.statValue, { color: colors.success }]}>
+                {formatCount(sentCount)}
+              </Text>
             </View>
 
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -116,7 +123,7 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
         {/* Interval */}
         <View style={styles.statItem}>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Interval</Text>
-          <Text style={[styles.statValue, { color: colors.info }]}>
+          <Text numberOfLines={1} style={[styles.statValue, { color: colors.info }]}>
             {interval}
             <Text style={[styles.unit, { color: colors.textSecondary }]}>s</Text>
           </Text>

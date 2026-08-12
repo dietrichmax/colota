@@ -10,6 +10,16 @@ export const formatBytes = (bytes: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/**
+ * Formats a point count for the fixed-width stat columns, which fit about six glyphs
+ * at their 24px value size. Abbreviates above that (123456 -> "123K", 2000000 -> "2.0M").
+ */
+export const formatCount = (count: number): string => {
+  if (count < 100_000) return count.toLocaleString()
+  if (count < 1_000_000) return `${Math.floor(count / 1_000)}K`
+  return `${(count / 1_000_000).toFixed(1)}M`
+}
+
 /** Clamps `value` to the inclusive range [min, max]. */
 export const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value))
 
