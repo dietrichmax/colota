@@ -6,6 +6,16 @@ export function hasFiniteNumbers(obj: Record<string, unknown>, keys: string[]): 
   return keys.every((k) => isFiniteNumber(obj[k]))
 }
 
+/** Device ids reach outbound headers, so keep them short and printable. */
+export function isValidTid(value: unknown): value is string {
+  if (typeof value !== "string" || value.length === 0 || value.length > 64) return false
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i)
+    if (code < 0x20 || code === 0x7f) return false
+  }
+  return true
+}
+
 /** Host and port of a target URL, for identifying it */
 export function targetHost(url: string): string {
   try {

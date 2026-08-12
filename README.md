@@ -228,6 +228,19 @@ curl -H "x-api-key: $API_KEY" http://localhost:3000/health
 
 `target` is the `n` in `TARGET_n`, so it matches your `.env` even when two targets share a host. A rising `failed` count means that target is rejecting your points — `lastError` says why. Counts are since the last restart. Without the API key, `/health` returns only `status`, `uptime` and `targets`.
 
+### Certificates
+
+Targets on the same Docker network can use plain `http://`, as the examples above do. No certificates are involved.
+
+If a target is served over HTTPS with a certificate your own CA issued, forwarding fails with `UNABLE_TO_VERIFY_LEAF_SIGNATURE` or `DEPTH_ZERO_SELF_SIGNED_CERT` if the certificate is self-signed and that target's `failed` count climbs. Trust your CA:
+
+```yaml
+environment:
+  NODE_EXTRA_CA_CERTS: /certs/my-ca.pem
+volumes:
+  - ./my-ca.pem:/certs/my-ca.pem:ro
+```
+
 ### Batch handling
 
 When the Colota app uses the **Overland** template (or **Dawarich** + Batch mode), it uploads multiple points in one request to `/overland`. The forwarder handles each target according to its type and `BATCH_MODE`:

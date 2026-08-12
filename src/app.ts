@@ -3,7 +3,7 @@ import crypto from "crypto"
 import { loadTargets } from "./targets"
 import { forwardToAll, forwardBatch, getDeliveryStats } from "./forwarder"
 import { owntracksToColota, overlandFeatureToColota, type ColotaPayload } from "./transform"
-import { maskUrl, hasFiniteNumbers, sanitizeLogValue } from "./utils"
+import { maskUrl, hasFiniteNumbers, sanitizeLogValue, isValidTid } from "./utils"
 
 export const app: Application = express()
 const API_KEY = process.env.API_KEY
@@ -124,6 +124,11 @@ app.post("/locations", authenticate, jsonParser, async (req: Request, res: Respo
     return
   }
 
+  if (body.tid !== undefined && !isValidTid(body.tid)) {
+    res.status(400).json({ error: "Invalid tid: 1-64 characters, no control characters" })
+    return
+  }
+
   if (targets.length === 0) {
     res.status(200).json({ message: "No targets configured", forwarded: 0 })
     return
@@ -160,7 +165,12 @@ app.post("/overland", authenticate, jsonParser, async (req: Request, res: Respon
     return
   }
 
-  const deviceId = typeof body.device_id === "string" ? body.device_id : undefined
+  if (body.device_id !== undefined && !isValidTid(body.device_id)) {
+    res.status(400).json({ error: "Invalid device_id: 1-64 characters, no control characters" })
+    return
+  }
+
+  const deviceId = isValidTid(body.device_id) ? body.device_id : undefined
 
   // 201 per Overland spec; fire-and-forget so the client doesn't wait on N target round-trips.
   res.status(201).json({ result: "ok" })

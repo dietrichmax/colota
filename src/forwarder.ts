@@ -56,7 +56,7 @@ async function dispatch(target: Target, url: string, init: RequestInit): Promise
   try {
     const res = await fetch(url, { ...init, signal: controller.signal })
     if (!res.ok) {
-      const text = (await res.text()).slice(0, 200)
+      const text = sanitizeLogValue((await res.text()).slice(0, 200))
       console.warn(`[forwarder] ${maskUrl(target.url)} responded ${res.status}: ${text}`)
       record(target, `HTTP ${res.status}`)
     } else {

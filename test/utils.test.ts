@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { isFiniteNumber, hasFiniteNumbers, maskUrl, sanitizeLogValue, targetHost } from "../src/utils"
+import { isFiniteNumber, hasFiniteNumbers, maskUrl, sanitizeLogValue, targetHost, isValidTid } from "../src/utils"
 
 test("isFiniteNumber rejects NaN, Infinity and non-numbers", () => {
   assert.equal(isFiniteNumber(5), true)
@@ -43,6 +43,21 @@ test("maskUrl keeps host and path so a failing target stays identifiable", () =>
     maskUrl("http://dawarich:3000/api/v1/overland/batches?api_key=x"),
     "http://dawarich:3000/api/v1/overland/batches?…"
   )
+})
+
+test("isValidTid keeps free-form ids but rejects what breaks an outbound header", () => {
+  // README documents tid as free-form, so these must keep working
+  assert.equal(isValidTid("phone1"), true)
+  assert.equal(isValidTid("Max Phone"), true)
+  assert.equal(isValidTid("phone.1"), true)
+  // a CR or LF makes fetch() reject X-Limit-D, dropping the point while the client sees success
+  assert.equal(isValidTid("AA\r\nX-Injected: yes"), false)
+  assert.equal(isValidTid("a\u0000b"), false)
+  // type confusion and unbounded length reach downstream records
+  assert.equal(isValidTid({ evil: 1 }), false)
+  assert.equal(isValidTid(""), false)
+  assert.equal(isValidTid("x".repeat(65)), false)
+  assert.equal(isValidTid("x".repeat(64)), true)
 })
 
 test("targetHost keeps host and port and nothing else", () => {
