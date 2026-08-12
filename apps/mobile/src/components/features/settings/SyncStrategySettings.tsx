@@ -440,7 +440,7 @@ export function SyncStrategySettings({
             <View style={styles.paramGroup}>
               <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Quality Filters</Text>
 
-              <SettingRow label="Filter Inaccurate Locations" hint="Reject low-accuracy GPS readings">
+              <SettingRow label="Filter Inaccurate Locations" hint="Reject fixes the GPS chip reports as imprecise">
                 <Switch
                   value={settings.filterInaccurateLocations}
                   onValueChange={(value) =>
@@ -466,7 +466,7 @@ export function SyncStrategySettings({
                     onBlur={() => handleNumericBlur("accuracyThreshold", 1)}
                     unit={shortDistanceUnit()}
                     placeholder="50"
-                    hint="Reject readings with accuracy worse than this"
+                    hint="Based on the chip's own estimate, which can be optimistic"
                     colors={colors}
                   />
                 </View>

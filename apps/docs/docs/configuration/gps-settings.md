@@ -32,6 +32,8 @@ Only records a new location if you've moved at least this many meters since the 
 
 When enabled, GPS fixes with accuracy worse than the threshold are discarded. This prevents recording poor-quality positions from indoor or urban environments.
 
+The accuracy value comes from the GPS chip's own estimate of its confidence, not from ground truth. Chips sometimes report a tight accuracy on a position that is badly wrong, and no threshold can reject those, because the fix does not admit to being imprecise. If a stationary device is filling your history with drift, the [Movement Threshold](#movement-threshold) is the setting that keeps those points out of the log.
+
 The Google Play variant uses Android's `HIGH_ACCURACY` positioning mode via FusedLocationProvider, which combines GPS, Wi-Fi, and cellular data. The FOSS variant requests the same high-accuracy mode from the platform's fused location provider on Android 12+ and falls back to `GPS_PROVIDER` on older versions or ROMs without a fused provider.
 
 ## Position-Jump Filter
