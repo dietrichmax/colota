@@ -1,6 +1,6 @@
 {
   "name": "colota-forwarder",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "scripts": {
     "dev": "nodemon --watch src/** --watch .env --ext ts,js -I --exec node --experimental-specifier-resolution=node --loader ts-node/esm ./src/server.ts",
     "build": "webpack",
