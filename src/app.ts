@@ -21,7 +21,7 @@ targets.forEach((t, i) => console.log(`  ${i + 1}. ${maskUrl(t.url)}${t.auth ? "
 if (!API_KEY) {
   console.warn("No API_KEY set - running without authentication")
 } else if (API_KEY.length < 16) {
-  console.warn(`API_KEY is only ${API_KEY.length} characters - generate a stronger one with: openssl rand -base64 32`)
+  console.warn("API_KEY is shorter than 16 characters - generate a stronger one with: openssl rand -base64 32")
 }
 
 app.set("trust proxy", 1)
