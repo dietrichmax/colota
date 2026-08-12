@@ -17,7 +17,7 @@ Receives location updates from the [Colota](https://colota.app) app or any OwnTr
 | `POST` | `/locations` | yes | Colota native payload — fans out to all matching targets |
 | `POST` | `/owntracks` | yes | OwnTracks HTTP payload — only `_type: "location"` is forwarded, others drop |
 | `POST` | `/overland` | yes | Colota batch payload (Overland format) - forwarded whole to `overland` targets, split to single points for the rest |
-| `GET` | `/health` | no | Health check for Docker / orchestrators — returns `{ status, uptime, targets }` |
+| `GET` | `/health` | no | Health check for Docker / orchestrators — returns `{ status, uptime, targets }`, plus per-target delivery counts when the API key is sent |
 
 ## Setup
 
@@ -176,7 +176,7 @@ TARGET_6_TYPE=owntracks
 | `API_KEY` | - | If set, requests must include it via `x-api-key` header, `?api_key=` query param, or `Authorization: Bearer` |
 | `FORWARD_TIMEOUT_MS` | `30000` | Per-target HTTP timeout in milliseconds |
 | `MAX_BATCH_POINTS` | `10000` | Max points in one `/overland` batch; larger batches are rejected with `413` |
-| `MAX_QUEUED_POINTS` | `50000` | Max points still being forwarded before `/overland` replies `429` + `Retry-After` |
+| `MAX_QUEUED_POINTS` | `50000` | Max points still being forwarded before `/overland` replies `503` + `Retry-After` |
 | `SPLIT_CONCURRENCY` | `1` | Default max in-flight requests per target when splitting a batch (non-`overland` targets) |
 | `SPLIT_DELAY_MS` | `0` | Default delay between requests per target when splitting a batch |
 | `TARGET_n_URL` | - | Forward destination (n = 1-20, must be consecutive) |
@@ -192,6 +192,41 @@ TARGET_6_TYPE=owntracks
 | `TARGET_n_SPLIT_DELAY_MS` | (global) | Per-target override of `SPLIT_DELAY_MS` |
 
 ## Advanced
+
+### Delivery status
+
+The forwarder answers your phone as soon as it accepts a point and forwards in the background, so a `200` from the forwarder does not mean a target stored anything. Send the API key to `/health` to see how each target is doing:
+
+```sh
+curl -H "x-api-key: $API_KEY" http://localhost:3000/health
+```
+
+```json
+{
+  "status": "ok",
+  "uptime": 1832.4,
+  "targets": 2,
+  "delivery": [
+    {
+      "target": 1,
+      "host": "dawarich:3000",
+      "ok": 412,
+      "failed": 0,
+      "lastOkAt": "2026-08-12T09:41:02.881Z"
+    },
+    {
+      "target": 2,
+      "host": "geopulse.example.com",
+      "ok": 0,
+      "failed": 412,
+      "lastFailAt": "2026-08-12T09:41:02.883Z",
+      "lastError": "HTTP 401"
+    }
+  ]
+}
+```
+
+`target` is the `n` in `TARGET_n`, so it matches your `.env` even when two targets share a host. A rising `failed` count means that target is rejecting your points — `lastError` says why. Counts are since the last restart. Without the API key, `/health` returns only `status`, `uptime` and `targets`.
 
 ### Batch handling
 
@@ -230,7 +265,7 @@ A phone that has been offline uploads everything it saved at once. Split targets
 | Variable            | Default | Description                                                                        |
 | ------------------- | ------- | ---------------------------------------------------------------------------------- |
 | `MAX_BATCH_POINTS`  | `10000` | Larger batches are rejected with `413` (more than fits in one 1 MB request anyway) |
-| `MAX_QUEUED_POINTS` | `50000` | Above this many points still in flight, `/overland` replies `429` + `Retry-After`  |
+| `MAX_QUEUED_POINTS` | `50000` | Above this many points still in flight, `/overland` replies `503` + `Retry-After`  |
 
 Neither loses data — the app keeps the points it could not send and retries later. For a large backlog, use an `overland` target instead, which sends the whole batch in one request, or set `BATCH_MODE=latest`. Raise `SPLIT_CONCURRENCY` if you want split targets to drain faster.
 

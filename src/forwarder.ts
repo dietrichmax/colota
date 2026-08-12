@@ -1,6 +1,6 @@
 import type { Target } from "./targets"
 import { transformPayload, type ColotaPayload } from "./transform"
-import { maskUrl } from "./utils"
+import { maskUrl, sanitizeLogValue, targetHost } from "./utils"
 
 const FORWARD_TIMEOUT = Number(process.env.FORWARD_TIMEOUT_MS) || 30_000
 const DEFAULT_SPLIT_CONCURRENCY = Number(process.env.SPLIT_CONCURRENCY) || 1
@@ -13,6 +13,43 @@ export interface OverlandEnvelope {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
+export interface TargetStats {
+  target: number // the n in TARGET_n
+  host: string // host:port only — this is exposed over /health
+  ok: number
+  failed: number
+  lastOkAt?: string
+  lastFailAt?: string
+  lastError?: string
+}
+
+const stats = new Map<string, Omit<TargetStats, "target" | "host">>()
+
+function record(target: Target, error?: string): void {
+  let s = stats.get(target.url)
+  if (!s) {
+    s = { ok: 0, failed: 0 }
+    stats.set(target.url, s)
+  }
+  const now = new Date().toISOString()
+  if (error === undefined) {
+    s.ok++
+    s.lastOkAt = now
+  } else {
+    s.failed++
+    s.lastFailAt = now
+    s.lastError = error
+  }
+}
+
+/** Delivery counters per configured target, in config order. */
+export function getDeliveryStats(targets: Target[]): TargetStats[] {
+  return targets.map((t, i) => {
+    const s = stats.get(t.url) ?? { ok: 0, failed: 0 }
+    return { target: i + 1, host: targetHost(t.url), ...s }
+  })
+}
+
 async function dispatch(target: Target, url: string, init: RequestInit): Promise<void> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FORWARD_TIMEOUT)
@@ -21,9 +58,13 @@ async function dispatch(target: Target, url: string, init: RequestInit): Promise
     if (!res.ok) {
       const text = (await res.text()).slice(0, 200)
       console.warn(`[forwarder] ${maskUrl(target.url)} responded ${res.status}: ${text}`)
+      record(target, `HTTP ${res.status}`)
+    } else {
+      record(target)
     }
   } catch (err) {
     console.error(`[forwarder] Failed to reach ${maskUrl(target.url)}:`, err)
+    record(target, sanitizeLogValue(String(err)).slice(0, 120))
   } finally {
     clearTimeout(timeout)
   }

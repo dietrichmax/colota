@@ -1,6 +1,6 @@
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { forwardBatch, forwardToAll, type OverlandEnvelope } from "../src/forwarder"
+import { forwardBatch, forwardToAll, getDeliveryStats, type OverlandEnvelope } from "../src/forwarder"
 import type { Target } from "../src/targets"
 import { overlandFeatureToColota, type ColotaPayload } from "../src/transform"
 
@@ -129,6 +129,61 @@ test("passthrough targets (raw/colota/geopulse) POST the payload unchanged", asy
 test("forwards the Authorization header when target.auth is set", async () => {
   await forwardToAll([{ url: "http://a", type: "raw", auth: "Bearer xyz" }], pt(1))
   assert.equal(calls[0].headers?.["Authorization"], "Bearer xyz")
+})
+
+// Unique URLs per test: the counters are module state, keyed by target URL.
+test("delivery stats count a successful forward", async () => {
+  const target: Target = { url: "http://stats-ok", type: "raw" }
+  await forwardToAll([target], pt(1))
+  const s = getDeliveryStats([target])[0]
+  assert.equal(s.ok, 1)
+  assert.equal(s.failed, 0)
+  assert.ok(s.lastOkAt)
+})
+
+test("a target that rejects the point is counted as failed", async () => {
+  // the client was already told "Accepted" — this counter is the only place the failure surfaces
+  globalThis.fetch = (async () => ({ ok: false, status: 401, text: async () => "denied" })) as unknown as typeof fetch
+  const target: Target = { url: "http://stats-401", type: "raw" }
+  await forwardToAll([target], pt(1))
+  const s = getDeliveryStats([target])[0]
+  assert.equal(s.failed, 1)
+  assert.equal(s.lastError, "HTTP 401") // status only, never the response body
+})
+
+test("a network failure is recorded without exposing the target URL", async () => {
+  // these counters are served over /health, so nothing here may carry a target secret
+  globalThis.fetch = (async () => {
+    throw new TypeError("fetch failed")
+  }) as unknown as typeof fetch
+  const target: Target = { url: "http://stats-down/api?api_key=SECRET", type: "raw" }
+  await forwardToAll([target], pt(1))
+  const s = getDeliveryStats([target])[0]
+  assert.equal(s.failed, 1)
+  assert.match(s.lastError!, /fetch failed/)
+  assert.doesNotMatch(s.lastError!, /SECRET/)
+  assert.equal(s.host, "stats-down") // host only, so no path or query can leak
+})
+
+test("delivery stats number targets by config position", () => {
+  // two targets can share a host, so the number is what identifies them
+  const a: Target = { url: "https://dawarich.example.com/api/v1/owntracks/points?api_key=user1", type: "raw" }
+  const b: Target = { url: "https://dawarich.example.com/api/v1/owntracks/points?api_key=user2", type: "raw" }
+  const s = getDeliveryStats([a, b])
+  assert.deepEqual(
+    s.map((x) => [x.target, x.host]),
+    [
+      [1, "dawarich.example.com"],
+      [2, "dawarich.example.com"]
+    ]
+  )
+})
+
+test("a target that has never been reached still appears, with zeros", () => {
+  const s = getDeliveryStats([{ url: "http://stats-unused", type: "raw" }])[0]
+  assert.equal(s.ok, 0)
+  assert.equal(s.failed, 0)
+  assert.equal(s.lastError, undefined)
 })
 
 test("end-to-end: a Colota app Overland batch fans out correctly", async () => {

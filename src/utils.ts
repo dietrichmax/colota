@@ -6,6 +6,15 @@ export function hasFiniteNumbers(obj: Record<string, unknown>, keys: string[]): 
   return keys.every((k) => isFiniteNumber(obj[k]))
 }
 
+/** Host and port of a target URL, for identifying it */
+export function targetHost(url: string): string {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
+}
+
 /** Renders a target URL for logs. Keeps host and path, drops credentials and query string. */
 export function maskUrl(url: string): string {
   try {

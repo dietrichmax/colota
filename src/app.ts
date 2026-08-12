@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction, Application } from "express"
 import crypto from "crypto"
 import { loadTargets } from "./targets"
-import { forwardToAll, forwardBatch } from "./forwarder"
+import { forwardToAll, forwardBatch, getDeliveryStats } from "./forwarder"
 import { owntracksToColota, overlandFeatureToColota, type ColotaPayload } from "./transform"
 import { maskUrl, hasFiniteNumbers, sanitizeLogValue } from "./utils"
 
@@ -43,27 +43,42 @@ app.use((req: Request, _res: Response, next: NextFunction): void => {
   next()
 })
 
-// Health check
-app.get("/health", (_req: Request, res: Response) => {
-  res.status(200).json({ status: "ok", uptime: process.uptime(), targets: targets.length })
+// Health check. Delivery counts need the key; { status, uptime, targets } stays public.
+app.get("/health", (req: Request, res: Response) => {
+  const health = { status: "ok", uptime: process.uptime(), targets: targets.length }
+  if (!REQUIRE_AUTH || keyMatches(providedKey(req))) {
+    res.status(200).json({ ...health, delivery: getDeliveryStats(targets) })
+    return
+  }
+  res.status(200).json(health)
 })
+
+function providedKey(req: Request): string | undefined {
+  const auth = req.header("authorization")
+  const bearer = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined
+  return req.header("x-api-key") ?? bearer ?? (typeof req.query.api_key === "string" ? req.query.api_key : undefined)
+}
+
+/** True when the request carries the API key, without rejecting when it doesn't. */
+function keyMatches(key: string | undefined): boolean {
+  if (!key || !API_KEY) return false
+  const bufA = Buffer.from(key, "utf8")
+  const bufB = Buffer.from(API_KEY, "utf8")
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB)
+}
 
 // Auth middleware
 function authenticate(req: Request, res: Response, next: NextFunction): void {
   if (!REQUIRE_AUTH) return next()
 
-  const bearer = req.header("authorization")?.startsWith("Bearer ") ? req.header("authorization")!.slice(7) : undefined
-  const key =
-    req.header("x-api-key") ?? bearer ?? (typeof req.query.api_key === "string" ? req.query.api_key : undefined)
+  const key = providedKey(req)
 
-  if (!key || !API_KEY) {
+  if (!key) {
     res.status(403).json({ error: "Forbidden: missing API key" })
     return
   }
 
-  const bufA = Buffer.from(key, "utf8")
-  const bufB = Buffer.from(API_KEY, "utf8")
-  if (bufA.length !== bufB.length || !crypto.timingSafeEqual(bufA, bufB)) {
+  if (!keyMatches(key)) {
     res.status(403).json({ error: "Forbidden: invalid API key" })
     return
   }
@@ -134,8 +149,8 @@ app.post("/overland", authenticate, jsonParser, async (req: Request, res: Respon
     return
   }
   if (queuedPoints + body.locations.length > MAX_QUEUED_POINTS) {
-    // Retry-After so a backlog replay paces itself instead of dropping the batch.
-    res.set("Retry-After", "60").status(429).json({ error: "Still forwarding an earlier batch — retry later" })
+    // 503, not 429: Colota splits a 4xx batch and retries both halves at once; a 5xx makes it back off.
+    res.set("Retry-After", "60").status(503).json({ error: "Still forwarding an earlier batch — retry later" })
     return
   }
 
