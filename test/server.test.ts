@@ -1,9 +1,23 @@
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
-import type { AddressInfo } from "node:net"
-import type { Server } from "node:http"
+import { createServer, type Server } from "node:http"
+import type { AddressInfo, Socket } from "node:net"
+
+// A target that accepts connections but never replies, so a batch stays in flight
+// long enough to assert the queue limit.
+const sockets = new Set<Socket>()
+const sink = createServer(() => {})
+sink.on("connection", (s) => {
+  sockets.add(s)
+  s.on("close", () => sockets.delete(s))
+})
+await new Promise<void>((resolve) => sink.listen(0, "127.0.0.1", () => resolve()))
 
 process.env.API_KEY = "secret"
+process.env.TARGET_1_URL = `http://127.0.0.1:${(sink.address() as AddressInfo).port}/`
+process.env.FORWARD_TIMEOUT_MS = "2000"
+process.env.MAX_BATCH_POINTS = "3"
+process.env.MAX_QUEUED_POINTS = "4"
 const { app } = await import("../src/app")
 
 let server: Server
@@ -12,7 +26,11 @@ before(() => {
   server = app.listen(0)
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
 })
-after(() => server.close())
+after(() => {
+  for (const s of sockets) s.destroy()
+  sink.close()
+  server.close()
+})
 
 const post = (path: string, body: string, headers: Record<string, string> = {}) =>
   fetch(base + path, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body })
@@ -46,4 +64,21 @@ test("POST /overland with a valid batch is accepted (201)", async () => {
 
 test("GET /health needs no auth (200)", async () => {
   assert.equal((await fetch(base + "/health")).status, 200)
+})
+
+const overlandPoint = { geometry: { coordinates: [1, 2] } }
+const batch = (n: number) =>
+  JSON.stringify({ device_id: "d", locations: Array.from({ length: n }, () => overlandPoint) })
+
+test("POST /overland rejects a batch over MAX_BATCH_POINTS (413)", async () => {
+  // every point fans out to its own request per target, so one oversized batch
+  // would flood every downstream service before the client even waits
+  assert.equal((await post("/overland", batch(4), withKey)).status, 413)
+})
+
+test("POST /overland pushes back once MAX_QUEUED_POINTS is in flight (429)", async () => {
+  // under-cap batches must not stack up either: the first is still forwarding to a
+  // target that never replies, so the second has to be refused rather than queued
+  assert.equal((await post("/overland", batch(3), withKey)).status, 201)
+  assert.equal((await post("/overland", batch(3), withKey)).status, 429)
 })

@@ -175,6 +175,8 @@ TARGET_6_TYPE=owntracks
 | `PORT` | `3000` | Port to listen on |
 | `API_KEY` | - | If set, requests must include it via `x-api-key` header, `?api_key=` query param, or `Authorization: Bearer` |
 | `FORWARD_TIMEOUT_MS` | `30000` | Per-target HTTP timeout in milliseconds |
+| `MAX_BATCH_POINTS` | `10000` | Max points in one `/overland` batch; larger batches are rejected with `413` |
+| `MAX_QUEUED_POINTS` | `50000` | Max points still being forwarded before `/overland` replies `429` + `Retry-After` |
 | `SPLIT_CONCURRENCY` | `1` | Default max in-flight requests per target when splitting a batch (non-`overland` targets) |
 | `SPLIT_DELAY_MS` | `0` | Default delay between requests per target when splitting a batch |
 | `TARGET_n_URL` | - | Forward destination (n = 1-20, must be consecutive) |
@@ -209,19 +211,28 @@ When the Colota app uses the **Overland** template (or **Dawarich** + Batch mode
 
   Example — feed Dawarich the raw batch for full history, give Home Assistant just the latest fix, and trickle into a self-hosted Traccar at most 2 at a time with a 200 ms gap:
 
-  ```env
-  TARGET_1_URL=https://dawarich.example.com/api/v1/overland/batches?api_key=your-key
-  TARGET_1_TYPE=overland
+```env
+TARGET_1_URL=https://dawarich.example.com/api/v1/overland/batches?api_key=your-key
+TARGET_1_TYPE=overland
 
-  TARGET_2_URL=http://homeassistant:8123/api/webhook/your-webhook-id
-  TARGET_2_TYPE=colota
-  TARGET_2_BATCH_MODE=latest
+TARGET_2_URL=http://homeassistant:8123/api/webhook/your-webhook-id
+TARGET_2_TYPE=colota
+TARGET_2_BATCH_MODE=latest
 
-  TARGET_3_URL=https://traccar.example.com:5055
-  TARGET_3_TYPE=traccar
-  TARGET_3_SPLIT_CONCURRENCY=2
-  TARGET_3_SPLIT_DELAY_MS=200
-  ```
+TARGET_3_URL=https://traccar.example.com:5055
+TARGET_3_TYPE=traccar
+TARGET_3_SPLIT_CONCURRENCY=2
+TARGET_3_SPLIT_DELAY_MS=200
+```
+
+A phone that has been offline uploads everything it saved at once. Split targets send one request per point, so a long backlog becomes a lot of requests. Two limits stop that from hammering your services:
+
+| Variable            | Default | Description                                                                        |
+| ------------------- | ------- | ---------------------------------------------------------------------------------- |
+| `MAX_BATCH_POINTS`  | `10000` | Larger batches are rejected with `413` (more than fits in one 1 MB request anyway) |
+| `MAX_QUEUED_POINTS` | `50000` | Above this many points still in flight, `/overland` replies `429` + `Retry-After`  |
+
+Neither loses data — the app keeps the points it could not send and retries later. For a large backlog, use an `overland` target instead, which sends the whole batch in one request, or set `BATCH_MODE=latest`. Raise `SPLIT_CONCURRENCY` if you want split targets to drain faster.
 
 ### Multi-user / TID routing
 

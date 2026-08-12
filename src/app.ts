@@ -22,6 +22,10 @@ app.disable("x-powered-by")
 
 const jsonParser = express.json({ limit: "1mb", strict: true })
 
+const MAX_BATCH_POINTS = Number(process.env.MAX_BATCH_POINTS) || 10_000
+const MAX_QUEUED_POINTS = Number(process.env.MAX_QUEUED_POINTS) || 50_000
+let queuedPoints = 0
+
 app.use((req: Request, _res: Response, next: NextFunction): void => {
   if (req.path === "/health") return next()
   if (req.method === "GET") return next()
@@ -116,6 +120,18 @@ app.post("/overland", authenticate, jsonParser, async (req: Request, res: Respon
     return
   }
 
+  if (body.locations.length > MAX_BATCH_POINTS) {
+    res
+      .status(413)
+      .json({ error: `Batch of ${body.locations.length} points exceeds MAX_BATCH_POINTS (${MAX_BATCH_POINTS})` })
+    return
+  }
+  if (queuedPoints + body.locations.length > MAX_QUEUED_POINTS) {
+    // Retry-After so a backlog replay paces itself instead of dropping the batch.
+    res.set("Retry-After", "60").status(429).json({ error: "Still forwarding an earlier batch — retry later" })
+    return
+  }
+
   const deviceId = typeof body.device_id === "string" ? body.device_id : undefined
 
   // 201 per Overland spec; fire-and-forget so the client doesn't wait on N target round-trips.
@@ -137,7 +153,10 @@ app.post("/overland", authenticate, jsonParser, async (req: Request, res: Respon
     console.warn(`[overland] ${skipped}/${payloads.length + skipped} Features skipped`)
   }
 
-  forwardBatch(targets, { locations: body.locations, device_id: deviceId }, payloads)
+  queuedPoints += payloads.length
+  forwardBatch(targets, { locations: body.locations, device_id: deviceId }, payloads).finally(() => {
+    queuedPoints -= payloads.length
+  })
 })
 
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
