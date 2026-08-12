@@ -17,9 +17,32 @@ test("hasFiniteNumbers requires every key to be a finite number", () => {
   assert.equal(hasFiniteNumbers({ a: 1, b: "2" }, ["a", "b"]), false) // wrong type
 })
 
-test("maskUrl hides api_key and token", () => {
-  assert.equal(maskUrl("https://url.com/p?api_key=secret&z=1"), "https://url.com/p?api_key=***&z=1")
-  assert.equal(maskUrl("https://url.com/p?token=abc"), "https://url.com/p?token=***")
+test("maskUrl drops every query value, not just known secret names", () => {
+  // logs get pasted into issue reports — a param name we don't recognise must not leak
+  assert.equal(maskUrl("https://url.com/p?api_key=secret&z=1"), "https://url.com/p?…")
+  assert.equal(maskUrl("https://url.com/p?token=abc"), "https://url.com/p?…")
+  assert.equal(maskUrl("https://url.com/p?key=secret"), "https://url.com/p?…")
+  assert.equal(maskUrl("https://url.com/p?access_token=secret"), "https://url.com/p?…")
+})
+
+test("maskUrl never prints URL credentials, but shows that some are set", () => {
+  assert.equal(
+    maskUrl("https://admin:hunter2@geopulse.example.com/api/colota"),
+    "https://***@geopulse.example.com/api/colota"
+  )
+  assert.equal(maskUrl("https://admin@url.com/p"), "https://***@url.com/p")
+})
+
+test("maskUrl keeps host and path so a failing target stays identifiable", () => {
+  // two targets on one host differ only by path — both must survive masking
+  assert.equal(
+    maskUrl("http://dawarich:3000/api/v1/owntracks/points?api_key=x"),
+    "http://dawarich:3000/api/v1/owntracks/points?…"
+  )
+  assert.equal(
+    maskUrl("http://dawarich:3000/api/v1/overland/batches?api_key=x"),
+    "http://dawarich:3000/api/v1/overland/batches?…"
+  )
 })
 
 test("maskUrl returns the input unchanged when it isn't a URL", () => {

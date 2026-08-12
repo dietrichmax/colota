@@ -28,6 +28,16 @@ test("skips a target with an invalid URL", () => {
   assert.equal(loadTargets().length, 0)
 })
 
+test("skips a target with credentials in the URL", () => {
+  // fetch() rejects these, so loading one would only produce a target that never sends
+  process.env.TARGET_1_URL = "https://admin:hunter2@geopulse.example.com/api/colota"
+  assert.equal(loadTargets().length, 0)
+
+  clearTargetEnv()
+  process.env.TARGET_1_URL = "https://admin@geopulse.example.com/api/colota"
+  assert.equal(loadTargets().length, 0)
+})
+
 test("parses batchMode=latest and ignores invalid values", () => {
   process.env.TARGET_1_URL = "http://a"
   process.env.TARGET_1_BATCH_MODE = "latest"
