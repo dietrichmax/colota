@@ -5,16 +5,34 @@ on:
     branches:
       - main
   pull_request_target:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, edited]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  update_release_draft:
+  autolabel:
+    name: Label pull request
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.base.repo.full_name == 'dietrichmax/colota'
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.base.repo.full_name == 'dietrichmax/colota'
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Apply labels
+        uses: release-drafter/release-drafter/autolabeler@34d80673e067bdc0c24568d3af899c216adcfaa9 # v7
+        with:
+          config-name: release-drafter.yml
+
+  update_release_draft:
+    name: Update release draft
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
