@@ -4,8 +4,7 @@ import { createServer, type Server } from "node:http"
 import { spawnSync } from "node:child_process"
 import type { AddressInfo, Socket } from "node:net"
 
-// A target that accepts connections but never replies, so a batch stays in flight
-// long enough to assert the queue limit.
+// A target that accepts connections but never replies, so a batch stays in flight.
 const sockets = new Set<Socket>()
 const sink = createServer(() => {})
 sink.on("connection", (s) => {
@@ -67,6 +66,31 @@ test("GET /health needs no auth (200)", async () => {
   assert.equal((await fetch(base + "/health")).status, 200)
 })
 
+test("GET /health keeps its documented shape but hides delivery detail without the key", async () => {
+  const body = (await (await fetch(base + "/health")).json()) as Record<string, unknown>
+  assert.equal(body.status, "ok")
+  assert.equal(typeof body.uptime, "number") // documented fields stay public
+  assert.equal(body.targets, 1)
+  assert.equal(body.delivery, undefined) // how healthy your targets are is not public
+})
+
+test("GET /health ignores ?api_key= — a key in a GET URL ends up in proxy logs", async () => {
+  const body = (await (await fetch(`${base}/health?api_key=secret`)).json()) as Record<string, unknown>
+  assert.equal(body.status, "ok")
+  assert.equal(body.delivery, undefined) // header only, even though the key is correct
+})
+
+test("GET /health with the key reports every target's delivery counts", async () => {
+  const body = (await (await fetch(base + "/health", { headers: withKey })).json()) as {
+    delivery: { target: number; host: string; ok: number; failed: number }[]
+  }
+  assert.equal(body.delivery.length, 1) // one entry per configured target, in config order
+  assert.equal(body.delivery[0].target, 1) // the n in TARGET_n
+  assert.match(body.delivery[0].host, /^127\.0\.0\.1:\d+$/) // host:port, no path
+  assert.equal(typeof body.delivery[0].ok, "number")
+  assert.equal(typeof body.delivery[0].failed, "number")
+})
+
 test("refuses to start while API_KEY is still the example value", () => {
   const run = spawnSync(process.execPath, ["--import", "tsx", "src/server.ts"], {
     env: { ...process.env, API_KEY: "your-secret-key" },
@@ -82,14 +106,15 @@ const batch = (n: number) =>
   JSON.stringify({ device_id: "d", locations: Array.from({ length: n }, () => overlandPoint) })
 
 test("POST /overland rejects a batch over MAX_BATCH_POINTS (413)", async () => {
-  // every point fans out to its own request per target, so one oversized batch
-  // would flood every downstream service before the client even waits
+  // every point fans out to its own request per target, so one oversized batch floods them all
   assert.equal((await post("/overland", batch(4), withKey)).status, 413)
 })
 
-test("POST /overland pushes back once MAX_QUEUED_POINTS is in flight (429)", async () => {
-  // under-cap batches must not stack up either: the first is still forwarding to a
-  // target that never replies, so the second has to be refused rather than queued
+test("POST /overland pushes back once MAX_QUEUED_POINTS is in flight (503)", async () => {
+  // under-cap batches must not stack up either. 5xx specifically: Colota answers a 4xx
+  // by splitting the batch and retrying both halves at once.
   assert.equal((await post("/overland", batch(3), withKey)).status, 201)
-  assert.equal((await post("/overland", batch(3), withKey)).status, 429)
+  const res = await post("/overland", batch(3), withKey)
+  assert.equal(res.status, 503)
+  assert.equal(res.headers.get("retry-after"), "60")
 })

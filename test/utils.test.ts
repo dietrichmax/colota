@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { isFiniteNumber, hasFiniteNumbers, maskUrl, sanitizeLogValue } from "../src/utils"
+import { isFiniteNumber, hasFiniteNumbers, maskUrl, sanitizeLogValue, targetHost } from "../src/utils"
 
 test("isFiniteNumber rejects NaN, Infinity and non-numbers", () => {
   assert.equal(isFiniteNumber(5), true)
@@ -43,6 +43,12 @@ test("maskUrl keeps host and path so a failing target stays identifiable", () =>
     maskUrl("http://dawarich:3000/api/v1/overland/batches?api_key=x"),
     "http://dawarich:3000/api/v1/overland/batches?…"
   )
+})
+
+test("targetHost keeps host and port and nothing else", () => {
+  assert.equal(targetHost("http://dawarich:3000/api/v1/owntracks/points?api_key=x"), "dawarich:3000")
+  assert.equal(targetHost("https://geopulse.example.com/api/colota"), "geopulse.example.com")
+  assert.equal(targetHost("not a url"), "not a url")
 })
 
 test("maskUrl returns the input unchanged when it isn't a URL", () => {
