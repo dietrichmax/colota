@@ -80,7 +80,7 @@ Each entry in the `geofences` array describes one pause zone. `name`, `lat`, `lo
 | `pauseOnWifi`              | boolean | `false`    | Also stop GPS while connected to Wi-Fi or Ethernet           |
 | `pauseOnMotionless`        | boolean | `false`    | Also stop GPS after no motion for `motionlessTimeoutMinutes` |
 | `motionlessTimeoutMinutes` | number  | `10`       | Minutes of stillness before motionless pause kicks in        |
-| `heartbeatEnabled`         | boolean | `false`    | Send periodic location updates while paused                  |
+| `heartbeatEnabled`         | boolean | `false`    | Record a point at the zone center while paused               |
 | `heartbeatIntervalMinutes` | number  | `15`       | Heartbeat interval in minutes                                |
 
 Imported geofences are appended by default. The import confirmation screen has a "Replace zones with the same name" toggle that deletes existing zones whose names match before creating the incoming ones.

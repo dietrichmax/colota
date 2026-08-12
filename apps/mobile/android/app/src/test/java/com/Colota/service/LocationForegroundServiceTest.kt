@@ -6,6 +6,7 @@ import android.location.Location
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
+import com.Colota.data.SettingsKeys
 import com.Colota.location.LocationProvider
 import com.Colota.location.LocationUpdateCallback
 import com.Colota.sync.PayloadBuilder
@@ -2610,57 +2611,151 @@ class LocationForegroundServiceTest {
     }
 
     // =========================================================================
-    // sendHeartbeatLocation - sync condition check
+    // recordHeartbeatLocation - recording is independent of sending (#524)
     // =========================================================================
 
     @Test
-    fun `sendHeartbeatLocation skips send when sync condition not met`() = testScope.runTest {
+    fun `recordHeartbeatLocation records the point even when the sync condition is not met`() = testScope.runTest {
+        // The stay must survive offline mode and a disallowed connection. Whether it also goes
+        // out is SyncManager's call, which still honours the SSID condition (fdw's fix).
         every { syncManager.isSyncAllowed() } returns false
-        setField("currentZoneGeofence", homeGeofence)
-
-        invokeSendHeartbeatLocation()
-
-        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
-        verify { AppLogger.d("LocationService", "Heartbeat skipped: sync condition not met") }
-    }
-
-    @Test
-    fun `sendHeartbeatLocation sends when sync condition is met`() = testScope.runTest {
-        every { syncManager.isSyncAllowed() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
         every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
         setField("currentZoneGeofence", homeGeofence)
 
-        invokeSendHeartbeatLocation()
+        invokeRecordHeartbeatLocation()
 
-        coVerify { networkManager.sendToEndpoint(any(), "https://example.com", any(), any(), any()) }
-        verify { AppLogger.i("LocationService", "Heartbeat sent for zone 'Home'") }
+        verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        coVerify { syncManager.queueAndSend(1L, any()) }
     }
 
     @Test
-    fun `sendHeartbeatLocation skips when no current zone`() = testScope.runTest {
+    fun `recordHeartbeatLocation never sends around SyncManager`() = testScope.runTest {
+        // Going straight to networkManager would bypass the sync condition entirely
         every { syncManager.isSyncAllowed() } returns true
-        setField("currentZoneGeofence", null)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("currentZoneGeofence", homeGeofence)
 
-        invokeSendHeartbeatLocation()
+        invokeRecordHeartbeatLocation()
 
         coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify { AppLogger.i("LocationService", "Heartbeat recorded for zone 'Home'") }
     }
 
     @Test
-    fun `sendHeartbeatLocation must not overwrite lastKnownLocation`() = testScope.runTest {
+    fun `recordHeartbeatLocation skips when no current zone`() = testScope.runTest {
+        setField("currentZoneGeofence", null)
+
+        invokeRecordHeartbeatLocation()
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { syncManager.queueAndSend(any(), any()) }
+    }
+
+    @Test
+    fun `recordHeartbeatLocation must not overwrite lastKnownLocation`() = testScope.runTest {
         val realPreviousFix = mockLocation(lat = 52.50, lon = 13.40,
             time = System.currentTimeMillis() - 60_000)
         setField("currentZoneGeofence", homeGeofence)
         setField("lastKnownLocation", realPreviousFix)
-        every { syncManager.isSyncAllowed() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
         every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(),
             any(), any(), any(), any()) } returns 1L
 
-        invokeSendHeartbeatLocation()
+        invokeRecordHeartbeatLocation()
 
         assertSame(realPreviousFix, getField<Location?>("lastKnownLocation"))
+    }
+
+    @Test
+    fun `startHeartbeat records at once on zone entry`() = runServiceTest {
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeStartHeartbeat(15, firstDelayMs = 0L)
+        advanceTimeBy(1_000)
+
+        verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `restore resumes the running interval instead of restarting it`() {
+        // A device that respawns the service more often than the interval would otherwise never
+        // reach a heartbeat at all, which is worse than the duplicate this replaced
+        every { dbHelper.getSetting(SettingsKeys.HEARTBEAT_LAST_AT) } returns
+            (System.currentTimeMillis() - 10 * 60_000L).toString()
+
+        val remaining = invokeRemainingHeartbeatDelay(15)
+
+        assertTrue("Expected about 5 min left, got ${remaining}ms", remaining in 4 * 60_000L..5 * 60_000L)
+    }
+
+    @Test
+    fun `restore records at once when no heartbeat was ever taken`() {
+        // Self-correcting: recording establishes the timestamp the next restart reads
+        every { dbHelper.getSetting(SettingsKeys.HEARTBEAT_LAST_AT) } returns null
+
+        assertEquals(0L, invokeRemainingHeartbeatDelay(15))
+    }
+
+    @Test
+    fun `restore records at once when the interval already elapsed`() {
+        every { dbHelper.getSetting(SettingsKeys.HEARTBEAT_LAST_AT) } returns
+            (System.currentTimeMillis() - 60 * 60_000L).toString()
+
+        assertEquals(0L, invokeRemainingHeartbeatDelay(15))
+    }
+
+    @Test
+    fun `entering a zone with the heartbeat on records a point at once`() = runServiceTest {
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeEnterPauseZone(geofence("Home", heartbeatEnabled = true))
+        advanceTimeBy(1_000)
+
+        verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `switching the heartbeat on from the editor records a point at once`() = runServiceTest {
+        // The editor promises changes take effect immediately, and the interval is unchanged here,
+        // so nothing else in applyZoneSettingsIfChanged marks this as new
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("currentZoneGeofence", geofence("Home", heartbeatEnabled = false))
+
+        invokeApplyZoneSettingsIfChanged(geofence("Home", heartbeatEnabled = true))
+        advanceTimeBy(1_000)
+
+        verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `re-applying an unchanged zone does not record another point`() = runServiceTest {
+        // RECHECK fires on unrelated edits too; each one must not stack a duplicate on an
+        // interval that is already running
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        every { dbHelper.getSetting(SettingsKeys.HEARTBEAT_LAST_AT) } returns
+            (System.currentTimeMillis() - 60_000L).toString()
+        setField("currentZoneGeofence", geofence("Home", heartbeatEnabled = true))
+
+        invokeApplyZoneSettingsIfChanged(geofence("Home", heartbeatEnabled = true))
+        advanceTimeBy(1_000)
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `startHeartbeat waits a full interval when restoring a zone`() = runServiceTest {
+        // Every service restart restores the zone. Recording here would add a duplicate point,
+        // and POST one, for a stay the previous instance already covered.
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeStartHeartbeat(15, firstDelayMs = 15 * 60_000L)
+        advanceTimeBy(1_000)
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+
+        advanceTimeBy(15 * 60_000L)
+        verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
 
@@ -2725,12 +2820,33 @@ class LocationForegroundServiceTest {
         radius: Double = 100.0,
         pauseOnWifi: Boolean = false,
         pauseOnMotionless: Boolean = false,
-        motionlessTimeoutMinutes: Int = 10
-    ) = GeofenceHelper.Geofence(name, lat, lon, radius, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes)
+        motionlessTimeoutMinutes: Int = 10,
+        heartbeatEnabled: Boolean = false,
+        heartbeatIntervalMinutes: Int = 15
+    ) = GeofenceHelper.Geofence(
+        name, lat, lon, radius, pauseOnWifi, pauseOnMotionless, motionlessTimeoutMinutes,
+        heartbeatEnabled, heartbeatIntervalMinutes
+    )
 
-    private fun invokeSendHeartbeatLocation() = runBlocking {
+    private fun invokeRemainingHeartbeatDelay(intervalMinutes: Int): Long {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
-            "sendHeartbeatLocation", kotlin.coroutines.Continuation::class.java
+            "remainingHeartbeatDelay", Int::class.java
+        )
+        method.isAccessible = true
+        return method.invoke(service, intervalMinutes) as Long
+    }
+
+    private fun invokeStartHeartbeat(intervalMinutes: Int, firstDelayMs: Long) {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "startHeartbeat", Int::class.java, Long::class.java
+        )
+        method.isAccessible = true
+        method.invoke(service, intervalMinutes, firstDelayMs)
+    }
+
+    private fun invokeRecordHeartbeatLocation() = runBlocking {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "recordHeartbeatLocation", kotlin.coroutines.Continuation::class.java
         )
         method.isAccessible = true
         suspendCancellableCoroutine<Unit> { cont ->

@@ -299,7 +299,10 @@ class LocationForegroundService : Service() {
                     AppLogger.d(TAG, "Restored motionless pause state")
                 }
                 if (restoredGeofence?.heartbeatEnabled == true) {
-                    startHeartbeat(restoredGeofence.heartbeatIntervalMinutes)
+                    startHeartbeat(
+                        restoredGeofence.heartbeatIntervalMinutes,
+                        firstDelayMs = remainingHeartbeatDelay(restoredGeofence.heartbeatIntervalMinutes)
+                    )
                     AppLogger.d(TAG, "Restored heartbeat: ${restoredGeofence.heartbeatIntervalMinutes}min")
                 }
                 ensureMotionDetectorRunning()
@@ -756,7 +759,11 @@ class LocationForegroundService : Service() {
      * Called on RECHECK when already inside the zone so editor changes take effect immediately.
      */
     private fun applyZoneSettingsIfChanged(zone: GeofenceHelper.Geofence) {
-        val heartbeatChanged = currentZoneGeofence?.heartbeatIntervalMinutes != zone.heartbeatIntervalMinutes
+        val previousZone = currentZoneGeofence
+        val heartbeatChanged = previousZone?.heartbeatIntervalMinutes != zone.heartbeatIntervalMinutes
+        // Switching the heartbeat on from the editor is an arrival as far as the user is concerned,
+        // so it records at once. A restore or an interval change is not.
+        val heartbeatJustEnabled = previousZone?.heartbeatEnabled != true && zone.heartbeatEnabled
         currentZoneGeofence = zone
 
         if (zone.pauseOnWifi && wifiCallback == null) {
@@ -776,7 +783,9 @@ class LocationForegroundService : Service() {
         ensureMotionDetectorRunning()
 
         if (zone.heartbeatEnabled && (heartbeatJob == null || heartbeatChanged)) {
-            startHeartbeat(zone.heartbeatIntervalMinutes)
+            val firstDelayMs =
+                if (heartbeatJustEnabled) 0L else remainingHeartbeatDelay(zone.heartbeatIntervalMinutes)
+            startHeartbeat(zone.heartbeatIntervalMinutes, firstDelayMs)
         } else if (!zone.heartbeatEnabled) {
             cancelHeartbeat()
         }
@@ -1000,7 +1009,7 @@ class LocationForegroundService : Service() {
      */
     private fun startZoneHolds(zone: GeofenceHelper.Geofence) {
         if (zone.pauseOnWifi) registerWifiPause()
-        if (zone.heartbeatEnabled) startHeartbeat(zone.heartbeatIntervalMinutes)
+        if (zone.heartbeatEnabled) startHeartbeat(zone.heartbeatIntervalMinutes, firstDelayMs = 0L)
         ensureMotionDetectorRunning()
     }
 
@@ -1107,20 +1116,36 @@ class LocationForegroundService : Service() {
     }
 
     /**
-     * Starts a heartbeat that sends a location update to the server at a relaxed
-     * interval while paused in a geofence zone. Fires one send immediately so the
-     * backend sees zone entry without waiting a full interval.
+     * Starts a heartbeat that records a point at the zone center at a relaxed interval
+     * while paused in a geofence zone.
+     *
+     * [firstDelayMs] is 0 for an arrival, so the backend sees it without waiting an interval.
+     * A restore passes the time still owed on the running interval - see [remainingHeartbeatDelay].
+     * Restarting the clock there would starve a device that respawns the service more often than
+     * the interval, and recording on every restore would stack duplicates for one stay.
      */
-    private fun startHeartbeat(intervalMinutes: Int) {
+    private fun startHeartbeat(intervalMinutes: Int, firstDelayMs: Long) {
         cancelHeartbeat()
-        AppLogger.i(TAG, "Heartbeat started: ${intervalMinutes}min interval")
+        AppLogger.i(TAG, "Heartbeat started: ${intervalMinutes}min interval, first in ${firstDelayMs}ms")
         heartbeatJob = serviceScope?.launch {
-            sendHeartbeatLocation()
+            delay(firstDelayMs)
+            recordHeartbeatLocation()
             while (isActive) {
                 delay(intervalMinutes * 60_000L)
-                sendHeartbeatLocation()
+                recordHeartbeatLocation()
             }
         }
+    }
+
+    /**
+     * Time left on the interval that was running before this service instance existed.
+     * No stored timestamp means record now and establish one, which self-corrects on the
+     * next restart rather than leaving the heartbeat permanently silent.
+     */
+    private fun remainingHeartbeatDelay(intervalMinutes: Int): Long {
+        val lastAt = dbHelper.getSetting(SettingsKeys.HEARTBEAT_LAST_AT)?.toLongOrNull() ?: return 0L
+        val elapsed = System.currentTimeMillis() - lastAt
+        return (intervalMinutes * 60_000L - elapsed).coerceIn(0L, intervalMinutes * 60_000L)
     }
 
     private fun cancelHeartbeat() {
@@ -1130,20 +1155,22 @@ class LocationForegroundService : Service() {
         AppLogger.i(TAG, "Heartbeat cancelled")
     }
 
-    private suspend fun sendHeartbeatLocation() {
-        if (config.endpoint.isBlank()) {
-            AppLogger.d(TAG, "Heartbeat skipped: no endpoint")
+    /**
+     * Records a point at the current zone center. Mirrors [saveAnchorPoint]: the point is
+     * saved unconditionally and handed to [SyncManager], which owns whether it goes out now,
+     * waits in the queue or stays local in offline mode. Recording and sending are separate
+     * concerns here - gating the save on a successful send loses the stay entirely whenever
+     * the server is unreachable or sync is not allowed.
+     */
+    private suspend fun recordHeartbeatLocation() {
+        if (!::config.isInitialized) {
+            AppLogger.w(TAG, "Config not yet initialized, skipping heartbeat")
             return
         }
 
         val zone = currentZoneGeofence
         if (zone == null) {
             AppLogger.d(TAG, "Heartbeat skipped: no current zone")
-            return
-        }
-
-        if (!syncManager.isSyncAllowed()) {
-            AppLogger.d(TAG, "Heartbeat skipped: sync condition not met")
             return
         }
 
@@ -1156,33 +1183,29 @@ class LocationForegroundService : Service() {
         val (battery, batteryStatus) = deviceInfoHelper.getCachedBatteryStatus()
         val timestampSec = location.time / 1000
 
-        val payload = PayloadBuilder.buildLocationPayload(location, timestampSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat)
-
-        val sent = networkManager.sendToEndpoint(
-            payload, config.endpoint, secureStorage.getAuthHeaders(),
-            config.httpMethod, config.apiFormat
+        val locationId = dbHelper.saveLocation(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            accuracy = location.accuracy.toDouble(),
+            altitude = if (location.hasAltitude()) location.altitude.toInt() else null,
+            speed = 0.0,
+            bearing = 0.0,
+            battery = battery,
+            battery_status = batteryStatus,
+            timestamp = timestampSec,
+            endpoint = config.endpoint
         )
 
-        if (sent) {
-            // Only persist to DB on successful send
-            val locationId = dbHelper.saveLocation(
-                latitude = location.latitude,
-                longitude = location.longitude,
-                accuracy = location.accuracy.toDouble(),
-                altitude = if (location.hasAltitude()) location.altitude.toInt() else null,
-                speed = 0.0,
-                bearing = 0.0,
-                battery = battery,
-                battery_status = batteryStatus,
-                timestamp = timestampSec,
-                endpoint = config.endpoint
-            )
-            dbHelper.markLocationsSent(listOf(locationId))
-            LocationServiceModule.sendLocationEvent(location, battery, batteryStatus)
-            AppLogger.i(TAG, "Heartbeat sent for zone '${zone.name}'")
-        } else {
-            AppLogger.d(TAG, "Heartbeat failed: server unreachable, will retry next cycle")
-        }
+        // Emit before queueAndSend: an instant-mode send blocks on the network, and the map
+        // should not wait out a timeout to show a point that is already saved.
+        LocationServiceModule.sendLocationEvent(location, battery, batteryStatus)
+
+        dbHelper.saveSetting(SettingsKeys.HEARTBEAT_LAST_AT, location.time.toString())
+
+        val payload = PayloadBuilder.buildLocationPayload(location, timestampSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat)
+        syncManager.queueAndSend(locationId, payload)
+
+        AppLogger.i(TAG, "Heartbeat recorded for zone '${zone.name}'")
     }
 
     /**

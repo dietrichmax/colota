@@ -14,4 +14,8 @@ object SettingsKeys {
 
     /** True when a low-battery (<5%) stop paused tracking - armed for charger auto-resume. */
     const val STOPPED_BY_BATTERY = "stopped_by_battery"
+
+    /** Epoch ms of the last geofence heartbeat, so a service restart resumes the interval
+     *  instead of restarting it and starving a device that respawns often. */
+    const val HEARTBEAT_LAST_AT = "heartbeat_last_at"
 }

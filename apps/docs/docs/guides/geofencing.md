@@ -43,7 +43,9 @@ Stops GPS after the device has been still for the configured time (default 1 min
 
 ### Stationary heartbeat
 
-Sends a periodic location update to your server while paused inside the zone. Useful as a proof-of-presence signal so your backend knows the device is still there. The heartbeat sends the geofence center as a synthetic anchor point (no GPS wake), bypassing normal sync conditions like Wi-Fi only. The first heartbeat fires immediately on zone entry, then repeats at the configured interval. Minimum 1 minute, default 15.
+Records a point at the geofence center at a set interval while paused inside the zone, as a synthetic fix that does not wake GPS. Useful as a proof-of-presence signal so your backend knows the device is still there.
+
+The point is always saved on the device, including in offline mode and when the server is unreachable. Sending it is separate: it goes out under your normal sync rules, so a Wi-Fi-only or SSID condition still governs the upload while the stay is recorded either way. The first point is recorded on zone entry, then one per interval. Minimum 1 minute, default 15.
 
 ### Combined behavior
 

@@ -302,7 +302,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 
           <SettingRow
             label="Stationary heartbeat"
-            hint="Periodic server update while paused"
+            hint="Periodic point at the zone center while paused"
             style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
           >
             <Switch
@@ -317,7 +317,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 
           {pauseTracking && heartbeatEnabled && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
-              <SettingRow label="Interval (min)" hint="How often to send a location update">
+              <SettingRow label="Interval (min)" hint="How often to record a point">
                 <TextInput
                   testID="heartbeat-interval-input"
                   style={[inputStyle, styles.numInput]}

@@ -1,1 +1,3 @@
 - Large point counts stay on one line in the settings summary, shown as 123K or 2.0M
+- Geofence heartbeat now records points in offline mode and when the server is unreachable
+- No duplicate heartbeat point after the app restarts in the background
