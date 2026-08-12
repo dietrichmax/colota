@@ -27,6 +27,10 @@ export function loadTargets(): Target[] {
         console.warn(`TARGET_${i}_URL has unsupported protocol "${parsed.protocol}" — skipping`)
         continue
       }
+      if (parsed.username || parsed.password) {
+        console.warn(`TARGET_${i}_URL has credentials in the URL — use TARGET_${i}_AUTH instead — skipping`)
+        continue
+      }
     } catch {
       console.warn(`TARGET_${i}_URL is not a valid URL — skipping`)
       continue

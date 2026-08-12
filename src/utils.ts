@@ -6,17 +6,13 @@ export function hasFiniteNumbers(obj: Record<string, unknown>, keys: string[]): 
   return keys.every((k) => isFiniteNumber(obj[k]))
 }
 
-const SENSITIVE_PARAMS = new Set(["api_key", "token"])
-
+/** Renders a target URL for logs. Keeps host and path, drops credentials and query string. */
 export function maskUrl(url: string): string {
   try {
     const parsed = new URL(url)
-    for (const param of SENSITIVE_PARAMS) {
-      if (parsed.searchParams.has(param)) {
-        parsed.searchParams.set(param, "***")
-      }
-    }
-    return parsed.toString()
+    const creds = parsed.username || parsed.password ? "***@" : ""
+    const query = parsed.search ? "?…" : ""
+    return `${parsed.protocol}//${creds}${parsed.host}${parsed.pathname}${query}`
   } catch {
     return url
   }
