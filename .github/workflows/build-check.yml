@@ -8,6 +8,7 @@ on:
       - '!fastlane/**'
       - 'packages/shared/**'
       - 'package-lock.json'
+      - '.nvmrc'
       - '.github/workflows/build-check.yml'
       - '.github/actions/setup-build/**'
   pull_request:
@@ -17,6 +18,7 @@ on:
       - '!fastlane/**'
       - 'packages/shared/**'
       - 'package-lock.json'
+      - '.nvmrc'
       - '.github/workflows/build-check.yml'
       - '.github/actions/setup-build/**'
 
