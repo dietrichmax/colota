@@ -260,7 +260,9 @@ Targets without `FILTER_TID` receive data from all phones. Targets with `FILTER_
 
 ## Security
 
-- Set a strong, random `API_KEY` in your `.env` before going public
+- Set a strong, random `API_KEY` in your `.env` before going public — generate one with `openssl rand -base64 32`. The forwarder refuses to start if the example value from `.env.example` is still in place
+- Send the key in the `x-api-key` header rather than `?api_key=` — query strings end up in your reverse proxy's access log
+- The forwarder does not limit how fast someone can guess the key. If you expose it to the internet, add a rate limit at the proxy
 - Run behind a reverse proxy (Traefik, Caddy, etc.) that handles TLS — the forwarder does not terminate TLS itself
 - The `compose.yml` binds to `127.0.0.1` so the port is not reachable from outside without a proxy
 

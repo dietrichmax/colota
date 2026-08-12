@@ -9,12 +9,19 @@ export const app: Application = express()
 const API_KEY = process.env.API_KEY
 const REQUIRE_AUTH = typeof API_KEY === "string" && API_KEY.length > 0
 
+if (API_KEY === "your-secret-key") {
+  console.error("API_KEY is still the example value from .env.example - generate one with: openssl rand -base64 32")
+  process.exit(1)
+}
+
 const targets = loadTargets()
 console.log(`Loaded ${targets.length} target(s):`)
 targets.forEach((t, i) => console.log(`  ${i + 1}. ${maskUrl(t.url)}${t.auth ? " (auth set)" : ""}`))
 
-if (!REQUIRE_AUTH) {
+if (!API_KEY) {
   console.warn("No API_KEY set - running without authentication")
+} else if (API_KEY.length < 16) {
+  console.warn("API_KEY is shorter than 16 characters - generate a stronger one with: openssl rand -base64 32")
 }
 
 app.set("trust proxy", 1)
