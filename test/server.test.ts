@@ -50,6 +50,18 @@ test("POST /locations with a valid point and key is accepted (200)", async () =>
   assert.equal((await post("/locations", validPoint, withKey)).status, 200)
 })
 
+test("POST /locations rejects a tid that would break the outbound header (400)", async () => {
+  // undici refuses a header value containing CRLF, so this used to be accepted and then
+  // silently dropped — the client got "Accepted" and no target ever saw the point
+  const tid = JSON.stringify({ lat: 1, lon: 2, tst: 100, acc: 5, batt: 90, bs: 2, tid: "AA\r\nX-Injected: yes" })
+  assert.equal((await post("/locations", tid, withKey)).status, 400)
+})
+
+test("POST /overland rejects a malformed device_id (400)", async () => {
+  const body = JSON.stringify({ device_id: "x".repeat(65), locations: [] })
+  assert.equal((await post("/overland", body, withKey)).status, 400)
+})
+
 test("POST /locations with missing fields is rejected (400)", async () => {
   assert.equal((await post("/locations", JSON.stringify({ lat: 1 }), withKey)).status, 400)
 })
