@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useMemo, useState, useCallback, useLayoutEffect, useEffect } from "react"
+import React, { useMemo, useState, useCallback, useLayoutEffect, useEffect, useRef } from "react"
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native"
 import {
   Route,
@@ -24,14 +24,15 @@ import { Card } from "../components/ui/Card"
 import { Container } from "../components/ui/Container"
 import { TrackMap } from "../components/features/inspector/TrackMap"
 import { InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
-import { getTripColor, computeTripStats } from "../utils/trips"
+import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
 import { HIT_SLOP_LG } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
-import type { Trip, ThemeColors } from "../types/global"
+import { BOUNDARY_ACTION_SPLIT } from "../types/global"
+import type { Trip, ThemeColors, BoundaryAction } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
 
 const MAX_BARS = 120
@@ -64,6 +65,21 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
   const [showExport, setShowExport] = useState(false)
   const [chartActiveIndex, setChartActiveIndex] = useState<number | null>(null)
+  // Without these, a boundary the user merged reads as a plain gap and refuses to split
+  const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, BoundaryAction>>(() => new Map())
+
+  useEffect(() => {
+    let active = true
+    NativeLocationService.getBoundaryOverrides()
+      .then((o) => {
+        if (active) setBoundaryOverrides(buildBoundaryOverrideMap(o))
+      })
+      // Split stays available on plain gaps; only merged boundaries stop being offered
+      .catch((error) => logger.error("[TripDetail] Boundary override load failed:", error))
+    return () => {
+      active = false
+    }
+  }, [])
 
   const currentIdx = trips.findIndex((t) => t.index === trip.index)
   const prevTrip = currentIdx > 0 ? trips[currentIdx - 1] : null
@@ -92,6 +108,49 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
       showAlert("Save Failed", "Unable to save note. Please try again.", "error")
     }
   }, [])
+
+  const splittingRef = useRef(false)
+  const handlePointSplit = useCallback(
+    async (id: number) => {
+      if (splittingRef.current) return
+      // A trip's locations are a contiguous run of the day, so the preceding point is the one
+      // that ends the trip.
+      const idx = trip.locations.findIndex((l) => l.id === id)
+      const blocked = splitBlockedReason(trip.locations, idx, boundaryOverrides)
+      if (blocked) {
+        showAlert("Cannot Split Here", blocked, "info")
+        return
+      }
+      const at = trip.locations[idx].timestamp
+      const confirmed = await showConfirm({
+        // The confirm covers the popup, so name the point in it
+        title: at ? `Start a new trip at ${formatTime(at, true)}?` : "Split Trip?",
+        message:
+          "Everything from this point onwards becomes a separate trip. Your location data is not changed, and you can undo this by merging the two trips again.",
+        confirmText: "Split"
+      })
+      if (!confirmed) return
+      splittingRef.current = true
+      try {
+        await NativeLocationService.addBoundaryOverrides([
+          {
+            before_timestamp: trip.locations[idx - 1].timestamp ?? 0,
+            after_timestamp: trip.locations[idx].timestamp ?? 0,
+            action: BOUNDARY_ACTION_SPLIT
+          }
+        ])
+        // This trip no longer exists in the form we are showing, and the day view refetches
+        // on focus, so going back is what applies the new boundary.
+        navigation.goBack()
+      } catch (error) {
+        logger.error("[TripDetail] Split failed:", error)
+        showAlert("Split Failed", "Unable to split the trip here. Please try again.", "error")
+      } finally {
+        splittingRef.current = false
+      }
+    },
+    [trip, boundaryOverrides, navigation]
+  )
 
   const handleExport = useCallback(
     async (format: ExportFormat) => {
@@ -186,6 +245,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
           trackColor={tripColor}
           fitVersion={trip.index}
           onPointNoteChange={handlePointNoteChange}
+          onPointSplit={handlePointSplit}
         />
       </View>
       <ScrollView contentContainerStyle={styles.content}>

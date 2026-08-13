@@ -444,6 +444,23 @@ export interface Trip {
   startIndex: number // offset into the day's location array
 }
 
+/**
+ * A manual trip boundary edit, keyed by the timestamps either side of the gap rather than by row
+ * id, so deleting a location leaves it harmless instead of dangling.
+ */
+export interface TripBoundaryOverride {
+  before_timestamp: number
+  after_timestamp: number
+  action: BoundaryAction
+}
+
+/** Suppress the automatic split at this gap. */
+export const BOUNDARY_ACTION_MERGE = 0
+/** Force a split at this gap regardless of its duration. */
+export const BOUNDARY_ACTION_SPLIT = 1
+
+export type BoundaryAction = typeof BOUNDARY_ACTION_MERGE | typeof BOUNDARY_ACTION_SPLIT
+
 // ============================================================================
 // mTLS - client certificate bridge contract
 // ============================================================================

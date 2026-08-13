@@ -458,6 +458,31 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun addBoundaryOverrides(overrides: ReadableArray, promise: Promise) = executeAsync(promise) {
+        val rows = mutableListOf<Triple<Long, Long, Int>>()
+        for (i in 0 until overrides.size()) {
+            val o = overrides.getMap(i) ?: continue
+            val before = o.getDouble("before_timestamp").toLong()
+            val after = o.getDouble("after_timestamp").toLong()
+            rows.add(Triple(before, after, o.getInt("action")))
+        }
+        dbHelper.addBoundaryOverrides(rows)
+    }
+
+    @ReactMethod
+    fun getBoundaryOverrides(promise: Promise) = executeAsync(promise) {
+        Arguments.createArray().apply {
+            dbHelper.getBoundaryOverrides().forEach { (before, after, action) ->
+                pushMap(Arguments.createMap().apply {
+                    putDouble("before_timestamp", before.toDouble())
+                    putDouble("after_timestamp", after.toDouble())
+                    putInt("action", action)
+                })
+            }
+        }
+    }
+
+    @ReactMethod
     fun vacuumDatabase(promise: Promise) = executeAsync(promise) { 
         dbHelper.vacuum()
         true 

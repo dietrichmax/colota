@@ -7,7 +7,7 @@ import React, { useRef, useEffect, useMemo, useState, useCallback } from "react"
 import { View, StyleSheet, Text, Pressable, TextInput } from "react-native"
 import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
 import type { NativeSyntheticEvent } from "react-native"
-import { MapPinOff, X, Check, Trash2 } from "lucide-react-native"
+import { MapPinOff, X, Check, Trash2, Split } from "lucide-react-native"
 import { ThemeColors, Trip } from "../../../types/global"
 import { getTripColor } from "../../../utils/trips"
 import { fonts } from "../../../styles/typography"
@@ -42,6 +42,8 @@ interface Props {
   onPointNoteChange?: (id: number, note: string | null) => void
   /** When provided, the point popup gains a delete action. Omit for read-only maps. */
   onPointDelete?: (id: number) => void
+  /** When provided, the point popup gains a "start a new trip here" action. */
+  onPointSplit?: (id: number) => void
 }
 
 export function TrackMap({
@@ -51,7 +53,8 @@ export function TrackMap({
   trackColor,
   fitVersion,
   onPointNoteChange,
-  onPointDelete
+  onPointDelete,
+  onPointSplit
 }: Props) {
   const mapRef = useRef<ColotaMapRef>(null)
   const [isCentered, setIsCentered] = useState(true)
@@ -308,6 +311,18 @@ export function TrackMap({
               {popup.timestamp ? new Date(popup.timestamp * 1000).toLocaleTimeString() : "-"}
             </Text>
             <View style={styles.popupActions}>
+              {onPointSplit && popup.id >= 0 && (
+                <Pressable
+                  testID="popup-split-point"
+                  onPress={() => onPointSplit(popup.id)}
+                  hitSlop={HIT_SLOP_MD}
+                  style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start a new trip at this point"
+                >
+                  <Split size={16} color={colors.text} />
+                </Pressable>
+              )}
               {onPointDelete && popup.id >= 0 && (
                 <Pressable
                   testID="popup-delete-point"

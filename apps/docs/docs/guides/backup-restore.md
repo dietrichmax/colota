@@ -15,6 +15,7 @@ Use this when you want a full archive of your data, when you're moving to a new 
 | Location history (the full SQLite database) | mTLS client certificate (private key in OS keystore - re-import the `.p12` after restore) |
 | Settings (sync, GPS, server, appearance) | Offline map tiles (re-download after restore) |
 | Geofences and tracking profiles | Cached map tiles |
+| Manual trip merges and splits (see [Editing Trips](editing-trips.md)) |  |
 | Auth credentials (Basic, Bearer, custom headers) |  |
 | mTLS Trusted Server CA (public cert bytes) |  |
 

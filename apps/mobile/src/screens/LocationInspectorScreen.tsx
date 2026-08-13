@@ -11,7 +11,7 @@ import { BarChart2 } from "lucide-react-native"
 import { Container } from "../components"
 import { Tab } from "../components/ui/Tab"
 import { useTheme } from "../hooks/useTheme"
-import { Trip, LocationCoords } from "../types/global"
+import { Trip, LocationCoords, BoundaryAction, BOUNDARY_ACTION_SPLIT } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { CalendarPicker } from "../components/features/inspector/CalendarPicker"
@@ -20,7 +20,14 @@ import { TripList } from "../components/features/inspector/TripList"
 import { LocationTable } from "../components/features/inspector/LocationTable"
 import { formatDistance, formatTime, startOfDaySec, endOfDaySec } from "../utils/geo"
 import { pad2 } from "../utils/format"
-import { segmentTrips, getTripColor } from "../utils/trips"
+import {
+  segmentTrips,
+  getTripColor,
+  buildBoundaryOverrideMap,
+  gapsBetweenTrips,
+  splitBlockedReason,
+  SPLIT_BLOCKED_NOT_A_TRIP
+} from "../utils/trips"
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
@@ -40,6 +47,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   // Note edits, kept out of trackLocations so a save doesn't hand the map a new array (which would
   // re-render it). Used only by the Data tab; the map reads notes through its own overlay.
   const [noteOverrides, setNoteOverrides] = useState<Record<number, string | undefined>>({})
+  const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, BoundaryAction>>(() => new Map())
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [fitVersion, setFitVersion] = useState(0)
 
@@ -51,7 +59,10 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   const distanceCache = useRef<Map<string, Map<string, number>>>(new Map())
 
   // Trip segmentation from already-fetched day data
-  const trips = useMemo(() => segmentTrips(trackLocations), [trackLocations])
+  const trips = useMemo(
+    () => segmentTrips(trackLocations, undefined, boundaryOverrides),
+    [trackLocations, boundaryOverrides]
+  )
 
   // Sum of per-trip distances (excludes gap jumps between trips)
   const dailyDistance = useMemo(() => {
@@ -131,9 +142,13 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       const startTimestamp = startOfDaySec(mapDate)
       const endTimestamp = endOfDaySec(mapDate)
 
-      const result = await NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp)
+      const [result, overrides] = await Promise.all([
+        NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp),
+        NativeLocationService.getBoundaryOverrides()
+      ])
       if (id === fetchTrackIdRef.current) {
         setTrackLocations(result || [])
+        setBoundaryOverrides(buildBoundaryOverrideMap(overrides))
         setNoteOverrides({})
         setSelectedTrip(null)
         setFitVersion((v) => v + 1)
@@ -142,6 +157,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       logger.error("[LocationHistory] Track fetch error:", err)
       if (id === fetchTrackIdRef.current) {
         setTrackLocations([])
+        setBoundaryOverrides(new Map())
         setNoteOverrides({})
         setSelectedTrip(null)
         setFitVersion((v) => v + 1)
@@ -218,6 +234,37 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     await fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
   }, [mapDate, fetchTrackData, fetchDaysWithData])
 
+  const handleMergeTrips = useCallback(
+    async (toMerge: Trip[]) => {
+      if (toMerge.length < 2) return
+      const sorted = [...toMerge].sort((a, b) => a.index - b.index)
+      // TripList enforces an adjacency invariant before calling us, so sorted indices are contiguous.
+      const first = sorted[0].index
+      const last = sorted[sorted.length - 1].index
+      const confirmed = await showConfirm({
+        title: `Merge ${sorted.length} trips?`,
+        message: `${sorted.length === 2 ? `Trips ${first} and ${last}` : `Trips ${first}-${last}`} will be combined into one.`,
+        confirmText: "Merge"
+      })
+      if (!confirmed) return
+      // Each displayed pair can span more than one gap: trips dropped by the extent filter still
+      // have their points in trackLocations, and every gap across them has to be suppressed.
+      const overrides = sorted
+        .slice(1)
+        .flatMap((trip, i) => gapsBetweenTrips(trackLocations, sorted[i], trip, boundaryOverrides))
+      try {
+        await NativeLocationService.addBoundaryOverrides(overrides)
+        await fetchTrackData()
+      } catch (error) {
+        logger.error("[LocationHistory] Trip merge failed:", error)
+        showAlert("Merge Failed", "Unable to merge the selected trips. Please try again.", "error")
+        // Re-throw so TripList's CAB preserves the selection and lets the user retry.
+        throw error
+      }
+    },
+    [trackLocations, boundaryOverrides, fetchTrackData]
+  )
+
   const handleDeleteTrips = useCallback(
     async (toDelete: Trip[]) => {
       if (toDelete.length === 0) return
@@ -242,6 +289,50 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       }
     },
     [refreshAfterDelete]
+  )
+
+  const splittingPointRef = useRef(false)
+  const handlePointSplit = useCallback(
+    async (id: number) => {
+      if (splittingPointRef.current) return
+      // Match on row id, not timestamp: two fixes can land in the same second
+      const idx = trackLocations.findIndex((l) => l.id === id)
+      // The map draws runs the extent filter dropped, so a tap can land outside every trip.
+      // Splitting there would exempt both halves from that filter and conjure trips from jitter.
+      const inTrip = trips.some((t) => idx >= t.startIndex && idx < t.startIndex + t.locationCount)
+      const blocked = inTrip ? splitBlockedReason(trackLocations, idx, boundaryOverrides) : SPLIT_BLOCKED_NOT_A_TRIP
+      if (blocked) {
+        showAlert("Cannot Split Here", blocked, "info")
+        return
+      }
+      const at = trackLocations[idx].timestamp
+      const confirmed = await showConfirm({
+        // The confirm covers the popup, so name the point in it
+        title: at ? `Start a new trip at ${formatTime(at, true)}?` : "Split Trip?",
+        message:
+          "Everything from this point onwards becomes a separate trip. Your location data is not changed, and you can undo this by merging the two trips again.",
+        confirmText: "Split"
+      })
+      if (!confirmed) return
+      splittingPointRef.current = true
+      try {
+        await NativeLocationService.addBoundaryOverrides([
+          {
+            before_timestamp: trackLocations[idx - 1].timestamp ?? 0,
+            after_timestamp: trackLocations[idx].timestamp ?? 0,
+            action: BOUNDARY_ACTION_SPLIT
+          }
+        ])
+        // Re-segmenting recolours the track at the tapped point, which is the confirmation
+        await fetchTrackData()
+      } catch (error) {
+        logger.error("[LocationHistory] Trip split failed:", error)
+        showAlert("Split Failed", "Unable to split the trip here. Please try again.", "error")
+      } finally {
+        splittingPointRef.current = false
+      }
+    },
+    [trackLocations, trips, boundaryOverrides, fetchTrackData]
   )
 
   const handlePointDelete = useCallback(
@@ -347,6 +438,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             fitVersion={fitVersion}
             onPointNoteChange={handlePointNoteChange}
             onPointDelete={handlePointDelete}
+            onPointSplit={handlePointSplit}
           />
           {selectedTrip && (
             <Pressable
@@ -375,6 +467,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             selectedTripIndex={selectedTrip?.index ?? null}
             onExport={exportTrips}
             onDelete={handleDeleteTrips}
+            onMerge={handleMergeTrips}
           />
         </View>
       )}

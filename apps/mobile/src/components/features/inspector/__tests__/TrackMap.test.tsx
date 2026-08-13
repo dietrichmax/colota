@@ -182,6 +182,55 @@ describe("TrackMap point deletion", () => {
 
     expect(queryByTestId("popup-delete-point")).toBeNull()
   })
+
+  it("reports the tapped point's id to the split handler", () => {
+    // The id, not the timestamp: the caller resolves the boundary from it and two fixes
+    // in one trip can share a second
+    const onPointSplit = jest.fn()
+    const { getByTestId } = render(
+      <TrackMap locations={[loc(52.5, 13.4)]} colors={colors} trackColor="#000" onPointSplit={onPointSplit} />
+    )
+
+    tapPoint(getByTestId("track-points"), 42)
+    fireEvent.press(getByTestId("popup-split-point"))
+
+    expect(onPointSplit).toHaveBeenCalledWith(42)
+  })
+
+  it("offers no split action on a read-only map", () => {
+    const { getByTestId, queryByTestId } = render(
+      <TrackMap locations={[loc(52.5, 13.4)]} colors={colors} trackColor="#000" />
+    )
+
+    tapPoint(getByTestId("track-points"), 42)
+
+    expect(queryByTestId("popup-split-point")).toBeNull()
+  })
+
+  it("offers no split action for a point with no row id", () => {
+    // Without a row id there is no way to locate the point in the day's array
+    const { getByTestId, queryByTestId } = render(
+      <TrackMap locations={[loc(52.5, 13.4)]} colors={colors} trackColor="#000" onPointSplit={jest.fn()} />
+    )
+
+    tapPoint(getByTestId("track-points"), -1)
+
+    expect(queryByTestId("popup-split-point")).toBeNull()
+  })
+
+  it("offers the split action on every point with a row id", () => {
+    // The map has no view of the surrounding day, so it cannot tell which points are splittable.
+    // The screen takes every tap and explains the ones it cannot act on.
+    const { getByTestId, queryByTestId } = render(
+      <TrackMap locations={[loc(52.5, 13.4)]} colors={colors} trackColor="#000" onPointSplit={jest.fn()} />
+    )
+
+    tapPoint(getByTestId("track-points"), 42)
+
+    expect(getByTestId("popup-split-point")).toBeTruthy()
+    // Delete is a separate opt-in and stays absent on a map that didn't ask for it
+    expect(queryByTestId("popup-delete-point")).toBeNull()
+  })
 })
 
 describe("TrackMap trip coloring", () => {

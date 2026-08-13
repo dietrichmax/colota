@@ -20,8 +20,11 @@ import java.io.File
 
 /**
  * SQLite integration tests for DatabaseHelper using Robolectric.
- * Tests actual insert/query/delete, onUpgrade migration, WAL mode,
- * transaction handling, and foreign key cascades against a real SQLite DB.
+ * Tests actual insert/query/delete, WAL mode, transaction handling, and foreign key cascades
+ * against a real SQLite DB.
+ *
+ * Migrations are covered through `migrateCandidate`, the backup-restore entry point. `onUpgrade`
+ * delegates to the same `applyMigrations`, so the SQL is covered either way.
  */
 @RunWith(RobolectricTestRunner::class)
 class DatabaseHelperSQLiteTest {
@@ -59,13 +62,14 @@ class DatabaseHelperSQLiteTest {
     // ========================================================================
 
     @Test
-    fun `onCreate creates all five tables`() {
+    fun `onCreate creates all six tables`() {
         val tables = queryTableNames()
         assertTrue(tables.contains("locations"))
         assertTrue(tables.contains("queue"))
         assertTrue(tables.contains("settings"))
         assertTrue(tables.contains("geofences"))
         assertTrue(tables.contains("tracking_profiles"))
+        assertTrue(tables.contains("trip_boundary_overrides"))
     }
 
     @Test
@@ -140,7 +144,10 @@ class DatabaseHelperSQLiteTest {
         DatabaseHelper.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
-            assertEquals(6, migrated.version)
+            assertEquals(7, migrated.version)
+            // migrateCandidate stamps the version unconditionally, so the version alone proves
+            // nothing about the v7 step. This is the restore-an-older-backup path.
+            assertMigratedTableExists(migrated, DatabaseHelper.TABLE_BOUNDARY_OVERRIDES)
             migrated.rawQuery(
                 "SELECT name, activation_delay_seconds FROM tracking_profiles",
                 null
@@ -176,7 +183,8 @@ class DatabaseHelperSQLiteTest {
         DatabaseHelper.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
-            assertEquals(6, migrated.version)
+            assertEquals(7, migrated.version)
+            assertMigratedTableExists(migrated, DatabaseHelper.TABLE_BOUNDARY_OVERRIDES)
             migrated.rawQuery("PRAGMA table_info(locations)", null).use { locCursor ->
                 val locCols = mutableSetOf<String>()
                 while (locCursor.moveToNext()) {
@@ -981,6 +989,127 @@ class DatabaseHelperSQLiteTest {
     }
 
     // ========================================================================
+    // trip boundary overrides
+    // ========================================================================
+
+    @Test
+    fun `addBoundaryOverrides and getBoundaryOverrides round-trip`() {
+        db.addBoundaryOverrides(listOf(
+            Triple(1000L, 2000L, DatabaseHelper.BOUNDARY_ACTION_MERGE),
+            Triple(3000L, 4000L, DatabaseHelper.BOUNDARY_ACTION_SPLIT)
+        ))
+
+        val stored = db.getBoundaryOverrides()
+        assertEquals(2, stored.size)
+        assertEquals(Triple(1000L, 2000L, DatabaseHelper.BOUNDARY_ACTION_MERGE), stored[0])
+        assertEquals(Triple(3000L, 4000L, DatabaseHelper.BOUNDARY_ACTION_SPLIT), stored[1])
+    }
+
+    @Test
+    fun `writing the same boundary twice keeps the latest action`() {
+        // Splitting a boundary the user previously merged has to win outright - otherwise the
+        // edit silently does nothing and there is no separate cleanup step to fall back on.
+        db.addBoundaryOverrides(listOf(Triple(1000L, 2000L, DatabaseHelper.BOUNDARY_ACTION_MERGE)))
+        db.addBoundaryOverrides(listOf(Triple(1000L, 2000L, DatabaseHelper.BOUNDARY_ACTION_SPLIT)))
+
+        val stored = db.getBoundaryOverrides()
+        assertEquals(1, stored.size)
+        assertEquals(DatabaseHelper.BOUNDARY_ACTION_SPLIT, stored[0].third)
+    }
+
+    @Test
+    fun `addBoundaryOverrides is no-op for empty list`() {
+        assertEquals(0, db.addBoundaryOverrides(emptyList()))
+        assertTrue(db.getBoundaryOverrides().isEmpty())
+    }
+
+    @Test
+    fun `deleting a location leaves its override behind as an inert no-op`() {
+        // Overrides are keyed by timestamp, not row id. The contract is that a stale row must
+        // never break segmentation.
+        db.saveLocation(latitude = 52.52, longitude = 13.405, timestamp = 1000L)
+        db.addBoundaryOverrides(listOf(Triple(1000L, 2000L, DatabaseHelper.BOUNDARY_ACTION_MERGE)))
+
+        db.deleteInRange(1000L, 1000L)
+
+        assertEquals(1, db.getBoundaryOverrides().size)
+        val stats = db.getDailyStats(0L, 9999999L)
+        assertTrue(stats.isEmpty())
+    }
+
+    @Test
+    fun `clearAllLocations also drops boundary overrides`() {
+        db.saveLocation(latitude = 52.52, longitude = 13.405, timestamp = 1000L)
+        db.addBoundaryOverrides(listOf(Triple(1000L, 2000L, DatabaseHelper.BOUNDARY_ACTION_MERGE)))
+
+        db.clearAllLocations()
+
+        assertTrue(db.getBoundaryOverrides().isEmpty())
+    }
+
+    @Test
+    fun `getDailyStats merges two trips across a merged boundary`() {
+        // The calendar's trip count has to agree with the trip list, or the same day reports
+        // two different numbers depending on which screen you are on.
+        db.saveLocation(latitude = 52.52, longitude = 13.405, timestamp = 1708344000L)
+        db.saveLocation(latitude = 52.60, longitude = 13.405, timestamp = 1708344060L)
+        db.saveLocation(latitude = 52.70, longitude = 13.405, timestamp = 1708346000L) // 1940s gap
+        db.saveLocation(latitude = 52.80, longitude = 13.405, timestamp = 1708346060L)
+
+        assertEquals(2, db.getDailyStats(1708300000L, 1708400000L)[0]["tripCount"])
+
+        db.addBoundaryOverrides(listOf(
+            Triple(1708344060L, 1708346000L, DatabaseHelper.BOUNDARY_ACTION_MERGE)
+        ))
+        assertEquals(1, db.getDailyStats(1708300000L, 1708400000L)[0]["tripCount"])
+    }
+
+    @Test
+    fun `getDailyStats splits a trip at a manually split boundary`() {
+        db.saveLocation(latitude = 52.52, longitude = 13.405, timestamp = 1708344000L)
+        db.saveLocation(latitude = 52.60, longitude = 13.405, timestamp = 1708344060L)
+        db.saveLocation(latitude = 52.70, longitude = 13.405, timestamp = 1708344120L)
+        db.saveLocation(latitude = 52.80, longitude = 13.405, timestamp = 1708344180L)
+
+        assertEquals(1, db.getDailyStats(1708300000L, 1708400000L)[0]["tripCount"])
+
+        db.addBoundaryOverrides(listOf(
+            Triple(1708344060L, 1708344120L, DatabaseHelper.BOUNDARY_ACTION_SPLIT)
+        ))
+        assertEquals(2, db.getDailyStats(1708300000L, 1708400000L)[0]["tripCount"])
+    }
+
+    @Test
+    fun `getDailyStats drops a one-point segment even though a split forces it`() {
+        // Mirrors the JS segmenter: a split only gets written where both sides have two points,
+        // but a later delete can leave one side with a single fix. A lone point is not a trip.
+        db.saveLocation(latitude = 52.52, longitude = 13.405, timestamp = 1708344000L)
+        db.saveLocation(latitude = 52.60, longitude = 13.405, timestamp = 1708344060L)
+        db.saveLocation(latitude = 52.600001, longitude = 13.405, timestamp = 1708344120L)
+
+        db.addBoundaryOverrides(listOf(
+            Triple(1708344000L, 1708344060L, DatabaseHelper.BOUNDARY_ACTION_SPLIT)
+        ))
+        // The two-point side survives on the exemption; the one-point side does not
+        assertEquals(1, db.getDailyStats(1708300000L, 1708400000L)[0]["tripCount"])
+    }
+
+    @Test
+    fun `getDailyStats counts both sides of a manual split even when one is stationary`() {
+        // Mirrors the JS segmenter's exemption: an explicit split must not be swallowed by the
+        // stationary-jitter filter, or the user's edit looks like it did nothing.
+        db.saveLocation(latitude = 52.52, longitude = 13.405, timestamp = 1708344000L)
+        db.saveLocation(latitude = 52.60, longitude = 13.405, timestamp = 1708344060L)
+        db.saveLocation(latitude = 52.600001, longitude = 13.405, timestamp = 1708344120L)
+        db.saveLocation(latitude = 52.600002, longitude = 13.405, timestamp = 1708344180L)
+
+        db.addBoundaryOverrides(listOf(
+            Triple(1708344060L, 1708344120L, DatabaseHelper.BOUNDARY_ACTION_SPLIT)
+        ))
+        assertEquals(2, db.getDailyStats(1708300000L, 1708400000L)[0]["tripCount"])
+    }
+
+    // ========================================================================
     // deleteOlderThan
     // ========================================================================
 
@@ -1053,6 +1182,16 @@ class DatabaseHelperSQLiteTest {
     // ========================================================================
     // Helpers
     // ========================================================================
+
+    /** Asserts against a migrated candidate file rather than the live singleton. */
+    private fun assertMigratedTableExists(migrated: SQLiteDatabase, table: String) {
+        migrated.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            arrayOf(table)
+        ).use { cursor ->
+            assertTrue("Migration must create $table", cursor.moveToFirst())
+        }
+    }
 
     private fun queryTableNames(): Set<String> {
         val tables = mutableSetOf<String>()

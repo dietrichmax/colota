@@ -51,6 +51,7 @@ const sidebars: SidebarsConfig = {
         "guides/data-import",
         "guides/data-export",
         "guides/data-management",
+        "guides/editing-trips",
         "guides/backup-restore",
         "guides/deep-link-setup",
         "guides/battery-optimization",

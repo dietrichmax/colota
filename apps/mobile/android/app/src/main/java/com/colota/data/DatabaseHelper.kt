@@ -32,13 +32,17 @@ class DatabaseHelper private constructor(context: Context) :
 
     companion object {
         const val DATABASE_NAME = "Colota.db"
-        const val DATABASE_VERSION = 6
+        const val DATABASE_VERSION = 7
 
         const val TABLE_LOCATIONS = "locations"
         const val TABLE_QUEUE = "queue"
         const val TABLE_SETTINGS = "settings"
         const val TABLE_GEOFENCES = "geofences"
         const val TABLE_PROFILES = "tracking_profiles"
+        const val TABLE_BOUNDARY_OVERRIDES = "trip_boundary_overrides"
+
+        const val BOUNDARY_ACTION_MERGE = 0
+        const val BOUNDARY_ACTION_SPLIT = 1
         private val DEFAULT_FIELD_MAP = mapOf(
             "lat" to "lat", "lon" to "lon", "acc" to "acc",
             "alt" to "alt", "vel" to "vel", "batt" to "batt",
@@ -85,6 +89,18 @@ class DatabaseHelper private constructor(context: Context) :
         """
         private const val CREATE_PROFILES_INDEX =
             "CREATE INDEX IF NOT EXISTS idx_profiles_enabled ON $TABLE_PROFILES(enabled, priority DESC)"
+
+        // Keyed by the timestamp pair either side of a boundary rather than by row id, so deleting
+        // a location leaves the override harmless instead of dangling.
+        private const val CREATE_BOUNDARY_OVERRIDES_TABLE = """
+            CREATE TABLE IF NOT EXISTS $TABLE_BOUNDARY_OVERRIDES (
+                before_timestamp INTEGER NOT NULL,
+                after_timestamp INTEGER NOT NULL,
+                action INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                PRIMARY KEY (before_timestamp, after_timestamp)
+            )
+        """
 
         @Volatile
         private var INSTANCE: DatabaseHelper? = null
@@ -237,6 +253,9 @@ class DatabaseHelper private constructor(context: Context) :
                 db.execSQL("UPDATE $TABLE_PROFILES SET activation_delay_seconds = 60 WHERE condition_type = 'stationary'")
                 db.execSQL("ALTER TABLE $TABLE_LOCATIONS ADD COLUMN note TEXT")
             }
+            if (oldVersion < 7) {
+                db.execSQL(CREATE_BOUNDARY_OVERRIDES_TABLE)
+            }
         }
 
         @JvmStatic
@@ -310,6 +329,7 @@ class DatabaseHelper private constructor(context: Context) :
         """)
 
         db.execSQL(CREATE_PROFILES_TABLE)
+        db.execSQL(CREATE_BOUNDARY_OVERRIDES_TABLE)
 
         db.execSQL("CREATE INDEX idx_queue_created ON $TABLE_QUEUE(created_at)")
         db.execSQL("CREATE INDEX idx_queue_location ON $TABLE_QUEUE(location_id)")
@@ -813,7 +833,55 @@ class DatabaseHelper private constructor(context: Context) :
     fun clearAllLocations(): Int {
         requireNotRestoring()
         writableDatabase.delete(TABLE_QUEUE, null, null) // FK constraint: queue references locations
+        writableDatabase.delete(TABLE_BOUNDARY_OVERRIDES, null, null) // derived state, no point keeping
         return writableDatabase.delete(TABLE_LOCATIONS, null, null)
+    }
+
+    /**
+     * Persists manual trip boundary edits. Existing pairs are overwritten, so splitting a boundary
+     * the user previously merged (or the reverse) resolves to whichever action came last.
+     */
+    fun addBoundaryOverrides(overrides: List<Triple<Long, Long, Int>>): Int {
+        requireNotRestoring()
+        if (overrides.isEmpty()) return 0
+        val now = System.currentTimeMillis() / 1000
+        val db = writableDatabase
+        var written = 0
+        db.beginTransaction()
+        try {
+            db.compileStatement(
+                "INSERT OR REPLACE INTO $TABLE_BOUNDARY_OVERRIDES " +
+                    "(before_timestamp, after_timestamp, action, created_at) VALUES (?, ?, ?, ?)"
+            ).use { stmt ->
+                for ((before, after, action) in overrides) {
+                    stmt.clearBindings()
+                    stmt.bindLong(1, before)
+                    stmt.bindLong(2, after)
+                    stmt.bindLong(3, action.toLong())
+                    stmt.bindLong(4, now)
+                    if (stmt.executeInsert() != -1L) written++
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return written
+    }
+
+    fun getBoundaryOverrides(): List<Triple<Long, Long, Int>> {
+        val out = mutableListOf<Triple<Long, Long, Int>>()
+        readableDatabase.query(
+            TABLE_BOUNDARY_OVERRIDES,
+            arrayOf("before_timestamp", "after_timestamp", "action"),
+            null, null, null, null,
+            "before_timestamp ASC"
+        ).use { c ->
+            while (c.moveToNext()) {
+                out.add(Triple(c.getLong(0), c.getLong(1), c.getInt(2)))
+            }
+        }
+        return out
     }
 
     fun deleteOlderThan(days: Int): Int {
@@ -980,6 +1048,14 @@ class DatabaseHelper private constructor(context: Context) :
      */
     fun getDailyStats(startTimestamp: Long, endTimestamp: Long): List<Map<String, Any>> {
         val stats = mutableListOf<Map<String, Any>>()
+        // Kept out of the block below: failing to read manual edits should fall back to plain
+        // automatic segmentation, not blank the caller's whole calendar month.
+        val overrides = try {
+            getBoundaryOverrides().associate { (before, after, action) -> (before to after) to action }
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Error loading trip boundary overrides", e)
+            emptyMap()
+        }
         try {
             readableDatabase.rawQuery(
                 """
@@ -1009,14 +1085,25 @@ class DatabaseHelper private constructor(context: Context) :
                 var segMaxLon = 0.0
                 var segDistance = 0.0
                 var segCounted = false
+                var segForced = false
+                var segPoints = 0
 
-                fun startSegment(lat: Double, lon: Double) {
+                fun countSegment() {
+                    tripCount++
+                    segCounted = true
+                    distance += segDistance
+                    segDistance = 0.0
+                }
+
+                fun startSegment(lat: Double, lon: Double, forced: Boolean = false) {
                     segMinLat = lat
                     segMaxLat = lat
                     segMinLon = lon
                     segMaxLon = lon
                     segDistance = 0.0
                     segCounted = false
+                    segForced = forced
+                    segPoints = 1
                 }
 
                 fun emitDay() {
@@ -1053,19 +1140,27 @@ class DatabaseHelper private constructor(context: Context) :
                     } else {
                         count++
                         endTime = ts
-                        if (ts - prevTs >= TRIP_GAP_SECONDS) {
-                            startSegment(lat, lon)
+                        val override = overrides[prevTs to ts]
+                        val forcedSplit = override == BOUNDARY_ACTION_SPLIT
+                        if (forcedSplit || (override == null && ts - prevTs >= TRIP_GAP_SECONDS)) {
+                            // The segment ending here abuts the split, so it is exempt from the
+                            // extent filter too - but a lone point is still not a trip.
+                            if (forcedSplit && !segCounted && segPoints >= 2) countSegment()
+                            startSegment(lat, lon, forcedSplit)
                         } else {
+                            segPoints++
                             segDistance += haversineDistance(prevLat, prevLon, lat, lon)
                             if (lat < segMinLat) segMinLat = lat
                             if (lat > segMaxLat) segMaxLat = lat
                             if (lon < segMinLon) segMinLon = lon
                             if (lon > segMaxLon) segMaxLon = lon
+                            // Counting a forced segment is deferred to here, its second point, so a
+                            // split left dangling by a later delete cannot conjure a one-point trip.
                             if (!segCounted &&
-                                haversineDistance(segMinLat, segMinLon, segMaxLat, segMaxLon) >= MIN_TRIP_EXTENT_METERS
+                                (segForced ||
+                                    haversineDistance(segMinLat, segMinLon, segMaxLat, segMaxLon) >= MIN_TRIP_EXTENT_METERS)
                             ) {
-                                tripCount++
-                                segCounted = true
+                                countSegment()
                             }
                             if (segCounted) {
                                 distance += segDistance

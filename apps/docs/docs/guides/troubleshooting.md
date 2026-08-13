@@ -33,6 +33,10 @@ Colota stops tracking below 5% (when unplugged) and resumes automatically once y
 - Check if **High Accuracy** is enabled in device location settings
 - Enable **Filter Inaccurate Locations** in app settings
 
+## Trips are split or merged in the wrong place
+
+Colota starts a new trip after a 15-minute gap in fixes, so a long stop can break one journey into several and two back-to-back activities can end up as one trip. Correct either case by hand from the Trips tab - see [Editing Trips](editing-trips.md).
+
 ## Server sync not working
 
 1. Check endpoint URL format - must be `https://` for public endpoints, or `http://` for private/local addresses

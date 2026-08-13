@@ -16,7 +16,8 @@ import {
   Settings,
   TestEndpointArgs,
   TestEndpointResult,
-  TrackingProfile
+  TrackingProfile,
+  TripBoundaryOverride
 } from "../types/global"
 import { logger } from "../utils/logger"
 
@@ -318,6 +319,23 @@ class NativeLocationService {
     if (ids.length === 0) return 0
     logger.debug(`[NativeLocationService] Deleting ${ids.length} locations by id`)
     return LocationServiceModule.deleteLocationsByIds(ids)
+  }
+
+  /**
+   * Persists manual trip boundary edits. Writing the same boundary twice keeps the latest action,
+   * so a split over a previous merge (or the reverse) resolves without a separate cleanup step.
+   */
+  static async addBoundaryOverrides(overrides: TripBoundaryOverride[]): Promise<void> {
+    this.ensureModule()
+    if (overrides.length === 0) return
+    logger.debug(`[NativeLocationService] Writing ${overrides.length} trip boundary overrides`)
+    await LocationServiceModule.addBoundaryOverrides(overrides)
+  }
+
+  /** Falls back to an empty list so a read failure degrades to plain automatic segmentation. */
+  static async getBoundaryOverrides(): Promise<TripBoundaryOverride[]> {
+    this.ensureModule()
+    return this.safeExecute(() => LocationServiceModule.getBoundaryOverrides(), [], "getBoundaryOverrides failed")
   }
 
   /**

@@ -58,6 +58,7 @@ jest.mock("lucide-react-native", () => {
     Gauge: stub("Gauge"),
     Trash2: stub("Trash2"),
     X: stub("X"),
+    Merge: stub("Merge"),
     CheckSquare: stub("CheckSquare"),
     Square: stub("Square")
   }
@@ -231,6 +232,74 @@ describe("TripList - CAB selection", () => {
     await act(async () => {
       resolve()
     })
+  })
+
+  it("CAB Merge fires onMerge with the selected adjacent trips", async () => {
+    const onMerge = jest.fn().mockResolvedValue(undefined)
+    const { getByLabelText } = render(
+      <TripList trips={makeTrips(4)} colors={colors} onTripSelect={jest.fn()} onMerge={onMerge} />
+    )
+
+    fireEvent(getByLabelText(/Trip 2,/), "longPress")
+    fireEvent.press(getByLabelText(/Trip 3,/))
+    await act(async () => {
+      fireEvent.press(getByLabelText("Merge selected trips"))
+    })
+
+    expect(onMerge).toHaveBeenCalledTimes(1)
+    expect(onMerge.mock.calls[0][0].map((t: Trip) => t.index)).toEqual([2, 3])
+  })
+
+  it("does not merge a non-contiguous selection", async () => {
+    // Merging trips 1 and 3 would have to swallow trip 2, which the user never asked for
+    const onMerge = jest.fn().mockResolvedValue(undefined)
+    const { getByLabelText } = render(
+      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onMerge={onMerge} />
+    )
+
+    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+    fireEvent.press(getByLabelText(/Trip 3,/))
+
+    const mergeBtn = getByLabelText("Merge selected trips")
+    expect(mergeBtn.props.accessibilityState.disabled).toBe(true)
+    await act(async () => {
+      fireEvent.press(mergeBtn)
+    })
+    expect(onMerge).not.toHaveBeenCalled()
+  })
+
+  it("does not merge a single trip", async () => {
+    const onMerge = jest.fn().mockResolvedValue(undefined)
+    const { getByLabelText } = render(
+      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onMerge={onMerge} />
+    )
+
+    fireEvent(getByLabelText(/Trip 2,/), "longPress")
+
+    expect(getByLabelText("Merge selected trips").props.accessibilityState.disabled).toBe(true)
+    await act(async () => {
+      fireEvent.press(getByLabelText("Merge selected trips"))
+    })
+    expect(onMerge).not.toHaveBeenCalled()
+  })
+
+  it("keeps the selection when a merge fails so the user can retry", async () => {
+    const onMerge = jest.fn().mockRejectedValue(new Error("bridge down"))
+    const { getByLabelText } = render(
+      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onMerge={onMerge} />
+    )
+
+    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+    fireEvent.press(getByLabelText(/Trip 2,/))
+    await act(async () => {
+      fireEvent.press(getByLabelText("Merge selected trips"))
+    })
+
+    expect(getByLabelText("Cancel selection")).toBeTruthy()
+    await act(async () => {
+      fireEvent.press(getByLabelText("Merge selected trips"))
+    })
+    expect(onMerge).toHaveBeenCalledTimes(2)
   })
 
   it("Cancel X clears selection and returns to idle header", () => {
