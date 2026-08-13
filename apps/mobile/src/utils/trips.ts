@@ -232,8 +232,20 @@ export function computeTripStats(locations: LocationCoords[]): TripStats {
     }
   }
 
+  let avgSpeed = 0
+  if (speedCount > 0) {
+    avgSpeed = speedSum / speedCount
+  } else if (locations.length > 1) {
+    // Points reach here with no usable speed three ways: a chip reporting 0 on every fix, an
+    // update interval past applySpeedFallback's 60s window, or an import whose source file
+    // carried none. Without this the trip reads 0 next to a correct distance. Note this counts
+    // stopped time, unlike the reported-speed branch above, which averages moving fixes only.
+    const seconds = (locations[locations.length - 1].timestamp ?? 0) - (locations[0].timestamp ?? 0)
+    if (seconds > 0) avgSpeed = computeTotalDistance(locations) / seconds
+  }
+
   return {
-    avgSpeed: speedCount > 0 ? speedSum / speedCount : 0,
+    avgSpeed,
     elevationGain,
     elevationLoss
   }

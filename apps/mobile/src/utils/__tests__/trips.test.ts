@@ -503,6 +503,25 @@ describe("computeTripStats", () => {
     expect(stats.avgSpeed).toBe(10) // only the 10 counts
   })
 
+  it("derives average speed from position when no point has a usable speed", () => {
+    const locations = [
+      { latitude: 52.52, longitude: 13.405, timestamp: 1000, speed: 0 },
+      { latitude: 52.521, longitude: 13.405, timestamp: 1050, speed: 0 }
+    ]
+    // 0.001 degrees of latitude is ~111.2m, covered in 50s
+    const stats = computeTripStats(locations)
+    expect(stats.avgSpeed).toBeCloseTo(2.224, 3)
+  })
+
+  it("prefers reported speeds over the position-derived fallback", () => {
+    const locations = [
+      { latitude: 52.52, longitude: 13.405, timestamp: 1000, speed: 3 },
+      { latitude: 52.53, longitude: 13.405, timestamp: 1050, speed: 3 }
+    ]
+    // Position implies ~22 m/s over these 50s, so a flipped precedence would be visible
+    expect(computeTripStats(locations).avgSpeed).toBe(3)
+  })
+
   it("computes elevation gain and loss", () => {
     const locations = [
       { latitude: 0, longitude: 0, altitude: 100 },
