@@ -8,6 +8,11 @@
       "matchPackageNames": [
         "react-native",
         "@react-native/**",
+        "@react-native/babel-preset",
+        "@react-native/eslint-config",
+        "@react-native/jest-preset",
+        "@react-native/metro-config",
+        "@react-native/typescript-config",
         "@react-native-community/cli",
         "@react-native-community/cli-**"
       ]
