@@ -5,3 +5,4 @@
 - Split a trip by tapping the point on the map where the new trip should start
 - Trips show an average speed instead of 0 km/h when the points carry no speed, including imported tracks
 - Tracking no longer gets stuck on Pause after a geofence is deleted or its motionless pause is turned off
+- Tracking restarts itself when the phone stops delivering locations, instead of staying silent until you reinstall

@@ -65,6 +65,7 @@ class LocationForegroundService : Service() {
     @Volatile private var locationRestartJob: Job? = null
     @Volatile private var trackingHeartbeatJob: Job? = null
     @Volatile private var lastFixAtMs: Long = 0L
+    @Volatile private var lastFixAtUptimeMs: Long = 0L
     @Volatile private var motionDetector: MotionStateDetector? = null
     @Volatile private var lastKnownLocation: Location? = null
 
@@ -160,6 +161,11 @@ class LocationForegroundService : Service() {
         /** The stream counts as stalled after this many tracking intervals without a fix (floored at
          *  [PAUSE_WATCHDOG_INTERVAL_MS]), so a long interval isn't probed more often than configured. */
         private const val PAUSE_WATCHDOG_STALL_INTERVALS = 2
+        /** Tracking intervals without a fix before the active stream is re-registered. */
+        private const val ACTIVE_STALL_INTERVALS = 5
+        /** Floor under that: several minutes without a fix is normal on a short interval, so a
+         *  tighter floor would re-register during ordinary sleep. */
+        private const val ACTIVE_STALL_FLOOR_MS = 10 * 60_000L
 
         const val ACTION_MANUAL_FLUSH = "com.Colota.ACTION_MANUAL_FLUSH"
         const val ACTION_RECHECK_ZONE = "com.Colota.RECHECK_PAUSE_ZONE"
@@ -465,11 +471,13 @@ class LocationForegroundService : Service() {
                     return
                 }
                 lastFixAtMs = SystemClock.elapsedRealtime()
+                lastFixAtUptimeMs = SystemClock.uptimeMillis()
                 handleLocationUpdate(location)
             }
         }
         locationUpdateCallback = callback
         lastFixAtMs = SystemClock.elapsedRealtime()
+        lastFixAtUptimeMs = SystemClock.uptimeMillis()
 
         if (deviceInfoHelper.isBatteryCritical()) {
             val (level, _) = deviceInfoHelper.getCachedBatteryStatus()
@@ -550,7 +558,7 @@ class LocationForegroundService : Service() {
     private fun isLocationUpdatesRegistered(): Boolean = locationUpdateCallback != null
 
     /** Logs a state snapshot every 5 minutes so silent stalls and pause/stop gaps are visible
-     *  in user-exported logs. Data-only; no recovery action. */
+     *  in user-exported logs, and re-registers a stream that has gone quiet while active. */
     private fun startTrackingHeartbeatLogger() {
         trackingHeartbeatJob?.cancel()
         val scope = serviceScope ?: return
@@ -571,8 +579,31 @@ class LocationForegroundService : Service() {
                 } catch (e: Exception) {
                     AppLogger.w(TAG, "Heartbeat snapshot failed: ${e.message}")
                 }
+                try {
+                    withContext(Dispatchers.Main) { recoverStalledStream() }
+                } catch (e: CancellationException) {
+                    throw e  // recovery cancels this job on purpose; swallowing it would leave two loops
+                } catch (e: Exception) {
+                    AppLogger.w(TAG, "Stall recovery failed: ${e.message}")
+                }
             }
         }
+    }
+
+    /** Re-registers the stream after [ACTIVE_STALL_INTERVALS] intervals of silence. The pause
+     *  watchdog only probes inside a zone, so a stream that dies while active stays dead. */
+    private fun recoverStalledStream() {
+        if (!isLocationUpdatesRegistered() || insidePauseZone || isWifiPaused || isMotionlessPaused) return
+        // The OS hands out no fixes while location is off, and the request survives the toggle.
+        if (!deviceInfoHelper.isLocationEnabled()) return
+        // Awake time, not wall clock: deep sleep produces no fixes by design.
+        val awakeSinceLastFix = SystemClock.uptimeMillis() - lastFixAtUptimeMs
+        val stallThresholdMs = maxOf(ACTIVE_STALL_FLOOR_MS, config.interval * ACTIVE_STALL_INTERVALS)
+        if (awakeSinceLastFix < stallThresholdMs) return
+        val wallSinceLastFix = SystemClock.elapsedRealtime() - lastFixAtMs
+        AppLogger.w(TAG, "Stream quiet ${awakeSinceLastFix / 1000}s awake (${wallSinceLastFix / 1000}s wall) while active - re-registering location updates")
+        stopLocationUpdates()
+        setupLocationUpdates()
     }
 
     /** Wifi and motionless are holds inside a zone pause, so they're checked first. Without
@@ -781,6 +812,10 @@ class LocationForegroundService : Service() {
             maybeResumeGps()
         }
         ensureMotionDetectorRunning()
+
+        // Resume on state, not on a flag transition: a restore that dropped a stale motionless hold
+        // leaves no request behind, and a lightweight action never runs handleStart to make one.
+        if (!isLocationUpdatesRegistered()) maybeResumeGps()
 
         if (zone.heartbeatEnabled && (heartbeatJob == null || heartbeatChanged)) {
             val firstDelayMs =
@@ -1483,8 +1518,13 @@ class LocationForegroundService : Service() {
             // Wakelock holds the CPU across the async fix - the alarm's wake window ends here, and a foreground service won't.
             val wakeLock = acquireHeartbeatWakeLock()
             requestFreshOrLastLocation { location, _ ->
-                if (location != null) handleLocationUpdate(location)
-                else AppLogger.d(TAG, "Stationary heartbeat: no usable fix")
+                if (location != null) {
+                    // Bypasses the provider callback, so stamp here or a stationary profile, which
+                    // gets no OS-pushed fixes by design, reads as a dead stream.
+                    lastFixAtMs = SystemClock.elapsedRealtime()
+                    lastFixAtUptimeMs = SystemClock.uptimeMillis()
+                    handleLocationUpdate(location)
+                } else AppLogger.d(TAG, "Stationary heartbeat: no usable fix")
                 if (wakeLock?.isHeld == true) wakeLock.release()
             }
         }

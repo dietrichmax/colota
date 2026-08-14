@@ -1017,6 +1017,115 @@ class LocationForegroundServiceTest {
         verify(exactly = 0) { locationProvider.getCurrentLocation(any(), any()) }
     }
 
+    // =========================================================================
+    // Active-stream stall recovery
+    // =========================================================================
+
+    @Test
+    fun `re-registers the location stream after it goes quiet while active`() = runServiceTest {
+        // The pause watchdog only probes inside a zone, so a stream that dies while active
+        // otherwise stays dead
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+        setField("lastFixAtUptimeMs", -700_000L) // ~11.6 min awake, past the 10-min floor
+
+        invokeRecoverStalledStream()
+
+        verify { locationProvider.removeLocationUpdates(any()) }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `tolerates a doze-length gap on a short interval`() = runServiceTest {
+        // Several minutes without a fix is normal on a 5s interval; the floor keeps that from
+        // reading as a fault
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+        setField("lastFixAtUptimeMs", -420_000L) // 7 min awake
+
+        invokeRecoverStalledStream()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `does not count a night of deep sleep as silence`() = runServiceTest {
+        // 8h of wall clock but no awake time: the phone was suspended, so it produced no fixes
+        // by design
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+        setField("lastFixAtMs", -8 * 60 * 60_000L)
+        setField("lastFixAtUptimeMs", -10_000L)
+
+        invokeRecoverStalledStream()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `does not re-register while system location is switched off`() = runServiceTest {
+        // The OS hands out no fixes while location is off, and the request survives the toggle
+        every { deviceInfoHelper.isLocationEnabled() } returns false
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+        setField("lastFixAtUptimeMs", -700_000L)
+
+        invokeRecoverStalledStream()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `heartbeat keeps ticking after it recovers a stalled stream`() = runServiceTest {
+        // Recovery cancels the job it runs in and relies on setupLocationUpdates relaunching the
+        // logger; if that stops happening, recovery and the 5-min diagnostics die silently
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+        setField("lastFixAtUptimeMs", -700_000L)
+        invokeStartTrackingHeartbeatLogger()
+
+        advanceTimeBy(5 * 60_000L + 1)
+        runCurrent()
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+        assertTrue("heartbeat loop must survive its own recovery", getField<Job?>("trackingHeartbeatJob")?.isActive == true)
+    }
+
+    @Test
+    fun `leaves a healthy stream alone`() = runServiceTest {
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+        setField("lastFixAtUptimeMs", -10_000L) // 10s since the last fix
+
+        invokeRecoverStalledStream()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `does not re-register while paused in a zone`() = runServiceTest {
+        // A zone pause stops fixes on purpose, and the pause watchdog owns that resume
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+        setField("insidePauseZone", true)
+        setField("lastFixAtUptimeMs", -700_000L)
+
+        invokeRecoverStalledStream()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `stall threshold scales with the configured interval`() = runServiceTest {
+        // 30-min interval -> threshold max(10min, 150min), so an 11-min gap is normal, not a stall
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 30 * 60_000L,
+            accuracyThreshold = 50f,
+            filterInaccurateLocations = true,
+            syncIntervalSeconds = 0
+        ))
+        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+        setField("lastFixAtUptimeMs", -700_000L)
+
+        invokeRecoverStalledStream()
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
     @Test
     fun `handleLocationUpdate while paused rejects a hallucinated outlier instead of fabricating an exit`() = testScope.runTest {
         // A teleport-signature fix (huge implied speed, ~0 chip speed) lands outside the radius but
@@ -2367,6 +2476,36 @@ class LocationForegroundServiceTest {
     }
 
     @Test
+    fun `applyZoneSettingsIfChanged resumes GPS that no hold explains`() {
+        // A restore that dropped a stale motionless hold leaves the flag already false, so there
+        // is no transition to resume on and a lightweight action never runs handleStart
+        val detector = mockk<MotionStateDetector>(relaxed = true)
+        setField("motionDetector", detector)
+        setField("currentZoneGeofence", homeGeofence)
+        setField("isMotionlessPaused", false)
+        setField("locationUpdateCallback", null)
+
+        invokeApplyZoneSettingsIfChanged(homeGeofence)
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `applyZoneSettingsIfChanged leaves a held stream stopped`() {
+        // The state check must not defeat the holds: a motionless hold means GPS is off on purpose
+        val motionlessGeofence = geofence("Home", 52.50, 13.40, 150.0, pauseOnMotionless = true)
+        setField("motionDetector", mockk<MotionStateDetector>(relaxed = true))
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", motionlessGeofence)
+        setField("isMotionlessPaused", true)
+        setField("locationUpdateCallback", null)
+
+        invokeApplyZoneSettingsIfChanged(motionlessGeofence)
+
+        verify(exactly = 0) { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
     fun `applyZoneSettingsIfChanged starts motion detector when pauseOnMotionless toggled on`() {
         val detector = mockk<MotionStateDetector>(relaxed = true)
         setField("motionDetector", detector)
@@ -2457,6 +2596,18 @@ class LocationForegroundServiceTest {
     private fun invokeHandleZoneRecheckAction() {
         val method = LocationForegroundService::class.java
             .getDeclaredMethod("handleZoneRecheckAction")
+        method.isAccessible = true
+        method.invoke(service)
+    }
+
+    private fun invokeStartTrackingHeartbeatLogger() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("startTrackingHeartbeatLogger")
+        method.isAccessible = true
+        method.invoke(service)
+    }
+
+    private fun invokeRecoverStalledStream() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("recoverStalledStream")
         method.isAccessible = true
         method.invoke(service)
     }
