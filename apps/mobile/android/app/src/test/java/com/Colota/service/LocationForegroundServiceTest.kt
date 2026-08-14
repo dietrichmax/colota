@@ -2468,6 +2468,14 @@ class LocationForegroundServiceTest {
         method.invoke(service)
     }
 
+    private fun invokeRestoreMotionlessHold(geofence: GeofenceHelper.Geofence?, savedActive: Boolean) {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "restoreMotionlessHold", GeofenceHelper.Geofence::class.java, Boolean::class.java
+        )
+        method.isAccessible = true
+        method.invoke(service, geofence, savedActive)
+    }
+
     private fun invokeSetupLocationUpdates() {
         val method = LocationForegroundService::class.java
             .getDeclaredMethod("setupLocationUpdates")
@@ -2532,6 +2540,54 @@ class LocationForegroundServiceTest {
         setField("isWifiPaused", false)
         setField("isMotionlessPaused", false)
 
+        invokeSetupLocationUpdates()
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    // =========================================================================
+    // Motionless pause restore on service restart
+    // =========================================================================
+
+    @Test
+    fun `restore keeps the motionless hold while the zone still pauses on motionless`() {
+        setField("currentZoneName", "Home")
+
+        invokeRestoreMotionlessHold(geofence("Home", pauseOnMotionless = true), savedActive = true)
+
+        assertTrue(getField("isMotionlessPaused"))
+        verify(exactly = 0) { dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "false") }
+    }
+
+    @Test
+    fun `restore drops a motionless hold whose geofence is gone`() {
+        // Only the motion detector clears this hold and it is never started for a zone that no longer
+        // exists, so keeping the flag would leave GPS off for good - surviving restarts and force-stops.
+        setField("currentZoneName", "Home")
+
+        invokeRestoreMotionlessHold(null, savedActive = true)
+
+        assertFalse(getField("isMotionlessPaused"))
+        verify { dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "false") }
+    }
+
+    @Test
+    fun `restore drops a motionless hold when the zone no longer pauses on motionless`() {
+        setField("currentZoneName", "Home")
+
+        invokeRestoreMotionlessHold(geofence("Home", pauseOnMotionless = false), savedActive = true)
+
+        assertFalse(getField("isMotionlessPaused"))
+        verify { dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "false") }
+    }
+
+    @Test
+    fun `GPS starts again after a stale motionless hold is dropped`() = runServiceTest {
+        setField("currentZoneName", "Home")
+        setField("insidePauseZone", true)
+        setField("isMotionlessPaused", true)
+
+        invokeRestoreMotionlessHold(null, savedActive = true)
         invokeSetupLocationUpdates()
 
         verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }

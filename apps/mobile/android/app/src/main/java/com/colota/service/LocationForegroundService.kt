@@ -294,10 +294,10 @@ class LocationForegroundService : Service() {
                     // so setupLocationUpdates() won't start GPS before onAvailable fires.
                     registerWifiPause()
                 }
-                if (savedSettings[SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE]?.toBoolean() == true) {
-                    isMotionlessPaused = true
-                    AppLogger.d(TAG, "Restored motionless pause state")
-                }
+                restoreMotionlessHold(
+                    restoredGeofence,
+                    savedSettings[SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE]?.toBoolean() == true
+                )
                 if (restoredGeofence?.heartbeatEnabled == true) {
                     startHeartbeat(
                         restoredGeofence.heartbeatIntervalMinutes,
@@ -1113,6 +1113,23 @@ class LocationForegroundService : Service() {
     private fun clearMotionlessPauseState() {
         isMotionlessPaused = false
         dbHelper.saveSetting(SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE, "false")
+    }
+
+    /**
+     * Only the motion detector clears a motionless hold, and [ensureMotionDetectorRunning] starts it
+     * only while the zone still pauses on motionless. Restoring the flag without that zone strands it:
+     * [setupLocationUpdates] returns early, so GPS, the heartbeat logger and the pause watchdog never
+     * start, and nothing is left that could release it - not a restart, not force-stopping the app.
+     */
+    private fun restoreMotionlessHold(restoredGeofence: GeofenceHelper.Geofence?, savedActive: Boolean) {
+        if (!savedActive) return
+        if (restoredGeofence?.pauseOnMotionless == true) {
+            isMotionlessPaused = true
+            AppLogger.d(TAG, "Restored motionless pause state")
+        } else {
+            clearMotionlessPauseState()
+            AppLogger.w(TAG, "Dropped stale motionless pause for '$currentZoneName' - zone no longer pauses on motionless")
+        }
     }
 
     /**
