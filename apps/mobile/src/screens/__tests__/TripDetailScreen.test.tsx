@@ -1,5 +1,5 @@
 import React from "react"
-import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
 import type { Trip } from "../../types/global"
 
 jest.mock("../../services/NativeLocationService", () => ({
@@ -141,12 +141,20 @@ const makeProps = (trip: Trip) =>
 describe("TripDetailScreen - split from the map", () => {
   beforeEach(() => jest.clearAllMocks())
 
+  // Splitting is refused until the boundary overrides land, so pressing straight after render
+  // would exercise that guard rather than the reason each test is named for
+  const renderLoaded = async (props: ReturnType<typeof makeProps>) => {
+    const utils = render(<TripDetailScreen {...props} />)
+    await act(async () => {})
+    return utils
+  }
+
   it("splits at the tapped point, keyed off the point before it", async () => {
     // A trip's locations are contiguous in the day, so the preceding point is the real boundary.
     // An off-by-one would write a pair that matches no gap and quietly do nothing.
     ;(showConfirm as jest.Mock).mockResolvedValueOnce(true)
     const props = makeProps(makeTrip(4))
-    const { getByTestId } = render(<TripDetailScreen {...props} />)
+    const { getByTestId } = await renderLoaded(props)
 
     fireEvent.press(getByTestId("trigger-point-split"))
 
@@ -161,7 +169,7 @@ describe("TripDetailScreen - split from the map", () => {
     // Staying would show route.params.trip, a snapshot the split just invalidated
     ;(showConfirm as jest.Mock).mockResolvedValueOnce(true)
     const props = makeProps(makeTrip(4))
-    const { getByTestId } = render(<TripDetailScreen {...props} />)
+    const { getByTestId } = await renderLoaded(props)
 
     fireEvent.press(getByTestId("trigger-point-split"))
 
@@ -170,7 +178,7 @@ describe("TripDetailScreen - split from the map", () => {
 
   it("splits nothing when the confirm is dismissed", async () => {
     const props = makeProps(makeTrip(4))
-    const { getByTestId } = render(<TripDetailScreen {...props} />)
+    const { getByTestId } = await renderLoaded(props)
 
     fireEvent.press(getByTestId("trigger-point-split"))
 
@@ -179,11 +187,11 @@ describe("TripDetailScreen - split from the map", () => {
     expect(props.navigation.goBack).not.toHaveBeenCalled()
   })
 
-  it("does not split at the trip's first point", () => {
+  it("does not split at the trip's first point", async () => {
     // That point already starts the trip, so it bails before the dialog - there is no
-    // question worth asking. The guard runs before any await, so this needs no flush.
+    // question worth asking.
     const props = makeProps(makeTrip(4))
-    const { getByTestId } = render(<TripDetailScreen {...props} />)
+    const { getByTestId } = await renderLoaded(props)
 
     fireEvent.press(getByTestId("trigger-point-split-first"))
 
@@ -191,10 +199,10 @@ describe("TripDetailScreen - split from the map", () => {
     expect(NativeLocationService.addBoundaryOverrides).not.toHaveBeenCalled()
   })
 
-  it("does not split a two-point trip into a one-point trip", () => {
+  it("does not split a two-point trip into a one-point trip", async () => {
     // A one-point trip has no duration and no distance, and cannot be split again
     const props = makeProps(makeTrip(2))
-    const { getByTestId } = render(<TripDetailScreen {...props} />)
+    const { getByTestId } = await renderLoaded(props)
 
     fireEvent.press(getByTestId("trigger-point-split"))
 
@@ -204,9 +212,9 @@ describe("TripDetailScreen - split from the map", () => {
     expect(NativeLocationService.addBoundaryOverrides).not.toHaveBeenCalled()
   })
 
-  it("does not split at the trip's last point", () => {
+  it("does not split at the trip's last point", async () => {
     const props = makeProps(makeTrip(4))
-    const { getByTestId } = render(<TripDetailScreen {...props} />)
+    const { getByTestId } = await renderLoaded(props)
 
     fireEvent.press(getByTestId("trigger-point-split-last"))
 
@@ -218,7 +226,7 @@ describe("TripDetailScreen - split from the map", () => {
     ;(showConfirm as jest.Mock).mockResolvedValueOnce(true)
     ;(NativeLocationService.addBoundaryOverrides as jest.Mock).mockRejectedValueOnce(new Error("bridge down"))
     const props = makeProps(makeTrip(4))
-    const { getByTestId } = render(<TripDetailScreen {...props} />)
+    const { getByTestId } = await renderLoaded(props)
 
     fireEvent.press(getByTestId("trigger-point-split"))
 
