@@ -13,6 +13,20 @@
         "@react-native/metro-config",
         "@react-native/typescript-config"
       ]
+    },
+    {
+      "description": "React Native pins its own toolchain and nests private copies of it, so bumping these independently gains nothing and drifts the app off the only version set RN tests. Update them together with react-native, taking the versions from the RN upgrade helper template.",
+      "matchFileNames": ["apps/mobile/package.json", "package.json"],
+      "matchPackageNames": [
+        "@babel/**",
+        "typescript",
+        "jest",
+        "@types/jest",
+        "eslint",
+        "@typescript-eslint/**",
+        "metro**"
+      ],
+      "enabled": false
     }
   ]
 }

@@ -10,6 +10,10 @@ runs:
         node-version-file: '.nvmrc'
         cache: 'npm'
 
+    - name: Enable Corepack
+      run: corepack enable
+      shell: bash
+
     - name: Setup Java
       uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
       with:

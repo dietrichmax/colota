@@ -41,6 +41,9 @@ jobs:
       - name: Setup build environment
         uses: ./.github/actions/setup-build
 
+      - name: Check dependency graph resolves
+        run: npm install --dry-run
+
       - name: Run ESLint
         run: npm run lint -w @colota/mobile
 
