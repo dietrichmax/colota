@@ -105,27 +105,25 @@ export function DataManagementScreen({}: ScreenProps) {
 
       const receivedProgress = { current: false }
 
-      progressListenerRef.current = syncEmitter.addListener(
-        "onSyncProgress",
-        (event: { sent: number; failed: number; total: number }) => {
-          receivedProgress.current = true
-          const processed = event.sent + event.failed
-          if (processed >= event.total) {
-            // Sync finished - show final result, then clean up
-            const msg =
-              event.failed > 0
-                ? `Synced ${event.sent}/${event.total} (${event.failed} failed)`
-                : `Synced ${event.sent}/${event.total}`
-            setFeedback(msg)
-            flushTimeout.set(async () => {
-              await cleanupFlush()
-              showFeedback("Sync complete")
-            }, 1500)
-          } else {
-            setFeedback(`Syncing ${processed}/${event.total}...`)
-          }
+      progressListenerRef.current = syncEmitter.addListener("onSyncProgress", (rawEvent: any) => {
+        const event = rawEvent as { sent: number; failed: number; total: number }
+        receivedProgress.current = true
+        const processed = event.sent + event.failed
+        if (processed >= event.total) {
+          // Sync finished - show final result, then clean up
+          const msg =
+            event.failed > 0
+              ? `Synced ${event.sent}/${event.total} (${event.failed} failed)`
+              : `Synced ${event.sent}/${event.total}`
+          setFeedback(msg)
+          flushTimeout.set(async () => {
+            await cleanupFlush()
+            showFeedback("Sync complete")
+          }, 1500)
+        } else {
+          setFeedback(`Syncing ${processed}/${event.total}...`)
         }
-      )
+      })
 
       // manualFlush is fire-and-forget; fall back after 30s if no progress events arrive
       await NativeLocationService.manualFlush()

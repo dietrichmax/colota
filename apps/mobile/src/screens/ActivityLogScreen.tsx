@@ -4,7 +4,16 @@
  */
 
 import React, { useState, useCallback, useMemo, useLayoutEffect, useRef } from "react"
-import { Text, StyleSheet, View, ScrollView, TextInput, Pressable, ActivityIndicator } from "react-native"
+import {
+  Text,
+  StyleSheet,
+  View,
+  ScrollView,
+  TextInput,
+  Pressable,
+  ActivityIndicator,
+  type ScrollViewInstance
+} from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Share2, Search, X, ArrowDown } from "lucide-react-native"
@@ -33,7 +42,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
   const [activeLevels, setActiveLevels] = useState<Set<FilterLevel>>(new Set(LOG_LEVELS))
   const [showScrollEnd, setShowScrollEnd] = useState(false)
   const isNearEnd = useRef(true)
-  const scrollRef = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollViewInstance>(null)
 
   const loadLogs = useCallback(async () => {
     try {

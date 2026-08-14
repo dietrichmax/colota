@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react"
 import { View, Text, StyleSheet, TextInput, Pressable, FlatList, ActivityIndicator, AppState } from "react-native"
 import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
-import type { NativeSyntheticEvent } from "react-native"
+import type { NativeSyntheticEvent, TextInputInstance } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { showAlert, showConfirm } from "../services/modalService"
 import { ScreenProps } from "../types/global"
@@ -62,7 +62,7 @@ interface DownloadFormProps {
   downloadError: string | null
   areasCount: number
   totalStorageBytes: number
-  nameInputRef: React.RefObject<TextInput | null>
+  nameInputRef: React.RefObject<TextInputInstance | null>
   onNameChange: (v: string) => void
   onDownload: () => void
   onCancelDownload: () => void
@@ -203,7 +203,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
   const [areas, setAreas] = useState<OfflineAreaInfo[]>([])
   const [areaBounds, setAreaBounds] = useState<OfflineAreaBounds[]>([])
   const newNameRef = useRef("")
-  const nameInputRef = useRef<TextInput>(null)
+  const nameInputRef = useRef<TextInputInstance>(null)
 
   const currentBoundsRef = useRef<[[number, number], [number, number]] | null>(null)
   const [estimatedSizeLabel, setEstimatedSizeLabel] = useState<string | null>(null)
@@ -857,7 +857,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                 Download map tiles to browse your tracks offline while hiking or camping
               </Text>
             </View>
-          ) : null
+          ) : undefined
         }
         renderItem={renderItem}
       />

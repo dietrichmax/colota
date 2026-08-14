@@ -38,6 +38,15 @@ jest.mock("lucide-react-native", () => {
   )
 })
 
+// RN registers these globals in setUpTimers, which the jest preset never runs.
+// Runs synchronously so deferred work lands inside act() - deferring it made
+// waitFor race under parallel suite load.
+global.requestIdleCallback = (cb) => {
+  cb()
+  return 0
+}
+global.cancelIdleCallback = () => {}
+
 // AppState mock - RN exports AppState as .default from this path
 jest.mock("react-native/Libraries/AppState/AppState", () => ({
   __esModule: true,

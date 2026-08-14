@@ -382,7 +382,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
                 Create a geofence to stop recording locations in specific areas
               </Text>
             </View>
-          ) : null
+          ) : undefined
         }
         renderItem={renderItem}
       />

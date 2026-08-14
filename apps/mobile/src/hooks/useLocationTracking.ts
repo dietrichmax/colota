@@ -116,8 +116,9 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    * Listens for unexpected tracking stops (e.g. battery critical)
    */
   useEffect(() => {
-    const sub = locationEventEmitter.addListener("onTrackingStopped", (event: { reason: string }) => {
-      logger.warn(`[useLocationTracking] Tracking stopped by native: ${event.reason}`)
+    const sub = locationEventEmitter.addListener("onTrackingStopped", (event: any) => {
+      const { reason } = event as { reason: string }
+      logger.warn(`[useLocationTracking] Tracking stopped by native: ${reason}`)
       if (listenerRef.current) {
         listenerRef.current.remove()
         listenerRef.current = null
@@ -131,8 +132,9 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    * Listens for tracking starts initiated outside JS (e.g. automation intent)
    */
   useEffect(() => {
-    const sub = locationEventEmitter.addListener("onTrackingStarted", (event: { reason: string }) => {
-      logger.info(`[useLocationTracking] Tracking started by native: ${event.reason}`)
+    const sub = locationEventEmitter.addListener("onTrackingStarted", (event: any) => {
+      const { reason } = event as { reason: string }
+      logger.info(`[useLocationTracking] Tracking started by native: ${reason}`)
       setTracking(true)
     })
     return () => sub.remove()
@@ -142,8 +144,9 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    * Listens for sync errors from native service
    */
   useEffect(() => {
-    const sub = locationEventEmitter.addListener("onSyncError", (event: { message: string; queuedCount: number }) => {
-      logger.warn(`[useLocationTracking] Sync error: ${event.message} (${event.queuedCount} queued)`)
+    const sub = locationEventEmitter.addListener("onSyncError", (event: any) => {
+      const { message, queuedCount } = event as { message: string; queuedCount: number }
+      logger.warn(`[useLocationTracking] Sync error: ${message} (${queuedCount} queued)`)
     })
     return () => sub.remove()
   }, [])

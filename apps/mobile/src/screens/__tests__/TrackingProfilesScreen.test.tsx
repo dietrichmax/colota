@@ -254,7 +254,7 @@ describe("TrackingProfilesScreen", () => {
     let shareSpy: jest.SpyInstance
 
     beforeEach(() => {
-      shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction" })
+      shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction", activityType: undefined })
     })
 
     afterEach(() => {

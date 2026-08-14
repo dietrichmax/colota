@@ -4,16 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Switch,
-  TextInput,
-  DeviceEventEmitter,
-  InteractionManager
-} from "react-native"
+import { View, Text, StyleSheet, ScrollView, Switch, TextInput, DeviceEventEmitter } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
@@ -24,6 +15,9 @@ import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { parsePositiveInt, isPositiveInt } from "../utils/settingsValidation"
 import type { RootScreenProps } from "../types/navigation"
+
+declare function requestIdleCallback(callback: () => void): number
+declare function cancelIdleCallback(handle: number): void
 
 export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geofence Editor">) {
   const { colors } = useTheme()
@@ -79,9 +73,12 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
   useEffect(() => {
     if (!geofenceId) return
 
-    const task = InteractionManager.runAfterInteractions(() => {
+    let cancelled = false
+
+    const handle = requestIdleCallback(() => {
       NativeLocationService.getGeofences()
         .then((geofences) => {
+          if (cancelled) return
           const existing = geofences.find((g) => g.id === geofenceId)
           if (existing) {
             setName(existing.name)
@@ -106,13 +103,17 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           }
         })
         .catch((err) => {
+          if (cancelled) return
           logger.error("[GeofenceEditor] Failed to load geofence:", err)
           showAlert("Error", "Failed to load geofence data.", "error")
           navigation.goBack()
         })
     })
 
-    return () => task.cancel()
+    return () => {
+      cancelled = true
+      cancelIdleCallback(handle)
+    }
   }, [geofenceId, navigation])
 
   const handleRadiusChange = useCallback((val: string) => {
