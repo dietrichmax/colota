@@ -3,16 +3,28 @@
   "postUpdateOptions": ["npmDedupe"],
   "packageRules": [
     {
-      "description": "Bump react-native and its @react-native/* tooling in one PR.",
+      "description": "Bump react-native, its @react-native/* tooling and the community CLI in one PR. The CLI versions independently but is locked to RN releases and drives the bundle task. Wildcards so new RN packages are covered without editing this list.",
       "groupName": "react-native monorepo",
       "matchPackageNames": [
         "react-native",
-        "@react-native/babel-preset",
-        "@react-native/eslint-config",
-        "@react-native/jest-preset",
-        "@react-native/metro-config",
-        "@react-native/typescript-config"
+        "@react-native/**",
+        "@react-native-community/cli",
+        "@react-native-community/cli-**"
       ]
+    },
+    {
+      "description": "React Native pins its own toolchain and nests private copies of it, so bumping these independently gains nothing and drifts the app off the only version set RN tests. Update them together with react-native, taking the versions from the RN upgrade helper template.",
+      "matchFileNames": ["apps/mobile/package.json", "package.json"],
+      "matchPackageNames": [
+        "@babel/**",
+        "typescript",
+        "jest",
+        "@types/jest",
+        "eslint",
+        "@typescript-eslint/**",
+        "metro**"
+      ],
+      "enabled": false
     }
   ]
 }
