@@ -16,8 +16,10 @@
     "generate:icons": "node packages/shared/logo/generate-icons.mjs"
   },
   "devDependencies": {
-    "prettier": "3.9.6"
+    "prettier": "3.9.6",
+    "typescript": "6.0.3"
   },
+  "packageManager": "npm@11.17.0",
   "engines": {
     "node": ">=20"
   }
