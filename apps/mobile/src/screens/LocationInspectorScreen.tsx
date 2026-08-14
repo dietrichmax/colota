@@ -225,7 +225,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     setFitVersion((v) => v + 1)
   }, [])
 
-  const refreshAfterDelete = useCallback(async () => {
+  const refreshAfterEdit = useCallback(async () => {
     const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
     daysCache.current.delete(key)
     notesCache.current.delete(key)
@@ -254,7 +254,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         .flatMap((trip, i) => gapsBetweenTrips(trackLocations, sorted[i], trip, boundaryOverrides))
       try {
         await NativeLocationService.addBoundaryOverrides(overrides)
-        await fetchTrackData()
+        await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Trip merge failed:", error)
         showAlert("Merge Failed", "Unable to merge the selected trips. Please try again.", "error")
@@ -262,7 +262,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         throw error
       }
     },
-    [trackLocations, boundaryOverrides, fetchTrackData]
+    [trackLocations, boundaryOverrides, refreshAfterEdit]
   )
 
   const handleDeleteTrips = useCallback(
@@ -282,13 +282,13 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         await NativeLocationService.deleteLocationsInRanges(
           toDelete.map((t) => ({ start: t.startTime, end: t.endTime }))
         )
-        await refreshAfterDelete()
+        await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Trip delete failed:", error)
         showAlert("Delete Failed", "Unable to delete selection. Please try again.", "error")
       }
     },
-    [refreshAfterDelete]
+    [refreshAfterEdit]
   )
 
   const splittingPointRef = useRef(false)
@@ -324,7 +324,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
           }
         ])
         // Re-segmenting recolours the track at the tapped point, which is the confirmation
-        await fetchTrackData()
+        await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Trip split failed:", error)
         showAlert("Split Failed", "Unable to split the trip here. Please try again.", "error")
@@ -332,7 +332,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         splittingPointRef.current = false
       }
     },
-    [trackLocations, trips, boundaryOverrides, fetchTrackData]
+    [trackLocations, trips, boundaryOverrides, refreshAfterEdit]
   )
 
   const handlePointDelete = useCallback(
@@ -352,7 +352,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       deletingPointRef.current = true
       try {
         await NativeLocationService.deleteLocationsByIds([id])
-        await refreshAfterDelete()
+        await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Point delete failed:", error)
         showAlert("Delete Failed", "Unable to delete point. Please try again.", "error")
@@ -360,7 +360,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         deletingPointRef.current = false
       }
     },
-    [trackLocations, refreshAfterDelete]
+    [trackLocations, refreshAfterEdit]
   )
 
   const handlePointNoteChange = useCallback(

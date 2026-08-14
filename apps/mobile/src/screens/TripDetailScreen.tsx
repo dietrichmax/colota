@@ -67,6 +67,8 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   const [chartActiveIndex, setChartActiveIndex] = useState<number | null>(null)
   // Without these, a boundary the user merged reads as a plain gap and refuses to split
   const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, BoundaryAction>>(() => new Map())
+  // Splitting before they arrive would judge a merged boundary as a plain gap and refuse a legal split
+  const [boundariesLoaded, setBoundariesLoaded] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -76,6 +78,9 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
       })
       // Split stays available on plain gaps; only merged boundaries stop being offered
       .catch((error) => logger.error("[TripDetail] Boundary override load failed:", error))
+      .finally(() => {
+        if (active) setBoundariesLoaded(true)
+      })
     return () => {
       active = false
     }
@@ -113,6 +118,10 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   const handlePointSplit = useCallback(
     async (id: number) => {
       if (splittingRef.current) return
+      if (!boundariesLoaded) {
+        showAlert("Cannot Split Here", "Still loading this trip's edits. Try again in a moment.", "info")
+        return
+      }
       // A trip's locations are a contiguous run of the day, so the preceding point is the one
       // that ends the trip.
       const idx = trip.locations.findIndex((l) => l.id === id)
@@ -149,7 +158,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         splittingRef.current = false
       }
     },
-    [trip, boundaryOverrides, navigation]
+    [trip, boundaryOverrides, boundariesLoaded, navigation]
   )
 
   const handleExport = useCallback(
