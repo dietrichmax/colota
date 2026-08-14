@@ -48,7 +48,7 @@
     "@types/react": "19.2.18",
     "@types/react-test-renderer": "19.1.0",
     "eslint": "9.39.5",
-    "jest": "30.3.0",
+    "jest": "30.4.2",
     "react-test-renderer": "19.2.8",
     "typescript": "7.0.2"
   },
