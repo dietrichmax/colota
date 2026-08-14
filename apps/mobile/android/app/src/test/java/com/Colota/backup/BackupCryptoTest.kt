@@ -229,6 +229,20 @@ class BackupCryptoTest {
         }
     }
 
+    /**
+     * A backup written by an earlier build, committed as bytes. Every other test here encrypts and
+     * decrypts in one process, so a change to Argon2 or the layout moves both sides together and
+     * they stay green while real backups on disk become unreadable. Only a stored blob catches it.
+     *
+     * If this fails after a dependency bump, existing user backups can no longer be restored. Do
+     * not regenerate it to make it pass.
+     */
+    @Test
+    fun `backup written by an earlier build still decrypts`() {
+        val blob = KNOWN_ANSWER_HEX.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        assertArrayEquals(KNOWN_ANSWER_PLAINTEXT.toByteArray(), decrypt(blob))
+    }
+
     private fun encrypt(plaintext: ByteArray, chunkSize: Int = BackupFormat.DEFAULT_CHUNK_SIZE): ByteArray {
         val out = ByteArrayOutputStream()
         crypto.encrypt(ByteArrayInputStream(plaintext), out, password, chunkSize)
@@ -239,5 +253,18 @@ class BackupCryptoTest {
         val out = ByteArrayOutputStream()
         crypto.decrypt(ByteArrayInputStream(encrypted), out, password)
         return out.toByteArray()
+    }
+
+    private companion object {
+        const val KNOWN_ANSWER_PLAINTEXT =
+            "colota known-answer fixture v1: this payload spans several chunks."
+
+        val KNOWN_ANSWER_HEX = """
+            434f4c4f5441424b010000010000000000030000000100000000ccb7bfa930357ecb3c5a94104679c8ad
+            51de9362b044aceffdb74540f56bbefac96dfdebdc8866cf00000020000000000000000000200e026f3c
+            c10696349deaf3b464886a1391b614ab61804d35ee6d71bf481aae82b6f3921b1e2c8b2794845eabbc79
+            e84d00000020a6cde04e60e66b3fc2d0f81118c4dba5ae54c0540f925030de3d94cf362a51e7f9df1f93
+            209a0fa94d0d9a8f4a4120c60000000226e39399ef355a3f1b0cae0f28f4b6d81dd7ffffffff00000003
+        """.trimIndent().replace("\n", "")
     }
 }
