@@ -522,16 +522,51 @@ describe("computeTripStats", () => {
     expect(computeTripStats(locations).avgSpeed).toBe(3)
   })
 
-  it("computes elevation gain and loss", () => {
-    const locations = [
-      { latitude: 0, longitude: 0, altitude: 100 },
-      { latitude: 0, longitude: 0, altitude: 150 }, // +50
-      { latitude: 0, longitude: 0, altitude: 120 }, // -30
-      { latitude: 0, longitude: 0, altitude: 200 } // +80
-    ]
+  it("rejects alternating altitude noise instead of counting it as climb", () => {
+    // Noise alternating with the true value turns a steady 20m climb into a swing many times its
+    // size, which the raw sum counted as ascent
+    const locations = Array.from({ length: 41 }, (_, i) => ({
+      latitude: 0,
+      longitude: 0,
+      altitude: i % 2 === 0 ? 500 + i / 2 : 480,
+      timestamp: 1000 + i * 6
+    }))
     const stats = computeTripStats(locations)
-    expect(stats.elevationGain).toBe(130) // 50 + 80
-    expect(stats.elevationLoss).toBe(30)
+    expect(stats.elevationGain).toBeLessThan(30)
+    expect(stats.elevationLoss).toBeLessThan(15)
+  })
+
+  it("keeps sustained climb after smoothing", () => {
+    // A real ascent must survive the filter that rejects the noise above. Smoothing shortens the
+    // span slightly at both ends, so allow a small shortfall but never an overcount.
+    const locations = Array.from({ length: 201 }, (_, i) => ({
+      latitude: 0,
+      longitude: 0,
+      altitude: 500 + i * 0.5,
+      timestamp: 1000 + i * 6
+    }))
+    const stats = computeTripStats(locations)
+    expect(stats.elevationGain).toBeGreaterThan(95)
+    expect(stats.elevationGain).toBeLessThanOrEqual(100)
+    expect(stats.elevationLoss).toBe(0)
+  })
+
+  it("reports the same climb whatever the fix interval", () => {
+    // The window is in seconds, not samples, so doubling the tracking rate must not change the
+    // answer. A sample-width window reported wildly different numbers for the same terrain.
+    const climbAt = (intervalSeconds: number, points: number) =>
+      computeTripStats(
+        Array.from({ length: points }, (_, i) => ({
+          latitude: 0,
+          longitude: 0,
+          altitude: 500 + i * (120 / (points - 1)),
+          timestamp: 1000 + i * intervalSeconds
+        }))
+      ).elevationGain
+
+    const slow = climbAt(6, 101) // 600s of climbing, 6s fixes
+    const fast = climbAt(3, 201) // same 600s and same 120m, 3s fixes
+    expect(Math.abs(fast - slow)).toBeLessThan(3)
   })
 
   it("ignores elevation diff when altitude is null", () => {
@@ -544,6 +579,39 @@ describe("computeTripStats", () => {
     // null gap means no diff is computed for either adjacent pair
     expect(stats.elevationGain).toBe(0)
     expect(stats.elevationLoss).toBe(0)
+  })
+
+  it("does not bridge across a point with no altitude", () => {
+    // Two descents separated by a missing altitude. Smoothing must not join them: the 200m step
+    // up across the gap is not climb the user did, and would read as such if the runs merged.
+    const descent = (base: number, from: number) =>
+      Array.from({ length: 15 }, (_, i) => ({
+        latitude: 0,
+        longitude: 0,
+        altitude: base - i * 2,
+        timestamp: from + i * 6
+      }))
+    const stats = computeTripStats([
+      ...descent(500, 1000),
+      { latitude: 0, longitude: 0, altitude: undefined, timestamp: 1090 },
+      ...descent(700, 1100)
+    ])
+    expect(stats.elevationGain).toBe(0)
+    expect(stats.elevationLoss).toBeLessThan(56) // two runs of at most 28m, not the 256m bridged
+  })
+
+  it("leaves sparsely sampled tracks unsmoothed", () => {
+    // Points minutes apart carry no per-fix noise, so smoothing would remove real terrain
+    const altitudes = [500, 520, 540, 560, 540, 530, 540, 550, 560]
+    const locations = altitudes.map((altitude, i) => ({
+      latitude: 0,
+      longitude: 0,
+      altitude,
+      timestamp: 1000 + i * 300
+    }))
+    const stats = computeTripStats(locations)
+    expect(stats.elevationGain).toBe(90)
+    expect(stats.elevationLoss).toBe(30)
   })
 
   it("handles flat terrain (no gain or loss)", () => {

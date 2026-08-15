@@ -209,25 +209,102 @@ export interface TripStats {
   elevationLoss: number // meters
 }
 
+// Reported altitude swings up and down between consecutive fixes, so adding the raw differences
+// counts each swing as both a climb and a descent and badly overstates them. The window is in
+// seconds rather than samples so the amount of smoothing does not change with the fix interval.
+const ELEVATION_SMOOTHING_HALF_WINDOW_SECONDS = 12
+// One pass leaves a ripple behind when the noise alternates on every fix.
+const ELEVATION_SMOOTHING_PASSES = 2
+// Smoothing cannot fully flatten the wobble, so ignore what is left rather than accumulate it
+// over thousands of points.
+const ELEVATION_THRESHOLD_METERS = 1
+
+interface AltitudeRun {
+  altitudes: number[]
+  /** Null when any point lacks a timestamp, which leaves the run unsmoothed. */
+  timestamps: number[] | null
+}
+
+/** Runs of consecutive altitudes, broken wherever a point reports none. */
+function altitudeRuns(locations: LocationCoords[]): AltitudeRun[] {
+  const runs: AltitudeRun[] = []
+  let altitudes: number[] = []
+  let timestamps: number[] = []
+  let timed = true
+
+  const flush = () => {
+    if (altitudes.length > 0) runs.push({ altitudes, timestamps: timed ? timestamps : null })
+    altitudes = []
+    timestamps = []
+    timed = true
+  }
+
+  for (const loc of locations) {
+    if (loc.altitude == null) {
+      flush()
+      continue
+    }
+    altitudes.push(loc.altitude)
+    if (loc.timestamp == null) timed = false
+    else timestamps.push(loc.timestamp)
+  }
+  flush()
+  return runs
+}
+
+/**
+ * Centered moving average over a fixed time window. Points with no neighbour inside the window
+ * keep their own value, so sparsely sampled tracks such as imports pass through untouched.
+ */
+function smoothAltitudes(altitudes: number[], timestamps: number[]): number[] {
+  const half = ELEVATION_SMOOTHING_HALF_WINDOW_SECONDS
+  let smoothed = altitudes
+
+  for (let pass = 0; pass < ELEVATION_SMOOTHING_PASSES; pass++) {
+    const source = smoothed
+    smoothed = source.map((_, i) => {
+      let sum = source[i]
+      let count = 1
+      for (let j = i - 1; j >= 0 && timestamps[i] - timestamps[j] <= half; j--) {
+        sum += source[j]
+        count++
+      }
+      for (let j = i + 1; j < source.length && timestamps[j] - timestamps[i] <= half; j++) {
+        sum += source[j]
+        count++
+      }
+      return sum / count
+    })
+  }
+  return smoothed
+}
+
 export function computeTripStats(locations: LocationCoords[]): TripStats {
   let speedSum = 0
   let speedCount = 0
   let elevationGain = 0
   let elevationLoss = 0
 
-  for (let i = 0; i < locations.length; i++) {
-    const loc = locations[i]
+  for (const loc of locations) {
     if (loc.speed != null && loc.speed > 0) {
       speedSum += loc.speed
       speedCount++
     }
-    if (i > 0) {
-      const prevAlt = locations[i - 1].altitude
-      const currAlt = loc.altitude
-      if (prevAlt != null && currAlt != null) {
-        const diff = currAlt - prevAlt
-        if (diff > 0) elevationGain += diff
-        else elevationLoss += Math.abs(diff)
+  }
+
+  for (const run of altitudeRuns(locations)) {
+    const series = run.timestamps ? smoothAltitudes(run.altitudes, run.timestamps) : run.altitudes
+    // Measure from the last altitude committed rather than the previous point, so wobble under
+    // the threshold is skipped instead of being carried into the next comparison.
+    let reference = series[0]
+    for (let i = 1; i < series.length; i++) {
+      const diff = series[i] - reference
+      if (diff > ELEVATION_THRESHOLD_METERS) {
+        elevationGain += diff
+        reference = series[i]
+      } else if (diff < -ELEVATION_THRESHOLD_METERS) {
+        elevationLoss += Math.abs(diff)
+        reference = series[i]
       }
     }
   }
