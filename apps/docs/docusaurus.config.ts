@@ -68,6 +68,11 @@ const config: Config = {
           label: "Docs"
         },
         {
+          to: "/releases",
+          label: "Releases",
+          position: "left"
+        },
+        {
           to: "/privacy-policy",
           label: "Privacy Policy",
           position: "left"
