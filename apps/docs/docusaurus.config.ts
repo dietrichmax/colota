@@ -45,7 +45,11 @@ const config: Config = {
     [
       "@docusaurus/plugin-client-redirects",
       {
-        redirects: [{ from: "/docs/guides/app-shortcuts", to: "/docs/guides/automation" }]
+        redirects: [
+          { from: "/docs/guides/app-shortcuts", to: "/docs/guides/automation" },
+          // Short, shareable install URL. The docs page is the single source for install channels.
+          { from: "/download", to: "/docs/getting-started/installation" }
+        ]
       }
     ]
   ],
@@ -88,6 +92,23 @@ const config: Config = {
       style: "dark",
       links: [
         {
+          title: "Download",
+          items: [
+            {
+              label: "Google Play",
+              href: "https://play.google.com/store/apps/details?id=com.Colota&hl=en-US"
+            },
+            {
+              label: "F-Droid",
+              href: "https://f-droid.org/packages/com.Colota/"
+            },
+            {
+              label: "IzzyOnDroid",
+              href: "https://apt.izzysoft.de/packages/com.Colota/"
+            }
+          ]
+        },
+        {
           title: "Docs",
           items: [
             {
@@ -122,26 +143,9 @@ const config: Config = {
             {
               label: "Discussions",
               href: "https://github.com/dietrichmax/colota/discussions"
-            }
-          ]
-        },
-        {
-          title: "Download",
-          items: [
-            {
-              label: "Google Play",
-              href: "https://play.google.com/store/apps/details?id=com.Colota&hl=en-US"
             },
             {
-              label: "F-Droid",
-              href: "https://f-droid.org/packages/com.Colota/"
-            },
-            {
-              label: "IzzyOnDroid",
-              href: "https://apt.izzysoft.de/packages/com.Colota/"
-            },
-            {
-              label: "Releases",
+              label: "GitHub Releases",
               href: "https://github.com/dietrichmax/colota/releases"
             }
           ]
@@ -150,21 +154,13 @@ const config: Config = {
           title: "Support",
           items: [
             {
-              label: "GitHub Sponsors",
-              href: "https://github.com/sponsors/dietrichmax"
-            },
-            {
-              label: "Ko-fi",
-              href: "https://ko-fi.com/maxdietrich"
-            },
-            {
-              label: "Privacy Policy",
-              to: "/privacy-policy"
+              label: "Donate",
+              href: "https://mxd.codes/support"
             }
           ]
         }
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Max Dietrich. Licensed under AGPL-3.0.`
+      copyright: `Copyright © ${new Date().getFullYear()} Max Dietrich. Licensed under AGPL-3.0. <a href="/privacy-policy">Privacy Policy</a>`
     },
     prism: {
       theme: prismThemes.github,

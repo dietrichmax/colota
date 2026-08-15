@@ -37,7 +37,7 @@ function HomepageHeader() {
               F-Droid
             </Link>{" "}
             and
-            <Link className={styles.downloadLink} href="https://apt.izzysoft.de/fdroid/index/apk/com.Colota">
+            <Link className={styles.downloadLink} href="https://apt.izzysoft.de/packages/com.Colota/">
               IzzyOnDroid
             </Link>
           </div>
