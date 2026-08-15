@@ -2832,7 +2832,7 @@ class LocationForegroundServiceTest {
         invokeRecordHeartbeatLocation()
 
         verify { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
-        coVerify { syncManager.queueAndSend(1L, any()) }
+        coVerify { syncManager.queueAndSend(1L, any(), true) }
     }
 
     @Test
@@ -2846,6 +2846,18 @@ class LocationForegroundServiceTest {
 
         coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
         verify { AppLogger.i("LocationService", "Heartbeat recorded for zone 'Home'") }
+    }
+
+    @Test
+    fun `recordHeartbeatLocation asks to send past the sync interval`() = testScope.runTest {
+        // Queued like an ordinary fix, the stay arrives a full sync interval late
+        every { syncManager.isSyncAllowed() } returns true
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        setField("currentZoneGeofence", homeGeofence)
+
+        invokeRecordHeartbeatLocation()
+
+        coVerify { syncManager.queueAndSend(1L, any(), true) }
     }
 
     @Test

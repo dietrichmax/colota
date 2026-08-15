@@ -310,6 +310,78 @@ class SyncManagerTest {
         coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
     }
 
+    // --- queueAndSend: bypassInterval ---
+
+    @Test
+    fun `queueAndSend bypassInterval sends despite a periodic interval`() = scope.runTest {
+        // Before #579 the heartbeat POSTed directly, ignoring the interval. This restores that
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 900,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+
+        val payload = JSONObject().put("lat", 52.0)
+        syncManager.queueAndSend(1L, payload, bypassInterval = true)
+
+        coVerify { networkManager.sendToEndpoint(any(), "https://example.com", emptyMap(), "POST") }
+        verify { dbHelper.removeFromQueueByLocationId(1L) }
+    }
+
+    @Test
+    fun `queueAndSend bypassInterval still honours the sync condition`() = scope.runTest {
+        // bypassInterval covers the interval only, never the network the user chose
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 900,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "wifi_ssid",
+            syncSsid = "HomeNetwork",
+            authHeaders = emptyMap()
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        every { networkManager.isConnectedToSsid("HomeNetwork") } returns false
+
+        val payload = JSONObject().put("lat", 52.0)
+        syncManager.queueAndSend(1L, payload, bypassInterval = true)
+
+        coVerify(exactly = 0) { networkManager.sendToEndpoint(any(), any(), any(), any()) }
+        verify { dbHelper.addToQueue(1L, any()) }
+    }
+
+    @Test
+    fun `queueAndSend bypassInterval leaves a failed send in the queue`() = scope.runTest {
+        // An unreachable server must not lose the point (#579)
+        every { dbHelper.addToQueue(any(), any()) } returns 42L
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 900,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns false
+
+        val payload = JSONObject().put("lat", 52.0)
+        syncManager.queueAndSend(1L, payload, bypassInterval = true)
+
+        verify { dbHelper.incrementRetryCount(42L, "Send failed") }
+        verify(exactly = 0) { dbHelper.removeFromQueueByLocationId(any()) }
+    }
+
     // --- queueAndSend: auth headers and HTTP method ---
 
     @Test

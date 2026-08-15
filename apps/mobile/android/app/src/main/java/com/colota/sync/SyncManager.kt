@@ -128,7 +128,7 @@ class SyncManager(
         }
     }
 
-    suspend fun queueAndSend(locationId: Long, payload: JSONObject) {
+    suspend fun queueAndSend(locationId: Long, payload: JSONObject, bypassInterval: Boolean = false) {
         if (isOfflineMode) {
             AppLogger.d(TAG, "Skipping queue for location $locationId - offline mode")
             return
@@ -144,7 +144,7 @@ class SyncManager(
         }
 
         // Immediate send mode (syncInterval = 0)
-        if (syncIntervalSeconds == 0 && isSyncAllowed()) {
+        if ((syncIntervalSeconds == 0 || bypassInterval) && isSyncAllowed()) {
             AppLogger.d(TAG, "Instant send")
             val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod, apiFormat)
 
@@ -157,7 +157,7 @@ class SyncManager(
                 dbHelper.incrementRetryCount(queueId, "Send failed")
             }
         }
-        // If syncInterval > 0, the periodic sync job will handle it
+        // Otherwise the periodic sync job will handle it
     }
 
     fun isSyncAllowed(): Boolean {

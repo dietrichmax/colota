@@ -1212,7 +1212,8 @@ class LocationForegroundService : Service() {
      * saved unconditionally and handed to [SyncManager], which owns whether it goes out now,
      * waits in the queue or stays local in offline mode. Recording and sending are separate
      * concerns here - gating the save on a successful send loses the stay entirely whenever
-     * the server is unreachable or sync is not allowed.
+     * the server is unreachable or sync is not allowed. The send skips the sync interval: on
+     * Power Saver a queued stay reaches the endpoint 15 minutes after the user got home.
      */
     private suspend fun recordHeartbeatLocation() {
         if (!::config.isInitialized) {
@@ -1255,7 +1256,7 @@ class LocationForegroundService : Service() {
         dbHelper.saveSetting(SettingsKeys.HEARTBEAT_LAST_AT, location.time.toString())
 
         val payload = PayloadBuilder.buildLocationPayload(location, timestampSec, battery, batteryStatus, payloadFieldMap, payloadCustomFields, config.apiFormat)
-        syncManager.queueAndSend(locationId, payload)
+        syncManager.queueAndSend(locationId, payload, bypassInterval = true)
 
         AppLogger.i(TAG, "Heartbeat recorded for zone '${zone.name}'")
     }
