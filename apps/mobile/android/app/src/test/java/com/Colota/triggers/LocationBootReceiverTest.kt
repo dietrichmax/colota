@@ -178,6 +178,18 @@ class LocationBootReceiverTest {
     }
 
     @Test
+    fun `handleBootCompleted does not restart a service that is already running`() = runTest {
+        mockkObject(LocationForegroundService.Companion)
+        every { LocationForegroundService.isRunning } returns true
+        every { LocationForegroundService.startTracking(any(), any(), any()) } just Runs
+        mockDbReadyAndEnabled()
+
+        callHandleBootCompleted(mockContext, Intent.ACTION_BOOT_COMPLETED)
+
+        verify(exactly = 0) { LocationForegroundService.startTracking(any(), any(), any()) }
+    }
+
+    @Test
     fun `handleBootCompleted loads config from database`() = runTest {
         mockDbReadyAndEnabled()
 

@@ -120,6 +120,11 @@ class LocationBootReceiver : BroadcastReceiver() {
                 return
             }
             
+            if (LocationForegroundService.isRunning) {
+                AppLogger.d(TAG, "Trigger received ($action) but the service is already running - not restarting")
+                return
+            }
+
             AppLogger.d(TAG, "Trigger received ($action). Restarting service...")
 
             val reason = if (action == Intent.ACTION_MY_PACKAGE_REPLACED) "App updated" else "Device rebooted"
