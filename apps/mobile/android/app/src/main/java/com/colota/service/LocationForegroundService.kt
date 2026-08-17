@@ -913,6 +913,7 @@ class LocationForegroundService : Service() {
 
         val zone = geofenceHelper.getPauseZone(location)
         if (zone != null && insidePauseZone && zone.name == currentZoneName) {
+            AppLogger.d(TAG, "Location dropped: inside active pause zone '$currentZoneName'")
             // Send position to UI so the map stays current while paused
             val (bat, batStatus) = deviceInfoHelper.getCachedBatteryStatus()
             LocationServiceModule.sendLocationEvent(location, bat, batStatus)
