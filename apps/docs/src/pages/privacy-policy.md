@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-**Last updated: August 2, 2026**
+**Last updated: August 19, 2026**
 
 Colota ("the App") is a self-hosted GPS tracking application for Android, developed by Max Dietrich. This privacy policy explains what data the App collects, how it is used, and your rights regarding that data.
 
@@ -103,7 +103,7 @@ The GMS variant of the App is distributed via Google Play, which may collect dat
 
 ### Map Tiles (maps.mxd.codes)
 
-The App displays maps using a self-hosted tile server at [maps.mxd.codes](https://maps.mxd.codes), operated by the developer on a VPS provided by [netcup](https://www.netcup.de). No CDN, proxy or other external service (e.g. Cloudflare) sits in front of the server. When the map is visible or offline map packs are downloaded, your device makes requests to this server to fetch vector tiles. Downloaded tiles are cached in the app's local database for offline use. Access logging is disabled for all requests by default. Logging may be enabled temporarily to investigate abuse or operational issues. No cookies or tracking are used. A custom tile server URL can be configured in Settings. See the [tile server guide](/docs/guides/tile-server) for more details.
+The App displays maps using a self-hosted tile server at [maps.mxd.codes](https://maps.mxd.codes), operated by the developer on a VPS provided by [netcup](https://www.netcup.de). No CDN, proxy or other external service (e.g. Cloudflare) sits in front of the server. When the map is visible or offline map packs are downloaded, your device makes requests to this server to fetch vector tiles. Downloaded tiles are cached in the app's local database for offline use. Requests identify the App by name and version (for example `Colota/1.14.0`) so that app traffic can be told apart from unknown bulk callers when logging is switched on. No device, install or user identifier is sent, and the value is the same for every install of a given version. Access logging is disabled for all requests by default. Logging may be enabled temporarily to investigate abuse or operational issues. No cookies or tracking are used. A custom tile server URL can be configured in Settings and receives the same requests. See the [tile server guide](/docs/guides/tile-server) for more details.
 
 ### No Other Third Parties
 

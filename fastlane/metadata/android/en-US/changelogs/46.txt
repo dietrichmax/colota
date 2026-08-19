@@ -1,0 +1,1 @@
+- Map requests identify the app by name and version, never the device or user

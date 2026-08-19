@@ -41,9 +41,12 @@ import {
 } from "./src/screens/"
 import { BottomTabBar } from "./src/components"
 import { loadDisplayPreferences } from "./src/utils/geo"
+import { registerTileServerUserAgent } from "./src/utils/tileHeaders"
 
 // Load display preferences early
 loadDisplayPreferences()
+
+registerTileServerUserAgent()
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
 
