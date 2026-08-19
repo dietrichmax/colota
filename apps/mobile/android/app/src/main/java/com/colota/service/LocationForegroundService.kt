@@ -331,12 +331,13 @@ class LocationForegroundService : Service() {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             )
         } catch (e: Exception) {
-            AppLogger.e(TAG, "Cannot start foreground service - background start restricted", e)
+            AppLogger.e(TAG, "Cannot start foreground service (${deniedStartCause(e)})", e)
             stopSelf()
             return START_NOT_STICKY
         }
 
         if (!isLightweight) {
+            startTrackingHeartbeatLogger()
             dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
             dbHelper.saveSetting(SettingsKeys.STOPPED_BY_BATTERY, "false")
             BatteryRecoveryScheduler.cancel(this)
@@ -429,6 +430,7 @@ class LocationForegroundService : Service() {
         teardownStep("batteryMonitor") { batteryMonitor.stop() }
         teardownStep("conditionMonitor") { conditionMonitor.stop() }
         teardownStep("locationUpdates") { stopLocationUpdates() }
+        teardownStep("trackingHeartbeatLogger") { cancelTrackingHeartbeatLogger() }
         teardownStep("periodicSync") { syncManager.stopPeriodicSync() }
         teardownStep("networkManager") { networkManager.destroy() }
 
@@ -528,7 +530,6 @@ class LocationForegroundService : Service() {
                 )
             }
 
-            startTrackingHeartbeatLogger()
             startPauseWatchdog()
         } catch (e: SecurityException) {
             AppLogger.e(TAG, "Location permission missing", e)
@@ -539,8 +540,15 @@ class LocationForegroundService : Service() {
         }
     }
 
+    /** Matched by name because the class is API 31+ and its IllegalStateException superclass is too broad. */
+    private fun deniedStartCause(e: Exception): String = when {
+        e.javaClass.simpleName == "ForegroundServiceStartNotAllowedException" -> "background start not allowed"
+        e is SecurityException -> "missing foreground-service location permission"
+        else -> e.javaClass.simpleName
+    }
+
     private fun stopLocationUpdates() {
-        cancelTrackingHeartbeatLogger()
+        // The heartbeat logger outlives the stream; the watchdog only probes while it is live.
         stopPauseWatchdog()
         locationUpdateCallback?.let { locationProvider.removeLocationUpdates(it) }
         locationUpdateCallback = null
@@ -560,7 +568,8 @@ class LocationForegroundService : Service() {
     /** Logs a state snapshot every 5 minutes so silent stalls and pause/stop gaps are visible
      *  in user-exported logs, and re-registers a stream that has gone quiet while active. */
     private fun startTrackingHeartbeatLogger() {
-        trackingHeartbeatJob?.cancel()
+        // onStartCommand re-enters often; restarting would reset the interval before it ever fires.
+        if (trackingHeartbeatJob?.isActive == true) return
         val scope = serviceScope ?: return
         trackingHeartbeatJob = scope.launch {
             while (isActive) {
@@ -573,7 +582,7 @@ class LocationForegroundService : Service() {
                     val doze = (getSystemService(POWER_SERVICE) as? PowerManager)?.isDeviceIdleMode ?: false
                     AppLogger.i(TAG,
                         "Heartbeat state=$state, ${sinceLastFix / 1000}s since last fix, " +
-                            "queue=${dbHelper.getStats().queued}, batt=$battery%, " +
+                            "queue=${dbHelper.getQueuedCount()}, batt=$battery%, " +
                             "profile=${profileManager.getActiveProfileName() ?: "default"}, doze=$doze"
                     )
                 } catch (e: Exception) {
@@ -582,7 +591,7 @@ class LocationForegroundService : Service() {
                 try {
                     withContext(Dispatchers.Main) { recoverStalledStream() }
                 } catch (e: CancellationException) {
-                    throw e  // recovery cancels this job on purpose; swallowing it would leave two loops
+                    throw e  // service teardown; swallowing it would outlive the scope
                 } catch (e: Exception) {
                     AppLogger.w(TAG, "Stall recovery failed: ${e.message}")
                 }

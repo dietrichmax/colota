@@ -1072,9 +1072,9 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `heartbeat keeps ticking after it recovers a stalled stream`() = runServiceTest {
-        // Recovery cancels the job it runs in and relies on setupLocationUpdates relaunching the
-        // logger; if that stops happening, recovery and the 5-min diagnostics die silently
+    fun `the 5-minute loop is what drives stall recovery`() = runServiceTest {
+        // Nothing else probes a stream that died while active, so if this loop stops calling
+        // recoverStalledStream the stall is never noticed
         setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
         setField("lastFixAtUptimeMs", -700_000L)
         invokeStartTrackingHeartbeatLogger()
@@ -1083,7 +1083,47 @@ class LocationForegroundServiceTest {
         runCurrent()
 
         verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
-        assertTrue("heartbeat loop must survive its own recovery", getField<Job?>("trackingHeartbeatJob")?.isActive == true)
+        assertTrue("and it has to keep ticking afterwards", getField<Job?>("trackingHeartbeatJob")?.isActive == true)
+    }
+
+    @Test
+    fun `heartbeat logger survives a pause stopping the stream`() = runServiceTest {
+        // Every pause path goes through stopLocationUpdates, and a pause is a state worth logging
+        invokeStartTrackingHeartbeatLogger()
+
+        invokeStopLocationUpdates()
+
+        assertTrue(
+            "a pause must not silence the diagnostic that explains the pause",
+            getField<Job?>("trackingHeartbeatJob")?.isActive == true
+        )
+    }
+
+    @Test
+    fun `starting the heartbeat logger twice keeps the original loop`() = runServiceTest {
+        // onStartCommand re-enters often; a restart would reset the interval before it ever fires
+        invokeStartTrackingHeartbeatLogger()
+        val first = getField<Job?>("trackingHeartbeatJob")
+
+        invokeStartTrackingHeartbeatLogger()
+
+        assertSame("second call must be a no-op", first, getField<Job?>("trackingHeartbeatJob"))
+        assertTrue(first?.isActive == true)
+    }
+
+    /** Stands in for the API 31+ framework class, which deniedStartCause matches by simple name. */
+    private class ForegroundServiceStartNotAllowedException : IllegalStateException()
+
+    @Test
+    fun `a denied start names which failure it was`() = runServiceTest {
+        // A start refused at boot reaches no one, so the log is the only place the two causes can
+        // still be told apart afterwards
+        assertEquals(
+            "background start not allowed",
+            invokeDeniedStartCause(ForegroundServiceStartNotAllowedException())
+        )
+        assertTrue(invokeDeniedStartCause(SecurityException("nope")).contains("permission"))
+        assertEquals("IllegalArgumentException", invokeDeniedStartCause(IllegalArgumentException("odd")))
     }
 
     @Test
@@ -2604,6 +2644,19 @@ class LocationForegroundServiceTest {
         val method = LocationForegroundService::class.java.getDeclaredMethod("startTrackingHeartbeatLogger")
         method.isAccessible = true
         method.invoke(service)
+    }
+
+    private fun invokeStopLocationUpdates() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("stopLocationUpdates")
+        method.isAccessible = true
+        method.invoke(service)
+    }
+
+    private fun invokeDeniedStartCause(e: Exception): String {
+        val method = LocationForegroundService::class.java
+            .getDeclaredMethod("deniedStartCause", Exception::class.java)
+        method.isAccessible = true
+        return method.invoke(service, e) as String
     }
 
     private fun invokeRecoverStalledStream() {
