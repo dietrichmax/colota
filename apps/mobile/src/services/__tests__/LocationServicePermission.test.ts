@@ -78,6 +78,47 @@ describe("ensurePermissions", () => {
     expect(requestSpy).not.toHaveBeenCalled()
   })
 
+  it("skips the disclosure when only notification permission is missing", async () => {
+    setPlatform("android", 33)
+    checkSpy.mockImplementation((perm: string) =>
+      Promise.resolve(perm !== PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
+    )
+    const disclosureSpy = jest.fn().mockResolvedValue(true)
+    registerDisclosureCallback(disclosureSpy)
+
+    const result = await ensurePermissions()
+
+    expect(result).toBe(true)
+    expect(disclosureSpy).not.toHaveBeenCalled()
+    expect(requestSpy).toHaveBeenCalledWith(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
+  })
+
+  it("starts tracking when notifications are denied even if the disclosure would be declined", async () => {
+    setPlatform("android", 33)
+    checkSpy.mockImplementation((perm: string) =>
+      Promise.resolve(perm !== PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
+    )
+    requestSpy.mockResolvedValue(PermissionsAndroid.RESULTS.DENIED)
+    registerDisclosureCallback(() => Promise.resolve(false))
+
+    expect(await ensurePermissions()).toBe(true)
+  })
+
+  it("still shows the disclosure when only background location is missing", async () => {
+    setPlatform("android", 33)
+    checkSpy.mockImplementation((perm: string) =>
+      Promise.resolve(perm !== PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)
+    )
+    const disclosureSpy = jest.fn().mockResolvedValue(true)
+    registerDisclosureCallback(disclosureSpy)
+
+    await ensurePermissions()
+
+    // Google Play requires the disclosure immediately before the background location request
+    expect(disclosureSpy).toHaveBeenCalledTimes(1)
+    expect(requestSpy).toHaveBeenCalledWith(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)
+  })
+
   it("shows disclosure before requesting permissions", async () => {
     setPlatform("android", 28)
     const disclosureSpy = jest.fn().mockResolvedValue(true)

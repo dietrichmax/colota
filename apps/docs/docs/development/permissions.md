@@ -19,7 +19,7 @@ These are the permissions Colota uses and why. None are related to analytics, ad
 | Network State                  | Yes         | Check connectivity before syncing                                     |
 | Wi-Fi State                    | Yes         | Detect current SSID for sync condition filtering                      |
 | Boot Completed                 | Yes         | Auto-restart tracking after device reboot                             |
-| Notifications                  | Android 13+ | Display the foreground service notification                           |
+| Notifications                  | Optional    | Show the tracking notification (Android 13+)                          |
 | Local Network Access           | Android 17+ | Access local network servers (self-hosted)                            |
 | Battery Optimization Exemption | Optional    | Prevent Android from killing the tracking service                     |
 | Wake Lock                      | Yes         | Briefly wake the CPU for the stationary heartbeat and background jobs |
@@ -30,10 +30,10 @@ When you start tracking for the first time, Colota requests permissions in seque
 
 1. **Fine Location** - Required to access GPS hardware
 2. **Background Location** (Android 10+) - Appears as a separate dialog asking to "Allow all the time"
-3. **Notification Permission** (Android 13+) - Required for the foreground service notification
+3. **Notification Permission** (Android 13+) - Shows the tracking notification
 4. **Battery Optimization Exemption** - Optional dialog to prevent the system from restricting the app
 
-If any required permission is denied, tracking cannot start. The app does not request permissions until you explicitly tap "Start Tracking".
+Only the two location permissions are required. The app does not request anything until you tap "Start Tracking".
 
 The **Local Network Permission** (Android 17+) is not part of this sequence. It is requested separately when you use **Test Connection** with a local/private server endpoint.
 
@@ -83,7 +83,7 @@ If tracking was active when the device was powered off, Colota automatically res
 android.permission.POST_NOTIFICATIONS
 ```
 
-Starting with Android 13, apps must request notification permission explicitly. Colota uses a foreground service for GPS tracking, which requires a persistent notification. Without this permission, the service cannot start - including after a device reboot.
+On Android 13 and later, apps need this permission before they can show notifications. Colota asks for it but does not require it - tracking runs either way. Denying it hides the tracking notification, so you lose the live status and any alert when tracking stops.
 
 ### Local Network Access
 

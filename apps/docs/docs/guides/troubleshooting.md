@@ -8,14 +8,16 @@ sidebar_position: 4
 
 - Go to **Settings > Apps > Colota > Battery** and select **Unrestricted**
 - Verify location permissions are set to **Allow all the time**
-- Ensure notification permission is granted - Colota uses a foreground service which requires a persistent notification. Without it, the service cannot start.
+- Grant notification permission if you want to see tracking status
 
 ## Tracking doesn't start after reboot
 
 - Make sure tracking was active before the reboot
-- Notification permission must be granted - without it the foreground service cannot start on boot
+- Do not force-stop Colota. A force-stopped app receives no boot broadcast until you open it again
+- **Samsung**: turn off "Pause app activity if unused" for Colota (**Settings > Apps > Colota > Battery**)
+- **Xiaomi, Huawei, Oppo, Vivo, OnePlus**: allow Autostart for Colota in the phone's own security or battery app
 - Disable battery optimization for Colota (**Settings > Apps > Colota > Battery > Unrestricted**)
-- **Samsung**: Make sure "Pause app activity if unused" is turned off for Colota (**Settings > Apps > Colota > Battery**)
+- Open the app once if you have not used it for months. Android resets permissions for unused apps
 
 ## Tracking stopped on low battery and didn't resume
 

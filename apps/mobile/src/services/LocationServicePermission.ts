@@ -64,30 +64,28 @@ export async function ensurePermissions(): Promise<boolean> {
   if (Platform.OS !== "android") return true
 
   try {
-    // Skip disclosure + requests if everything is already granted
     const status = await checkPermissions()
-    if (status.location && status.background && status.notifications) {
-      await requestBatteryOptimizationExemption()
-      return true
+
+    // Location grants only - including notifications here replays the disclosure on every start
+    if (!status.location || !status.background) {
+      // Prominent disclosure (required by Google Play User Data policy)
+      const consented = _disclosureCallback ? await _disclosureCallback() : await fallbackDisclosure()
+      if (!consented) return false
+
+      // Fine location
+      if (!status.location) {
+        const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION)
+        if (result !== PermissionsAndroid.RESULTS.GRANTED) return false
+      }
+
+      // Background location (Android 10+)
+      if (Platform.Version >= ANDROID_10 && !status.background) {
+        const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)
+        if (result !== PermissionsAndroid.RESULTS.GRANTED) return false
+      }
     }
 
-    // Prominent disclosure (required by Google Play User Data policy)
-    const consented = _disclosureCallback ? await _disclosureCallback() : await fallbackDisclosure()
-    if (!consented) return false
-
-    // Fine location
-    if (!status.location) {
-      const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION)
-      if (result !== PermissionsAndroid.RESULTS.GRANTED) return false
-    }
-
-    // Background location (Android 10+)
-    if (Platform.Version >= ANDROID_10 && !status.background) {
-      const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)
-      if (result !== PermissionsAndroid.RESULTS.GRANTED) return false
-    }
-
-    // Notifications (Android 13+, non-blocking)
+    // Notifications (Android 13+, non-blocking) - the app has no other way to ask
     if (Platform.Version >= ANDROID_13 && !status.notifications) {
       await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
     }

@@ -64,7 +64,7 @@ Yes. Restore is replace-everything: locations, settings, geofences and credentia
 
 ### What happens when the phone restarts?
 
-If auto-start on boot is enabled, Colota automatically resumes tracking after a device restart when tracking was active before.
+Colota resumes tracking after a restart if tracking was active before it. There is no setting for this. If it does not resume, see [Troubleshooting](guides/troubleshooting.md).
 
 ### How much battery does it use?
 

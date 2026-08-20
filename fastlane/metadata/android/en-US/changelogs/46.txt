@@ -1,1 +1,2 @@
 - Map requests identify the app by name and version, never the device or user
+- Tracking no longer refuses to start when notifications are turned off

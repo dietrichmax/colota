@@ -67,7 +67,7 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 
 1. Install from [Google Play](https://play.google.com/store/apps/details?id=com.Colota&hl=en-US), [F-Droid](https://f-droid.org/packages/com.Colota/), [IzzyOnDroid](https://apt.izzysoft.de/packages/com.Colota/) or download the APK from [GitHub Releases](https://github.com/dietrichmax/colota/releases)
 2. Grant location permissions (precise, all the time)
-3. Grant notification permission (required for the foreground service)
+3. Grant notification permission (optional; on Android 13+ refusing it hides the status notification)
 4. Disable battery optimization for Colota
 5. Press **Start Tracking**
 
