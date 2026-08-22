@@ -445,7 +445,7 @@ describe("useLocationTracking", () => {
       mockCheckPermissions.mockResolvedValue({ location: false, background: false, notifications: true })
       mockGetMostRecentLocation.mockResolvedValue(null)
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
 
       await act(async () => {
         await appStateCallback("active")

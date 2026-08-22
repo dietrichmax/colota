@@ -317,7 +317,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
     } catch (err) {
       logger.error("[useLocationTracking] Failed to fetch location on reconnect:", err)
     }
-  }, [])
+  }, [reviveIfDead])
 
   /**
    * Syncs tracking state and coords when app returns to foreground.
