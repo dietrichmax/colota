@@ -66,8 +66,9 @@ class BatteryRecoveryWorker(
             return Result.success()
         }
 
-        val alreadyTracking = db.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
-        if (alreadyTracking) {
+        // Liveness, not the intent flag: a flag left true by a service the system killed would
+        // make this recovery a permanent no-op, which is the window it exists to cover.
+        if (LocationForegroundService.isRunning) {
             // Manual start / cable-wobble race already brought tracking back.
             AppLogger.d(TAG, "Already tracking - skipping resume")
             return Result.success()

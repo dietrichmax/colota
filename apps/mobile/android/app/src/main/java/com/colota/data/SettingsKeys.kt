@@ -7,6 +7,8 @@ package com.Colota.data
 
 /** Runtime state keys persisted via DatabaseHelper.saveSetting/getSetting. */
 object SettingsKeys {
+    /** The user's intent to track, which outlives the process. Liveness is
+     *  [com.Colota.service.LocationForegroundService.isRunning] - never this. */
     const val TRACKING_ENABLED = "tracking_enabled"
     const val PAUSE_ZONE_NAME = "pause_zone_name"
     const val PAUSE_ZONE_WIFI_ACTIVE = "pause_zone_wifi_active"

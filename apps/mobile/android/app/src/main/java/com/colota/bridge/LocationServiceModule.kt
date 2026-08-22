@@ -318,12 +318,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     fun stopService() {
         AppLogger.d(TAG, "Stopping Service via UI")
 
+        // Before the stop, not after: a liveness check racing an async write would see the user's
+        // intent still true with the service already gone, and restart what they just turned off.
+        dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "false")
+
         val intent = Intent(reactApplicationContext, LocationForegroundService::class.java)
         reactApplicationContext.stopService(intent)
-
-        moduleScope.launch(Dispatchers.IO) {
-            dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "false")
-        }
     }
 
     @ReactMethod
@@ -489,8 +489,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     private fun triggerZoneRecheck() {
-        val isTracking = dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
-        if (!isTracking) return
+        if (!LocationForegroundService.isRunning) return
         try {
             startServiceWithAction(LocationForegroundService.ACTION_RECHECK_ZONE)
         } catch (e: Exception) {
@@ -499,13 +498,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     private fun refreshNotificationIfTracking() {
-        val isTracking = dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
-        if (isTracking) {
-            try {
-                startServiceWithAction(LocationForegroundService.ACTION_REFRESH_NOTIFICATION)
-            } catch (e: Exception) {
-                AppLogger.w(TAG, "Notification refresh skipped: service not running")
-            }
+        if (!LocationForegroundService.isRunning) return
+        try {
+            startServiceWithAction(LocationForegroundService.ACTION_REFRESH_NOTIFICATION)
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Notification refresh skipped: service not running")
         }
     }
 
@@ -700,13 +697,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     private fun triggerProfileRecheck() {
-        val isTracking = dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
-        if (isTracking) {
-            try {
-                startServiceWithAction(LocationForegroundService.ACTION_RECHECK_PROFILES)
-            } catch (e: Exception) {
-                AppLogger.w(TAG, "Profile recheck skipped: service not running")
-            }
+        if (!LocationForegroundService.isRunning) return
+        try {
+            startServiceWithAction(LocationForegroundService.ACTION_RECHECK_PROFILES)
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Profile recheck skipped: service not running")
         }
     }
 
@@ -794,6 +789,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun isLocationEnabled(promise: Promise) {
         promise.resolve(deviceInfo.isLocationEnabled())
+    }
+
+    /** Whether a service instance is alive. TRACKING_ENABLED is the user's intent, not this. */
+    @ReactMethod
+    fun isServiceRunning(promise: Promise) {
+        promise.resolve(LocationForegroundService.isRunning)
     }
 
     @ReactMethod

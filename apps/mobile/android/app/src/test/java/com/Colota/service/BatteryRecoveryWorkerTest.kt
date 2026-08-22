@@ -87,15 +87,37 @@ class BatteryRecoveryWorkerTest {
     }
 
     @Test
-    fun `skips resume when tracking is already active`() {
+    fun `skips resume when the service is already running`() {
+        db.saveSetting(SettingsKeys.STOPPED_BY_BATTERY, "true")
+
+        mockkObject(LocationForegroundService.Companion)
+        try {
+            every { LocationForegroundService.isRunning } returns true
+
+            val result = runWorker()
+
+            assertEquals(ListenableWorker.Result.success(), result)
+            assertNull("Already tracking - must not double-start", shadowOf(app).nextStartedService)
+            verify(exactly = 0) { LocationServiceModule.sendTrackingStartedEvent(any()) }
+        } finally {
+            unmockkObject(LocationForegroundService.Companion)
+        }
+    }
+
+    /**
+     * A service the system killed leaves the intent flag true. Gating on that flag made this
+     * recovery a permanent no-op for exactly the users it exists to rescue.
+     */
+    @Test
+    fun `resumes when the intent flag is stale-true but the service is dead`() {
         db.saveSetting(SettingsKeys.STOPPED_BY_BATTERY, "true")
         db.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
 
         val result = runWorker()
 
         assertEquals(ListenableWorker.Result.success(), result)
-        assertNull("Already tracking - must not double-start", shadowOf(app).nextStartedService)
-        verify(exactly = 0) { LocationServiceModule.sendTrackingStartedEvent(any()) }
+        assertNotNull("A dead service must still be resumed", shadowOf(app).nextStartedService)
+        verify { LocationServiceModule.sendTrackingStartedEvent(any()) }
     }
 
     @Test

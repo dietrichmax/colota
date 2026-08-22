@@ -5,6 +5,7 @@
 
 package com.Colota.bridge
 
+import android.content.Intent
 import android.location.Location
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
@@ -54,6 +55,8 @@ class LocationServiceModuleTest {
         every { Arguments.createMap() } returns JavaOnlyMap()
 
         mockkObject(DatabaseHelper.Companion)
+        mockkObject(LocationForegroundService.Companion)
+        every { LocationForegroundService.isRunning } returns true
 
         setCompanionField("reactContextRef", WeakReference(mockContext))
         setCompanionField("isAppInForeground", true)
@@ -65,6 +68,7 @@ class LocationServiceModuleTest {
         unmockkObject(AppLogger)
         unmockkStatic(Arguments::class)
         unmockkObject(DatabaseHelper.Companion)
+        unmockkObject(LocationForegroundService.Companion)
         setCompanionField("reactContextRef", WeakReference<ReactApplicationContext>(null))
         setCompanionField("isAppInForeground", true)
         setCompanionField("activeProfileName", null)
@@ -404,9 +408,9 @@ class LocationServiceModuleTest {
     // ========================================================================
 
     @Test
-    fun `triggerProfileRecheck skips when tracking disabled`() {
-        val (module, dbHelper) = createModuleWithDeps()
-        every { dbHelper.getSetting("tracking_enabled", "false") } returns "false"
+    fun `triggerProfileRecheck skips when the service is not running`() {
+        val (module, _) = createModuleWithDeps()
+        every { LocationForegroundService.isRunning } returns false
 
         invokePrivate(module, "triggerProfileRecheck")
 
@@ -414,23 +418,38 @@ class LocationServiceModuleTest {
     }
 
     @Test
-    fun `triggerProfileRecheck dispatches when tracking enabled`() {
-        val (module, dbHelper) = createModuleWithDeps()
-        every { dbHelper.getSetting("tracking_enabled", "false") } returns "true"
+    fun `triggerProfileRecheck dispatches when the service is running`() {
+        val (module, _) = createModuleWithDeps()
+        every { LocationForegroundService.isRunning } returns true
 
         invokePrivate(module, "triggerProfileRecheck")
 
         verify { module["startServiceWithAction"](LocationForegroundService.ACTION_RECHECK_PROFILES) }
     }
 
+    /**
+     * The intent flag outlives a service the system killed, so gating on it used to send a
+     * lightweight action to nothing - cold-starting a service that never begins tracking.
+     */
+    @Test
+    fun `triggerProfileRecheck skips a dead service even though the user still wants tracking`() {
+        val (module, dbHelper) = createModuleWithDeps()
+        every { dbHelper.getSetting("tracking_enabled", "false") } returns "true"
+        every { LocationForegroundService.isRunning } returns false
+
+        invokePrivate(module, "triggerProfileRecheck")
+
+        verify(exactly = 0) { module["startServiceWithAction"](any<String>()) }
+    }
+
     // ========================================================================
-    // refreshNotificationIfTracking — only dispatches when tracking is enabled
+    // refreshNotificationIfTracking — only dispatches when the service is alive
     // ========================================================================
 
     @Test
-    fun `refreshNotificationIfTracking skips when not tracking`() {
-        val (module, dbHelper) = createModuleWithDeps()
-        every { dbHelper.getSetting("tracking_enabled", "false") } returns "false"
+    fun `refreshNotificationIfTracking skips when the service is not running`() {
+        val (module, _) = createModuleWithDeps()
+        every { LocationForegroundService.isRunning } returns false
 
         invokePrivate(module, "refreshNotificationIfTracking")
 
@@ -438,13 +457,77 @@ class LocationServiceModuleTest {
     }
 
     @Test
-    fun `refreshNotificationIfTracking dispatches when tracking`() {
-        val (module, dbHelper) = createModuleWithDeps()
-        every { dbHelper.getSetting("tracking_enabled", "false") } returns "true"
+    fun `refreshNotificationIfTracking dispatches when the service is running`() {
+        val (module, _) = createModuleWithDeps()
+        every { LocationForegroundService.isRunning } returns true
 
         invokePrivate(module, "refreshNotificationIfTracking")
 
         verify { module["startServiceWithAction"](LocationForegroundService.ACTION_REFRESH_NOTIFICATION) }
+    }
+
+    // ========================================================================
+    // triggerZoneRecheck — same liveness gate
+    // ========================================================================
+
+    @Test
+    fun `triggerZoneRecheck skips when the service is not running`() {
+        val (module, _) = createModuleWithDeps()
+        every { LocationForegroundService.isRunning } returns false
+
+        invokePrivate(module, "triggerZoneRecheck")
+
+        verify(exactly = 0) { module["startServiceWithAction"](any<String>()) }
+    }
+
+    @Test
+    fun `triggerZoneRecheck dispatches when the service is running`() {
+        val (module, _) = createModuleWithDeps()
+        every { LocationForegroundService.isRunning } returns true
+
+        invokePrivate(module, "triggerZoneRecheck")
+
+        verify { module["startServiceWithAction"](LocationForegroundService.ACTION_RECHECK_ZONE) }
+    }
+
+    // ========================================================================
+    // stopService — intent is cleared before the service goes away
+    // ========================================================================
+
+    /**
+     * Written after the stop, the flag left a window where the service was already gone but the
+     * user's intent still read true - long enough for a liveness check to restart what they
+     * had just turned off.
+     */
+    @Test
+    fun `stopService clears the user's intent before stopping the service`() {
+        val (module, dbHelper) = createModuleWithDeps()
+        mockkConstructor(Intent::class)
+        try {
+            module.stopService()
+
+            verifyOrder {
+                dbHelper.saveSetting("tracking_enabled", "false")
+                mockContext.stopService(any())
+            }
+        } finally {
+            unmockkConstructor(Intent::class)
+        }
+    }
+
+    // ========================================================================
+    // isServiceRunning
+    // ========================================================================
+
+    @Test
+    fun `isServiceRunning resolves the service's own liveness flag`() {
+        val (module, _) = createModuleWithDeps()
+        val promise = mockk<com.facebook.react.bridge.Promise>(relaxed = true)
+        every { LocationForegroundService.isRunning } returns true
+
+        module.isServiceRunning(promise)
+
+        verify { promise.resolve(true) }
     }
 
     // ========================================================================

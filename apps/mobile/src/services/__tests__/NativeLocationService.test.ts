@@ -211,6 +211,18 @@ describe("NativeLocationService", () => {
     })
   })
 
+  describe("isServiceRunning", () => {
+    it("reports the native service's own liveness", async () => {
+      nativeMock.isServiceRunning.mockResolvedValueOnce(false)
+      expect(await NativeLocationService.isServiceRunning()).toBe(false)
+    })
+
+    it("returns null when the bridge fails, so callers cannot mistake it for a dead service", async () => {
+      nativeMock.isServiceRunning.mockRejectedValueOnce(new Error("bridge gone"))
+      expect(await NativeLocationService.isServiceRunning()).toBeNull()
+    })
+  })
+
   describe("getStats", () => {
     it("returns database stats", async () => {
       const stats = await NativeLocationService.getStats()
