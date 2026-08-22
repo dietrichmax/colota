@@ -113,7 +113,7 @@ This allows Colota to show the system dialog asking to exempt the app from batte
 android.permission.WAKE_LOCK
 ```
 
-Lets Colota briefly hold the CPU awake while it acquires a location fix for a stationary-profile heartbeat during Doze, and is used internally by WorkManager for auto-export and battery-recovery jobs. A normal permission - granted automatically, with no access to personal data.
+Lets Colota briefly hold the CPU awake when a heartbeat alarm fires during Doze. The stationary-profile heartbeat holds it while it acquires a location fix, and the geofence heartbeat while it writes and sends the zone-center point. It is also used internally by WorkManager for auto-export and battery-recovery jobs. Android grants this permission automatically and it gives no access to personal data.
 
 ## Revoking Permissions
 

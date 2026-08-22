@@ -47,7 +47,7 @@ Stops GPS after the device has been still for the configured time (default 1 min
 
 Records a point at the geofence center at a set interval while paused inside the zone, as a synthetic fix that does not wake GPS. Useful as a proof-of-presence signal so your backend knows the device is still there.
 
-The point is always saved on the device, including in offline mode and when the server is unreachable. Sending it is separate: it goes out under your normal sync rules, so a Wi-Fi-only or SSID condition still governs the upload while the stay is recorded either way. The first point is recorded on zone entry, then one per interval. Minimum 1 minute, default 15.
+The point is always saved on the device, including in offline mode and when the server is unreachable. Sending it is separate: it goes out under your normal sync rules, so a Wi-Fi-only or SSID condition still governs the upload while the stay is recorded either way. The first point is recorded on zone entry, then one per interval. Minimum 1 minute, default 15. Treat the interval as a minimum rather than a schedule: Colota uses an inexact alarm so it does not need the exact-alarm permission, and Android delivers those late.
 
 ### Combined behavior
 

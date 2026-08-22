@@ -126,6 +126,12 @@
             android:enabled="true"
             android:exported="false" />
 
+        <!-- Geofence heartbeat alarm receiver -->
+        <receiver
+            android:name=".service.GeofenceHeartbeatReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
         <!-- Tracking control receiver (Tasker / automation) -->
         <receiver
             android:name=".triggers.TrackingControlReceiver"

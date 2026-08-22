@@ -110,7 +110,7 @@ class LocationForegroundService : Service() {
     @Volatile private var currentZoneGeofence: GeofenceHelper.Geofence? = null
     @Volatile private var pendingPauseZone: GeofenceHelper.Geofence? = null
     @Volatile private var entryDelayJob: Job? = null
-    @Volatile private var heartbeatJob: Job? = null
+    @Volatile private var heartbeatArmed = false
     @Volatile private var stationaryHeartbeatArmed = false
 
     // WiFi pause sub-state (same Main-only mutation contract as above)
@@ -178,6 +178,8 @@ class LocationForegroundService : Service() {
         const val ACTION_DEBUG_FORCE_MOTION = "com.Colota.DEBUG_FORCE_MOTION"
         /** Alarm delivery for the stationary-profile heartbeat; see [StationaryHeartbeatScheduler]. */
         const val ACTION_STATIONARY_HEARTBEAT = "com.Colota.STATIONARY_HEARTBEAT"
+        /** Alarm delivery for the geofence-zone heartbeat; see [GeofenceHeartbeatScheduler]. */
+        const val ACTION_GEOFENCE_HEARTBEAT = "com.Colota.GEOFENCE_HEARTBEAT"
 
         /** Actions that skip config reload and preserve current notification state. */
         private val LIGHTWEIGHT_ACTIONS = setOf(
@@ -186,7 +188,8 @@ class LocationForegroundService : Service() {
             ACTION_REFRESH_NOTIFICATION,
             ACTION_RECHECK_PROFILES,
             ACTION_STOP_REQUEST,
-            ACTION_STATIONARY_HEARTBEAT
+            ACTION_STATIONARY_HEARTBEAT,
+            ACTION_GEOFENCE_HEARTBEAT
         )
 
         /**
@@ -282,8 +285,9 @@ class LocationForegroundService : Service() {
             loadConfigFromIntent(null)
         }
 
-        // Restore pause zone state so a restart without a cached location fix doesn't incorrectly resume tracking
-        if (!insidePauseZone) {
+        // Restore pause zone state so a restart without a cached location fix doesn't incorrectly resume tracking.
+        // An explicit start is trusted over the flag, which the bridge writes after starting us.
+        if (!insidePauseZone && (shouldBeTracking || !isLightweight)) {
             val savedZone = savedSettings[SettingsKeys.PAUSE_ZONE_NAME]
             if (!savedZone.isNullOrBlank()) {
                 insidePauseZone = true
@@ -304,7 +308,8 @@ class LocationForegroundService : Service() {
                     restoredGeofence,
                     savedSettings[SettingsKeys.PAUSE_ZONE_MOTIONLESS_ACTIVE]?.toBoolean() == true
                 )
-                if (restoredGeofence?.heartbeatEnabled == true) {
+                // The alarm's own handler records; doing it here too would double-record
+                if (restoredGeofence?.heartbeatEnabled == true && action != ACTION_GEOFENCE_HEARTBEAT) {
                     startHeartbeat(
                         restoredGeofence.heartbeatIntervalMinutes,
                         firstDelayMs = remainingHeartbeatDelay(restoredGeofence.heartbeatIntervalMinutes)
@@ -350,6 +355,7 @@ class LocationForegroundService : Service() {
             ACTION_RECHECK_PROFILES -> handleRecheckProfiles()
             ACTION_MANUAL_FLUSH -> handleManualFlush()
             ACTION_STATIONARY_HEARTBEAT -> handleStationaryHeartbeatFired()
+            ACTION_GEOFENCE_HEARTBEAT -> handleGeofenceHeartbeatFired(shouldBeTracking)
             ACTION_STOP_REQUEST -> stopForegroundServiceWithReason(
                 intent.getStringExtra(EXTRA_STOP_REASON) ?: "Stopped"
             )
@@ -826,7 +832,7 @@ class LocationForegroundService : Service() {
         // leaves no request behind, and a lightweight action never runs handleStart to make one.
         if (!isLocationUpdatesRegistered()) maybeResumeGps()
 
-        if (zone.heartbeatEnabled && (heartbeatJob == null || heartbeatChanged)) {
+        if (zone.heartbeatEnabled && (!heartbeatArmed || heartbeatChanged)) {
             val firstDelayMs =
                 if (heartbeatJustEnabled) 0L else remainingHeartbeatDelay(zone.heartbeatIntervalMinutes)
             startHeartbeat(zone.heartbeatIntervalMinutes, firstDelayMs)
@@ -1187,15 +1193,13 @@ class LocationForegroundService : Service() {
      * the interval, and recording on every restore would stack duplicates for one stay.
      */
     private fun startHeartbeat(intervalMinutes: Int, firstDelayMs: Long) {
-        cancelHeartbeat()
+        heartbeatArmed = true
         AppLogger.i(TAG, "Heartbeat started: ${intervalMinutes}min interval, first in ${firstDelayMs}ms")
-        heartbeatJob = serviceScope?.launch {
-            delay(firstDelayMs)
-            recordHeartbeatLocation()
-            while (isActive) {
-                delay(intervalMinutes * 60_000L)
-                recordHeartbeatLocation()
-            }
+        if (firstDelayMs <= 0L) {
+            serviceScope?.launch { recordHeartbeatLocation() }
+            GeofenceHeartbeatScheduler.schedule(this, intervalMinutes * 60_000L)
+        } else {
+            GeofenceHeartbeatScheduler.schedule(this, firstDelayMs)
         }
     }
 
@@ -1211,10 +1215,52 @@ class LocationForegroundService : Service() {
     }
 
     private fun cancelHeartbeat() {
-        if (heartbeatJob == null) return
-        heartbeatJob?.cancel()
-        heartbeatJob = null
-        AppLogger.i(TAG, "Heartbeat cancelled")
+        // Unconditional: a fresh instance reads as unarmed, but the old process's alarm still fires
+        val wasArmed = heartbeatArmed
+        heartbeatArmed = false
+        GeofenceHeartbeatScheduler.cancel(this)
+        if (wasArmed) AppLogger.i(TAG, "Heartbeat cancelled")
+    }
+
+    /** The stored timestamp decides whether to record, since a restore may already have done it. */
+    private fun handleGeofenceHeartbeatFired(shouldBeTracking: Boolean) {
+        val zone = currentZoneGeofence
+        if (!insidePauseZone || zone?.heartbeatEnabled != true) {
+            cancelHeartbeat()
+            // A zone-to-zone move leaves the old alarm pending, so this reaches healthy services
+            // too. A pause hold also has no stream, so only intent may stop one.
+            if (!shouldBeTracking) stopSelf()
+            else if (!isLocationUpdatesRegistered()) maybeResumeGps()
+            return
+        }
+        heartbeatArmed = true
+
+        val remaining = remainingHeartbeatDelay(zone.heartbeatIntervalMinutes)
+        if (remaining > 0L) {
+            GeofenceHeartbeatScheduler.schedule(this, remaining)
+            return
+        }
+
+        // The alarm's wake window ends when onReceive returns, and a foreground service does not
+        // hold the CPU, so the DB write and send need their own wakelock.
+        val wakeLock = acquireHeartbeatWakeLock()
+        val scope = serviceScope
+        if (scope == null) {
+            if (wakeLock?.isHeld == true) wakeLock.release()
+            return
+        }
+        scope.launch {
+            try {
+                recordHeartbeatLocation()
+            } finally {
+                if (wakeLock?.isHeld == true) wakeLock.release()
+            }
+        }
+        GeofenceHeartbeatScheduler.schedule(this, zone.heartbeatIntervalMinutes * 60_000L)
+
+        // A lightweight action builds no stream, and zone exit is only seen on one. Last, because
+        // the recheck it triggers can exit the zone synchronously and cancel the alarm just armed.
+        if (!isLocationUpdatesRegistered()) maybeResumeGps()
     }
 
     /**
@@ -1544,7 +1590,7 @@ class LocationForegroundService : Service() {
 
     private fun acquireHeartbeatWakeLock(): PowerManager.WakeLock? {
         val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return null
-        return pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "colota:stationary-heartbeat").apply {
+        return pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "colota:heartbeat").apply {
             acquire(HEARTBEAT_WAKELOCK_TIMEOUT_MS)
         }
     }

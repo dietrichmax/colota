@@ -5,51 +5,23 @@
 
 package com.Colota.service
 
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import com.Colota.util.AppLogger
+import com.Colota.util.AlarmScheduler
 
 /**
- * Schedules the stationary-profile heartbeat alarm. Uses setAndAllowWhileIdle (like
- * AutoExportScheduler) so it fires through Doze without the SCHEDULE_EXACT_ALARM permission;
- * the OS floors it to ~9min while idle, which suits a stationary cadence. Delivered to
- * [StationaryHeartbeatReceiver], which forwards it to [LocationForegroundService].
+ * Wakes [LocationForegroundService] for the stationary-profile heartbeat. Delivered via
+ * [StationaryHeartbeatReceiver] so the PendingIntent stays a plain explicit broadcast and the
+ * foreground-service start runs inside the alarm's temporary allowlist window.
  */
 object StationaryHeartbeatScheduler {
 
-    private const val TAG = "StationaryHeartbeat"
-    private const val REQUEST_CODE = 9301
-    /** Cadence floor; Doze also floors allow-while-idle to ~9min. */
-    private const val MIN_INTERVAL_MS = 60_000L
+    private val alarm = AlarmScheduler(
+        tag = "StationaryHeartbeat",
+        requestCode = 9301,
+        receiver = StationaryHeartbeatReceiver::class.java
+    )
 
-    fun schedule(context: Context, intervalMs: Long) {
-        val am = context.getSystemService(AlarmManager::class.java) ?: return
-        val delay = maxOf(intervalMs, MIN_INTERVAL_MS)
-        am.setAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + delay,
-            pendingIntent(context)
-        )
-        AppLogger.d(TAG, "Stationary heartbeat armed: ${delay / 1000}s")
-    }
+    fun schedule(context: Context, intervalMs: Long) = alarm.schedule(context, intervalMs)
 
-    fun cancel(context: Context) {
-        val am = context.getSystemService(AlarmManager::class.java) ?: return
-        am.cancel(pendingIntent(context))
-        AppLogger.d(TAG, "Stationary heartbeat cancelled")
-    }
-
-    private fun pendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, StationaryHeartbeatReceiver::class.java).apply {
-            setPackage(context.packageName)
-        }
-        return PendingIntent.getBroadcast(
-            context,
-            REQUEST_CODE,
-            intent,
-            PendingIntent.FLAG_IMMUTABLE
-        )
-    }
+    fun cancel(context: Context) = alarm.cancel(context)
 }

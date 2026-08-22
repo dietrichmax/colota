@@ -108,6 +108,9 @@ class LocationForegroundServiceTest {
         every { LocationServiceModule.sendProfileSwitchEvent(any(), any()) } returns true
 
         mockkObject(BatteryRecoveryScheduler)
+        mockkObject(GeofenceHeartbeatScheduler)
+        every { GeofenceHeartbeatScheduler.schedule(any(), any()) } just Runs
+        every { GeofenceHeartbeatScheduler.cancel(any()) } just Runs
         every { BatteryRecoveryScheduler.schedule(any()) } just Runs
         every { BatteryRecoveryScheduler.cancel(any()) } just Runs
 
@@ -131,6 +134,7 @@ class LocationForegroundServiceTest {
         unmockkObject(PayloadBuilder)
         unmockkObject(AppLogger)
         unmockkObject(BatteryRecoveryScheduler)
+        unmockkObject(GeofenceHeartbeatScheduler)
         unmockkStatic(android.os.Looper::class)
     }
 
@@ -2946,6 +2950,7 @@ class LocationForegroundServiceTest {
         advanceTimeBy(1_000)
 
         verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify { GeofenceHeartbeatScheduler.schedule(any(), 15 * 60_000L) }
     }
 
     @Test
@@ -2984,6 +2989,7 @@ class LocationForegroundServiceTest {
         advanceTimeBy(1_000)
 
         verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify { GeofenceHeartbeatScheduler.schedule(any(), 15 * 60_000L) }
     }
 
     @Test
@@ -3015,19 +3021,116 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `startHeartbeat waits a full interval when restoring a zone`() = runServiceTest {
-        // Every service restart restores the zone. Recording here would add a duplicate point,
-        // and POST one, for a stay the previous instance already covered.
+    fun `restoring arms for the time left on the interval, not a fresh one`() = runServiceTest {
+        // Restarting the clock would starve a device that respawns more often than the interval
         every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
         setField("currentZoneGeofence", homeGeofence)
 
-        invokeStartHeartbeat(15, firstDelayMs = 15 * 60_000L)
+        invokeStartHeartbeat(15, firstDelayMs = 5 * 60_000L)
         advanceTimeBy(1_000)
 
         verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify { GeofenceHeartbeatScheduler.schedule(any(), 5 * 60_000L) }
+    }
 
-        advanceTimeBy(15 * 60_000L)
+    @Test
+    fun `a fired heartbeat re-registers a location stream the cold start never made`() = runServiceTest {
+        // Zone exit is only ever seen on the stream, so without this the alarm keeps recording at a
+        // zone the user already left
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        every { dbHelper.getSetting(SettingsKeys.HEARTBEAT_LAST_AT) } returns
+            (System.currentTimeMillis() - 20 * 60_000L).toString()
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", geofence("Home", heartbeatEnabled = true))
+        setField("locationUpdateCallback", null)
+
+        invokeGeofenceHeartbeatFired()
+
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a fired heartbeat records and re-arms for the next interval`() = runServiceTest {
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        every { dbHelper.getSetting(SettingsKeys.HEARTBEAT_LAST_AT) } returns
+            (System.currentTimeMillis() - 20 * 60_000L).toString()
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", geofence("Home", heartbeatEnabled = true))
+
+        invokeGeofenceHeartbeatFired()
+        advanceTimeBy(1_000)
+
         verify(exactly = 1) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify { GeofenceHeartbeatScheduler.schedule(any(), 15 * 60_000L) }
+    }
+
+    @Test
+    fun `a fired heartbeat does not duplicate the point a restore just recorded`() = runServiceTest {
+        // A cold service restores the zone and records in onStartCommand before this action runs
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+        every { dbHelper.getSetting(SettingsKeys.HEARTBEAT_LAST_AT) } returns
+            System.currentTimeMillis().toString()
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", geofence("Home", heartbeatEnabled = true))
+
+        invokeGeofenceHeartbeatFired()
+        advanceTimeBy(1_000)
+
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify { GeofenceHeartbeatScheduler.schedule(any(), match { it > 14 * 60_000L }) }
+    }
+
+    @Test
+    fun `cancelling clears an alarm a previous process left pending`() = runServiceTest {
+        // A fresh instance reads as unarmed, but the alarm outlives the process that set it
+        setField("heartbeatArmed", false)
+
+        invokeCancelHeartbeat()
+
+        verify { GeofenceHeartbeatScheduler.cancel(any()) }
+    }
+
+    @Test
+    fun `a stale heartbeat stops a service the user already stopped`() = runServiceTest {
+        setField("heartbeatArmed", true)
+        setField("insidePauseZone", false)
+        setField("currentZoneGeofence", null)
+
+        invokeGeofenceHeartbeatFired(shouldBeTracking = false)
+
+        verify { GeofenceHeartbeatScheduler.cancel(any()) }
+        // startForeground already ran, so without this a dead service keeps its notification
+        verify { service.stopSelf() }
+    }
+
+    @Test
+    fun `a bail-out repairs the stream when no hold explains its absence`() = runServiceTest {
+        // A latched zone with no geofence and no stream would otherwise never recover
+        setField("heartbeatArmed", true)
+        setField("insidePauseZone", true)
+        setField("currentZoneGeofence", null)
+        setField("locationUpdateCallback", null)
+
+        invokeGeofenceHeartbeatFired(shouldBeTracking = true)
+
+        verify(exactly = 0) { service.stopSelf() }
+        verify { locationProvider.requestLocationUpdates(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `an old zone's heartbeat never stops a service the user still wants`() = runServiceTest {
+        // A wifi hold makes a healthy paused service look streamless
+        setField("heartbeatArmed", true)
+        setField("insidePauseZone", true)
+        setField("isWifiPaused", true)
+        setField("currentZoneGeofence", geofence("Neighbourhood", heartbeatEnabled = false))
+
+        invokeGeofenceHeartbeatFired(shouldBeTracking = true)
+
+        verify { GeofenceHeartbeatScheduler.cancel(any()) }
+        verify(exactly = 0) { service.stopSelf() }
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
 
@@ -3114,6 +3217,20 @@ class LocationForegroundServiceTest {
         )
         method.isAccessible = true
         method.invoke(service, intervalMinutes, firstDelayMs)
+    }
+
+    private fun invokeCancelHeartbeat() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("cancelHeartbeat")
+        method.isAccessible = true
+        method.invoke(service)
+    }
+
+    private fun invokeGeofenceHeartbeatFired(shouldBeTracking: Boolean = true) {
+        val method = LocationForegroundService::class.java.getDeclaredMethod(
+            "handleGeofenceHeartbeatFired", Boolean::class.java
+        )
+        method.isAccessible = true
+        method.invoke(service, shouldBeTracking)
     }
 
     private fun invokeRecordHeartbeatLocation() = runBlocking {
