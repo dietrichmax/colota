@@ -516,6 +516,44 @@ class LocationServiceModuleTest {
     }
 
     // ========================================================================
+    // startService — records a recovery start in the native log
+    // ========================================================================
+
+    /**
+     * The JS reconciler's own logging never reaches the exported log, so this line is the
+     * only evidence a report will carry that the service had died while tracking was on.
+     */
+    @Test
+    fun `startService records that it is reviving a service which died while tracking was on`() {
+        val (module, dbHelper) = createModuleWithDeps()
+        every { LocationForegroundService.isRunning } returns false
+        every { dbHelper.getSetting("tracking_enabled", "false") } returns "true"
+        mockkConstructor(Intent::class)
+        try {
+            module.startService(JavaOnlyMap(), mockk(relaxed = true))
+
+            verify { AppLogger.w(any(), "Starting a service that died while tracking was on") }
+        } finally {
+            unmockkConstructor(Intent::class)
+        }
+    }
+
+    @Test
+    fun `startService stays quiet on an ordinary user start`() {
+        val (module, dbHelper) = createModuleWithDeps()
+        every { LocationForegroundService.isRunning } returns false
+        every { dbHelper.getSetting("tracking_enabled", "false") } returns "false"
+        mockkConstructor(Intent::class)
+        try {
+            module.startService(JavaOnlyMap(), mockk(relaxed = true))
+
+            verify(exactly = 0) { AppLogger.w(any(), "Starting a service that died while tracking was on") }
+        } finally {
+            unmockkConstructor(Intent::class)
+        }
+    }
+
+    // ========================================================================
     // isServiceRunning
     // ========================================================================
 

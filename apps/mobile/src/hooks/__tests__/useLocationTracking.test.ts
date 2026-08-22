@@ -12,18 +12,22 @@ const mockStart = jest.fn().mockResolvedValue(undefined)
 const mockStop = jest.fn()
 const mockGetMostRecentLocation = jest.fn().mockResolvedValue(null)
 const mockIsTrackingActive = jest.fn().mockResolvedValue(false)
+const mockIsServiceRunning = jest.fn().mockResolvedValue(true)
 
 jest.mock("../../services/NativeLocationService", () => ({
   start: (...args: any[]) => mockStart(...args),
   stop: (...args: any[]) => mockStop(...args),
   getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args),
-  isTrackingActive: (...args: any[]) => mockIsTrackingActive(...args)
+  isTrackingActive: (...args: any[]) => mockIsTrackingActive(...args),
+  isServiceRunning: (...args: any[]) => mockIsServiceRunning(...args)
 }))
 
 // Mock permissions
 const mockEnsurePermissions = jest.fn().mockResolvedValue(true)
+const mockCheckPermissions = jest.fn().mockResolvedValue({ location: true, background: true, notifications: true })
 jest.mock("../../services/LocationServicePermission", () => ({
-  ensurePermissions: (...args: any[]) => mockEnsurePermissions(...args)
+  ensurePermissions: (...args: any[]) => mockEnsurePermissions(...args),
+  checkPermissions: (...args: any[]) => mockCheckPermissions(...args)
 }))
 
 // Mock NativeEventEmitter as a class
@@ -43,8 +47,13 @@ import { useLocationTracking } from "../useLocationTracking"
 
 beforeEach(() => {
   jest.clearAllMocks()
+  // clearAllMocks keeps implementations, so restore the defaults each test explicitly overrides
+  mockIsTrackingActive.mockResolvedValue(false)
+  mockIsServiceRunning.mockResolvedValue(true)
+  mockCheckPermissions.mockResolvedValue({ location: true, background: true, notifications: true })
   jest.spyOn(console, "log").mockImplementation()
   jest.spyOn(console, "error").mockImplementation()
+  jest.spyOn(console, "warn").mockImplementation()
 })
 
 afterEach(() => {
@@ -241,6 +250,21 @@ describe("useLocationTracking", () => {
 
       expect(result.current.tracking).toBe(true)
     })
+
+    // Hydration reads settings from SQLite and reconnects in the same pass, before the hook's
+    // settings ref has caught up - restarting on the ref would configure the service from defaults.
+    it("restarts a dead service with the settings it was handed, not the stale ref", async () => {
+      mockIsServiceRunning.mockResolvedValue(false)
+      const stored = { ...DEFAULT_SETTINGS, interval: 42 }
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      await act(async () => {
+        await result.current.reconnect(stored)
+      })
+
+      expect(mockStart).toHaveBeenCalledWith(expect.objectContaining({ interval: 42 }))
+    })
   })
 
   describe("AppState foreground sync", () => {
@@ -313,6 +337,121 @@ describe("useLocationTracking", () => {
       })
 
       expect(result.current.coords?.latitude).toBe(48.1)
+    })
+
+    /**
+     * The #444 case: the user still wants tracking and the UI still shows it, but Android killed
+     * the service. Nothing recorded until the user noticed and toggled Stop/Start by hand.
+     */
+    it("restarts the service when tracking is on but the service died", async () => {
+      mockIsTrackingActive.mockResolvedValue(true)
+      mockIsServiceRunning.mockResolvedValue(true)
+      mockGetMostRecentLocation.mockResolvedValue(null)
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      await act(async () => {
+        await result.current.startTracking(DEFAULT_SETTINGS)
+      })
+      expect(mockStart).toHaveBeenCalledTimes(1)
+
+      mockIsServiceRunning.mockResolvedValue(false)
+      await act(async () => {
+        await appStateCallback("active")
+      })
+
+      expect(mockStart).toHaveBeenCalledTimes(2)
+      // A resume must never replay the disclosure or the battery/notification dialogs
+      expect(mockEnsurePermissions).toHaveBeenCalledTimes(1)
+      expect(result.current.tracking).toBe(true)
+    })
+
+    it("reconnects and restarts when the service died while the app was closed", async () => {
+      mockIsTrackingActive.mockResolvedValue(true)
+      mockIsServiceRunning.mockResolvedValue(false)
+      mockGetMostRecentLocation.mockResolvedValue(null)
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      await act(async () => {
+        await appStateCallback("active")
+      })
+
+      expect(mockStart).toHaveBeenCalledTimes(1)
+      expect(mockEnsurePermissions).not.toHaveBeenCalled()
+      expect(result.current.tracking).toBe(true)
+    })
+
+    it("leaves a live service alone", async () => {
+      mockIsTrackingActive.mockResolvedValue(true)
+      mockIsServiceRunning.mockResolvedValue(true)
+      mockGetMostRecentLocation.mockResolvedValue(null)
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      await act(async () => {
+        await result.current.startTracking(DEFAULT_SETTINGS)
+      })
+
+      await act(async () => {
+        await appStateCallback("active")
+      })
+
+      expect(mockStart).toHaveBeenCalledTimes(1)
+      expect(result.current.tracking).toBe(true)
+    })
+
+    // A bridge failure says nothing about the service - restarting on it would double-start.
+    /**
+     * Hydration and the foreground handler both reconcile on app open. Without a guard both
+     * observe the service still down while the first start is in flight, and the service gets
+     * a second onStartCommand it never needed. Caught on a device, not by the single-path tests.
+     */
+    it("starts a dead service only once when both reconcile paths fire together", async () => {
+      mockIsTrackingActive.mockResolvedValue(true)
+      mockIsServiceRunning.mockResolvedValue(false)
+      mockGetMostRecentLocation.mockResolvedValue(null)
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      await act(async () => {
+        await Promise.all([result.current.reconnect(DEFAULT_SETTINGS), appStateCallback("active")])
+      })
+
+      expect(mockStart).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not restart when liveness is unknown", async () => {
+      mockIsTrackingActive.mockResolvedValue(true)
+      mockIsServiceRunning.mockResolvedValue(null)
+      mockGetMostRecentLocation.mockResolvedValue(null)
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      await act(async () => {
+        await result.current.startTracking(DEFAULT_SETTINGS)
+      })
+
+      await act(async () => {
+        await appStateCallback("active")
+      })
+
+      expect(mockStart).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not restart a dead service when location permission is gone", async () => {
+      mockIsTrackingActive.mockResolvedValue(true)
+      mockIsServiceRunning.mockResolvedValue(false)
+      mockCheckPermissions.mockResolvedValue({ location: false, background: false, notifications: true })
+      mockGetMostRecentLocation.mockResolvedValue(null)
+
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+
+      await act(async () => {
+        await appStateCallback("active")
+      })
+
+      expect(mockStart).not.toHaveBeenCalled()
     })
 
     it("does nothing when transitioning to background", async () => {

@@ -180,7 +180,9 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
           }
 
           logger.debug("[TrackingContext] Re-syncing UI with active background service")
-          internalReconnect()
+          // Pass the settings we just parsed: the hook's ref still holds the defaults until
+          // the next render, and a restart from here would start the service configured wrong.
+          internalReconnect(mergedSettings)
 
           // Restore active profile name from the running service
           const profileName = await NativeLocationService.getActiveProfileName()

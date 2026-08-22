@@ -8,7 +8,7 @@ import { AppState, NativeEventEmitter, NativeModules } from "react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { LocationCoords, Settings, LocationTrackingResult } from "../types/global"
-import { ensurePermissions } from "../services/LocationServicePermission"
+import { ensurePermissions, checkPermissions } from "../services/LocationServicePermission"
 import { SERVICE_RESTART_DELAY_MS, RESTART_DEBOUNCE_MS } from "../constants"
 import { logger } from "../utils/logger"
 
@@ -39,6 +39,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
   const settingsRef = useRef<Settings>(settings)
   const isTrackingRef = useRef(false)
   const restartingRef = useRef(false)
+  const revivingRef = useRef(false)
   const restartQueuedRef = useRef(false)
   const listenerRef = useRef<any>(null)
 
@@ -251,11 +252,43 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
   )
 
   /**
-   * Reconnects React state to an already-running native service.
-   * Used after app restart when tracking_enabled is true in the DB.
-   * Does NOT request permissions or restart the service.
+   * Restarts the service when the user wants tracking but no service is alive.
+   *
+   * Deliberately skips ensurePermissions: the disclosure is already gated on the location
+   * grants, but the notification request and the battery-exemption dialog are not, so
+   * reusing it would pop system dialogs every time the app is foregrounded.
    */
-  const reconnect = useCallback(async () => {
+  const reviveIfDead = useCallback(async (settings: Settings) => {
+    // Hydration and the foreground handler both reach here on app open, and both would see
+    // the service still down while the first start is in flight.
+    if (revivingRef.current) return
+    revivingRef.current = true
+
+    try {
+      const running = await NativeLocationService.isServiceRunning()
+      if (running !== false) return // null = unknown, not dead
+
+      const perms = await checkPermissions()
+      if (!perms.location) {
+        logger.warn("[useLocationTracking] Service is dead but location permission is gone, not restarting")
+        return
+      }
+
+      logger.warn("[useLocationTracking] Tracking is on but the service is not running - restarting")
+      await NativeLocationService.start(settings)
+    } catch (error) {
+      logger.error("[useLocationTracking] Restart of a dead service failed:", error)
+    } finally {
+      revivingRef.current = false
+    }
+  }, [])
+
+  /**
+   * Reconnects React state to a native service that should be running.
+   * Used after app restart when tracking_enabled is true in the DB.
+   * Does NOT request permissions, but does restart the service if it died.
+   */
+  const reconnect = useCallback(async (settings?: Settings) => {
     if (isTrackingRef.current) {
       logger.debug("[useLocationTracking] Already tracking, skip reconnect")
       return
@@ -263,6 +296,8 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
 
     logger.debug("[useLocationTracking] Reconnecting to active service")
     setTracking(true)
+
+    await reviveIfDead(settings ?? settingsRef.current)
 
     try {
       const latest = await NativeLocationService.getMostRecentLocation()
@@ -287,7 +322,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
   /**
    * Syncs tracking state and coords when app returns to foreground.
    * Detects external start/stop (e.g. app shortcuts) by comparing UI state
-   * against the DB's tracking_enabled flag.
+   * against the DB's tracking_enabled flag, and restarts a service the system killed.
    */
   useEffect(() => {
     const subscription = AppState.addEventListener("change", async (nextState) => {
@@ -309,7 +344,10 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
         }
         setTracking(false)
       } else if (isTrackingRef.current && serviceActive) {
-        // Already in sync - refresh coords since events are suppressed while backgrounded
+        // Intent and UI agree, but the service itself may have been killed meanwhile
+        await reviveIfDead(settingsRef.current)
+
+        // Refresh coords since events are suppressed while backgrounded
         NativeLocationService.getMostRecentLocation()
           .then((latest) => {
             if (latest) {
@@ -333,7 +371,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
     })
 
     return () => subscription.remove()
-  }, [reconnect])
+  }, [reconnect, reviveIfDead])
 
   /**
    * Cleanup on unmount

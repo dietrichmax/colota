@@ -298,6 +298,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     fun startService(config: ReadableMap, promise: Promise) {
         AppLogger.d(TAG, "Starting Service with config")
 
+        // JS logging never reaches the exported log, so record here that this start is a
+        // recovery - otherwise a report of "it stopped recording" shows the restart but
+        // never says the service had died while the user still wanted tracking.
+        if (!LocationForegroundService.isRunning &&
+            dbHelper.getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
+        ) {
+            AppLogger.w(TAG, "Starting a service that died while tracking was on")
+        }
+
         val serviceConfig = ServiceConfig.fromReadableMap(config, dbHelper)
         val serviceIntent = Intent(reactApplicationContext, LocationForegroundService::class.java)
         serviceConfig.toIntent(serviceIntent)
