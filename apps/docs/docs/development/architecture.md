@@ -155,6 +155,17 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Stationary detection - pauses GPS after 60s without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). Suspended during entry delay and inside geofence pause zones.
 - Queuing data for server sync
 
+**Alarms go through a receiver, not the service.** Each scheduler targets a `BroadcastReceiver`
+that then starts the service. That keeps the PendingIntent a plain explicit broadcast, and the
+foreground-service start runs inside the alarm's temporary allowlist window.
+
+**Intent vs liveness.** The `tracking_enabled` setting records that the user wants tracking and
+deliberately survives process death and reboot. Whether a service exists right now is
+`LocationForegroundService.isRunning`. Anything asking "is tracking alive" must read `isRunning`,
+because a service the system killed leaves the flag true. Recovery is layered: the app reconciles
+the two whenever it reaches the foreground, and `TrackingWatchdogScheduler` covers the window while
+the app stays closed.
+
 ### NotificationHelper
 
 Handles all notification logic for the tracking service:
@@ -164,6 +175,7 @@ Handles all notification logic for the tracking service:
 - Status text generation (coordinates, sync status, pause zones)
 - Throttled updates (10s minimum interval, 2m minimum movement)
 - Deduplication to avoid unnecessary notification redraws
+- Stopped notification, posted on a deliberate stop and by the tracking watchdog when Android refuses a background restart, in which case tapping it opens the app so the reconciler can resume
 
 ### DatabaseHelper
 
@@ -263,6 +275,10 @@ For backups, two `internal` methods support the export/import flow without expos
 | Module | Purpose |
 | --- | --- |
 | `LocationBootReceiver` | Auto-restarts tracking after device reboot |
+| `AlarmScheduler` | Shared one-shot wake-up alarm used by the geofence heartbeat, the stationary heartbeat and the tracking watchdog. `setAndAllowWhileIdle` fires through Doze without `SCHEDULE_EXACT_ALARM`, at the cost of being inexact, so every interval built on it is a minimum and not a schedule. Floors the delay at 60s, and each alarm needs its own request code. Whoever handles a tick re-arms the next one |
+| `GeofenceHeartbeatScheduler` / `GeofenceHeartbeatReceiver` | Wakes the service for the zone heartbeat while paused in a geofence. Replaced a coroutine delay, which stopped counting while the phone slept |
+| `TrackingWatchdogReceiver` | Fired by `TrackingWatchdogScheduler` - restarts the service when the user still wants tracking but none is running. Where Android refuses a background start it posts a resume notification instead, and records when notifications are denied too |
+| `TrackingWatchdogScheduler` | Arms a 15min `setAndAllowWhileIdle` alarm for as long as tracking is wanted, re-armed by each tick and cancelled on stop. Distinct from the in-service pause watchdog, which dies with the service it would have to watch. Doze defers these alarms, so the interval is a minimum |
 | `MotionStateDetector` / `RawSensorMotionDetector` | Single detector behind a `MotionState { STATIONARY, MOVING }` interface. Backed by 30s-batched accelerometer variance (hysteresis: > 0.30 m/s² for 3s -> MOVING; < 0.15 m/s² for the configured per-zone dwell -> STATIONARY) and parallel `TYPE_SIGNIFICANT_MOTION` as a fast-path for sharp events. Fans out to both motionless-pause and stationary-profile exit consumers via one callback site in `LocationForegroundService.onMotionStateChange`. |
 | `DeviceInfoHelper` | Device metadata and battery status with caching |
 | `FileOperations` | File I/O, sharing via FileProvider, and clipboard access |
@@ -378,7 +394,7 @@ Supporting utilities in `mapUtils.ts`:
 
 | Hook                  | Purpose                                                                                  |
 | --------------------- | ---------------------------------------------------------------------------------------- |
-| `useLocationTracking` | Manages the foreground service lifecycle, native event subscriptions, and location state |
+| `useLocationTracking` | Manages the foreground service lifecycle, native event subscriptions, and location state. On app foreground it reconciles the user's intent against real service liveness and restarts a service that died |
 | `useTheme`            | Provides theme colors, mode, and toggle from ThemeProvider context                       |
 | `useAutoSave`         | Debounced auto-save pattern for settings screens                                         |
 | `useTimeout`          | Managed timeout with automatic cleanup on unmount                                        |

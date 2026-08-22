@@ -9,6 +9,7 @@ sidebar_position: 4
 - Go to **Settings > Apps > Colota > Battery** and select **Unrestricted**
 - Verify location permissions are set to **Allow all the time**
 - Grant notification permission if you want to see tracking status
+- If the notification disappeared while the app still shows tracking on, Android killed the service. Opening the app restarts it. With battery set to **Unrestricted** it also restarts on its own, usually within 15 to 30 minutes
 
 ## Tracking doesn't start after reboot
 
