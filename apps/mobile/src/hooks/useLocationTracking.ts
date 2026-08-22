@@ -258,7 +258,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    * grants, but the notification request and the battery-exemption dialog are not, so
    * reusing it would pop system dialogs every time the app is foregrounded.
    */
-  const reviveIfDead = useCallback(async (settings: Settings) => {
+  const reviveIfDead = useCallback(async (startSettings: Settings) => {
     // Hydration and the foreground handler both reach here on app open, and both would see
     // the service still down while the first start is in flight.
     if (revivingRef.current) return
@@ -275,7 +275,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
       }
 
       logger.warn("[useLocationTracking] Tracking is on but the service is not running - restarting")
-      await NativeLocationService.start(settings)
+      await NativeLocationService.start(startSettings)
     } catch (error) {
       logger.error("[useLocationTracking] Restart of a dead service failed:", error)
     } finally {
@@ -288,7 +288,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    * Used after app restart when tracking_enabled is true in the DB.
    * Does NOT request permissions, but does restart the service if it died.
    */
-  const reconnect = useCallback(async (settings?: Settings) => {
+  const reconnect = useCallback(async (startSettings?: Settings) => {
     if (isTrackingRef.current) {
       logger.debug("[useLocationTracking] Already tracking, skip reconnect")
       return
@@ -297,7 +297,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
     logger.debug("[useLocationTracking] Reconnecting to active service")
     setTracking(true)
 
-    await reviveIfDead(settings ?? settingsRef.current)
+    await reviveIfDead(startSettings ?? settingsRef.current)
 
     try {
       const latest = await NativeLocationService.getMostRecentLocation()
