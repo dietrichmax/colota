@@ -109,6 +109,9 @@ class LocationForegroundServiceTest {
 
         mockkObject(BatteryRecoveryScheduler)
         mockkObject(GeofenceHeartbeatScheduler)
+        mockkObject(TrackingWatchdogScheduler)
+        every { TrackingWatchdogScheduler.schedule(any()) } just Runs
+        every { TrackingWatchdogScheduler.cancel(any()) } just Runs
         every { GeofenceHeartbeatScheduler.schedule(any(), any()) } just Runs
         every { GeofenceHeartbeatScheduler.cancel(any()) } just Runs
         every { BatteryRecoveryScheduler.schedule(any()) } just Runs
@@ -135,6 +138,7 @@ class LocationForegroundServiceTest {
         unmockkObject(AppLogger)
         unmockkObject(BatteryRecoveryScheduler)
         unmockkObject(GeofenceHeartbeatScheduler)
+        unmockkObject(TrackingWatchdogScheduler)
         unmockkStatic(android.os.Looper::class)
     }
 
@@ -3281,4 +3285,107 @@ class LocationForegroundServiceTest {
     private val homeGeofence = geofence("Home", 52.50, 13.40, 150.0)
     private val officeGeofence = geofence("Office", 48.14, 11.58, 200.0)
     private val parkGeofence = geofence("Park", 52.51, 13.35, 100.0)
+
+    // ========================================================================
+    // onStartCommand - a lightweight wake reaching a cold service
+    // ========================================================================
+
+    /** A fresh instance: `config` is what onStartCommand uses to tell cold from warm. */
+    private fun makeCold() {
+        setField("config", null)
+        every { dbHelper.getAllSettings() } returns mapOf(SettingsKeys.TRACKING_ENABLED to "true")
+        every { notificationHelper.getInitialStatus(any(), any(), any()) } returns "status"
+        every { notificationHelper.buildTitle(any()) } returns "Colota Tracking"
+        every { notificationHelper.buildTrackingNotification(any(), any()) } returns mockk(relaxed = true)
+        every { service.startForeground(any<Int>(), any(), any<Int>()) } returns Unit
+    }
+
+    private fun trackingOff() {
+        every { dbHelper.getAllSettings() } returns mapOf(SettingsKeys.TRACKING_ENABLED to "false")
+    }
+
+    private fun intentFor(action: String?): Intent = mockk(relaxed = true) {
+        every { this@mockk.action } returns action
+        every { getStringExtra(any()) } returns null
+        every { extras } returns null
+    }
+
+    /** Without this, the tracking notification sits over a service that records nothing. */
+    @Test
+    fun `a lightweight wake on a cold service starts tracking in full`() = runServiceTest {
+        makeCold()
+
+        service.onStartCommand(intentFor(LocationForegroundService.ACTION_RECHECK_ZONE), 0, 1)
+        advanceUntilIdle()
+
+        verify { service["handleStart"]() }
+        verify(exactly = 0) { service["handleZoneRecheckAction"]() }
+        verify { dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "true") }
+    }
+
+    @Test
+    fun `a lightweight action on a live service runs only its own handler`() = runServiceTest {
+        makeCold()
+        injectDependencies() // restores a non-null config, ie a warm instance
+
+        service.onStartCommand(intentFor(LocationForegroundService.ACTION_RECHECK_ZONE), 0, 1)
+        advanceUntilIdle()
+
+        verify { service["handleZoneRecheckAction"]() }
+        verify(exactly = 0) { service["handleStart"]() }
+    }
+
+    /** Promoting a stop into a start would resurrect tracking the user just ended. */
+    @Test
+    fun `a stop request on a cold service is never promoted`() = runServiceTest {
+        makeCold()
+
+        service.onStartCommand(intentFor(LocationForegroundService.ACTION_STOP_REQUEST), 0, 1)
+        advanceUntilIdle()
+
+        verify(exactly = 0) { service["handleStart"]() }
+        verify { dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "false") }
+    }
+
+    /** A stale alarm outliving a user stop must not leave a half-built service behind. */
+    @Test
+    fun `a lightweight wake on a cold service with tracking off stops it`() = runServiceTest {
+        makeCold()
+        trackingOff()
+
+        val result = service.onStartCommand(
+            intentFor(LocationForegroundService.ACTION_STATIONARY_HEARTBEAT), 0, 1
+        )
+        advanceUntilIdle()
+
+        assertEquals(android.app.Service.START_NOT_STICKY, result)
+        verify { service.stopSelf() }
+        verify(exactly = 0) { dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, any()) }
+    }
+
+    /** Sync Now with tracking off is supported, but the service it creates must not linger. */
+    @Test
+    fun `a manual flush with tracking off flushes and then stops`() = runServiceTest {
+        makeCold()
+        trackingOff()
+
+        service.onStartCommand(intentFor(LocationForegroundService.ACTION_MANUAL_FLUSH), 0, 1)
+        advanceUntilIdle()
+
+        coVerify { syncManager.manualFlush() }
+        verify { service.stopSelf() }
+    }
+
+    @Test
+    fun `a manual flush while tracking leaves the service running`() = runServiceTest {
+        makeCold()
+        injectDependencies()
+
+        service.onStartCommand(intentFor(LocationForegroundService.ACTION_MANUAL_FLUSH), 0, 1)
+        advanceUntilIdle()
+
+        coVerify { syncManager.manualFlush() }
+        verify(exactly = 0) { service.stopSelf() }
+    }
+
 }

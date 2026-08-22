@@ -272,15 +272,29 @@ class LocationForegroundService : Service() {
             return START_NOT_STICKY
         }
 
-        val action = intent?.action
+        val requestedAction = intent?.action
+        // Captured before the config load below, which is what makes an instance warm.
+        val cold = !::config.isInitialized
+
+        // A lightweight wake can be the first thing a fresh instance sees. Running only its
+        // handler would leave a tracking notification over a service with no GPS stream and
+        // no sync, so run the full start instead.
+        val promoted = cold && shouldBeTracking &&
+            requestedAction in LIGHTWEIGHT_ACTIONS &&
+            requestedAction != ACTION_STOP_REQUEST
+        val action = if (promoted) null else requestedAction
         val isLightweight = action in LIGHTWEIGHT_ACTIONS
 
-        AppLogger.d(TAG, "onStartCommand: action=${action ?: "START"}, lightweight=$isLightweight")
+        AppLogger.d(
+            TAG,
+            "onStartCommand: action=${requestedAction ?: "START"}, lightweight=$isLightweight" +
+                if (promoted) " (promoted to full start)" else ""
+        )
 
         // Skip config reload for lightweight actions, but if the service was
         // killed and restarted by one, load from DB so SyncManager has an endpoint.
         if (!isLightweight) {
-            loadConfigFromIntent(intent)
+            loadConfigFromIntent(if (promoted) null else intent)
         } else if (!::config.isInitialized) {
             loadConfigFromIntent(null)
         }
@@ -344,6 +358,16 @@ class LocationForegroundService : Service() {
             return START_NOT_STICKY
         }
 
+        // A stale alarm can wake a fresh instance after the user stopped tracking. Its handler
+        // would find nothing to do and nothing would stop the service it just created.
+        if (cold && isLightweight && !shouldBeTracking &&
+            action != ACTION_STOP_REQUEST && action != ACTION_MANUAL_FLUSH
+        ) {
+            AppLogger.d(TAG, "Lightweight wake on a cold service with tracking off - stopping")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         if (!isLightweight) {
             startTrackingHeartbeatLogger()
             dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
@@ -357,11 +381,11 @@ class LocationForegroundService : Service() {
             ACTION_REFRESH_NOTIFICATION -> handleRefreshNotification()
             ACTION_RECHECK_ZONE -> handleZoneRecheckAction()
             ACTION_RECHECK_PROFILES -> handleRecheckProfiles()
-            ACTION_MANUAL_FLUSH -> handleManualFlush()
+            ACTION_MANUAL_FLUSH -> handleManualFlush(stopAfter = !shouldBeTracking)
             ACTION_STATIONARY_HEARTBEAT -> handleStationaryHeartbeatFired()
             ACTION_GEOFENCE_HEARTBEAT -> handleGeofenceHeartbeatFired(shouldBeTracking)
             ACTION_STOP_REQUEST -> stopForegroundServiceWithReason(
-                intent.getStringExtra(EXTRA_STOP_REASON) ?: "Stopped"
+                intent?.getStringExtra(EXTRA_STOP_REASON) ?: "Stopped"
             )
             else -> handleStart()
         }
@@ -393,9 +417,11 @@ class LocationForegroundService : Service() {
         }
     }
 
-    private fun handleManualFlush() {
+    /** [stopAfter] when the flush is the only reason this service exists, so it doesn't linger. */
+    private fun handleManualFlush(stopAfter: Boolean) {
         serviceScope?.launch {
             syncManager.manualFlush()
+            if (stopAfter) stopSelf()
         }
     }
 
