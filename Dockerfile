@@ -6,6 +6,7 @@ COPY . .
 RUN npm run build
 
 FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:ffab599740d4aaa66029d02b9e6d3de4f622fefb7410081c5ef69c86430f364d
+LABEL org.opencontainers.image.source="https://github.com/dietrichmax/colota-forwarder"
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/dist/server.cjs ./
