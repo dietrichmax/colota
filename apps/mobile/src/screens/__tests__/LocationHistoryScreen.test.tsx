@@ -1,6 +1,9 @@
 import React from "react"
 import { render, fireEvent, waitFor } from "@testing-library/react-native"
 
+// Every locations array the map is handed, so a test can assert the identity survives a save
+const mockMapLocationsSeen: any[] = []
+
 // --- Mocks ---
 
 jest.mock("../../services/NativeLocationService", () => ({
@@ -15,7 +18,8 @@ jest.mock("../../services/NativeLocationService", () => ({
     deleteLocationsInRange: jest.fn().mockResolvedValue(0),
     deleteLocationsByIds: jest.fn().mockResolvedValue(0),
     getBoundaryOverrides: jest.fn().mockResolvedValue([]),
-    addBoundaryOverrides: jest.fn().mockResolvedValue(undefined)
+    addBoundaryOverrides: jest.fn().mockResolvedValue(undefined),
+    updateLocationNote: jest.fn().mockResolvedValue(undefined)
   }
 }))
 
@@ -94,10 +98,19 @@ jest.mock("../../components/features/inspector/CalendarPicker", () => {
 
 jest.mock("../../components/features/inspector/TrackMap", () => {
   const R = require("react")
-  const { View, Pressable } = require("react-native")
+  const { View, Pressable, Text } = require("react-native")
   return {
-    TrackMap: (props: any) =>
-      R.createElement(View, { testID: "TrackMap" }, [
+    TrackMap: (props: any) => {
+      mockMapLocationsSeen.push(props.locations)
+      return R.createElement(View, { testID: "TrackMap" }, [
+        R.createElement(Text, { key: "o", testID: "TrackMap-overrides" }, JSON.stringify(props.noteOverrides ?? {})),
+        props.onPointNoteChange
+          ? R.createElement(Pressable, {
+              key: "n",
+              testID: "trigger-point-note",
+              onPress: () => props.onPointNoteChange(1, "lunch")
+            })
+          : null,
         props.onPointDelete
           ? R.createElement(Pressable, {
               key: "d",
@@ -120,6 +133,7 @@ jest.mock("../../components/features/inspector/TrackMap", () => {
             })
           : null
       ])
+    }
   }
 })
 
@@ -135,8 +149,16 @@ jest.mock("../../components/features/inspector/TripList", () => {
         { testID: "TripList" },
         props.onMerge
           ? R.createElement(Pressable, {
+              key: "m",
               testID: "trigger-trip-merge",
               onPress: () => props.onMerge([TRIP_A, TRIP_B])
+            })
+          : null,
+        props.onTripSelect
+          ? R.createElement(Pressable, {
+              key: "t",
+              testID: "trigger-trip-select",
+              onPress: () => props.onTripSelect(props.trips?.[0])
             })
           : null
       )
@@ -400,5 +422,70 @@ describe("LocationHistoryScreen", () => {
     fireEvent.press(getByText("Data"))
 
     expect(getByTestId("LocationTable")).toBeTruthy()
+  })
+})
+
+describe("LocationHistoryScreen - notes saved on the map", () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  /** The tabs unmount the map, so the screen has to hold the note and hand it back. */
+  it("passes a note saved this session back to the map", async () => {
+    ;(NativeLocationService.getLocationsByDateRange as jest.Mock).mockResolvedValueOnce(DAY_POINTS)
+    const { getByTestId } = render(<LocationHistoryScreen {...createProps()} />)
+    await waitFor(() => expect(NativeLocationService.getLocationsByDateRange).toHaveBeenCalled())
+
+    fireEvent.press(getByTestId("trigger-point-note"))
+
+    await waitFor(() => expect(getByTestId("TrackMap-overrides").props.children).toContain("lunch"))
+  })
+
+  /**
+   * Trip Detail renders the trip it is handed and has no way back to this screen's state, so a
+   * note saved here and then edited there would otherwise be overwritten from the stale base.
+   */
+  /**
+   * Merging notes into the map's locations would hand it a new array on every save, and the
+   * effect keyed on that array closes the open popup - the user would lose the field mid-edit.
+   */
+  it("does not hand the map a new locations array when a note is saved", async () => {
+    ;(NativeLocationService.getLocationsByDateRange as jest.Mock).mockResolvedValueOnce(DAY_POINTS)
+    const { getByTestId } = render(<LocationHistoryScreen {...createProps()} />)
+    await waitFor(() => expect(NativeLocationService.getLocationsByDateRange).toHaveBeenCalled())
+    const before = mockMapLocationsSeen[mockMapLocationsSeen.length - 1]
+
+    fireEvent.press(getByTestId("trigger-point-note"))
+    // Wait for the override to reach the map, so the re-render under test has actually happened
+    await waitFor(() => expect(getByTestId("TrackMap-overrides").props.children).toContain("lunch"))
+
+    expect(mockMapLocationsSeen[mockMapLocationsSeen.length - 1]).toBe(before)
+  })
+
+  it("hands Trip Detail the notes saved this session", async () => {
+    ;(segmentTrips as jest.Mock).mockReturnValue([{ ...DAY_TRIP, locations: DAY_POINTS }])
+    ;(NativeLocationService.getLocationsByDateRange as jest.Mock).mockResolvedValueOnce(DAY_POINTS)
+    const props = createProps()
+    const { getByTestId, getByText } = render(<LocationHistoryScreen {...props} />)
+    await waitFor(() => expect(NativeLocationService.getLocationsByDateRange).toHaveBeenCalled())
+
+    fireEvent.press(getByTestId("trigger-point-note"))
+    await waitFor(() => expect(NativeLocationService.updateLocationNote).toHaveBeenCalledWith(1, "lunch"))
+    fireEvent.press(getByText("Trips"))
+    fireEvent.press(getByTestId("trigger-trip-select"))
+
+    expect(props.navigation.navigate).toHaveBeenCalledWith(
+      "Trip Detail",
+      expect.objectContaining({
+        trip: expect.objectContaining({
+          locations: expect.arrayContaining([expect.objectContaining({ id: 1, note: "lunch" })])
+        }),
+        // Trip Detail's prev/next chevrons render straight out of this array, so an unmerged
+        // copy here is the same data loss one navigation step later
+        trips: expect.arrayContaining([
+          expect.objectContaining({
+            locations: expect.arrayContaining([expect.objectContaining({ id: 1, note: "lunch" })])
+          })
+        ])
+      })
+    )
   })
 })

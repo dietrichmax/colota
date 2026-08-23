@@ -26,12 +26,19 @@ jest.mock("../../utils/logger", () => ({
 // Exposes the point popup's split action without a real map
 jest.mock("../../components/features/inspector/TrackMap", () => {
   const R = require("react")
-  const { View, Pressable } = require("react-native")
+  const { View, Pressable, Text } = require("react-native")
   return {
     TrackMap: (props: any) =>
       R.createElement(
         View,
         { testID: "TrackMap" },
+        R.createElement(Text, { testID: "TrackMap-overrides" }, JSON.stringify(props.noteOverrides ?? {})),
+        props.onPointNoteChange
+          ? R.createElement(Pressable, {
+              testID: "trigger-point-note",
+              onPress: () => props.onPointNoteChange(props.locations?.[0]?.id, "lunch")
+            })
+          : null,
         props.onPointSplit
           ? [
               R.createElement(Pressable, {
@@ -232,5 +239,20 @@ describe("TripDetailScreen - split from the map", () => {
 
     await waitFor(() => expect(NativeLocationService.addBoundaryOverrides).toHaveBeenCalled())
     expect(props.navigation.goBack).not.toHaveBeenCalled()
+  })
+})
+
+describe("TripDetailScreen - notes saved on the map", () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  /** The map is unmounted when this screen is left, so a saved note has to live in the screen. */
+  it("hands a note saved this session back to the map", async () => {
+    const { getByTestId } = render(<TripDetailScreen {...makeProps(makeTrip(3))} />)
+    await act(async () => {})
+
+    fireEvent.press(getByTestId("trigger-point-note"))
+
+    await waitFor(() => expect(NativeLocationService.updateLocationNote).toHaveBeenCalledWith(1, "lunch"))
+    await waitFor(() => expect(getByTestId("TrackMap-overrides").props.children).toContain("lunch"))
   })
 })

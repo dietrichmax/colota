@@ -45,8 +45,17 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   })
   const [trackLocations, setTrackLocations] = useState<LocationCoords[]>([])
   // Note edits, kept out of trackLocations so a save doesn't hand the map a new array (which would
-  // re-render it). Used only by the Data tab; the map reads notes through its own overlay.
+  // close its popup). Applied wherever a location's note is shown: the table, the map and the
+  // trip handed to Trip Detail.
   const [noteOverrides, setNoteOverrides] = useState<Record<number, string | undefined>>({})
+  const withNotes = useCallback(
+    (locs: LocationCoords[]) =>
+      Object.keys(noteOverrides).length === 0
+        ? locs
+        : locs.map((l) => (l.id != null && l.id in noteOverrides ? { ...l, note: noteOverrides[l.id] } : l)),
+    [noteOverrides]
+  )
+
   const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, BoundaryAction>>(() => new Map())
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [fitVersion, setFitVersion] = useState(0)
@@ -183,11 +192,13 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   )
 
   /** Tap a trip card -> open detail screen */
+  // Trip Detail renders what it is handed, so notes saved this visit have to travel with it.
   const handleTripSelect = useCallback(
     (trip: Trip) => {
-      navigation.navigate("Trip Detail", { trip, trips })
+      const withSessionNotes = (t: Trip) => ({ ...t, locations: withNotes(t.locations) })
+      navigation.navigate("Trip Detail", { trip: withSessionNotes(trip), trips: trips.map(withSessionNotes) })
     },
-    [navigation, trips]
+    [navigation, trips, withNotes]
   )
 
   /** Export trips (all or single) */
@@ -382,14 +393,9 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
 
   const mapLocations = selectedTrip ? (selectedTrip.locations as LocationCoords[]) : trackLocations
 
-  // Apply note edits for the Data tab table only; the map reads notes via its own overlay.
-  const tableLocations = useMemo(
-    () =>
-      Object.keys(noteOverrides).length === 0
-        ? trackLocations
-        : trackLocations.map((l) => (l.id != null && l.id in noteOverrides ? { ...l, note: noteOverrides[l.id] } : l)),
-    [trackLocations, noteOverrides]
-  )
+  // The map gets the overrides as a prop rather than merged in here, because a new locations
+  // identity closes its open popup.
+  const tableLocations = useMemo(() => withNotes(trackLocations), [trackLocations, withNotes])
 
   const calendarPicker = useMemo(
     () => (
@@ -433,6 +439,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
           <TrackMap
             locations={mapLocations}
             colors={colors}
+            noteOverrides={noteOverrides}
             trips={selectedTrip ? undefined : trips}
             trackColor={colors.primary}
             fitVersion={fitVersion}

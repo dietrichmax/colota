@@ -7,6 +7,7 @@ import type { Trip } from "../../../../types/global"
 const mockFitBounds = jest.fn()
 const mockSetStop = jest.fn()
 const mockBuildSegments = jest.fn()
+const mockBuildPoints = jest.fn()
 
 jest.mock("../../map/mapUtils", () => {
   const actual = jest.requireActual("../../map/mapUtils")
@@ -15,6 +16,10 @@ jest.mock("../../map/mapUtils", () => {
     buildTrackSegmentsGeoJSON: (...args: any[]) => {
       mockBuildSegments(...args)
       return actual.buildTrackSegmentsGeoJSON(...args)
+    },
+    buildTrackPointsGeoJSON: (...args: any[]) => {
+      mockBuildPoints(...args)
+      return actual.buildTrackPointsGeoJSON(...args)
     }
   }
 })
@@ -249,5 +254,85 @@ describe("TrackMap trip coloring", () => {
     const options = mockBuildSegments.mock.calls[0][2]
     expect(options.locationColors).toEqual(["#trip1", "#trip1", "#track", "#track", "#track", "#trip2", "#trip2"])
     expect([...options.skipIndices].sort((a: number, b: number) => a - b)).toEqual([2, 3, 4, 5])
+  })
+})
+
+describe("TrackMap note overrides", () => {
+  /** The tabs unmount this map, so a note saved here used to come back stale. */
+  it("renders a note saved this session instead of the stored one", () => {
+    mockBuildPoints.mockClear()
+    render(
+      <TrackMap
+        locations={[{ ...loc(52.5, 13.4), id: 42, note: "stored" }] as any}
+        colors={colors}
+        trackColor="#000"
+        noteOverrides={{ 42: "saved this session" }}
+        onPointNoteChange={jest.fn()}
+      />
+    )
+
+    const [locationsPassed] = mockBuildPoints.mock.calls.at(-1)!
+    expect(locationsPassed[0].note).toBe("saved this session")
+  })
+
+  /** Cleared notes are stored as undefined, so the merge has to test presence, not truthiness. */
+  it("shows a note cleared this session as cleared, not as the stored text", () => {
+    mockBuildPoints.mockClear()
+    render(
+      <TrackMap
+        locations={[{ ...loc(52.5, 13.4), id: 42, note: "stored" }] as any}
+        colors={colors}
+        trackColor="#000"
+        noteOverrides={{ 42: undefined }}
+        onPointNoteChange={jest.fn()}
+      />
+    )
+
+    const [locationsPassed] = mockBuildPoints.mock.calls.at(-1)!
+    expect(locationsPassed[0].note).toBeUndefined()
+  })
+
+  /**
+   * Merging notes into locations instead would hand the map a new array on every save, and the
+   * effect that clears the popup on a day change would close it mid-edit.
+   */
+  it("keeps the popup open when a note is saved", () => {
+    const { getByTestId, queryByTestId } = render(
+      <TrackMap
+        locations={[{ ...loc(52.5, 13.4), id: 42, note: "" }] as any}
+        colors={colors}
+        trackColor="#000"
+        onPointNoteChange={jest.fn()}
+      />
+    )
+    fireEvent(getByTestId("track-points"), "press", {
+      nativeEvent: {
+        features: [
+          {
+            properties: { id: 42, color: "#000", speed: 0, timestamp: 1000, accuracy: 5, altitude: 10, note: "" },
+            geometry: { type: "Point", coordinates: [13.4, 52.5] }
+          }
+        ]
+      }
+    })
+    fireEvent.changeText(getByTestId("popup-note-input"), "lunch")
+    fireEvent.press(getByTestId("popup-note-save"))
+
+    expect(queryByTestId("popup-note-input")).not.toBeNull()
+  })
+
+  it("leaves the stored note alone when nothing was edited", () => {
+    mockBuildPoints.mockClear()
+    render(
+      <TrackMap
+        locations={[{ ...loc(52.5, 13.4), id: 42, note: "stored" }] as any}
+        colors={colors}
+        trackColor="#000"
+        onPointNoteChange={jest.fn()}
+      />
+    )
+
+    const [locationsPassed] = mockBuildPoints.mock.calls.at(-1)!
+    expect(locationsPassed[0].note).toBe("stored")
   })
 })

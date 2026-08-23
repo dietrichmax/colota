@@ -58,6 +58,9 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   const trips: Trip[] = route.params.trips
   const tripColor = getTripColor(trip.index)
   const [deleting, setDeleting] = useState(false)
+  // The map reads a note back when the point is re-tapped, and the chevrons swap in a trip from
+  // route.params, so a saved note has to be held here rather than inside the map.
+  const [noteOverrides, setNoteOverrides] = useState<Record<number, string | undefined>>({})
 
   const stats = useMemo(() => computeTripStats(trip.locations), [trip])
   const duration = trip.endTime - trip.startTime
@@ -104,10 +107,10 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
     [navigation]
   )
 
-  // Just persist: TrackMap overlays the value for re-taps, and export reads the DB.
   const handlePointNoteChange = useCallback(async (id: number, note: string | null) => {
     try {
       await NativeLocationService.updateLocationNote(id, note)
+      setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
     } catch (error) {
       logger.error("[TripDetail] Note update failed:", error)
       showAlert("Save Failed", "Unable to save note. Please try again.", "error")
@@ -253,6 +256,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
           colors={colors}
           trackColor={tripColor}
           fitVersion={trip.index}
+          noteOverrides={noteOverrides}
           onPointNoteChange={handlePointNoteChange}
           onPointSplit={handlePointSplit}
         />

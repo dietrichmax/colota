@@ -38,6 +38,8 @@ interface Props {
   trips?: Trip[]
   trackColor: string
   fitVersion?: number
+  /** Notes saved this session, by id. Held by the parent because the tabs unmount this map. */
+  noteOverrides?: Record<number, string | undefined>
   /** When provided, the point popup gains an editable note field. Omit for read-only maps. */
   onPointNoteChange?: (id: number, note: string | null) => void
   /** When provided, the point popup gains a delete action. Omit for read-only maps. */
@@ -52,6 +54,7 @@ export function TrackMap({
   trips,
   trackColor,
   fitVersion,
+  noteOverrides,
   onPointNoteChange,
   onPointDelete,
   onPointSplit
@@ -75,7 +78,6 @@ export function TrackMap({
   } | null>(null)
   const [noteDraft, setNoteDraft] = useState("")
   const [mapReady, setMapReady] = useState(false)
-  const [noteEdits, setNoteEdits] = useState<Record<number, string>>({})
 
   // Fit map to track bounds when fitVersion changes (date change, trip select)
   const bounds = useMemo(() => computeTrackBounds(locations), [locations])
@@ -111,11 +113,10 @@ export function TrackMap({
 
   const handleMapReady = useCallback(() => setMapReady(true), [])
 
-  // Clear popup, highlight and session note edits when the locations change (new day / different trip)
+  // Clear popup and highlight when the locations change (new day / different trip)
   useEffect(() => {
     setPopup(null)
     setSelectedPoint(null)
-    setNoteEdits({})
   }, [locations])
 
   const handleFitTrack = useCallback(() => {
@@ -166,11 +167,11 @@ export function TrackMap({
   )
   const pointsGeoJSON = useMemo(() => {
     const locs =
-      Object.keys(noteEdits).length === 0
+      !noteOverrides || Object.keys(noteOverrides).length === 0
         ? locations
-        : locations.map((l) => (l.id != null && l.id in noteEdits ? { ...l, note: noteEdits[l.id] } : l))
+        : locations.map((l) => (l.id != null && l.id in noteOverrides ? { ...l, note: noteOverrides[l.id] } : l))
     return buildTrackPointsGeoJSON(locs, colors, locationColors)
-  }, [locations, colors, locationColors, noteEdits])
+  }, [locations, colors, locationColors, noteOverrides])
 
   // Highlight GeoJSON for selected point
   const highlightGeoJSON = useMemo(() => {
@@ -232,7 +233,6 @@ export function TrackMap({
     if (!popup || popup.id < 0 || !onPointNoteChange) return
     const saved = noteDraft.trim()
     onPointNoteChange(popup.id, saved || null)
-    setNoteEdits((prev) => ({ ...prev, [popup.id]: saved }))
     setPopup((p) => (p ? { ...p, note: saved } : p))
     setNoteDraft(saved)
   }, [popup, noteDraft, onPointNoteChange])
@@ -370,6 +370,7 @@ export function TrackMap({
               {onPointNoteChange ? (
                 <View style={styles.noteRow}>
                   <TextInput
+                    testID="popup-note-input"
                     value={noteDraft}
                     onChangeText={setNoteDraft}
                     placeholder="Add a note"
@@ -379,6 +380,7 @@ export function TrackMap({
                   />
                   {noteDraft.trim() !== popup.note && (
                     <Pressable
+                      testID="popup-note-save"
                       onPress={handleSaveNote}
                       hitSlop={HIT_SLOP_MD}
                       style={({ pressed }) => [styles.noteSaveBtn, pressed && { opacity: colors.pressedOpacity }]}
