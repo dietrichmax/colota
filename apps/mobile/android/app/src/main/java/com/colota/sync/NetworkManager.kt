@@ -35,6 +35,8 @@ class NetworkManager(private val context: Context) {
         private const val CONNECTION_TIMEOUT = 10000
         private const val READ_TIMEOUT = 10000
         private const val NETWORK_CHECK_CACHE_MS = 5000L
+        private const val ERROR_BODY_MAX_CHARS = 200
+        private val WHITESPACE = Regex("\\s+")
     }
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -303,7 +305,7 @@ class NetworkManager(private val context: Context) {
                 TestEndpointResult(
                     false,
                     httpStatus = responseCode,
-                    errorMessage = "Server returned $responseCode: ${errorBody.take(200)}"
+                    errorMessage = "Server returned $responseCode: $errorBody"
                 )
             }
         } catch (e: SSLHandshakeException) {
@@ -373,8 +375,13 @@ class NetworkManager(private val context: Context) {
         }
     }
 
+    /**
+     * Bounded and single-line. A rate-limited flush logs one of these per rejected point, and an
+     * nginx error page is 7 lines each - enough to push real events out of the rolling log file.
+     */
     private fun readErrorBody(connection: HttpURLConnection): String = try {
-        connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
+        connection.errorStream?.bufferedReader()?.use { it.readText() }
+            ?.replace(WHITESPACE, " ")?.trim()?.take(ERROR_BODY_MAX_CHARS) ?: "No error body"
     } catch (_: Exception) { "Could not read error body" }
 
     /**

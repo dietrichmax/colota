@@ -109,7 +109,54 @@ class NetworkManagerTest {
         assertEquals("https://server.com/api", result)
     }
 
+    // --- readErrorBody ---
+
+    /**
+     * A rate-limited flush logs one error body per rejected point. Field logs showed ~110 nginx
+     * 429 pages in two seconds, 7 lines each, crowding real events out of the rolling log file.
+     */
+    @Test
+    fun `an html error page is logged as a single bounded line`() {
+        val nginx429 = """
+            <html>
+            <head><title>429 Too Many Requests</title></head>
+            <body>
+            <center><h1>429 Too Many Requests</h1></center>
+            <hr><center>nginx</center>
+            </body>
+            </html>
+        """.trimIndent()
+
+        val logged = invokeReadErrorBody(nginx429)
+
+        assertFalse("must not span lines", logged.contains("\n"))
+        assertTrue("must stay bounded", logged.length <= 200)
+        assertTrue("must keep the useful part", logged.contains("429 Too Many Requests"))
+    }
+
+    @Test
+    fun `a body longer than the cap is truncated`() {
+        val logged = invokeReadErrorBody("x".repeat(5000))
+
+        assertEquals(200, logged.length)
+    }
+
+    @Test
+    fun `a missing body reports that rather than throwing`() {
+        assertEquals("No error body", invokeReadErrorBody(null))
+    }
+
     // --- Reflection helpers to access private methods ---
+
+    private fun invokeReadErrorBody(body: String?): String {
+        val connection = io.mockk.mockk<java.net.HttpURLConnection>(relaxed = true)
+        io.mockk.every { connection.errorStream } returns body?.byteInputStream()
+        val method = NetworkManager::class.java
+            .getDeclaredMethod("readErrorBody", java.net.HttpURLConnection::class.java)
+        method.isAccessible = true
+        return method.invoke(createNetworkManagerViaReflection(), connection) as String
+    }
+
 
     private fun invokeBuildQueryString(payload: JSONObject): String {
         val method = NetworkManager::class.java.getDeclaredMethod("buildQueryString", JSONObject::class.java)
