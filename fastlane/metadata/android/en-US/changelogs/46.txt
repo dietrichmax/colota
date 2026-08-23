@@ -2,3 +2,4 @@
 - Tracking no longer refuses to start when notifications are turned off
 - Geofence heartbeat keeps recording while the phone sleeps
 - Tracking restarts itself when Android kills it in the background
+- Notes saved on the map no longer disappear when you switch tabs
