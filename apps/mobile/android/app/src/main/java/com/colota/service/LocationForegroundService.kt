@@ -651,13 +651,12 @@ class LocationForegroundService : Service() {
         setupLocationUpdates()
     }
 
-    /** Wifi and motionless are holds inside a zone pause, so they're checked first. Without
-     *  PAUSED(zone) a latched pause reads as ACTIVE in an exported log. */
+    /** Holds come first: both stop the stream, which is what a null callback means. */
     private fun trackingStateLabel(): String = when {
-        locationUpdateCallback == null -> "STOPPED"
         isWifiPaused && isMotionlessPaused -> "PAUSED(wifi+motionless)"
         isWifiPaused -> "PAUSED(wifi)"
         isMotionlessPaused -> "PAUSED(motionless)"
+        locationUpdateCallback == null -> "STOPPED"
         insidePauseZone -> "PAUSED(zone)"
         else -> "ACTIVE"
     }

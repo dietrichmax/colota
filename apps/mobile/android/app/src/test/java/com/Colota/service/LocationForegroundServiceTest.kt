@@ -2093,13 +2093,41 @@ class LocationForegroundServiceTest {
         assertEquals("PAUSED(zone)", invokeTrackingStateLabel())
     }
 
+    /** A hold stops the stream, so a live callback here would pin a state that cannot occur. */
     @Test
-    fun `trackingStateLabel reports the wifi hold ahead of the zone pause`() {
-        setField("locationUpdateCallback", mockk<LocationUpdateCallback>(relaxed = true))
+    fun `trackingStateLabel reports the wifi hold rather than a stop`() {
+        setField("locationUpdateCallback", null)
         setField("insidePauseZone", true)
         setField("isWifiPaused", true)
 
         assertEquals("PAUSED(wifi)", invokeTrackingStateLabel())
+    }
+
+    @Test
+    fun `trackingStateLabel reports the motionless hold rather than a stop`() {
+        setField("locationUpdateCallback", null)
+        setField("insidePauseZone", true)
+        setField("isMotionlessPaused", true)
+
+        assertEquals("PAUSED(motionless)", invokeTrackingStateLabel())
+    }
+
+    @Test
+    fun `trackingStateLabel names both holds when both are active`() {
+        setField("locationUpdateCallback", null)
+        setField("insidePauseZone", true)
+        setField("isWifiPaused", true)
+        setField("isMotionlessPaused", true)
+
+        assertEquals("PAUSED(wifi+motionless)", invokeTrackingStateLabel())
+    }
+
+    /** With no hold to explain it, a null callback really is a stop. */
+    @Test
+    fun `trackingStateLabel reports a genuine stop`() {
+        setField("locationUpdateCallback", null)
+
+        assertEquals("STOPPED", invokeTrackingStateLabel())
     }
 
     @Test
