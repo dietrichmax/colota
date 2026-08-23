@@ -25,6 +25,11 @@ Additional headers may be included based on your [authentication](/docs/configur
 
 **Body:**
 
+This is the body for the default field-mapped format. The Traccar POST and Overland templates and
+Dawarich in batch mode, send a different shape entirely. Those formats use fixed field names, so the
+[field mapping](/docs/configuration/field-mapping) does not apply to them and both add a `device_id`
+key. See [API templates](/docs/integrations/api-templates) for the exact bodies.
+
 ```json
 {
   "lat": 48.135124,
@@ -72,10 +77,14 @@ All field names are [customizable](/docs/configuration/field-mapping).
 When exiting a [pause zone](/docs/guides/geofencing#anchor-points), Colota sends a synthetic location at the geofence center. These payloads look like regular locations but have specific characteristics:
 
 - `lat`/`lon` are the geofence center coordinates (not the actual GPS position)
-- `acc` is set to the geofence radius in meters
+- `acc` is 0, so the point passes any downstream quality filter and is recognisable as synthetic
 - `tst` is set to 1 second before the first real GPS fix after leaving the zone
 - `alt`, `vel`, and `bear` are not included
 - `batt` and `bs` reflect the current battery state
+
+A zone [heartbeat](/docs/guides/geofencing) produces the same kind of synthetic point while you are
+still inside the zone: the zone centre, `acc` 0, timestamped when the heartbeat fired. Filter on both
+if you want to tell app-generated points from real fixes.
 
 ### Custom Fields
 
@@ -85,7 +94,12 @@ Custom field values are always sent as strings.
 
 ## Batch Sync Behavior
 
-Colota sends **one location per HTTP request** - not an array. During batch sync, up to 10 requests are sent concurrently, processing up to 500 queued locations per sync cycle.
+In the default field-mapped format Colota sends **one location per HTTP request**. During batch sync
+up to 10 requests are sent concurrently, processing up to 500 queued locations per sync cycle.
+
+The Overland format, and Dawarich in batch mode, instead send **an array of locations in a single
+request**. Batch size is configurable (1 to 500, default 50) and up to 10 batches are sent per cycle,
+so one cycle can move considerably more than 500 points.
 
 Your server should handle multiple simultaneous POST requests. If you have rate limiting, some requests may fail and be retried.
 
@@ -133,7 +147,11 @@ Your server only needs to return a 2xx status code. The response body is not rea
 | **Any non-2xx response** | Queued for retry                           |
 | **Network timeout**      | Retried (10s connection, 10s read timeout) |
 
-There is no distinction between 4xx and 5xx in retry behavior - all failures are retried indefinitely. Failed items stay in the queue until they succeed or you clear the queue manually. Location data is never deleted.
+There is no distinction between 4xx and 5xx in retry behavior - all failures are retried indefinitely,
+and failed items stay in the queue until they succeed.
+
+Clearing the queue in **Settings > Data Management** deletes those locations outright, not just their
+place in the queue, so anything not yet sent is lost.
 
 ## Retry Strategy
 
