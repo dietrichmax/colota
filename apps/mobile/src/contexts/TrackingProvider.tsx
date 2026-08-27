@@ -97,6 +97,8 @@ export function parseRawSettings(allRaw: Record<string, string>): Settings {
  */
 export function TrackingProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(DEFAULT_SETTINGS)
+  // Distinct from isLoading, which the safety timeout below flips without ever filling settings.
+  const [hydrated, setHydrated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [activeProfileName, setActiveProfileName] = useState<string | null>(null)
@@ -137,7 +139,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     stopTracking: internalStop,
     restartTracking: internalRestart,
     reconnect: internalReconnect
-  } = useLocationTracking(settings)
+  } = useLocationTracking(settings, hydrated)
 
   /**
    * Initial Hydration Effect.
@@ -158,6 +160,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
         if (Object.keys(allRaw).length === 0) {
           logger.debug("[TrackingContext] Initializing DB with defaults")
           await setSettings(DEFAULT_SETTINGS)
+          if (isMountedRef.current) setHydrated(true)
           return
         }
 
@@ -166,6 +169,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
 
         if (!isMountedRef.current) return
         setSettingsState(mergedSettings)
+        setHydrated(true)
 
         // Auto-reconnect UI if tracking was active
         const isTrackingActive = allRaw.tracking_enabled === "true"

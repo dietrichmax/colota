@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react-native"
-import { DEFAULT_SETTINGS } from "../../types/global"
+import { DEFAULT_SETTINGS, Settings } from "../../types/global"
 import { showAlert } from "../../services/modalService"
 
 jest.mock("../../services/modalService", () => ({
@@ -63,7 +63,7 @@ afterEach(() => {
 describe("useLocationTracking", () => {
   describe("initial state", () => {
     it("returns default state", () => {
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       expect(result.current.coords).toBeNull()
       expect(result.current.tracking).toBe(false)
@@ -73,7 +73,7 @@ describe("useLocationTracking", () => {
 
   describe("startTracking", () => {
     it("requests permissions and starts native service", async () => {
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -85,7 +85,7 @@ describe("useLocationTracking", () => {
     })
 
     it("does not start if already tracking", async () => {
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -100,7 +100,7 @@ describe("useLocationTracking", () => {
 
     it("shows alert and does not start if permissions denied", async () => {
       mockEnsurePermissions.mockResolvedValueOnce(false)
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -113,7 +113,7 @@ describe("useLocationTracking", () => {
 
     it("reverts tracking state if native start fails", async () => {
       mockStart.mockRejectedValueOnce(new Error("native error"))
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -126,7 +126,7 @@ describe("useLocationTracking", () => {
 
   describe("stopTracking", () => {
     it("stops native service and clears state", async () => {
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -142,7 +142,7 @@ describe("useLocationTracking", () => {
     })
 
     it("does nothing if not tracking", () => {
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       act(() => {
         result.current.stopTracking()
@@ -154,7 +154,7 @@ describe("useLocationTracking", () => {
 
   describe("restartTracking", () => {
     it("stops the service and clears coords during restart", async () => {
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -171,7 +171,7 @@ describe("useLocationTracking", () => {
 
     it("queues restart if already restarting", async () => {
       const logSpy = jest.spyOn(console, "log").mockImplementation()
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -202,7 +202,7 @@ describe("useLocationTracking", () => {
         batteryStatus: 2
       })
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.reconnect()
@@ -227,7 +227,7 @@ describe("useLocationTracking", () => {
     it("sets tracking to true even if no stored location", async () => {
       mockGetMostRecentLocation.mockResolvedValueOnce(null)
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.reconnect()
@@ -238,7 +238,7 @@ describe("useLocationTracking", () => {
     })
 
     it("does nothing if already tracking", async () => {
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -257,7 +257,7 @@ describe("useLocationTracking", () => {
       mockIsServiceRunning.mockResolvedValue(false)
       const stored = { ...DEFAULT_SETTINGS, interval: 42 }
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.reconnect(stored)
@@ -282,7 +282,7 @@ describe("useLocationTracking", () => {
       mockIsTrackingActive.mockResolvedValue(true)
       mockGetMostRecentLocation.mockResolvedValue(null)
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       // App is not tracking in UI, but service is active
       await act(async () => {
@@ -296,7 +296,7 @@ describe("useLocationTracking", () => {
     it("updates UI to stopped when service was stopped externally", async () => {
       mockIsTrackingActive.mockResolvedValue(false)
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       // Start tracking in UI first
       await act(async () => {
@@ -326,7 +326,7 @@ describe("useLocationTracking", () => {
         batteryStatus: 2
       })
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -348,7 +348,7 @@ describe("useLocationTracking", () => {
       mockIsServiceRunning.mockResolvedValue(true)
       mockGetMostRecentLocation.mockResolvedValue(null)
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -371,7 +371,7 @@ describe("useLocationTracking", () => {
       mockIsServiceRunning.mockResolvedValue(false)
       mockGetMostRecentLocation.mockResolvedValue(null)
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await appStateCallback("active")
@@ -382,12 +382,43 @@ describe("useLocationTracking", () => {
       expect(result.current.tracking).toBe(true)
     })
 
+    /**
+     * TrackingProvider mounts with DEFAULT_SETTINGS and replaces them from SQLite a round trip later.
+     * A listener registered before that read lands revives a dead service with no endpoint, so uploads
+     * stop and the rows queued meanwhile keep the default field map.
+     */
+    it("does not subscribe to AppState before settings are hydrated", async () => {
+      const { AppState } = require("react-native")
+      mockIsTrackingActive.mockResolvedValue(true)
+      mockIsServiceRunning.mockResolvedValue(false)
+      mockGetMostRecentLocation.mockResolvedValue(null)
+
+      const persisted = { ...DEFAULT_SETTINGS, endpoint: "https://example.test/loc", interval: 6 }
+
+      const { rerender } = renderHook(
+        ({ current, hydrated }: { current: Settings; hydrated: boolean }) => useLocationTracking(current, hydrated),
+        { initialProps: { current: DEFAULT_SETTINGS, hydrated: false } }
+      )
+
+      expect(AppState.addEventListener).not.toHaveBeenCalled()
+
+      rerender({ current: persisted, hydrated: true })
+      expect(AppState.addEventListener).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        await appStateCallback("active")
+      })
+
+      expect(mockStart).toHaveBeenCalledTimes(1)
+      expect(mockStart).toHaveBeenCalledWith(expect.objectContaining({ endpoint: "https://example.test/loc" }))
+    })
+
     it("leaves a live service alone", async () => {
       mockIsTrackingActive.mockResolvedValue(true)
       mockIsServiceRunning.mockResolvedValue(true)
       mockGetMostRecentLocation.mockResolvedValue(null)
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -412,7 +443,7 @@ describe("useLocationTracking", () => {
       mockIsServiceRunning.mockResolvedValue(false)
       mockGetMostRecentLocation.mockResolvedValue(null)
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await Promise.all([result.current.reconnect(DEFAULT_SETTINGS), appStateCallback("active")])
@@ -426,7 +457,7 @@ describe("useLocationTracking", () => {
       mockIsServiceRunning.mockResolvedValue(null)
       mockGetMostRecentLocation.mockResolvedValue(null)
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -445,7 +476,7 @@ describe("useLocationTracking", () => {
       mockCheckPermissions.mockResolvedValue({ location: false, background: false, notifications: true })
       mockGetMostRecentLocation.mockResolvedValue(null)
 
-      renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await appStateCallback("active")
@@ -455,7 +486,7 @@ describe("useLocationTracking", () => {
     })
 
     it("does nothing when transitioning to background", async () => {
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await appStateCallback("background")
@@ -468,7 +499,7 @@ describe("useLocationTracking", () => {
 
   describe("native event listener", () => {
     it("attaches listener when tracking starts", async () => {
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -484,7 +515,7 @@ describe("useLocationTracking", () => {
         return { remove: mockRemove }
       })
 
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)
@@ -518,7 +549,7 @@ describe("useLocationTracking", () => {
     })
 
     it("removes listener when tracking stops", async () => {
-      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
 
       await act(async () => {
         await result.current.startTracking(DEFAULT_SETTINGS)

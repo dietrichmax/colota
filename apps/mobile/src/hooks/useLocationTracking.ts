@@ -27,9 +27,10 @@ const locationEventEmitter = new NativeEventEmitter(LocationServiceModule)
  * - Service restart logic with proper delays
  *
  * @param settings Initial tracking configuration
+ * @param settingsHydrated Whether `settings` has been read back from SQLite yet
  * @returns Control interface for location tracking
  */
-export function useLocationTracking(settings: Settings): LocationTrackingResult {
+export function useLocationTracking(settings: Settings, settingsHydrated: boolean): LocationTrackingResult {
   // State
   const [coords, setCoords] = useState<LocationCoords | null>(null)
   const [tracking, setTracking] = useState(false)
@@ -325,6 +326,9 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
    * against the DB's tracking_enabled flag, and restarts a service the system killed.
    */
   useEffect(() => {
+    // Until hydration settingsRef holds DEFAULT_SETTINGS and a revive from here would start the service on them.
+    if (!settingsHydrated) return
+
     const subscription = AppState.addEventListener("change", async (nextState) => {
       if (nextState !== "active") return
 
@@ -371,7 +375,7 @@ export function useLocationTracking(settings: Settings): LocationTrackingResult 
     })
 
     return () => subscription.remove()
-  }, [reconnect, reviveIfDead])
+  }, [settingsHydrated, reconnect, reviveIfDead])
 
   /**
    * Cleanup on unmount
