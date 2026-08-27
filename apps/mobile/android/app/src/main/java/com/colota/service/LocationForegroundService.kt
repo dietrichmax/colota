@@ -613,11 +613,10 @@ class LocationForegroundService : Service() {
                 // Catch here so a DB or system-service hiccup doesn't kill the heartbeat loop.
                 try {
                     val state = trackingStateLabel()
-                    val sinceLastFix = SystemClock.elapsedRealtime() - lastFixAtMs
                     val (battery, _) = deviceInfoHelper.getCachedBatteryStatus()
                     val doze = (getSystemService(POWER_SERVICE) as? PowerManager)?.isDeviceIdleMode ?: false
                     AppLogger.i(TAG,
-                        "Heartbeat state=$state, ${sinceLastFix / 1000}s since last fix, " +
+                        "Heartbeat state=$state, ${sinceLastFixLabel()}, " +
                             "queue=${dbHelper.getQueuedCount()}, batt=$battery%, " +
                             "profile=${profileManager.getActiveProfileName() ?: "default"}, doze=$doze"
                     )
@@ -660,6 +659,12 @@ class LocationForegroundService : Service() {
         insidePauseZone -> "PAUSED(zone)"
         else -> "ACTIVE"
     }
+
+    /** 0 means nothing has stamped the field since this instance started (a restart under a hold never
+     *  registers the stream), and elapsedRealtime() - 0 is the phone's uptime, not a fix age. */
+    private fun sinceLastFixLabel(): String =
+        if (lastFixAtMs == 0L) "no location stream this instance"
+        else "${(SystemClock.elapsedRealtime() - lastFixAtMs) / 1000}s since last fix"
 
     private fun cancelTrackingHeartbeatLogger() {
         trackingHeartbeatJob?.cancel()
