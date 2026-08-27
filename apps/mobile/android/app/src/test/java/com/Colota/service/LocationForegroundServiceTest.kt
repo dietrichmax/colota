@@ -3,6 +3,7 @@ package com.Colota.service
 import android.app.NotificationManager
 import android.content.Intent
 import android.location.Location
+import android.os.SystemClock
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
@@ -2137,6 +2138,22 @@ class LocationForegroundServiceTest {
         assertEquals("ACTIVE", invokeTrackingStateLabel())
     }
 
+    /** A restart under a hold never registers the stream, so nothing stamps lastFixAtMs and the raw
+     *  subtraction prints the phone's uptime - a healthy soak read "137019s since last fix". */
+    @Test
+    fun `sinceLastFixLabel says the stream never started instead of printing uptime`() {
+        setField("lastFixAtMs", 0L)
+
+        assertEquals("no location stream this instance", invokeSinceLastFixLabel())
+    }
+
+    @Test
+    fun `sinceLastFixLabel reports the age of a stamped fix`() {
+        setField("lastFixAtMs", SystemClock.elapsedRealtime() - 30_000L)
+
+        assertEquals("30s since last fix", invokeSinceLastFixLabel())
+    }
+
     // =========================================================================
     // stopForegroundServiceWithReason - battery critical path
     // =========================================================================
@@ -2659,6 +2676,12 @@ class LocationForegroundServiceTest {
 
     private fun invokeTrackingStateLabel(): String {
         val method = LocationForegroundService::class.java.getDeclaredMethod("trackingStateLabel")
+        method.isAccessible = true
+        return method.invoke(service) as String
+    }
+
+    private fun invokeSinceLastFixLabel(): String {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("sinceLastFixLabel")
         method.isAccessible = true
         return method.invoke(service) as String
     }
