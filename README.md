@@ -232,7 +232,7 @@ curl -H "x-api-key: $API_KEY" http://localhost:3000/health
 
 Targets on the same Docker network can use plain `http://`, as the examples above do. No certificates are involved.
 
-If a target is served over HTTPS with a certificate your own CA issued, forwarding fails with `UNABLE_TO_VERIFY_LEAF_SIGNATURE` or `DEPTH_ZERO_SELF_SIGNED_CERT` if the certificate is self-signed and that target's `failed` count climbs. Trust your CA:
+If a target's certificate was issued by your own CA or is self-signed, every forward to it fails with a certificate error in `lastError`, for example `UNABLE_TO_GET_ISSUER_CERT_LOCALLY` or `DEPTH_ZERO_SELF_SIGNED_CERT`. The forwarder is the TLS client in that connection, so it is the forwarder, not the target, that needs to trust the CA. Mount the CA certificate (root, or the whole chain as one PEM bundle) into the forwarder container and point Node at it:
 
 ```yaml
 environment:
@@ -240,6 +240,8 @@ environment:
 volumes:
   - ./my-ca.pem:/certs/my-ca.pem:ro
 ```
+
+The file must be readable by the image's non-root user.
 
 ### Batch handling
 

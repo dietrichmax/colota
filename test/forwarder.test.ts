@@ -165,6 +165,18 @@ test("a network failure is recorded without exposing the target URL", async () =
   assert.equal(s.host, "stats-down") // host only, so no path or query can leak
 })
 
+test('a TLS failure records the certificate error code, not "fetch failed"', async () => {
+  globalThis.fetch = (async () => {
+    throw new TypeError("fetch failed", {
+      cause: Object.assign(new Error("self-signed certificate"), { code: "DEPTH_ZERO_SELF_SIGNED_CERT" })
+    })
+  }) as unknown as typeof fetch
+  const target: Target = { url: "https://stats-tls/api?api_key=SECRET", type: "raw" }
+  await forwardToAll([target], pt(1))
+  const s = getDeliveryStats([target])[0]
+  assert.equal(s.lastError, "DEPTH_ZERO_SELF_SIGNED_CERT")
+})
+
 test("delivery stats number targets by config position", () => {
   // two targets can share a host, so the number is what identifies them
   const a: Target = { url: "https://dawarich.example.com/api/v1/owntracks/points?api_key=user1", type: "raw" }

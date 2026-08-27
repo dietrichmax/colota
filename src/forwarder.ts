@@ -50,6 +50,11 @@ export function getDeliveryStats(targets: Target[]): TargetStats[] {
   })
 }
 
+function errorReason(err: unknown): string {
+  const code = (err as { cause?: { code?: unknown } })?.cause?.code
+  return typeof code === "string" ? code : String(err)
+}
+
 async function dispatch(target: Target, url: string, init: RequestInit): Promise<void> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FORWARD_TIMEOUT)
@@ -64,7 +69,7 @@ async function dispatch(target: Target, url: string, init: RequestInit): Promise
     }
   } catch (err) {
     console.error(`[forwarder] Failed to reach ${maskUrl(target.url)}:`, err)
-    record(target, sanitizeLogValue(String(err)).slice(0, 120))
+    record(target, sanitizeLogValue(errorReason(err)).slice(0, 120))
   } finally {
     clearTimeout(timeout)
   }
