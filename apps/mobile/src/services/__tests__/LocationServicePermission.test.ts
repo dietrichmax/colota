@@ -90,7 +90,8 @@ describe("ensurePermissions", () => {
 
     expect(result).toBe(true)
     expect(disclosureSpy).not.toHaveBeenCalled()
-    expect(requestSpy).toHaveBeenCalledWith(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
+    // No prompt without a disclosure before it: the notification ask only rides along with the location grants
+    expect(requestSpy).not.toHaveBeenCalled()
   })
 
   it("starts tracking when notifications are denied even if the disclosure would be declined", async () => {

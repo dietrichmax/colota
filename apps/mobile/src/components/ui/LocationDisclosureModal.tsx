@@ -22,7 +22,8 @@ export function LocationDisclosureModal() {
       title="Location Data Collection"
       paragraphs={[
         "Colota collects location data to enable GPS tracking and sending your position to your configured server, even when the app is closed or not in use.",
-        "This data is sent only to the server you set up. No data is shared with third parties."
+        "This data is sent only to the server you set up. No data is shared with third parties.",
+        "While tracking runs, a persistent notification shows its status. Battery optimization should be disabled for reliable background operation."
       ]}
       confirmLabel="Agree"
       registerCallback={registerDisclosureCallback}
