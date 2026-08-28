@@ -83,7 +83,7 @@ If tracking was active when the device was powered off, Colota automatically res
 android.permission.POST_NOTIFICATIONS
 ```
 
-On Android 13 and later, apps need this permission before they can show notifications. Colota asks for it but does not require it - tracking runs either way. Denying it hides the tracking notification, so you lose the live status and any alert when tracking stops.
+On Android 13 and later, apps need this permission before they can show notifications. Colota asks for it but does not require it - tracking runs either way. Denying it hides the tracking notification, so you lose the live status and the tap-to-resume alert when Android kills tracking.
 
 ### Local Network Access
 

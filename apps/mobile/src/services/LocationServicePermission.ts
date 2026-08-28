@@ -83,11 +83,12 @@ export async function ensurePermissions(): Promise<boolean> {
         const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)
         if (result !== PermissionsAndroid.RESULTS.GRANTED) return false
       }
-    }
 
-    // Notifications (Android 13+, non-blocking) - the app has no other way to ask
-    if (Platform.Version >= ANDROID_13 && !status.notifications) {
-      await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
+      // Notifications (Android 13+, non-blocking). Kept inside the disclosure-gated block so every
+      // runtime prompt is preceded by the disclosure; Android auto-denies re-asks after two denials anyway.
+      if (Platform.Version >= ANDROID_13 && !status.notifications) {
+        await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)
+      }
     }
 
     // Battery optimization exemption (optional)
@@ -108,7 +109,7 @@ function fallbackDisclosure(): Promise<boolean> {
   return new Promise((resolve) => {
     Alert.alert(
       "Location Data Collection",
-      "Colota collects location data to enable GPS tracking and sending your position to your configured server, even when the app is closed or not in use.\n\nNo data is shared with third parties.",
+      "Colota collects location data in the background to enable continuous GPS tracking, recording your position history and uploading it to your own server, even when the app is closed or not in use.\n\nYour location is sent only to the server you configure. No data is shared with third parties.",
       [
         { text: "Not Now", style: "cancel", onPress: () => resolve(false) },
         { text: "Agree", onPress: () => resolve(true) }
