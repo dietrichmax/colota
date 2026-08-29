@@ -27,7 +27,7 @@ For servers that require a client certificate at the TLS handshake (e.g. nginx `
 
 Authentication credentials (Basic auth, Bearer tokens, custom headers) are stored using Android's [`EncryptedSharedPreferences`](https://developer.android.com/reference/androidx/security/crypto/EncryptedSharedPreferences) with **AES-256-GCM** encryption. Credentials never leave the device except as HTTP headers sent to your configured endpoint.
 
-Sensitive values (Authorization, Bearer, Token, API-Key) are automatically masked in log exports.
+Sensitive values (Authorization, Bearer, Token, API-Key) and token-like parts of the endpoint URL are automatically masked in log exports.
 
 ## Location Data at Rest
 

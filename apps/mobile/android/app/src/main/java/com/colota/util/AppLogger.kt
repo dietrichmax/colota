@@ -48,6 +48,8 @@ object AppLogger {
         RegexOption.IGNORE_CASE
     )
 
+    private val opaquePathSegmentRegex = Regex("^[A-Za-z0-9_-]{16,}$")
+
     /**
      * Masks the value of sensitive HTTP headers before logging.
      * Shows the first 4 characters followed by "***", or "***" for values shorter than 5.
@@ -60,20 +62,25 @@ object AppLogger {
     }
 
     /**
-     * Masks sensitive query parameter values inside a URL before logging.
-     * Returns the input unchanged if the URL has no query string or can't be parsed.
+     * Masks sensitive query parameter values and token-like path segments inside a URL before logging.
+     * Returns the input unchanged if the URL can't be parsed.
      */
     fun maskSensitiveUrlValues(url: String): String {
         return try {
             val uri = android.net.Uri.parse(url)
-            val names = uri.queryParameterNames
-            if (names.isEmpty()) return url
+            val builder = uri.buildUpon()
+            uri.encodedPath?.let { path ->
+                builder.encodedPath(path.split("/").joinToString("/") { if (opaquePathSegmentRegex.matches(it)) maskValue(it) else it })
+            }
 
-            val builder = uri.buildUpon().clearQuery()
-            for (name in names) {
-                val isSensitive = sensitiveQueryRegex.containsMatchIn(name)
-                for (value in uri.getQueryParameters(name)) {
-                    builder.appendQueryParameter(name, if (isSensitive) maskValue(value) else value)
+            val names = uri.queryParameterNames
+            if (names.isNotEmpty()) {
+                builder.clearQuery()
+                for (name in names) {
+                    val isSensitive = sensitiveQueryRegex.containsMatchIn(name)
+                    for (value in uri.getQueryParameters(name)) {
+                        builder.appendQueryParameter(name, if (isSensitive) maskValue(value) else value)
+                    }
                 }
             }
             builder.build().toString()
