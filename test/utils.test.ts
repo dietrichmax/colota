@@ -1,6 +1,14 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { isFiniteNumber, hasFiniteNumbers, maskUrl, sanitizeLogValue, targetHost, isValidTid } from "../src/utils"
+import {
+  isFiniteNumber,
+  hasFiniteNumbers,
+  maskUrl,
+  maskWebhookId,
+  sanitizeLogValue,
+  targetHost,
+  isValidTid
+} from "../src/utils"
 
 test("isFiniteNumber rejects NaN, Infinity and non-numbers", () => {
   assert.equal(isFiniteNumber(5), true)
@@ -64,6 +72,23 @@ test("targetHost keeps host and port and nothing else", () => {
   assert.equal(targetHost("http://dawarich:3000/api/v1/owntracks/points?api_key=x"), "dawarich:3000")
   assert.equal(targetHost("https://geopulse.example.com/api/colota"), "geopulse.example.com")
   assert.equal(targetHost("not a url"), "not a url")
+})
+
+test("maskUrl hides a Home Assistant webhook id, which is the whole credential", () => {
+  // HA webhooks have no separate key, so the id is the credential
+  assert.equal(
+    maskUrl("http://homeassistant:8123/api/webhook/a1b2c3d4e5f6-secret"),
+    "http://homeassistant:8123/api/webhook/***"
+  )
+  // only the id segment is secret
+  assert.equal(maskUrl("http://ha.local/api/webhook/abc/extra?x=1"), "http://ha.local/api/webhook/***/extra?…")
+})
+
+test("maskWebhookId scrubs the id when a target echoes the request path in its error body", () => {
+  // an Express target's 404 body echoes the request path
+  assert.equal(maskWebhookId("Cannot POST /api/webhook/abc123"), "Cannot POST /api/webhook/***")
+  assert.equal(maskWebhookId("<pre>Cannot POST /api/webhook/abc123</pre>"), "<pre>Cannot POST /api/webhook/***</pre>")
+  assert.equal(maskWebhookId("plain text"), "plain text")
 })
 
 test("maskUrl returns the input unchanged when it isn't a URL", () => {
