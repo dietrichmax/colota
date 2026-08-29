@@ -13,6 +13,7 @@ const mockShowConfirm = jest.fn().mockResolvedValue(false)
 
 let mockSettings: Settings = { ...DEFAULT_SETTINGS }
 let mockTracking = false
+let mockSettingsHydrated = true
 let mockCoords: { latitude: number; longitude: number } | null = null
 
 jest.mock("../../contexts/TrackingProvider", () => ({
@@ -22,7 +23,8 @@ jest.mock("../../contexts/TrackingProvider", () => ({
     startTracking: mockStartTracking,
     stopTracking: mockStopTracking,
     setSettings: mockSetSettings,
-    activeProfileName: "Default"
+    activeProfileName: "Default",
+    settingsHydrated: mockSettingsHydrated
   }),
   useCoords: () => mockCoords
 }))
@@ -88,7 +90,12 @@ jest.mock("../../components", () => {
     QuickAccess: () => R.createElement(View, { testID: "QuickAccess" }),
     WelcomeCard: () => R.createElement(View, { testID: "WelcomeCard" }),
     Container: ({ children }: any) => R.createElement(View, null, children),
-    Button: ({ title, onPress }: any) => R.createElement(Pressable, { onPress }, R.createElement(Text, null, title))
+    Button: ({ title, onPress, disabled }: any) =>
+      R.createElement(
+        Pressable,
+        { onPress, disabled, accessibilityState: { disabled: !!disabled } },
+        R.createElement(Text, null, title)
+      )
   }
 })
 
@@ -101,6 +108,7 @@ describe("DashboardScreen", () => {
     jest.clearAllMocks()
     mockSettings = { ...DEFAULT_SETTINGS }
     mockTracking = false
+    mockSettingsHydrated = true
     mockCoords = null
     mockIsLocationEnabled.mockResolvedValue(true)
     mockOpenLocationSettings.mockResolvedValue(true)
@@ -139,6 +147,25 @@ describe("DashboardScreen", () => {
     const { queryByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 
     expect(queryByTestId("CoordinateDisplay")).toBeNull()
+  })
+
+  it("disables Start Tracking while settings have not been read", () => {
+    // start() sends every key, and fromReadableMap prefers a present empty endpoint over the stored one.
+    mockSettingsHydrated = false
+
+    const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
+
+    expect(getByText("Start Tracking")).toBeDisabled()
+  })
+
+  it("hides WelcomeCard while settings have not been read", () => {
+    // Unhydrated settings read as a first run, and dismissing the card would save the defaults.
+    mockSettings = { ...DEFAULT_SETTINGS, hasCompletedSetup: false }
+    mockSettingsHydrated = false
+
+    const { queryByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
+
+    expect(queryByTestId("WelcomeCard")).toBeNull()
   })
 
   it("shows WelcomeCard when hasCompletedSetup is false", () => {

@@ -22,6 +22,7 @@ type TrackingContextType = {
   updateSettingsLocal: (s: Settings) => void
   tracking: boolean
   isLoading: boolean
+  settingsHydrated: boolean
   error: Error | null
   activeProfileName: string | null
   startTracking: () => Promise<void>
@@ -109,11 +110,21 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
   // Ref to track if initialization has been done (prevents re-running on dependency changes)
   const hasInitializedRef = useRef(false)
 
+  const settingsReadRef = useRef(false)
+
   /**
    * Batch updates settings across both UI state and Native storage.
    * Wrapped in useCallback to maintain referential equality.
    */
   const setSettings = useCallback(async (newSettings: Settings) => {
+    // State holds DEFAULT_SETTINGS until the read lands, so a save before then overwrites the stored ones.
+    if (!settingsReadRef.current) {
+      const err = new Error("Settings are not loaded, so nothing was saved")
+      logger.error("[TrackingContext] Save blocked, settings not loaded")
+      if (isMountedRef.current) setError(err)
+      throw err
+    }
+
     try {
       logger.debug("[TrackingContext] Batch syncing to Native storage...")
       // SettingsService handles unit conversion (seconds -> ms)
@@ -153,13 +164,17 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
       try {
         logger.debug("[TrackingContext] Hydrating settings and state...")
         const allRaw = await NativeLocationService.getAllSettings()
+        settingsReadRef.current = true
 
         if (!isMountedRef.current) return
 
         // Initialize DB with defaults if empty
         if (Object.keys(allRaw).length === 0) {
           logger.debug("[TrackingContext] Initializing DB with defaults")
-          await setSettings(DEFAULT_SETTINGS)
+          // The table is empty either way, so the defaults on screen are the truth even unwritten.
+          await setSettings(DEFAULT_SETTINGS).catch((err) =>
+            logger.error("[TrackingContext] Seeding defaults failed:", err)
+          )
           if (isMountedRef.current) setHydrated(true)
           return
         }
@@ -240,6 +255,14 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
    * Wrapped tracking controls with useCallback for stable references
    */
   const startTracking = useCallback(async () => {
+    // Same latch as setSettings: an unhydrated start would run the service on DEFAULT_SETTINGS.
+    if (!settingsReadRef.current) {
+      const err = new Error("Settings are not loaded, so tracking was not started")
+      logger.error("[TrackingContext] Start blocked, settings not loaded")
+      if (isMountedRef.current) setError(err)
+      throw err
+    }
+
     try {
       await internalStart(settings)
       if (isMountedRef.current) {
@@ -298,13 +321,25 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
       updateSettingsLocal: setSettingsState,
       tracking,
       isLoading,
+      settingsHydrated: hydrated,
       error,
       activeProfileName,
       startTracking,
       stopTracking,
       restartTracking
     }),
-    [settings, tracking, isLoading, error, activeProfileName, setSettings, startTracking, stopTracking, restartTracking]
+    [
+      settings,
+      tracking,
+      isLoading,
+      hydrated,
+      error,
+      activeProfileName,
+      setSettings,
+      startTracking,
+      stopTracking,
+      restartTracking
+    ]
   )
 
   return (

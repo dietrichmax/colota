@@ -7,6 +7,7 @@ package com.Colota.data
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteException
 import androidx.test.core.app.ApplicationProvider
 import org.junit.After
 import org.junit.Assert.*
@@ -622,6 +623,28 @@ class DatabaseHelperSQLiteTest {
         assertEquals("value2", all["custom2"])
         // Plus prepopulated defaults
         assertTrue(all.size >= 18)
+    }
+
+    @Test
+    fun `getAllSettingsOrThrow reads the same map as getAllSettings`() {
+        db.saveSetting("custom1", "value1")
+
+        assertEquals(db.getAllSettings(), db.getAllSettingsOrThrow())
+    }
+
+    /** JS writes defaults over an empty read, so the bridge needs the failure, not an empty map. */
+    @Test
+    fun `getAllSettingsOrThrow throws on a failed read that getAllSettings reports as empty`() {
+        db.writableDatabase.execSQL("DROP TABLE ${DatabaseHelper.TABLE_SETTINGS}")
+
+        assertTrue(db.getAllSettings().isEmpty())
+
+        try {
+            db.getAllSettingsOrThrow()
+            fail("Expected SQLiteException")
+        } catch (e: SQLiteException) {
+            assertTrue(e.message?.contains("no such table") == true)
+        }
     }
 
     // ========================================================================

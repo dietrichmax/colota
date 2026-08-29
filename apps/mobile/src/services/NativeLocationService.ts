@@ -20,6 +20,7 @@ import {
   TripBoundaryOverride
 } from "../types/global"
 import { logger } from "../utils/logger"
+import { SETTINGS_READ_ATTEMPTS, SETTINGS_READ_RETRY_DELAY_MS } from "../constants"
 
 const { LocationServiceModule, MtlsBridgeModule, BuildConfigModule } = NativeModules
 
@@ -576,11 +577,21 @@ class NativeLocationService {
   }
 
   /**
-   * Retrieves all settings as key-value pairs
+   * Retrieves all settings as key-value pairs.
+   * A few retries, then the rejection goes through: JS seeds defaults into the table on an empty result.
    */
   static async getAllSettings(): Promise<Record<string, string>> {
     this.ensureModule()
-    return this.safeExecute(() => LocationServiceModule.getAllSettings(), {}, "getAllSettings failed")
+
+    for (let attempt = 1; attempt < SETTINGS_READ_ATTEMPTS; attempt++) {
+      try {
+        return await LocationServiceModule.getAllSettings()
+      } catch (err) {
+        logger.warn(`[NativeLocationService] Settings read failed, retry ${attempt}/${SETTINGS_READ_ATTEMPTS}:`, err)
+        await new Promise<void>((resolve) => setTimeout(resolve, SETTINGS_READ_RETRY_DELAY_MS))
+      }
+    }
+    return LocationServiceModule.getAllSettings()
   }
 
   // ============================================================================

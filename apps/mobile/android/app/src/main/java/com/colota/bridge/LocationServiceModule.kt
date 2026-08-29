@@ -737,7 +737,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getAllSettings(promise: Promise) = executeAsync(promise) {
-        val settingsMap = dbHelper.getAllSettings()
+        val settingsMap = dbHelper.getAllSettingsOrThrow()
         Arguments.createMap().apply {
             settingsMap.forEach { (k, v) -> putString(k, v) }
         }

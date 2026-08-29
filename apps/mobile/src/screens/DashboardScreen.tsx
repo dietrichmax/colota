@@ -25,7 +25,8 @@ import { Square, Play } from "lucide-react-native"
 import { logger } from "../utils/logger"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
-  const { settings, tracking, startTracking, stopTracking, setSettings, activeProfileName } = useTracking()
+  const { settings, tracking, startTracking, stopTracking, setSettings, activeProfileName, settingsHydrated } =
+    useTracking()
   const { colors } = useTheme()
 
   const [stats, setStats] = useState<DatabaseStats>({
@@ -232,7 +233,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
               icon={tracking ? Square : Play}
               onPress={tracking ? handleStop : handleStart}
               activeOpacity={0.9}
-              disabled={!tracking && isBatteryCritical}
+              disabled={!tracking && (isBatteryCritical || !settingsHydrated)}
               title={tracking ? "Stop Tracking" : "Start Tracking"}
             />
           </Animated.View>
@@ -240,13 +241,17 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
         {/* Content Section */}
         <View style={[styles.content, { backgroundColor: colors.background }]}>
-          {/* Welcome Card (first run) */}
-          {!settings.hasCompletedSetup && (
+          {/* Welcome Card (first run). Unhydrated settings read as a first run and cannot be dismissed. */}
+          {settingsHydrated && !settings.hasCompletedSetup && (
             <WelcomeCard
               settings={settings}
               tracking={tracking}
               colors={colors}
-              onDismiss={() => setSettings({ ...settings, hasCompletedSetup: true })}
+              onDismiss={() =>
+                setSettings({ ...settings, hasCompletedSetup: true }).catch((err) =>
+                  logger.error("[DashboardScreen] Failed to dismiss welcome card:", err)
+                )
+              }
               onStartTracking={handleStart}
               onNavigateToConnection={() => navigation.navigate("Connection")}
               onNavigateToTrackingSync={() => navigation.navigate("Tracking & Sync")}

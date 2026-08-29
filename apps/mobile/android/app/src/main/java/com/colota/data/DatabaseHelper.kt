@@ -963,31 +963,41 @@ class DatabaseHelper private constructor(context: Context) :
 
     fun getAllSettings(): Map<String, String> {
         val settings = mutableMapOf<String, String>()
-        
-        try {
-            readableDatabase.query(
-                TABLE_SETTINGS, 
-                arrayOf("key", "value"),
-                null, null, null, null, null
-            ).use { cursor ->
-                val keyIdx = cursor.getColumnIndexOrThrow("key")
-                val valIdx = cursor.getColumnIndexOrThrow("value")
 
-                while (cursor.moveToNext()) {
-                    val key = cursor.getString(keyIdx)
-                    val value = cursor.getString(valIdx)
-                    if (key != null && value != null) {
-                        settings[key] = value
-                    }
-                }
-            }
+        try {
+            loadSettingsInto(settings)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error loading settings", e)
         }
-        
+
         return settings
     }
 
+    /** Throws on a read failure, because JS seeds the table with defaults when this comes back empty. */
+    fun getAllSettingsOrThrow(): Map<String, String> {
+        val settings = mutableMapOf<String, String>()
+        loadSettingsInto(settings)
+        return settings
+    }
+
+    private fun loadSettingsInto(settings: MutableMap<String, String>) {
+        readableDatabase.query(
+            TABLE_SETTINGS,
+            arrayOf("key", "value"),
+            null, null, null, null, null
+        ).use { cursor ->
+            val keyIdx = cursor.getColumnIndexOrThrow("key")
+            val valIdx = cursor.getColumnIndexOrThrow("value")
+
+            while (cursor.moveToNext()) {
+                val key = cursor.getString(keyIdx)
+                val value = cursor.getString(valIdx)
+                if (key != null && value != null) {
+                    settings[key] = value
+                }
+            }
+        }
+    }
 
     /**
      * Returns distinct dates (YYYY-MM-DD) that have location data within the range.
