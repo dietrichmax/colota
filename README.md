@@ -26,7 +26,7 @@ Receives location updates from the [Colota](https://colota.app) app or any OwnTr
 ```yaml
 services:
   colota-forwarder:
-    image: mxdcodes/colota-forwarder:v0.4.0
+    image: mxdcodes/colota-forwarder:v0.4.4
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
