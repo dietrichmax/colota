@@ -25,13 +25,18 @@ export function targetHost(url: string): string {
   }
 }
 
-/** Renders a target URL for logs. Keeps host and path, drops credentials and query string. */
+/** A Home Assistant webhook id is the URL's only credential. Also run over response bodies, which can echo the path. */
+export function maskWebhookId(value: string): string {
+  return value.replace(/\/api\/webhook\/[^/?#\s"'<]+/g, "/api/webhook/***")
+}
+
+/** Renders a target URL for logs. Keeps host and path, drops credentials, webhook ids and query string. */
 export function maskUrl(url: string): string {
   try {
     const parsed = new URL(url)
     const creds = parsed.username || parsed.password ? "***@" : ""
     const query = parsed.search ? "?…" : ""
-    return `${parsed.protocol}//${creds}${parsed.host}${parsed.pathname}${query}`
+    return `${parsed.protocol}//${creds}${parsed.host}${maskWebhookId(parsed.pathname)}${query}`
   } catch {
     return url
   }

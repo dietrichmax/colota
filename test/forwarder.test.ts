@@ -1,4 +1,4 @@
-import { test, beforeEach, afterEach } from "node:test"
+import { test, beforeEach, afterEach, mock } from "node:test"
 import assert from "node:assert/strict"
 import { forwardBatch, forwardToAll, getDeliveryStats, type OverlandEnvelope } from "../src/forwarder"
 import type { Target } from "../src/targets"
@@ -149,6 +149,25 @@ test("a target that rejects the point is counted as failed", async () => {
   const s = getDeliveryStats([target])[0]
   assert.equal(s.failed, 1)
   assert.equal(s.lastError, "HTTP 401") // status only, never the response body
+})
+
+test("a rejected point is logged without the Home Assistant webhook id, even when the target echoes it", async () => {
+  // the warn line carries the masked URL and the response body, and either can hold the id
+  globalThis.fetch = (async () => ({
+    ok: false,
+    status: 404,
+    text: async () => "Cannot POST /api/webhook/hook-secret"
+  })) as unknown as typeof fetch
+  const warn = mock.method(console, "warn", () => {})
+  try {
+    const target: Target = { url: "http://ha-404:8123/api/webhook/hook-secret", type: "raw" }
+    await forwardToAll([target], pt(1))
+    const line = warn.mock.calls.map((c) => c.arguments.join(" ")).join("\n")
+    assert.match(line, /ha-404:8123\/api\/webhook\/\*\*\* responded 404/)
+    assert.doesNotMatch(line, /hook-secret/)
+  } finally {
+    warn.mock.restore()
+  }
 })
 
 test("a network failure is recorded without exposing the target URL", async () => {

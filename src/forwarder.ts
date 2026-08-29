@@ -1,6 +1,6 @@
 import type { Target } from "./targets"
 import { transformPayload, type ColotaPayload } from "./transform"
-import { maskUrl, sanitizeLogValue, targetHost } from "./utils"
+import { maskUrl, maskWebhookId, sanitizeLogValue, targetHost } from "./utils"
 
 const FORWARD_TIMEOUT = Number(process.env.FORWARD_TIMEOUT_MS) || 30_000
 const DEFAULT_SPLIT_CONCURRENCY = Number(process.env.SPLIT_CONCURRENCY) || 1
@@ -61,7 +61,7 @@ async function dispatch(target: Target, url: string, init: RequestInit): Promise
   try {
     const res = await fetch(url, { ...init, signal: controller.signal })
     if (!res.ok) {
-      const text = sanitizeLogValue((await res.text()).slice(0, 200))
+      const text = maskWebhookId(sanitizeLogValue((await res.text()).slice(0, 200)))
       console.warn(`[forwarder] ${maskUrl(target.url)} responded ${res.status}: ${text}`)
       record(target, `HTTP ${res.status}`)
     } else {
