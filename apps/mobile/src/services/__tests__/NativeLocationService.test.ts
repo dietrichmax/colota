@@ -96,11 +96,14 @@ jest.mock("react-native", () => ({
 
 import { NativeModules } from "react-native"
 import NativeLocationService from "../NativeLocationService"
+import { SETTINGS_READ_ATTEMPTS } from "../../constants"
 
 const nativeMock = NativeModules.LocationServiceModule as Record<string, jest.Mock>
 
 beforeEach(() => {
   jest.clearAllMocks()
+  // clearAllMocks keeps implementations, so a rejecting test would leak into the next one.
+  nativeMock.getAllSettings.mockResolvedValue({})
 })
 
 describe("NativeLocationService", () => {
@@ -246,6 +249,30 @@ describe("NativeLocationService", () => {
     it("passes table name, limit, and offset", async () => {
       await NativeLocationService.getTableData("queue", 50, 10)
       expect(nativeMock.getTableData).toHaveBeenCalledWith("queue", 50, 10)
+    })
+  })
+
+  describe("getAllSettings", () => {
+    it("returns the stored settings", async () => {
+      nativeMock.getAllSettings.mockResolvedValueOnce({ interval: "5000" })
+      await expect(NativeLocationService.getAllSettings()).resolves.toEqual({ interval: "5000" })
+    })
+
+    it("recovers when a retry succeeds", async () => {
+      nativeMock.getAllSettings
+        .mockRejectedValueOnce(new Error("database is locked"))
+        .mockResolvedValueOnce({ endpoint: "https://kept.example/api" })
+
+      await expect(NativeLocationService.getAllSettings()).resolves.toEqual({ endpoint: "https://kept.example/api" })
+      expect(nativeMock.getAllSettings).toHaveBeenCalledTimes(2)
+    })
+
+    // Hydration seeds the table with defaults on an empty result, so a read that never succeeded must reject.
+    it("rejects once every attempt has failed", async () => {
+      nativeMock.getAllSettings.mockRejectedValue(new Error("database is locked"))
+
+      await expect(NativeLocationService.getAllSettings()).rejects.toThrow("database is locked")
+      expect(nativeMock.getAllSettings).toHaveBeenCalledTimes(SETTINGS_READ_ATTEMPTS)
     })
   })
 

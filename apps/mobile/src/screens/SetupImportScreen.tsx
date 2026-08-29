@@ -10,7 +10,6 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { Container, Card, Button, SectionTitle } from "../components"
 import { fonts } from "../styles/typography"
 import { CircleAlert, CircleCheck, Import } from "lucide-react-native"
-import SettingsService from "../services/SettingsService"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
@@ -65,7 +64,6 @@ export function SetupImportScreen({ route, navigation }: any) {
       }
       merged.syncPreset = detectPreset(merged)
 
-      await SettingsService.updateMultiple(merged)
       await setSettings(merged)
 
       // Apply auth - deep merge customHeaders

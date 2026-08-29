@@ -15,6 +15,8 @@ export const SAVE_SUCCESS_DISPLAY_MS = 2000
 export const TEST_RESULT_DISPLAY_MS = 5_000
 export const SERVICE_RESTART_DELAY_MS = 500
 export const RESTART_DEBOUNCE_MS = 100
+export const SETTINGS_READ_ATTEMPTS = 3
+export const SETTINGS_READ_RETRY_DELAY_MS = 150
 
 // Touch targets
 export const HIT_SLOP_SM = { top: 6, right: 6, bottom: 6, left: 6 } as const

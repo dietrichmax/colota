@@ -62,10 +62,18 @@ import { logger } from "../../utils/logger"
 
 const mockGetAllSettings = NativeLocationService.getAllSettings as jest.Mock
 const mockUpdateMultiple = SettingsService.updateMultiple as jest.Mock
+const mockGetActiveProfileName = NativeLocationService.getActiveProfileName as jest.Mock
 
 beforeEach(() => {
   jest.clearAllMocks()
+  mockGetAllSettings.mockResolvedValue({})
 })
+
+const settleHydration = async () => {
+  await act(async () => {
+    await new Promise<void>((resolve) => setTimeout(resolve, 100))
+  })
+}
 
 const wrapper = ({ children }: { children: React.ReactNode }) => <TrackingProvider>{children}</TrackingProvider>
 
@@ -123,6 +131,8 @@ describe("useTracking", () => {
 
     const { result } = renderHook(() => useTracking(), { wrapper })
 
+    await settleHydration()
+
     const newSettings = { ...DEFAULT_SETTINGS, interval: 30, endpoint: "https://new.com" }
 
     await act(async () => {
@@ -145,18 +155,98 @@ describe("useTracking", () => {
   })
 
   it("sets error state when hydration fails", async () => {
-    mockGetAllSettings.mockRejectedValueOnce(new Error("DB read failed"))
+    mockGetAllSettings.mockRejectedValue(new Error("DB read failed"))
 
     const { result } = renderHook(() => useTracking(), { wrapper })
 
-    await act(async () => {
-      await new Promise<void>((resolve) => setTimeout(resolve, 100))
-    })
+    await settleHydration()
 
     expect(result.current.error).toBeInstanceOf(Error)
     expect(result.current.error?.message).toBe("DB read failed")
     expect(result.current.isLoading).toBe(false)
     expect(logger.error).toHaveBeenCalledWith("[TrackingContext] Hydration failed:", expect.any(Error))
+  })
+
+  it("does not seed defaults over the database when the settings read fails", async () => {
+    // A failed read must not land in the empty-map branch, which overwrites every stored setting.
+    mockGetAllSettings.mockRejectedValue(new Error("DB read failed"))
+
+    renderHook(() => useTracking(), { wrapper })
+
+    await settleHydration()
+
+    expect(mockUpdateMultiple).not.toHaveBeenCalled()
+  })
+
+  it("hydrates a first run even when seeding the defaults fails", async () => {
+    // An empty table is a real first run, so the UI must not stay gated on the write succeeding.
+    mockGetAllSettings.mockResolvedValueOnce({})
+    mockUpdateMultiple.mockRejectedValueOnce(new Error("disk full"))
+
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await settleHydration()
+
+    expect(result.current.settingsHydrated).toBe(true)
+    expect(result.current.error).toBeInstanceOf(Error)
+  })
+
+  it("refuses to start tracking before the settings read lands", async () => {
+    // start() sends every key, so an unhydrated start runs the service on DEFAULT_SETTINGS.
+    mockGetAllSettings.mockReturnValueOnce(new Promise(() => {}))
+
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await act(async () => {
+      await expect(result.current.startTracking()).rejects.toThrow("Settings are not loaded")
+    })
+
+    expect(mockStartTracking).not.toHaveBeenCalled()
+  })
+
+  it("refuses to save before the settings read lands", async () => {
+    mockGetAllSettings.mockReturnValueOnce(new Promise(() => {}))
+
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await act(async () => {
+      await expect(result.current.setSettings(DEFAULT_SETTINGS)).rejects.toThrow("Settings are not loaded")
+    })
+
+    expect(mockUpdateMultiple).not.toHaveBeenCalled()
+  })
+
+  it("keeps saving when hydration fails after the read landed", async () => {
+    // The stored settings are on screen at that point, so blocking saves would be wrong.
+    mockGetAllSettings.mockResolvedValueOnce({ endpoint: "https://kept.example/api", tracking_enabled: "true" })
+    mockGetActiveProfileName.mockRejectedValueOnce(new Error("bridge died"))
+
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await settleHydration()
+
+    await act(async () => {
+      await result.current.setSettings({ ...DEFAULT_SETTINGS, endpoint: "https://kept.example/api" })
+    })
+
+    expect(mockUpdateMultiple).toHaveBeenCalled()
+  })
+
+  it("refuses to save while the settings read has failed", async () => {
+    // Every screen saves the whole Settings object, so one edit here would persist the defaults.
+    mockGetAllSettings.mockRejectedValue(new Error("DB read failed"))
+
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await settleHydration()
+
+    await act(async () => {
+      await expect(result.current.setSettings({ ...DEFAULT_SETTINGS, hasCompletedSetup: true })).rejects.toThrow(
+        "Settings are not loaded"
+      )
+    })
+
+    expect(mockUpdateMultiple).not.toHaveBeenCalled()
   })
 
   it("sets isLoading to false after successful hydration", async () => {
@@ -322,7 +412,6 @@ describe("useTracking", () => {
   })
 
   it("restores activeProfileName on reconnect when tracking was active", async () => {
-    const mockGetActiveProfileName = NativeLocationService.getActiveProfileName as jest.Mock
     mockGetActiveProfileName.mockResolvedValueOnce("Charging")
     mockGetAllSettings.mockResolvedValueOnce({
       interval: "5000",

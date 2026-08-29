@@ -1,0 +1,1 @@
+- Settings are no longer replaced with defaults when the app fails to read them

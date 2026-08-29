@@ -32,13 +32,6 @@ jest.mock("../../services/NativeLocationService", () => ({
   }
 }))
 
-jest.mock("../../services/SettingsService", () => ({
-  __esModule: true,
-  default: {
-    updateMultiple: jest.fn().mockResolvedValue(undefined)
-  }
-}))
-
 jest.mock("../../services/modalService", () => ({
   showAlert: (...args: any[]) => mockShowAlert(...args)
 }))
