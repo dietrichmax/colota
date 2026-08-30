@@ -743,6 +743,24 @@ class DatabaseHelperSQLiteTest {
     }
 
     // ========================================================================
+    // Export readers throw, so a failed page never ends an export as complete
+    // ========================================================================
+
+    @Test
+    fun `getLocationsByDateRange throws when the read fails`() {
+        db.writableDatabase.execSQL("DROP TABLE locations")
+
+        assertThrows(SQLiteException::class.java) { db.getLocationsByDateRange(0L, 9999L, 100, 0) }
+    }
+
+    @Test
+    fun `getLocationsChronological throws when the read fails`() {
+        db.writableDatabase.execSQL("DROP TABLE locations")
+
+        assertThrows(SQLiteException::class.java) { db.getLocationsChronological(100, 0) }
+    }
+
+    // ========================================================================
     // Stats and cleanup
     // ========================================================================
 

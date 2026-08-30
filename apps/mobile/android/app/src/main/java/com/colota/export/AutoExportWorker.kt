@@ -11,6 +11,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.database.SQLException
 import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
@@ -36,6 +37,9 @@ class AutoExportWorker(
     private val appContext: Context,
     params: WorkerParameters
 ) : CoroutineWorker(appContext, params) {
+
+    // Only the SAF copy raises this, so a directory verdict can never be reached from a database read
+    private class DirectoryAccessException(message: String) : Exception(message)
 
     companion object {
         private const val TAG = "AutoExportWorker"
@@ -214,13 +218,21 @@ class AutoExportWorker(
                 userMessage = "Invalid export configuration: ${e.message}",
                 retry = false
             )
-        } catch (e: IllegalStateException) {
+        } catch (e: DirectoryAccessException) {
             handleExportFailure(
                 tempFile, config, db, e,
                 error = "Directory access failed: ${e.message}",
                 logMessage = "Auto-export failed - directory access issue",
                 userMessage = "Could not access export directory: ${e.message}",
                 retry = false
+            )
+        } catch (e: SQLException) {
+            handleExportFailure(
+                tempFile, config, db, e,
+                error = "Read failed: ${e.message}",
+                logMessage = "Auto-export failed - database read, will retry",
+                userMessage = "Could not read locations. Will retry.",
+                retry = true
             )
         } catch (e: IOException) {
             handleExportFailure(
@@ -270,13 +282,13 @@ class AutoExportWorker(
 
         val docFile = DocumentFile.fromTreeUri(appContext, dirUri)
             ?.createFile(mimeType, fileName)
-            ?: throw IllegalStateException("Failed to create file in selected directory")
+            ?: throw DirectoryAccessException("Failed to create file in selected directory")
 
         resolver.openOutputStream(docFile.uri)?.use { outStream ->
             sourceFile.inputStream().use { inStream ->
                 inStream.copyTo(outStream)
             }
-        } ?: throw IllegalStateException("Failed to open output stream")
+        } ?: throw DirectoryAccessException("Failed to open output stream")
 
         return docFile
     }

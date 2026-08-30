@@ -596,22 +596,18 @@ class DatabaseHelper private constructor(context: Context) :
     /**
      * Returns all locations ordered chronologically (ASC) with pagination.
      * Used for export operations where chronological order is required.
+     * Throws on a read failure so an export never ends as complete with rows missing.
      */
-    fun getLocationsChronological(limit: Int, offset: Int): List<Map<String, Any?>> {
-        return try {
-            readableDatabase.query(
-                TABLE_LOCATIONS, null, null, null, null, null,
-                "timestamp ASC, id ASC", "$limit OFFSET $offset"
-            ).use { it.toMapList() }
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "Error reading locations chronologically", e)
-            emptyList()
-        }
-    }
+    fun getLocationsChronological(limit: Int, offset: Int): List<Map<String, Any?>> =
+        readableDatabase.query(
+            TABLE_LOCATIONS, null, null, null, null, null,
+            "timestamp ASC, id ASC", "$limit OFFSET $offset"
+        ).use { it.toMapList() }
 
     /**
      * Retrieves locations within a date range, ordered chronologically.
-     * Used for rendering track polylines on the map view.
+     * Used for the map polyline, the trip export and the incremental auto-export.
+     * Throws on a read failure; the map's JS wrapper falls back to an empty list.
      *
      * @param startTimestamp Start of range (Unix seconds, inclusive)
      * @param endTimestamp End of range (Unix seconds, inclusive)
@@ -622,21 +618,15 @@ class DatabaseHelper private constructor(context: Context) :
         endTimestamp: Long,
         limit: Int = 0,
         offset: Int = 0
-    ): List<Map<String, Any?>> {
-        return try {
-            readableDatabase.query(
-                TABLE_LOCATIONS, null,
-                "timestamp >= ? AND timestamp <= ?",
-                arrayOf(startTimestamp.toString(), endTimestamp.toString()),
-                null, null,
-                "timestamp ASC, id ASC",
-                if (limit > 0) "$limit OFFSET $offset" else null
-            ).use { it.toMapList() }
-        } catch (e: Exception) {
-            AppLogger.e(TAG, "Error reading locations by date range", e)
-            emptyList()
-        }
-    }
+    ): List<Map<String, Any?>> =
+        readableDatabase.query(
+            TABLE_LOCATIONS, null,
+            "timestamp >= ? AND timestamp <= ?",
+            arrayOf(startTimestamp.toString(), endTimestamp.toString()),
+            null, null,
+            "timestamp ASC, id ASC",
+            if (limit > 0) "$limit OFFSET $offset" else null
+        ).use { it.toMapList() }
 
 
     /**

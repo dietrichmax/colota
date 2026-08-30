@@ -18,6 +18,20 @@ class ExportConvertersTest {
         mapOf("latitude" to 48.8566, "longitude" to 2.3522, "accuracy" to 15.0, "altitude" to 40.0, "speed" to 0.5, "bearing" to 90.0, "battery" to 72L, "battery_status" to 1L, "timestamp" to 1700003600L)
     )
 
+    // --- exportToFile ---
+
+    @Test
+    fun `exportToFile rethrows a later page read failure and removes the partial file`() {
+        val outputFile = tempFolder.newFile("export.geojson")
+
+        assertThrows(IllegalStateException::class.java) {
+            ExportConverters.exportToFile("geojson", outputFile, pageSize = 1) { _, offset ->
+                if (offset == 0) sampleRows.take(1) else throw IllegalStateException("disk I/O error")
+            }
+        }
+        assertFalse(outputFile.exists())
+    }
+
     // --- extensionFor ---
 
     @Test

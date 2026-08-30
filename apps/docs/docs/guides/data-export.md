@@ -98,7 +98,7 @@ If several devices export into the same folder and none of the templates include
 - Writes to a temporary file first, then copies to the export directory - if something goes wrong mid-export, you never get a partial or corrupted file
 - After copying, verifies the destination file exists and has the correct size before deleting the temp file
 - If the export loop is cancelled (e.g. by disabling auto-export), it cleans up gracefully without leaving partial files
-- Permanent errors (invalid config, directory access issues) fail immediately; transient errors (I/O failures) retry up to 3 times
+- Permanent errors (invalid config, directory access issues) fail immediately; transient errors (I/O failures, a failed database read) retry up to 3 times
 - If the selected directory becomes inaccessible (permissions revoked), auto-export disables itself and a notification prompts you to re-select the directory
 - A notification is shown after each export with the file name and location count
 - Old export files beyond the retention limit are cleaned up after each successful export. Cleanup only considers files matching Colota's own export naming pattern, so unrelated files and subfolders in the directory are never touched
