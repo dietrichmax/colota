@@ -225,6 +225,12 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
                 Arrays.fill(passwordChars, 0.toChar())
                 BackupForegroundService.stop(reactApplicationContext)
                 DatabaseHelper.setRestoreInProgress(false)
+                // pauseAllDbWriters cancels the alarm before the restore can fail, so the re-arm belongs here.
+                try {
+                    AutoExportScheduler.scheduleNext(reactApplicationContext)
+                } catch (e: Exception) {
+                    AppLogger.w(TAG, "scheduleNext failed after restore: ${e.message}")
+                }
                 operationMutex.unlock()
             }
         }

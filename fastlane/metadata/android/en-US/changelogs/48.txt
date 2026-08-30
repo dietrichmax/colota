@@ -3,3 +3,4 @@
 - Exports stop with an error instead of silently leaving out locations when a database read fails
 - Auto-export no longer fails when the folder app has not registered the new file yet
 - Switching auto-export off stops a running export
+- Auto-export keeps its schedule after a backup restore
