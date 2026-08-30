@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.StatFs
 import android.provider.DocumentsContract
 import com.Colota.backup.BackupBuilder
+import com.Colota.backup.BackupError
 import com.Colota.backup.BackupException
 import com.Colota.backup.BackupForegroundService
 import com.Colota.backup.BackupOrphanCleanup
@@ -20,6 +21,7 @@ import com.Colota.data.SettingsKeys
 import com.Colota.export.AutoExportScheduler
 import com.Colota.export.AutoExportWorker
 import com.Colota.service.LocationForegroundService
+import com.Colota.triggers.TrackingControl
 import com.Colota.util.AppLogger
 import com.Colota.util.SafPickerCoordinator
 import com.facebook.react.ReactApplication
@@ -198,17 +200,23 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
                 promise.reject("E_BUSY", "Another backup or restore is in progress")
                 return@launch
             }
+            var dbReplaced = false
+            var trackingWasEnabled = false
             try {
                 val uri = Uri.parse(uriString)
                 ensureFreeSpaceForRestore(uri)
 
                 startForegroundOnMain("Restoring backup...")
 
+                // Read before pauseAllDbWriters clears it, and outside it so a straggler timeout still resumes.
+                trackingWasEnabled = DatabaseHelper.getInstance(reactApplicationContext)
+                    .getSetting(SettingsKeys.TRACKING_ENABLED, "false") == "true"
                 pauseAllDbWriters()
 
                 val input = reactApplicationContext.contentResolver.openInputStream(uri)
                     ?: throw IllegalStateException("Could not open input stream for $uriString")
                 input.use { BackupRestorer(reactApplicationContext).restore(it, passwordChars) }
+                dbReplaced = true
 
                 // Swap is done; clear the writer block so the post-restore saveSetting can land on the new DB.
                 DatabaseHelper.setRestoreInProgress(false)
@@ -219,6 +227,8 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
 
                 promise.resolve(true)
             } catch (e: Exception) {
+                // The swap happens inside restore(); SECRETS_PARTIAL is the only failure raised after it.
+                if (e is BackupException && e.error == BackupError.SECRETS_PARTIAL) dbReplaced = true
                 AppLogger.e(TAG, "restoreBackup failed", e)
                 promise.reject(errorCode(e), e.message ?: "Restore failed", e)
             } finally {
@@ -230,6 +240,20 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
                     AutoExportScheduler.scheduleNext(reactApplicationContext)
                 } catch (e: Exception) {
                     AppLogger.w(TAG, "scheduleNext failed after restore: ${e.message}")
+                }
+                // Once the database is the backup's, the destination-device rule applies and tracking stays off.
+                // Not in the catch: every saveSetting here is gated until the finally clears restoreInProgress.
+                if (!dbReplaced && trackingWasEnabled) {
+                    try {
+                        // A denied startForeground returns before the service writes the flag, and the
+                        // watchdog it arms disarms itself while the flag still reads false.
+                        DatabaseHelper.getInstance(reactApplicationContext)
+                            .saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
+                        TrackingControl.start(reactApplicationContext, "Resumed after a failed restore")
+                        AppLogger.i(TAG, "Resumed tracking after a failed restore")
+                    } catch (e: Exception) {
+                        AppLogger.w(TAG, "Could not resume tracking after a failed restore: ${e.message}")
+                    }
                 }
                 operationMutex.unlock()
             }
