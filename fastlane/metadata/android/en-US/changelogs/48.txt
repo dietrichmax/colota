@@ -1,2 +1,3 @@
 - Settings are no longer replaced with defaults when the app fails to read them
 - Log exports no longer contain webhook ids or session tokens from the endpoint address
+- Exports stop with an error instead of silently leaving out locations when a database read fails

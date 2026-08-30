@@ -514,7 +514,8 @@ object ExportConverters {
     /**
      * Streams a paginated export to file. On cancellation mid-write the footer
      * is skipped and the partial row count is returned; file cleanup is the
-     * caller's job.
+     * caller's job. A page read that throws deletes the file and propagates, so
+     * a failed export never looks complete.
      */
     fun exportToFile(
         format: String,
@@ -529,21 +530,26 @@ object ExportConverters {
         var offset = 0
         var cancelled = false
 
-        sink.use {
-            OutputStreamWriter(outputFile.outputStream(), Charsets.UTF_8).use { w ->
-                writer.writeHeader(w)
+        try {
+            sink.use {
+                OutputStreamWriter(outputFile.outputStream(), Charsets.UTF_8).use { w ->
+                    writer.writeHeader(w)
 
-                while (true) {
-                    if (shouldCancel()) { cancelled = true; break }
-                    val page = fetchPage(pageSize, offset)
-                    if (page.isEmpty()) break
-                    writer.writeRows(w, page.map(ExportRow::from), offset, sink)
-                    totalRows += page.size
-                    offset += pageSize
+                    while (true) {
+                        if (shouldCancel()) { cancelled = true; break }
+                        val page = fetchPage(pageSize, offset)
+                        if (page.isEmpty()) break
+                        writer.writeRows(w, page.map(ExportRow::from), offset, sink)
+                        totalRows += page.size
+                        offset += pageSize
+                    }
+
+                    if (!cancelled) writer.writeFooter(w, sink)
                 }
-
-                if (!cancelled) writer.writeFooter(w, sink)
             }
+        } catch (e: Exception) {
+            outputFile.delete()
+            throw e
         }
         return totalRows
     }
