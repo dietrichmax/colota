@@ -268,7 +268,7 @@ class NetworkManager(private val context: Context) {
         val url = try {
             URL(resolvedEndpoint)
         } catch (_: Exception) {
-            return@withContext TestEndpointResult(false, errorMessage = "Invalid URL: $resolvedEndpoint")
+            return@withContext TestEndpointResult(false, errorMessage = "Invalid URL: ${AppLogger.maskSensitiveUrlValues(resolvedEndpoint)}")
         }
         if (!UrlSafety.isValidProtocol(resolvedEndpoint)) {
             return@withContext TestEndpointResult(

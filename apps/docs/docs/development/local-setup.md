@@ -168,7 +168,7 @@ Test files are located in `apps/mobile/android/app/src/test/java/com/Colota/`. T
 - **SyncManager** - Instant/periodic sync modes, retry logic, Wi-Fi only gating, backoff
 - **NetworkManager** - Query string building, URL variable substitution
 - **UrlSafety** - HTTPS-for-public enforcement, private/CGNAT host detection
-- **AppLogger** - Sensitive HTTP header value masking
+- **AppLogger** - Masking of sensitive header values, URL query values and token-like URL path segments
 - **DatabaseHelper** - Data model, cutoff calculations, batch operations
 - **SecureStorageHelper** - Basic Auth, Bearer token, custom headers, JSON parsing
 - **DeviceInfoHelper** - Battery threshold logic, status code mapping, percentage calculation

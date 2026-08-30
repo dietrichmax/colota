@@ -121,4 +121,59 @@ class AppLoggerTest {
         val masked = AppLogger.maskSensitiveUrlValues("https://example.com/x?auth=abcdefgh")
         assertEquals("https://example.com/x?auth=abcd***", masked)
     }
+
+    @Test
+    fun `maskSensitiveUrlValues masks a webhook id in the path`() {
+        val masked = AppLogger.maskSensitiveUrlValues(
+            "https://ha.example.com/api/webhook/3f9a1c2b7d4e5f6a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a"
+        )
+        assertEquals("https://ha.example.com/api/webhook/3f9a***", masked)
+    }
+
+    @Test
+    fun `maskSensitiveUrlValues masks a session token but keeps the device name`() {
+        val masked = AppLogger.maskSensitiveUrlValues(
+            "https://cloud.example.com/apps/phonetrack/log/owntracks/a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6/pixel"
+        )
+        assertEquals("https://cloud.example.com/apps/phonetrack/log/owntracks/a1b2***/pixel", masked)
+    }
+
+    @Test
+    fun `maskSensitiveUrlValues keeps route words and dates`() {
+        val url = "https://example.com/api/v1/owntracks/points/2026/08/29"
+        assertEquals(url, AppLogger.maskSensitiveUrlValues(url))
+    }
+
+    @Test
+    fun `maskSensitiveUrlValues masks a letters-only id because a missed secret costs more than a masked word`() {
+        val masked = AppLogger.maskSensitiveUrlValues("https://ha.example.com/api/webhook/my-personal-webhook-id")
+        assertEquals("https://ha.example.com/api/webhook/my-p***", masked)
+    }
+
+    @Test
+    fun `maskSensitiveUrlValues masks from 16 characters`() {
+        val kept = "https://example.com/abcdefghijklmno"
+        assertEquals(kept, AppLogger.maskSensitiveUrlValues(kept))
+        assertEquals("https://example.com/abcd***", AppLogger.maskSensitiveUrlValues("https://example.com/abcdefghijklmnop"))
+    }
+
+    @Test
+    fun `maskSensitiveUrlValues keeps unresolved URL variables`() {
+        val url = "https://example.com/locations/%YEAR/%MONTH/%DAY?id=my-phone"
+        assertEquals(url, AppLogger.maskSensitiveUrlValues(url))
+    }
+
+    @Test
+    fun `maskSensitiveUrlValues masks path token and query key together`() {
+        val masked = AppLogger.maskSensitiveUrlValues(
+            "https://example.com/hooks/abcdef1234567890abcdef/points?api_key=secret123&lat=1.5"
+        )
+        assertEquals("https://example.com/hooks/abcd***/points?api_key=secr***&lat=1.5", masked)
+    }
+
+    @Test
+    fun `maskSensitiveUrlValues masks a token in a URL with an unknown scheme`() {
+        val masked = AppLogger.maskSensitiveUrlValues("htps://ha.example.com/api/webhook/abcdef1234567890abcdef")
+        assertEquals("htps://ha.example.com/api/webhook/abcd***", masked)
+    }
 }

@@ -148,6 +148,21 @@ class NetworkManagerTest {
 
     // --- Reflection helpers to access private methods ---
 
+    // --- testEndpoint ---
+
+    @Test
+    fun `testEndpoint invalid URL message goes through the URL mask`() {
+        // Plain JUnit has no android.net.Uri, so the mask itself is covered in AppLoggerTest
+        every { AppLogger.maskSensitiveUrlValues(any()) } answers { "masked(${firstArg<String>()})" }
+
+        val result = kotlinx.coroutines.runBlocking {
+            createNetworkManagerViaReflection().testEndpoint(JSONObject(), "htps://ha.example.com/api/webhook/abc")
+        }
+
+        assertFalse(result.ok)
+        assertEquals("Invalid URL: masked(htps://ha.example.com/api/webhook/abc)", result.errorMessage)
+    }
+
     private fun invokeReadErrorBody(body: String?): String {
         val connection = io.mockk.mockk<java.net.HttpURLConnection>(relaxed = true)
         io.mockk.every { connection.errorStream } returns body?.byteInputStream()
