@@ -59,10 +59,17 @@ object AutoExportScheduler {
         AppLogger.i(TAG, "Enqueued immediate auto-export")
     }
 
+    internal fun enqueueScheduled(context: Context) {
+        WorkManager.getInstance(context.applicationContext)
+            .enqueue(OneTimeWorkRequestBuilder<AutoExportWorker>().build())
+    }
+
     fun cancel(context: Context) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         am.cancel(pendingIntent(context))
-        AppLogger.i(TAG, "Cancelled auto-export alarm")
+        // WorkManager tags every request with the worker's class name, so this stops a running export too
+        WorkManager.getInstance(context.applicationContext).cancelAllWorkByTag(AutoExportWorker::class.java.name)
+        AppLogger.i(TAG, "Cancelled auto-export alarm and any queued or running export")
     }
 
     private fun pendingIntent(context: Context): PendingIntent {

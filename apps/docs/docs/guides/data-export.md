@@ -96,8 +96,8 @@ If several devices export into the same folder and none of the templates include
 - Promotes to a foreground service during export, preventing Android from killing long-running exports
 - Streams data in chunks (10,000 locations at a time) to keep memory usage low even with very large datasets
 - Writes to a temporary file first, then copies to the export directory - if something goes wrong mid-export, you never get a partial or corrupted file
-- After copying, verifies the destination file exists and has the correct size before deleting the temp file
-- If the export loop is cancelled (e.g. by disabling auto-export), it cleans up gracefully without leaving partial files
+- After copying, verifies that every byte of the temp file was written before deleting it. The destination is never queried back, so a folder app that registers the new file late cannot fail the export
+- Switching auto-export off stops a running export without leaving partial files; a file already being copied to the folder is finished first
 - Permanent errors (invalid config, directory access issues) fail immediately; transient errors (I/O failures, a failed database read) retry up to 3 times
 - If the selected directory becomes inaccessible (permissions revoked), auto-export disables itself and a notification prompts you to re-select the directory
 - A notification is shown after each export with the file name and location count

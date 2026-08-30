@@ -287,9 +287,9 @@ For backups, two `internal` methods support the export/import flow without expos
 | `TimedCache` | Generic TTL cache used for queue count, device info, profiles, and network state |
 | `BuildConfigModule` | Exposes build constants (SDK versions, app version) to JS |
 | `AppLogger` | Centralized logger - always active, all tags prefixed with `Colota.` for logcat filtering |
-| `AutoExportWorker` | WorkManager `CoroutineWorker` enqueued by `AutoExportAlarmReceiver` - performs the export (chunked writes, foreground service, retries, retention cleanup) and re-arms the next alarm in `finally` |
+| `AutoExportWorker` | WorkManager `CoroutineWorker` enqueued by `AutoExportAlarmReceiver` - performs the export (chunked writes to a per-run temp file, foreground service, retries, retention cleanup), verifies the copy by bytes written and re-arms the next alarm in `finally` |
 | `AutoExportAlarmReceiver` | Broadcast receiver fired by AlarmManager at the configured time - hands off to `AutoExportWorker` because the receiver's 10s budget can't run an export |
-| `AutoExportScheduler` | Arms `AlarmManager.setAndAllowWhileIdle` for the next configured wall-clock time. Called on enable, after each worker run, after schedule edits and on boot |
+| `AutoExportScheduler` | Arms `AlarmManager.setAndAllowWhileIdle` for the next configured wall-clock time. Called on enable, by the alarm receiver on every fire, after each worker run, after schedule edits and on boot |
 | `AutoExportConfig` | Typed data class wrapping auto-export settings (interval, time-of-day, weekday, day-of-month, enabledAt) from the SQLite settings table with validation, `isExportDue()` and `nextExportTimestamp()` |
 | `ExportConverters` | Native CSV/GeoJSON/GPX/KML serialization for both "Export all" (flat, streamed via `exportToFile`) and per-trip / multi-select export (trip-segmented via `convertTrips`, reached through the `exportTripsToFile` bridge). In-memory, streaming, and file-based interfaces |
 | `ShortcutHandlerActivity` | Transparent activity handling app shortcut intents (start/stop tracking) without UI. Delegates to the shared `TrackingControl` helper |

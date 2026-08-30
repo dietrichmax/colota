@@ -1,3 +1,5 @@
 - Settings are no longer replaced with defaults when the app fails to read them
 - Log exports no longer contain webhook ids or session tokens from the endpoint address
 - Exports stop with an error instead of silently leaving out locations when a database read fails
+- Auto-export no longer fails when the folder app has not registered the new file yet
+- Switching auto-export off stops a running export
