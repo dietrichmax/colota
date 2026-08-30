@@ -12,9 +12,15 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.Colota.backup.BackupBuilder
+import com.Colota.backup.BackupError
+import com.Colota.backup.BackupException
 import com.Colota.backup.BackupOrphanCleanup
+import com.Colota.backup.BackupRestorer
 import com.Colota.data.DatabaseHelper
+import com.Colota.data.SettingsKeys
 import com.Colota.export.AutoExportScheduler
+import com.Colota.service.LocationForegroundService
+import com.Colota.triggers.TrackingControl
 import com.Colota.util.AppLogger
 import com.Colota.util.SecureStorageHelper
 import com.facebook.react.bridge.JavaOnlyArray
@@ -22,6 +28,7 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.BridgeReactContext
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -85,6 +92,10 @@ class BackupServiceModuleTest {
         every { SecureStorageHelper.getInstance(any()) } returns secureStorage
 
         mockkObject(AutoExportScheduler)
+        mockkConstructor(BackupRestorer::class)
+        every { anyConstructed<BackupRestorer>().restore(any(), any()) } answers { callOriginal() }
+        mockkObject(TrackingControl)
+        every { TrackingControl.start(any(), any()) } just Runs
 
         // restoreBackup awaits the orphan sweep, which only MainApplication.onCreate starts
         BackupOrphanCleanup.start(context)
@@ -104,6 +115,8 @@ class BackupServiceModuleTest {
     @After
     fun tearDown() {
         unmockkObject(AutoExportScheduler)
+        unmockkConstructor(BackupRestorer::class)
+        unmockkObject(TrackingControl)
         unmockkObject(SecureStorageHelper.Companion)
         unmockkObject(AppLogger)
         DatabaseHelper.getInstance(context).close()
@@ -151,6 +164,106 @@ class BackupServiceModuleTest {
         assertTrue("the alarm follows the restored DB, not the one replaced", shadowOf(alarmManager).scheduledAlarms.isEmpty())
     }
 
+    @Test
+    fun `a failed restore restarts the tracking it stopped`() {
+        enableAutoExport()
+        val backup = backupBytes()
+        db.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
+
+        val outcome = restore(backup, "wrong".toCharArray())
+
+        assertEquals("E_BACKUP_WRONG_PASSWORD", outcome.rejectCode)
+        verify(exactly = 1) { TrackingControl.start(any(), "Resumed after a failed restore") }
+    }
+
+    @Test
+    fun `a failed restore leaves tracking off when it was already off`() {
+        enableAutoExport()
+        val backup = backupBytes()
+        db.saveSetting(SettingsKeys.TRACKING_ENABLED, "false")
+
+        val outcome = restore(backup, "wrong".toCharArray())
+
+        assertEquals("E_BACKUP_WRONG_PASSWORD", outcome.rejectCode)
+        verify(exactly = 0) { TrackingControl.start(any(), any()) }
+    }
+
+    @Test
+    fun `a successful restore leaves tracking stopped on purpose`() {
+        enableAutoExport()
+        val backup = backupBytes()
+        db.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
+
+        val outcome = restore(backup, password)
+
+        assertTrue("restore should resolve", outcome.resolved)
+        verify(exactly = 0) { TrackingControl.start(any(), any()) }
+        assertEquals("false", db.getSetting(SettingsKeys.TRACKING_ENABLED, "true"))
+    }
+
+    @Test
+    fun `a restore that replaced the database keeps tracking off even when it then fails`() {
+        enableAutoExport()
+        val backup = backupBytes()
+        db.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
+        // Secrets fail after the swap, so the live DB is the backup's and the destination-device rule applies
+        every { anyConstructed<BackupRestorer>().restore(any(), any()) } throws
+            BackupException(BackupError.SECRETS_PARTIAL, "credentials could not be applied")
+
+        val outcome = restore(backup, password)
+
+        assertEquals("E_BACKUP_SECRETS_PARTIAL", outcome.rejectCode)
+        verify(exactly = 0) { TrackingControl.start(any(), any()) }
+    }
+
+    @Test
+    fun `a restore aborted by a writer that would not stop resumes tracking`() {
+        enableAutoExport()
+        val backup = backupBytes()
+        db.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
+        // pauseAllDbWriters throws instead of returning, which is why the flag is read before it runs
+        mockkObject(LocationForegroundService.Companion)
+        try {
+            every { LocationForegroundService.isRunning } returns true
+
+            val outcome = restore(backup, password)
+
+            assertEquals("E_BACKUP_PRECONDITION", outcome.rejectCode)
+            verify(exactly = 1) { TrackingControl.start(any(), "Resumed after a failed restore") }
+        } finally {
+            unmockkObject(LocationForegroundService.Companion)
+        }
+    }
+
+    @Test
+    fun `the resume writes the tracking flag itself so a denied start still recovers`() {
+        enableAutoExport()
+        val backup = backupBytes()
+        db.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
+        // Left false, the watchdog the denied start arms disarms itself on its first tick
+        every { TrackingControl.start(any(), any()) } just Runs
+
+        restore(backup, "wrong".toCharArray())
+
+        assertEquals("true", db.getSetting(SettingsKeys.TRACKING_ENABLED, "false"))
+    }
+
+    @Test
+    fun `a denied resume leaves the module usable`() {
+        enableAutoExport()
+        val backup = backupBytes()
+        db.saveSetting(SettingsKeys.TRACKING_ENABLED, "true")
+        every { TrackingControl.start(any(), any()) } throws IllegalStateException("FGS start denied")
+
+        val denied = restore(backup, "wrong".toCharArray())
+        assertEquals("E_BACKUP_WRONG_PASSWORD", denied.rejectCode)
+
+        // An escaping resume would strand operationMutex and lock out every later backup and restore
+        every { TrackingControl.start(any(), any()) } just Runs
+        val next = restore(backup, "wrong".toCharArray())
+        assertEquals("E_BACKUP_WRONG_PASSWORD", next.rejectCode)
+    }
+
     // promise.resolve fires before the finally re-arms, so the re-arm needs its own latch
     private fun restore(backup: ByteArray, pw: CharArray): Outcome {
         val outcome = Outcome()
@@ -173,7 +286,19 @@ class BackupServiceModuleTest {
 
         assertTrue("restore did not settle", outcome.settled.await(30, TimeUnit.SECONDS))
         assertTrue("restore finished without re-arming", outcome.rearmed.await(10, TimeUnit.SECONDS))
+        awaitIdle()
         return outcome
+    }
+
+    // The resume runs after both latches; the mutex is released by the finally's last statement,
+    // which makes "the whole finally is done" observable instead of a guessed delay.
+    private fun awaitIdle() {
+        val field = BackupServiceModule::class.java.getDeclaredField("operationMutex")
+        field.isAccessible = true
+        val mutex = field.get(module) as Mutex
+        val deadline = System.currentTimeMillis() + 10_000
+        while (mutex.isLocked && System.currentTimeMillis() < deadline) Thread.sleep(10)
+        assertFalse("restore never released the operation mutex", mutex.isLocked)
     }
 
     private fun enableAutoExport() {

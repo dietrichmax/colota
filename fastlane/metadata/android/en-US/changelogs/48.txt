@@ -4,3 +4,4 @@
 - Auto-export no longer fails when the folder app has not registered the new file yet
 - Switching auto-export off stops a running export
 - Auto-export keeps its schedule after a backup restore
+- An aborted backup restore starts tracking again instead of leaving it off
