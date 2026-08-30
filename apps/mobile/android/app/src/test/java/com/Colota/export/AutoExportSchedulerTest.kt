@@ -7,10 +7,11 @@ package com.Colota.export
 
 import android.app.AlarmManager
 import android.content.Context
+import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.Colota.data.DatabaseHelper
 import com.Colota.util.AppLogger
@@ -34,9 +35,9 @@ class AutoExportSchedulerTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
 
-        // scheduleNext calls WorkManager.cancelUniqueWork; needs WorkManager initialized.
+        // A WorkManager whose worker executor never runs, so enqueued work stays unfinished and cancel is observable
         val config = Configuration.Builder()
-            .setExecutor(SynchronousExecutor())
+            .setExecutor { }
             .build()
         WorkManagerTestInitHelper.initializeTestWorkManager(context, config)
 
@@ -100,6 +101,35 @@ class AutoExportSchedulerTest {
             "AlarmManager should have no scheduled alarms after cancel",
             shadowOf(alarmManager).scheduledAlarms.isEmpty()
         )
+    }
+
+    @Test
+    fun `cancel also stops a queued or running export`() {
+        AutoExportScheduler.runNow(context)
+        val wm = WorkManager.getInstance(context)
+        assertFalse(wm.getWorkInfosByTag(AutoExportWorker::class.java.name).get().single().state.isFinished)
+
+        AutoExportScheduler.cancel(context)
+
+        assertEquals(WorkInfo.State.CANCELLED, wm.getWorkInfosByTag(AutoExportWorker::class.java.name).get().single().state)
+    }
+
+    @Test
+    fun `the alarm receiver re-arms the alarm before enqueuing so a failed enqueue cannot end the schedule`() {
+        mockkObject(AutoExportScheduler)
+        every { AutoExportScheduler.enqueueScheduled(any()) } throws RuntimeException("WorkManager not initialized")
+        every { AutoExportScheduler.scheduleNext(any()) } just Runs
+        try {
+            AutoExportAlarmReceiver().onReceive(context, Intent())
+
+            verifyOrder {
+                AutoExportScheduler.scheduleNext(context)
+                AutoExportScheduler.enqueueScheduled(context)
+            }
+            verify { AppLogger.e("AutoExportAlarm", "Failed to enqueue export worker", any()) }
+        } finally {
+            unmockkObject(AutoExportScheduler)
+        }
     }
 
     @Test

@@ -138,8 +138,8 @@ class AutoExportWorker(
             Date(exportStartSec * 1000)
         )
 
-        // Write to cache first, then copy to SAF.
-        val tempFile = File(appContext.cacheDir, "auto_export_temp$ext")
+        // Write to cache first, then copy to SAF. One file per run, so two runs can never truncate each other
+        val tempFile = File.createTempFile("auto_export_", ext, appContext.cacheDir)
 
         return try {
             val rowCount = if (config.mode == "incremental" && config.lastExportTimestamp > 0) {
@@ -166,17 +166,7 @@ class AutoExportWorker(
                 return Result.success()
             }
 
-            val tempSize = tempFile.length()
             val destDocFile = copyToSafDirectory(dirUri, fileName, tempFile, config.format)
-
-            val destSize = destDocFile.length()
-            if (!destDocFile.exists() || destSize == 0L) {
-                tempFile.delete()
-                throw IOException("Export verification failed: destination file missing or empty")
-            }
-            if (destSize != tempSize) {
-                AppLogger.w(TAG, "Export size mismatch: temp=$tempSize, dest=$destSize")
-            }
 
             tempFile.delete()
 
@@ -284,12 +274,21 @@ class AutoExportWorker(
             ?.createFile(mimeType, fileName)
             ?: throw DirectoryAccessException("Failed to create file in selected directory")
 
-        resolver.openOutputStream(docFile.uri)?.use { outStream ->
-            sourceFile.inputStream().use { inStream ->
-                inStream.copyTo(outStream)
+        val expected = sourceFile.length()
+        try {
+            val copied = resolver.openOutputStream(docFile.uri)?.use { outStream ->
+                sourceFile.inputStream().use { inStream ->
+                    inStream.copyTo(outStream)
+                }
+            } ?: throw DirectoryAccessException("Failed to open output stream")
+            // Verified by what was written, never by querying the document back: cloud providers report size 0 until synced
+            if (copied != expected) {
+                throw IOException("Export verification failed: copied $copied of $expected bytes")
             }
-        } ?: throw DirectoryAccessException("Failed to open output stream")
-
+        } catch (e: Exception) {
+            docFile.delete()
+            throw e
+        }
         return docFile
     }
 
