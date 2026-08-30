@@ -63,7 +63,7 @@ Replaces all current data Restoring overwrites every location, setting, geofence
 
 ### What Gets Paused
 
-To swap the database safely, the restore stops the location tracking service and any in-flight auto-export. If a writer can't be stopped within ~5 seconds the restore aborts before touching your data.
+To swap the database safely, the restore stops the location tracking service and any in-flight auto-export. If a writer can't be stopped within ~5 seconds the restore aborts before touching your data. The auto-export schedule is armed again when the restore finishes, whether or not it succeeded.
 
 After restore, tracking is left **off** so the new device doesn't silently start uploading on the old credentials. Re-enable it when you've checked the data is correct.
 
