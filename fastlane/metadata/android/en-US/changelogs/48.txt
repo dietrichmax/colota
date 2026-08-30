@@ -5,3 +5,4 @@
 - Switching auto-export off stops a running export
 - Auto-export keeps its schedule after a backup restore
 - An aborted backup restore starts tracking again instead of leaving it off
+- Uploads to a local server recover after a temporary DNS failure instead of waiting for an app restart

@@ -1,9 +1,17 @@
 package com.Colota.sync
 
+import java.net.InetAddress
+import java.net.UnknownHostException
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 class UrlSafetyTest {
+
+    @Before
+    fun setUp() {
+        UrlSafety.clearCache()
+    }
 
     // --- isValidProtocol ---
 
@@ -130,15 +138,6 @@ class UrlSafetyTest {
     }
 
     @Test
-    fun `isPrivateEndpoint resolves hostname via DNS`() {
-        // localhost resolves to 127.0.0.1 via InetAddress - proves the DNS path works.
-        // Testing hostnames like "server.local" -> 192.168.x.x requires mDNS which
-        // is not available in unit tests, but the code path is the same: InetAddress.getByName()
-        // -> isSiteLocalAddress. The example.com test below proves public DNS resolution works.
-        assertTrue(UrlSafety.isPrivateEndpoint("http://localhost:8080/api"))
-    }
-
-    @Test
     fun `isPrivateEndpoint returns false for unresolvable host`() {
         assertFalse(UrlSafety.isPrivateEndpoint("http://this-host-does-not-exist-xyz.invalid/api"))
     }
@@ -146,5 +145,42 @@ class UrlSafetyTest {
     @Test
     fun `isPrivateEndpoint returns false for malformed URL`() {
         assertFalse(UrlSafety.isPrivateEndpoint("not-a-url"))
+    }
+
+    // --- private-host resolution ---
+
+    @Test
+    fun `localhost is private without consulting the resolver`() {
+        assertTrue(UrlSafety.isPrivateHost("localhost") { throw AssertionError("resolver must not be called") })
+    }
+
+    @Test
+    fun `a failed lookup does not pin a LAN host as public for the rest of the process`() {
+        val host = "nas.blip.test"
+        val lan = InetAddress.getByName("192.168.1.50")
+
+        assertFalse(UrlSafety.isPrivateHost(host) { throw UnknownHostException(it) })
+
+        assertTrue(UrlSafety.isPrivateHost(host) { lan })
+        assertTrue(UrlSafety.isValidProtocol("http://$host/api"))
+    }
+
+    @Test
+    fun `a resolved host is cached so a later lookup failure cannot flip the verdict`() {
+        val host = "nas.cached.test"
+        val lan = InetAddress.getByName("10.0.0.7")
+
+        assertTrue(UrlSafety.isPrivateHost(host) { lan })
+        assertTrue(UrlSafety.isPrivateHost(host) { throw UnknownHostException(it) })
+    }
+
+    @Test
+    fun `a host that resolves to a public address stays cached as public`() {
+        val host = "tracker.public.test"
+        val wan = InetAddress.getByName("93.184.216.34")
+
+        assertFalse(UrlSafety.isPrivateHost(host) { wan })
+        assertFalse(UrlSafety.isPrivateHost(host) { throw UnknownHostException(it) })
+        assertFalse(UrlSafety.isValidProtocol("http://$host/api"))
     }
 }

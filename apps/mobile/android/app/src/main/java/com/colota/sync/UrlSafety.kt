@@ -5,6 +5,7 @@
 
 package com.Colota.sync
 
+import androidx.annotation.VisibleForTesting
 import java.net.InetAddress
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
@@ -15,10 +16,10 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object UrlSafety {
 
-    /** Per-hostname cache of the DNS lookup + private-range check. */
+    /** Per-hostname cache. Only successful lookups are cached: a failed one must not pin a host as public. */
     private val privateHostCache = ConcurrentHashMap<String, Boolean>()
 
-    /** Performs DNS resolution and caches the result. */
+    /** Performs DNS resolution and caches a successful lookup. */
     fun isPrivateEndpoint(endpoint: String): Boolean {
         val host = try {
             URL(endpoint).host ?: return false
@@ -47,21 +48,30 @@ object UrlSafety {
      * Matches Android's local network definition:
      * loopback, site-local (RFC 1918), link-local, and CGNAT (100.64.0.0/10).
      */
-    fun isPrivateHost(host: String): Boolean {
+    fun isPrivateHost(host: String): Boolean = isPrivateHost(host, InetAddress::getByName)
+
+    @VisibleForTesting
+    internal fun isPrivateHost(host: String, resolve: (String) -> InetAddress): Boolean {
         if (host == "localhost") return true
-        return privateHostCache.getOrPut(host) {
-            try {
-                val address = InetAddress.getByName(host)
-                address.isAnyLocalAddress ||
-                    address.isLoopbackAddress ||
-                    address.isSiteLocalAddress ||
-                    address.isLinkLocalAddress ||
-                    isCgnatAddress(address)
-            } catch (e: Exception) {
-                false
-            }
+        privateHostCache[host]?.let { return it }
+
+        val address = try {
+            resolve(host)
+        } catch (_: Exception) {
+            return false
         }
+
+        val isPrivate = address.isAnyLocalAddress ||
+            address.isLoopbackAddress ||
+            address.isSiteLocalAddress ||
+            address.isLinkLocalAddress ||
+            isCgnatAddress(address)
+        privateHostCache[host] = isPrivate
+        return isPrivate
     }
+
+    @VisibleForTesting
+    internal fun clearCache() = privateHostCache.clear()
 
     /** Checks if the address falls in the CGNAT range 100.64.0.0/10. */
     private fun isCgnatAddress(address: InetAddress): Boolean {
