@@ -816,6 +816,72 @@ class SyncManagerTest {
     }
 
     @Test
+    fun `startPeriodicSync logs the tick the network gate swallows`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 1,
+            retryIntervalSeconds = 1,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns false
+        every { dbHelper.getQueuedCount() } returns 5
+
+        syncManager.startPeriodicSync()
+        advanceTimeBy(1_500)
+
+        verify(atLeast = 1) { AppLogger.d("SyncManager", "Sync tick: queue=5 allowed=false") }
+        syncManager.stopPeriodicSync()
+    }
+
+    @Test
+    fun `startPeriodicSync logs an idle periodic tick so a missing line means the timer stalled`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 1,
+            retryIntervalSeconds = 1,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        every { dbHelper.getQueuedCount() } returns 0
+
+        syncManager.startPeriodicSync()
+        advanceTimeBy(1_500)
+
+        verify(atLeast = 1) { AppLogger.d("SyncManager", "Sync tick: queue=0 allowed=true") }
+        syncManager.stopPeriodicSync()
+    }
+
+    @Test
+    fun `startPeriodicSync stays silent on an idle instant-mode tick`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 1,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        every { dbHelper.getQueuedCount() } returns 0
+
+        syncManager.startPeriodicSync()
+        advanceTimeBy(65_000)
+
+        verify(exactly = 0) { AppLogger.d("SyncManager", match { it.startsWith("Sync tick") }) }
+        syncManager.stopPeriodicSync()
+    }
+
+    @Test
     fun `stopPeriodicSync prevents further syncs after cancellation`() = scope.runTest {
         syncManager.updateConfig(
             endpoint = "https://example.com",

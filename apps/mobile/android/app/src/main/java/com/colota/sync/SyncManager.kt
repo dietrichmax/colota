@@ -77,11 +77,17 @@ class SyncManager(
                 val baseDelay = calculateNextSyncDelay()
                 delay(baseDelay * 1000L)
 
-                if (!isSyncAllowed()) {
+                val queued = getCachedQueuedCount()
+                val allowed = isSyncAllowed()
+                // Instant mode idles every 30 s; only a periodic tick or a stuck queue is worth a line
+                if (syncIntervalSeconds > 0 || queued > 0) {
+                    AppLogger.d(TAG, "Sync tick: queue=$queued allowed=$allowed" + if (endpoint.isBlank()) " endpoint=NONE" else "")
+                }
+                if (!allowed) {
                     continue
                 }
 
-                if (endpoint.isNotBlank() && getCachedQueuedCount() > 0) {
+                if (endpoint.isNotBlank() && queued > 0) {
                     val errorMessage: String? = try {
                         val success = performSyncAndCheckSuccess()
 
