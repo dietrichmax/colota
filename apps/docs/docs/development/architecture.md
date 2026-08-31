@@ -215,7 +215,7 @@ For mTLS-protected endpoints, builds the `HttpsURLConnection` with a custom `SSL
 
 ### UrlSafety
 
-HTTP endpoint policy: HTTPS is required for public hosts, HTTP is only allowed when the host resolves to a private/local address (loopback, RFC 1918 site-local, link-local, or CGNAT 100.64.0.0/10). Resolves hostnames via `InetAddress` so server.local-style mDNS names work, with a per-hostname cache. Pure validation with no transport state, also exposed to the JS bridge for pre-save endpoint checks.
+HTTP endpoint policy: HTTPS is required for public hosts, HTTP is only allowed when the host resolves to a private/local address (loopback, RFC 1918 site-local, link-local, or CGNAT 100.64.0.0/10). Resolves hostnames via `InetAddress` so server.local-style mDNS names work. The lookup runs on every call, so a host that stops resolving to a private address is no longer trusted for plain HTTP after a network change. Pure validation with no transport state, also exposed to the JS bridge for pre-save endpoint checks.
 
 ### ClientCertSslContextProvider
 

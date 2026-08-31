@@ -8,7 +8,6 @@ package com.Colota.sync
 import androidx.annotation.VisibleForTesting
 import java.net.InetAddress
 import java.net.URL
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * HTTP endpoint policy: which protocols and hosts the app is willing to talk to.
@@ -16,10 +15,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object UrlSafety {
 
-    /** Per-hostname cache. Only successful lookups are cached: a failed one must not pin a host as public. */
-    private val privateHostCache = ConcurrentHashMap<String, Boolean>()
-
-    /** Performs DNS resolution and caches a successful lookup. */
+    /** Resolves the host on every call, so a host that stops resolving privately stops being trusted. */
     fun isPrivateEndpoint(endpoint: String): Boolean {
         val host = try {
             URL(endpoint).host ?: return false
@@ -53,7 +49,6 @@ object UrlSafety {
     @VisibleForTesting
     internal fun isPrivateHost(host: String, resolve: (String) -> InetAddress): Boolean {
         if (host == "localhost") return true
-        privateHostCache[host]?.let { return it }
 
         val address = try {
             resolve(host)
@@ -66,12 +61,8 @@ object UrlSafety {
             address.isSiteLocalAddress ||
             address.isLinkLocalAddress ||
             isCgnatAddress(address)
-        privateHostCache[host] = isPrivate
         return isPrivate
     }
-
-    @VisibleForTesting
-    internal fun clearCache() = privateHostCache.clear()
 
     /** Checks if the address falls in the CGNAT range 100.64.0.0/10. */
     private fun isCgnatAddress(address: InetAddress): Boolean {
