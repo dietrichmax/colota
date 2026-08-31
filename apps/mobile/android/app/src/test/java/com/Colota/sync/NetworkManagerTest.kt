@@ -1,5 +1,10 @@
 package com.Colota.sync
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.wifi.WifiInfo
+import android.net.wifi.WifiManager
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -9,8 +14,8 @@ import org.junit.After
 import org.junit.Before
 
 /**
- * Tests for NetworkManager's pure-logic methods.
- * Network I/O and Android ConnectivityManager are not tested here (require instrumented tests).
+ * Tests for NetworkManager's pure-logic methods, plus callback registration against a mocked
+ * ConnectivityManager. Network I/O still needs instrumented tests.
  */
 class NetworkManagerTest {
 
@@ -26,6 +31,82 @@ class NetworkManagerTest {
     @After
     fun tearDown() {
         unmockkObject(AppLogger)
+    }
+
+    // --- network callback registration ---
+
+    private fun newManagerWith(cm: ConnectivityManager): NetworkManager {
+        val ctx = mockk<Context>(relaxed = true)
+        every { ctx.getSystemService(Context.CONNECTIVITY_SERVICE) } returns cm
+        every { ctx.getSystemService(Context.WIFI_SERVICE) } returns null
+        return NetworkManager(ctx)
+    }
+
+    @Test
+    fun `setSsidTracking swaps the callback in both directions`() {
+        val cm = mockk<ConnectivityManager>(relaxed = true)
+        val manager = newManagerWith(cm)
+
+        verify(exactly = 1) { cm.registerDefaultNetworkCallback(any<ConnectivityManager.NetworkCallback>()) }
+        verify(exactly = 0) { cm.unregisterNetworkCallback(any<ConnectivityManager.NetworkCallback>()) }
+
+        manager.setSsidTracking(true)
+        verify(exactly = 1) { cm.unregisterNetworkCallback(any<ConnectivityManager.NetworkCallback>()) }
+        verify(exactly = 2) { cm.registerDefaultNetworkCallback(any<ConnectivityManager.NetworkCallback>()) }
+
+        manager.setSsidTracking(false)
+        verify(exactly = 2) { cm.unregisterNetworkCallback(any<ConnectivityManager.NetworkCallback>()) }
+        verify(exactly = 3) { cm.registerDefaultNetworkCallback(any<ConnectivityManager.NetworkCallback>()) }
+    }
+
+    @Test
+    fun `setSsidTracking with an unchanged value does not churn the callback`() {
+        val cm = mockk<ConnectivityManager>(relaxed = true)
+        val manager = newManagerWith(cm)
+
+        manager.setSsidTracking(false)
+        manager.setSsidTracking(false)
+        verify(exactly = 1) { cm.registerDefaultNetworkCallback(any<ConnectivityManager.NetworkCallback>()) }
+
+        manager.setSsidTracking(true)
+        manager.setSsidTracking(true)
+        verify(exactly = 2) { cm.registerDefaultNetworkCallback(any<ConnectivityManager.NetworkCallback>()) }
+    }
+
+    @Test
+    fun `the SSID is only read while tracking is on`() {
+        val cm = mockk<ConnectivityManager>(relaxed = true)
+        val slot = slot<ConnectivityManager.NetworkCallback>()
+        every { cm.registerDefaultNetworkCallback(capture(slot)) } just Runs
+        val info = mockk<WifiInfo>(relaxed = true)
+        every { info.ssid } returns "\"HomeNet\""
+        val wifi = mockk<WifiManager>(relaxed = true)
+        every { wifi.connectionInfo } returns info
+        val ctx = mockk<Context>(relaxed = true)
+        every { ctx.getSystemService(Context.CONNECTIVITY_SERVICE) } returns cm
+        every { ctx.getSystemService(Context.WIFI_SERVICE) } returns wifi
+        val manager = NetworkManager(ctx)
+
+        slot.captured.onCapabilitiesChanged(mockk(relaxed = true), mockk(relaxed = true))
+        assertFalse(manager.isConnectedToSsid("HomeNet"))
+
+        manager.setSsidTracking(true)
+        slot.captured.onCapabilitiesChanged(mockk(relaxed = true), mockk(relaxed = true))
+        assertTrue(manager.isConnectedToSsid("HomeNet"))
+    }
+
+    @Test
+    fun `the plain callback still tracks VPN state`() {
+        val cm = mockk<ConnectivityManager>(relaxed = true)
+        val slot = slot<ConnectivityManager.NetworkCallback>()
+        every { cm.registerDefaultNetworkCallback(capture(slot)) } just Runs
+        val manager = newManagerWith(cm)
+
+        val caps = mockk<NetworkCapabilities>(relaxed = true)
+        every { caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) } returns true
+        slot.captured.onCapabilitiesChanged(mockk(relaxed = true), caps)
+
+        assertTrue(manager.isVpnConnected())
     }
 
     // --- buildQueryString ---

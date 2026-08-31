@@ -8,6 +8,8 @@ import com.Colota.util.AppLogger
 import com.Colota.sync.tls.ClientCertSslContextProvider
 import com.Colota.util.TimedCache
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -19,6 +21,7 @@ import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.UnrecoverableKeyException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -35,6 +38,7 @@ class NetworkManager(private val context: Context) {
         private const val CONNECTION_TIMEOUT = 10000
         private const val READ_TIMEOUT = 10000
         private const val NETWORK_CHECK_CACHE_MS = 5000L
+        private const val SSID_PROBE_TIMEOUT_MS = 3000L
         private const val ERROR_BODY_MAX_CHARS = 200
         private val WHITESPACE = Regex("\\s+")
     }
@@ -43,6 +47,7 @@ class NetworkManager(private val context: Context) {
 
     @Volatile private var currentSsid: String = ""
     @Volatile private var isVpn: Boolean = false
+    @Volatile private var ssidTracking: Boolean = false
     private val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as? WifiManager
 
     // Lazy so existing unit tests that mock Context don't trigger EncryptedSharedPreferences init.
@@ -55,11 +60,77 @@ class NetworkManager(private val context: Context) {
         clientCertProvider.invalidate()
     }
 
-    private val networkCallback = createNetworkCallback()
+    private var networkCallback = createNetworkCallback(withSsid = false)
 
-    private fun createNetworkCallback(): ConnectivityManager.NetworkCallback {
+    /**
+     * The location-flagged callback notes FINE_LOCATION on every delivery, which lights the privacy
+     * indicator with GPS stopped. Register it only while the SSID is needed; VPN state needs no flag.
+     */
+    @Synchronized
+    fun setSsidTracking(enabled: Boolean) {
+        if (enabled == ssidTracking) return
+        try {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Failed to unregister network callback", e)
+        }
+        networkCallback = createNetworkCallback(withSsid = enabled)
+        try {
+            connectivityManager.registerDefaultNetworkCallback(networkCallback)
+            // Committed only once a callback is live, so a failed swap can be retried.
+            ssidTracking = enabled
+            if (!enabled) currentSsid = ""
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Failed to register network callback", e)
+        }
+    }
+
+    /** One-shot SSID read for the picker: the flagged callback is registered for this call only. */
+    fun readSsidOnce(onResult: (String) -> Unit) {
+        if (ssidTracking) {
+            onResult(currentSsid)
+            return
+        }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            // Below S the SSID comes from WifiManager, not the callback, so waiting on one would
+            // only stall and would return "" whenever there is no default network.
+            onResult(readSsid(null))
+            return
+        }
+
+        val done = AtomicBoolean(false)
+        var probe: ConnectivityManager.NetworkCallback? = null
+        fun finish(ssid: String) {
+            if (!done.compareAndSet(false, true)) return
+            probe?.let {
+                try {
+                    connectivityManager.unregisterNetworkCallback(it)
+                } catch (e: Exception) {
+                    AppLogger.e(TAG, "Failed to unregister SSID probe", e)
+                }
+            }
+            onResult(ssid)
+        }
+
+        probe = object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
+            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = finish(readSsid(caps))
+        }
+
+        try {
+            connectivityManager.registerDefaultNetworkCallback(probe)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Failed to register SSID probe", e)
+            probe = null
+            finish("")
+            return
+        }
+        Handler(Looper.getMainLooper()).postDelayed({ finish("") }, SSID_PROBE_TIMEOUT_MS)
+    }
+
+    private fun createNetworkCallback(withSsid: Boolean): ConnectivityManager.NetworkCallback {
         fun update(caps: NetworkCapabilities) {
-            currentSsid = readSsid(caps)
+            if (withSsid) currentSsid = readSsid(caps)
             isVpn = caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
         }
         fun clear() {
@@ -67,7 +138,7 @@ class NetworkManager(private val context: Context) {
             isVpn = false
         }
 
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        return if (withSsid && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
                 override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = update(caps)
                 override fun onLost(network: Network) = clear()
@@ -80,9 +151,9 @@ class NetworkManager(private val context: Context) {
         }
     }
 
-    private fun readSsid(caps: NetworkCapabilities): String {
+    private fun readSsid(caps: NetworkCapabilities?): String {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            (caps.transportInfo as? WifiInfo)?.ssid?.removeSurrounding("\"") ?: ""
+            (caps?.transportInfo as? WifiInfo)?.ssid?.removeSurrounding("\"") ?: ""
         } else {
             @Suppress("DEPRECATION")
             wifiManager?.connectionInfo?.ssid?.removeSurrounding("\"") ?: ""
@@ -447,7 +518,7 @@ class NetworkManager(private val context: Context) {
 
     /**
      * Returns true when connected to a WiFi network matching the given SSID.
-     * SSID is updated via NetworkCallback with FLAG_INCLUDE_LOCATION_INFO.
+     * Only meaningful while setSsidTracking(true) holds the location-flagged callback.
      */
     fun isConnectedToSsid(ssid: String): Boolean {
         if (ssid.isBlank()) return false
@@ -459,8 +530,6 @@ class NetworkManager(private val context: Context) {
      * Updated via NetworkCallback.
      */
     fun isVpnConnected(): Boolean = isVpn
-
-    fun getCurrentSsid(): String = currentSsid
 
     fun destroy() {
         try {
