@@ -7,3 +7,4 @@
 - An aborted backup restore starts tracking again instead of leaving it off
 - Uploads to a local server recover after a temporary DNS failure instead of waiting for an app restart
 - A local server that moves off your network is no longer trusted for unencrypted uploads
+- The location privacy indicator no longer lights up when GPS is not running

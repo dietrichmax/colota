@@ -795,6 +795,68 @@ class LocationForegroundServiceTest {
         assertEquals(freshLocation, getField<Location?>("lastKnownLocation"))
     }
 
+    @Test
+    fun `only the wifi_ssid condition turns SSID tracking on`() {
+        // Reading the SSID is attributed as location access, so it must follow the condition needing it.
+        setField("config", ServiceConfig(endpoint = "https://example.com", syncCondition = "wifi_ssid"))
+        invokePushConfigToSyncManager()
+        verify { networkManager.setSsidTracking(true) }
+
+        setField("config", ServiceConfig(endpoint = "https://example.com", syncCondition = "any"))
+        invokePushConfigToSyncManager()
+        verify { networkManager.setSsidTracking(false) }
+    }
+
+    @Test
+    fun `ACTION_RECHECK_ZONE during a hold with no cached fix still applies a zone edit`() {
+        setField("lastKnownLocation", null)
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        setField("isWifiPaused", true)
+        every { geofenceHelper.getGeofenceByName("Home") } returns null
+
+        invokeHandleZoneRecheckAction()
+
+        verify(exactly = 0) { locationProvider.getCurrentLocation(any(), any()) }
+        assertFalse(getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `ACTION_RECHECK_ZONE during a hold still applies a zone edit`() {
+        // A zone edit must take effect during a hold, or GPS stays dead until the user leaves the wifi.
+        val cached = mockLocation(lat = 48.0, lon = 11.0)
+        setField("lastKnownLocation", cached)
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        setField("isWifiPaused", true)
+        every { geofenceHelper.getPauseZone(cached) } returns null
+
+        invokeHandleZoneRecheckAction()
+
+        verify(exactly = 0) { locationProvider.getCurrentLocation(any(), any()) }
+        assertFalse(getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `ACTION_RECHECK_ZONE during a motionless hold requests no fresh fix`() {
+        setField("lastKnownLocation", null)
+        setField("insidePauseZone", true)
+        setField("currentZoneName", "Home")
+        setField("currentZoneGeofence", homeGeofence)
+        setField("isMotionlessPaused", true)
+        val pausing = geofence("Home", pauseOnMotionless = true)
+        setField("currentZoneGeofence", pausing)
+        every { geofenceHelper.getGeofenceByName("Home") } returns pausing
+
+        invokeHandleZoneRecheckAction()
+
+        verify(exactly = 0) { locationProvider.getCurrentLocation(any(), any()) }
+        verify(exactly = 0) { locationProvider.getLastLocation(any(), any()) }
+        assertTrue(getField("insidePauseZone"))
+    }
+
     // =========================================================================
     // #444 - restored / paused zone recheck against a fresh fix
     // =========================================================================
@@ -2648,6 +2710,12 @@ class LocationForegroundServiceTest {
 
     private fun invokeExitPauseZone() {
         val method = LocationForegroundService::class.java.getDeclaredMethod("exitPauseZone")
+        method.isAccessible = true
+        method.invoke(service)
+    }
+
+    private fun invokePushConfigToSyncManager() {
+        val method = LocationForegroundService::class.java.getDeclaredMethod("pushConfigToSyncManager")
         method.isAccessible = true
         method.invoke(service)
     }

@@ -765,7 +765,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getCurrentSsid(promise: Promise) {
-        promise.resolve(networkManager.getCurrentSsid())
+        networkManager.readSsidOnce { promise.resolve(it) }
     }
 
     @ReactMethod

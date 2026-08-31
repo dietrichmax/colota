@@ -768,6 +768,18 @@ class LocationForegroundService : Service() {
     private fun handleZoneRecheckAction() {
         // A cached fix while paused is usually the stale home fix - force a fresh one so a departure exits.
         if (insidePauseZone) {
+            // Holds own their resume: re-evaluate on the last fix so a zone edit applies, without probing.
+            if (isWifiPaused || isMotionlessPaused) {
+                val cached = lastKnownLocation
+                if (cached != null) {
+                    recheckZoneWithLocation(cached)
+                } else {
+                    // A restart under a hold never gets a fix, so settle the edit from the zone row.
+                    val zone = currentZoneName?.let { geofenceHelper.getGeofenceByName(it) }
+                    if (zone == null) exitPauseZone() else applyZoneSettingsIfChanged(zone)
+                }
+                return
+            }
             requestFreshOrLastLocation { location, probed ->
                 if (location != null) {
                     lastKnownLocation = location
@@ -1631,6 +1643,9 @@ class LocationForegroundService : Service() {
     }
 
     private fun pushConfigToSyncManager() {
+        // Only wifi_ssid reads the SSID, and reading it is attributed as location access.
+        networkManager.setSsidTracking(config.syncCondition == "wifi_ssid")
+
         // Instant mode bypasses the queue and posts one flat payload, which 4xxs
         // forever against /api/v1/overland/batches. Defensive net under the UI guard.
         val effectiveFormat = if (config.syncIntervalSeconds == 0 && config.apiFormat == ApiFormat.OVERLAND_BATCH) {

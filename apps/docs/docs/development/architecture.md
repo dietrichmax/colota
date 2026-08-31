@@ -209,7 +209,7 @@ Orchestrates batch location uploads with:
 
 ### NetworkManager
 
-HTTP client. Injects auth headers, caches connectivity checks, and detects unmetered connections, specific SSIDs and VPN status for sync condition filtering. Endpoint policy (HTTPS-for-public, private host detection) is delegated to `UrlSafety`.
+HTTP client. Injects auth headers, caches connectivity checks, and detects unmetered connections and VPN status for sync condition filtering. SSID detection needs a location-flagged network callback, which is attributed as location access, so it is registered only while the `wifi_ssid` condition is active or the SSID picker asks. Endpoint policy (HTTPS-for-public, private host detection) is delegated to `UrlSafety`.
 
 For mTLS-protected endpoints, builds the `HttpsURLConnection` with a custom `SSLSocketFactory` supplied by `ClientCertSslContextProvider` (per-instance, never `setDefaultSSLSocketFactory()` - the override is scoped to outbound location sync, not the whole process).
 
