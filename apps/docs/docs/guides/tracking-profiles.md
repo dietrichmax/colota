@@ -36,7 +36,7 @@ Tracking profiles automatically adjust GPS interval, distance filter, and sync s
 | **Speed Below** | Average speed drops below the configured threshold (km/h) |
 | **Stationary**  | Device not moving for approximately 60 seconds            |
 
-Speed conditions use a rolling average of the last 5 GPS readings to avoid triggering on momentary speed spikes. The stationary condition uses a fixed speed threshold (0.3 m/s) with a 60-second timeout for reliable detection - unlike speed-below, it does not flap on GPS noise near zero.
+Speed conditions use a rolling average of the last 5 GPS readings to avoid triggering on momentary speed spikes. The stationary condition uses a fixed speed threshold (0.3 m/s) that has to hold across 60 seconds of fixes, so unlike speed-below it does not flap on GPS noise near zero. The window is measured over the fixes themselves, so a stretch with no fixes at all is not counted as stillness and the profile waits for the stream instead of switching on.
 
 :::tip[Stationary profile]
 
@@ -50,9 +50,9 @@ Stationary profiles always use a **0m** distance filter and ignore the setting. 
 
 :::caution[Accuracy filtering affects stationary detection]
 
-The stationary condition needs GPS speed below 0.3 m/s for a full 60 seconds. Noisy fixes report speeds above that and restart the count, so with a loose accuracy filter (40m or more) the profile may never activate at all. Around 15m keeps those fixes out of the way.
+The stationary condition needs GPS speed below 0.3 m/s across 60 seconds of fixes, and the accuracy filter can stop that working from either direction. Too loose (40m or more) and noisy fixes report speeds above the threshold, restarting the count. Too tight and the fixes are dropped before the speed check ever sees them, which leaves the condition with nothing to measure. Either way the profile does not activate. Around 15m keeps both out of the way.
 
-Do not go much tighter than that. A filtered fix is dropped before the speed check ever sees it, and with nothing arriving there is nothing left to report movement, so the profile can switch on while you are moving. Your distance filter does not have that effect: whenever a speed or stationary profile is enabled the app asks Android for every fix, and the filter only decides what gets saved.
+Your distance filter does not have that effect: whenever a speed or stationary profile is enabled the app asks Android for every fix, and the filter only decides what gets saved.
 
 :::
 
