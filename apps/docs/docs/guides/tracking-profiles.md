@@ -38,15 +38,21 @@ Tracking profiles automatically adjust GPS interval, distance filter, and sync s
 
 Speed conditions use a rolling average of the last 5 GPS readings to avoid triggering on momentary speed spikes. The stationary condition uses a fixed speed threshold (0.3 m/s) with a 60-second timeout for reliable detection - unlike speed-below, it does not flap on GPS noise near zero.
 
-:::tip
+:::tip[Stationary profile]
 
-Stationary profile When the device becomes stationary, the motion detector is started. It uses batched accelerometer variance plus the hardware significant motion sensor in parallel, so the profile deactivates within seconds of real movement regardless of the configured GPS interval (e.g. 30 min). The deactivation delay setting is not shown for stationary profiles since the motion detector handles instant resume. The distance filter is forced to **0m** for stationary profiles so a point is recorded at every interval regardless of GPS drift - any other value would drop every stationary point.
+Colota starts the motion detector when the device goes still. It watches accelerometer variance and the hardware significant motion sensor together, so moving again usually ends the profile within seconds rather than at the next fix. That is why the editor hides the deactivation delay here.
+
+The sensor is not a guarantee. It can miss a slow, gentle start, and not every device has the hardware sensor that can wake a sleeping phone. If it does not notice you starting to move, the profile ends only once GPS reports movement, which at a long interval means waiting for the next fix. That is what the editor warns about above 60 seconds.
+
+Stationary profiles always use a **0m** distance filter and ignore the setting. Fixes taken in one spot sit a few meters apart, so anything larger would drop the points the profile is there to record.
 
 :::
 
-:::caution
+:::caution[Accuracy filtering affects stationary detection]
 
-Accuracy filtering matters for stationary detection The stationary condition triggers when GPS speed stays below 0.3 m/s for 60 seconds. If your default settings allow inaccurate locations (e.g. 40m+ accuracy) with a low distance filter (0m), GPS drift from noisy fixes can produce phantom speeds above the threshold - preventing the stationary profile from ever activating. To fix this, tighten your accuracy filter (e.g. 15m or less) so only clean fixes reach the speed check.
+The stationary condition needs GPS speed below 0.3 m/s for a full 60 seconds. Noisy fixes report speeds above that and restart the count, so with a loose accuracy filter (40m or more) the profile may never activate at all. Around 15m keeps those fixes out of the way.
+
+Do not go much tighter than that. A filtered fix is dropped before the speed check ever sees it, and with nothing arriving there is nothing left to report movement, so the profile can switch on while you are moving. Your distance filter does not have that effect: whenever a speed or stationary profile is enabled the app asks Android for every fix, and the filter only decides what gets saved.
 
 :::
 
