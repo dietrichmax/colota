@@ -60,8 +60,11 @@ class ProfileManager(
     @Volatile private var isCarMode = false
     @Volatile var isStationary = false
         private set
+    // The run of consecutive sub-threshold fixes, timed by location.time.
     // Written/read from location + motion callbacks without synchronization.
-    @Volatile private var stationaryJob: Job? = null
+    @Volatile private var runStartedAtMs = 0L
+    @Volatile private var lastSampleAtMs = 0L
+    @Volatile private var lastSampleGapMs = 0L
 
     // Speed rolling average buffer
     private val speedBuffer = ArrayDeque<Float>()
@@ -81,8 +84,8 @@ class ProfileManager(
     /** Called by the motion sensor when the device starts moving while stationary. */
     fun onMotionDetected() {
         if (!isStationary) return
-        stationaryJob?.cancel()
-        stationaryJob = null
+        // Or the next still fix re-activates from the run this verdict already spent.
+        runStartedAtMs = 0L
         isStationary = false
         onStationaryChanged?.invoke(false)
         AppLogger.d(TAG, "Motion detected - device no longer stationary")
@@ -315,14 +318,20 @@ class ProfileManager(
         pendingActivationProfileId = null
     }
 
+    /** Only the fix that completes the window can conclude stillness; a stopped stream never does. */
     private fun evaluateStationaryState(location: android.location.Location) {
         if (ProfileConstants.CONDITION_STATIONARY !in getNeededConditionTypes()) return
+
+        val sampleAtMs = location.time
+        val gapMs = if (lastSampleAtMs == 0L) -1L else sampleAtMs - lastSampleAtMs
+        val previousGapMs = lastSampleGapMs
+        lastSampleAtMs = sampleAtMs
+        if (gapMs >= 0) lastSampleGapMs = gapMs
 
         val speed = if (location.hasSpeed()) location.speed else 0f
 
         if (speed >= ProfileConstants.STATIONARY_SPEED_THRESHOLD) {
-            stationaryJob?.cancel()
-            stationaryJob = null
+            runStartedAtMs = 0L
             if (isStationary) {
                 isStationary = false
                 onStationaryChanged?.invoke(false)
@@ -331,16 +340,33 @@ class ProfileManager(
             return
         }
 
-        if (!isStationary && stationaryJob?.isActive != true) {
-            val timeoutMs = stationaryTimeoutMs()
-            stationaryJob = scope.launch {
-                delay(timeoutMs)
-                isStationary = true
-                onStationaryChanged?.invoke(true)
-                AppLogger.d(TAG, "Device stationary (speed below threshold for ${timeoutMs / 1000}s)")
-                evaluate()
-            }
+        if (isStationary) return
+
+        val timeoutMs = stationaryTimeoutMs()
+        if (runStartedAtMs == 0L || !runSurvivesGap(gapMs, previousGapMs)) {
+            if (runStartedAtMs != 0L) AppLogger.d(TAG, "Stationary run restarted: ${gapMs}ms without a fix")
+            runStartedAtMs = sampleAtMs
         }
+
+        val stillForMs = sampleAtMs - runStartedAtMs
+        if (stillForMs < timeoutMs) return
+
+        isStationary = true
+        onStationaryChanged?.invoke(true)
+        AppLogger.d(TAG, "Device stationary (speed below threshold for ${stillForMs / 1000}s)")
+    }
+
+    /**
+     * A gap is unobserved time, not stillness. The tolerance scales with the run's own spacing, and
+     * deliberately not with the window: a long window must not make a long blackout count as stillness.
+     */
+    private fun runSurvivesGap(gapMs: Long, previousGapMs: Long): Boolean {
+        if (gapMs < 0) return false
+        val tolerance = maxOf(
+            ProfileConstants.STATIONARY_MIN_GAP_TOLERANCE_MS,
+            previousGapMs * ProfileConstants.STATIONARY_GAP_TOLERANCE_FACTOR
+        )
+        return gapMs <= minOf(tolerance, ProfileConstants.STATIONARY_MAX_GAP_TOLERANCE_MS)
     }
 
     // Stationary detection window = the profile's activation delay (the "still for this long" time).
