@@ -18,6 +18,18 @@ const config: Config = {
 
   onBrokenLinks: "throw",
 
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "alternate",
+        type: "application/rss+xml",
+        title: "Colota Releases",
+        href: "https://colota.app/releases.xml"
+      }
+    }
+  ],
+
   staticDirectories: ["static", "../../packages/shared"],
 
   i18n: {
