@@ -9,6 +9,8 @@ const repoRoot = join(docsRoot, "..", "..")
 const changelogDir = join(repoRoot, "fastlane", "metadata", "android", "en-US", "changelogs")
 // A standalone page, not a doc: this is a changelog, and it mirrors src/pages/privacy-policy.md.
 const out = join(docsRoot, "src", "pages", "releases.md")
+const feedOut = join(docsRoot, "static", "releases.xml")
+const SITE = "https://colota.app"
 const REPO = "https://github.com/dietrichmax/colota"
 const GRADLE = "apps/mobile/android/app/build.gradle"
 
@@ -53,11 +55,13 @@ for (const tag of releases) {
     continue
   }
   const code = Number(gradle.match(/versionCode\s+(\d+)/)[1])
-  if (!existsSync(join(changelogDir, `${code}.txt`))) {
+  const changelog = join(changelogDir, `${code}.txt`)
+  if (!existsSync(changelog)) {
     skipped.push(`${tag}: no changelog for versionCode ${code}`)
     continue
   }
-  byCode.set(code, { code, version, date: git("log", "-1", "--format=%as", tag) })
+  const iso = git("log", "-1", "--format=%aI", tag)
+  byCode.set(code, { code, version, date: iso.slice(0, 10), iso, notes: readFileSync(changelog, "utf8").trim() })
 }
 
 // Newest first. Sorting by versionCode rather than version string avoids 1.10.0 < 1.9.0.
@@ -67,12 +71,15 @@ if (entries.length === 0) {
   throw new Error("No release tag matched a changelog, refusing to write an empty releases page.")
 }
 
-const sections = entries.map((entry, i) => {
-  const notes = readFileSync(join(changelogDir, `${entry.code}.txt`), "utf8").trim().replace(/([\\{}])/g, "\\$1")
+const compareUrl = (entry, i) => {
   const previous = entries[i + 1]
-  const compare = previous
+  return previous
     ? `${REPO}/compare/v${previous.version}...v${entry.version}`
     : `${REPO}/releases/tag/v${entry.version}`
+}
+
+const sections = entries.map((entry, i) => {
+  const notes = entry.notes.replace(/([\\{}])/g, "\\$1")
 
   return [
     `## ${entry.version}`,
@@ -81,7 +88,7 @@ const sections = entries.map((entry, i) => {
     ``,
     notes,
     ``,
-    `**Full Changelog**: ${compare}`,
+    `**Full Changelog**: ${compareUrl(entry, i)}`,
   ].join("\n")
 })
 
@@ -95,14 +102,59 @@ const page = [
   ``,
   `Highlights for each published version, the same notes shown in Google Play and F-Droid.`,
   `Every entry links to the full commit range on GitHub.`,
+  `Subscribe with the [RSS feed](pathname:///releases.xml).`,
   ``,
   sections.join("\n\n"),
   ``,
 ].join("\n")
 
 writeFileSync(out, page)
+
+// Docusaurus slugs "## 1.15.0" to "1150", and that anchor is the item guid.
+const anchor = (version) => `${SITE}/releases#${version.replace(/\./g, "")}`
+const xmlEscape = (text) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+
+const items = entries.map((entry, i) => {
+  const bullets = entry.notes
+    .split("\n")
+    .map((line) => line.replace(/^\s*[-*]\s*/, "").trim())
+    .filter(Boolean)
+    .map((line) => `<li>${xmlEscape(line)}</li>`)
+    .join("")
+  const body = `<ul>${bullets}</ul><p><a href="${compareUrl(entry, i)}">Full changelog</a></p>`
+
+  return [
+    `    <item>`,
+    `      <title>Colota ${entry.version}</title>`,
+    `      <link>${anchor(entry.version)}</link>`,
+    `      <guid isPermaLink="true">${anchor(entry.version)}</guid>`,
+    `      <pubDate>${new Date(entry.iso).toUTCString()}</pubDate>`,
+    `      <description>${xmlEscape(body)}</description>`,
+    `    </item>`
+  ].join("\n")
+})
+
+// Dated from the newest release, not the build clock, so a rebuild produces an identical file.
+const feed = [
+  `<?xml version="1.0" encoding="UTF-8"?>`,
+  `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">`,
+  `  <channel>`,
+  `    <title>Colota Releases</title>`,
+  `    <link>${SITE}/releases</link>`,
+  `    <description>Release highlights for every published version of Colota.</description>`,
+  `    <language>en</language>`,
+  `    <lastBuildDate>${new Date(entries[0].iso).toUTCString()}</lastBuildDate>`,
+  `    <atom:link href="${SITE}/releases.xml" rel="self" type="application/rss+xml" />`,
+  ...items,
+  `  </channel>`,
+  `</rss>`,
+  ``
+].join("\n")
+
+writeFileSync(feedOut, feed)
 if (skipped.length) console.log(`Skipped ${skipped.length} tag(s):\n  ${skipped.join("\n  ")}`)
 if (mistagged.length) {
   console.warn(`WARNING: ${mistagged.length} tag(s) missing from the page, retag to include them:\n  ${mistagged.join("\n  ")}`)
 }
-console.log(`Generated ${out} with ${entries.length} releases`)
+console.log(`Generated ${out} and ${feedOut} with ${entries.length} releases`)
