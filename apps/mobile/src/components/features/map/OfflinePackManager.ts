@@ -6,6 +6,8 @@
 import { OfflineManager, type OfflinePack } from "@maplibre/maplibre-react-native"
 import { MAP_STYLE_URL_LIGHT as MAP_STYLE_URL } from "../../../constants"
 import NativeLocationService from "../../../services/NativeLocationService"
+import { logger } from "../../../utils/logger"
+import { formatBytes } from "../../../utils/format"
 
 const MIN_ZOOM = 8
 const MAX_ZOOM = 14 // mxd.codes / OpenFreeMap caps vector tiles at z14
@@ -116,6 +118,8 @@ export async function createOfflinePack(
 
   OfflineManager.setTileCountLimit(TILE_COUNT_LIMIT)
 
+  logger.info(`[OfflinePackManager] Downloading '${name}': z${MIN_ZOOM}-${MAX_ZOOM}, ${estimateSizeLabel(ne, sw)}`)
+
   await OfflineManager.createPack(
     {
       mapStyle,
@@ -124,7 +128,14 @@ export async function createOfflinePack(
       bounds: [sw[0], sw[1], ne[0], ne[1]],
       metadata: { name }
     },
-    (_pack, status) => onProgress(status as OfflinePackStatus),
+    (_pack, status) => {
+      const s = status as OfflinePackStatus
+      // Progress fires continuously, so only the terminal state is worth a line.
+      if (s.state === DOWNLOAD_STATE.COMPLETE) {
+        logger.info(`[OfflinePackManager] Download complete: '${name}', ${formatBytes(s.completedResourceSize ?? 0)}`)
+      }
+      onProgress(s)
+    },
     (_pack, err) => onError(err)
   )
 }
@@ -144,7 +155,8 @@ export async function loadOfflineAreas(): Promise<OfflineAreaInfo[]> {
           isComplete: status?.state === DOWNLOAD_STATE.COMPLETE,
           isActive: status?.state === DOWNLOAD_STATE.ACTIVE
         }
-      } catch {
+      } catch (err) {
+        logger.warn(`[OfflinePackManager] Status unreadable for pack '${name}':`, err)
         return { name, sizeBytes: null, isComplete: false, isActive: false }
       }
     })
@@ -163,6 +175,9 @@ export async function deleteOfflineArea(name: string): Promise<void> {
       // pack may already be inactive - proceed to delete
     }
     await OfflineManager.deletePack(pack.id)
+    logger.info(`[OfflinePackManager] Deleted offline area '${name}'`)
+  } else {
+    logger.debug(`[OfflinePackManager] No pack named '${name}' to delete`)
   }
 
   // SQLite does not shrink the database file when rows are deleted - freed pages
@@ -170,6 +185,7 @@ export async function deleteOfflineArea(name: string): Promise<void> {
   // reset the database so the OS reclaims the storage space.
   const remaining = await OfflineManager.getPacks()
   if (remaining.length === 0) {
+    logger.info("[OfflinePackManager] Last area removed, resetting the tile database to reclaim space")
     await OfflineManager.resetDatabase()
   }
 }
@@ -193,33 +209,64 @@ export interface OfflineAreaBounds {
   downloadedAt?: number // Unix ms timestamp set when download starts
 }
 
+/** Reads the stored list. Throws when it cannot be read, so a writer can tell empty from failed. */
+async function readOfflineAreaBoundsOrThrow(): Promise<OfflineAreaBounds[]> {
+  // A rejection here means the value is intact but unreachable, so a writer must not overwrite it.
+  const json = await NativeLocationService.getSetting(BOUNDS_KEY, "[]")
+
+  let parsed: unknown[]
+  try {
+    parsed = JSON.parse(json ?? "[]") as unknown[]
+  } catch (err) {
+    // Unrecoverable either way, so refusing would leave the key unwritable for good. Repair it.
+    logger.warn("[OfflinePackManager] Stored area bounds are malformed, starting a fresh list:", err)
+    return []
+  }
+  // Filter out entries from the old schema (lat/lon/radiusMeters) that lack ne/sw
+  return parsed.filter(
+    (b): b is OfflineAreaBounds =>
+      typeof b === "object" &&
+      b !== null &&
+      "ne" in b &&
+      "sw" in b &&
+      Array.isArray((b as OfflineAreaBounds).ne) &&
+      Array.isArray((b as OfflineAreaBounds).sw)
+  )
+}
+
+/** Display path: an unreadable list shows as empty, since there is nothing to render either way. */
 export async function loadOfflineAreaBounds(): Promise<OfflineAreaBounds[]> {
   try {
-    const json = await NativeLocationService.getSetting(BOUNDS_KEY, "[]")
-    const parsed = JSON.parse(json ?? "[]") as unknown[]
-    // Filter out entries from the old schema (lat/lon/radiusMeters) that lack ne/sw
-    return parsed.filter(
-      (b): b is OfflineAreaBounds =>
-        typeof b === "object" &&
-        b !== null &&
-        "ne" in b &&
-        "sw" in b &&
-        Array.isArray((b as OfflineAreaBounds).ne) &&
-        Array.isArray((b as OfflineAreaBounds).sw)
-    )
-  } catch {
+    return await readOfflineAreaBoundsOrThrow()
+  } catch (err) {
+    logger.error("[OfflinePackManager] Failed to read saved area bounds:", err)
     return []
   }
 }
 
 export async function saveOfflineAreaBounds(entry: OfflineAreaBounds): Promise<void> {
-  const existing = await loadOfflineAreaBounds()
+  let existing: OfflineAreaBounds[]
+  try {
+    existing = await readOfflineAreaBoundsOrThrow()
+  } catch (err) {
+    logger.error(
+      `[OfflinePackManager] Not saving bounds for '${entry.name}': stored list unreadable, so the area will not be re-downloadable after a restart:`,
+      err
+    )
+    return
+  }
   const updated = [...existing.filter((b) => b.name !== entry.name), entry]
   await NativeLocationService.saveSetting(BOUNDS_KEY, JSON.stringify(updated))
 }
 
 export async function removeOfflineAreaBounds(name: string): Promise<void> {
-  const existing = await loadOfflineAreaBounds()
+  let existing: OfflineAreaBounds[]
+  try {
+    existing = await readOfflineAreaBoundsOrThrow()
+  } catch (err) {
+    logger.error(`[OfflinePackManager] Not removing bounds for '${name}', stored list unreadable:`, err)
+    return
+  }
   const updated = existing.filter((b) => b.name !== name)
   await NativeLocationService.saveSetting(BOUNDS_KEY, JSON.stringify(updated))
 }
