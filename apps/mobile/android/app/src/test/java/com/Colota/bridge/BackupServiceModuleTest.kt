@@ -43,6 +43,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowStatFs
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.util.Date
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -262,6 +263,14 @@ class BackupServiceModuleTest {
         every { TrackingControl.start(any(), any()) } just Runs
         val next = restore(backup, "wrong".toCharArray())
         assertEquals("E_BACKUP_WRONG_PASSWORD", next.rejectCode)
+    }
+
+    @Test
+    fun `the suggested backup filename carries a second-precision stamp so cloud uploads never collide`() {
+        val name = BackupServiceModule.defaultBackupFilename(Date(1754130640000L))
+        assertTrue(name, name.matches(Regex("""colota_backup_\d{8}_\d{6}\.colota""")))
+        val oneSecondLater = BackupServiceModule.defaultBackupFilename(Date(1754130641000L))
+        assertNotEquals(name, oneSecondLater)
     }
 
     // promise.resolve fires before the finally re-arms, so the re-arm needs its own latch
