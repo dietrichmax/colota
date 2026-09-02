@@ -9,3 +9,4 @@
 - A local server that moves off your network is no longer trusted for unencrypted uploads
 - The location privacy indicator no longer lights up when GPS is not running
 - Subscribe to new releases with the RSS feed at colota.app/releases.xml
+- Backup files get a date and time in their name
