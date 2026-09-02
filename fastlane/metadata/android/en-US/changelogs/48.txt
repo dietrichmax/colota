@@ -10,3 +10,4 @@
 - The location privacy indicator no longer lights up when GPS is not running
 - Subscribe to new releases with the RSS feed at colota.app/releases.xml
 - Backup files get a date and time in their name
+- Downloaded offline map areas no longer lose their saved extents when the stored list cannot be read

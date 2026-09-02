@@ -500,6 +500,28 @@ describe("saveOfflineAreaBounds", () => {
 
     expect(mockSaveSetting).toHaveBeenCalledWith("offline_area_bounds", expect.any(String))
   })
+
+  it("does not write when the stored list cannot be read", async () => {
+    // Both writers rebuild the whole list, so one built on a failed read persists the new entry
+    // and drops every other area.
+    mockGetSetting.mockRejectedValueOnce(new Error("db error"))
+
+    await saveOfflineAreaBounds({ name: "new", ne: [0.1, 0.1], sw: [-0.1, -0.1] })
+
+    expect(mockSaveSetting).not.toHaveBeenCalled()
+  })
+
+  it("repairs the stored list when it is malformed rather than refusing forever", async () => {
+    // Only an unreachable read blocks the write. Malformed input is repaired, not refused.
+    mockGetSetting.mockResolvedValueOnce("{invalid json")
+
+    await saveOfflineAreaBounds({ name: "new", ne: [0.1, 0.1], sw: [-0.1, -0.1] })
+
+    expect(mockSaveSetting).toHaveBeenCalledWith(
+      "offline_area_bounds",
+      JSON.stringify([{ name: "new", ne: [0.1, 0.1], sw: [-0.1, -0.1] }])
+    )
+  })
 })
 
 // ============================================================================
@@ -541,5 +563,13 @@ describe("removeOfflineAreaBounds", () => {
     await removeOfflineAreaBounds("solo")
 
     expect(JSON.parse(mockSaveSetting.mock.calls[0][1])).toEqual([])
+  })
+  it("does not write when the stored list cannot be read", async () => {
+    // A failed read here would otherwise save [], wiping every area rather than the named one.
+    mockGetSetting.mockRejectedValueOnce(new Error("db error"))
+
+    await removeOfflineAreaBounds("home")
+
+    expect(mockSaveSetting).not.toHaveBeenCalled()
   })
 })
