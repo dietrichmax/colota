@@ -1,0 +1,1 @@
+- A notification now alerts you when tracking stops on its own, instead of appearing silently

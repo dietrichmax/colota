@@ -2221,6 +2221,21 @@ class LocationForegroundServiceTest {
     // =========================================================================
 
     @Test
+    fun `a stop request from a shortcut or automation does not alert`() = runServiceTest {
+        service.onStartCommand(intentFor(LocationForegroundService.ACTION_STOP_REQUEST), 0, 1)
+        advanceUntilIdle()
+
+        verify { notificationHelper.buildStoppedNotification(any(), false) }
+    }
+
+    @Test
+    fun `a stop the user did not ask for alerts`() {
+        invokeStopWithReason("Location permission missing", false)
+
+        verify { notificationHelper.buildStoppedNotification("Location permission missing", true) }
+    }
+
+    @Test
     fun `stopForBattery clears active profile event`() {
         every { profileManager.getActiveProfileName() } returns "Charging"
 
@@ -2686,12 +2701,19 @@ class LocationForegroundServiceTest {
         method.invoke(service, location)
     }
 
-    private fun invokeStopWithReason(reason: String, stoppedByBattery: Boolean) {
+    private fun invokeStopWithReason(
+        reason: String,
+        stoppedByBattery: Boolean,
+        unexpected: Boolean = true
+    ) {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
-            "stopForegroundServiceWithReason", String::class.java, Boolean::class.javaPrimitiveType
+            "stopForegroundServiceWithReason",
+            String::class.java,
+            Boolean::class.javaPrimitiveType,
+            Boolean::class.javaPrimitiveType
         )
         method.isAccessible = true
-        method.invoke(service, reason, stoppedByBattery)
+        method.invoke(service, reason, stoppedByBattery, unexpected)
     }
 
     private fun invokeOnBatteryCritical() {

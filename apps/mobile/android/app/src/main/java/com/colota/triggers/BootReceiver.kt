@@ -113,7 +113,12 @@ class LocationBootReceiver : BroadcastReceiver() {
                         notificationHelper.createChannel()
                         notificationManager.notify(
                             NotificationHelper.STOPPED_NOTIFICATION_ID,
-                            notificationHelper.buildStoppedNotification("Battery below 5% - tracking paused")
+                            // Re-announced after a reboot, but the user still has tracking off
+                            // without asking for it, so it alerts like the original stop did.
+                            notificationHelper.buildStoppedNotification(
+                                "Battery below 5% - tracking paused",
+                                unexpected = true
+                            )
                         )
                     }
                 }
