@@ -152,7 +152,7 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Anchor points - a synthetic location saved on zone exit as a clean start point for the departing trip, timestamped 1s before the first real GPS fix
 - Battery critical shutdown (below 5% while unplugged), detected via a battery-broadcast receiver so it fires even while GPS is paused in a zone
 - Location accuracy filtering
-- Stationary detection - pauses GPS after 60s without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). Suspended during entry delay and inside geofence pause zones.
+- Stationary detection - slows GPS to the profile's interval after 60s of fixes without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). It keeps working inside a pause zone and during an entry delay, since fixes reach `ProfileManager` before the in-zone drop; only a hold that stops the stream can prevent a verdict.
 - Queuing data for server sync
 
 **Alarms go through a receiver, not the service.** Each scheduler targets a `BroadcastReceiver`
@@ -248,6 +248,8 @@ When both WiFi and motionless pause are enabled, GPS only resumes when both cond
 ### ProfileManager
 
 Evaluates tracking profile conditions and switches GPS settings automatically. Supports five condition types: charging, Android Auto / car mode, speed above threshold, speed below threshold, and stationary. Uses a rolling speed buffer for averaged speed readings, deactivation delays (hysteresis) to prevent rapid toggling, and priority-based resolution when multiple profiles match.
+
+The stationary condition is decided by the fixes and never by a timer. `evaluateStationaryState` tracks a run of consecutive fixes below 0.3 m/s and the verdict is reached by the fix that completes the window, so a stream that stops delivering cannot produce one. A gap restarts the run unless it is within three times the previous gap, or 60 seconds if that is larger, and no gap over 15 minutes is ever tolerated. Calibrating on the previous gap keeps a sparse Doze cadence usable while a fast stream that goes quiet is treated as unobserved time rather than stillness; the window length deliberately plays no part, or a long window would license a long blackout. The motion sensor discards a run in progress as well as an active verdict.
 
 ### ProfileHelper
 

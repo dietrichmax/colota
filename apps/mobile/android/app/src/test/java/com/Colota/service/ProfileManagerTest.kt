@@ -23,6 +23,8 @@ class ProfileManagerTest {
 
     private lateinit var profileHelper: ProfileHelper
     private lateinit var testScope: TestScope
+    // Fix timestamps are wall-clock, so a run reads more clearly from a non-zero base.
+    private val t0 = 1_000_000L
     private var switchedInterval: Long = 0
     private var switchedDistance: Float = 0f
     private var switchedSyncInterval: Int = 0
@@ -123,13 +125,31 @@ class ProfileManagerTest {
         activationDelaySeconds = activationDelay
     )
 
-    private fun mockLocation(speed: Float, hasSpeed: Boolean = true): Location {
+    private fun mockLocation(speed: Float, hasSpeed: Boolean = true, timeMs: Long = t0): Location {
         return mockk {
             every { this@mockk.speed } returns speed
             every { this@mockk.hasSpeed() } returns hasSpeed
+            every { time } returns timeMs
             every { latitude } returns 52.52
             every { longitude } returns 13.405
         }
+    }
+
+    /** Feeds sub-threshold fixes 6s apart until the run spans [spanMs]. */
+    private fun feedStillRun(
+        manager: ProfileManager,
+        spanMs: Long = 60_000L,
+        startAtMs: Long = t0,
+        speed: Float = 0.1f,
+        hasSpeed: Boolean = true
+    ): Long {
+        var t = startAtMs
+        manager.onLocationUpdate(mockLocation(speed, hasSpeed, t))
+        while (t - startAtMs < spanMs) {
+            t += 6_000L
+            manager.onLocationUpdate(mockLocation(speed, hasSpeed, t))
+        }
+        return t
     }
 
     @Before
@@ -735,18 +755,22 @@ class ProfileManagerTest {
     )
 
     @Test
-    fun `activates stationary profile after timeout`() = testScope.runTest {
+    fun `activates stationary profile once the fixes span the window`() = testScope.runTest {
         val profile = stationaryProfile()
         every { profileHelper.getEnabledProfiles() } returns listOf(profile)
 
         val manager = createManager()
 
-        // Feed slow locations - should not activate immediately
-        manager.onLocationUpdate(mockLocation(0.1f))
+        // One fix cannot show a minute of stillness, however long the app then waits
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0))
+        advanceTimeBy(60_000L + 100)
         assertEquals(0, switchCount)
 
-        // Advance past stationary timeout
-        advanceTimeBy(60_000L + 100)
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0 + 30_000))
+        assertEquals(0, switchCount)
+
+        // The verdict lands on the fix that completes the window
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0 + 60_000))
 
         assertEquals("Stationary", switchedProfileName)
         assertEquals(30000L, switchedInterval)
@@ -758,15 +782,15 @@ class ProfileManagerTest {
         every { profileHelper.getEnabledProfiles() } returns listOf(profile)
 
         val manager = createManager()
-        manager.onLocationUpdate(mockLocation(0.1f))
 
-        // Not stationary before the configured 30s
-        advanceTimeBy(29_000)
+        // Not stationary before the configured 30s of fixes
+        feedStillRun(manager, spanMs = 24_000)
+        advanceTimeBy(60_000)
         assertNull(switchedProfileName)
         assertFalse(manager.isStationary)
 
         // Becomes stationary at its own window, not the built-in 60s
-        advanceTimeBy(2_000)
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0 + 30_000))
         assertEquals("Stationary", switchedProfileName)
         assertTrue(manager.isStationary)
     }
@@ -777,10 +801,9 @@ class ProfileManagerTest {
         every { profileHelper.getEnabledProfiles() } returns listOf(profile)
 
         val manager = createManager()
-        manager.onLocationUpdate(mockLocation(0.1f))
 
-        // 0 = no stillness window, same as every other delay: instant
-        advanceTimeBy(100)
+        // 0 = no stillness window, same as every other delay: the first still fix decides
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0))
         assertEquals("Stationary", switchedProfileName)
     }
 
@@ -791,7 +814,7 @@ class ProfileManagerTest {
 
         val manager = createManager()
 
-        repeat(5) { manager.onLocationUpdate(mockLocation(5f)) }
+        feedStillRun(manager, spanMs = 60_000, speed = 5f)
         advanceTimeBy(60_000L + 100)
 
         assertNull(switchedProfileName)
@@ -808,12 +831,11 @@ class ProfileManagerTest {
         manager.defaultSyncInterval = 0
 
         // Become stationary
-        manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(60_000L + 100)
+        val stillUntil = feedStillRun(manager)
         assertEquals("Stationary", switchedProfileName)
 
         // Start moving
-        manager.onLocationUpdate(mockLocation(5f))
+        manager.onLocationUpdate(mockLocation(5f, timeMs = stillUntil + 6_000))
 
         // Wait past deactivation delay
         advanceTimeBy(11_000)
@@ -822,22 +844,23 @@ class ProfileManagerTest {
     }
 
     @Test
-    fun `stationary timer resets when speed goes above threshold`() = testScope.runTest {
+    fun `stationary run restarts when speed goes above threshold`() = testScope.runTest {
         val profile = stationaryProfile()
         every { profileHelper.getEnabledProfiles() } returns listOf(profile)
 
         val manager = createManager()
 
-        // Start countdown
-        manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(30_000)
+        // 30s of stillness, half the window
+        feedStillRun(manager, spanMs = 30_000)
 
-        // Speed goes above threshold - should cancel timer
-        manager.onLocationUpdate(mockLocation(5f))
-        advanceTimeBy(40_000)
+        // One fix above the threshold discards it
+        manager.onLocationUpdate(mockLocation(5f, timeMs = t0 + 36_000))
 
-        // Should not have activated
+        // 54s of stillness after it is still short of a fresh window
+        feedStillRun(manager, spanMs = 54_000, startAtMs = t0 + 42_000)
+
         assertNull(switchedProfileName)
+        assertFalse(manager.isStationary)
     }
 
     @Test
@@ -847,9 +870,8 @@ class ProfileManagerTest {
 
         val manager = createManager()
 
-        // Location without speed data
-        manager.onLocationUpdate(mockLocation(0f, hasSpeed = false))
-        advanceTimeBy(60_000L + 100)
+        // Locations without speed data
+        feedStillRun(manager, speed = 0f, hasSpeed = false)
 
         assertEquals("Stationary", switchedProfileName)
     }
@@ -862,11 +884,10 @@ class ProfileManagerTest {
         val manager = createManager()
         assertFalse(manager.isStationary)
 
-        manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(60_000L + 100)
+        val stillUntil = feedStillRun(manager)
         assertTrue(manager.isStationary)
 
-        manager.onLocationUpdate(mockLocation(5f))
+        manager.onLocationUpdate(mockLocation(5f, timeMs = stillUntil + 6_000))
         assertFalse(manager.isStationary)
     }
 
@@ -877,11 +898,10 @@ class ProfileManagerTest {
 
         val manager = createManager()
 
-        manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(60_000L + 100)
+        val stillUntil = feedStillRun(manager)
         assertEquals(true, lastStationaryCallback)
 
-        manager.onLocationUpdate(mockLocation(5f))
+        manager.onLocationUpdate(mockLocation(5f, timeMs = stillUntil + 6_000))
         assertEquals(false, lastStationaryCallback)
     }
 
@@ -896,8 +916,7 @@ class ProfileManagerTest {
         manager.defaultSyncInterval = 0
 
         // Become stationary
-        manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(60_000L + 100)
+        feedStillRun(manager)
         assertEquals("Stationary", switchedProfileName)
         assertTrue(manager.isStationary)
 
@@ -921,6 +940,144 @@ class ProfileManagerTest {
         assertNull(lastStationaryCallback)
     }
 
+    // --- Stationary evidence: a verdict needs fixes behind it ---
+
+    @Test
+    fun `no stationary verdict without fixes`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // Bad reception is what silences the stream, so silence must not read as stillness.
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0))
+        advanceTimeBy(600_000L)
+
+        assertFalse(manager.isStationary)
+        assertEquals(0, switchCount)
+    }
+
+    @Test
+    fun `a gap in the fixes restarts the stationary run`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // 54s of stillness at a 6s cadence, one fix short of the window
+        feedStillRun(manager, spanMs = 54_000)
+        assertFalse(manager.isStationary)
+
+        // The accuracy filter starves the detector for 9m54s: unobserved time is not stillness.
+        val returnedAt = t0 + 54_000 + 594_000
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = returnedAt))
+        assertFalse(manager.isStationary)
+
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = returnedAt + 54_000))
+        assertFalse(manager.isStationary)
+
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = returnedAt + 60_000))
+        assertTrue(manager.isStationary)
+    }
+
+    @Test
+    fun `a sparse but unbroken stream still qualifies`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // Nine minutes apart is a dozing phone's cadence, not a gap, so it has to stay reachable.
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0))
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0 + 540_000))
+        assertFalse("the first spacing is what calibrates the run", manager.isStationary)
+
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0 + 1_080_000))
+        assertTrue(manager.isStationary)
+    }
+
+    @Test
+    fun `evidence sparser than the cap never qualifies`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // The run's own spacing would tolerate 45 minutes. The cap does not.
+        var t = t0
+        repeat(4) {
+            manager.onLocationUpdate(mockLocation(0.1f, timeMs = t))
+            t += 2_700_000L
+        }
+
+        assertFalse(manager.isStationary)
+        assertEquals(0, switchCount)
+    }
+
+    @Test
+    fun `stillness is earned again after the motion sensor ends it`() = testScope.runTest {
+        val profile = stationaryProfile(deactivationDelay = 0)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+
+        feedStillRun(manager)
+        assertTrue(manager.isStationary)
+
+        manager.onMotionDetected()
+        assertFalse(manager.isStationary)
+
+        // The spent run must not hand the verdict straight back on the next still fix
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0 + 66_000))
+        assertFalse(manager.isStationary)
+
+        feedStillRun(manager, startAtMs = t0 + 72_000)
+        assertTrue(manager.isStationary)
+    }
+
+    @Test
+    fun `a blackout after movement does not conclude stillness`() = testScope.runTest {
+        val profile = stationaryProfile()
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+
+        // A legitimate sparse run leaves its wide spacing behind as the calibration
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0))
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0 + 600_000))
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0 + 1_200_000))
+        assertTrue(manager.isStationary)
+
+        // Movement ends it, then reception dies and the only fixes carry no speed. Inheriting the
+        // still phone's spacing must not let two far-apart fixes rebuild a verdict while driving.
+        manager.onLocationUpdate(mockLocation(5f, timeMs = t0 + 1_800_000))
+        assertFalse(manager.isStationary)
+
+        manager.onLocationUpdate(mockLocation(0f, hasSpeed = false, timeMs = t0 + 2_700_000))
+        manager.onLocationUpdate(mockLocation(0f, hasSpeed = false, timeMs = t0 + 4_500_000))
+
+        assertFalse(manager.isStationary)
+    }
+
+    @Test
+    fun `a long activation delay does not widen what counts as stillness`() = testScope.runTest {
+        val profile = stationaryProfile(activationDelay = 600)
+        every { profileHelper.getEnabledProfiles() } returns listOf(profile)
+
+        val manager = createManager()
+
+        // Activation Delay has no upper bound in the editor. A ten-minute window must not make a
+        // nine-minute blackout count as nine minutes of stillness.
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0))
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0 + 540_000))
+        manager.onLocationUpdate(mockLocation(0.1f, timeMs = t0 + 600_000))
+
+        assertFalse(manager.isStationary)
+        assertEquals(0, switchCount)
+    }
+
     // --- Stationary + other conditions: priority interactions ---
 
     @Test
@@ -932,8 +1089,7 @@ class ProfileManagerTest {
         val manager = createManager()
 
         // Become stationary first
-        manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(60_000L + 100)
+        feedStillRun(manager)
         assertEquals("Stationary", switchedProfileName)
 
         // Start charging - higher priority should take over
@@ -953,8 +1109,7 @@ class ProfileManagerTest {
         manager.defaultSyncInterval = 0
 
         // Become stationary
-        manager.onLocationUpdate(mockLocation(0.1f))
-        advanceTimeBy(60_000L + 100)
+        feedStillRun(manager)
         assertTrue(manager.isStationary)
 
         // Start charging - charging wins
@@ -974,8 +1129,8 @@ class ProfileManagerTest {
 
         val manager = createManager()
 
-        // Feed slow locations - should not start stationary timer
-        manager.onLocationUpdate(mockLocation(0.1f))
+        // Feed slow locations - the stationary state is never evaluated at all
+        feedStillRun(manager)
         advanceTimeBy(60_000L + 100)
 
         assertFalse(manager.isStationary)
