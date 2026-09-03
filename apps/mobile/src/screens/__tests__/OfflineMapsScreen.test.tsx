@@ -4,8 +4,9 @@
  */
 
 import React from "react"
-import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
 import { OfflineMapsScreen } from "../OfflineMapsScreen"
+import { logger } from "../../utils/logger"
 
 // --- MapLibre ---
 jest.mock("@maplibre/maplibre-react-native", () => ({
@@ -260,6 +261,31 @@ describe("OfflineMapsScreen", () => {
         expect.any(Function)
       )
     })
+  })
+
+  it("logs the first tile error and then only a total, not one line per tile", async () => {
+    // One line up front so a stalled download is not silent, one total at the end.
+    const warn = jest.spyOn(logger, "warn").mockImplementation(() => {})
+    mockShowConfirm.mockResolvedValue(true)
+    const { findByText, getByTestId, getByPlaceholderText } = renderScreen()
+    await waitForMapReady(findByText)
+    fireEvent.changeText(getByPlaceholderText("Home area, Trail..."), "flooded")
+    fireEvent.press(getByTestId("download-btn"))
+    await waitFor(() => expect(mockCreateOfflinePack).toHaveBeenCalled())
+
+    const [, , , onProgress, onError] = mockCreateOfflinePack.mock.calls[0]
+    for (let i = 0; i < 50; i++) onError({ message: "HTTP status code 429" })
+
+    const tileLines = () => warn.mock.calls.filter((c) => String(c[0]).includes("Tile error"))
+    expect(tileLines()).toHaveLength(1)
+
+    await act(async () => {
+      onProgress({ state: "complete", percentage: 100, completedResourceSize: 1000 })
+    })
+
+    const totals = warn.mock.calls.filter((c) => String(c[0]).includes("50 tile error(s) total"))
+    expect(totals).toHaveLength(1)
+    warn.mockRestore()
   })
 
   it("does not call createOfflinePack when user cancels the confirmation", async () => {

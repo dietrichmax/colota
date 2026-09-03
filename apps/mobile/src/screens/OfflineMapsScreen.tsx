@@ -343,7 +343,19 @@ export function OfflineMapsScreen({}: ScreenProps) {
       activePackNameRef.current = name
 
       const attempt = (retriesLeft: number) => {
+        let tileErrors = 0
+        let lastTileError: unknown = null
+        const reportTileErrors = () => {
+          if (tileErrors === 0) return
+          logger.warn(
+            `[OfflineMapsScreen] ${tileErrors} tile error(s) total downloading '${name}', last:`,
+            lastTileError
+          )
+          tileErrors = 0
+        }
+
         const onFailure = (message: string) => {
+          reportTileErrors()
           if (retriesLeft > 0) {
             const attempt_num = MAX_RETRIES - retriesLeft + 1
             logger.warn(`[OfflineMapsScreen] Download failed, retrying (${attempt_num}/${MAX_RETRIES})...`)
@@ -373,6 +385,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
             setDownloadProgress(status)
             setDownloadError(null)
             if (status.state === DOWNLOAD_STATE.COMPLETE) {
+              reportTileErrors()
               activePackNameRef.current = null
               setDownloading(false)
               setDownloadBounds(null)
@@ -381,11 +394,15 @@ export function OfflineMapsScreen({}: ScreenProps) {
             }
           },
           (err: unknown) => {
-            logger.warn("[OfflineMapsScreen] Tile error (may retry):", err)
+            tileErrors += 1
+            lastTileError = err
+            if (tileErrors === 1) logger.warn(`[OfflineMapsScreen] Tile error downloading '${name}':`, err)
           }
         ).catch(() => {
           onFailure("Failed to start download. Please try again.")
-          deleteOfflineArea(name).catch(() => {})
+          deleteOfflineArea(name).catch((err) => {
+            logger.error(`[OfflineMapsScreen] Failed to clean up pack '${name}':`, err)
+          })
         })
       }
 

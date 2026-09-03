@@ -1,12 +1,7 @@
-- Settings are no longer replaced with defaults when the app fails to read them
-- Log exports no longer contain webhook ids or session tokens from the endpoint address
-- Exports stop with an error instead of silently leaving out locations when a database read fails
-- Auto-export no longer fails when the folder app has not registered the new file yet
-- Switching auto-export off stops a running export
-- Auto-export keeps its schedule after a backup restore
-- An aborted backup restore starts tracking again instead of leaving it off
-- Uploads to a local server recover after a temporary DNS failure instead of waiting for an app restart
-- A local server that moves off your network is no longer trusted for unencrypted uploads
-- The location privacy indicator no longer lights up when GPS is not running
-- Subscribe to new releases with the RSS feed at colota.app/releases.xml
-- A stationary tracking profile no longer switches on while you are moving with a weak GPS signal
+- Settings no longer reset to defaults when they fail to load
+- The location privacy indicator no longer lights up while GPS is off
+- Auto-export is reliable on cloud folders and keeps its schedule after a restore
+- Backup files get a date and time in their name
+- Downloaded offline map areas can no longer be lost by a failed read
+- Uploads to a local server recover from DNS hiccups on their own
+- Subscribe to new releases at colota.app/releases.xml

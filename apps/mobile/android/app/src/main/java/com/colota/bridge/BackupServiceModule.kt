@@ -43,7 +43,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.SimpleDateFormat
 import java.util.Arrays
+import java.util.Date
+import java.util.Locale
 
 class BackupServiceModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
@@ -66,8 +69,10 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
         private const val REQUEST_PICK_DESTINATION = 9101
         private const val REQUEST_PICK_SOURCE = 9102
 
-        private const val DEFAULT_BACKUP_FILENAME = "colota_backup.colota"
         private const val MIME_BACKUP = "application/octet-stream"
+
+        internal fun defaultBackupFilename(now: Date = Date()): String =
+            "colota_backup_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(now) + ".colota"
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -86,7 +91,7 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
     fun pickBackupDestination(promise: Promise) {
         pickerCoordinator.pickCreateDocument(
             mime = MIME_BACKUP,
-            defaultName = DEFAULT_BACKUP_FILENAME,
+            defaultName = defaultBackupFilename(),
             requestCode = REQUEST_PICK_DESTINATION,
             promise = promise,
         )
