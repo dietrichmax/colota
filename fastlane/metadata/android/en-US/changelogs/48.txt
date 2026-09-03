@@ -1,7 +1,8 @@
 - Settings no longer reset to defaults when they fail to load
-- The location privacy indicator no longer lights up while GPS is off
-- Auto-export is reliable on cloud folders and keeps its schedule after a restore
+- The privacy indicator no longer lights up while GPS is off
+- A stationary profile no longer switches on while you are moving
+- Auto-export works on cloud folders and survives a restore
 - Backup files get a date and time in their name
-- Downloaded offline map areas can no longer be lost by a failed read
+- Offline map areas are no longer lost by a failed read
 - Uploads to a local server recover from DNS hiccups on their own
 - Subscribe to new releases at colota.app/releases.xml
