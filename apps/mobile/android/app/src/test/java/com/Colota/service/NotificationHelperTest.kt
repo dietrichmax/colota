@@ -16,6 +16,49 @@ import org.junit.Test
  */
 class NotificationHelperTest {
 
+    // --- channel routing (Robolectric: a real Notification, so the channel can be read back) ---
+
+    @org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+    class ChannelRouting {
+        private fun helperFor(): Pair<NotificationHelper, android.app.NotificationManager> {
+            val ctx = org.robolectric.RuntimeEnvironment.getApplication()
+            val nm = ctx.getSystemService(android.app.NotificationManager::class.java)
+            return NotificationHelper(ctx, nm) to nm
+        }
+
+        @Test
+        fun `an unexpected stop goes to the alerting channel`() {
+            val (helper, _) = helperFor()
+            helper.createChannel()
+
+            val n = helper.buildStoppedNotification("killed", unexpected = true)
+
+            assertEquals(NotificationHelper.STOPPED_CHANNEL_ID, n.channelId)
+        }
+
+        @Test
+        fun `a stop the user asked for stays on the silent tracking channel`() {
+            val (helper, _) = helperFor()
+            helper.createChannel()
+
+            val n = helper.buildStoppedNotification("stopped via shortcut", unexpected = false)
+
+            assertEquals(NotificationHelper.CHANNEL_ID, n.channelId)
+        }
+
+        @Test
+        fun `the alerting channel can actually alert and the tracking channel cannot`() {
+            val (helper, nm) = helperFor()
+            helper.createChannel()
+
+            val tracking = nm.getNotificationChannel(NotificationHelper.CHANNEL_ID)
+            val stopped = nm.getNotificationChannel(NotificationHelper.STOPPED_CHANNEL_ID)
+
+            assertEquals(android.app.NotificationManager.IMPORTANCE_LOW, tracking.importance)
+            assertEquals(android.app.NotificationManager.IMPORTANCE_DEFAULT, stopped.importance)
+        }
+    }
+
     private lateinit var helper: NotificationHelper
 
     @Before

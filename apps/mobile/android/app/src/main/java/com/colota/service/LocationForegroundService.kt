@@ -385,7 +385,8 @@ class LocationForegroundService : Service() {
             ACTION_STATIONARY_HEARTBEAT -> handleStationaryHeartbeatFired()
             ACTION_GEOFENCE_HEARTBEAT -> handleGeofenceHeartbeatFired(shouldBeTracking)
             ACTION_STOP_REQUEST -> stopForegroundServiceWithReason(
-                intent?.getStringExtra(EXTRA_STOP_REASON) ?: "Stopped"
+                intent?.getStringExtra(EXTRA_STOP_REASON) ?: "Stopped",
+                unexpected = false
             )
             else -> handleStart()
         }
@@ -1465,7 +1466,11 @@ class LocationForegroundService : Service() {
         stopForegroundServiceWithReason("Battery below 5% - tracking paused", stoppedByBattery = true)
     }
 
-    private fun stopForegroundServiceWithReason(reason: String, stoppedByBattery: Boolean = false) {
+    private fun stopForegroundServiceWithReason(
+        reason: String,
+        stoppedByBattery: Boolean = false,
+        unexpected: Boolean = true
+    ) {
         if (isStopping) return
         isStopping = true
         AppLogger.i(TAG, "Stopping: $reason")
@@ -1488,7 +1493,7 @@ class LocationForegroundService : Service() {
 
         notificationManager.notify(
             NotificationHelper.STOPPED_NOTIFICATION_ID,
-            notificationHelper.buildStoppedNotification(reason)
+            notificationHelper.buildStoppedNotification(reason, unexpected = unexpected)
         )
 
         stopLocationUpdates()

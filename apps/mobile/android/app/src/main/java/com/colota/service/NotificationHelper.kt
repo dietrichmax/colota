@@ -29,6 +29,7 @@ class NotificationHelper(
 
     companion object {
         const val CHANNEL_ID = "location_service_channel"
+        const val STOPPED_CHANNEL_ID = "tracking_stopped_channel"
         const val NOTIFICATION_ID = 1
         const val STOPPED_NOTIFICATION_ID = 2
         const val THROTTLE_MS = 10000L
@@ -45,6 +46,16 @@ class NotificationHelper(
             setShowBadge(false)
         }
         notificationManager.createNotificationChannel(channel)
+
+        val stoppedChannel = NotificationChannel(
+            STOPPED_CHANNEL_ID,
+            "Tracking stopped",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Alerts when tracking stops without you asking it to"
+            setShowBadge(true)
+        }
+        notificationManager.createNotificationChannel(stoppedChannel)
     }
 
     fun buildTrackingNotification(title: String, statusText: String): Notification {
@@ -69,7 +80,11 @@ class NotificationHelper(
     fun buildTitle(activeProfileName: String?): String =
         if (activeProfileName != null) "Colota \u00b7 $activeProfileName" else "Colota Tracking"
 
-    fun buildStoppedNotification(reason: String): Notification {
+    /**
+     * @param unexpected a stop the user did not ask for, which alerts. Anything else stays on the
+     * silent tracking channel, so a caller has to opt in rather than inherit the alert.
+     */
+    fun buildStoppedNotification(reason: String, unexpected: Boolean = false): Notification {
         // Opening the app is the recovery path when the watchdog cannot restart the service
         // itself, so this notification has to be tappable.
         val pendingIntent = PendingIntent.getActivity(
@@ -79,12 +94,17 @@ class NotificationHelper(
             PendingIntent.FLAG_IMMUTABLE
         )
 
-        return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle("Colota: Stopped")
+        return NotificationCompat.Builder(
+            context,
+            if (unexpected) STOPPED_CHANNEL_ID else CHANNEL_ID
+        )
+            .setContentTitle("Tracking stopped")
             .setContentText(reason)
             .setSmallIcon(android.R.drawable.ic_lock_power_off)
             .setOngoing(false)
             .setAutoCancel(true)
+            // Silences the watchdog's 15-minute re-post while this one still shows. Dismissing it
+            // starts a fresh post, which alerts again: tracking is still down and a tap is the fix.
             .setOnlyAlertOnce(true)
             .setContentIntent(pendingIntent)
             .build()

@@ -58,7 +58,7 @@ class TrackingWatchdogReceiver : BroadcastReceiver() {
                 AppLogger.e(TAG, "Watchdog restart failed (${e.javaClass.simpleName})", e)
                 // Tracking can run with notifications denied, so the tap-to-resume fallback
                 // is not always available. Say so rather than assume the user was told.
-                if (NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                if (canPromptToResume(context)) {
                     notifyTapToResume(context)
                 } else {
                     AppLogger.w(TAG, "Cannot prompt to resume either - notifications are denied")
@@ -71,6 +71,14 @@ class TrackingWatchdogReceiver : BroadcastReceiver() {
         }
     }
 
+    /** App permission is not enough: the stop notification has its own channel, blockable alone. */
+    private fun canPromptToResume(context: Context): Boolean {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = manager.getNotificationChannel(NotificationHelper.STOPPED_CHANNEL_ID)
+        return channel == null || channel.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
     private fun notifyTapToResume(context: Context) {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -78,7 +86,7 @@ class TrackingWatchdogReceiver : BroadcastReceiver() {
             it.createChannel()
             notificationManager.notify(
                 NotificationHelper.STOPPED_NOTIFICATION_ID,
-                it.buildStoppedNotification("Tracking service was killed - tap to resume")
+                it.buildStoppedNotification("Tracking service was killed - tap to resume", unexpected = true)
             )
         }
     }

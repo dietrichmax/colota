@@ -175,7 +175,7 @@ Handles all notification logic for the tracking service:
 - Status text generation (coordinates, sync status, pause zones)
 - Throttled updates (10s minimum interval, 2m minimum movement)
 - Deduplication to avoid unnecessary notification redraws
-- Stopped notification, posted on a deliberate stop and by the tracking watchdog when Android refuses a background restart, in which case tapping it opens the app so the reconciler can resume
+- Stopped notification, posted on a deliberate stop and by the tracking watchdog when Android refuses a background restart, in which case tapping it opens the app so the reconciler can resume. Two channels back it. `location_service_channel` at `IMPORTANCE_LOW` carries the ongoing status and any stop the user asked for; `tracking_stopped_channel` at `IMPORTANCE_DEFAULT` carries the ones they did not, so a killed service is audible instead of sitting silently under the ongoing notification. `buildStoppedNotification` defaults to the silent channel and callers opt in
 
 ### DatabaseHelper
 
