@@ -5,7 +5,7 @@
  */
 
 import React from "react"
-import { lightColors, darkColors, fontFamily } from "@colota/shared"
+import { lightColors, darkColors, fontFamily, radius } from "@colota/shared"
 import type { ThemeColors } from "@colota/shared"
 
 function colorVars(colors: ThemeColors) {
@@ -14,9 +14,6 @@ function colorVars(colors: ThemeColors) {
     --ifm-color-primary-dark: ${colors.primaryDark};
     --ifm-color-primary-darker: ${colors.primaryDark};
     --ifm-color-primary-darkest: ${colors.primaryDark};
-    --ifm-color-primary-light: ${colors.primaryLight};
-    --ifm-color-primary-lighter: ${colors.primaryLight};
-    --ifm-color-primary-lightest: ${colors.primaryLight};
     --ifm-background-color: ${colors.background};
     --ifm-font-color-base: ${colors.text};
     --ifm-font-color-secondary: ${colors.textSecondary};
@@ -24,8 +21,11 @@ function colorVars(colors: ThemeColors) {
     --ifm-font-family-base: '${fontFamily}', system-ui, -apple-system, sans-serif;
     --colota-card-bg: ${colors.card};
     --colota-card-elevated-bg: ${colors.cardElevated};
+    --colota-well: ${colors.well};
     --colota-border: ${colors.border};
-    --colota-card-radius: 12px;
+    --colota-error: ${colors.error};
+    --colota-on-primary: ${colors.textOnPrimary};
+    --colota-card-radius: ${radius.sm}px;
     --colota-card-padding: 16px;
   `
 }

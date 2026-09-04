@@ -52,22 +52,7 @@ jest.mock("../../services/modalService", () => ({
 
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      primaryDark: "#115E59",
-      border: "#e5e7eb",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textLight: "#9ca3af",
-      background: "#fff",
-      success: "#22c55e",
-      error: "#ef4444",
-      card: "#fff",
-      surface: "#fff",
-      backgroundElevated: "#f9fafb",
-      textOnPrimary: "#fff",
-      borderRadius: 8
-    }
+    colors: require("@colota/shared").lightColors
   })
 }))
 
@@ -172,10 +157,6 @@ jest.mock("../../components/features/inspector/LocationTable", () => {
     LocationTable: (_props: any) => R.createElement(View, { testID: "LocationTable" })
   }
 })
-
-jest.mock("../../styles/typography", () => ({
-  fonts: { regular: {}, bold: {}, semiBold: {} }
-}))
 
 jest.mock("../../utils/logger", () => ({
   logger: { error: jest.fn(), info: jest.fn(), debug: jest.fn() }

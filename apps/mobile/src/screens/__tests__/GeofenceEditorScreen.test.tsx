@@ -34,24 +34,7 @@ jest.mock("react-native/Libraries/EventEmitter/NativeEventEmitter")
 
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      primaryDark: "#0d9488",
-      border: "#e5e7eb",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textDisabled: "#d1d5db",
-      textLight: "#9ca3af",
-      textOnPrimary: "#fff",
-      background: "#fff",
-      card: "#fff",
-      error: "#ef4444",
-      warning: "#f59e0b",
-      success: "#22c55e",
-      placeholder: "#9ca3af",
-      borderRadius: 12,
-      pressedOpacity: 0.7
-    }
+    colors: require("@colota/shared").lightColors
   })
 }))
 

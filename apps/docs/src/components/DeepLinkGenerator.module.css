@@ -113,7 +113,7 @@
 
 .removeBtn:hover {
   opacity: 1;
-  color: #e53e3e;
+  color: var(--colota-error);
 }
 
 .addBtn {
@@ -221,7 +221,7 @@
 
 .copyBtn {
   background: var(--ifm-color-primary);
-  color: #fff;
+  color: var(--colota-on-primary);
 }
 
 .copyBtn:hover {
@@ -242,8 +242,8 @@
   display: flex;
   justify-content: center;
   padding: 1rem;
-  background: #fff;
-  border-radius: 8px;
+  background: var(--colota-card-bg);
+  border-radius: var(--colota-card-radius);
   margin-top: 0.75rem;
 }
 

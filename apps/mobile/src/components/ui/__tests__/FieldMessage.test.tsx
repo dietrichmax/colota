@@ -1,12 +1,9 @@
 import React from "react"
 import { render } from "@testing-library/react-native"
+import { lightColors } from "@colota/shared"
 import { FieldMessage } from "../FieldMessage"
 
-const mockColors = {
-  textSecondary: "#6b7280",
-  warning: "#f59e0b",
-  error: "#ef4444"
-} as any
+const mockColors = lightColors
 
 jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: mockColors })
