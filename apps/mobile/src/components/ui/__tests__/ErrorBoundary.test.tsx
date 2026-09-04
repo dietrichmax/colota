@@ -4,13 +4,7 @@ import { Text } from "react-native"
 
 jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: {
-      background: "#fff",
-      text: "#000",
-      textSecondary: "#666",
-      primary: "#0d9488",
-      textOnPrimary: "#fff"
-    }
+    colors: require("@colota/shared").lightColors
   })
 }))
 

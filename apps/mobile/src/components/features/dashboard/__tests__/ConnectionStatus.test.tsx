@@ -4,17 +4,7 @@ import { DeviceEventEmitter } from "react-native"
 
 jest.mock("../../../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: {
-      success: "#22c55e",
-      error: "#ef4444",
-      warning: "#f59e0b",
-      textSecondary: "#6b7280",
-      textLight: "#9ca3af",
-      text: "#000",
-      card: "#fff",
-      border: "#e5e7eb",
-      pressedOpacity: 0.6
-    }
+    colors: require("@colota/shared").lightColors
   })
 }))
 

@@ -9,14 +9,7 @@ import {
   darkifyStyle
 } from "../mapUtils"
 import { haversine as haversineDistance } from "../../../../utils/geo"
-
-// Only the color keys used by mapUtils functions
-const colors = {
-  success: "#2E7D32",
-  warning: "#C2410C",
-  error: "#D32F2F",
-  info: "#1976D2"
-} as any
+import { lightColors as colors } from "@colota/shared"
 
 // ============================================================================
 // lerpColor

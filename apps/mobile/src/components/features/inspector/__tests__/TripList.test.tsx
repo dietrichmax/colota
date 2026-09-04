@@ -15,10 +15,6 @@ jest.mock("../../../../utils/trips", () => ({
   computeTripStats: () => ({ avgSpeed: 0, elevationGain: 0, elevationLoss: 0 })
 }))
 
-jest.mock("../../../../styles/typography", () => ({
-  fonts: { regular: {}, bold: {}, semiBold: {} }
-}))
-
 jest.mock("../../../../utils/exportConverters", () => ({
   EXPORT_FORMATS: {
     csv: { label: "CSV" },
@@ -31,17 +27,7 @@ jest.mock("../../../../utils/exportConverters", () => ({
 
 jest.mock("../../../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textDisabled: "#9ca3af",
-      border: "#e5e7eb",
-      card: "#fff",
-      cardElevated: "#f9fafb",
-      error: "#ef4444",
-      pressedOpacity: 0.7
-    }
+    colors: require("@colota/shared").lightColors
   })
 }))
 

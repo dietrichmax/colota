@@ -20,18 +20,7 @@ jest.mock("../../../index", () => {
 
 jest.mock("../../../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: {
-      text: "#000",
-      textSecondary: "#666",
-      textLight: "#999",
-      background: "#fff",
-      border: "#ddd",
-      placeholder: "#999",
-      error: "#f00",
-      warning: "#f80",
-      success: "#0a0",
-      pressedOpacity: 0.7
-    }
+    colors: require("@colota/shared").lightColors
   })
 }))
 

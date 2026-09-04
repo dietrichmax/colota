@@ -10,19 +10,7 @@ jest.mock("@react-navigation/native", () => ({
 
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      text: "#000",
-      textSecondary: "#6b7280",
-      card: "#fff",
-      warning: "#f59e0b",
-      border: "#e5e7eb",
-      textLight: "#9ca3af",
-      success: "#22c55e",
-      primaryDark: "#0d9488",
-      textOnPrimary: "#fff",
-      background: "#fff"
-    },
+    colors: require("@colota/shared").lightColors,
     mode: "light"
   })
 }))

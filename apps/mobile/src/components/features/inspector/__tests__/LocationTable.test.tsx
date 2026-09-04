@@ -9,10 +9,6 @@ jest.mock("../../../../utils/geo", () => ({
   getSpeedUnit: jest.fn(() => ({ factor: 3.6, unit: "km/h" }))
 }))
 
-jest.mock("../../../../styles/typography", () => ({
-  fonts: { regular: {}, bold: {}, semiBold: {} }
-}))
-
 import { LocationTable } from "../LocationTable"
 
 const mockColors = {

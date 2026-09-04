@@ -4,16 +4,7 @@ import { TRACKING_PRESETS } from "../../../../types/global"
 
 jest.mock("../../../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      primaryDark: "#115E59",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textLight: "#9ca3af",
-      success: "#22c55e",
-      warning: "#f59e0b",
-      border: "#e5e7eb"
-    }
+    colors: require("@colota/shared").lightColors
   })
 }))
 

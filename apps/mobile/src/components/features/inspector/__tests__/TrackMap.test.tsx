@@ -62,10 +62,6 @@ jest.mock("../../map/MapCenterButton", () => ({
   MapCenterButton: () => null
 }))
 
-jest.mock("../../../../styles/typography", () => ({
-  fonts: { regular: {}, bold: {}, semiBold: {} }
-}))
-
 jest.mock("../../../../utils/geo", () => ({
   getSpeedUnit: () => ({ factor: 3.6, unit: "km/h" })
 }))

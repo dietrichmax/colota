@@ -1,6 +1,7 @@
 import React from "react"
 import { renderHook, act, waitFor } from "@testing-library/react-native"
 import { Appearance } from "react-native"
+import { lightColors, darkColors } from "@colota/shared"
 
 import NativeLocationService from "../../services/NativeLocationService"
 import { ThemeProvider, useTheme } from "../useTheme"
@@ -153,14 +154,18 @@ describe("useTheme", () => {
   it("provides different color objects for light and dark modes", () => {
     const { result } = renderHook(() => useTheme(), { wrapper })
 
-    const lightColors = result.current.colors
+    expect(result.current.colors).toBe(lightColors)
 
     act(() => {
       result.current.toggleTheme()
     })
 
-    const darkColors = result.current.colors
+    expect(result.current.colors).toBe(darkColors)
+  })
 
-    expect(lightColors).not.toBe(darkColors)
+  // Every screen reads one object for both modes, so a token added to one palette
+  // and forgotten in the other renders as undefined in that mode only.
+  it("carries the same token keys in both palettes", () => {
+    expect(Object.keys(darkColors).sort()).toEqual(Object.keys(lightColors).sort())
   })
 })
