@@ -226,7 +226,7 @@ describe("MtlsSection", () => {
     it("renders the empty-state Import CA button + helper text", async () => {
       const { getByText } = render(<MtlsSection />)
       await waitFor(() => {
-        expect(getByText("Trusted Server CA")).toBeTruthy()
+        expect(getByText("Trusted server CA")).toBeTruthy()
         expect(getByText("Import CA (.crt / .pem)")).toBeTruthy()
       })
     })

@@ -203,7 +203,7 @@ describe("ExportLocationsScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Select Format")).toBeTruthy()
+      expect(getByText("Select format")).toBeTruthy()
     })
   })
 

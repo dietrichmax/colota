@@ -409,7 +409,7 @@ export function AutoExportScreen(_props: ScreenProps) {
 
         {/* Export Directory */}
         <View style={styles.section}>
-          <SectionTitle>Export Directory</SectionTitle>
+          <SectionTitle>Export directory</SectionTitle>
           <Card>
             <Pressable
               style={({ pressed }) => [styles.directoryRow, pressed && { opacity: colors.pressedOpacity }]}
@@ -631,7 +631,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         {/* Export History */}
         {exportFiles.length > 0 && (
           <View style={styles.section}>
-            <SectionTitle>Export History</SectionTitle>
+            <SectionTitle>Export history</SectionTitle>
             <Card>
               {exportFiles.map((file, i) => (
                 <View key={file.name}>

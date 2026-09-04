@@ -229,24 +229,24 @@ describe("DataManagementScreen", () => {
     })
   })
 
-  it("shows DEV TOOLS section when debug mode enabled", async () => {
+  it("shows the dev tools section when debug mode enabled", async () => {
     mockGetSetting.mockResolvedValue("true")
 
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("DEV TOOLS")).toBeTruthy()
+      expect(getByText("Dev tools")).toBeTruthy()
       expect(getByText("Insert Dummy Data")).toBeTruthy()
     })
   })
 
-  it("hides DEV TOOLS section when debug mode disabled", async () => {
+  it("hides the dev tools section when debug mode disabled", async () => {
     mockGetSetting.mockResolvedValue("false")
 
     const { queryByText } = renderScreen()
 
     await waitFor(() => {
-      expect(queryByText("DEV TOOLS")).toBeNull()
+      expect(queryByText("Dev tools")).toBeNull()
       expect(queryByText("Insert Dummy Data")).toBeNull()
     })
   })
@@ -294,7 +294,7 @@ describe("DataManagementScreen", () => {
         expect(getByText("Data Management")).toBeTruthy()
       })
 
-      expect(queryByText("QUEUE ACTIONS")).toBeNull()
+      expect(queryByText("Queue actions")).toBeNull()
       expect(queryByText("Sync Now")).toBeNull()
     })
 

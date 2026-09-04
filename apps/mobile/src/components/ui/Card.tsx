@@ -5,17 +5,19 @@
 
 import React from "react"
 import { View, Pressable, StyleSheet, ViewStyle, StyleProp, AccessibilityRole, AccessibilityState } from "react-native"
+import { radius } from "@colota/shared"
 import { useTheme } from "../../hooks/useTheme"
+import { elevation, space, STATE_LAYER_ALPHA } from "../../constants"
 
-type CardVariant = "default" | "elevated" | "outlined" | "interactive"
+type CardVariant = "sheet" | "floating" | "default" | "elevated" | "outlined" | "interactive" | "danger"
 
 type CardProps = {
   children: React.ReactNode
   style?: StyleProp<ViewStyle>
-  danger?: boolean
   variant?: CardVariant
   onPress?: () => void
   onLongPress?: () => void
+  testID?: string
   accessibilityRole?: AccessibilityRole
   accessibilityLabel?: string
   accessibilityHint?: string
@@ -25,86 +27,73 @@ type CardProps = {
 export function Card({
   children,
   style,
-  danger = false,
   variant = "default",
   onPress,
   onLongPress,
+  testID,
   accessibilityRole,
   accessibilityLabel,
   accessibilityHint,
   accessibilityState
 }: CardProps) {
-  const { colors } = useTheme()
+  const { colors, mode } = useTheme()
 
-  const getVariantStyles = (): ViewStyle => {
-    if (danger) {
-      return {
-        backgroundColor: colors.error + "12",
-        borderColor: colors.error,
-        borderWidth: 2
-      }
-    }
-
+  const surfaceStyle = (): ViewStyle => {
     switch (variant) {
+      case "floating":
+        return {
+          backgroundColor: colors.cardElevated,
+          borderRadius: radius.lg,
+          elevation: mode === "dark" ? 0 : elevation.floating
+        }
+      // The bordered legacy surface, kept until the screens that group with it compose
+      // headed lists: dropping the stroke here strips it from screens this PR does not touch.
       case "default":
         return {
           backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderWidth: 1
+          borderRadius: radius.lg,
+          borderWidth: 1,
+          borderColor: colors.border
         }
+      case "sheet":
       case "elevated":
-        return {
-          backgroundColor: colors.cardElevated,
-          borderColor: "transparent",
-          borderWidth: 0,
-          elevation: 1,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 6
-        }
       case "outlined":
-        return {
-          backgroundColor: "transparent",
-          borderColor: colors.border,
-          borderWidth: 1.5
-        }
       case "interactive":
-        return {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderWidth: 1
-        }
+      case "danger":
+        return { backgroundColor: colors.card, borderRadius: 0 }
     }
   }
 
-  const cardView = <View style={[styles.card, getVariantStyles(), style]}>{children}</View>
+  const surface = [styles.card, surfaceStyle(), style]
 
-  if (variant === "interactive" && (onPress || onLongPress)) {
+  if (onPress || onLongPress) {
     return (
       <Pressable
+        testID={testID}
         onPress={onPress}
         onLongPress={onLongPress}
         accessibilityRole={accessibilityRole}
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
         accessibilityState={accessibilityState}
-        style={({ pressed }) => ({ opacity: pressed ? colors.pressedOpacity : 1 })}
+        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
       >
-        {cardView}
+        <View style={surface}>{children}</View>
       </Pressable>
     )
   }
 
-  return cardView
+  return (
+    <View testID={testID} style={surface}>
+      {children}
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    padding: space.lg,
     width: "100%"
   }
 })

@@ -105,7 +105,7 @@ export function ExportLocationsScreen({}: ScreenProps) {
 
             {/* Format Selection */}
             <View style={styles.section}>
-              <SectionTitle>Select Format</SectionTitle>
+              <SectionTitle>Select format</SectionTitle>
               <Card>
                 <FormatSelector selectedFormat={selectedFormat} onSelectFormat={setSelectedFormat} />
               </Card>

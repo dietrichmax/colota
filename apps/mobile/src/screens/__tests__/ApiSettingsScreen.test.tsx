@@ -205,7 +205,7 @@ describe("ApiSettingsScreen", () => {
 
       fireEvent.press(getByText(/^GET$/))
 
-      expect(getByText("EXAMPLE REQUEST")).toBeTruthy()
+      expect(getByText("Example request")).toBeTruthy()
     })
   })
 

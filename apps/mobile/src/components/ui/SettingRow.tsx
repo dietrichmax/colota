@@ -4,49 +4,18 @@
  */
 
 import React from "react"
-import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native"
-import { fonts } from "../../styles/typography"
-import { useTheme } from "../../hooks/useTheme"
+import { type StyleProp, type ViewStyle } from "react-native"
+import { ListItem } from "./ListItem"
 
 interface SettingRowProps {
   label: string
   hint?: string
   children: React.ReactNode
+  divider?: boolean
   style?: StyleProp<ViewStyle>
+  testID?: string
 }
 
-export function SettingRow({ label, hint, children, style }: SettingRowProps) {
-  const { colors } = useTheme()
-  return (
-    <View style={[styles.settingRow, style]}>
-      <View style={styles.settingContent}>
-        <Text style={[styles.settingLabel, { color: colors.text }]}>{label}</Text>
-        {hint && <Text style={[styles.settingHint, { color: colors.textSecondary }]}>{hint}</Text>}
-      </View>
-      {children}
-    </View>
-  )
+export function SettingRow({ label, hint, children, divider = false, style, testID }: SettingRowProps) {
+  return <ListItem label={label} sub={hint} trailing={children} divider={divider} style={style} testID={testID} />
 }
-
-const styles = StyleSheet.create({
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4
-  },
-  settingContent: {
-    flex: 1,
-    marginRight: 16
-  },
-  settingLabel: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  settingHint: {
-    fontSize: 13,
-    ...fonts.regular,
-    lineHeight: 18
-  }
-})

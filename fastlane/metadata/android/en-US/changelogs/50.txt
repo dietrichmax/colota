@@ -1,1 +1,2 @@
 - A calmer colour palette across the app in both light and dark
+- Calmer section headings, and list rows no longer cut off their description

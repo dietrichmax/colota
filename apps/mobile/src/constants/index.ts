@@ -50,6 +50,9 @@ export const motion = {
 
 export const elevation = { floating: 2 } as const
 
+// M3 interaction-state layer: the primitive's own content colour over its container at 10 percent.
+export const STATE_LAYER_ALPHA = "1A"
+
 // Map
 export const DEFAULT_MAP_ZOOM = 17
 export const WORLD_MAP_ZOOM = 2
