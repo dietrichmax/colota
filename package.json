@@ -28,7 +28,7 @@
     "ts-node": "10.9.2",
     "tsx": "4.23.13",
     "typescript": "6.0.3",
-    "webpack": "5.110.2",
+    "webpack": "5.110.3",
     "webpack-cli": "7.2.3"
   }
 }
