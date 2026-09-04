@@ -722,6 +722,7 @@ class NativeLocationService {
     VERSION_NAME: string
     VERSION_CODE: number
     FLAVOR: string
+    APP_LANGUAGE: string
   } | null {
     if (!BuildConfigModule) {
       logger.warn("[NativeLocationService] BuildConfigModule not available")

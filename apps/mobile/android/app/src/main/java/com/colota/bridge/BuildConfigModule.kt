@@ -8,6 +8,7 @@
 import com.facebook.react.bridge.ReactApplicationContext
 import com.Colota.BuildConfig
 import com.facebook.react.bridge.ReactContextBaseJavaModule
+import java.util.Locale
 
 class BuildConfigModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
@@ -24,7 +25,8 @@ class BuildConfigModule(reactContext: ReactApplicationContext) :
             "NDK_VERSION" to BuildConfig.NDK_VERSION,
             "VERSION_NAME" to BuildConfig.VERSION_NAME,
             "VERSION_CODE" to BuildConfig.VERSION_CODE,
-            "FLAVOR" to BuildConfig.FLAVOR
+            "FLAVOR" to BuildConfig.FLAVOR,
+            "APP_LANGUAGE" to Locale.getDefault().toLanguageTag()
         )
     }
 }
