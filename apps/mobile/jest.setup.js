@@ -54,3 +54,7 @@ jest.mock("react-native/Libraries/AppState/AppState", () => ({
     addEventListener: jest.fn(() => ({ remove: jest.fn() }))
   }
 }))
+
+const i18next = require("i18next")
+const { I18N_OPTIONS } = require("./src/i18n/options")
+i18next.init({ ...I18N_OPTIONS, lng: "en" })

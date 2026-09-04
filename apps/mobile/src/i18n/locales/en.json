@@ -1,0 +1,14 @@
+{
+  "appearance.darkMode": "Dark Mode",
+  "appearance.units": "Units",
+  "appearance.units.metric": "Metric",
+  "appearance.units.imperial": "Imperial",
+  "appearance.timeFormat": "Time Format",
+  "appearance.mapTileServer": "Map Tile Server",
+  "appearance.mapStyle.placeholder": "Default",
+  "appearance.mapStyle.emptyHint": "Leave empty to use the default",
+  "appearance.mapStyle.reset": "Reset to default",
+  "appearance.mapStyle.subtitle": "Override the default map tile source",
+  "appearance.mapStyle.light": "Light style URL",
+  "appearance.mapStyle.dark": "Dark style URL"
+}

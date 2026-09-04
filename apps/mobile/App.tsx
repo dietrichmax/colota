@@ -12,6 +12,8 @@ import { fonts } from "./src/styles/typography"
 import { TrackingProvider } from "./src/contexts/TrackingProvider"
 import { ErrorBoundary } from "./src/components/ui/ErrorBoundary"
 import type { RootStackParamList, RootStackRoute } from "./src/types/navigation"
+
+import "./src/i18n"
 import {
   ActivityLogScreen,
   DashboardScreen,

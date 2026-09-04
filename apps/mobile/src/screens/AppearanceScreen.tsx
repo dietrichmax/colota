@@ -7,6 +7,7 @@ import React, { useState, useCallback, useEffect } from "react"
 import { Text, StyleSheet, Switch, View, ScrollView, Pressable, TextInput } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
+import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
 import { fonts } from "../styles/typography"
 import { Card, Container, Divider, SettingRow } from "../components"
@@ -17,6 +18,7 @@ import type { UnitSystem, TimeFormat } from "../utils/geo"
 
 export function AppearanceScreen({}: ScreenProps) {
   const { mode, toggleTheme, colors } = useTheme()
+  const { t } = useTranslation()
 
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(getUnitSystem)
   const [timeFormat, setTimeFormat] = useState<TimeFormat>(getTimeFormat)
@@ -90,7 +92,7 @@ export function AppearanceScreen({}: ScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         <Card>
-          <SettingRow label="Dark Mode">
+          <SettingRow label={t("appearance.darkMode")}>
             <Switch
               testID="dark-mode-switch"
               value={mode === "dark"}
@@ -105,7 +107,7 @@ export function AppearanceScreen({}: ScreenProps) {
 
           <Divider />
 
-          <SettingRow label="Units">
+          <SettingRow label={t("appearance.units")}>
             <View style={styles.chipGroup}>
               {(["metric", "imperial"] as const).map((unit) => {
                 const selected = unitSystem === unit
@@ -123,7 +125,7 @@ export function AppearanceScreen({}: ScreenProps) {
                     onPress={() => selectUnitSystem(unit)}
                   >
                     <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>
-                      {unit === "metric" ? "Metric" : "Imperial"}
+                      {unit === "metric" ? t("appearance.units.metric") : t("appearance.units.imperial")}
                     </Text>
                   </Pressable>
                 )
@@ -133,7 +135,7 @@ export function AppearanceScreen({}: ScreenProps) {
 
           <Divider />
 
-          <SettingRow label="Time Format">
+          <SettingRow label={t("appearance.timeFormat")}>
             <View style={styles.chipGroup}>
               {(["24h", "12h"] as const).map((fmt) => {
                 const selected = timeFormat === fmt
@@ -165,10 +167,8 @@ export function AppearanceScreen({}: ScreenProps) {
             onPress={() => setShowMapTileServer(!showMapTileServer)}
           >
             <View style={styles.linkContent}>
-              <Text style={[styles.linkLabel, { color: colors.text }]}>Map Tile Server</Text>
-              <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
-                Override the default map tile source
-              </Text>
+              <Text style={[styles.linkLabel, { color: colors.text }]}>{t("appearance.mapTileServer")}</Text>
+              <Text style={[styles.linkSub, { color: colors.textSecondary }]}>{t("appearance.mapStyle.subtitle")}</Text>
             </View>
             {showMapTileServer ? (
               <ChevronUp size={20} color={colors.textLight} />
@@ -180,7 +180,7 @@ export function AppearanceScreen({}: ScreenProps) {
           {showMapTileServer && (
             <View style={styles.mapTilePanel}>
               <Text style={[styles.mapStyleSub, styles.mapStyleSubFirst, { color: colors.textSecondary }]}>
-                Light style URL
+                {t("appearance.mapStyle.light")}
               </Text>
               <TextInput
                 testID="map-style-url-light"
@@ -191,14 +191,14 @@ export function AppearanceScreen({}: ScreenProps) {
                 value={mapStyleUrlLight}
                 onChangeText={setMapStyleUrlLight}
                 onBlur={() => saveMapStyleUrl("mapStyleUrlLight", mapStyleUrlLight)}
-                placeholder="Default"
+                placeholder={t("appearance.mapStyle.placeholder")}
                 placeholderTextColor={colors.placeholder}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="url"
               />
               <Text style={[styles.mapStyleSub, styles.mapStyleSubSecond, { color: colors.textSecondary }]}>
-                Dark style URL
+                {t("appearance.mapStyle.dark")}
               </Text>
               <TextInput
                 testID="map-style-url-dark"
@@ -209,20 +209,24 @@ export function AppearanceScreen({}: ScreenProps) {
                 value={mapStyleUrlDark}
                 onChangeText={setMapStyleUrlDark}
                 onBlur={() => saveMapStyleUrl("mapStyleUrlDark", mapStyleUrlDark)}
-                placeholder="Default"
+                placeholder={t("appearance.mapStyle.placeholder")}
                 placeholderTextColor={colors.placeholder}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="url"
               />
               <View style={styles.mapStyleFooter}>
-                <Text style={[styles.mapStyleHint, { color: colors.textLight }]}>Leave empty to use the default</Text>
+                <Text style={[styles.mapStyleHint, { color: colors.textLight }]}>
+                  {t("appearance.mapStyle.emptyHint")}
+                </Text>
                 {mapStyleUrlLight.trim() || mapStyleUrlDark.trim() ? (
                   <Pressable
                     onPress={resetMapStyle}
                     style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
                   >
-                    <Text style={[styles.mapStyleHint, { color: colors.primary }]}>Reset to default</Text>
+                    <Text style={[styles.mapStyleHint, { color: colors.primary }]}>
+                      {t("appearance.mapStyle.reset")}
+                    </Text>
                   </Pressable>
                 ) : null}
               </View>
