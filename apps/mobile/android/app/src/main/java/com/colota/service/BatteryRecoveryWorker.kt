@@ -17,6 +17,7 @@ import androidx.work.WorkerParameters
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.SettingsKeys
 import com.Colota.util.AppLogger
+import com.Colota.util.DeviceInfoHelper
 
 /**
  * Resumes the location foreground service after a battery-critical (<5%) stop,
@@ -64,6 +65,13 @@ class BatteryRecoveryWorker(
         if (!stoppedByBattery) {
             AppLogger.d(TAG, "Not stopped by battery - nothing to resume")
             return Result.success()
+        }
+
+        // The charging constraint can fire before WorkManager's tracker sees the unplug; the
+        // sticky broadcast cannot go stale that way. Retry, not success: success drops the recovery.
+        if (DeviceInfoHelper(appContext).isBatteryCritical()) {
+            AppLogger.d(TAG, "Battery still critical and unplugged - not resuming")
+            return Result.retry()
         }
 
         // Liveness, not the intent flag: a flag left true by a service the system killed would
