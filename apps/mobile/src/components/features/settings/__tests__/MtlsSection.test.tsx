@@ -3,18 +3,26 @@ import { render, fireEvent, waitFor } from "@testing-library/react-native"
 
 jest.mock("../../../index", () => {
   const R = require("react")
-  const { View, Text, Pressable } = require("react-native")
+  const { View, Text, Pressable, TextInput } = require("react-native")
   return {
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children }: any) => R.createElement(View, null, children),
-    Divider: () => R.createElement(View, null),
-    Button: ({ title, onPress, disabled }: any) =>
+    Button: ({ title, onPress, disabled, loading }: any) =>
       R.createElement(
         Pressable,
-        { onPress, disabled, accessibilityRole: "button" },
+        { onPress, disabled: disabled || loading, accessibilityRole: "button" },
         R.createElement(Text, null, title)
       ),
-    FieldMessage: ({ children }: any) => R.createElement(Text, null, children)
+    FieldMessage: ({ children }: any) => R.createElement(Text, null, children),
+    StatRow: ({ label, value }: any) =>
+      R.createElement(View, null, R.createElement(Text, null, label), R.createElement(Text, null, value)),
+    TextField: ({ testID, label, hint, value, onChangeText, editable }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        hint ? R.createElement(Text, null, hint) : null,
+        R.createElement(TextInput, { testID, value, onChangeText, editable, accessibilityLabel: label })
+      )
   }
 })
 
@@ -118,13 +126,13 @@ describe("MtlsSection", () => {
   describe("client cert: PKCS12 import", () => {
     it("shows password field after picking a .p12 file", async () => {
       mockPickClientCertFile.mockResolvedValueOnce("base64bytes")
-      const { getByText, getByPlaceholderText } = render(<MtlsSection />)
+      const { getByText } = render(<MtlsSection />)
       await waitFor(() => getByText("Import .p12 / .pfx"))
       fireEvent.press(getByText("Import .p12 / .pfx"))
 
       await waitFor(() => {
-        expect(getByText("Password (leave empty if none)")).toBeTruthy()
-        expect(getByPlaceholderText("PKCS12 password")).toBeTruthy()
+        expect(getByText("PKCS12 password")).toBeTruthy()
+        expect(getByText("Leave empty if the file has none")).toBeTruthy()
         expect(getByText("Save")).toBeTruthy()
         expect(getByText("Cancel")).toBeTruthy()
       })
@@ -134,11 +142,11 @@ describe("MtlsSection", () => {
       mockPickClientCertFile.mockResolvedValueOnce("base64bytes")
       mockImportClientCert.mockRejectedValueOnce({ code: "E_CERT_PASSWORD", message: "bad password" })
 
-      const { getByText, getByPlaceholderText } = render(<MtlsSection />)
+      const { getByText, getByTestId } = render(<MtlsSection />)
       await waitFor(() => getByText("Import .p12 / .pfx"))
       fireEvent.press(getByText("Import .p12 / .pfx"))
       await waitFor(() => getByText("Save"))
-      fireEvent.changeText(getByPlaceholderText("PKCS12 password"), "wrong")
+      fireEvent.changeText(getByTestId("p12-password-input"), "wrong")
       fireEvent.press(getByText("Save"))
 
       await waitFor(() => expect(getByText("Incorrect password")).toBeTruthy())
@@ -150,11 +158,11 @@ describe("MtlsSection", () => {
       mockPickClientCertFile.mockResolvedValueOnce("base64bytes")
       mockImportClientCert.mockRejectedValueOnce({ code: "E_CERT_INVALID", message: "not pkcs12" })
 
-      const { getByText, getByPlaceholderText } = render(<MtlsSection />)
+      const { getByText, getByTestId } = render(<MtlsSection />)
       await waitFor(() => getByText("Import .p12 / .pfx"))
       fireEvent.press(getByText("Import .p12 / .pfx"))
       await waitFor(() => getByText("Save"))
-      fireEvent.changeText(getByPlaceholderText("PKCS12 password"), "any")
+      fireEvent.changeText(getByTestId("p12-password-input"), "any")
       fireEvent.press(getByText("Save"))
 
       await waitFor(() => expect(getByText("Not a valid PKCS12 file")).toBeTruthy())
@@ -192,7 +200,7 @@ describe("MtlsSection", () => {
       await waitFor(() => {
         // shortenDn strips down to just the CN value
         expect(getByText("colota-test-client")).toBeTruthy()
-        expect(getByText("Remove Certificate")).toBeTruthy()
+        expect(getByText("Remove certificate")).toBeTruthy()
       })
     })
 
@@ -278,7 +286,7 @@ describe("MtlsSection", () => {
   })
 
   describe("remove actions", () => {
-    it("clears client cert and refreshes when Remove Certificate is tapped", async () => {
+    it("clears client cert and refreshes when Remove certificate is tapped", async () => {
       mockGetClientCertInfo
         .mockResolvedValueOnce({
           configured: true,
@@ -290,8 +298,8 @@ describe("MtlsSection", () => {
         .mockResolvedValueOnce({ configured: false })
 
       const { getByText } = render(<MtlsSection />)
-      await waitFor(() => getByText("Remove Certificate"))
-      fireEvent.press(getByText("Remove Certificate"))
+      await waitFor(() => getByText("Remove certificate"))
+      fireEvent.press(getByText("Remove certificate"))
 
       await waitFor(() => {
         expect(mockClearClientCert).toHaveBeenCalled()

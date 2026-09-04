@@ -46,7 +46,7 @@ describe("initI18n", () => {
 
     initI18n()
 
-    expect(t("appearance.darkMode")).toBe("Dark Mode")
+    expect(t("appearance.darkMode")).toBe("Dark mode")
   })
 
   it("returns the key itself when it is missing, rather than empty text", () => {

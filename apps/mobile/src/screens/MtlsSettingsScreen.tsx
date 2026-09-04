@@ -7,6 +7,7 @@ import React from "react"
 import { Text, StyleSheet, ScrollView } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
+import { useTranslation } from "../i18n/useTranslation"
 import { text } from "../styles/typography"
 import { space } from "../constants"
 import { Container } from "../components"
@@ -14,6 +15,7 @@ import { MtlsSection } from "../components/features/settings/MtlsSection"
 
 export function MtlsSettingsScreen({}: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   return (
     <Container>
@@ -22,9 +24,7 @@ export function MtlsSettingsScreen({}: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>
-          For endpoints behind a reverse proxy that requires mutual TLS authentication
-        </Text>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>{t("mtls.intro")}</Text>
 
         <MtlsSection />
       </ScrollView>
@@ -34,9 +34,9 @@ export function MtlsSettingsScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 40
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   },
   intro: {
     ...text.body,

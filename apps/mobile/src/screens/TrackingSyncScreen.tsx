@@ -6,16 +6,15 @@
 import React, { useCallback } from "react"
 import { StyleSheet, ScrollView } from "react-native"
 import { ScreenProps, Settings } from "../types/global"
-import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Toast } from "../components/ui/Toast"
 import { Container } from "../components"
 import { SyncStrategySettings } from "../components/features/settings/SyncStrategySettings"
+import { space } from "../constants"
 
 export function TrackingSyncScreen({}: ScreenProps) {
   const { settings, setSettings, updateSettingsLocal, restartTracking } = useTracking()
-  const { colors } = useTheme()
   const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
 
   const handleDebouncedSave = useCallback(
@@ -50,7 +49,6 @@ export function TrackingSyncScreen({}: ScreenProps) {
           onSettingsChange={updateSettingsLocal}
           onDebouncedSave={handleDebouncedSave}
           onImmediateSave={handleImmediateSave}
-          colors={colors}
         />
       </ScrollView>
 
@@ -61,8 +59,8 @@ export function TrackingSyncScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 40
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   }
 })

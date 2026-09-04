@@ -16,15 +16,6 @@ jest.mock("../../../ui/RadioDot", () => {
   }
 })
 
-jest.mock("lucide-react-native", () => {
-  const R = require("react")
-  const { View } = require("react-native")
-  return {
-    Zap: () => R.createElement(View, null),
-    Check: () => R.createElement(View, null)
-  }
-})
-
 import { PresetOption } from "../PresetOption"
 
 describe("PresetOption", () => {
@@ -77,6 +68,8 @@ describe("PresetOption", () => {
     expect(getByTestId("radio-unselected")).toBeTruthy()
   })
 
+  // The note used to be a tinted badge; it stays a readable line so the recommendation
+  // does not depend on colour a user may not see.
   it("shows Recommended badge for balanced preset", () => {
     const { getByText } = render(
       <PresetOption preset="balanced" isSelected={false} isOfflineMode={false} onSelect={mockOnSelect} />
@@ -90,6 +83,6 @@ describe("PresetOption", () => {
       <PresetOption preset="instant" isSelected={false} isOfflineMode={false} onSelect={mockOnSelect} />
     )
 
-    expect(getByText("High Battery Usage")).toBeTruthy()
+    expect(getByText("High battery use")).toBeTruthy()
   })
 })

@@ -66,6 +66,5 @@ export { TrackMap } from "./features/inspector/TrackMap"
 // ============================================================================
 // Feature Components - Settings
 // ============================================================================
-export { StatsCard } from "./features/settings/StatsCard"
 export { ConnectionSettings } from "./features/settings/ConnectionSettings"
 export { SyncStrategySettings } from "./features/settings/SyncStrategySettings"

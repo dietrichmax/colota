@@ -4,22 +4,38 @@ import { DEFAULT_SETTINGS, Settings } from "../../../../types/global"
 
 jest.mock("../../../index", () => {
   const R = require("react")
-  const { View, Text, Pressable } = require("react-native")
+  const { View, Text, Pressable, TextInput } = require("react-native")
   return {
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
-    Button: ({ title, onPress, disabled }: any) =>
-      R.createElement(Pressable, { onPress, disabled }, R.createElement(Text, null, title)),
-    SettingRow: ({ label, hint, children }: any) =>
+    Button: ({ title, onPress, disabled, loading, testID }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress, disabled: disabled || loading, accessibilityState: { disabled: disabled || loading } },
+        R.createElement(Text, null, title)
+      ),
+    FieldMessage: ({ children }: any) => R.createElement(Text, null, children),
+    ListItem: ({ testID, label, sub, onPress }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress },
+        R.createElement(Text, null, label),
+        sub ? R.createElement(Text, null, sub) : null
+      ),
+    Notice: ({ testID, variant, title, message }: any) =>
+      R.createElement(
+        View,
+        { testID, accessibilityHint: variant },
+        R.createElement(Text, null, title),
+        message ? R.createElement(Text, null, message) : null
+      ),
+    TextField: ({ testID, label, value, onChangeText, placeholder }: any) =>
       R.createElement(
         View,
         null,
         R.createElement(Text, null, label),
-        hint && R.createElement(Text, null, hint),
-        children
-      ),
-    FieldMessage: ({ children }: any) => R.createElement(Text, null, children)
+        R.createElement(TextInput, { testID, value, onChangeText, placeholder })
+      )
   }
 })
 
@@ -75,8 +91,9 @@ jest.mock("../../../../services/modalService", () => ({
   showChoice: (...args: any[]) => mockShowChoice(...args)
 }))
 
+const mockIsEndpointAllowed = jest.fn().mockReturnValue(true)
 jest.mock("../../../../utils/settingsValidation", () => ({
-  isEndpointAllowed: () => true
+  isEndpointAllowed: (...args: any[]) => mockIsEndpointAllowed(...args)
 }))
 
 jest.mock("../../../../services/LocationServicePermission", () => ({
@@ -93,21 +110,6 @@ jest.mock("../../../../utils/logger", () => ({
 
 import { ConnectionSettings } from "../ConnectionSettings"
 
-const mockColors = {
-  primary: "#0d9488",
-  primaryDark: "#115E59",
-  text: "#000",
-  textSecondary: "#6b7280",
-  textLight: "#9ca3af",
-  background: "#fff",
-  border: "#e5e7eb",
-  success: "#22c55e",
-  warning: "#f59e0b",
-  error: "#ef4444",
-  placeholder: "#9ca3af",
-  card: "#fff"
-} as any
-
 const mockNavigation = { navigate: jest.fn() }
 
 describe("ConnectionSettings", () => {
@@ -115,6 +117,7 @@ describe("ConnectionSettings", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockIsEndpointAllowed.mockReturnValue(true)
     mockOnSettingsChange = jest.fn()
   })
 
@@ -126,74 +129,92 @@ describe("ConnectionSettings", () => {
         endpointInput={endpointInput}
         onEndpointInputChange={jest.fn()}
         onSettingsChange={mockOnSettingsChange}
-        colors={mockColors}
         navigation={mockNavigation}
       />
     )
   }
 
-  it("renders Connection section title", () => {
+  // The screen header already says "Connection", so the first group names what it holds
+  // instead of repeating the screen.
+  it("heads the first group with what it configures, not the screen name", () => {
     const { getByText } = renderComponent()
 
-    expect(getByText("Connection")).toBeTruthy()
+    expect(getByText("Server")).toBeTruthy()
   })
 
-  it("shows Offline Mode toggle", () => {
+  it("shows the offline mode toggle", () => {
     const { getByText } = renderComponent()
 
-    expect(getByText("Offline Mode")).toBeTruthy()
+    expect(getByText("Offline mode")).toBeTruthy()
     expect(getByText("Save locally, no network sync")).toBeTruthy()
   })
 
   describe("online mode", () => {
-    it("shows Server Endpoint input", () => {
+    it("shows the server endpoint field", () => {
       const { getByText } = renderComponent()
 
-      expect(getByText("Server Endpoint")).toBeTruthy()
+      expect(getByText("Server endpoint")).toBeTruthy()
     })
 
-    it("shows Test Connection button", () => {
+    it("shows the test connection button", () => {
       const { getByText } = renderComponent()
 
-      expect(getByText("Test Connection")).toBeTruthy()
+      expect(getByText("Test connection")).toBeTruthy()
     })
 
-    it("shows Authentication & Headers link", () => {
+    // The row label has to read the same as the header the route paints.
+    it("shows the authentication row under its own screen title", () => {
       const { getByText } = renderComponent()
 
-      expect(getByText("Authentication & Headers")).toBeTruthy()
+      expect(getByText("Authentication")).toBeTruthy()
     })
 
-    it("shows HTTPS badge for https endpoint", () => {
-      const { getByText } = renderComponent({}, "https://example.com/api/locations")
+    // Plain HTTP to a public host is refused by the native URL guard, so the warning is
+    // the only thing that tells a user why nothing will ever upload.
+    it("warns about plain HTTP to a public host", async () => {
+      mockIsEndpointPrivate.mockResolvedValue(false)
+      const { getByText } = renderComponent({}, "http://example.com/api/locations")
 
-      expect(getByText("HTTPS")).toBeTruthy()
+      await waitFor(() => {
+        expect(getByText("HTTP is only allowed for private addresses and localhost.")).toBeTruthy()
+      })
     })
 
-    it("shows HTTP badge for http endpoint", () => {
-      const { getByText } = renderComponent({}, "http://192.168.1.1/api/locations")
+    it("does not warn for an https endpoint", () => {
+      const { queryByText } = renderComponent({}, "https://example.com/api/locations")
 
-      expect(getByText("HTTP")).toBeTruthy()
+      expect(queryByText("HTTP is only allowed for private addresses and localhost.")).toBeNull()
+    })
+
+    // The button used to be dimmed by an opacity wrapper while still firing; a real
+    // disabled state is what keeps a rejected endpoint from being tested.
+    it("disables the test button when the endpoint cannot be reached", () => {
+      mockIsEndpointAllowed.mockReturnValue(false)
+      const { getByTestId } = renderComponent({}, "http://example.com/api")
+
+      expect(getByTestId("test-connection-btn").props.accessibilityState).toEqual(
+        expect.objectContaining({ disabled: true })
+      )
     })
   })
 
   describe("offline mode", () => {
-    it("hides Server Endpoint input", () => {
+    it("hides the server endpoint field", () => {
       const { queryByText } = renderComponent({ isOfflineMode: true })
 
-      expect(queryByText("Server Endpoint")).toBeNull()
+      expect(queryByText("Server endpoint")).toBeNull()
     })
 
-    it("hides Test Connection button", () => {
+    it("hides the test connection button", () => {
       const { queryByText } = renderComponent({ isOfflineMode: true })
 
-      expect(queryByText("Test Connection")).toBeNull()
+      expect(queryByText("Test connection")).toBeNull()
     })
 
-    it("hides Authentication & Headers link", () => {
+    it("hides the authentication row", () => {
       const { queryByText } = renderComponent({ isOfflineMode: true })
 
-      expect(queryByText("Authentication & Headers")).toBeNull()
+      expect(queryByText("Authentication")).toBeNull()
     })
   })
 
@@ -221,16 +242,16 @@ describe("ConnectionSettings", () => {
       await waitFor(() => {
         expect(mockShowChoice).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: "Unsent Locations",
+            title: "Unsent locations",
             message: expect.stringContaining("10 locations")
           })
         )
       })
     })
 
-    it("syncs first then enables offline when Sync First chosen", async () => {
+    it("syncs first then enables offline when Sync first chosen", async () => {
       mockGetStats.mockResolvedValue({ queued: 10, sent: 50, total: 60, today: 5, databaseSizeMB: 1 })
-      mockShowChoice.mockResolvedValue(0) // Sync First (with endpoint)
+      mockShowChoice.mockResolvedValue(0) // Sync first (with endpoint)
       const { getAllByRole } = renderComponent({ endpoint: "https://example.com/api" })
 
       const toggle = getAllByRole("switch")[0]
@@ -244,7 +265,7 @@ describe("ConnectionSettings", () => {
 
     it("keeps queue and enables offline when Keep chosen", async () => {
       mockGetStats.mockResolvedValue({ queued: 10, sent: 50, total: 60, today: 5, databaseSizeMB: 1 })
-      mockShowChoice.mockResolvedValue(1) // Keep in Queue (with endpoint)
+      mockShowChoice.mockResolvedValue(1) // Keep in queue (with endpoint)
       const { getAllByRole } = renderComponent({ endpoint: "https://example.com/api" })
 
       const toggle = getAllByRole("switch")[0]
@@ -283,9 +304,9 @@ describe("ConnectionSettings", () => {
       expect(mockShowChoice).not.toHaveBeenCalled()
     })
 
-    it("omits Sync First button when no endpoint configured", async () => {
+    it("omits the Sync first button when no endpoint configured", async () => {
       mockGetStats.mockResolvedValue({ queued: 5, sent: 0, total: 5, today: 5, databaseSizeMB: 0.1 })
-      mockShowChoice.mockResolvedValue(0) // Keep in Queue (no endpoint, so index 0 = keep)
+      mockShowChoice.mockResolvedValue(0) // Keep in queue (no endpoint, so index 0 = keep)
       const { getAllByRole } = renderComponent({ endpoint: "" }, "")
 
       const toggle = getAllByRole("switch")[0]
@@ -294,7 +315,7 @@ describe("ConnectionSettings", () => {
       await waitFor(() => {
         expect(mockShowChoice).toHaveBeenCalledWith(
           expect.objectContaining({
-            buttons: expect.not.arrayContaining([expect.objectContaining({ text: "Sync First" })])
+            buttons: expect.not.arrayContaining([expect.objectContaining({ text: "Sync first" })])
           })
         )
       })
@@ -322,7 +343,7 @@ describe("ConnectionSettings", () => {
       })
       const { getByText } = renderComponent({}, "http://example.com/api")
 
-      fireEvent.press(getByText("Test Connection"))
+      fireEvent.press(getByText("Test connection"))
 
       await waitFor(() => {
         expect(getByText(/HTTPS is required for public endpoints/)).toBeTruthy()
@@ -334,7 +355,7 @@ describe("ConnectionSettings", () => {
       mockTestEndpoint.mockResolvedValue({ ok: true, status: 200 })
       const { getByText } = renderComponent({}, "https://example.com/api")
 
-      fireEvent.press(getByText("Test Connection"))
+      fireEvent.press(getByText("Test connection"))
 
       await waitFor(() => {
         expect(getByText("Connection successful")).toBeTruthy()
@@ -350,7 +371,7 @@ describe("ConnectionSettings", () => {
       })
       const { getByText } = renderComponent({}, "https://example.com/api")
 
-      fireEvent.press(getByText("Test Connection"))
+      fireEvent.press(getByText("Test connection"))
 
       await waitFor(() => {
         expect(getByText(/TLS handshake failed/)).toBeTruthy()

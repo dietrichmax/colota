@@ -4,20 +4,19 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from "react"
-import { Text, StyleSheet, TextInput, View, Pressable } from "react-native"
-import { CircleCheckBig, ChevronRight } from "lucide-react-native"
-import { Settings, ThemeColors } from "../../../types/global"
+import { StyleSheet, View } from "react-native"
+import { Settings } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
+import { useTranslation } from "../../../i18n/useTranslation"
 import { isEndpointAllowed } from "../../../utils/settingsValidation"
 import { isTraccarJsonFormat, isOverlandFormat } from "../../../utils/apiPayload"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
-import { fonts } from "../../../styles/typography"
 import { SettingRow } from "../../ui/SettingRow"
 import { Toggle } from "../../ui/Toggle"
 import { useTimeout } from "../../../hooks/useTimeout"
-import { size, TEST_RESULT_DISPLAY_MS } from "../../../constants"
+import { space, TEST_RESULT_DISPLAY_MS } from "../../../constants"
 import { logger } from "../../../utils/logger"
-import { Button, Card, SectionTitle, Divider, FieldMessage } from "../../index"
+import { Button, SectionTitle, Divider, FieldMessage, ListItem, Notice, TextField } from "../../index"
 import { showChoice } from "../../../services/modalService"
 
 interface ConnectionSettingsProps {
@@ -25,7 +24,6 @@ interface ConnectionSettingsProps {
   endpointInput: string
   onEndpointInputChange: (value: string) => void
   onSettingsChange: (newSettings: Settings) => void
-  colors: ThemeColors
   navigation: any
 }
 
@@ -34,9 +32,9 @@ export function ConnectionSettings({
   endpointInput,
   onEndpointInputChange,
   onSettingsChange,
-  colors,
   navigation
 }: ConnectionSettingsProps) {
+  const { t } = useTranslation()
   const [testing, setTesting] = useState(false)
   const [testResponse, setTestResponse] = useState<string | null>(null)
   const [testError, setTestError] = useState(false)
@@ -63,13 +61,13 @@ export function ConnectionSettings({
           if (stats.queued > 0) {
             const hasEndpoint = !!settings.endpoint
             const buttons = [
-              ...(hasEndpoint ? [{ text: "Sync First", style: "primary" as const }] : []),
-              { text: "Keep in Queue", style: "secondary" as const },
-              { text: "Cancel", style: "secondary" as const }
+              ...(hasEndpoint ? [{ text: t("connection.unsent.sync"), style: "primary" as const }] : []),
+              { text: t("connection.unsent.keep"), style: "secondary" as const },
+              { text: t("connection.unsent.cancel"), style: "secondary" as const }
             ]
             const choice = await showChoice({
-              title: "Unsent Locations",
-              message: `You have ${stats.queued} locations waiting to sync. What would you like to do?`,
+              title: t("connection.unsent.title"),
+              message: t("connection.unsent.message", { count: stats.queued }),
               buttons
             })
             const action = hasEndpoint
@@ -93,7 +91,7 @@ export function ConnectionSettings({
       }
       onSettingsChange({ ...settings, isOfflineMode: enabled })
     },
-    [settings, onSettingsChange]
+    [settings, onSettingsChange, t]
   )
 
   const handleTestEndpoint = useCallback(async () => {
@@ -105,7 +103,7 @@ export function ConnectionSettings({
     try {
       const recentLocation = await NativeLocationService.getMostRecentLocation()
       if (!recentLocation) {
-        setTestResponse("No location data yet. Start tracking to collect a test point, then try again.")
+        setTestResponse(t("connection.test.noLocation"))
         setTestError(true)
         return
       }
@@ -134,7 +132,7 @@ export function ConnectionSettings({
       if (isPrivate) {
         const granted = await ensureLocalNetworkPermission()
         if (!granted) {
-          setTestResponse("Local network permission required to reach this server")
+          setTestResponse(t("connection.test.localNetworkDenied"))
           setTestError(true)
           return
         }
@@ -159,218 +157,92 @@ export function ConnectionSettings({
       })
 
       if (result.ok) {
-        setTestResponse("Connection successful")
+        setTestResponse(t("connection.test.success"))
         onSettingsChange({ ...settings, endpoint: endpointInput })
       } else {
         logger.warn("[ConnectionSettings] Test failed:", result.status, result.errorMessage)
-        setTestResponse(result.errorMessage || `Server returned ${result.status}`)
+        setTestResponse(result.errorMessage || t("connection.test.status", { status: result.status }))
         setTestError(true)
       }
     } catch (err: any) {
-      const msg = err?.message || "Unknown error"
+      const msg = err?.message || t("connection.test.unknownError")
       logger.warn("[ConnectionSettings] Test failed:", err?.name, msg)
-      setTestResponse(`Connection failed: ${msg}`)
+      setTestResponse(t("connection.test.failed", { message: msg }))
       setTestError(true)
     } finally {
       setTesting(false)
       timeout.set(() => setTestResponse(null), TEST_RESULT_DISPLAY_MS)
     }
-  }, [endpointInput, settings, onSettingsChange, timeout])
+  }, [endpointInput, settings, onSettingsChange, timeout, t])
+
+  const testDisabled = !endpointInput || !isEndpointAllowed(endpointInput)
 
   return (
-    <View style={styles.section}>
-      <SectionTitle>Connection</SectionTitle>
-      <Card>
-        <SettingRow label="Offline Mode" hint="Save locally, no network sync">
-          <Toggle
-            value={settings.isOfflineMode}
-            onValueChange={handleOfflineModeChange}
-            accessibilityLabel="Offline Mode"
-          />
-        </SettingRow>
+    <View>
+      <SectionTitle first>{t("connection.server")}</SectionTitle>
 
-        {!settings.isOfflineMode && (
-          <>
-            <Divider />
+      <SettingRow label={t("connection.offlineMode")} hint={t("connection.offlineMode.hint")}>
+        <Toggle
+          value={settings.isOfflineMode}
+          onValueChange={handleOfflineModeChange}
+          accessibilityLabel={t("connection.offlineMode")}
+        />
+      </SettingRow>
 
-            <View style={styles.inputGroup}>
-              <View style={styles.inputHeader}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Server Endpoint</Text>
-                {endpointInput && (
-                  <View
-                    style={[
-                      styles.protocolBadge,
-                      {
-                        backgroundColor: endpointInput.startsWith("https://")
-                          ? colors.success + "20"
-                          : colors.warning + "20"
-                      }
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.protocolText,
-                        {
-                          color: endpointInput.startsWith("https://") ? colors.success : colors.warning
-                        }
-                      ]}
-                    >
-                      {endpointInput.startsWith("https://") ? "HTTPS" : "HTTP"}
-                    </Text>
-                  </View>
-                )}
-              </View>
+      {!settings.isOfflineMode && (
+        <>
+          <Divider tight />
 
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    borderColor: colors.border,
-                    color: colors.text,
-                    backgroundColor: colors.background
-                  }
-                ]}
-                value={endpointInput}
-                onChangeText={onEndpointInputChange}
-                placeholder="https://your-server.com/api/locations"
-                placeholderTextColor={colors.placeholder}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
-
-              {!endpointInput && (
-                <FieldMessage variant="warning">No server configured. Locations are saved locally</FieldMessage>
-              )}
-
-              {endpointInput.startsWith("http://") && !endpointPrivate && (
-                <FieldMessage variant="warning">HTTP only allowed for private IPs / localhost</FieldMessage>
-              )}
-
-              {endpointInput.includes("%") && (
-                <FieldMessage>Variables: %DATE, %YEAR, %MONTH, %DAY, %TIMESTAMP</FieldMessage>
-              )}
-            </View>
-
-            <Button
-              style={[
-                styles.testButton,
-                (!endpointInput || !isEndpointAllowed(endpointInput)) && styles.disabledButton
-              ]}
-              onPress={() => {
-                if (!endpointInput || !isEndpointAllowed(endpointInput)) return
-                handleTestEndpoint()
-              }}
-              title={testing ? "Testing..." : "Test Connection"}
+          <View style={styles.form}>
+            <TextField
+              label={t("connection.endpoint")}
+              mono
+              value={endpointInput}
+              onChangeText={onEndpointInputChange}
+              placeholder="https://your-server.com/api/locations"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
             />
 
-            {testResponse && (
-              <View
-                style={[
-                  styles.responseBox,
-                  {
-                    borderColor: testError ? colors.error : colors.success,
-                    backgroundColor: (testError ? colors.error : colors.success) + "15"
-                  }
-                ]}
-              >
-                {!testError && <CircleCheckBig size={size.icon.sm} color={colors.success} />}
-                <Text style={[styles.responseText, { color: testError ? colors.error : colors.success }]}>
-                  {testResponse}
-                </Text>
-              </View>
+            {!endpointInput && <FieldMessage variant="warning">{t("connection.endpoint.none")}</FieldMessage>}
+
+            {endpointInput.startsWith("http://") && !endpointPrivate && (
+              <FieldMessage variant="warning">{t("connection.endpoint.httpPublic")}</FieldMessage>
             )}
 
-            <Divider />
+            {endpointInput.includes("%") && <FieldMessage>{t("connection.endpoint.variables")}</FieldMessage>}
 
-            <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
-              onPress={() => navigation.navigate("Auth Settings")}
-            >
-              <View style={styles.linkContent}>
-                <Text style={[styles.linkLabel, { color: colors.text }]}>Authentication & Headers</Text>
-                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
-                  Basic auth, bearer tokens, custom headers
-                </Text>
-              </View>
-              <ChevronRight size={size.icon.md} color={colors.textLight} />
-            </Pressable>
-          </>
-        )}
-      </Card>
+            <Button
+              testID="test-connection-btn"
+              style={styles.testButton}
+              disabled={testDisabled}
+              loading={testing}
+              onPress={handleTestEndpoint}
+              title={t("connection.test")}
+            />
+          </View>
+
+          {testResponse && (
+            <Notice testID="connection-test-result" variant={testError ? "error" : "success"} title={testResponse} />
+          )}
+
+          <ListItem
+            label={t("connection.auth")}
+            sub={t("connection.auth.sub")}
+            onPress={() => navigation.navigate("Auth Settings")}
+          />
+        </>
+      )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  section: {
-    marginBottom: 24
-  },
-  inputGroup: {
-    marginBottom: 12
-  },
-  inputHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10
-  },
-  inputLabel: {
-    fontSize: 15,
-    ...fonts.semiBold
-  },
-  protocolBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12
-  },
-  protocolText: {
-    fontSize: 11,
-    ...fonts.bold
-  },
-  input: {
-    borderWidth: 1.5,
-    padding: 16,
-    borderRadius: 12,
-    fontSize: 15,
-    ...fonts.regular
+  form: {
+    paddingVertical: space.lg
   },
   testButton: {
-    marginTop: 12
-  },
-  disabledButton: {
-    opacity: 0.5
-  },
-  responseBox: {
-    marginTop: 12,
-    padding: 14,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8
-  },
-  responseText: {
-    fontSize: 14,
-    ...fonts.semiBold
-  },
-  linkRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12
-  },
-  linkContent: {
-    flex: 1
-  },
-  linkLabel: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  linkSub: {
-    fontSize: 13,
-    ...fonts.regular
+    marginTop: space.lg
   }
 })
