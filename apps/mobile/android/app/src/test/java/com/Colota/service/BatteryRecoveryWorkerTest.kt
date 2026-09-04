@@ -6,6 +6,8 @@
 package com.Colota.service
 
 import android.app.Application
+import android.content.Intent
+import android.os.BatteryManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
@@ -120,6 +122,36 @@ class BatteryRecoveryWorkerTest {
         verify { LocationServiceModule.sendTrackingStartedEvent(any()) }
     }
 
+    /**
+     * WorkManager can run a charging-constrained worker before its tracker has observed the
+     * unplug, and resuming there restarts a service that stops on battery again and re-arms this.
+     */
+    @Test
+    fun `does not resume while the battery is still critical and unplugged`() {
+        db.saveSetting(SettingsKeys.STOPPED_BY_BATTERY, "true")
+        setBattery(level = 4, plugged = 0, status = BatteryManager.BATTERY_STATUS_DISCHARGING)
+
+        val result = runWorker()
+
+        // retry, not success: the recovery must survive to fire on a real charge.
+        assertEquals(ListenableWorker.Result.retry(), result)
+        assertNull("Still critical - must not restart the service", shadowOf(app).nextStartedService)
+        verify(exactly = 0) { LocationServiceModule.sendTrackingStartedEvent(any()) }
+    }
+
+    /** The guard reads level and plug state together, so charging at 4% is the recovery, not the loop. */
+    @Test
+    fun `resumes at a critical level once the charger is connected`() {
+        db.saveSetting(SettingsKeys.STOPPED_BY_BATTERY, "true")
+        setBattery(level = 4, plugged = BatteryManager.BATTERY_PLUGGED_AC, status = BatteryManager.BATTERY_STATUS_CHARGING)
+
+        val result = runWorker()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        assertNotNull("Charging at 4% is the recovery case", shadowOf(app).nextStartedService)
+        verify { LocationServiceModule.sendTrackingStartedEvent(any()) }
+    }
+
     @Test
     fun `structural FGS-start failure fails instead of retrying forever`() {
         db.saveSetting(SettingsKeys.STOPPED_BY_BATTERY, "true")
@@ -136,5 +168,16 @@ class BatteryRecoveryWorkerTest {
         } finally {
             unmockkObject(LocationForegroundService.Companion)
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun setBattery(level: Int, plugged: Int, status: Int) {
+        app.sendStickyBroadcast(
+            Intent(Intent.ACTION_BATTERY_CHANGED)
+                .putExtra(BatteryManager.EXTRA_LEVEL, level)
+                .putExtra(BatteryManager.EXTRA_SCALE, 100)
+                .putExtra(BatteryManager.EXTRA_STATUS, status)
+                .putExtra(BatteryManager.EXTRA_PLUGGED, plugged)
+        )
     }
 }
