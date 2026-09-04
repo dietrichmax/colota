@@ -4,24 +4,53 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
-import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
-import { Info, AlertCircle, AlertTriangle, CheckCircle } from "lucide-react-native"
+import { StyleSheet, Text } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
-import { fontSizes } from "@colota/shared"
-import { type ModalRequest, type AlertVariant, registerModalHandler } from "../../services/modalService"
+import { text as typeRoles } from "../../styles/typography"
+import { type ModalRequest, registerModalHandler } from "../../services/modalService"
+import { SEMANTIC_ICONS, semanticColor } from "./semantic"
+import { Button } from "./Button"
+import { ListItem } from "./ListItem"
+import { Sheet } from "./Sheet"
 
-const VARIANT_ICONS = {
-  info: Info,
-  error: AlertCircle,
-  warning: AlertTriangle,
-  success: CheckCircle
+type ModalButton = ModalRequest["buttons"][number]
+
+const BUTTON_VARIANT = {
+  primary: "primary",
+  destructive: "danger",
+  secondary: "ghost"
 } as const
+
+/** More than this many choices stop being a button stack and become a list. */
+const MAX_STACKED_BUTTONS = 2
+
+/**
+ * Back, the scrim and the dismiss slot all resolve to the same button, so a sheet that
+ * is closed without a choice reports what the caller reads as "the user backed out".
+ * Callers pass their dismissive option as `secondary`; a single-button alert falls back
+ * to that button, whose resolve is a no-op.
+ */
+function dismissiveIndex(buttons: ModalButton[]): number {
+  const last = buttons.map((btn) => btn.style).lastIndexOf("secondary")
+  return last === -1 ? buttons.length - 1 : last
+}
+
+/** Confirming action first, dismissive last, without disturbing the caller's indices. */
+function displayOrder(buttons: ModalButton[]): number[] {
+  const indices = buttons.map((_, index) => index)
+  return [
+    ...indices.filter((i) => buttons[i].style !== "secondary"),
+    ...indices.filter((i) => buttons[i].style === "secondary")
+  ]
+}
 
 export function AppModal() {
   const { colors } = useTheme()
   const [current, setCurrent] = useState<ModalRequest | null>(null)
   const queueRef = useRef<ModalRequest[]>([])
+  // The sheet plays its exit animation after `current` clears, so it keeps rendering
+  // the request it is closing rather than an empty surface.
+  const shownRef = useRef<ModalRequest | null>(null)
 
   const processNext = useCallback(() => {
     if (queueRef.current.length > 0) {
@@ -41,12 +70,6 @@ export function AppModal() {
     })
   }, [current])
 
-  useEffect(() => {
-    if (!current) return
-    const handler = BackHandler.addEventListener("hardwareBackPress", () => true)
-    return () => handler.remove()
-  }, [current])
-
   const handlePress = useCallback(
     (index: number) => {
       current?.resolve(index)
@@ -55,139 +78,62 @@ export function AppModal() {
     [current, processNext]
   )
 
-  if (!current) return null
+  if (current) shownRef.current = current
+  const request = shownRef.current
+  if (!request) return null
 
-  const Icon = VARIANT_ICONS[current.variant]
-  const iconColor = getVariantColor(current.variant, colors)
+  const dismissIndex = dismissiveIndex(request.buttons)
+  const dismiss = () => handlePress(dismissIndex)
+  const asList = request.buttons.length > MAX_STACKED_BUTTONS
+  const listIndices = asList ? request.buttons.map((_, index) => index).filter((index) => index !== dismissIndex) : []
+
+  const actions = asList ? (
+    <Button
+      title={request.buttons[dismissIndex].text}
+      variant="ghost"
+      onPress={() => handlePress(dismissIndex)}
+      testID={`modal-btn-${dismissIndex}`}
+    />
+  ) : (
+    displayOrder(request.buttons).map((index) => (
+      <Button
+        key={index}
+        title={request.buttons[index].text}
+        variant={BUTTON_VARIANT[request.buttons[index].style]}
+        onPress={() => handlePress(index)}
+        testID={`modal-btn-${index}`}
+      />
+    ))
+  )
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-        <View style={[styles.card, { backgroundColor: colors.cardElevated, borderRadius: colors.borderRadius + 4 }]}>
-          <View style={[styles.iconContainer, { backgroundColor: iconColor + "15" }]}>
-            <Icon size={28} color={iconColor} />
-          </View>
-
-          <Text style={[styles.title, { color: colors.text }]}>{current.title}</Text>
-          <Text style={[styles.body, { color: colors.textSecondary }]}>{current.message}</Text>
-
-          <View style={[styles.buttons, current.buttons.length > 2 && styles.buttonsVertical]}>
-            {current.buttons.map((btn, i) => {
-              const btnStyles = getButtonStyles(btn.style, colors)
-              return (
-                <Pressable
-                  key={i}
-                  style={({ pressed }) => [
-                    styles.button,
-                    current.buttons.length > 2 && styles.buttonFullWidth,
-                    btnStyles.container,
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
-                  onPress={() => handlePress(i)}
-                >
-                  <Text style={[styles.buttonText, btnStyles.text]}>{btn.text}</Text>
-                </Pressable>
-              )
-            })}
-          </View>
-        </View>
-      </View>
-    </Modal>
+    <Sheet
+      visible={current !== null}
+      title={request.title}
+      icon={SEMANTIC_ICONS[request.variant]}
+      iconColor={semanticColor(request.variant, colors)}
+      onDismiss={request.blocking ? undefined : dismiss}
+      actions={actions}
+      testID="app-modal-sheet"
+    >
+      <Text style={[styles.message, { color: colors.textSecondary }]}>{request.message}</Text>
+      {listIndices.map((index, position) => (
+        <ListItem
+          key={index}
+          label={request.buttons[index].text}
+          onPress={() => handlePress(index)}
+          divider={position < listIndices.length - 1}
+          trailingIcon={null}
+          accessibilityHint=""
+          testID={`modal-btn-${index}`}
+        />
+      ))}
+    </Sheet>
   )
 }
 
-function getVariantColor(variant: AlertVariant, colors: ReturnType<typeof useTheme>["colors"]): string {
-  switch (variant) {
-    case "error":
-      return colors.error
-    case "warning":
-      return colors.warning
-    case "success":
-      return colors.success
-    default:
-      return colors.info
-  }
-}
-
-function getButtonStyles(
-  style: "primary" | "secondary" | "destructive",
-  colors: ReturnType<typeof useTheme>["colors"]
-) {
-  switch (style) {
-    case "destructive":
-      return {
-        container: { backgroundColor: colors.error } as const,
-        text: { color: colors.textOnPrimary } as const
-      }
-    case "secondary":
-      return {
-        container: { borderWidth: 1.5, borderColor: colors.border } as const,
-        text: { color: colors.textSecondary } as const
-      }
-    default:
-      return {
-        container: { backgroundColor: colors.primary } as const,
-        text: { color: colors.textOnPrimary } as const
-      }
-  }
-}
-
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 32
-  },
-  card: {
-    width: "100%",
-    padding: 24,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    alignSelf: "center",
-    marginBottom: 16
-  },
-  title: {
-    fontSize: fontSizes.cardTitle,
-    ...fonts.bold,
-    textAlign: "center",
-    marginBottom: 12
-  },
-  body: {
-    fontSize: fontSizes.body,
-    ...fonts.regular,
-    lineHeight: 20,
-    textAlign: "center"
-  },
-  buttons: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 24
-  },
-  buttonsVertical: {
-    flexDirection: "column"
-  },
-  buttonFullWidth: {
-    flex: 0
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center"
-  },
-  buttonText: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold
+  message: {
+    ...typeRoles.body
   }
 })

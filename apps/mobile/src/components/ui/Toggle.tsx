@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Animated, Pressable, StyleSheet } from "react-native"
 import { radius } from "@colota/shared"
 import { useTheme } from "../../hooks/useTheme"
+import { useReduceMotion } from "../../hooks/useReduceMotion"
 import { motion, size, space, STATE_LAYER_ALPHA } from "../../constants"
 import { FocusRing } from "./FocusRing"
 
@@ -33,17 +34,18 @@ export function Toggle({
   testID
 }: ToggleProps) {
   const { colors } = useTheme()
+  const reduceMotion = useReduceMotion()
   const [focused, setFocused] = useState(false)
   const progress = useRef(new Animated.Value(value ? 1 : 0)).current
 
   useEffect(() => {
     Animated.timing(progress, {
       toValue: value ? 1 : 0,
-      duration: motion.control.duration,
+      duration: reduceMotion ? 0 : motion.control.duration,
       easing: motion.control.easing,
       useNativeDriver: true
     }).start()
-  }, [value, progress])
+  }, [value, reduceMotion, progress])
 
   const onFocus = useCallback(() => setFocused(true), [])
   const onBlur = useCallback(() => setFocused(false), [])

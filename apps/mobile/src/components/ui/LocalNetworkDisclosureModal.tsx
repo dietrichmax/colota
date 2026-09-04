@@ -5,7 +5,6 @@
 
 import React from "react"
 import { Wifi } from "lucide-react-native"
-import { useTheme } from "../../hooks/useTheme"
 import { registerLocalNetworkDisclosureCallback } from "../../services/LocationServicePermission"
 import { DisclosureModal } from "./DisclosureModal"
 
@@ -14,11 +13,10 @@ import { DisclosureModal } from "./DisclosureModal"
  * Shown before requesting ACCESS_LOCAL_NETWORK on Android 16+.
  */
 export function LocalNetworkDisclosureModal() {
-  const { colors } = useTheme()
-
   return (
     <DisclosureModal
-      icon={<Wifi size={28} color={colors.primary} />}
+      icon={Wifi}
+      blocking
       title="Local Network Access"
       paragraphs={[
         "Your server is on the local network. Colota needs local network access permission to reach it.",

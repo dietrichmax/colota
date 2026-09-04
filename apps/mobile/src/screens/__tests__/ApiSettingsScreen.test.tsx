@@ -47,7 +47,7 @@ jest.mock("../../components", () => {
   const { View, Text, Pressable } = require("react-native")
   return {
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    FloatingSaveIndicator: () => null,
+    Toast: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
     ChipGroup: ({ options, selected, onSelect }: any) =>

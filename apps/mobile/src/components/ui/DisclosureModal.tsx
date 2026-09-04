@@ -4,27 +4,37 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
-import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
+import { Text, StyleSheet } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
-import { fontSizes } from "@colota/shared"
+import { text } from "../../styles/typography"
+import { space } from "../../constants"
+import { Button } from "./Button"
+import { Sheet } from "./Sheet"
+
+type IconComponent = React.ComponentType<{ size?: number; color?: string }>
 
 interface DisclosureModalProps {
-  icon: React.ReactNode
+  icon: IconComponent
   title: string
   paragraphs: string[]
   confirmLabel: string
   registerCallback: (cb: () => Promise<boolean>) => void
+  /** Play's prominent disclosure has to be answered, so back and the scrim do nothing. */
+  blocking?: boolean
 }
 
 /**
- * Reusable themed disclosure modal.
- *
- * Renders a centered card with an icon, title, body paragraphs,
- * and "Not Now" / confirm buttons. The caller registers a callback
- * that, when invoked, shows the modal and resolves with the user's choice.
+ * The disclosure sheet: an icon, a title, body paragraphs and a confirm / Not Now pair.
+ * The caller registers a callback that shows it and resolves with the user's choice.
  */
-export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registerCallback }: DisclosureModalProps) {
+export function DisclosureModal({
+  icon,
+  title,
+  paragraphs,
+  confirmLabel,
+  registerCallback,
+  blocking = false
+}: DisclosureModalProps) {
   const { colors } = useTheme()
   const [visible, setVisible] = useState(false)
   const resolveRef = useRef<((value: boolean) => void) | null>(null)
@@ -38,130 +48,44 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
     })
   }, [registerCallback])
 
-  // Block hardware back button while visible
-  useEffect(() => {
-    if (!visible) return
-    const handler = BackHandler.addEventListener("hardwareBackPress", () => true)
-    return () => handler.remove()
-  }, [visible])
-
-  const handleConfirm = useCallback(() => {
+  const answer = useCallback((agreed: boolean) => {
     setVisible(false)
-    resolveRef.current?.(true)
+    resolveRef.current?.(agreed)
     resolveRef.current = null
   }, [])
 
-  const handleNotNow = useCallback(() => {
-    setVisible(false)
-    resolveRef.current?.(false)
-    resolveRef.current = null
-  }, [])
+  const handleConfirm = useCallback(() => answer(true), [answer])
+  const handleNotNow = useCallback(() => answer(false), [answer])
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-        <View style={[styles.card, { backgroundColor: colors.cardElevated, borderRadius: colors.borderRadius + 4 }]}>
-          {/* Icon */}
-          <View style={[styles.iconContainer, { backgroundColor: colors.primary + "15" }]}>{icon}</View>
-
-          {/* Title */}
-          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-
-          {/* Body */}
-          {paragraphs.map((text, i) => (
-            <Text key={i} style={[styles.body, i > 0 && styles.bodySpaced, { color: colors.textSecondary }]}>
-              {text}
-            </Text>
-          ))}
-
-          {/* Buttons */}
-          <View style={styles.buttons}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.secondaryButton,
-                { borderColor: colors.border },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-              onPress={handleNotNow}
-            >
-              <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not Now</Text>
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.primaryButton,
-                { backgroundColor: colors.primary },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-              onPress={handleConfirm}
-            >
-              <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>{confirmLabel}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
+    <Sheet
+      visible={visible}
+      title={title}
+      icon={icon}
+      iconColor={colors.primary}
+      onDismiss={blocking ? undefined : handleNotNow}
+      testID="disclosure-sheet"
+      actions={
+        <>
+          <Button title={confirmLabel} onPress={handleConfirm} />
+          <Button title="Not Now" variant="ghost" onPress={handleNotNow} />
+        </>
+      }
+    >
+      {paragraphs.map((paragraph, i) => (
+        <Text key={i} style={[styles.body, i > 0 && styles.bodySpaced, { color: colors.textSecondary }]}>
+          {paragraph}
+        </Text>
+      ))}
+    </Sheet>
   )
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 32
-  },
-  card: {
-    width: "100%",
-    padding: 24,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    alignSelf: "center",
-    marginBottom: 16
-  },
-  title: {
-    fontSize: fontSizes.cardTitle,
-    ...fonts.bold,
-    textAlign: "center",
-    marginBottom: 16
-  },
   body: {
-    fontSize: fontSizes.body,
-    ...fonts.regular,
-    lineHeight: 20
+    ...text.body
   },
   bodySpaced: {
-    marginTop: 8
-  },
-  buttons: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 24
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center"
-  },
-  primaryButton: {},
-  secondaryButton: {
-    borderWidth: 1.5
-  },
-  buttonText: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold
+    marginTop: space.sm
   }
 })
