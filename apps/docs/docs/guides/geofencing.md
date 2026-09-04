@@ -79,7 +79,7 @@ See the [Deep Link Setup](deep-link-setup.md#geofences) guide for the full paylo
 ## How It Works
 
 - Zone detection uses the Haversine formula (1-2ms per check)
-- When entering a pause zone, Colota keeps recording for 3.5× your tracking interval before pausing - this logs several real arrival points near the zone boundary, which backends like GeoPulse need to confirm a trip has ended
+- When entering a pause zone, Colota keeps recording for 3.5× your tracking interval before pausing - this logs several real arrival points near the zone boundary, which backends like GeoPulse need to confirm a trip has ended. The delay uses your configured interval.
 - The notification shows "Paused: [Zone Name]" once the pause takes effect
 - By default, GPS continues running inside the zone to detect when you leave. If **WiFi pause** or **motionless pause** is enabled, GPS stops entirely inside the zone and zone exit is detected when GPS resumes
 - If you leave before the entry delay completes, the delay is cancelled and tracking continues uninterrupted

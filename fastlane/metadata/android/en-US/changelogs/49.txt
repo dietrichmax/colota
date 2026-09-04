@@ -1,2 +1,3 @@
 - A notification now alerts you when tracking stops on its own, instead of appearing silently
 - Unplugging at a low battery no longer restarts tracking in a loop
+- Pause zones no longer take hours to engage when a tracking profile is active

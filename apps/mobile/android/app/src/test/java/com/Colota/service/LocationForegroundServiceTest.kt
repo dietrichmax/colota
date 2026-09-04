@@ -93,6 +93,7 @@ class LocationForegroundServiceTest {
         every { syncManager.getCachedQueuedCount() } returns 0
         every { syncManager.lastSuccessfulSyncTime } returns 0L
         every { profileManager.getActiveProfileName() } returns null
+        every { profileManager.defaultInterval } returns 5000L
         every { secureStorage.getAuthHeaders() } returns emptyMap()
 
         mockkObject(AppLogger)
@@ -2857,11 +2858,7 @@ class LocationForegroundServiceTest {
 
     @Test
     fun `entry delay uses 3_5x tracking interval`() = testScope.runTest {
-        setField("config", ServiceConfig(
-            endpoint = "https://example.com",
-            interval = 10000L,
-            filterInaccurateLocations = false
-        ))
+        every { profileManager.defaultInterval } returns 10000L
 
         invokeStartEntryDelay(homeGeofence)
 
@@ -2871,6 +2868,23 @@ class LocationForegroundServiceTest {
 
         // At 35001ms, zone should be entered
         advanceTimeBy(2L)
+        assertTrue(getField("insidePauseZone"))
+    }
+
+    @Test
+    fun `entry delay ignores the active profile interval`() = testScope.runTest {
+        // A profile interval is a battery override, not an arrival cadence: an hourly profile
+        // must not hold GPS on for 3.5 hours before the zone pauses.
+        every { profileManager.defaultInterval } returns 10000L
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 3600000L,
+            filterInaccurateLocations = false
+        ))
+
+        invokeStartEntryDelay(homeGeofence)
+
+        advanceTimeBy(35001L)
         assertTrue(getField("insidePauseZone"))
     }
 
