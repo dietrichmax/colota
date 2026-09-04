@@ -73,17 +73,17 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "API Config",
     component: ApiSettingsScreen,
-    title: "API Config"
+    title: "API field mapping"
   },
   {
     name: "Auth Settings",
     component: AuthSettingsScreen,
-    title: "Auth Settings"
+    title: "Authentication"
   },
   {
     name: "mTLS Settings",
     component: MtlsSettingsScreen,
-    title: "mTLS Settings"
+    title: "Client certificate"
   },
   {
     name: "Geofences",

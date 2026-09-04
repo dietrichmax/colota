@@ -8,14 +8,14 @@ import { View, Text, ScrollView, StyleSheet, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Container, Card, Button, SectionTitle, Toggle } from "../components"
-import { fonts } from "../styles/typography"
+import { fonts, text } from "../styles/typography"
 import { Share2, TriangleAlert } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
 import { buildSetupConfig, buildSetupLink, type SetupShareParts, type SetupShareSelection } from "../utils/setupLink"
 import { DEFAULT_AUTH_CONFIG, type AuthConfig, type Geofence, type TrackingProfile } from "../types/global"
-import { size } from "../constants"
+import { size, space } from "../constants"
 
 type ShareCategory = keyof SetupShareSelection
 
@@ -123,18 +123,10 @@ export function ShareSetupScreen() {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.content}>
-        <Card style={styles.headerCard}>
-          <View style={styles.headerRow}>
-            <Share2 size={size.icon.lg} color={colors.primary} />
-            <View style={styles.headerText}>
-              <Text style={[styles.title, { color: colors.text }]}>Share Setup</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                Choose what to bundle into a setup link, then share it. The recipient opens it to apply the same
-                configuration.
-              </Text>
-            </View>
-          </View>
-        </Card>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>
+          Choose what to bundle into a setup link, then share it. The recipient opens it to apply the same
+          configuration.
+        </Text>
 
         <View style={styles.section}>
           <SectionTitle>Include</SectionTitle>
@@ -198,25 +190,14 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40
   },
-  headerCard: {
-    marginBottom: 16
-  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12
   },
-  headerText: {
-    flex: 1
-  },
-  title: {
-    fontSize: 18,
-    ...fonts.bold
-  },
-  subtitle: {
-    fontSize: 13,
-    ...fonts.regular,
-    marginTop: 2
+  intro: {
+    ...text.body,
+    marginBottom: space.lg
   },
   section: {
     marginTop: 8

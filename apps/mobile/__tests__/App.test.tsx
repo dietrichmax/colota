@@ -4,6 +4,7 @@ import { render } from "@testing-library/react-native"
 import { lightColors } from "@colota/shared"
 
 const mockNavigatorProps: Record<string, any>[] = []
+const mockScreenProps: Record<string, any>[] = []
 
 jest.mock("@react-navigation/native", () => ({
   NavigationContainer: ({ children }: { children: React.ReactNode }) => children
@@ -13,9 +14,12 @@ jest.mock("@react-navigation/native-stack", () => ({
   createNativeStackNavigator: () => ({
     Navigator: (props: Record<string, any>) => {
       mockNavigatorProps.push(props)
-      return null
+      return props.children
     },
-    Screen: () => null
+    Screen: (props: Record<string, any>) => {
+      mockScreenProps.push(props)
+      return null
+    }
   })
 }))
 
@@ -49,6 +53,7 @@ import App from "../App"
 describe("App chrome", () => {
   beforeEach(() => {
     mockNavigatorProps.length = 0
+    mockScreenProps.length = 0
   })
 
   // One provider is what makes the icon set one weight. absoluteStrokeWidth is the half
@@ -72,6 +77,20 @@ describe("App chrome", () => {
     const { screenOptions } = mockNavigatorProps[0]
     expect(screenOptions.headerShadowVisible).toBe(false)
     expect(screenOptions.headerStyle).toEqual({ backgroundColor: lightColors.background })
+  })
+
+  // Every route but the two map heroes lost its in-screen H1, so the header is the only
+  // place a screen is named and a vague header string leaves the screen unnamed. The route
+  // name is the navigation key: renaming it would break every navigate() call, so the
+  // displayed title moves and the key does not.
+  it("names the screen in the header without renaming the route", () => {
+    render(<App />)
+
+    const titleFor = (name: string) => mockScreenProps.find((s) => s.name === name)?.options.headerTitle
+
+    expect(titleFor("Auth Settings")).toBe("Authentication")
+    expect(titleFor("API Config")).toBe("API field mapping")
+    expect(titleFor("mTLS Settings")).toBe("Client certificate")
   })
 
   // RN's Android StatusBar module exposes only setStyle and setHidden, so backgroundColor

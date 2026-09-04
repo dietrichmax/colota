@@ -131,7 +131,6 @@ export function MtlsSection() {
   if (certInfo === null || caInfo === null) {
     return (
       <View style={styles.section}>
-        <SectionTitle>Client Certificate (mTLS)</SectionTitle>
         <Card>
           <Text style={[styles.muted, { color: colors.textSecondary }]}>Loading...</Text>
         </Card>
@@ -142,7 +141,6 @@ export function MtlsSection() {
   return (
     <>
       <View style={styles.section}>
-        <SectionTitle>Client Certificate (mTLS)</SectionTitle>
         <Card>
           {importState.kind === "picked" ? (
             <View>

@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback, useLayoutEffect } from "react"
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
@@ -58,6 +58,11 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const [activationDelayStr, setActivationDelayStr] = useState("0")
   const [delayStr, setDelayStr] = useState("60")
   const [syncIntervalStr, setSyncIntervalStr] = useState(String(settings.syncInterval))
+
+  // headerTitle, not title: SCREEN_CONFIG sets headerTitle and native-stack prefers it.
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerTitle: isEditing ? "Edit profile" : "New profile" })
+  }, [navigation, isEditing])
 
   useEffect(() => {
     if (!profileId) return
@@ -189,10 +194,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>{isEditing ? "Edit Profile" : "New Profile"}</Text>
-        </View>
-
         {/* Name & Priority */}
         <SectionTitle>Profile</SectionTitle>
         <Card>
@@ -495,8 +496,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 
 const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 },
-  header: { marginBottom: 20 },
-  title: { fontSize: 28, ...fonts.bold, letterSpacing: -0.5 },
   inputGroup: { marginBottom: 4 },
   label: {
     fontSize: 12,

@@ -4,10 +4,11 @@
  */
 
 import React from "react"
-import { Text, StyleSheet, View, ScrollView } from "react-native"
+import { Text, StyleSheet, ScrollView } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
-import { fonts } from "../styles/typography"
+import { text } from "../styles/typography"
+import { space } from "../constants"
 import { Container } from "../components"
 import { MtlsSection } from "../components/features/settings/MtlsSection"
 
@@ -21,12 +22,9 @@ export function MtlsSettingsScreen({}: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Client Certificate (mTLS)</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            For endpoints behind a reverse proxy that requires mutual TLS authentication
-          </Text>
-        </View>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>
+          For endpoints behind a reverse proxy that requires mutual TLS authentication
+        </Text>
 
         <MtlsSection />
       </ScrollView>
@@ -40,18 +38,8 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 40
   },
-  header: {
-    marginBottom: 20
-  },
-  title: {
-    fontSize: 28,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: 4
-  },
-  subtitle: {
-    fontSize: 14,
-    ...fonts.regular,
-    lineHeight: 20
+  intro: {
+    ...text.body,
+    marginBottom: space.xl
   }
 })

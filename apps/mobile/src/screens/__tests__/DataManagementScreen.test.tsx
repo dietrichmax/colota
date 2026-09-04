@@ -147,12 +147,14 @@ describe("DataManagementScreen", () => {
     return render(<DataManagementScreen navigation={{} as any} />)
   }
 
-  it("renders Data Management title", async () => {
-    const { getByText } = renderScreen()
+  // The screen name is the navigation header's, so the body starts at the first section.
+  it("renders the first section without repeating the screen name", async () => {
+    const { getByText, queryByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Data Management")).toBeTruthy()
+      expect(getByText("Database statistics")).toBeTruthy()
     })
+    expect(queryByText("Data Management")).toBeNull()
   })
 
   it("shows database statistics with correct values", async () => {
@@ -291,7 +293,7 @@ describe("DataManagementScreen", () => {
       const { queryByText, getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Data Management")).toBeTruthy()
+        expect(getByText("Database statistics")).toBeTruthy()
       })
 
       expect(queryByText("Queue actions")).toBeNull()
@@ -302,7 +304,7 @@ describe("DataManagementScreen", () => {
       const { queryByText, getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Data Management")).toBeTruthy()
+        expect(getByText("Database statistics")).toBeTruthy()
       })
 
       expect(queryByText("Clear Sent History")).toBeNull()

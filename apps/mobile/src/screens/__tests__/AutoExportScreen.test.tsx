@@ -233,14 +233,15 @@ describe("AutoExportScreen", () => {
     mockGetExportFiles.mockResolvedValue([])
   })
 
-  it("renders subtitle", async () => {
-    // The "Auto-Export" page title lives in the navigation header, not the screen body
-    // (removed to avoid duplicating the nav-bar title), so we only assert on the subtitle.
-    const { getByText } = render(<AutoExportScreen {...mockProps} />)
+  // The navigation header says "Auto-Export" and the first row says whether it is on, so
+  // the body carries neither the name nor a line restating it.
+  it("opens on the enable row rather than a restated title", async () => {
+    const { getByText, queryByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Automatically export your location data on a schedule")).toBeTruthy()
+      expect(getByText("Enable Auto-Export")).toBeTruthy()
     })
+    expect(queryByText("Automatically export your location data on a schedule")).toBeNull()
   })
 
   it("renders all format options", async () => {
@@ -662,7 +663,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Automatically export your location data on a schedule")).toBeTruthy()
+      expect(getByText("Enable Auto-Export")).toBeTruthy()
     })
 
     await waitFor(() => {
@@ -753,7 +754,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Automatically export your location data on a schedule")).toBeTruthy()
+      expect(getByText("Enable Auto-Export")).toBeTruthy()
     })
 
     await act(async () => {
@@ -947,7 +948,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Automatically export your location data on a schedule")).toBeTruthy()
+      expect(getByText("Enable Auto-Export")).toBeTruthy()
     })
 
     await act(async () => {

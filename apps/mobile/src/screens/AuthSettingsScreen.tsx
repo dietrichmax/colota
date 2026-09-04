@@ -15,7 +15,7 @@ import { SectionTitle, Toast, Container, Card, Divider, ChipGroup } from "../com
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
-import { size } from "../constants"
+import { size, space } from "../constants"
 
 const AUTH_TYPE_OPTIONS: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
@@ -153,11 +153,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Authentication & Headers</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Secure your endpoint connection</Text>
-        </View>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>Secure your endpoint connection</Text>
 
         {/* Authentication Section */}
         <View style={styles.section}>
@@ -386,19 +382,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     ...fonts.regular
   },
-  header: {
-    marginBottom: 20
-  },
-  title: {
-    fontSize: 28,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: 4
-  },
-  subtitle: {
+  intro: {
     fontSize: 14,
     ...fonts.regular,
-    lineHeight: 20
+    lineHeight: 20,
+    marginBottom: space.xl
   },
   section: {
     marginBottom: 24
