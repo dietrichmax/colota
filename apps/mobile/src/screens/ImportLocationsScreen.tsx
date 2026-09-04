@@ -16,6 +16,7 @@ import { logger } from "../utils/logger"
 import { FILE_FORMATS, IMPORT_FORMAT_ORDER, importDescription } from "../utils/fileFormats"
 import { ScreenProps } from "../types/global"
 import type { ThemeColors } from "../types/global"
+import { size } from "../constants"
 
 const IMPORT_FORMAT_LABELS = Object.fromEntries(
   (Object.keys(FILE_FORMATS) as ImportFormat[]).map((k) => [k, FILE_FORMATS[k].label])
@@ -83,7 +84,7 @@ const FormatRow = ({ entry, colors }: { entry: (typeof SUPPORTED_FORMATS)[number
   const Icon = entry.icon
   return (
     <View style={styles.formatRow}>
-      <Icon size={22} color={colors.textLight} />
+      <Icon size={size.icon.md} color={colors.textLight} />
       <View style={styles.formatTextContent}>
         <View style={styles.formatTitleRow}>
           <Text style={[styles.formatTitle, { color: colors.text }]}>{entry.title}</Text>

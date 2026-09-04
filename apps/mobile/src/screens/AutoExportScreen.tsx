@@ -6,7 +6,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
 import { Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
-import { FolderOpen, CheckCircle, Share2, AlertTriangle } from "lucide-react-native"
+import { FolderOpen, CircleCheckBig, Share2, TriangleAlert } from "lucide-react-native"
 import {
   Container,
   Card,
@@ -39,7 +39,7 @@ import { fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
 import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
-import { SAVE_SUCCESS_DISPLAY_MS } from "../constants"
+import { size, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
 
 type ExportInterval = "daily" | "weekly" | "monthly"
 type ExportMode = "all" | "incremental"
@@ -411,7 +411,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               style={({ pressed }) => [styles.directoryRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={handlePickDirectory}
             >
-              <FolderOpen size={22} color={colors.primary} />
+              <FolderOpen size={size.icon.md} color={colors.primary} />
               <View style={styles.directoryContent}>
                 <Text style={[styles.settingLabel, { color: colors.text }]}>
                   {directoryUri ? "Directory Selected" : "Select Directory"}
@@ -422,7 +422,7 @@ export function AutoExportScreen(_props: ScreenProps) {
                     : "Tap to choose where files are saved"}
                 </Text>
               </View>
-              {directoryUri && <CheckCircle size={18} color={colors.success} />}
+              {directoryUri && <CircleCheckBig size={size.icon.md} color={colors.success} />}
             </Pressable>
           </Card>
         </View>
@@ -590,7 +590,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.errorRow}>
-                  <AlertTriangle size={14} color={colors.error} />
+                  <TriangleAlert size={size.icon.sm} color={colors.error} />
                   <Text style={[styles.errorText, { color: colors.error }]} numberOfLines={2}>
                     {lastError}
                   </Text>
@@ -651,7 +651,7 @@ export function AutoExportScreen(_props: ScreenProps) {
                       style={({ pressed }) => [styles.shareButton, pressed && { opacity: 0.5 }]}
                       onPress={() => handleShareFile(file)}
                     >
-                      <Share2 size={18} color={colors.primary} />
+                      <Share2 size={size.icon.md} color={colors.primary} />
                     </Pressable>
                   </View>
                 </View>

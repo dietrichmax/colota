@@ -7,8 +7,9 @@ import { NavigationContainer, NavigationContainerRef } from "@react-navigation/n
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { View, StatusBar, Platform, StyleSheet } from "react-native"
+import { LucideProvider } from "lucide-react-native"
 import { ThemeProvider, useTheme } from "./src/hooks/useTheme"
-import { fonts } from "./src/styles/typography"
+import { text } from "./src/styles/typography"
 import { TrackingProvider } from "./src/contexts/TrackingProvider"
 import { ErrorBoundary } from "./src/components/ui/ErrorBoundary"
 import type { RootStackParamList, RootStackRoute } from "./src/types/navigation"
@@ -51,6 +52,10 @@ loadDisplayPreferences()
 registerTileServerUserAgent()
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
+
+// One weight for the whole set. absoluteStrokeWidth keeps it 1.5 device pixels at every
+// size, so a 16 badge and a 24 tab glyph read the same rather than the 16 reading heavier.
+const ICON_STROKE_WIDTH = 1.5
 
 type ScreenConfig = { name: RootStackRoute; component: React.ComponentType<any>; title: string }
 
@@ -190,14 +195,12 @@ function AppNavigator() {
   const screenOptions = useMemo(
     () => ({
       headerStyle: {
-        backgroundColor: colors.background,
-        elevation: 0,
-        shadowOpacity: 0
+        backgroundColor: colors.background
       },
+      headerShadowVisible: false,
       headerTintColor: colors.text,
       headerTitleStyle: {
-        ...fonts.bold,
-        fontSize: 18,
+        ...text.title,
         color: colors.text
       },
       headerTitleAlign: "left" as const,
@@ -211,11 +214,9 @@ function AppNavigator() {
   const statusBarConfig = useMemo(
     () => ({
       barStyle: isDark ? ("light-content" as const) : ("dark-content" as const),
-      backgroundColor: colors.background,
-      translucent: false,
       animated: true
     }),
-    [colors.background, isDark]
+    [isDark]
   )
   const linking = useMemo(
     () => ({
@@ -274,13 +275,15 @@ export default function App() {
   // pads itself with the bottom inset, so the provider has to sit above them.
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <ErrorBoundary>
-          <TrackingProvider>
-            <AppNavigator />
-          </TrackingProvider>
-        </ErrorBoundary>
-      </ThemeProvider>
+      <LucideProvider strokeWidth={ICON_STROKE_WIDTH} absoluteStrokeWidth>
+        <ThemeProvider>
+          <ErrorBoundary>
+            <TrackingProvider>
+              <AppNavigator />
+            </TrackingProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
+      </LucideProvider>
     </SafeAreaProvider>
   )
 }

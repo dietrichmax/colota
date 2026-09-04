@@ -13,7 +13,7 @@ import { Card, Container, Divider, SectionTitle, Footer } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
-import { REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL, TILE_SERVER_DOCS_URL } from "../constants"
+import { size, REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL, TILE_SERVER_DOCS_URL } from "../constants"
 import { logger } from "../utils/logger"
 
 // Helper function to map SDK to Android version
@@ -67,12 +67,12 @@ const LinkRow = ({
     style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
     onPress={() => onOpenURL(url)}
   >
-    <Icon size={20} color={colors.textLight} />
+    <Icon size={size.icon.md} color={colors.textLight} />
     <View style={styles.linkTextContainer}>
       <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
       <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>{subtitle}</Text>
     </View>
-    <ExternalLink size={18} color={colors.textLight} />
+    <ExternalLink size={size.icon.md} color={colors.textLight} />
   </Pressable>
 )
 
@@ -268,7 +268,7 @@ export function AboutScreen({}: ScreenProps) {
                 pressed && { opacity: colors.pressedOpacity }
               ]}
             >
-              <Bug size={14} color={colors.warning} />
+              <Bug size={size.icon.sm} color={colors.warning} />
               <Text style={[styles.debugText, { color: colors.warning }]}>Debug Mode (tap to hide)</Text>
             </Pressable>
           )}
@@ -327,7 +327,7 @@ export function AboutScreen({}: ScreenProps) {
                   Self-hosted map tile server - configure your own
                 </Text>
               </View>
-              <ExternalLink size={18} color={colors.textLight} />
+              <ExternalLink size={size.icon.md} color={colors.textLight} />
             </Pressable>
             <Divider />
             <Pressable
@@ -340,7 +340,7 @@ export function AboutScreen({}: ScreenProps) {
                   Map data by OpenStreetMap contributors
                 </Text>
               </View>
-              <ExternalLink size={18} color={colors.textLight} />
+              <ExternalLink size={size.icon.md} color={colors.textLight} />
             </Pressable>
           </Card>
         </View>
@@ -369,7 +369,11 @@ export function AboutScreen({}: ScreenProps) {
                 ]}
                 onPress={handleCopyDebugInfo}
               >
-                {copied ? <Check size={16} color={colors.success} /> : <Copy size={16} color={colors.primaryDark} />}
+                {copied ? (
+                  <Check size={size.icon.sm} color={colors.success} />
+                ) : (
+                  <Copy size={size.icon.sm} color={colors.primaryDark} />
+                )}
                 <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
                   {copied ? "Copied!" : "Copy Debug Info"}
                 </Text>

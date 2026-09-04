@@ -21,7 +21,7 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
-import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
+import { size, DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
 
 const HAS_NOTE = ["!=", ["get", "note"], ""]
 const trackPointStyle: any = {
@@ -297,7 +297,7 @@ export function TrackMap({
       {isEmpty && (
         <View style={[styles.emptyOverlay, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
           <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
-            <MapPinOff size={32} color={colors.textSecondary} />
+            <MapPinOff size={size.icon.lg} color={colors.textSecondary} />
           </View>
           <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
           <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>No tracked locations for this day.</Text>
@@ -320,7 +320,7 @@ export function TrackMap({
                   accessibilityRole="button"
                   accessibilityLabel="Start a new trip at this point"
                 >
-                  <Split size={16} color={colors.text} />
+                  <Split size={size.icon.sm} color={colors.text} />
                 </Pressable>
               )}
               {onPointDelete && popup.id >= 0 && (
@@ -332,7 +332,7 @@ export function TrackMap({
                   accessibilityRole="button"
                   accessibilityLabel="Delete this point"
                 >
-                  <Trash2 size={16} color={colors.error} />
+                  <Trash2 size={size.icon.sm} color={colors.error} />
                 </Pressable>
               )}
               <Pressable
@@ -343,7 +343,7 @@ export function TrackMap({
                 hitSlop={HIT_SLOP_MD}
                 style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
               >
-                <X size={16} color={colors.textSecondary} />
+                <X size={size.icon.sm} color={colors.textSecondary} />
               </Pressable>
             </View>
           </View>
@@ -385,7 +385,7 @@ export function TrackMap({
                       hitSlop={HIT_SLOP_MD}
                       style={({ pressed }) => [styles.noteSaveBtn, pressed && { opacity: colors.pressedOpacity }]}
                     >
-                      <Check size={18} color={colors.primary} />
+                      <Check size={size.icon.md} color={colors.primary} />
                     </Pressable>
                   )}
                 </View>

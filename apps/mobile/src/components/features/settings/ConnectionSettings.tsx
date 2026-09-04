@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react"
 import { Text, StyleSheet, TextInput, View, Pressable } from "react-native"
-import { CheckCircle, ChevronRight } from "lucide-react-native"
+import { CircleCheckBig, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isEndpointAllowed } from "../../../utils/settingsValidation"
@@ -15,7 +15,7 @@ import { fonts } from "../../../styles/typography"
 import { SettingRow } from "../../ui/SettingRow"
 import { Toggle } from "../../ui/Toggle"
 import { useTimeout } from "../../../hooks/useTimeout"
-import { TEST_RESULT_DISPLAY_MS } from "../../../constants"
+import { size, TEST_RESULT_DISPLAY_MS } from "../../../constants"
 import { logger } from "../../../utils/logger"
 import { Button, Card, SectionTitle, Divider, FieldMessage } from "../../index"
 import { showChoice } from "../../../services/modalService"
@@ -274,7 +274,7 @@ export function ConnectionSettings({
                   }
                 ]}
               >
-                {!testError && <CheckCircle size={16} color={colors.success} />}
+                {!testError && <CircleCheckBig size={size.icon.sm} color={colors.success} />}
                 <Text style={[styles.responseText, { color: testError ? colors.error : colors.success }]}>
                   {testResponse}
                 </Text>
@@ -293,7 +293,7 @@ export function ConnectionSettings({
                   Basic auth, bearer tokens, custom headers
                 </Text>
               </View>
-              <ChevronRight size={20} color={colors.textLight} />
+              <ChevronRight size={size.icon.md} color={colors.textLight} />
             </Pressable>
           </>
         )}
