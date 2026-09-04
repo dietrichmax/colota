@@ -155,6 +155,16 @@ class ExportFilenameTest {
     }
 
     @Test
+    fun `matcher accepts the extension a provider appends for the file's mime type`() {
+        // A provider that was handed application/json for a .geojson file appends .json, and the
+        // matcher then recognises none of the files it wrote - retention deletes nothing, forever.
+        assertTrue(defaultMatcher.matches("colota_export_2026-05-20_0815.geojson.json"))
+        assertTrue(defaultMatcher.matches("colota_export_2026-05-20_0815 (1).geojson.json"))
+        assertTrue(defaultMatcher.matches("colota_export_2026-05-20_0815.gpx.xml"))
+        assertFalse(defaultMatcher.matches("colota_export_2026-05-20_0815.geojson.zip"))
+    }
+
+    @Test
     fun `matcher rejects a directory sharing the marker`() {
         assertFalse(defaultMatcher.matches("colota_exports"))
         assertFalse(defaultMatcher.matches("colota_export_archive"))
