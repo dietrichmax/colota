@@ -102,7 +102,7 @@ describe("ShareSetupScreen", () => {
     const { getByText, getByTestId } = render(<ShareSetupScreen />)
     await waitFor(() => expect(mockGetAuthConfig).toHaveBeenCalled())
 
-    fireEvent(getByTestId("share-tracking"), "valueChange", true)
+    fireEvent.press(getByTestId("share-tracking"))
     fireEvent.press(getByText("Share"))
     await waitFor(() => expect(shareSpy).toHaveBeenCalledTimes(1))
 
@@ -117,16 +117,15 @@ describe("ShareSetupScreen", () => {
     await waitFor(() => expect(mockGetAuthConfig).toHaveBeenCalled())
 
     const credentials = getByTestId("share-credentials")
-    expect(credentials.props.value).toBe(false)
-    expect(credentials.props.disabled).toBe(true)
+    expect(credentials.props.accessibilityState).toEqual(expect.objectContaining({ checked: false, disabled: true }))
   })
 
   it("includes credentials when configured and toggled on", async () => {
     mockGetAuthConfig.mockResolvedValue(BASIC_AUTH)
     const { getByTestId, getByText } = render(<ShareSetupScreen />)
-    await waitFor(() => expect(getByTestId("share-credentials").props.disabled).toBe(false))
+    await waitFor(() => expect(getByTestId("share-credentials").props.accessibilityState.disabled).toBe(false))
 
-    fireEvent(getByTestId("share-credentials"), "valueChange", true)
+    fireEvent.press(getByTestId("share-credentials"))
     fireEvent.press(getByText("Share"))
     await waitFor(() => expect(shareSpy).toHaveBeenCalledTimes(1))
 

@@ -478,6 +478,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
             selected={localTemplate}
             onSelect={handleTemplateChange}
             colors={colors}
+            accessibilityLabel="Backend template"
           />
           {localTemplate !== "custom" && (
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
@@ -496,6 +497,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
               selected={localHttpMethod}
               onSelect={handleHttpMethodChange}
               colors={colors}
+              accessibilityLabel="HTTP method"
             />
             {localHttpMethod === "GET" && (
               <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
@@ -515,6 +517,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
               onSelect={handleDawarichModeChange}
               colors={colors}
               disabled={batchDisabled ? new Set<DawarichMode>(["batch"]) : undefined}
+              accessibilityLabel="Dawarich mode"
             />
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
               {localDawarichMode === "batch"

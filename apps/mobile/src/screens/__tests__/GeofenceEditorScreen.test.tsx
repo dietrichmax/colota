@@ -52,6 +52,15 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
+    Toggle: ({ value, onValueChange, disabled, testID, accessibilityLabel }: any) =>
+      R.createElement(Pressable, {
+        testID,
+        disabled,
+        accessibilityRole: "switch",
+        accessibilityLabel,
+        accessibilityState: { checked: value, disabled: !!disabled },
+        onPress: () => onValueChange(!value)
+      }),
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
@@ -156,7 +165,7 @@ describe("GeofenceEditorScreen", () => {
       expect(getByTestId("pause-wifi-toggle")).toBeTruthy()
     })
 
-    fireEvent(getByTestId("pause-wifi-toggle"), "onValueChange", true)
+    fireEvent.press(getByTestId("pause-wifi-toggle"))
 
     await waitFor(() => {
       expect(getByTestId("btn-save-geofence").props.accessibilityState.disabled).toBe(false)

@@ -229,10 +229,11 @@ export function DashboardScreen({ navigation }: ScreenProps) {
           >
             <Button
               style={styles.controlButton}
+              shape="pill"
+              elevation={4}
               variant={tracking ? "danger" : "primary"}
               icon={tracking ? Square : Play}
               onPress={tracking ? handleStop : handleStart}
-              activeOpacity={0.9}
               disabled={!tracking && (isBatteryCritical || !settingsHydrated)}
               title={tracking ? "Stop Tracking" : "Start Tracking"}
             />
@@ -300,10 +301,7 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   controlButton: {
-    borderRadius: 28,
-    elevation: 4,
-    minWidth: 200,
-    shadowColor: "#000"
+    minWidth: 200
   },
   content: {
     flex: 1,

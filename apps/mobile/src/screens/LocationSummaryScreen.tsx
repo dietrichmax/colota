@@ -227,7 +227,13 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
   return (
     <Container>
       <View style={styles.header}>
-        <ChipGroup options={PERIOD_OPTIONS} selected={period} onSelect={setPeriod} colors={colors} />
+        <ChipGroup
+          options={PERIOD_OPTIONS}
+          selected={period}
+          onSelect={setPeriod}
+          colors={colors}
+          accessibilityLabel="Period"
+        />
       </View>
 
       {loading && !refreshing ? (

@@ -23,6 +23,10 @@ jest.mock("../../../index", () => {
   }
 })
 
+jest.mock("../../../../hooks/useTheme", () => ({
+  useTheme: () => ({ colors: require("@colota/shared").lightColors, mode: "light" })
+}))
+
 jest.mock("../../../ui/SettingRow", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
@@ -199,7 +203,7 @@ describe("ConnectionSettings", () => {
       const { getAllByRole } = renderComponent()
 
       const toggle = getAllByRole("switch")[0]
-      fireEvent(toggle, "valueChange", true)
+      fireEvent.press(toggle)
 
       await waitFor(() => {
         expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ isOfflineMode: true }))
@@ -212,7 +216,7 @@ describe("ConnectionSettings", () => {
       const { getAllByRole } = renderComponent({ endpoint: "https://example.com/api" })
 
       const toggle = getAllByRole("switch")[0]
-      fireEvent(toggle, "valueChange", true)
+      fireEvent.press(toggle)
 
       await waitFor(() => {
         expect(mockShowChoice).toHaveBeenCalledWith(
@@ -230,7 +234,7 @@ describe("ConnectionSettings", () => {
       const { getAllByRole } = renderComponent({ endpoint: "https://example.com/api" })
 
       const toggle = getAllByRole("switch")[0]
-      fireEvent(toggle, "valueChange", true)
+      fireEvent.press(toggle)
 
       await waitFor(() => {
         expect(mockManualFlush).toHaveBeenCalled()
@@ -244,7 +248,7 @@ describe("ConnectionSettings", () => {
       const { getAllByRole } = renderComponent({ endpoint: "https://example.com/api" })
 
       const toggle = getAllByRole("switch")[0]
-      fireEvent(toggle, "valueChange", true)
+      fireEvent.press(toggle)
 
       await waitFor(() => {
         expect(mockManualFlush).not.toHaveBeenCalled()
@@ -259,7 +263,7 @@ describe("ConnectionSettings", () => {
       const { getAllByRole } = renderComponent({ endpoint: "https://example.com/api" })
 
       const toggle = getAllByRole("switch")[0]
-      fireEvent(toggle, "valueChange", true)
+      fireEvent.press(toggle)
 
       await waitFor(() => {
         expect(mockShowChoice).toHaveBeenCalled()
@@ -271,7 +275,7 @@ describe("ConnectionSettings", () => {
       const { getAllByRole } = renderComponent({ isOfflineMode: true })
 
       const toggle = getAllByRole("switch")[0]
-      fireEvent(toggle, "valueChange", false)
+      fireEvent.press(toggle)
 
       await waitFor(() => {
         expect(mockOnSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ isOfflineMode: false }))
@@ -285,7 +289,7 @@ describe("ConnectionSettings", () => {
       const { getAllByRole } = renderComponent({ endpoint: "" }, "")
 
       const toggle = getAllByRole("switch")[0]
-      fireEvent(toggle, "valueChange", true)
+      fireEvent.press(toggle)
 
       await waitFor(() => {
         expect(mockShowChoice).toHaveBeenCalledWith(

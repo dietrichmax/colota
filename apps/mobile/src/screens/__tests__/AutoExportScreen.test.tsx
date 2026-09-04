@@ -111,6 +111,15 @@ jest.mock("../../components", () => {
   const RN = require("react-native")
   const { EXPORT_FORMATS, EXPORT_FORMAT_KEYS } = require("../../utils/exportConverters")
   return {
+    Toggle: (props: any) =>
+      R.createElement(RN.Pressable, {
+        testID: props.testID,
+        disabled: props.disabled,
+        accessibilityRole: "switch",
+        accessibilityLabel: props.accessibilityLabel,
+        accessibilityState: { checked: props.value, disabled: !!props.disabled },
+        onPress: () => props.onValueChange(!props.value)
+      }),
     Container: (props: any) => R.createElement(RN.View, null, props.children),
     Card: (props: any) => R.createElement(RN.View, null, props.children),
     SectionTitle: (props: any) => R.createElement(RN.Text, null, props.children),
@@ -298,7 +307,7 @@ describe("AutoExportScreen", () => {
       expect(getByRole("switch")).toBeTruthy()
     })
 
-    fireEvent(getByRole("switch"), "valueChange", true)
+    fireEvent.press(getByRole("switch"))
 
     await waitFor(() => {
       expect(mockShowAlert).toHaveBeenCalledWith("No Directory", "Please select an export directory first.", "info")
@@ -323,7 +332,7 @@ describe("AutoExportScreen", () => {
       expect(getByRole("switch")).toBeTruthy()
     })
 
-    fireEvent(getByRole("switch"), "valueChange", true)
+    fireEvent.press(getByRole("switch"))
 
     await waitFor(() => {
       expect(mockSaveSetting).toHaveBeenCalledWith("autoExportEnabled", "true")
@@ -349,7 +358,7 @@ describe("AutoExportScreen", () => {
       expect(getByRole("switch")).toBeTruthy()
     })
 
-    fireEvent(getByRole("switch"), "valueChange", false)
+    fireEvent.press(getByRole("switch"))
 
     await waitFor(() => {
       expect(mockSaveSetting).toHaveBeenCalledWith("autoExportEnabled", "false")

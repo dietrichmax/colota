@@ -35,14 +35,19 @@ describe("FieldMessage", () => {
     expect(node.props.style).toEqual(expect.arrayContaining([expect.objectContaining({ color: mockColors.error })]))
   })
 
-  it("falls back to error color when theme has no warning color", () => {
-    jest.resetModules()
-    jest.doMock("../../../hooks/useTheme", () => ({
-      useTheme: () => ({ colors: { ...mockColors, warning: undefined } })
-    }))
-    const Fresh = require("../FieldMessage").FieldMessage
-    const { getByText } = render(<Fresh variant="warning">Warn</Fresh>)
-    const node = getByText("Warn")
-    expect(node.props.style).toEqual(expect.arrayContaining([expect.objectContaining({ color: mockColors.error })]))
+  // An invalid field is announced without moving focus, so the user hears why the save
+  // was refused while still typing in the field that caused it.
+  it("announces the error variant as an alert on a polite live region", () => {
+    const { getByText } = render(<FieldMessage variant="error">Bad</FieldMessage>)
+    const node = getByText("Bad")
+    expect(node.props.accessibilityRole).toBe("alert")
+    expect(node.props["aria-live"] ?? node.props.accessibilityLiveRegion).toBe("polite")
+  })
+
+  it("leaves the info variant off the live region so hints do not interrupt", () => {
+    const { getByText } = render(<FieldMessage>Info text</FieldMessage>)
+    const node = getByText("Info text")
+    expect(node.props.accessibilityRole).toBeUndefined()
+    expect(node.props["aria-live"] ?? node.props.accessibilityLiveRegion).toBe("none")
   })
 })

@@ -53,6 +53,15 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
+    Toggle: ({ value, onValueChange, disabled, testID, accessibilityLabel }: any) =>
+      R.createElement(Pressable, {
+        testID,
+        disabled,
+        accessibilityRole: "switch",
+        accessibilityLabel,
+        accessibilityState: { checked: value, disabled: !!disabled },
+        onPress: () => onValueChange(!value)
+      }),
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
@@ -427,7 +436,7 @@ describe("SetupImportScreen", () => {
       ])
       const { getByText, getByTestId } = renderScreen(encode({ geofences: [validGeofence] }))
 
-      fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
+      fireEvent.press(getByTestId("replace-imports-switch"))
       fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
@@ -441,7 +450,7 @@ describe("SetupImportScreen", () => {
       mockGetGeofences.mockResolvedValueOnce([{ id: 8, name: "Other", lat: 0, lon: 0, radius: 50, enabled: true }])
       const { getByText, getByTestId } = renderScreen(encode({ geofences: [validGeofence] }))
 
-      fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
+      fireEvent.press(getByTestId("replace-imports-switch"))
       fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
@@ -463,7 +472,7 @@ describe("SetupImportScreen", () => {
       }
       const { getByText, getByTestId } = renderScreen(encode(config))
 
-      fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
+      fireEvent.press(getByTestId("replace-imports-switch"))
       fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
@@ -677,7 +686,7 @@ describe("SetupImportScreen", () => {
       ])
       const { getByText, getByTestId } = renderScreen(encode({ profiles: [validProfile] }))
 
-      fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
+      fireEvent.press(getByTestId("replace-imports-switch"))
       fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
