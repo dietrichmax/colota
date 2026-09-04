@@ -1015,7 +1015,7 @@ class LocationForegroundService : Service() {
     }
 
     /**
-     * Starts a delay of 3.5 tracking intervals before pausing GPS on geofence entry.
+     * Starts a delay of 3.5 configured tracking intervals before pausing GPS on geofence entry.
      * Real GPS locations continue to be logged during the delay, giving backends
      * like GeoPulse enough arrival points for reliable trip detection.
      * If the device exits the zone before the delay completes, the delay is cancelled.
@@ -1030,7 +1030,7 @@ class LocationForegroundService : Service() {
             return
         }
 
-        val delayMs = (config.interval * ENTRY_DELAY_MULTIPLIER).toLong()
+        val delayMs = (profileManager.defaultInterval * ENTRY_DELAY_MULTIPLIER).toLong()
         AppLogger.d(TAG, "Geofence entry delay started for '${geofence.name}': ${delayMs}ms (${delayMs / 1000.0}s)")
 
         entryDelayJob = scope.launch {
