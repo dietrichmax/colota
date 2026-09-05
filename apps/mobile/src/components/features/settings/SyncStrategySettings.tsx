@@ -8,12 +8,13 @@ import { Text, StyleSheet, Switch, View, Pressable, TextInput, AppState } from "
 import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
-import { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS, OVERLAND_BATCH_MIN, OVERLAND_BATCH_MAX } from "../../../constants"
+import { OVERLAND_BATCH_MAX, OVERLAND_BATCH_MIN, SYNC_INTERVAL_LABELS, SYNC_INTERVAL_PRESETS, space } from "../../../constants"
 import { SectionTitle, Card, Divider, NumericInput, SettingRow } from "../../index"
 import { PresetOption } from "./PresetOption"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 import { isOverlandFormat } from "../../../utils/apiPayload"
 import NativeLocationService from "../../../services/NativeLocationService"
+import { radius } from "@colota/shared"
 
 interface SyncStrategySettingsProps {
   settings: Settings
@@ -481,7 +482,7 @@ export function SyncStrategySettings({
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   },
   presetSpacer: {
     height: 8
@@ -490,14 +491,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12
+    paddingVertical: space.md
   },
   advancedText: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold
   },
   advancedPanel: {
-    marginTop: 16
+    marginTop: space.lg
   },
   customBanner: {
     padding: 14,
@@ -507,21 +508,21 @@ const styles = StyleSheet.create({
   bannerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8
+    gap: space.sm
   },
   customBannerText: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.medium
   },
   paramGroup: {
-    marginBottom: 4
+    marginBottom: space.xs
   },
   paramGroupTitle: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.bold,
     textTransform: "uppercase",
     letterSpacing: 1,
-    marginBottom: 16,
+    marginBottom: space.lg,
     opacity: 0.6
   },
   settingBlock: {
@@ -530,17 +531,17 @@ const styles = StyleSheet.create({
   blockLabel: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: 4
+    marginBottom: space.xs
   },
   blockHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
-    marginBottom: 12,
+    marginBottom: space.md,
     lineHeight: 18
   },
   optionsGrid: {
     flexDirection: "row",
-    gap: 8,
+    gap: space.sm,
     flexWrap: "wrap"
   },
   gridOption: {
@@ -551,58 +552,58 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   gridLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   settingRowSpaced: {
-    marginTop: 16
+    marginTop: space.lg
   },
   nestedSetting: {
-    marginTop: 12,
-    paddingLeft: 16,
+    marginTop: space.md,
+    paddingLeft: space.lg,
     borderLeftWidth: 3
   },
   customSyncInput: {
-    marginTop: 12
+    marginTop: space.md
   },
   syncConditionChips: {
     flexDirection: "row",
     gap: 6
   },
   syncConditionChip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: space.md,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1
   },
   syncConditionChipText: {
     ...fonts.medium,
-    fontSize: 12
+    fontSize: fontSizes.caption
   },
   ssidRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
-    gap: 8
+    marginTop: space.sm,
+    gap: space.sm
   },
   ssidInput: {
     flex: 1,
     borderWidth: 1.5,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    fontSize: 13,
+    fontSize: fontSizes.description,
     fontFamily: "monospace"
   },
   ssidFillButton: {
     alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     borderWidth: 1
   },
   ssidFillText: {
     ...fonts.medium,
-    fontSize: 12
+    fontSize: fontSizes.caption
   }
 })

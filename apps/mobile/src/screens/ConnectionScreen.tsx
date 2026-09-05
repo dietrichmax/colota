@@ -12,6 +12,7 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
 import { Container } from "../components"
 import { ConnectionSettings } from "../components/features/settings/ConnectionSettings"
+import { space } from "../constants"
 
 export function ConnectionScreen({ navigation }: ScreenProps) {
   const { settings, setSettings, restartTracking } = useTracking()
@@ -58,8 +59,8 @@ export function ConnectionScreen({ navigation }: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.lg
   }
 })

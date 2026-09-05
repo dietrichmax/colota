@@ -10,12 +10,13 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { SavedTrackingProfile, ScreenProps } from "../types/global"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { Container, SectionTitle, Card } from "../components"
 import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { buildProfilesLink } from "../utils/setupLink"
-import { PROFILE_CONDITIONS, MS_TO_KMH, HIT_SLOP_MD } from "../constants"
+import { HIT_SLOP_MD, MS_TO_KMH, PROFILE_CONDITIONS, space } from "../constants"
+import { radius } from "@colota/shared"
 
 function formatCondition(profile: SavedTrackingProfile): string {
   const condition = PROFILE_CONDITIONS.find((c) => c.type === profile.condition.type)
@@ -226,21 +227,21 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16, paddingBottom: 40 },
+  list: { padding: space.lg, paddingBottom: 40 },
   header: { marginBottom: 20 },
-  title: { fontSize: 28, ...fonts.bold, letterSpacing: -0.5, marginBottom: 6 },
-  subtitle: { fontSize: 14, ...fonts.regular, lineHeight: 20 },
+  title: { fontSize: fontSizes.screenTitle, ...fonts.bold, letterSpacing: -0.5, marginBottom: 6 },
+  subtitle: { fontSize: fontSizes.body, ...fonts.regular, lineHeight: 20 },
   createBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24
+    gap: space.sm,
+    padding: space.lg,
+    borderRadius: radius.md,
+    marginBottom: space.xl
   },
-  createBtnText: { fontSize: 15, ...fonts.semiBold },
-  card: { marginBottom: 12 },
+  createBtnText: { fontSize: fontSizes.input, ...fonts.semiBold },
+  card: { marginBottom: space.md },
   activeCard: { borderWidth: 2 },
   row: { flexDirection: "row", alignItems: "center" },
   iconWrap: {
@@ -249,31 +250,31 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12
+    marginRight: space.md
   },
-  info: { flex: 1, marginRight: 12 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
-  name: { fontSize: 15, ...fonts.semiBold },
-  activeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  activeBadgeText: { fontSize: 10, ...fonts.semiBold, textTransform: "uppercase" },
-  priorityBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  priorityText: { fontSize: 10, ...fonts.semiBold },
-  condition: { fontSize: 13, ...fonts.medium, marginBottom: 2 },
-  settings: { fontSize: 11, ...fonts.regular },
-  actions: { alignItems: "center", gap: 8 },
+  info: { flex: 1, marginRight: space.md },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm, marginBottom: 2 },
+  name: { fontSize: fontSizes.input, ...fonts.semiBold },
+  activeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.xs },
+  activeBadgeText: { fontSize: fontSizes.micro, ...fonts.semiBold, textTransform: "uppercase" },
+  priorityBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.xs },
+  priorityText: { fontSize: fontSizes.micro, ...fonts.semiBold },
+  condition: { fontSize: fontSizes.description, ...fonts.medium, marginBottom: 2 },
+  settings: { fontSize: fontSizes.small, ...fonts.regular },
+  actions: { alignItems: "center", gap: space.sm },
   deleteBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     alignItems: "center",
     justifyContent: "center"
   },
   activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  shareBtn: { padding: 4, marginBottom: 12 },
+  shareBtn: { padding: space.xs, marginBottom: space.md },
   empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
+  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 6 },
   emptyHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     textAlign: "center",
     maxWidth: 280,
     lineHeight: 18

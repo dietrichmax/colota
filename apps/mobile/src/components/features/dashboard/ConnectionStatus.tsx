@@ -10,8 +10,10 @@ import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
 import { ServerStatus, ConnectionStatusProps } from "../../../types/global"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
+import { space } from "../../../constants"
+import { radius } from "@colota/shared"
 
 export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps) {
   const { colors } = useTheme()
@@ -106,24 +108,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 14,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
     marginBottom: 22
   },
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
-    marginRight: 12
+    borderRadius: radius.xs,
+    marginRight: space.md
   },
   host: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.medium
   },
   status: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.medium,
-    marginRight: 8
+    marginRight: space.sm
   }
 })

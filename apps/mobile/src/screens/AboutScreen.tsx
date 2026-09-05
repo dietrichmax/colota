@@ -8,13 +8,14 @@ import { Text, StyleSheet, View, ScrollView, Linking, Pressable, Image } from "r
 import { ScreenProps, ThemeColors } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { ExternalLink, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check } from "lucide-react-native"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { Card, Container, Divider, SectionTitle, Footer } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
-import { REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL, TILE_SERVER_DOCS_URL } from "../constants"
+import { ISSUES_URL, PRIVACY_POLICY_URL, REPO_URL, TILE_SERVER_DOCS_URL, space } from "../constants"
 import { logger } from "../utils/logger"
+import { radius } from "@colota/shared"
 
 // Helper function to map SDK to Android version
 function getAndroidVersion(sdkVersion: number): string {
@@ -390,13 +391,13 @@ export function AboutScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     paddingBottom: 40,
-    paddingTop: 8
+    paddingTop: space.sm
   },
   header: {
     marginTop: 20,
-    marginBottom: 24,
+    marginBottom: space.xl,
     alignItems: "center"
   },
   appIconContainer: {
@@ -405,7 +406,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: space.lg,
     overflow: "hidden"
   },
   appIcon: {
@@ -413,85 +414,85 @@ const styles = StyleSheet.create({
     height: 80
   },
   title: {
-    fontSize: 28,
+    fontSize: fontSizes.screenTitle,
     ...fonts.bold,
-    marginBottom: 4
+    marginBottom: space.xs
   },
   version: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   },
   linkRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
-    gap: 12
+    gap: space.md
   },
   linkTextContainer: {
     flex: 1
   },
   linkTitle: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.semiBold
   },
   linkSubtitle: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     marginTop: 1
   },
   techRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8
+    paddingVertical: space.sm
   },
   techLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.medium
   },
   techValue: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   section: {
-    marginTop: 24
+    marginTop: space.xl
   },
   debugHint: {
-    fontSize: 11,
-    marginTop: 8,
+    fontSize: fontSizes.small,
+    marginTop: space.sm,
     fontStyle: "italic"
   },
   debugBadge: {
-    marginTop: 12,
-    paddingHorizontal: 12,
+    marginTop: space.md,
+    paddingHorizontal: space.md,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     flexDirection: "row",
     alignItems: "center",
     gap: 6
   },
   debugText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.semiBold
   },
   debugActions: {
     gap: 10,
-    marginTop: 16
+    marginTop: space.lg
   },
   copyButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: space.sm,
+    paddingVertical: space.md,
+    borderRadius: radius.md,
     borderWidth: 1
   },
   copyButtonText: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   logHint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     textAlign: "center",
     fontStyle: "italic",
     lineHeight: 16

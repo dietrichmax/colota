@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { Download } from "lucide-react-native"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { Button, Card, Container, Divider, LoadingOverlay, SectionTitle } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
@@ -16,6 +16,8 @@ import { logger } from "../utils/logger"
 import { FILE_FORMATS, IMPORT_FORMAT_ORDER, importDescription } from "../utils/fileFormats"
 import { ScreenProps } from "../types/global"
 import type { ThemeColors } from "../types/global"
+import { space } from "../constants"
+import { radius } from "@colota/shared"
 
 const IMPORT_FORMAT_LABELS = Object.fromEntries(
   (Object.keys(FILE_FORMATS) as ImportFormat[]).map((k) => [k, FILE_FORMATS[k].label])
@@ -257,14 +259,14 @@ export function ImportLocationsScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     paddingTop: 20,
     paddingBottom: 40
   },
   statsContainer: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 2,
-    marginBottom: 24,
+    marginBottom: space.xl,
     overflow: "hidden"
   },
   statsGrid: {
@@ -276,31 +278,31 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.semiBold,
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    marginBottom: 8
+    marginBottom: space.sm
   },
   statValue: {
-    fontSize: 20,
+    fontSize: fontSizes.cardTitle,
     ...fonts.bold,
     letterSpacing: -0.5,
     textAlign: "center"
   },
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   },
   intro: {
-    marginBottom: 12,
-    fontSize: 14,
+    marginBottom: space.md,
+    fontSize: fontSizes.body,
     lineHeight: 20
   },
   formatRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 10,
-    gap: 16
+    gap: space.lg
   },
   formatTextContent: {
     flex: 1
@@ -308,28 +310,28 @@ const styles = StyleSheet.create({
   formatTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
+    gap: space.sm,
+    marginBottom: space.xs,
     flexWrap: "wrap"
   },
   formatTitle: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.semiBold,
     letterSpacing: -0.2
   },
   extensionBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: space.sm,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1
   },
   extensionText: {
-    fontSize: 10,
+    fontSize: fontSizes.micro,
     ...fonts.bold,
     letterSpacing: 0.3
   },
   formatDescription: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     lineHeight: 16
   }
 })

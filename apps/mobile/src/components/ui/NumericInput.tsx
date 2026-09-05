@@ -6,7 +6,9 @@
 import React from "react"
 import { View, Text, StyleSheet, TextInput } from "react-native"
 import { ThemeColors } from "../../types/global"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
+import { space } from "../../constants"
+import { radius } from "@colota/shared"
 
 interface NumericInputProps {
   label: string
@@ -76,34 +78,34 @@ export function NumericInput({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16
+    marginBottom: space.lg
   },
   label: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold,
-    marginBottom: 8
+    marginBottom: space.sm
   },
   hint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
-    marginBottom: 12,
+    marginBottom: space.md,
     lineHeight: 18
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12
+    gap: space.md
   },
   input: {
     flex: 1,
     borderWidth: 1,
     padding: 14,
-    borderRadius: 12,
-    fontSize: 15,
+    borderRadius: radius.md,
+    fontSize: fontSizes.input,
     textAlign: "center"
   },
   unit: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.medium,
     minWidth: 64
   }

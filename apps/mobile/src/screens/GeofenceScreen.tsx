@@ -10,17 +10,10 @@ import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { ChevronRight, Wifi, PersonStanding, MapPinHouse, Share2 } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
-import {
-  DEFAULT_MAP_ZOOM,
-  WORLD_MAP_ZOOM,
-  GEOFENCE_ZOOM_PADDING,
-  MAP_ANIMATION_DURATION_MS,
-  MAX_MAP_ZOOM,
-  HIT_SLOP_MD
-} from "../constants"
+import { DEFAULT_MAP_ZOOM, GEOFENCE_ZOOM_PADDING, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM, WORLD_MAP_ZOOM, space } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
 import { buildGeofencesGeoJSON } from "../components/features/map/mapUtils"
@@ -29,6 +22,7 @@ import { UserLocationOverlay } from "../components/features/map/UserLocationOver
 import { logger } from "../utils/logger"
 import { formatShortDistance, shortDistanceUnit, inputToMeters } from "../utils/geo"
 import { buildGeofencesLink } from "../utils/setupLink"
+import { radius } from "@colota/shared"
 
 const GeofenceMap = React.memo(function GeofenceMap({
   tracking,
@@ -393,9 +387,9 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
 const styles = StyleSheet.create({
   map: { height: 450, overflow: "hidden" },
   list: { padding: 20, paddingBottom: 40 },
-  section: { marginBottom: 16 },
-  hint: { fontSize: 13, ...fonts.regular, lineHeight: 18, marginBottom: 16 },
-  inputRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
+  section: { marginBottom: space.lg },
+  hint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18, marginBottom: space.lg },
+  inputRow: { flexDirection: "row", gap: space.md, marginBottom: space.lg },
   inputGroup: { flex: 1 },
   inputGroupName: {
     flex: 2
@@ -405,36 +399,36 @@ const styles = StyleSheet.create({
     minWidth: 90
   },
   label: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.semiBold,
     marginBottom: 6,
     textTransform: "uppercase",
     letterSpacing: 0.5
   },
-  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: 15 },
+  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: fontSizes.input },
   inputCentered: {
     textAlign: "center"
   },
-  placeBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
-  placeBtnText: { fontSize: 15, ...fonts.semiBold },
-  card: { marginBottom: 12 },
+  placeBtn: { padding: space.lg, borderRadius: radius.md, alignItems: "center" },
+  placeBtnText: { fontSize: fontSizes.input, ...fonts.semiBold },
+  card: { marginBottom: space.md },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between"
   },
-  zoomBtn: { padding: 4, marginRight: 16 },
+  zoomBtn: { padding: space.xs, marginRight: space.lg },
   activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  shareBtn: { padding: 4, marginBottom: 12 },
+  shareBtn: { padding: space.xs, marginBottom: space.md },
   editBtn: { flex: 1, flexDirection: "row", alignItems: "center" },
-  info: { flex: 1, marginRight: 12 },
-  name: { fontSize: 15, ...fonts.semiBold, marginBottom: 2 },
-  radiusRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  radius: { fontSize: 12 },
+  info: { flex: 1, marginRight: space.md },
+  name: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 2 },
+  radiusRow: { flexDirection: "row", alignItems: "center", gap: space.xs },
+  radius: { fontSize: fontSizes.caption },
   empty: { alignItems: "center", paddingVertical: 20 },
-  emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
+  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 6 },
   emptyHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     textAlign: "center",
     maxWidth: 260,
     lineHeight: 18

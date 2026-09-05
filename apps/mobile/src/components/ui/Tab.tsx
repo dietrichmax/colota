@@ -5,8 +5,9 @@
 
 import React from "react"
 import { Pressable, Text, StyleSheet } from "react-native"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
 import { ThemeColors } from "../../types/global"
+import { space } from "../../constants"
 
 interface TabProps {
   label: string
@@ -34,11 +35,11 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     alignItems: "center",
-    padding: 12,
+    padding: space.md,
     borderBottomWidth: 2
   },
   tabText: {
-    fontSize: 14
+    fontSize: fontSizes.body
   },
   tabTextActive: {
     ...fonts.bold

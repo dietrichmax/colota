@@ -7,9 +7,10 @@ import React from "react"
 import { View, Text, StyleSheet } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { SectionTitle } from "../../ui/SectionTitle"
 import { Card } from "../../ui/Card"
+import { space } from "../../../constants"
 
 export function CoordinateDisplay() {
   const coords = useCoords()
@@ -64,19 +65,19 @@ const styles = StyleSheet.create({
     gap: 10
   },
   coordLabel: {
-    fontSize: 10,
+    fontSize: fontSizes.micro,
     ...fonts.semiBold,
-    marginBottom: 4,
+    marginBottom: space.xs,
     letterSpacing: 0.5,
     textTransform: "uppercase"
   },
   coordValue: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.bold,
     letterSpacing: -0.3
   },
   coordUnit: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.medium,
     opacity: 0.6
   }

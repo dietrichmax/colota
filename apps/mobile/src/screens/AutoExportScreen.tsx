@@ -34,11 +34,12 @@ import {
   isValidFilenameTemplate,
   renderFilenamePreview
 } from "../utils/exportConverters"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
 import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
-import { SAVE_SUCCESS_DISPLAY_MS } from "../constants"
+import { SAVE_SUCCESS_DISPLAY_MS, space } from "../constants"
+import { radius } from "@colota/shared"
 
 type ExportInterval = "daily" | "weekly" | "monthly"
 type ExportMode = "all" | "incremental"
@@ -665,7 +666,7 @@ export function AutoExportScreen(_props: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     paddingBottom: 40
   },
   header: {
@@ -673,26 +674,26 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     lineHeight: 20
   },
   section: {
-    marginTop: 24
+    marginTop: space.xl
   },
   settingLabel: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
     marginBottom: 2
   },
   settingDescription: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   },
   directoryRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 4
+    gap: space.md,
+    paddingVertical: space.xs
   },
   directoryContent: {
     flex: 1
@@ -701,27 +702,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4
+    paddingVertical: space.xs
   },
   statusLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.regular
   },
   statusValue: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold,
     flexShrink: 1,
     textAlign: "right",
-    marginLeft: 12
+    marginLeft: space.md
   },
   errorRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: space.sm,
     paddingVertical: 6
   },
   errorText: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
     flex: 1
   },
@@ -733,64 +734,64 @@ const styles = StyleSheet.create({
   },
   modeContent: {
     flex: 1,
-    marginRight: 16
+    marginRight: space.lg
   },
   fileRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8
+    paddingVertical: space.sm
   },
   fileInfo: {
     flex: 1,
-    marginRight: 12
+    marginRight: space.md
   },
   fileName: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold,
     marginBottom: 2
   },
   fileMeta: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular
   },
   shareButton: {
-    padding: 8
+    padding: space.sm
   },
   fieldLabel: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.semiBold,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginTop: 12,
-    marginBottom: 8
+    marginTop: space.md,
+    marginBottom: space.sm
   },
   templateInput: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.regular,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: radius.sm,
+    paddingHorizontal: space.md,
     paddingVertical: 10
   },
   templateHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
-    marginTop: 8
+    marginTop: space.sm
   },
   templateTokenRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: 8
+    gap: space.sm
   },
   templateToken: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold,
-    marginTop: 8,
+    marginTop: space.sm,
     minWidth: 72
   },
   templatePreview: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold,
-    marginTop: 8
+    marginTop: space.sm
   }
 })

@@ -10,7 +10,7 @@ import type { NativeSyntheticEvent } from "react-native"
 import { MapPinOff, X, Check, Trash2, Split } from "lucide-react-native"
 import { ThemeColors, Trip } from "../../../types/global"
 import { getTripColor } from "../../../utils/trips"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
 import {
@@ -21,7 +21,8 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
-import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
+import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, space } from "../../../constants"
+import { radius } from "@colota/shared"
 
 const HAS_NOTE = ["!=", ["get", "note"], ""]
 const trackPointStyle: any = {
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    padding: space.xl,
     zIndex: 20
   },
   iconCircle: {
@@ -435,17 +436,17 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16
+    marginBottom: space.lg
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: fontSizes.heading,
     ...fonts.bold,
     textAlign: "center"
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: space.sm,
     lineHeight: 20
   },
   popupCard: {
@@ -453,8 +454,8 @@ const styles = StyleSheet.create({
     top: 10,
     left: 10,
     right: 10,
-    padding: 12,
-    borderRadius: 12,
+    padding: space.md,
+    borderRadius: radius.md,
     borderWidth: 1,
     elevation: 6,
     shadowColor: "#000",
@@ -467,7 +468,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4
+    marginBottom: space.xs
   },
   popupActions: {
     flexDirection: "row",
@@ -477,20 +478,20 @@ const styles = StyleSheet.create({
   },
   popupTime: {
     fontWeight: "600",
-    fontSize: 13
+    fontSize: fontSizes.description
   },
   popupRow: {
     flexDirection: "row",
     justifyContent: "space-between"
   },
   popupLabel: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     textTransform: "uppercase",
     fontWeight: "600"
   },
   popupValue: {
     fontWeight: "500",
-    fontSize: 12
+    fontSize: fontSizes.caption
   },
   noteSection: {
     marginTop: 6,
@@ -501,11 +502,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 6,
-    marginTop: 4
+    marginTop: space.xs
   },
   noteInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: fontSizes.description,
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderWidth: 1,
@@ -520,10 +521,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 30,
     left: 10,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
-    padding: 8,
-    gap: 4,
+    padding: space.sm,
+    gap: space.xs,
     elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -542,7 +543,7 @@ const styles = StyleSheet.create({
     borderRadius: 5
   },
   legendLabel: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     fontWeight: "500"
   }
 })

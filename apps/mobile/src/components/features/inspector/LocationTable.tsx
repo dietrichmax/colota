@@ -5,9 +5,10 @@
 
 import React, { useCallback, useMemo } from "react"
 import { View, Text, FlatList, ScrollView, StyleSheet } from "react-native"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { LocationCoords, ThemeColors } from "../../../types/global"
 import { formatTime, getSpeedUnit } from "../../../utils/geo"
+import { space } from "../../../constants"
 
 interface Props {
   locations: LocationCoords[]
@@ -167,17 +168,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 32
+    padding: space.xxl
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.regular
   },
   header: {
     borderBottomWidth: 2
   },
   headerText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.bold,
     textTransform: "uppercase"
   },
@@ -185,11 +186,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     height: ROW_HEIGHT,
     alignItems: "center",
-    paddingHorizontal: 8,
+    paddingHorizontal: space.sm,
     borderBottomWidth: StyleSheet.hairlineWidth
   },
   cell: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     paddingHorizontal: 2
   },
