@@ -19,7 +19,7 @@ interface BadgeProps {
 
 function Badge({ icon, label, color }: BadgeProps) {
   return (
-    <View style={[styles.badge, { backgroundColor: color + "20", borderColor: color + "40" }]}>
+    <View style={[styles.badge, { backgroundColor: color + "20" }]}>
       <View style={styles.badgeContent}>
         {icon}
         <Text style={[styles.badgeText, { color }]}>{label}</Text>
