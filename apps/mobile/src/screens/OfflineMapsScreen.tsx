@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react"
-import { View, Text, StyleSheet, TextInput, Pressable, FlatList, ActivityIndicator, AppState } from "react-native"
+import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, AppState } from "react-native"
 import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
 import type { NativeSyntheticEvent, TextInputInstance } from "react-native"
 import { useTheme } from "../hooks/useTheme"
@@ -13,7 +13,7 @@ import { ScreenProps } from "../types/global"
 import { useCoords } from "../contexts/TrackingProvider"
 import { fontSizes, fonts } from "../styles/typography"
 import { X, CircleCheckBig, RefreshCw, TriangleAlert } from "lucide-react-native"
-import { Button, Card, Container, SectionTitle } from "../components"
+import { Button, Card, Container, SectionTitle, TextField } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
 import {
   DEFAULT_MAP_ZOOM,
@@ -121,17 +121,13 @@ const DownloadForm = memo(
             </Text>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
-              <TextInput
+              <TextField
                 ref={nameInputRef}
-                style={[
-                  styles.input,
-                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }
-                ]}
+                testID="area-name-input"
+                label="Name"
                 placeholder="Home area, Trail..."
-                placeholderTextColor={colors.placeholder}
                 onChangeText={onNameChange}
-                editable={!downloading}
+                disabled={downloading}
               />
             </View>
 

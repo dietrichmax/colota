@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from "react"
-import { Text, StyleSheet, TextInput, View, Pressable } from "react-native"
+import { Text, StyleSheet, View, Pressable } from "react-native"
 import { CircleCheckBig, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
@@ -16,7 +16,7 @@ import { SettingRow } from "../../ui/SettingRow"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { TEST_RESULT_DISPLAY_MS, size, space } from "../../../constants"
 import { logger } from "../../../utils/logger"
-import { Button, Card, Divider, FieldMessage, SectionTitle, Toggle } from "../../index"
+import { Button, Card, Divider, FieldMessage, SectionTitle, TextField, Toggle } from "../../index"
 import { showChoice } from "../../../services/modalService"
 import { radius } from "@colota/shared"
 
@@ -224,19 +224,13 @@ export function ConnectionSettings({
                 )}
               </View>
 
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    borderColor: colors.border,
-                    color: colors.text,
-                    backgroundColor: colors.background
-                  }
-                ]}
+              <TextField
+                accessibilityLabel="Server endpoint"
+                testID="endpoint-input"
+                mono
                 value={endpointInput}
                 onChangeText={onEndpointInputChange}
                 placeholder="https://your-server.com/api/locations"
-                placeholderTextColor={colors.placeholder}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="url"
@@ -325,13 +319,6 @@ const styles = StyleSheet.create({
   protocolText: {
     fontSize: fontSizes.small,
     ...fonts.bold
-  },
-  input: {
-    borderWidth: 1.5,
-    padding: space.lg,
-    borderRadius: radius.md,
-    fontSize: fontSizes.input,
-    ...fonts.regular
   },
   testButton: {
     marginTop: space.md

@@ -4,12 +4,12 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { View, Text, StyleSheet, ScrollView, TextInput, DeviceEventEmitter } from "react-native"
+import { View, Text, StyleSheet, ScrollView, DeviceEventEmitter } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { fontSizes, fonts } from "../styles/typography"
-import { Button, Card, Container, FieldMessage, SectionTitle, SettingRow, Toggle } from "../components"
+import { Button, Card, Container, FieldMessage, SectionTitle, SettingRow, Toggle, TextField } from "../components"
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
@@ -209,10 +209,6 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     }
   }, [geofenceId, name, navigation])
 
-  const inputStyle = [
-    styles.input,
-    { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }
-  ]
 
   return (
     <Container>
@@ -220,23 +216,24 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         <SectionTitle>General</SectionTitle>
         <Card style={styles.card}>
           <SettingRow label="Name">
-            <TextInput
+            <TextField
               testID="geofence-name-input"
-              style={[inputStyle, styles.nameInput]}
+              accessibilityLabel="Name"
+              style={styles.nameInput}
               value={name}
               onChangeText={setName}
               placeholder="Home, Work..."
-              placeholderTextColor={colors.placeholder}
             />
           </SettingRow>
           <SettingRow label={`Radius (${shortDistanceUnit()})`}>
-            <TextInput
+            <TextField
               testID="geofence-radius-input"
-              style={[inputStyle, styles.numInput]}
+              accessibilityLabel="Radius"
+              figure
+              style={styles.numInput}
               value={radiusStr}
               onChangeText={handleRadiusChange}
               placeholder="50"
-              placeholderTextColor={colors.placeholder}
               keyboardType="numeric"
             />
           </SettingRow>
@@ -287,13 +284,14 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           {pauseTracking && pauseOnMotionless && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
               <SettingRow label="Timeout (min)" hint="Minutes without motion before GPS stops">
-                <TextInput
+                <TextField
                   testID="motionless-timeout-input"
-                  style={[inputStyle, styles.numInput]}
+                  accessibilityLabel="Timeout in minutes"
+                  figure
+                  style={styles.numInput}
                   value={motionlessTimeoutStr}
                   onChangeText={setMotionlessTimeoutStr}
                   placeholder="1"
-                  placeholderTextColor={colors.placeholder}
                   keyboardType="number-pad"
                 />
               </SettingRow>
@@ -321,13 +319,14 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           {pauseTracking && heartbeatEnabled && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
               <SettingRow label="Interval (min)" hint="How often to record a point">
-                <TextInput
+                <TextField
                   testID="heartbeat-interval-input"
-                  style={[inputStyle, styles.numInput]}
+                  accessibilityLabel="Interval in minutes"
+                  figure
+                  style={styles.numInput}
                   value={heartbeatIntervalStr}
                   onChangeText={setHeartbeatIntervalStr}
                   placeholder="15"
-                  placeholderTextColor={colors.placeholder}
                   keyboardType="number-pad"
                 />
               </SettingRow>

@@ -4,15 +4,14 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, TextInput, View } from "react-native"
+import { Text, StyleSheet, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { fonts, fontSizes } from "../../../styles/typography"
-import { SectionTitle, Card, Divider, Button, FieldMessage } from "../../index"
+import { SectionTitle, Card, Divider, Button, FieldMessage, TextField } from "../../index"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { ClientCertInfoResult } from "../../../types/global"
 import { logger } from "../../../utils/logger"
 import { space } from "../../../constants"
-import { radius } from "@colota/shared"
 
 const EXPIRY_WARNING_DAYS = 14
 
@@ -148,26 +147,18 @@ export function MtlsSection() {
         <Card>
           {importState.kind === "picked" ? (
             <View>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Password (leave empty if none)</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    borderColor: colors.border,
-                    color: colors.text,
-                    backgroundColor: colors.background
-                  }
-                ]}
+              <TextField
+                label="Password (leave empty if none)"
+                testID="p12-password"
                 value={importState.password}
                 onChangeText={(v) => setImportState({ ...importState, password: v, error: null })}
                 placeholder="PKCS12 password"
-                placeholderTextColor={colors.placeholder}
                 autoCapitalize="none"
                 autoCorrect={false}
-                secureTextEntry
-                editable={!importState.importing}
+                secure
+                disabled={importState.importing}
+                error={importState.error ?? undefined}
               />
-              {importState.error && <FieldMessage variant="error">{importState.error}</FieldMessage>}
               <View style={styles.buttonRow}>
                 <Button
                   style={styles.flex1}
@@ -336,17 +327,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.description,
     ...fonts.regular,
     lineHeight: 18
-  },
-  fieldLabel: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold,
-    marginBottom: space.sm
-  },
-  input: {
-    borderWidth: 1.5,
-    padding: 14,
-    borderRadius: radius.md,
-    fontSize: fontSizes.input
   },
   importButton: {
     marginTop: space.md

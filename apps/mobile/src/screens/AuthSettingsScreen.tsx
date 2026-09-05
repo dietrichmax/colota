@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react"
-import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
 import { ChevronRight } from "lucide-react-native"
 import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { fonts, fontSizes } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup, Button } from "../components"
+import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup, Button, TextField } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
@@ -174,41 +174,26 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.text }]}>Username</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        borderColor: colors.border,
-                        color: colors.text,
-                        backgroundColor: colors.background
-                      }
-                    ]}
+                  <TextField
+                    label="Username"
+                    testID="basic-username"
                     value={config.username}
                     onChangeText={(v) => updateConfig({ username: v })}
                     placeholder="Username"
-                    placeholderTextColor={colors.placeholder}
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
 
-                  <Text style={[styles.fieldLabel, styles.fieldLabelSpaced, { color: colors.text }]}>Password</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        borderColor: colors.border,
-                        color: colors.text,
-                        backgroundColor: colors.background
-                      }
-                    ]}
+                  <TextField
+                    label="Password"
+                    testID="basic-password"
+                    style={styles.fieldLabelSpaced}
                     value={config.password}
                     onChangeText={(v) => updateConfig({ password: v })}
                     placeholder="Password"
-                    placeholderTextColor={colors.placeholder}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    secureTextEntry
+                    secure
                   />
                 </View>
               </>
@@ -219,25 +204,16 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.text }]}>Token</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.tokenInput,
-                      {
-                        borderColor: colors.border,
-                        color: colors.text,
-                        backgroundColor: colors.background
-                      }
-                    ]}
+                  <TextField
+                    label="Token"
+                    testID="bearer-token"
+                    mono
                     value={config.bearerToken}
                     onChangeText={(v) => updateConfig({ bearerToken: v })}
                     placeholder="Bearer token"
-                    placeholderTextColor={colors.placeholder}
                     autoCapitalize="none"
                     autoCorrect={false}
                     multiline
-                    textAlignVertical="top"
                   />
                 </View>
               </>
@@ -259,35 +235,22 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
                     {index > 0 && <Divider />}
                     <View style={styles.headerRow}>
                       <View style={styles.headerInputs}>
-                        <TextInput
-                          style={[
-                            styles.headerInput,
-                            {
-                              borderColor: isDuplicate ? colors.error : colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background
-                            }
-                          ]}
+                        <TextField
+                          accessibilityLabel="Header name"
+                          testID={`header-key-${header.id}`}
+                          error={isDuplicate}
                           value={header.key}
                           onChangeText={(v) => updateHeaderField(header.id, "key", v)}
                           placeholder="Header name"
-                          placeholderTextColor={colors.placeholder}
                           autoCapitalize="none"
                           autoCorrect={false}
                         />
-                        <TextInput
-                          style={[
-                            styles.headerInput,
-                            {
-                              borderColor: colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background
-                            }
-                          ]}
+                        <TextField
+                          accessibilityLabel="Header value"
+                          testID={`header-value-${header.id}`}
                           value={header.value}
                           onChangeText={(v) => updateHeaderField(header.id, "value", v)}
                           placeholder="Value"
-                          placeholderTextColor={colors.placeholder}
                           autoCapitalize="none"
                           autoCorrect={false}
                         />
@@ -389,24 +352,8 @@ const styles = StyleSheet.create({
   fieldGroup: {
     marginTop: space.xs
   },
-  fieldLabel: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold,
-    marginBottom: space.sm
-  },
   fieldLabelSpaced: {
     marginTop: 14
-  },
-  input: {
-    borderWidth: 1.5,
-    padding: 14,
-    borderRadius: radius.md,
-    fontSize: fontSizes.input
-  },
-  tokenInput: {
-    minHeight: 80,
-    fontFamily: "monospace",
-    fontSize: fontSizes.description
   },
   emptyHint: {
     fontSize: fontSizes.body,
@@ -422,12 +369,6 @@ const styles = StyleSheet.create({
   headerInputs: {
     flex: 1,
     gap: space.sm
-  },
-  headerInput: {
-    borderWidth: 1.5,
-    padding: space.md,
-    borderRadius: 10,
-    fontSize: fontSizes.body
   },
   removeButton: {
     width: 36,

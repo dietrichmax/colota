@@ -4,19 +4,18 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, View, ScrollView, Pressable, TextInput } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts } from "../styles/typography"
-import { Card, ChipGroup, Container, Divider, SettingRow, Toggle } from "../components"
+import { Card, ChipGroup, Container, Divider, SettingRow, Toggle, TextField } from "../components"
 import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
 import type { UnitSystem, TimeFormat } from "../utils/geo"
 import { size, space } from "../constants"
-import { radius } from "@colota/shared"
 
 export function AppearanceScreen({}: ScreenProps) {
   const { mode, toggleTheme, colors } = useTheme()
@@ -152,12 +151,10 @@ export function AppearanceScreen({}: ScreenProps) {
               <Text style={[styles.mapStyleSub, styles.mapStyleSubFirst, { color: colors.textSecondary }]}>
                 {t("appearance.mapStyle.light")}
               </Text>
-              <TextInput
+              <TextField
                 testID="map-style-url-light"
-                style={[
-                  styles.mapStyleInput,
-                  { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
-                ]}
+                accessibilityLabel={t("appearance.mapStyle.light")}
+                mono
                 value={mapStyleUrlLight}
                 onChangeText={setMapStyleUrlLight}
                 onBlur={() => saveMapStyleUrl("mapStyleUrlLight", mapStyleUrlLight)}
@@ -170,12 +167,10 @@ export function AppearanceScreen({}: ScreenProps) {
               <Text style={[styles.mapStyleSub, styles.mapStyleSubSecond, { color: colors.textSecondary }]}>
                 {t("appearance.mapStyle.dark")}
               </Text>
-              <TextInput
+              <TextField
                 testID="map-style-url-dark"
-                style={[
-                  styles.mapStyleInput,
-                  { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
-                ]}
+                accessibilityLabel={t("appearance.mapStyle.dark")}
+                mono
                 value={mapStyleUrlDark}
                 onChangeText={setMapStyleUrlDark}
                 onBlur={() => saveMapStyleUrl("mapStyleUrlDark", mapStyleUrlDark)}
@@ -243,13 +238,6 @@ const styles = StyleSheet.create({
   },
   mapStyleSubFirst: { marginTop: space.md },
   mapStyleSubSecond: { marginTop: 10 },
-  mapStyleInput: {
-    borderWidth: 1.5,
-    padding: space.md,
-    borderRadius: radius.md,
-    fontSize: fontSizes.description,
-    ...fonts.regular
-  },
   mapStyleFooter: {
     flexDirection: "row",
     justifyContent: "space-between",

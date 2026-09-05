@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useMemo, useRef } from "react"
-import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
 import {
   FieldMap,
   DEFAULT_FIELD_MAP,
@@ -21,7 +21,7 @@ import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup, Button } from "../components"
+import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup, Button, TextField } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
   buildTraccarJsonPayload,
@@ -575,23 +575,14 @@ export function ApiSettingsScreen({}: ScreenProps) {
                     {/* Right: Value input */}
                     <View style={styles.valueColumn}>
                       <View style={styles.inputRow}>
-                        <TextInput
-                          style={[
-                            styles.fieldInput,
-                            {
-                              borderColor: isDuplicate
-                                ? colors.error
-                                : isFieldModified
-                                  ? colors.primary
-                                  : colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background
-                            }
-                          ]}
+                        <TextField
+                          accessibilityLabel={key}
+                          testID={`field-${key}`}
+                          style={styles.fieldInput}
+                          error={isDuplicate}
                           value={localFieldMap[key]}
                           onChangeText={(text) => handleFieldChange(key, text)}
                           placeholder={referenceFieldMap[key]}
-                          placeholderTextColor={colors.placeholder}
                           autoCapitalize="none"
                           autoCorrect={false}
                         />
@@ -635,35 +626,24 @@ export function ApiSettingsScreen({}: ScreenProps) {
                 return (
                   <View key={field.id}>
                     <View style={styles.customFieldRow}>
-                      <TextInput
-                        style={[
-                          styles.customFieldInput,
-                          {
-                            borderColor: isDuplicate ? colors.error : colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
+                      <TextField
+                        accessibilityLabel="Custom field key"
+                        testID={`custom-key-${field.id}`}
+                        style={styles.customFieldInput}
+                        error={isDuplicate}
                         value={field.key}
                         onChangeText={(text) => handleCustomFieldChange(field.id, "key", text)}
                         placeholder="Key"
-                        placeholderTextColor={colors.placeholder}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
-                      <TextInput
-                        style={[
-                          styles.customFieldInput,
-                          {
-                            borderColor: colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
+                      <TextField
+                        accessibilityLabel="Custom field value"
+                        testID={`custom-value-${field.id}`}
+                        style={styles.customFieldInput}
                         value={field.value}
                         onChangeText={(text) => handleCustomFieldChange(field.id, "value", text)}
                         placeholder="Value"
-                        placeholderTextColor={colors.placeholder}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
