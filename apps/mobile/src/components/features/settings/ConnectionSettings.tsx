@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react"
 import { Text, StyleSheet, View } from "react-native"
-import { CircleCheckBig } from "lucide-react-native"
+import { CircleAlert, CircleCheckBig } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isEndpointAllowed } from "../../../utils/settingsValidation"
@@ -256,17 +256,13 @@ export function ConnectionSettings({
             />
 
             {testResponse && (
-              <View
-                style={[
-                  styles.responseBox,
-                  {
-                    borderColor: testError ? colors.error : colors.border,
-                    backgroundColor: testError ? colors.error + "15" : colors.well
-                  }
-                ]}
-              >
-                {!testError && <CircleCheckBig size={size.icon.sm} color={colors.success} />}
-                <Text style={[styles.responseText, { color: testError ? colors.error : colors.text }]}>
+              <View style={styles.responseRow}>
+                {testError ? (
+                  <CircleAlert size={size.icon.sm} color={colors.error} />
+                ) : (
+                  <CircleCheckBig size={size.icon.sm} color={colors.success} />
+                )}
+                <Text style={[styles.responseText, { color: testError ? colors.error : colors.textSecondary }]}>
                   {testResponse}
                 </Text>
               </View>
@@ -316,18 +312,15 @@ const styles = StyleSheet.create({
   testButton: {
     marginTop: space.md
   },
-  responseBox: {
+  responseRow: {
     marginTop: space.md,
-    padding: 14,
-    borderWidth: 1.5,
-    borderRadius: radius.md,
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "flex-start",
     gap: space.sm
   },
   responseText: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold
+    flex: 1,
+    fontSize: fontSizes.description,
+    ...fonts.regular
   },
 })
