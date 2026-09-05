@@ -21,7 +21,7 @@ import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup } from "../components"
+import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup, Button } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
   buildTraccarJsonPayload,
@@ -684,16 +684,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
               })
             )}
 
-            <Pressable
-              onPress={handleAddCustomField}
-              style={({ pressed }) => [
-                styles.addButton,
-                { borderColor: colors.border },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-            >
-              <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Field</Text>
-            </Pressable>
+            <Button title="+ Add Field" onPress={handleAddCustomField} variant="secondary" />
           </View>
         </View>
 
@@ -876,18 +867,6 @@ const styles = StyleSheet.create({
   removeButtonText: {
     fontSize: fontSizes.description,
     ...fonts.bold
-  },
-  addButton: {
-    paddingVertical: space.md,
-    alignItems: "center",
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    marginTop: space.sm
-  },
-  addButtonText: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold
   },
   emptyHint: {
     fontSize: fontSizes.description,
