@@ -379,15 +379,6 @@ const styles = StyleSheet.create({
     flex: 0,
     minWidth: 90
   },
-  label: {
-    fontSize: fontSizes.caption,
-    ...fonts.semiBold,
-    marginBottom: 6
-  },
-  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: fontSizes.input },
-  inputCentered: {
-    textAlign: "center"
-  },
   card: { marginBottom: space.md },
   row: {
     flexDirection: "row",

@@ -437,12 +437,6 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: 40 },
   header: { marginBottom: 20 },
   inputGroup: { marginBottom: space.xs },
-  label: {
-    fontSize: fontSizes.caption,
-    ...fonts.semiBold,
-    marginBottom: 6
-  },
-  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: fontSizes.input, ...fonts.regular },
   numInput: {
     borderWidth: 1,
     padding: 10,
