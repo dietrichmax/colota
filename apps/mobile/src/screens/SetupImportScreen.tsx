@@ -4,10 +4,10 @@
  */
 
 import React, { useState, useMemo } from "react"
-import { View, Text, ScrollView, StyleSheet, Switch } from "react-native"
+import { View, Text, ScrollView, StyleSheet } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Container, Card, Button, SectionTitle } from "../components"
+import { Button, Card, Container, SectionTitle, Toggle } from "../components"
 import { fontSizes, fonts } from "../styles/typography"
 import { CircleAlert, CircleCheckBig, Import } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
@@ -215,7 +215,12 @@ export function SetupImportScreen({ route, navigation }: any) {
                     Off: imports are added as new entries
                   </Text>
                 </View>
-                <Switch testID="replace-imports-switch" value={replaceByName} onValueChange={setReplaceByName} />
+                <Toggle
+                  accessibilityLabel="Replace entries with the same name"
+                  testID="replace-imports-switch"
+                  value={replaceByName}
+                  onValueChange={setReplaceByName}
+                />
               </View>
             </Card>
           </View>

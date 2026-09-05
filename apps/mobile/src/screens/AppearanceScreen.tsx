@@ -4,13 +4,13 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, Switch, View, ScrollView, Pressable, TextInput } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Pressable, TextInput } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts } from "../styles/typography"
-import { Card, Container, Divider, SettingRow } from "../components"
+import { Card, Container, Divider, SettingRow, Toggle } from "../components"
 import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
@@ -95,15 +95,11 @@ export function AppearanceScreen({}: ScreenProps) {
       >
         <Card>
           <SettingRow label={t("appearance.darkMode")}>
-            <Switch
+            <Toggle
+              accessibilityLabel={t("appearance.darkMode")}
               testID="dark-mode-switch"
               value={mode === "dark"}
               onValueChange={toggleTheme}
-              trackColor={{
-                false: colors.border,
-                true: colors.primary + "80"
-              }}
-              thumbColor={mode === "dark" ? colors.primary : colors.border}
             />
           </SettingRow>
 

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, Switch, View, Pressable, TextInput, AppState } from "react-native"
+import { Text, StyleSheet, View, Pressable, TextInput, AppState } from "react-native"
 import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
@@ -16,7 +16,7 @@ import {
   size,
   space
 } from "../../../constants"
-import { SectionTitle, Card, Divider, NumericInput, SettingRow } from "../../index"
+import { Card, Divider, NumericInput, SectionTitle, SettingRow, Toggle } from "../../index"
 import { PresetOption } from "./PresetOption"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 import { isOverlandFormat } from "../../../utils/apiPayload"
@@ -449,7 +449,8 @@ export function SyncStrategySettings({
               <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Quality filters</Text>
 
               <SettingRow label="Filter inaccurate locations" hint="Reject fixes the GPS chip reports as imprecise">
-                <Switch
+                <Toggle
+                  accessibilityLabel="Filter inaccurate locations"
                   value={settings.filterInaccurateLocations}
                   onValueChange={(value) =>
                     onImmediateSave({
@@ -457,11 +458,6 @@ export function SyncStrategySettings({
                       filterInaccurateLocations: value
                     })
                   }
-                  trackColor={{
-                    false: colors.border,
-                    true: colors.primary + "80"
-                  }}
-                  thumbColor={settings.filterInaccurateLocations ? colors.primary : colors.border}
                 />
               </SettingRow>
 
