@@ -387,12 +387,6 @@ export function AutoExportScreen(_props: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Automatically export your location data on a schedule
-          </Text>
-        </View>
-
         {/* Enable Toggle */}
         <Card>
           <SettingRow
@@ -668,15 +662,8 @@ export function AutoExportScreen(_props: ScreenProps) {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 40
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 20
-  },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 20
   },
   section: {
     marginTop: 24

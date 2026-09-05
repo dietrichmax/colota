@@ -201,11 +201,7 @@ export function AboutScreen({}: ScreenProps) {
   if (!buildConfig) {
     return (
       <Container>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Colota</Text>
-          </View>
-        </ScrollView>
+        <ScrollView contentContainerStyle={styles.scrollContent} />
       </Container>
     )
   }
@@ -247,7 +243,6 @@ export function AboutScreen({}: ScreenProps) {
           >
             <Image source={icon} style={styles.appIcon} resizeMode="contain" />
           </Pressable>
-          <Text style={[styles.title, { color: colors.text }]}>Colota</Text>
           <Pressable onPress={handleVersionTap} style={({ pressed }) => pressed && { opacity: 0.8 }}>
             <Text style={[styles.version, { color: colors.textSecondary }]}>Version {buildConfig.VERSION_NAME}</Text>
           </Pressable>
@@ -415,11 +410,6 @@ const styles = StyleSheet.create({
   appIcon: {
     width: 80,
     height: 80
-  },
-  title: {
-    fontSize: 28,
-    ...fonts.bold,
-    marginBottom: 4
   },
   version: {
     fontSize: 13,

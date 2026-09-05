@@ -21,6 +21,7 @@ import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
 import { fonts } from "../styles/typography"
+import { space } from "../constants"
 import { SectionTitle, Toast, Container, Divider, ChipGroup } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
@@ -462,13 +463,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>API Field Mapping</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Customize field names sent to your server
-          </Text>
-        </View>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>Customize field names sent to your server</Text>
 
         {/* Template Selector */}
         <View style={styles.section}>
@@ -752,21 +747,14 @@ export function ApiSettingsScreen({}: ScreenProps) {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 40
   },
-  header: {
-    marginTop: 20,
-    marginBottom: 20
-  },
-  title: {
-    fontSize: 28,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: 4
-  },
-  subtitle: {
+  intro: {
     fontSize: 14,
-    lineHeight: 20
+    ...fonts.regular,
+    lineHeight: 20,
+    marginBottom: space.xl
   },
   section: {
     marginBottom: 24

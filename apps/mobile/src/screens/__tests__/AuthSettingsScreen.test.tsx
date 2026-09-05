@@ -98,7 +98,7 @@ describe("AuthSettingsScreen", () => {
       const { getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Authentication & Headers")).toBeTruthy()
+        expect(getByText("Secure your endpoint connection")).toBeTruthy()
       })
     })
   })

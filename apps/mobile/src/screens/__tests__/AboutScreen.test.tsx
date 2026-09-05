@@ -109,11 +109,13 @@ describe("AboutScreen", () => {
     return render(<AboutScreen navigation={{} as any} />)
   }
 
-  it("renders app title and version", () => {
-    const { getByText } = renderScreen()
+  // The app name is the navigation header's job now; the screen keeps only the version,
+  // which is also the tap target for debug mode.
+  it("renders the version without repeating the app name", () => {
+    const { getByText, queryByText } = renderScreen()
 
-    expect(getByText("Colota")).toBeTruthy()
     expect(getByText("Version 1.3.0")).toBeTruthy()
+    expect(queryByText("Colota")).toBeNull()
   })
 
   it("shows tap hint after first taps", () => {

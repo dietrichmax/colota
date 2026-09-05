@@ -9,8 +9,8 @@ import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { size, space } from "../constants"
 import { Container, Card, Button, SectionTitle, Toggle } from "../components"
-import { fonts } from "../styles/typography"
-import { CircleAlert, CircleCheckBig, Import } from "lucide-react-native"
+import { fonts, text } from "../styles/typography"
+import { CircleAlert, CircleCheckBig } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
@@ -182,17 +182,9 @@ export function SetupImportScreen({ route, navigation }: any) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.content}>
-        <Card style={styles.headerCard}>
-          <View style={styles.headerRow}>
-            <Import size={size.icon.lg} color={colors.primary} />
-            <View style={styles.headerText}>
-              <Text style={[styles.title, { color: colors.text }]}>Import Configuration</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                A setup link wants to apply {result.entries.length} setting{result.entries.length !== 1 ? "s" : ""}
-              </Text>
-            </View>
-          </View>
-        </Card>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>
+          A setup link wants to apply {result.entries.length} setting{result.entries.length !== 1 ? "s" : ""}
+        </Text>
 
         {renderSection("TRACKING", trackingEntries)}
         {renderSection("API", apiEntries)}
@@ -258,6 +250,10 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1
+  },
+  intro: {
+    ...text.body,
+    marginBottom: space.lg
   },
   title: {
     fontSize: 18,

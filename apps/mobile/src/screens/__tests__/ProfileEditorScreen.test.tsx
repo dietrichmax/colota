@@ -82,9 +82,11 @@ jest.mock("../../components", () => {
 })
 
 const mockGoBack = jest.fn()
+const mockSetOptions = jest.fn()
 
 const mockNavigation = {
-  goBack: mockGoBack
+  goBack: mockGoBack,
+  setOptions: mockSetOptions
 }
 
 import { ProfileEditorScreen } from "../ProfileEditorScreen"
@@ -105,9 +107,11 @@ describe("ProfileEditorScreen", () => {
 
   // --- New Profile Mode ---
 
-  it("renders new profile title", () => {
-    const { getByText } = renderNewProfile()
-    expect(getByText("New Profile")).toBeTruthy()
+  // The title is dynamic, so it reaches the header through setOptions rather than a
+  // static SCREEN_CONFIG entry. headerTitle is the key native-stack prefers.
+  it("names the mode in the header for a new profile", () => {
+    renderNewProfile()
+    expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: "New profile" })
   })
 
   it("shows Create Profile button for new profile", () => {
@@ -209,11 +213,11 @@ describe("ProfileEditorScreen", () => {
 
   // --- Edit Mode ---
 
-  it("renders edit profile title when editing", async () => {
-    const { getByText } = renderEditProfile()
+  it("names the mode in the header when editing", async () => {
+    renderEditProfile()
 
     await waitFor(() => {
-      expect(getByText("Edit Profile")).toBeTruthy()
+      expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: "Edit profile" })
     })
   })
 

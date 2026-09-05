@@ -10,12 +10,12 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { SavedTrackingProfile, ScreenProps } from "../types/global"
-import { fonts } from "../styles/typography"
+import { fonts, text } from "../styles/typography"
 import { Container, SectionTitle, Card, Toggle } from "../components"
 import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { buildProfilesLink } from "../utils/setupLink"
-import { size, PROFILE_CONDITIONS, MS_TO_KMH, HIT_SLOP_MD } from "../constants"
+import { size, space, PROFILE_CONDITIONS, MS_TO_KMH, HIT_SLOP_MD } from "../constants"
 
 function formatCondition(profile: SavedTrackingProfile): string {
   const condition = PROFILE_CONDITIONS.find((c) => c.type === profile.condition.type)
@@ -175,12 +175,9 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.text }]}>Tracking Profiles</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                Auto-switch GPS settings based on charging, Android Auto, or speed
-              </Text>
-            </View>
+            <Text style={[styles.intro, { color: colors.textSecondary }]}>
+              Auto-switch GPS settings based on charging, Android Auto, or speed
+            </Text>
 
             <Pressable
               style={({ pressed }) => [
@@ -226,9 +223,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
 
 const styles = StyleSheet.create({
   list: { padding: 16, paddingBottom: 40 },
-  header: { marginBottom: 20 },
-  title: { fontSize: 28, ...fonts.bold, letterSpacing: -0.5, marginBottom: 6 },
-  subtitle: { fontSize: 14, ...fonts.regular, lineHeight: 20 },
+  intro: { ...text.body, marginBottom: space.xl },
   createBtn: {
     flexDirection: "row",
     alignItems: "center",
