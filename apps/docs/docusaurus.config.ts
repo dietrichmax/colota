@@ -59,6 +59,7 @@ const config: Config = {
       {
         redirects: [
           { from: "/docs/guides/app-shortcuts", to: "/docs/guides/automation" },
+          { from: "/docs/configuration/gps-settings", to: "/docs/configuration/tracking-settings" },
           // Short, shareable install URL. The docs page is the single source for install channels.
           { from: "/download", to: "/docs/getting-started/installation" }
         ]

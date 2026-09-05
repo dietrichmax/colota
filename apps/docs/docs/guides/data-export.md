@@ -25,14 +25,17 @@ Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) 
 
 ### Bulk Export
 
-1. Go to **Data Management**
-2. Tap **Export Data**
-3. Select the format
-4. Share the exported file via Android's share menu
+1. Go to **Settings → Export Locations**
+2. Select a format
+3. Tap **Export** and share the file via Android's share menu
+
+Bulk export always covers your full history. To export a subset, use the trip export below.
+
+For exports on a schedule instead of on demand, see [Scheduled Export](#scheduled-export-auto-export).
 
 ### Trip Export
 
-Go to **Location History** -> **Trips** tab. There are two ways to export:
+Go to the **History** tab → **Trips**. There are two ways to export:
 
 - **All trips for the day** - tap **Export All** in the header, pick a format, share.
 - **A custom selection** - long-press any trip card to enter selection mode. Tap additional cards to add or remove them. Use **Select all** to grab every trip. Tap the share icon in the selection header, pick a format, share. Works for a single trip too.
@@ -53,7 +56,7 @@ Automatically export your location data on a schedule without opening the app.
 
 ### Setup
 
-1. Go to **Settings > Auto-Export**
+1. Go to **Settings → Auto-Export**
 2. Select an export directory (files are saved there via Android's Storage Access Framework)
 3. Choose a format (CSV, GeoJSON, GPX, or KML)
 4. Set the frequency: **Daily**, **Weekly**, or **Monthly**

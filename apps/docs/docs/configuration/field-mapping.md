@@ -45,12 +45,12 @@ You can rename any field to match your backend. For example:
 }
 ```
 
-Configure field names in **Settings > API Settings > Field Mapping**.
+Configure field names in **Settings → API Field Mapping → Field Mappings**.
 
 ## Custom Static Fields
 
 Add arbitrary key-value pairs that are included in every API payload. For example, adding `_type: "location"` for OwnTracks-compatible backends.
 
-Configure in **Settings > API Settings > Custom Fields**.
+Configure in **Settings → API Field Mapping → Custom Fields**.
 
 **Note:** Custom field values are always sent as strings. Custom fields are added to the payload before location fields - if a custom field key matches a location field key, the location field takes precedence.

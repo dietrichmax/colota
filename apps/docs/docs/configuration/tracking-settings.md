@@ -2,16 +2,26 @@
 sidebar_position: 2
 ---
 
-# GPS Settings
+# Tracking Settings
+
+Found under **Settings → Tracking & Sync → Tracking Configuration**.
 
 ## Available Settings
 
-| Setting            | Description                          | Default   | Range      |
-| ------------------ | ------------------------------------ | --------- | ---------- |
-| Tracking Interval  | Time between GPS fixes               | 5 seconds | 1s - hours |
-| Movement Threshold | Minimum movement to trigger update   | 0 meters  | 0m - 1000m |
-| Accuracy Threshold | Filter out fixes above this accuracy | 50 meters | 1m - 1000m |
-| Filter Inaccurate  | Enable/disable accuracy filtering    | Disabled  | On/Off     |
+| Setting            | Description                          | Default   | Minimum |
+| ------------------ | ------------------------------------ | --------- | ------- |
+| Tracking Interval  | Time between GPS fixes               | 5 seconds | 1s      |
+| Movement Threshold | Minimum movement to trigger update   | 0         | 0       |
+| Accuracy Threshold | Filter out fixes above this accuracy | 50        | 1       |
+| Filter Inaccurate  | Enable/disable accuracy filtering    | Disabled  | On/Off  |
+
+The two distance settings use whichever unit you picked in **Settings → Appearance**, so they read as meters or feet. There is no upper limit on any of the three numbers.
+
+:::info[Tracking profiles override two of these]
+
+If a [tracking profile](/docs/guides/tracking-profiles) is active, it supplies its own tracking interval and movement threshold for as long as its condition holds. The values on this screen are what the app falls back to when no profile applies, so a profile is the usual reason fixes arrive at a different rate than the one set here.
+
+:::
 
 ## Tracking Interval
 
@@ -23,10 +33,10 @@ How often the app requests a GPS fix. Shorter intervals give denser track points
 
 ## Movement Threshold
 
-Only records a new location if you've moved at least this many meters since the last recorded point. Useful for filtering out stationary noise.
+Only records a new location if you've moved at least this far since the last recorded point. Useful for filtering out stationary noise.
 
-- **0m**: Record every GPS fix (default)
-- **10-50m**: Skip stationary updates, good for daily use
+- **0**: Record every GPS fix (default)
+- **10-50 m**: Skip stationary updates, good for daily use
 
 ## Accuracy Filter
 
@@ -42,6 +52,8 @@ Some GPS chips occasionally emit a single fix that's far off (10s of km) with a 
 
 Colota drops these automatically by comparing the chip's reported speed against the speed implied by the distance and time since the previous fix. When the two disagree by a wide margin, the fix is discarded. The filter is always on, has no user setting, and only triggers on this specific glitch pattern - normal travel passes through because the chip-reported and implied speeds agree closely.
 
-## Stationary Detection
+## See also
 
-Stationary detection is available through [tracking profiles](/docs/guides/tracking-profiles) (stationary condition) and [geofence zones](/docs/guides/geofencing) (pause when motionless). See those guides for configuration details.
+- [Sync Presets](sync-presets.md) - how often the queue is flushed to your server, and on which connections
+- [Tracking Profiles](/docs/guides/tracking-profiles) - switch interval and movement threshold automatically on charging, speed or a stationary phone
+- [Geofencing](/docs/guides/geofencing) - pause GPS entirely inside a zone

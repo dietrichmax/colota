@@ -17,7 +17,7 @@ const sidebars: SidebarsConfig = {
       label: "Configuration",
       items: [
         "configuration/sync-presets",
-        "configuration/gps-settings",
+        "configuration/tracking-settings",
         "configuration/server-settings",
         "configuration/field-mapping",
         "configuration/authentication",

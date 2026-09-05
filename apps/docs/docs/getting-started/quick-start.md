@@ -21,7 +21,7 @@ The app works completely offline. Server setup is optional.
 
 ## Next Steps
 
-- [Configure GPS settings](/docs/configuration/gps-settings) to adjust tracking intervals
+- [Configure tracking settings](/docs/configuration/tracking-settings) to adjust tracking intervals
 - [Set up a server](/docs/configuration/server-settings) to sync location data
 - [Create geofences](/docs/guides/geofencing) to save battery at home or work
 - [Battery optimization tips](/docs/guides/battery-optimization) to reduce power usage
