@@ -30,8 +30,8 @@ import {
   STATS_REFRESH_IDLE,
   MIN_STATS_INTERVAL_MS,
   MAP_HERO_FRACTION,
+  MAP_HERO_IDLE_PEEK,
   MAP_HERO_MIN_HEIGHT,
-  MAP_HERO_PEEK,
   MAP_HERO_SHEET_RESERVE,
   SHORT_WINDOW_HEIGHT,
   elevation,
@@ -71,33 +71,30 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   // useWindowDimensions reports the whole window under forced edge-to-edge, and the tab bar is a
   // flex sibling of the navigator, so the map is measured against what is left after it.
   const available = Math.max(windowHeight - (size.row + insets.bottom), 0)
-  const mapHeight = Math.round(
+  const trackingMapHeight = Math.round(
     windowHeight < SHORT_WINDOW_HEIGHT
       ? // A landscape phone or a split-screen half: the floor gives way so the sheet's first
         // heading, the coordinate line and the figure stay on screen.
         Math.min(available * MAP_HERO_FRACTION, Math.max(available - MAP_HERO_SHEET_RESERVE, 0))
       : Math.max(available * MAP_HERO_FRACTION, MAP_HERO_MIN_HEIGHT)
   )
+  // The seam follows the state, not a gesture: idle holds no live fix, so the sheet drops to its
+  // peek and the map takes the difference. A window too short for both keeps the tracking height,
+  // which is the taller sheet, rather than inverting the two states.
+  const mapHeight = tracking ? trackingMapHeight : Math.max(available - MAP_HERO_IDLE_PEEK, trackingMapHeight)
 
-  // --- Expand control. Self-contained: the seam value, this effect and the two props on
-  // DashboardMap are the whole feature, and back is left to the stack while expanded. ---
-  const [expanded, setExpanded] = useState(false)
   const reduceMotion = useReduceMotion()
   const seam = useRef(new Animated.Value(mapHeight)).current
-  const expandedMapHeight = Math.max(available - MAP_HERO_PEEK, mapHeight)
 
   useEffect(() => {
     Animated.timing(seam, {
-      toValue: expanded ? expandedMapHeight : mapHeight,
+      toValue: mapHeight,
       duration: reduceMotion ? 0 : motion.onScreen.duration,
       easing: motion.onScreen.easing,
       // The seam is a layout edge: the map grows into it, so this cannot ride the native driver.
       useNativeDriver: false
     }).start()
-  }, [expanded, expandedMapHeight, mapHeight, reduceMotion, seam])
-
-  const toggleExpanded = useCallback(() => setExpanded((on) => !on), [])
-  // --- End expand control ---
+  }, [mapHeight, reduceMotion, seam])
 
   const handleStart = async () => {
     // The control is never disabled: a greyed pill over map tiles has no contrast guarantee,
@@ -245,8 +242,6 @@ export function DashboardScreen({ navigation }: ScreenProps) {
           isBatteryCritical={isBatteryCritical}
           locationEnabled={locationEnabled}
           interval={settings.interval}
-          expanded={expanded}
-          onToggleExpand={toggleExpanded}
         />
       </Animated.View>
 
@@ -285,6 +280,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
       </ScrollView>
 
       <Animated.View
+        testID="pill-slot"
         style={[styles.pillSlot, { top: Animated.subtract(seam, PILL_OVERHANG) }]}
         pointerEvents="box-none"
       >

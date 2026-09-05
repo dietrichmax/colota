@@ -321,8 +321,6 @@
   "map.centre": "Centre on my location",
   "map.showTrack": "Show my track",
   "map.hideTrack": "Hide my track",
-  "map.expand": "Expand map",
-  "map.collapse": "Collapse map",
   "map.compass": "Point the map north",
   "map.attribution": "Show map attribution",
   "map.attribution.close": "Close"

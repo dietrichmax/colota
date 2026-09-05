@@ -171,25 +171,15 @@ describe("DashboardMap", () => {
       expect(getByTestId("map-controls")).toBeTruthy()
     })
 
-    // The expand control belongs to whoever owns the seam, so it appears only when a caller
-    // hands down a handler and the whole feature can be lifted out with that one prop.
-    it("has no expand control until a caller owns the seam", () => {
-      const { queryByTestId } = render(<DashboardMap {...baseProps} />)
+    // The seam is driven by tracking state, so nothing on the map may move it: a second way to
+    // set the height would fight the state and leave the two out of step.
+    it("offers no control over the seam", async () => {
+      const { getByTestId, queryByTestId, queryByLabelText } = render(<DashboardMap {...baseProps} />)
 
+      await waitFor(() => expect(getByTestId("track-toggle-btn")).toBeTruthy())
       expect(queryByTestId("map-expand-btn")).toBeNull()
-    })
-
-    it("names the expand control for the state it moves to", () => {
-      const onToggleExpand = jest.fn()
-      const { getByTestId, rerender } = render(<DashboardMap {...baseProps} onToggleExpand={onToggleExpand} />)
-
-      expect(getByTestId("map-expand-btn").props.accessibilityLabel).toBe("Expand map")
-      fireEvent.press(getByTestId("map-expand-btn"))
-      expect(onToggleExpand).toHaveBeenCalledTimes(1)
-
-      rerender(<DashboardMap {...baseProps} onToggleExpand={onToggleExpand} expanded />)
-
-      expect(getByTestId("map-expand-btn").props.accessibilityLabel).toBe("Collapse map")
+      expect(queryByLabelText("Expand map")).toBeNull()
+      expect(queryByLabelText("Collapse map")).toBeNull()
     })
   })
 })

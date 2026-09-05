@@ -3,8 +3,8 @@ import { act, render, fireEvent, waitFor } from "@testing-library/react-native"
 import { DEFAULT_SETTINGS, Settings } from "../../types/global"
 import {
   MAP_HERO_FRACTION,
+  MAP_HERO_IDLE_PEEK,
   MAP_HERO_MIN_HEIGHT,
-  MAP_HERO_PEEK,
   MAP_HERO_SHEET_RESERVE,
   motion,
   size
@@ -26,6 +26,7 @@ let mockTracking = false
 let mockSettingsHydrated = true
 let mockCoords: { latitude: number; longitude: number } | null = null
 let mockWindowHeight = 800
+let mockReduceMotion = false
 
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
@@ -38,6 +39,10 @@ jest.mock("../../contexts/TrackingProvider", () => ({
     settingsHydrated: mockSettingsHydrated
   }),
   useCoords: () => mockCoords
+}))
+
+jest.mock("../../hooks/useReduceMotion", () => ({
+  useReduceMotion: () => mockReduceMotion
 }))
 
 jest.mock("../../hooks/useTheme", () => ({
@@ -90,12 +95,7 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
-    DashboardMap: ({ onToggleExpand, ...props }: any) =>
-      R.createElement(
-        View,
-        { testID: "DashboardMap", ...props },
-        onToggleExpand ? R.createElement(Pressable, { testID: "expand-map", onPress: onToggleExpand }) : null
-      ),
+    DashboardMap: (props: any) => R.createElement(View, { testID: "DashboardMap", ...props }),
     CoordinateDisplay: () => R.createElement(View, { testID: "CoordinateDisplay" }),
     DatabaseStatistics: () => R.createElement(View, { testID: "DatabaseStatistics" }),
     ConnectionStatus: () => R.createElement(View, { testID: "ConnectionStatus" }),
@@ -121,12 +121,22 @@ const mockNavigation = { navigate: jest.fn() } as any
 const flatten = (style: any): Record<string, unknown> =>
   Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean).map(flatten)) : (style ?? {})
 
-// The seam is an Animated.Value once the expand control drives it, so the height is read
-// through the node rather than compared as a plain number.
+// The seam is an Animated.Value, so the map height and the pill's offset are read through the
+// node rather than compared as plain numbers.
 const heightOf = (node: any): number => {
   const height = flatten(node.props.style).height as any
   return typeof height === "number" ? height : height.__getValue()
 }
+
+const topOf = (node: any): number => {
+  const top = flatten(node.props.style).top as any
+  return typeof top === "number" ? top : top.__getValue()
+}
+
+const settle = () =>
+  act(() => {
+    jest.advanceTimersByTime(motion.onScreen.duration * 2)
+  })
 
 describe("DashboardScreen", () => {
   beforeEach(() => {
@@ -136,6 +146,7 @@ describe("DashboardScreen", () => {
     mockSettingsHydrated = true
     mockCoords = null
     mockWindowHeight = 800
+    mockReduceMotion = false
     mockIsLocationEnabled.mockResolvedValue(true)
     mockOpenLocationSettings.mockResolvedValue(true)
     mockShowConfirm.mockResolvedValue(false)
@@ -155,7 +166,8 @@ describe("DashboardScreen", () => {
       expect(scroll.props.scrollEnabled).toBeUndefined()
     })
 
-    it("gives the map 52 percent of what the tab bar leaves", () => {
+    it("gives the map 52 percent of what the tab bar leaves while tracking", () => {
+      mockTracking = true
       mockWindowHeight = 900
       const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 
@@ -163,7 +175,8 @@ describe("DashboardScreen", () => {
       expect(heightOf(getByTestId("map-hero"))).toBe(Math.round(available * MAP_HERO_FRACTION))
     })
 
-    it("holds the floor on a short-but-not-compact window", () => {
+    it("holds the floor on a short-but-not-compact window while tracking", () => {
+      mockTracking = true
       mockWindowHeight = 600
       const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 
@@ -172,7 +185,8 @@ describe("DashboardScreen", () => {
 
     // A landscape phone or a split-screen half: the floor would eat the sheet whole, so the
     // reserve wins and the first heading, the coordinate line and the figure stay on screen.
-    it("drops the floor at compact height and reserves the sheet", () => {
+    it("drops the floor at compact height and reserves the sheet while tracking", () => {
+      mockTracking = true
       mockWindowHeight = 400
       const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 
@@ -180,36 +194,104 @@ describe("DashboardScreen", () => {
       expect(heightOf(getByTestId("map-hero"))).toBe(Math.round(available - MAP_HERO_SHEET_RESERVE))
     })
 
-    // The seam moves, so the map, the pill and the sheet cannot each carry their own copy of it.
-    it("moves the seam to the peek when the map is expanded and back on a second press", () => {
+    // Idle carries no live fix, so the sheet is a peek and the map takes the rest. This is the
+    // state the user sees on first open, and it is the one the map is meant to dominate.
+    it("leaves the sheet a peek while tracking is off", () => {
+      mockWindowHeight = 900
+      const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
+
+      const available = 900 - (size.row + 16)
+      expect(heightOf(getByTestId("map-hero"))).toBe(available - MAP_HERO_IDLE_PEEK)
+    })
+
+    // The height is the state, not a control: starting has to give the sheet the room the live
+    // fix needs, and stopping has to hand it back, with nothing else touching the seam.
+    it("grows the sheet when tracking starts and shrinks it again when it stops", () => {
       jest.useFakeTimers()
       try {
         mockWindowHeight = 900
-        const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
+        const { getByTestId, rerender } = render(<DashboardScreen navigation={mockNavigation} />)
 
-        const collapsed = heightOf(getByTestId("map-hero"))
         const available = 900 - (size.row + 16)
+        const idle = heightOf(getByTestId("map-hero"))
+        expect(idle).toBe(available - MAP_HERO_IDLE_PEEK)
 
-        act(() => fireEvent.press(getByTestId("expand-map")))
-        act(() => {
-          jest.advanceTimersByTime(motion.onScreen.duration * 2)
-        })
-        expect(heightOf(getByTestId("map-hero"))).toBe(available - MAP_HERO_PEEK)
+        mockTracking = true
+        rerender(<DashboardScreen navigation={mockNavigation} />)
+        settle()
 
-        act(() => fireEvent.press(getByTestId("expand-map")))
-        act(() => {
-          jest.advanceTimersByTime(motion.onScreen.duration * 2)
-        })
-        expect(heightOf(getByTestId("map-hero"))).toBe(collapsed)
+        const running = heightOf(getByTestId("map-hero"))
+        expect(running).toBe(Math.round(available * MAP_HERO_FRACTION))
+        expect(running).toBeLessThan(idle)
+
+        mockTracking = false
+        rerender(<DashboardScreen navigation={mockNavigation} />)
+        settle()
+
+        expect(heightOf(getByTestId("map-hero"))).toBe(idle)
       } finally {
         jest.useRealTimers()
       }
+    })
+
+    // Reduced motion means the seam lands rather than travels: with the animation still running
+    // it would sit at the idle height, so the assertion fails the moment the flag is ignored.
+    it("lands the seam without travelling it under reduce motion", () => {
+      jest.useFakeTimers()
+      try {
+        mockReduceMotion = true
+        mockWindowHeight = 900
+        const { getByTestId, rerender } = render(<DashboardScreen navigation={mockNavigation} />)
+
+        const available = 900 - (size.row + 16)
+
+        mockTracking = true
+        act(() => {
+          rerender(<DashboardScreen navigation={mockNavigation} />)
+        })
+
+        expect(heightOf(getByTestId("map-hero"))).toBe(Math.round(available * MAP_HERO_FRACTION))
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    // height is a layout prop the native animated module refuses, so a flip to the native
+    // driver is a runtime crash on the first state change rather than a lint or type error.
+    it("keeps the seam on the JS driver, because height is a layout prop", () => {
+      const { Animated } = require("react-native")
+      const spy = jest.spyOn(Animated, "timing")
+
+      render(<DashboardScreen navigation={mockNavigation} />)
+
+      expect(spy).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ useNativeDriver: false }))
+      spy.mockRestore()
     })
 
     it("clears the Start pill with the sheet's top padding", () => {
       const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 
       expect(flatten(getByTestId("sheet").props.style).paddingTop).toBeGreaterThanOrEqual(size.touch / 2)
+    })
+
+    // The pill is the only thing crossing the seam, so it has to be anchored to the same value
+    // in both states; a second copy of the height would drift the moment one of them moves.
+    it("straddles the seam with the Start control in both states", () => {
+      jest.useFakeTimers()
+      try {
+        mockWindowHeight = 900
+        const { getByTestId, rerender } = render(<DashboardScreen navigation={mockNavigation} />)
+
+        expect(topOf(getByTestId("pill-slot"))).toBe(heightOf(getByTestId("map-hero")) - size.touch / 2)
+
+        mockTracking = true
+        rerender(<DashboardScreen navigation={mockNavigation} />)
+        settle()
+
+        expect(topOf(getByTestId("pill-slot"))).toBe(heightOf(getByTestId("map-hero")) - size.touch / 2)
+      } finally {
+        jest.useRealTimers()
+      }
     })
   })
 

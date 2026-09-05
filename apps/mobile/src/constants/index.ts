@@ -62,7 +62,9 @@ export const SHORT_WINDOW_HEIGHT = 480
 export const MAP_HERO_FRACTION = 0.52
 export const MAP_HERO_MIN_HEIGHT = 320
 export const MAP_HERO_SHEET_RESERVE = 200
-export const MAP_HERO_PEEK = 64
+// Tracking off, so the sheet carries no live fix: it keeps the Start pill's lower half, the gap
+// under it and the head of the first figure, and the map takes everything else.
+export const MAP_HERO_IDLE_PEEK = 128
 
 // Everything drawn over map tiles clears the safe area by this, on all four sides.
 export const MAP_OVERLAY_GUTTER = space.lg
