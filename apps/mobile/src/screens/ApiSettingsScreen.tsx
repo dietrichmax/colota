@@ -464,9 +464,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>API Field Mapping</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Customize field names sent to your server
           </Text>
@@ -756,12 +754,6 @@ const styles = StyleSheet.create({
   header: {
     marginTop: 20,
     marginBottom: 20
-  },
-  title: {
-    fontSize: fontSizes.screenTitle,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: space.xs
   },
   subtitle: {
     fontSize: fontSizes.body,

@@ -271,11 +271,6 @@ export function DataManagementScreen({}: ScreenProps) {
     <Container>
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Data management</Text>
-          </View>
-
           {/* Stats */}
           <View style={styles.section}>
             <SectionTitle>Database statistics</SectionTitle>
@@ -486,11 +481,6 @@ const styles = StyleSheet.create({
   header: {
     marginTop: 20,
     marginBottom: space.xl
-  },
-  title: {
-    fontSize: fontSizes.screenTitle,
-    ...fonts.bold,
-    marginBottom: space.xs
   },
   section: {
     marginBottom: space.xl

@@ -112,7 +112,8 @@ describe("AuthSettingsScreen", () => {
       const { getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Authentication & headers")).toBeTruthy()
+        // The screen name lives in the navigation header now, so anchor on the body's own caption.
+        expect(getByText("Secure your endpoint connection")).toBeTruthy()
       })
     })
   })
