@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from "react"
-import { Text, StyleSheet, View, Pressable } from "react-native"
-import { CircleCheckBig, ChevronRight } from "lucide-react-native"
+import { Text, StyleSheet, View } from "react-native"
+import { CircleCheckBig } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isEndpointAllowed } from "../../../utils/settingsValidation"
@@ -16,7 +16,7 @@ import { SettingRow } from "../../ui/SettingRow"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { TEST_RESULT_DISPLAY_MS, size, space } from "../../../constants"
 import { logger } from "../../../utils/logger"
-import { Button, Card, Divider, FieldMessage, SectionTitle, TextField, Toggle } from "../../index"
+import { Button, Card, Divider, FieldMessage, SectionTitle, TextField, Toggle, ListItem } from "../../index"
 import { showChoice } from "../../../services/modalService"
 import { radius } from "@colota/shared"
 
@@ -275,18 +275,12 @@ export function ConnectionSettings({
 
             <Divider />
 
-            <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+            <ListItem
+              testID="nav-auth-settings"
+              label="Authentication & headers"
+              sub="Basic auth, bearer tokens, custom headers"
               onPress={() => navigation.navigate("Auth Settings")}
-            >
-              <View style={styles.linkContent}>
-                <Text style={[styles.linkLabel, { color: colors.text }]}>Authentication & headers</Text>
-                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
-                  Basic auth, bearer tokens, custom headers
-                </Text>
-              </View>
-              <ChevronRight size={size.icon.md} color={colors.textLight} />
-            </Pressable>
+            />
           </>
         )}
       </Card>
@@ -337,22 +331,4 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.body,
     ...fonts.semiBold
   },
-  linkRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: space.md
-  },
-  linkContent: {
-    flex: 1
-  },
-  linkLabel: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  linkSub: {
-    fontSize: fontSizes.description,
-    ...fonts.regular
-  }
 })

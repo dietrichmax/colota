@@ -7,7 +7,7 @@
  */
 
 import React from "react"
-import { View, Text, TextInput } from "react-native"
+import { View, Text, TextInput, Pressable } from "react-native"
 
 /** Mirrors TextField: the label above, the input, and the message only when error is a string. */
 export function TextFieldStub({ label, error, secure: _secure, mono: _mono, style: _style, ...rest }: any) {
@@ -17,5 +17,15 @@ export function TextFieldStub({ label, error, secure: _secure, mono: _mono, styl
       <TextInput {...rest} />
       {typeof error === "string" ? <Text>{error}</Text> : null}
     </View>
+  )
+}
+
+/** Mirrors ListItem: label, sub, and the press target the test fires. */
+export function ListItemStub({ label, sub, onPress, testID, disabled }: any) {
+  return (
+    <Pressable testID={testID} onPress={onPress} disabled={disabled}>
+      <Text>{label}</Text>
+      {sub ? <Text>{sub}</Text> : null}
+    </Pressable>
   )
 }
