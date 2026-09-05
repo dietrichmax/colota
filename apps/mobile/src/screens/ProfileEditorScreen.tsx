@@ -4,27 +4,18 @@
  */
 
 import React, { useState, useEffect, useLayoutEffect, useCallback } from "react"
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from "react-native"
+import { View, Text, StyleSheet, ScrollView, TextInput } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
 import { fontSizes, fonts } from "../styles/typography"
-import { Button, Card, Container, Divider, FieldMessage, NumericInput, SectionTitle, SettingRow } from "../components"
+import { Button, Card, ChipGroup, Container, Divider, FieldMessage, NumericInput, RadioRow, SectionTitle, SettingRow } from "../components"
 import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
-import {
-  MS_TO_KMH,
-  PROFILE_CONDITIONS,
-  STATIONARY_MAX_INTERVAL_SECONDS,
-  SYNC_INTERVAL_LABELS,
-  SYNC_INTERVAL_PRESETS,
-  defaultProfileDelays,
-  size,
-  space
-} from "../constants"
+import { MS_TO_KMH, PROFILE_CONDITIONS, STATIONARY_MAX_INTERVAL_SECONDS, SYNC_INTERVAL_LABELS, SYNC_INTERVAL_PRESETS, defaultProfileDelays, space } from "../constants"
 import type { RootScreenProps } from "../types/navigation"
 import { radius } from "@colota/shared"
 
@@ -229,32 +220,17 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         {/* Condition */}
         <SectionTitle style={styles.sectionGap}>Activation condition</SectionTitle>
         <Card>
-          <View style={styles.conditionGrid}>
-            {PROFILE_CONDITIONS.map((opt) => {
-              const Icon = opt.icon
-              const selected = profile.condition.type === opt.type
-              return (
-                <Pressable
-                  key={opt.type}
-                  style={({ pressed }) => [
-                    styles.conditionOption,
-                    {
-                      backgroundColor: selected ? colors.primary + "15" : colors.background,
-                      borderColor: selected ? colors.primary : colors.border
-                    },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
-                  onPress={() => setConditionType(opt.type)}
-                >
-                  <Icon size={size.icon.md} color={selected ? colors.primary : colors.textSecondary} />
-                  <Text style={[styles.conditionLabel, { color: selected ? colors.primary : colors.text }]}>
-                    {opt.label}
-                  </Text>
-                  <Text style={[styles.conditionDesc, { color: colors.textLight }]}>{opt.description}</Text>
-                </Pressable>
-              )
-            })}
-          </View>
+          {PROFILE_CONDITIONS.map((opt, i) => (
+            <RadioRow
+              key={opt.type}
+              icon={opt.icon}
+              label={opt.label}
+              sub={opt.description}
+              selected={profile.condition.type === opt.type}
+              onPress={() => setConditionType(opt.type)}
+              divider={i < PROFILE_CONDITIONS.length - 1}
+            />
+          ))}
 
           {isSpeed && (
             <>
@@ -336,53 +312,28 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                   Default: {formatSyncDefault(settings.syncInterval)}
                 </Text>
               </View>
-              <View style={styles.syncGrid}>
-                {SYNC_INTERVAL_PRESETS.map((sec) => {
-                  const isSelected =
-                    profile.syncInterval === sec && SYNC_INTERVAL_PRESETS.includes(profile.syncInterval)
-                  return (
-                    <Pressable
-                      key={sec}
-                      style={({ pressed }) => [
-                        styles.syncOption,
-                        {
-                          backgroundColor: isSelected ? colors.primary + "15" : colors.background,
-                          borderColor: isSelected ? colors.primary : colors.border
-                        },
-                        pressed && { opacity: colors.pressedOpacity }
-                      ]}
-                      onPress={() => setProfile((prev) => ({ ...prev, syncInterval: sec }))}
-                    >
-                      <Text style={[styles.syncOptionLabel, { color: isSelected ? colors.primary : colors.text }]}>
-                        {SYNC_INTERVAL_LABELS[sec]}
-                      </Text>
-                    </Pressable>
-                  )
-                })}
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.syncOption,
-                    {
-                      backgroundColor: isCustomSyncInterval ? colors.primary + "15" : colors.background,
-                      borderColor: isCustomSyncInterval ? colors.primary : colors.border
-                    },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
-                  onPress={() => {
+              <ChipGroup
+                options={[
+                  ...SYNC_INTERVAL_PRESETS.map((sec) => ({
+                    value: String(sec),
+                    label: SYNC_INTERVAL_LABELS[sec]
+                  })),
+                  { value: "custom", label: "Custom" }
+                ]}
+                selected={isCustomSyncInterval ? "custom" : String(profile.syncInterval)}
+                onSelect={(value) => {
+                  if (value === "custom") {
+                    // Seeding a value is what makes the mode custom; the field takes over from here.
                     if (!isCustomSyncInterval) {
                       const customValue = 1800
                       setSyncIntervalStr(customValue.toString())
                       setProfile((prev) => ({ ...prev, syncInterval: customValue }))
                     }
-                  }}
-                >
-                  <Text
-                    style={[styles.syncOptionLabel, { color: isCustomSyncInterval ? colors.primary : colors.text }]}
-                  >
-                    Custom
-                  </Text>
-                </Pressable>
-              </View>
+                    return
+                  }
+                  setProfile((prev) => ({ ...prev, syncInterval: Number(value) }))
+                }}
+              />
 
               {isCustomSyncInterval && (
                 <View style={styles.customSyncInput}>
@@ -508,27 +459,9 @@ const styles = StyleSheet.create({
   },
   inputWithUnit: { flexDirection: "row", alignItems: "center", gap: 6 },
   unit: { fontSize: fontSizes.body, ...fonts.medium, minWidth: 28 },
-  conditionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10
-  },
-  conditionOption: {
-    width: "47%",
-    padding: space.md,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    alignItems: "center",
-    gap: space.xs
-  },
-  conditionLabel: { fontSize: fontSizes.description, ...fonts.semiBold },
-  conditionDesc: { fontSize: fontSizes.small, ...fonts.regular, textAlign: "center" },
   syncLabelRow: { marginBottom: space.sm },
   settingLabel: { fontSize: fontSizes.label, ...fonts.semiBold, marginBottom: 2 },
-  settingHint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18 },
-  syncGrid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  syncOption: { width: "31%", padding: space.md, borderRadius: 10, borderWidth: 1.5, alignItems: "center" }, // ~3 per row with gap
-  syncOptionLabel: { fontSize: fontSizes.description, ...fonts.semiBold },
+  settingHint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18 }, // ~3 per row with gap
   customSyncInput: { marginTop: space.md },
   saveBtn: {
     flexDirection: "row",

@@ -79,6 +79,31 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
+    RadioRow: function (props: any) {
+      const R = require("react")
+      const RN = require("react-native")
+      return R.createElement(
+        RN.Pressable,
+        { testID: props.testID, onPress: props.onPress, accessibilityState: { checked: props.selected } },
+        R.createElement(RN.Text, null, props.label),
+        props.sub ? R.createElement(RN.Text, null, props.sub) : null
+      )
+    },
+    ChipGroup: function (props: any) {
+      const R = require("react")
+      const RN = require("react-native")
+      return R.createElement(
+        RN.View,
+        null,
+        props.options.map(function (o: any) {
+          return R.createElement(
+            RN.Pressable,
+            { key: o.value, testID: o.testID, onPress: () => props.onSelect(o.value) },
+            R.createElement(RN.Text, null, o.label)
+          )
+        })
+      )
+    },
     Button: function (props: any) {
       return require("react").createElement(
         require("react-native").Pressable,
