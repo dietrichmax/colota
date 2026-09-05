@@ -54,8 +54,8 @@ export function ExportLocationsScreen({}: ScreenProps) {
         return
       }
 
-      setExportProgress(`Exported ${result.rowCount.toLocaleString()} locations`)
-
+      // Dismissed here rather than in the finally, which would not run until the share
+      // sheet is closed and would leave the overlay sitting behind it.
       setExporting(false)
       setExportProgress("")
 
