@@ -16,7 +16,6 @@ import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { parsePositiveInt, isPositiveInt } from "../utils/settingsValidation"
 import type { RootScreenProps } from "../types/navigation"
 import { space } from "../constants"
-import { radius } from "@colota/shared"
 
 declare function requestIdleCallback(callback: () => void): number
 declare function cancelIdleCallback(handle: number): void
@@ -365,12 +364,6 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   card: { marginBottom: space.lg },
-  input: {
-    padding: 10,
-    borderWidth: 1.5,
-    borderRadius: radius.sm,
-    fontSize: fontSizes.input
-  },
   nameInput: { flex: 1 },
   numInput: { width: 80, textAlign: "center" },
   toggleRow: { paddingVertical: 10 },

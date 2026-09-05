@@ -358,23 +358,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginBottom: space.sm
   },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    marginBottom: space.sm
-  },
-  inputField: {
-    flex: 1,
-    paddingHorizontal: space.md,
-    paddingVertical: space.md,
-    fontSize: fontSizes.label
-  },
-  eyeButton: {
-    paddingHorizontal: space.md,
-    paddingVertical: space.md
-  },
   strengthRow: {
     flexDirection: "row",
     alignItems: "center",

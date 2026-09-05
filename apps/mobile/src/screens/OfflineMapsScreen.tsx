@@ -886,12 +886,6 @@ const styles = StyleSheet.create({
   section: { marginBottom: space.lg },
   hint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18, marginBottom: space.lg },
   inputGroup: { marginBottom: space.lg },
-  label: {
-    fontSize: fontSizes.caption,
-    ...fonts.semiBold,
-    marginBottom: 6
-  },
-  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: fontSizes.input },
   sizeEstimate: { fontSize: fontSizes.caption, ...fonts.regular, marginBottom: space.md },
   progressContainer: { gap: 10 },
   progressHeader: { flexDirection: "row", alignItems: "center", gap: 10 },

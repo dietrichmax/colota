@@ -26,7 +26,6 @@ import { logger } from "../utils/logger"
 import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
 import { SAVE_SUCCESS_DISPLAY_MS, size, space } from "../constants"
-import { radius } from "@colota/shared"
 
 type ExportInterval = "daily" | "weekly" | "monthly"
 type ExportMode = "all" | "incremental"
@@ -730,14 +729,6 @@ const styles = StyleSheet.create({
     ...fonts.semiBold,
     marginTop: space.md,
     marginBottom: space.sm
-  },
-  templateInput: {
-    fontSize: fontSizes.input,
-    ...fonts.regular,
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    paddingHorizontal: space.md,
-    paddingVertical: 10
   },
   templateHint: {
     fontSize: fontSizes.description,
