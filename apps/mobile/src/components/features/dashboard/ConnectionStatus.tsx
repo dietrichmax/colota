@@ -10,8 +10,10 @@ import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
 import { ServerStatus, ConnectionStatusProps } from "../../../types/global"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
+import { size, space } from "../../../constants"
+import { radius } from "@colota/shared"
 
 export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps) {
   const { colors } = useTheme()
@@ -72,7 +74,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
       error: { color: colors.error, label: "Unreachable" },
       notConfigured: { color: colors.warning, label: "No endpoint" },
       deviceOffline: { color: colors.textSecondary, label: "Device offline" },
-      offline: { color: colors.textSecondary, label: "Offline Mode" },
+      offline: { color: colors.textSecondary, label: "Offline mode" },
       loading: { color: colors.textLight, label: "Checking" }
     }
 
@@ -93,10 +95,10 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
     >
       <View style={[styles.dot, { backgroundColor: config.color }]} />
       <Text style={[styles.host, { color: colors.text }]} numberOfLines={1}>
-        {isOffline ? "Offline Mode" : displayUrl || "Server"}
+        {isOffline ? "Offline mode" : displayUrl || "Server"}
       </Text>
       {!isOffline && <Text style={[styles.status, { color: config.color }]}>{config.label}</Text>}
-      <ChevronRight size={16} color={colors.textLight} />
+      <ChevronRight size={size.icon.sm} color={colors.textLight} />
     </Pressable>
   )
 }
@@ -106,24 +108,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 14,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
     marginBottom: 22
   },
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
-    marginRight: 12
+    borderRadius: radius.xs,
+    marginRight: space.md
   },
   host: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.medium
   },
   status: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.medium,
-    marginRight: 8
+    marginRight: space.sm
   }
 })

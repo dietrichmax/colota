@@ -4,16 +4,24 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, Switch, View, Pressable, TextInput, AppState } from "react-native"
+import { Text, StyleSheet, View, Pressable, TextInput, AppState } from "react-native"
 import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
-import { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS, OVERLAND_BATCH_MIN, OVERLAND_BATCH_MAX } from "../../../constants"
-import { SectionTitle, Card, Divider, NumericInput, SettingRow } from "../../index"
+import {
+  OVERLAND_BATCH_MAX,
+  OVERLAND_BATCH_MIN,
+  SYNC_INTERVAL_LABELS,
+  SYNC_INTERVAL_PRESETS,
+  size,
+  space
+} from "../../../constants"
+import { Card, Divider, NumericInput, SectionTitle, SettingRow, Toggle } from "../../index"
 import { PresetOption } from "./PresetOption"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 import { isOverlandFormat } from "../../../utils/apiPayload"
 import NativeLocationService from "../../../services/NativeLocationService"
+import { radius } from "@colota/shared"
 
 interface SyncStrategySettingsProps {
   settings: Settings
@@ -142,7 +150,7 @@ export function SyncStrategySettings({
 
   return (
     <View style={styles.section}>
-      <SectionTitle>Tracking Configuration</SectionTitle>
+      <SectionTitle>Tracking configuration</SectionTitle>
       <Card>
         <View accessibilityRole="radiogroup">
           {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map((preset, index) => (
@@ -164,11 +172,11 @@ export function SyncStrategySettings({
           style={({ pressed }) => [styles.advancedToggle, pressed && { opacity: colors.pressedOpacity }]}
           onPress={() => setShowAdvanced(!showAdvanced)}
         >
-          <Text style={[styles.advancedText, { color: colors.text }]}>Advanced Settings</Text>
+          <Text style={[styles.advancedText, { color: colors.text }]}>Advanced settings</Text>
           {showAdvanced ? (
-            <ChevronUp size={20} color={colors.textLight} />
+            <ChevronUp size={size.icon.md} color={colors.textLight} />
           ) : (
-            <ChevronDown size={20} color={colors.textLight} />
+            <ChevronDown size={size.icon.md} color={colors.textLight} />
           )}
         </Pressable>
 
@@ -177,7 +185,7 @@ export function SyncStrategySettings({
             {settings.syncPreset === "custom" && (
               <View style={[styles.customBanner, { backgroundColor: colors.info + "15" }]}>
                 <View style={styles.bannerRow}>
-                  <Lightbulb size={14} color={colors.info} />
+                  <Lightbulb size={size.icon.sm} color={colors.info} />
                   <Text style={[styles.customBannerText, { color: colors.info }]}>Using custom configuration</Text>
                 </View>
               </View>
@@ -185,10 +193,10 @@ export function SyncStrategySettings({
 
             {/* Tracking Parameters Group */}
             <View style={styles.paramGroup}>
-              <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Tracking Parameters</Text>
+              <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Tracking parameters</Text>
 
               <NumericInput
-                label="Tracking Interval"
+                label="Tracking interval"
                 value={intervalInput}
                 onChange={(val) => handleNumericChange("interval", val, 1)}
                 onBlur={() => handleNumericBlur("interval", 1)}
@@ -199,7 +207,7 @@ export function SyncStrategySettings({
               />
 
               <NumericInput
-                label="Movement Threshold"
+                label="Movement threshold"
                 value={distanceInput}
                 onChange={(val) => handleNumericChange("distance", val, 0)}
                 onBlur={() => handleNumericBlur("distance", 0)}
@@ -216,11 +224,11 @@ export function SyncStrategySettings({
 
                 {/* Network Parameters Group */}
                 <View style={styles.paramGroup}>
-                  <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Network Settings</Text>
+                  <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Network settings</Text>
 
                   {/* Sync Interval */}
                   <View style={styles.settingBlock}>
-                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync Interval</Text>
+                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync interval</Text>
                     <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
                       How often to upload data to server
                     </Text>
@@ -284,7 +292,7 @@ export function SyncStrategySettings({
                   {isCustomSyncInterval && (
                     <View style={styles.customSyncInput}>
                       <NumericInput
-                        label="Custom Sync Interval"
+                        label="Custom sync interval"
                         value={syncIntervalInput}
                         onChange={(val) => {
                           setSyncIntervalInput(val)
@@ -315,7 +323,7 @@ export function SyncStrategySettings({
                   {showOverlandBatchSize && (
                     <View style={styles.customSyncInput}>
                       <NumericInput
-                        label="Batch Size"
+                        label="Batch size"
                         value={overlandBatchSizeInput}
                         onChange={(val) => {
                           setOverlandBatchSizeInput(val)
@@ -346,7 +354,7 @@ export function SyncStrategySettings({
 
                   {/* Sync Condition */}
                   <View style={styles.settingRowSpaced}>
-                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync Only On</Text>
+                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync only on</Text>
                     <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
                       {settings.syncCondition === "any" && "Upload on any network connection"}
                       {settings.syncCondition === "wifi_any" && "Upload only when connected to Wi-Fi"}
@@ -438,10 +446,11 @@ export function SyncStrategySettings({
 
             {/* Quality Parameters Group */}
             <View style={styles.paramGroup}>
-              <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Quality Filters</Text>
+              <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Quality filters</Text>
 
-              <SettingRow label="Filter Inaccurate Locations" hint="Reject fixes the GPS chip reports as imprecise">
-                <Switch
+              <SettingRow label="Filter inaccurate locations" hint="Reject fixes the GPS chip reports as imprecise">
+                <Toggle
+                  accessibilityLabel="Filter inaccurate locations"
                   value={settings.filterInaccurateLocations}
                   onValueChange={(value) =>
                     onImmediateSave({
@@ -449,18 +458,13 @@ export function SyncStrategySettings({
                       filterInaccurateLocations: value
                     })
                   }
-                  trackColor={{
-                    false: colors.border,
-                    true: colors.primary + "80"
-                  }}
-                  thumbColor={settings.filterInaccurateLocations ? colors.primary : colors.border}
                 />
               </SettingRow>
 
               {settings.filterInaccurateLocations && (
                 <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
                   <NumericInput
-                    label="Accuracy Threshold"
+                    label="Accuracy threshold"
                     value={accuracyThresholdInput}
                     onChange={(val) => handleNumericChange("accuracyThreshold", val, 1)}
                     onBlur={() => handleNumericBlur("accuracyThreshold", 1)}
@@ -481,7 +485,7 @@ export function SyncStrategySettings({
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   },
   presetSpacer: {
     height: 8
@@ -490,14 +494,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12
+    paddingVertical: space.md
   },
   advancedText: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold
   },
   advancedPanel: {
-    marginTop: 16
+    marginTop: space.lg
   },
   customBanner: {
     padding: 14,
@@ -507,21 +511,19 @@ const styles = StyleSheet.create({
   bannerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8
+    gap: space.sm
   },
   customBannerText: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.medium
   },
   paramGroup: {
-    marginBottom: 4
+    marginBottom: space.xs
   },
   paramGroupTitle: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.bold,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 16,
+    marginBottom: space.lg,
     opacity: 0.6
   },
   settingBlock: {
@@ -530,17 +532,17 @@ const styles = StyleSheet.create({
   blockLabel: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: 4
+    marginBottom: space.xs
   },
   blockHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
-    marginBottom: 12,
+    marginBottom: space.md,
     lineHeight: 18
   },
   optionsGrid: {
     flexDirection: "row",
-    gap: 8,
+    gap: space.sm,
     flexWrap: "wrap"
   },
   gridOption: {
@@ -551,58 +553,58 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   gridLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   settingRowSpaced: {
-    marginTop: 16
+    marginTop: space.lg
   },
   nestedSetting: {
-    marginTop: 12,
-    paddingLeft: 16,
+    marginTop: space.md,
+    paddingLeft: space.lg,
     borderLeftWidth: 3
   },
   customSyncInput: {
-    marginTop: 12
+    marginTop: space.md
   },
   syncConditionChips: {
     flexDirection: "row",
     gap: 6
   },
   syncConditionChip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: space.md,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1
   },
   syncConditionChipText: {
     ...fonts.medium,
-    fontSize: 12
+    fontSize: fontSizes.caption
   },
   ssidRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
-    gap: 8
+    marginTop: space.sm,
+    gap: space.sm
   },
   ssidInput: {
     flex: 1,
     borderWidth: 1.5,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    fontSize: 13,
+    fontSize: fontSizes.description,
     fontFamily: "monospace"
   },
   ssidFillButton: {
     alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     borderWidth: 1
   },
   ssidFillText: {
     ...fonts.medium,
-    fontSize: 12
+    fontSize: fontSizes.caption
   }
 })

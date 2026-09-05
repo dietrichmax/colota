@@ -11,8 +11,8 @@ import type { NativeSyntheticEvent } from "react-native"
 import { Compass, Info, X } from "lucide-react-native"
 import { useIsFocused } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
-import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_LIGHT, MAP_STYLE_URL_DARK } from "../../../constants"
-import { fonts } from "../../../styles/typography"
+import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_DARK, MAP_STYLE_URL_LIGHT, size, space } from "../../../constants"
+import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
 
@@ -196,7 +196,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
       {showCompass && (
         <MapActionButton onPress={handleCompassPress} style={[mapActionStyles.right, styles.compassPosition]}>
           <View style={{ transform: [{ rotate: `${-heading}deg` }] }}>
-            <Compass size={20} color={colors.textLight} />
+            <Compass size={size.icon.md} color={colors.textLight} />
           </View>
         </MapActionButton>
       )}
@@ -210,7 +210,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
             accessibilityRole="button"
             accessibilityLabel="Show map attribution"
           >
-            <Info size={20} color={colors.textLight} />
+            <Info size={size.icon.md} color={colors.textLight} />
           </MapActionButton>
 
           <Modal
@@ -232,7 +232,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
                   accessibilityLabel="Close"
                   style={({ pressed }) => [styles.attributionClose, pressed && { opacity: colors.pressedOpacity }]}
                 >
-                  <X size={20} color={colors.textLight} />
+                  <X size={size.icon.md} color={colors.textLight} />
                 </Pressable>
                 {attributionLinks.map((link) => (
                   <Pressable
@@ -263,17 +263,17 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.4)",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 32
+    paddingHorizontal: space.xxl
   },
   attributionPopup: {
     maxWidth: 320,
     width: "100%",
-    paddingLeft: 16,
+    paddingLeft: space.lg,
     paddingRight: 36,
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 1,
-    gap: 8,
+    gap: space.sm,
     elevation: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -281,12 +281,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6
   },
   attributionPopupText: {
-    fontSize: 13
+    fontSize: fontSizes.description
   },
   attributionClose: {
     position: "absolute",
     top: 6,
     right: 6,
-    padding: 4
+    padding: space.xs
   }
 })

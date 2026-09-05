@@ -6,9 +6,10 @@
 import React from "react"
 import { Text, StyleSheet, View, Pressable } from "react-native"
 import type { LucideIcon } from "lucide-react-native"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
 import { useTheme } from "../../hooks/useTheme"
 import { RadioDot } from "./RadioDot"
+import { size, space } from "../../constants"
 
 export const FormatOption = ({
   icon: Icon,
@@ -38,7 +39,7 @@ export const FormatOption = ({
     >
       <View style={styles.formatContent}>
         <View style={styles.leftContent}>
-          <Icon size={22} color={colors.textLight} />
+          <Icon size={size.icon.md} color={colors.textLight} />
           <View style={styles.textContent}>
             <View style={styles.titleRow}>
               <Text
@@ -74,7 +75,7 @@ export const FormatOption = ({
 
 const styles = StyleSheet.create({
   formatOption: {
-    paddingVertical: 8
+    paddingVertical: space.sm
   },
   formatContent: {
     flexDirection: "row",
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 16
+    gap: space.lg
   },
   textContent: {
     flex: 1
@@ -92,31 +93,31 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: space.sm,
     marginBottom: 2
   },
   formatTitle: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
     letterSpacing: -0.2
   },
   extensionBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: space.sm,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1
   },
   extensionText: {
-    fontSize: 10,
+    fontSize: fontSizes.micro,
     ...fonts.bold,
     letterSpacing: 0.3
   },
   formatSubtitle: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     marginBottom: 2
   },
   formatDescription: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     lineHeight: 16
   }
 })

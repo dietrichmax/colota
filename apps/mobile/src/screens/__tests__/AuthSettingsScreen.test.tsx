@@ -61,6 +61,15 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     FloatingSaveIndicator: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
@@ -112,7 +121,8 @@ describe("AuthSettingsScreen", () => {
       const { getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Authentication & Headers")).toBeTruthy()
+        // The screen name lives in the navigation header now, so anchor on the body's own caption.
+        expect(getByText("Secure your endpoint connection")).toBeTruthy()
       })
     })
   })
@@ -124,8 +134,8 @@ describe("AuthSettingsScreen", () => {
       await waitFor(() => {
         expect(getByText("None")).toBeTruthy()
       })
-      expect(getByText("Basic Auth")).toBeTruthy()
-      expect(getByText("Bearer Token")).toBeTruthy()
+      expect(getByText("Basic auth")).toBeTruthy()
+      expect(getByText("Bearer token")).toBeTruthy()
     })
 
     it("defaults to None with no credential fields visible", async () => {
@@ -147,7 +157,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
 
       expect(getByText("Username")).toBeTruthy()
       expect(getByText("Password")).toBeTruthy()
@@ -160,7 +170,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Bearer Token"))
+      fireEvent.press(getByText("Bearer token"))
 
       expect(getByText("Token")).toBeTruthy()
     })
@@ -172,10 +182,10 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
       expect(getByText("Username")).toBeTruthy()
 
-      fireEvent.press(getByText("Bearer Token"))
+      fireEvent.press(getByText("Bearer token"))
       expect(queryByText("Username")).toBeNull()
       expect(queryByText("Password")).toBeNull()
       expect(getByText("Token")).toBeTruthy()
@@ -188,7 +198,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Bearer Token"))
+      fireEvent.press(getByText("Bearer token"))
       expect(getByText("Token")).toBeTruthy()
 
       fireEvent.press(getByText("None"))
@@ -202,7 +212,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
 
       expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
     })
@@ -248,7 +258,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
 
       const usernameInput = getByPlaceholderText("Username")
       fireEvent.changeText(usernameInput, "newuser")

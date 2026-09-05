@@ -139,6 +139,15 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children, style }: any) => R.createElement(View, { style }, children)
@@ -217,7 +226,7 @@ describe("OfflineMapsScreen", () => {
     fireEvent.changeText(getByPlaceholderText("Home area, Trail..."), "my area")
     fireEvent.press(getByTestId("download-btn"))
     await waitFor(() => {
-      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Mobile Data" }))
+      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Mobile data" }))
     })
   })
 
@@ -229,7 +238,7 @@ describe("OfflineMapsScreen", () => {
     fireEvent.changeText(getByPlaceholderText("Home area, Trail..."), "my area")
     fireEvent.press(getByTestId("download-btn"))
     await waitFor(() => {
-      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Mobile Data" }))
+      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Mobile data" }))
       expect(mockCreateOfflinePack).not.toHaveBeenCalled()
     })
   })
@@ -307,7 +316,7 @@ describe("OfflineMapsScreen", () => {
     await waitForMapReady(findByText)
     fireEvent.changeText(getByPlaceholderText("Home area, Trail..."), "my area")
     fireEvent.press(getByTestId("download-btn"))
-    fireEvent.press(await findByText("Cancel Download"))
+    fireEvent.press(await findByText("Cancel download"))
     await waitFor(() => {
       expect(mockDeleteOfflineArea).toHaveBeenCalledWith("my area")
       expect(mockRemoveOfflineAreaBounds).toHaveBeenCalledWith("my area")

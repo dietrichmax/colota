@@ -69,6 +69,15 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
@@ -221,7 +230,7 @@ describe("GeofenceEditorScreen", () => {
     await waitFor(() => {
       expect(mockShowConfirm).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: "Delete Geofence",
+          title: "Delete geofence",
           message: 'Delete "Home"?',
           confirmText: "Delete",
           destructive: true

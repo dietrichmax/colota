@@ -4,18 +4,19 @@
  */
 
 import React, { useState, useMemo } from "react"
-import { View, Text, ScrollView, StyleSheet, Switch } from "react-native"
+import { View, Text, ScrollView, StyleSheet } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Container, Card, Button, SectionTitle } from "../components"
-import { fonts } from "../styles/typography"
-import { CircleAlert, CircleCheck, Import } from "lucide-react-native"
+import { Button, Card, Container, SectionTitle, Toggle } from "../components"
+import { fontSizes, fonts } from "../styles/typography"
+import { CircleAlert, CircleCheckBig, Import } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
 import { type Settings } from "../types/global"
 import { validateConfig, detectPreset, type ConfigEntry, type ValidationResult } from "../utils/setupConfig"
 import { decodeConfig } from "../utils/setupLink"
+import { space } from "../constants"
 
 export function SetupImportScreen({ route, navigation }: any) {
   const { colors } = useTheme()
@@ -166,12 +167,12 @@ export function SetupImportScreen({ route, navigation }: any) {
             <View style={styles.headerRow}>
               <CircleAlert size={28} color={colors.error} />
               <View style={styles.headerText}>
-                <Text style={[styles.title, { color: colors.text }]}>Invalid Configuration</Text>
+                <Text style={[styles.title, { color: colors.text }]}>Invalid configuration</Text>
                 <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{result.error}</Text>
               </View>
             </View>
           </Card>
-          <Button title="Go Back" onPress={handleCancel} variant="primary" />
+          <Button title="Go back" onPress={handleCancel} variant="primary" />
         </ScrollView>
       </Container>
     )
@@ -185,7 +186,6 @@ export function SetupImportScreen({ route, navigation }: any) {
           <View style={styles.headerRow}>
             <Import size={28} color={colors.primary} />
             <View style={styles.headerText}>
-              <Text style={[styles.title, { color: colors.text }]}>Import Configuration</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 A setup link wants to apply {result.entries.length} setting{result.entries.length !== 1 ? "s" : ""}
               </Text>
@@ -215,7 +215,12 @@ export function SetupImportScreen({ route, navigation }: any) {
                     Off: imports are added as new entries
                   </Text>
                 </View>
-                <Switch testID="replace-imports-switch" value={replaceByName} onValueChange={setReplaceByName} />
+                <Toggle
+                  accessibilityLabel="Replace entries with the same name"
+                  testID="replace-imports-switch"
+                  value={replaceByName}
+                  onValueChange={setReplaceByName}
+                />
               </View>
             </Card>
           </View>
@@ -223,10 +228,10 @@ export function SetupImportScreen({ route, navigation }: any) {
 
         <View style={styles.actions}>
           <Button
-            title="Apply Configuration"
+            title="Apply configuration"
             onPress={handleApply}
             variant="primary"
-            icon={CircleCheck}
+            icon={CircleCheckBig}
             loading={applying}
             disabled={applying}
           />
@@ -239,31 +244,31 @@ export function SetupImportScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   content: {
-    padding: 16,
+    padding: space.lg,
     paddingBottom: 40
   },
   headerCard: {
-    marginBottom: 16
+    marginBottom: space.lg
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12
+    gap: space.md
   },
   headerText: {
     flex: 1
   },
   title: {
-    fontSize: 18,
+    fontSize: fontSizes.heading,
     ...fonts.bold
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
     marginTop: 2
   },
   section: {
-    marginTop: 8
+    marginTop: space.sm
   },
   settingRow: {
     flexDirection: "row",
@@ -275,34 +280,34 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth
   },
   settingLabel: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold
   },
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 6,
-    gap: 12
+    gap: space.md
   },
   toggleText: {
     flex: 1
   },
   toggleLabel: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold
   },
   toggleHint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     marginTop: 2
   },
   settingValue: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
     maxWidth: "60%",
     textAlign: "right"
   },
   actions: {
-    marginTop: 24
+    marginTop: space.xl
   }
 })

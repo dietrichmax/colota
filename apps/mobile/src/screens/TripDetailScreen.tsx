@@ -19,7 +19,7 @@ import {
   type LucideIcon
 } from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { Card } from "../components/ui/Card"
 import { Container } from "../components/ui/Container"
 import { TrackMap } from "../components/features/inspector/TrackMap"
@@ -27,13 +27,14 @@ import { InteractiveLineChart } from "../components/features/inspector/Interacti
 import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
-import { HIT_SLOP_LG } from "../constants"
+import { HIT_SLOP_LG, size, space } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
 import { BOUNDARY_ACTION_SPLIT } from "../types/global"
 import type { Trip, ThemeColors, BoundaryAction } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
+import { radius } from "@colota/shared"
 
 const MAX_BARS = 120
 
@@ -217,7 +218,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         hitSlop={8}
         style={({ pressed }) => [styles.headerBtn, (pressed || deleting) && { opacity: colors.pressedOpacity }]}
       >
-        <Trash2 size={20} color={colors.error} />
+        <Trash2 size={size.icon.md} color={colors.error} />
       </Pressable>
     ),
     [handleDelete, deleting, colors.error, colors.pressedOpacity]
@@ -271,7 +272,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               hitSlop={HIT_SLOP_LG}
               style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
             >
-              <ChevronLeft size={24} color={prevTrip ? colors.primary : colors.textDisabled} />
+              <ChevronLeft size={size.icon.lg} color={prevTrip ? colors.primary : colors.textDisabled} />
             </Pressable>
             <View style={styles.headerTitleCenter}>
               <View style={styles.headerTitleLine}>
@@ -288,7 +289,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               hitSlop={HIT_SLOP_LG}
               style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
             >
-              <ChevronRight size={24} color={nextTrip ? colors.primary : colors.textDisabled} />
+              <ChevronRight size={size.icon.lg} color={nextTrip ? colors.primary : colors.textDisabled} />
             </Pressable>
           </View>
         </View>
@@ -297,7 +298,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         <View style={[styles.statsGrid, styles.section]}>
           <StatCard icon={Route} label="Distance" value={formatDistance(trip.distance)} colors={colors} />
           <StatCard icon={Clock} label="Duration" value={formatDuration(duration)} colors={colors} />
-          <StatCard icon={Gauge} label="Avg Speed" value={formatSpeed(stats.avgSpeed)} colors={colors} />
+          <StatCard icon={Gauge} label="Avg speed" value={formatSpeed(stats.avgSpeed)} colors={colors} />
           <StatCard icon={MapPin} label="Points" value={String(trip.locationCount)} colors={colors} />
           {stats.elevationGain > 0 && (
             <StatCard
@@ -385,8 +386,8 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               pressed && { opacity: 0.8 }
             ]}
           >
-            <Share size={16} color={colors.textOnPrimary} />
-            <Text style={[styles.exportBtnText, { color: colors.textOnPrimary }]}>Export Trip</Text>
+            <Share size={size.icon.sm} color={colors.textOnPrimary} />
+            <Text style={[styles.exportBtnText, { color: colors.textOnPrimary }]}>Export trip</Text>
           </Pressable>
 
           {showExport && (
@@ -425,7 +426,7 @@ function StatCard({
 }) {
   return (
     <Card style={styles.statCard}>
-      <Icon size={16} color={colors.primary} />
+      <Icon size={size.icon.sm} color={colors.primary} />
       <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
     </Card>
@@ -434,11 +435,11 @@ function StatCard({
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: 32
+    paddingBottom: space.xxl
   },
   section: {
-    paddingHorizontal: 16,
-    marginTop: 12
+    paddingHorizontal: space.lg,
+    marginTop: space.md
   },
   mapContainer: {
     height: 480
@@ -451,7 +452,7 @@ const styles = StyleSheet.create({
   headerTitleCenter: {
     flex: 1,
     alignItems: "center",
-    gap: 4
+    gap: space.xs
   },
   headerTitleLine: {
     flexDirection: "row",
@@ -459,7 +460,7 @@ const styles = StyleSheet.create({
     gap: 10
   },
   navBtn: {
-    padding: 4
+    padding: space.xs
   },
   dot: {
     width: 12,
@@ -467,91 +468,90 @@ const styles = StyleSheet.create({
     borderRadius: 6
   },
   title: {
-    fontSize: 20,
+    fontSize: fontSizes.cardTitle,
     ...fonts.bold
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
     textAlign: "center"
   },
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8
+    gap: space.sm
   },
   statCard: {
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    gap: space.xs,
+    paddingVertical: space.md,
+    paddingHorizontal: space.sm,
     minWidth: "30%",
     flex: 1
   },
   statValue: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.bold
   },
   statLabel: {
-    fontSize: 11,
-    ...fonts.regular,
-    textTransform: "uppercase"
+    fontSize: fontSizes.small,
+    ...fonts.regular
   },
   chartCard: {
-    padding: 12
+    padding: space.md
   },
   chartTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8
+    marginBottom: space.sm
   },
   chartTitle: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   chartRange: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.regular
   },
   chartLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 4,
+    marginTop: space.xs,
     paddingLeft: 40
   },
   chartLabel: {
-    fontSize: 10,
+    fontSize: fontSizes.micro,
     ...fonts.regular
   },
   exportBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: space.sm,
     paddingVertical: 14
   },
   exportBtnText: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.semiBold
   },
   exportRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 8,
-    marginTop: 12
+    gap: space.sm,
+    marginTop: space.md
   },
   exportChip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: space.sm,
+    borderRadius: radius.sm,
     borderWidth: 1
   },
   exportChipText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.bold
   },
   headerBtn: {
-    padding: 8
+    padding: space.sm
   }
 })

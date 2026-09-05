@@ -7,10 +7,11 @@ import React, { useState, useMemo, useCallback, useRef } from "react"
 import { View, Text, Pressable, StyleSheet, LayoutAnimation } from "react-native"
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { formatDistance } from "../../../utils/geo"
 import { pad2 } from "../../../utils/format"
-import { HIT_SLOP_LG } from "../../../constants"
+import { HIT_SLOP_LG, size, space } from "../../../constants"
+import { radius } from "@colota/shared"
 
 interface CalendarPickerProps {
   date: Date
@@ -166,7 +167,7 @@ export function CalendarPicker({
           hitSlop={HIT_SLOP_LG}
           style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
         >
-          <ChevronLeft size={22} color={colors.primary} />
+          <ChevronLeft size={size.icon.md} color={colors.primary} />
         </Pressable>
 
         <Pressable
@@ -180,7 +181,7 @@ export function CalendarPicker({
                 <Text style={[styles.todayBadgeText, { color: colors.primary }]}>Today</Text>
               </View>
             )}
-            <Calendar size={14} color={colors.textSecondary} style={styles.calendarIcon} />
+            <Calendar size={size.icon.sm} color={colors.textSecondary} style={styles.calendarIcon} />
           </View>
           <Text style={[styles.countText, { color: colors.textSecondary }]}>
             {locationCount} {locationCount === 1 ? "location" : "locations"}
@@ -194,7 +195,7 @@ export function CalendarPicker({
           style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
           disabled={isToday}
         >
-          <ChevronRight size={22} color={isToday ? colors.textDisabled : colors.primary} />
+          <ChevronRight size={size.icon.md} color={isToday ? colors.textDisabled : colors.primary} />
         </Pressable>
       </View>
 
@@ -222,7 +223,7 @@ export function CalendarPicker({
               hitSlop={HIT_SLOP_LG}
               style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
             >
-              <ChevronLeft size={18} color={colors.primary} />
+              <ChevronLeft size={size.icon.md} color={colors.primary} />
             </Pressable>
             <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
             <Pressable
@@ -231,7 +232,7 @@ export function CalendarPicker({
               style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
               disabled={isFutureMonth}
             >
-              <ChevronRight size={18} color={isFutureMonth ? colors.textDisabled : colors.primary} />
+              <ChevronRight size={size.icon.md} color={isFutureMonth ? colors.textDisabled : colors.primary} />
             </Pressable>
           </View>
 
@@ -305,7 +306,7 @@ export function CalendarPicker({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 12,
+    paddingHorizontal: space.md,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth
   },
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between"
   },
   navBtn: {
-    padding: 8
+    padding: space.sm
   },
   dateContainer: {
     alignItems: "center",
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
     marginTop: 1
   },
   dateText: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.bold
   },
   todayBadge: {
@@ -339,49 +340,49 @@ const styles = StyleSheet.create({
     borderRadius: 6
   },
   todayBadgeText: {
-    fontSize: 10,
+    fontSize: fontSizes.micro,
     ...fonts.bold
   },
   countText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     marginTop: 2
   },
   todayBtn: {
     alignSelf: "center",
-    marginTop: 8,
-    paddingHorizontal: 16,
+    marginTop: space.sm,
+    paddingHorizontal: space.lg,
     paddingVertical: 6,
     borderRadius: 14
   },
   todayText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.semiBold
   },
   calendarContainer: {
-    marginTop: 12
+    marginTop: space.md
   },
   monthRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8
+    marginBottom: space.sm
   },
   monthNav: {
-    padding: 8
+    padding: space.sm
   },
   monthLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   weekdayRow: {
     flexDirection: "row",
-    marginBottom: 4
+    marginBottom: space.xs
   },
   weekdayText: {
     flex: 1,
     textAlign: "center",
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.semiBold
   },
   daysGrid: {
@@ -390,19 +391,19 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width: "14.28%",
-    paddingVertical: 4,
+    paddingVertical: space.xs,
     alignItems: "center",
     justifyContent: "center"
   },
   dayCircle: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     alignItems: "center",
     justifyContent: "center"
   },
   dayText: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   },
   dayDist: {

@@ -8,8 +8,10 @@ import { Text, StyleSheet, View, Pressable } from "react-native"
 import { Check, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import { useTracking } from "../../../contexts/TrackingProvider"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { Card } from "../../ui/Card"
+import { size, space } from "../../../constants"
+import { radius } from "@colota/shared"
 
 interface WelcomeCardProps {
   settings: Settings
@@ -42,7 +44,7 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
           }
         ]}
       >
-        {completed && <Check size={13} color={colors.success} />}
+        {completed && <Check size={size.icon.sm} color={colors.success} />}
       </View>
       <Text
         style={[
@@ -53,7 +55,7 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
       >
         {label}
       </Text>
-      {onPress && !completed && <ChevronRight size={18} color={colors.textLight} />}
+      {onPress && !completed && <ChevronRight size={size.icon.md} color={colors.textLight} />}
     </View>
   )
 
@@ -135,21 +137,21 @@ export function WelcomeCard({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16
+    marginBottom: space.lg
   },
   title: {
-    fontSize: 20,
+    fontSize: fontSizes.cardTitle,
     ...fonts.bold,
-    marginBottom: 4
+    marginBottom: space.xs
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.regular,
-    marginBottom: 16
+    marginBottom: space.lg
   },
   checklist: {
-    gap: 12,
-    marginBottom: 16
+    gap: space.md,
+    marginBottom: space.lg
   },
   checklistItem: {
     flexDirection: "row",
@@ -158,14 +160,14 @@ const styles = StyleSheet.create({
   checkCircle: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12
+    marginRight: space.md
   },
   checklistLabel: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.medium,
     flex: 1
   },
@@ -174,11 +176,11 @@ const styles = StyleSheet.create({
   },
   linkRow: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 16
+    gap: space.lg,
+    marginBottom: space.lg
   },
   link: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   dismissButton: {
@@ -188,7 +190,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5
   },
   dismissText: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   }
 })

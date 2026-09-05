@@ -8,6 +8,8 @@ import { ThemeColors } from "../../types/global"
 import { useTheme } from "../../hooks/useTheme"
 import { logger } from "../../utils/logger"
 import { fonts, fontSizes } from "../../styles/typography"
+import { space } from "../../constants"
+import { radius } from "@colota/shared"
 
 interface ErrorBoundaryInternalProps {
   children: React.ReactNode
@@ -55,7 +57,7 @@ class ErrorBoundaryInternal extends Component<ErrorBoundaryInternalProps, ErrorB
             ]}
             onPress={this.handleReset}
           >
-            <Text style={[styles.errorButtonText, { color: colors.textOnPrimary }]}>Try Again</Text>
+            <Text style={[styles.errorButtonText, { color: colors.textOnPrimary }]}>Try again</Text>
           </Pressable>
         </View>
       )
@@ -93,9 +95,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20
   },
   errorButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8
+    paddingHorizontal: space.xl,
+    paddingVertical: space.md,
+    borderRadius: radius.sm
   },
   errorButtonText: {
     fontSize: fontSizes.label,

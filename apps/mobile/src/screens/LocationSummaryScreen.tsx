@@ -23,14 +23,15 @@ import { useTheme } from "../hooks/useTheme"
 import { DailyStat } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { formatDistance, formatDuration, startOfDaySec } from "../utils/geo"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
+import { size, space } from "../constants"
 
 type Period = "week" | "month" | "30days"
 
 const PERIOD_OPTIONS = [
-  { value: "week" as const, label: "This Week" },
-  { value: "month" as const, label: "This Month" },
+  { value: "week" as const, label: "This week" },
+  { value: "month" as const, label: "This month" },
   { value: "30days" as const, label: "Last 30 Days" }
 ]
 const COUNT_UP_DURATION = 600 // ms
@@ -159,7 +160,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
             <Text style={[styles.dayLabel, { color: colors.text }]}>{formatDayLabel(item.day)}</Text>
             <View style={styles.dayHeaderRight}>
               <Text style={[styles.dayDistance, { color: colors.primary }]}>{formatDistance(item.distanceMeters)}</Text>
-              <ChevronRight size={14} color={colors.textDisabled} />
+              <ChevronRight size={size.icon.sm} color={colors.textDisabled} />
             </View>
           </View>
           <View style={styles.dayStats}>
@@ -181,7 +182,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
     () => (
       <View style={styles.summaryGrid}>
         <Card style={styles.summaryCard}>
-          <Route size={16} color={colors.primary} />
+          <Route size={size.icon.sm} color={colors.primary} />
           <AnimatedNumber
             value={summary.totalDistance}
             format={(n) => formatDistance(n)}
@@ -191,7 +192,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
         </Card>
 
         <Card style={styles.summaryCard}>
-          <MapPin size={16} color={colors.primary} />
+          <MapPin size={size.icon.sm} color={colors.primary} />
           <AnimatedNumber
             value={summary.totalTrips}
             format={(n) => String(n)}
@@ -201,17 +202,17 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
         </Card>
 
         <Card style={styles.summaryCard}>
-          <Calendar size={16} color={colors.primary} />
+          <Calendar size={size.icon.sm} color={colors.primary} />
           <AnimatedNumber
             value={summary.activeDays}
             format={(n) => String(n)}
             style={[styles.summaryValue, { color: colors.text }]}
           />
-          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Active Days</Text>
+          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Active days</Text>
         </Card>
 
         <Card style={styles.summaryCard}>
-          <TrendingUp size={16} color={colors.primary} />
+          <TrendingUp size={size.icon.sm} color={colors.primary} />
           <AnimatedNumber
             value={summary.avgDistance}
             format={(n) => formatDistance(n)}
@@ -262,10 +263,10 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    marginBottom: 8
+    paddingHorizontal: space.lg,
+    paddingTop: space.md,
+    paddingBottom: space.sm,
+    marginBottom: space.sm
   },
   loadingContainer: {
     flex: 1,
@@ -273,63 +274,62 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   listContent: {
-    paddingHorizontal: 12,
+    paddingHorizontal: space.md,
     paddingBottom: 20
   },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: 16
+    marginBottom: space.lg
   },
   summaryCard: {
     flexBasis: "45%",
     flexGrow: 1,
     flexShrink: 0,
     alignItems: "center",
-    padding: 12,
+    padding: space.md,
     gap: 2
   },
   summaryValue: {
-    fontSize: 18,
+    fontSize: fontSizes.heading,
     ...fonts.bold
   },
   summaryLabel: {
-    fontSize: 10,
-    ...fonts.semiBold,
-    textTransform: "uppercase"
+    fontSize: fontSizes.micro,
+    ...fonts.semiBold
   },
   dayCard: {
-    marginBottom: 8,
-    padding: 12
+    marginBottom: space.sm,
+    padding: space.md
   },
   dayHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4
+    marginBottom: space.xs
   },
   dayHeaderRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4
+    gap: space.xs
   },
   dayLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.bold
   },
   dayDistance: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.bold
   },
   dayStats: {
     flexDirection: "row",
-    gap: 16
+    gap: space.lg
   },
   dayStat: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular
   },
   empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: 15, ...fonts.semiBold }
+  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold }
 })

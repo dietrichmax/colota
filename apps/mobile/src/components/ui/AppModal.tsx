@@ -5,17 +5,18 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
-import { Info, AlertCircle, AlertTriangle, CheckCircle } from "lucide-react-native"
+import { Info, CircleAlert, TriangleAlert, CircleCheckBig } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
-import { fontSizes } from "@colota/shared"
+import { fontSizes, fonts } from "../../styles/typography"
+import { radius } from "@colota/shared"
 import { type ModalRequest, type AlertVariant, registerModalHandler } from "../../services/modalService"
+import { space } from "../../constants"
 
 const VARIANT_ICONS = {
   info: Info,
-  error: AlertCircle,
-  warning: AlertTriangle,
-  success: CheckCircle
+  error: CircleAlert,
+  warning: TriangleAlert,
+  success: CircleCheckBig
 } as const
 
 export function AppModal() {
@@ -137,11 +138,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 32
+    paddingHorizontal: space.xxl
   },
   card: {
     width: "100%",
-    padding: 24,
+    padding: space.xl,
     elevation: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -155,13 +156,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
-    marginBottom: 16
+    marginBottom: space.lg
   },
   title: {
     fontSize: fontSizes.cardTitle,
     ...fonts.bold,
     textAlign: "center",
-    marginBottom: 12
+    marginBottom: space.md
   },
   body: {
     fontSize: fontSizes.body,
@@ -171,8 +172,8 @@ const styles = StyleSheet.create({
   },
   buttons: {
     flexDirection: "row",
-    gap: 12,
-    marginTop: 24
+    gap: space.md,
+    marginTop: space.xl
   },
   buttonsVertical: {
     flexDirection: "column"
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     alignItems: "center"
   },
   buttonText: {

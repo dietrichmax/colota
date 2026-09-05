@@ -11,6 +11,8 @@ import { SectionTitle, Card, Divider, Button, FieldMessage } from "../../index"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { ClientCertInfoResult } from "../../../types/global"
 import { logger } from "../../../utils/logger"
+import { space } from "../../../constants"
+import { radius } from "@colota/shared"
 
 const EXPIRY_WARNING_DAYS = 14
 
@@ -328,31 +330,31 @@ function shortenDn(dn: string): string {
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   },
   muted: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
     lineHeight: 18
   },
   fieldLabel: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: 8
+    marginBottom: space.sm
   },
   input: {
     borderWidth: 1.5,
     padding: 14,
-    borderRadius: 12,
-    fontSize: 15
+    borderRadius: radius.md,
+    fontSize: fontSizes.input
   },
   importButton: {
-    marginTop: 12
+    marginTop: space.md
   },
   buttonRow: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 12,
+    gap: space.sm,
+    marginTop: space.md,
     alignItems: "center"
   },
   flex1: {
@@ -362,12 +364,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10
   },
   detailLabel: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.medium,
     marginBottom: 2
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.regular
   }
 })

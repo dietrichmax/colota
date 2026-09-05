@@ -63,7 +63,10 @@ jest.mock("../../map/MapCenterButton", () => ({
 }))
 
 jest.mock("../../../../styles/typography", () => ({
-  fonts: { regular: {}, bold: {}, semiBold: {} }
+  fonts: { regular: {}, bold: {}, semiBold: {} },
+  // The real scale, not stubs: these tests render styles that read a named size, and a
+  // stubbed object would let a renamed key through.
+  fontSizes: jest.requireActual("@colota/shared").fontSizes
 }))
 
 jest.mock("../../../../utils/geo", () => ({

@@ -22,7 +22,7 @@ describe("NumericInput", () => {
   function renderInput(overrides: Partial<React.ComponentProps<typeof NumericInput>> = {}) {
     return render(
       <NumericInput
-        label="Test Label"
+        label="Test label"
         value="10"
         onChange={mockOnChange}
         onBlur={mockOnBlur}
@@ -36,7 +36,7 @@ describe("NumericInput", () => {
   it("renders label, value, and unit", () => {
     const { getByText, getByDisplayValue } = renderInput()
 
-    expect(getByText("Test Label")).toBeTruthy()
+    expect(getByText("Test label")).toBeTruthy()
     expect(getByDisplayValue("10")).toBeTruthy()
     expect(getByText("seconds")).toBeTruthy()
   })

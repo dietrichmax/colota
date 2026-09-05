@@ -96,6 +96,15 @@ jest.mock("../../components", () => {
   const R = require("react")
   const RN = require("react-native")
   return {
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Button: function (props: any) {
       return R.createElement(
         RN.Pressable,
@@ -168,7 +177,7 @@ describe("DataManagementScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Data Management")).toBeTruthy()
+      expect(getByText("Database statistics")).toBeTruthy()
     })
   })
 
@@ -176,7 +185,7 @@ describe("DataManagementScreen", () => {
     const { getByText, getAllByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Total Locations")).toBeTruthy()
+      expect(getByText("Total locations")).toBeTruthy()
       expect(getByText("105")).toBeTruthy()
       expect(getByText("Sent")).toBeTruthy()
       // "100" appears as stat value and as badge count for Clear Sent History
@@ -194,7 +203,7 @@ describe("DataManagementScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Sync Now")).toBeTruthy()
+      expect(getByText("Sync now")).toBeTruthy()
     })
   })
 
@@ -212,7 +221,7 @@ describe("DataManagementScreen", () => {
     const { getByText, getAllByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Clear Sent History")).toBeTruthy()
+      expect(getByText("Clear sent history")).toBeTruthy()
       // "100" appears both as the Sent stat and as the Clear Sent History badge
       expect(getAllByText("100").length).toBeGreaterThanOrEqual(2)
     })
@@ -222,7 +231,7 @@ describe("DataManagementScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Clear Queue")).toBeTruthy()
+      expect(getByText("Clear queue")).toBeTruthy()
     })
   })
 
@@ -230,7 +239,7 @@ describe("DataManagementScreen", () => {
     const { getByText, getByDisplayValue } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Delete Old Locations")).toBeTruthy()
+      expect(getByText("Delete old locations")).toBeTruthy()
       expect(getByDisplayValue("90")).toBeTruthy()
       expect(getByText("days")).toBeTruthy()
       expect(getByText("Delete")).toBeTruthy()
@@ -241,7 +250,7 @@ describe("DataManagementScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Optimize Database")).toBeTruthy()
+      expect(getByText("Optimize database")).toBeTruthy()
       expect(getByText("Optimize")).toBeTruthy()
     })
   })
@@ -252,8 +261,8 @@ describe("DataManagementScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("DEV TOOLS")).toBeTruthy()
-      expect(getByText("Insert Dummy Data")).toBeTruthy()
+      expect(getByText("Dev tools")).toBeTruthy()
+      expect(getByText("Insert dummy data")).toBeTruthy()
     })
   })
 
@@ -263,8 +272,8 @@ describe("DataManagementScreen", () => {
     const { queryByText } = renderScreen()
 
     await waitFor(() => {
-      expect(queryByText("DEV TOOLS")).toBeNull()
-      expect(queryByText("Insert Dummy Data")).toBeNull()
+      expect(queryByText("Dev tools")).toBeNull()
+      expect(queryByText("Insert dummy data")).toBeNull()
     })
   })
 
@@ -276,12 +285,12 @@ describe("DataManagementScreen", () => {
       expect(getAllByText("100").length).toBeGreaterThanOrEqual(1)
     })
 
-    fireEvent.press(getByText("Clear Sent History"))
+    fireEvent.press(getByText("Clear sent history"))
 
     await waitFor(() => {
       expect(mockShowConfirm).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: "Clear Sent History",
+          title: "Clear sent history",
           destructive: true
         })
       )
@@ -297,7 +306,7 @@ describe("DataManagementScreen", () => {
       const { queryByText, getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Total Locations")).toBeTruthy()
+        expect(getByText("Total locations")).toBeTruthy()
       })
 
       expect(queryByText("Sent")).toBeNull()
@@ -308,30 +317,30 @@ describe("DataManagementScreen", () => {
       const { queryByText, getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Data Management")).toBeTruthy()
+        expect(getByText("Database statistics")).toBeTruthy()
       })
 
-      expect(queryByText("QUEUE ACTIONS")).toBeNull()
-      expect(queryByText("Sync Now")).toBeNull()
+      expect(queryByText("Queue actions")).toBeNull()
+      expect(queryByText("Sync now")).toBeNull()
     })
 
     it("hides Clear Sent History and Clear Queue actions", async () => {
       const { queryByText, getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Data Management")).toBeTruthy()
+        expect(getByText("Database statistics")).toBeTruthy()
       })
 
-      expect(queryByText("Clear Sent History")).toBeNull()
-      expect(queryByText("Clear Queue")).toBeNull()
+      expect(queryByText("Clear sent history")).toBeNull()
+      expect(queryByText("Clear queue")).toBeNull()
     })
 
     it("still shows Delete Old Locations and Optimize Database", async () => {
       const { getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Delete Old Locations")).toBeTruthy()
-        expect(getByText("Optimize Database")).toBeTruthy()
+        expect(getByText("Delete old locations")).toBeTruthy()
+        expect(getByText("Optimize database")).toBeTruthy()
       })
     })
 
@@ -348,7 +357,7 @@ describe("DataManagementScreen", () => {
       const { getByText, getAllByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Delete All Locations")).toBeTruthy()
+        expect(getByText("Delete all locations")).toBeTruthy()
         // "105" appears as Total Locations stat and as Delete All badge
         expect(getAllByText("105").length).toBeGreaterThanOrEqual(2)
       })
@@ -361,12 +370,12 @@ describe("DataManagementScreen", () => {
         expect(getAllByText("105").length).toBeGreaterThanOrEqual(1)
       })
 
-      fireEvent.press(getByText("Delete All Locations"))
+      fireEvent.press(getByText("Delete all locations"))
 
       await waitFor(() => {
         expect(mockShowConfirm).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: "Delete All Locations",
+            title: "Delete all locations",
             destructive: true
           })
         )

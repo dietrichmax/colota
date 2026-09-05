@@ -7,7 +7,8 @@ import React from "react"
 import { Text, StyleSheet, View, Pressable } from "react-native"
 import { ChevronRight } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
+import { size, space } from "../../constants"
 
 type IconComponent = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
 
@@ -45,7 +46,7 @@ export function ListItem({
     >
       {Icon && (
         <View style={styles.icon}>
-          <Icon size={22} color={colors.textLight} />
+          <Icon size={size.icon.md} color={colors.textLight} />
         </View>
       )}
       <View style={styles.content}>
@@ -56,7 +57,7 @@ export function ListItem({
           </Text>
         ) : null}
       </View>
-      <TrailingIcon size={20} color={colors.textLight} />
+      <TrailingIcon size={size.icon.md} color={colors.textLight} />
     </Pressable>
   )
 }
@@ -69,19 +70,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10
   },
   icon: {
-    marginRight: 16
+    marginRight: space.lg
   },
   content: {
     flex: 1,
-    paddingRight: 8
+    paddingRight: space.sm
   },
   label: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
     marginBottom: 2
   },
   sub: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   }
 })
