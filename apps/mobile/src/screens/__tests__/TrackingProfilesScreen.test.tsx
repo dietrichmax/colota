@@ -83,6 +83,13 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
+    Button: function (props: any) {
+      return require("react").createElement(
+        require("react-native").Pressable,
+        { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+        require("react").createElement(require("react-native").Text, null, props.title)
+      )
+    },
     Toggle: function (props: any) {
       return require("react").createElement(require("react-native").Switch, {
         testID: props.testID,

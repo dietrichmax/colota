@@ -11,7 +11,7 @@ import { ProfileService } from "../services/ProfileService"
 import { showAlert } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
 import { fontSizes, fonts } from "../styles/typography"
-import { Container, SectionTitle, Card, Divider, SettingRow, NumericInput, FieldMessage } from "../components"
+import { Button, Card, Container, Divider, FieldMessage, NumericInput, SectionTitle, SettingRow } from "../components"
 import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
@@ -475,21 +475,13 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         </Card>
 
         {/* Save Button */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.saveBtn,
-            { backgroundColor: colors.primary },
-            saving && styles.saveBtnDisabled,
-            pressed && { opacity: colors.pressedOpacity }
-          ]}
+        <Button
+          title={saving ? "Saving…" : isEditing ? "Save changes" : "Create profile"}
+          icon={Check}
+          loading={saving}
+          style={styles.saveBtn}
           onPress={handleSave}
-          disabled={saving}
-        >
-          <Check size={size.icon.md} color={colors.textOnPrimary} />
-          <Text style={[styles.saveBtnText, { color: colors.textOnPrimary }]}>
-            {saving ? "Saving..." : isEditing ? "Save changes" : "Create profile"}
-          </Text>
-        </Pressable>
+        />
       </ScrollView>
     </Container>
   )
@@ -547,7 +539,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     marginTop: space.lg
   },
-  saveBtnText: { fontSize: fontSizes.label, ...fonts.semiBold },
-  saveBtnDisabled: { opacity: 0.6 },
   sectionGap: { marginTop: space.xl }
 })

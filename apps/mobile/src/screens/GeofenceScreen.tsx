@@ -12,7 +12,7 @@ import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { fontSizes, fonts } from "../styles/typography"
 import { ChevronRight, Wifi, PersonStanding, MapPinHouse, Share2 } from "lucide-react-native"
-import { Container, SectionTitle, Card } from "../components"
+import { Button, Card, Container, SectionTitle } from "../components"
 import {
   DEFAULT_MAP_ZOOM,
   GEOFENCE_ZOOM_PADDING,
@@ -31,7 +31,6 @@ import { UserLocationOverlay } from "../components/features/map/UserLocationOver
 import { logger } from "../utils/logger"
 import { formatShortDistance, shortDistanceUnit, inputToMeters } from "../utils/geo"
 import { buildGeofencesLink } from "../utils/setupLink"
-import { radius } from "@colota/shared"
 
 const GeofenceMap = React.memo(function GeofenceMap({
   tracking,
@@ -345,20 +344,11 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
                   </View>
                 </View>
 
-                <Pressable
-                  testID="place-geofence-btn"
-                  style={({ pressed }) => [
-                    styles.placeBtn,
-                    { backgroundColor: colors.primary },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
-                  onPress={startPlacingGeofence}
+                <Button
+                  title={placingGeofence ? "Tap Map to Place..." : "Place geofence"}
                   disabled={placingGeofence}
-                >
-                  <Text style={[styles.placeBtnText, { color: colors.textOnPrimary }]}>
-                    {placingGeofence ? "Tap Map to Place..." : "Place geofence"}
-                  </Text>
-                </Pressable>
+                  onPress={startPlacingGeofence}
+                />
               </Card>
             </View>
 
@@ -416,8 +406,6 @@ const styles = StyleSheet.create({
   inputCentered: {
     textAlign: "center"
   },
-  placeBtn: { padding: space.lg, borderRadius: radius.md, alignItems: "center" },
-  placeBtnText: { fontSize: fontSizes.input, ...fonts.semiBold },
   card: { marginBottom: space.md },
   row: {
     flexDirection: "row",

@@ -3,13 +3,13 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 import React, { Component } from "react"
-import { View, Text, StyleSheet, Pressable } from "react-native"
+import { View, Text, StyleSheet } from "react-native"
 import { ThemeColors } from "../../types/global"
 import { useTheme } from "../../hooks/useTheme"
 import { logger } from "../../utils/logger"
 import { fonts, fontSizes } from "../../styles/typography"
-import { space } from "../../constants"
-import { radius } from "@colota/shared"
+
+import { Button } from "./Button"
 
 interface ErrorBoundaryInternalProps {
   children: React.ReactNode
@@ -49,16 +49,7 @@ class ErrorBoundaryInternal extends Component<ErrorBoundaryInternalProps, ErrorB
           <Text style={[styles.errorMessage, { color: colors.textSecondary }]}>
             {this.state.error?.message || "An unexpected error occurred"}
           </Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.errorButton,
-              { backgroundColor: colors.primary },
-              pressed && { opacity: colors.pressedOpacity }
-            ]}
-            onPress={this.handleReset}
-          >
-            <Text style={[styles.errorButtonText, { color: colors.textOnPrimary }]}>Try again</Text>
-          </Pressable>
+          <Button title="Try again" onPress={this.handleReset} />
         </View>
       )
     }
@@ -93,14 +84,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
     paddingHorizontal: 20
-  },
-  errorButton: {
-    paddingHorizontal: space.xl,
-    paddingVertical: space.md,
-    borderRadius: radius.sm
-  },
-  errorButtonText: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold
   }
 })
