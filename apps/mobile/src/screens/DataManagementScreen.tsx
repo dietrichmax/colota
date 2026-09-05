@@ -23,7 +23,7 @@ import { useTheme } from "../hooks/useTheme"
 import { fonts, fontSizes } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
+import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator, TextField } from "../components"
 import { SAVE_SUCCESS_DISPLAY_MS, STATS_REFRESH_FAST, size, space } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"
@@ -365,20 +365,15 @@ export function DataManagementScreen({}: ScreenProps) {
                   Remove locations older than specified days
                 </Text>
                 <View style={styles.daysInputRow}>
-                  <TextInput
-                    style={[
-                      styles.daysInput,
-                      {
-                        borderColor: colors.border,
-                        color: colors.text,
-                        backgroundColor: colors.backgroundElevated
-                      }
-                    ]}
+                  <TextField
+                    testID="retention-days-input"
+                    accessibilityLabel="Days to keep"
+                    figure
+                    style={styles.daysInput}
                     keyboardType="numeric"
                     value={daysInput}
                     onChangeText={setDaysInput}
                     placeholder="90"
-                    placeholderTextColor={colors.placeholder}
                   />
                   <Text style={[styles.daysLabel, { color: colors.textSecondary }]}>days</Text>
                   <Button

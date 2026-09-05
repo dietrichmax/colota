@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useEffect, useLayoutEffect, useCallback } from "react"
-import { View, Text, StyleSheet, ScrollView, TextInput } from "react-native"
+import { View, Text, StyleSheet, ScrollView } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
 import { fontSizes, fonts } from "../styles/typography"
-import { Button, Card, ChipGroup, Container, Divider, FieldMessage, NumericInput, RadioRow, SectionTitle, SettingRow } from "../components"
+import { Button, Card, ChipGroup, Container, Divider, FieldMessage, NumericInput, RadioRow, SectionTitle, SettingRow, TextField } from "../components"
 import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
@@ -190,14 +190,10 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         <SectionTitle>Profile</SectionTitle>
         <Card>
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
-            <TextInput
-              style={[
-                styles.input,
-                { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }
-              ]}
+            <TextField
+              testID="profile-name-input"
+              label="Name"
               placeholder="e.g. Driving, Cycling..."
-              placeholderTextColor={colors.placeholder}
               value={profile.name}
               onChangeText={(val) => setProfile((prev) => ({ ...prev, name: val }))}
             />
@@ -206,13 +202,14 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           <Divider />
 
           <SettingRow label="Priority" hint="Higher number wins when multiple profiles match">
-            <TextInput
-              style={inputStyle}
+            <TextField
+              accessibilityLabel="Priority"
+              figure
+              style={styles.numInput}
               keyboardType="numeric"
               value={priorityStr}
               onChangeText={(val) => handleNumericChange(setPriorityStr, "priority", val, 0)}
               placeholder="10"
-              placeholderTextColor={colors.placeholder}
             />
           </SettingRow>
         </Card>
@@ -236,14 +233,11 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
             <>
               <Divider />
               <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Speed Threshold (km/h)</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }
-                  ]}
+                <TextField
+                  testID="speed-threshold-input"
+                  label="Speed Threshold (km/h)"
+                  figure
                   placeholder="30"
-                  placeholderTextColor={colors.placeholder}
                   value={speedKmh}
                   onChangeText={handleSpeedChange}
                   keyboardType="numeric"
@@ -258,13 +252,14 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         <Card>
           <SettingRow label="Tracking interval" hint={`Default: ${settings.interval}s`}>
             <View style={styles.inputWithUnit}>
-              <TextInput
-                style={inputStyle}
+              <TextField
+                accessibilityLabel="Tracking interval"
+                figure
+                style={styles.numInput}
                 keyboardType="numeric"
                 value={intervalStr}
                 onChangeText={(val) => handleNumericChange(setIntervalStr, "interval", val, 1)}
                 placeholder="5"
-                placeholderTextColor={colors.placeholder}
               />
               <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
             </View>
@@ -289,13 +284,14 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               hint={`Default: ${metersToInput(settings.distance)} ${shortDistanceUnit()}`}
             >
               <View style={styles.inputWithUnit}>
-                <TextInput
-                  style={inputStyle}
+                <TextField
+                  accessibilityLabel="Movement threshold"
+                  figure
+                  style={styles.numInput}
                   keyboardType="numeric"
                   value={distanceStr}
                   onChangeText={(val) => handleNumericChange(setDistanceStr, "distance", val, 0)}
                   placeholder="0"
-                  placeholderTextColor={colors.placeholder}
                 />
                 <Text style={[styles.unit, { color: colors.textSecondary }]}>{shortDistanceUnit()}</Text>
               </View>
@@ -373,13 +369,14 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               hint="How long the device must be still before this profile activates. Resumes instantly via the hardware motion sensor when you move again."
             >
               <View style={styles.inputWithUnit}>
-                <TextInput
-                  style={inputStyle}
+                <TextField
+                  accessibilityLabel="Activation delay"
+                  figure
+                  style={styles.numInput}
                   keyboardType="numeric"
                   value={activationDelayStr}
                   onChangeText={(val) => handleNumericChange(setActivationDelayStr, "activationDelay", val, 0)}
                   placeholder="60"
-                  placeholderTextColor={colors.placeholder}
                 />
                 <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
               </View>
@@ -391,13 +388,14 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                 hint="How long the condition must hold before this profile takes over. Avoids switching on brief, temporary changes. 0 = instant."
               >
                 <View style={styles.inputWithUnit}>
-                  <TextInput
-                    style={inputStyle}
+                  <TextField
+                    accessibilityLabel="Activation delay"
+                    figure
+                    style={styles.numInput}
                     keyboardType="numeric"
                     value={activationDelayStr}
                     onChangeText={(val) => handleNumericChange(setActivationDelayStr, "activationDelay", val, 0)}
                     placeholder="0"
-                    placeholderTextColor={colors.placeholder}
                   />
                   <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
                 </View>
@@ -410,13 +408,14 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                 hint="How long after the condition stops before reverting to your defaults. Prevents rapid back-and-forth switching."
               >
                 <View style={styles.inputWithUnit}>
-                  <TextInput
-                    style={inputStyle}
+                  <TextField
+                    accessibilityLabel="Deactivation delay"
+                    figure
+                    style={styles.numInput}
                     keyboardType="numeric"
                     value={delayStr}
                     onChangeText={(val) => handleNumericChange(setDelayStr, "deactivationDelay", val, 0)}
                     placeholder="60"
-                    placeholderTextColor={colors.placeholder}
                   />
                   <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
                 </View>

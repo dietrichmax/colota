@@ -5,9 +5,9 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
-import { Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter } from "react-native"
 import { FolderOpen, CircleCheckBig, Share2, TriangleAlert } from "lucide-react-native"
-import { Button, Card, ChipGroup, Container, Divider, FloatingSaveIndicator, FormatSelector, NumericInput, RadioRow, SectionTitle, SettingRow, TimePicker, Toggle } from "../components"
+import { Button, Card, ChipGroup, Container, Divider, FloatingSaveIndicator, FormatSelector, NumericInput, RadioRow, SectionTitle, SettingRow, TimePicker, Toggle, TextField } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { useTimeout } from "../hooks/useTimeout"
 import { ScreenProps } from "../types/global"
@@ -430,13 +430,14 @@ export function AutoExportScreen(_props: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>File name</SectionTitle>
           <Card>
-            <TextInput
-              style={[styles.templateInput, { color: colors.text, borderColor: colors.border }]}
+            <TextField
+              testID="filename-template-input"
+              accessibilityLabel="File name template"
+              mono
               value={filenameTemplateInput}
               onChangeText={handleFilenameTemplateChange}
               onBlur={handleFilenameTemplateBlur}
               placeholder={DEFAULT_FILENAME_TEMPLATE}
-              placeholderTextColor={colors.textSecondary}
               autoCapitalize="none"
               autoCorrect={false}
             />

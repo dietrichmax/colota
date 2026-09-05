@@ -90,4 +90,9 @@ describe("TextField", () => {
     const { getByTestId } = render(<TextField label="Server address" testID="server-input" mono />)
     expect(flat(getByTestId("server-input")).fontFamily).toBe("monospace")
   })
+
+  it("keeps the recessed fill, so a field on a card still reads as a field", () => {
+    const { getByTestId } = render(<TextField label="Server address" testID="server-input" />)
+    expect(flat(getByTestId("server-input-box")).backgroundColor).toBe(lightColors.background)
+  })
 })

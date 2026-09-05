@@ -4,11 +4,11 @@
  */
 
 import React, { useEffect, useState } from "react"
-import { Modal, ScrollView, View, Text, TextInput, Pressable, StyleSheet } from "react-native"
+import { Modal, ScrollView, View, Text, Pressable, StyleSheet } from "react-native"
 import { Eye, EyeOff } from "lucide-react-native"
 import type { RootScreenProps } from "../types/navigation"
 import { useTheme } from "../hooks/useTheme"
-import { Button, Card, Container, SectionTitle } from "../components"
+import { Button, Card, Container, SectionTitle, TextField } from "../components"
 import BackupService, {
   MIN_BACKUP_PASSWORD_LENGTH,
   MIN_BACKUP_PASSWORD_BITS,
@@ -66,36 +66,21 @@ type PasswordFieldProps = {
   placeholder: string
   editable: boolean
   autoComplete: "password" | "new-password"
-  colors: ThemeColors
 }
 
-function PasswordField({ value, onChangeText, placeholder, editable, autoComplete, colors }: PasswordFieldProps) {
-  const [revealed, setRevealed] = useState(false)
-  const Icon = revealed ? EyeOff : Eye
+function PasswordField({ value, onChangeText, placeholder, editable, autoComplete }: PasswordFieldProps) {
   return (
-    <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.background }]}>
-      <TextInput
-        style={[styles.inputField, { color: colors.text }]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.placeholder}
-        autoCapitalize="none"
-        autoCorrect={false}
-        secureTextEntry={!revealed}
-        autoComplete={autoComplete}
-        editable={editable}
-      />
-      <Pressable
-        onPressIn={() => setRevealed(true)}
-        onPressOut={() => setRevealed(false)}
-        hitSlop={8}
-        style={styles.eyeButton}
-        accessibilityLabel="Hold to show password"
-      >
-        <Icon size={size.icon.md} color={colors.textSecondary} />
-      </Pressable>
-    </View>
+    <TextField
+      accessibilityLabel={placeholder}
+      secure
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      autoCapitalize="none"
+      autoCorrect={false}
+      autoComplete={autoComplete}
+      disabled={!editable}
+    />
   )
 }
 
@@ -142,7 +127,6 @@ function PasswordPromptModal({
             placeholder="Backup password"
             editable={!busy}
             autoComplete="password"
-            colors={colors}
           />
           <View style={styles.modalButtonsRow}>
             <View style={styles.modalButton}>
@@ -291,7 +275,6 @@ export function BackupRestoreScreen({}: Props) {
               placeholder={`At least ${MIN_BACKUP_PASSWORD_LENGTH} characters`}
               editable={busy === null}
               autoComplete="new-password"
-              colors={colors}
             />
             {backupPassword.length > 0 && (
               <View style={styles.strengthRow}>
@@ -319,7 +302,6 @@ export function BackupRestoreScreen({}: Props) {
               placeholder="Re-enter the same password"
               editable={busy === null}
               autoComplete="new-password"
-              colors={colors}
             />
             {showMismatch && <Text style={[styles.errorText, { color: colors.error }]}>Passwords do not match.</Text>}
 

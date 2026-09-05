@@ -128,6 +128,7 @@ jest.mock("../../components", () => {
   const RN = require("react-native")
   const { EXPORT_FORMATS, EXPORT_FORMAT_KEYS } = require("../../utils/exportConverters")
   return {
+    TextField: require("../../testing/componentStubs").TextFieldStub,
     RadioRow: function (props: any) {
       const R = require("react")
       const RN = require("react-native")

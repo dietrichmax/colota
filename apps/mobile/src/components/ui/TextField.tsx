@@ -3,8 +3,9 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState } from "react"
-import { View, Text, TextInput, Pressable, StyleSheet, TextInputProps, StyleProp, ViewStyle } from "react-native"
+import React, { forwardRef, useState } from "react"
+import { View, Text, TextInput, Pressable, StyleSheet, StyleProp, ViewStyle } from "react-native"
+import type { TextInputProps, TextInputInstance } from "react-native"
 import { Eye, EyeOff, CircleAlert } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
@@ -18,11 +19,17 @@ import { FieldMessage } from "./FieldMessage"
  */
 const FIELD_INSET = 15
 
+/** The three-line box a pasted token or note needs, which one touch target does not give it. */
+const MULTILINE_MIN_HEIGHT = 80
+
 type BaseProps = Omit<TextInputProps, "style" | "editable" | "secureTextEntry"> & {
-  error?: string
+  /** A string shows the ring and the message; true shows the ring alone, when a caller says it elsewhere. */
+  error?: string | boolean
   disabled?: boolean
   secure?: boolean
   mono?: boolean
+  /** A number the user reads back: centred and weighted, so the value is the thing you see. */
+  figure?: boolean
   style?: StyleProp<ViewStyle>
   testID?: string
 }
@@ -30,19 +37,24 @@ type BaseProps = Omit<TextInputProps, "style" | "editable" | "secureTextEntry"> 
 type TextFieldProps = BaseProps &
   ({ label: string; accessibilityLabel?: string } | { label?: undefined; accessibilityLabel: string })
 
-export function TextField({
+export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function TextField(
+  {
   label,
   accessibilityLabel,
   error,
   disabled = false,
   secure = false,
   mono = false,
+  figure = false,
   style,
   testID,
   onFocus,
   onBlur,
-  ...inputProps
-}: TextFieldProps) {
+    multiline = false,
+    ...inputProps
+  },
+  ref
+) {
   const { colors } = useTheme()
   const [focused, setFocused] = useState(false)
   const [revealed, setRevealed] = useState(false)
@@ -58,13 +70,23 @@ export function TextField({
       {label ? <Text style={[styles.label, { color: labelColor }]}>{label}</Text> : null}
       <View
         testID={testID ? `${testID}-box` : undefined}
-        style={[styles.box, { borderWidth, borderColor, paddingHorizontal: FIELD_INSET - borderWidth }]}
+        style={[
+          styles.box,
+          multiline && styles.boxMultiline,
+          {
+            borderWidth,
+            borderColor,
+            paddingHorizontal: FIELD_INSET - borderWidth,
+            backgroundColor: colors.background
+          }
+        ]}
       >
         <TextInput
+          ref={ref}
           testID={testID}
           editable={!disabled}
           secureTextEntry={secure && !revealed}
-          accessibilityLabel={error ? `${name}, ${error}` : name}
+          accessibilityLabel={typeof error === "string" ? `${name}, ${error}` : name}
           placeholderTextColor={colors.textLight}
           onFocus={(e) => {
             setFocused(true)
@@ -74,7 +96,14 @@ export function TextField({
             setFocused(false)
             onBlur?.(e)
           }}
-          style={[styles.input, mono && styles.mono, { color: disabled ? colors.textDisabled : colors.text }]}
+          multiline={multiline}
+          style={[
+            styles.input,
+            mono && styles.mono,
+            figure && styles.figure,
+            multiline && styles.multiline,
+            { color: disabled ? colors.textDisabled : colors.text }
+          ]}
           {...inputProps}
         />
         {secure ? (
@@ -93,10 +122,10 @@ export function TextField({
           <CircleAlert size={size.icon.md} color={colors.error} accessibilityElementsHidden importantForAccessibility="no" />
         ) : null}
       </View>
-      {error ? <FieldMessage variant="error">{error}</FieldMessage> : null}
+      {typeof error === "string" ? <FieldMessage variant="error">{error}</FieldMessage> : null}
     </View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   label: {
@@ -121,5 +150,17 @@ const styles = StyleSheet.create({
   },
   mono: {
     fontFamily: "monospace"
+  },
+  figure: {
+    textAlign: "center",
+    ...fonts.medium
+  },
+  boxMultiline: {
+    alignItems: "flex-start",
+    minHeight: MULTILINE_MIN_HEIGHT,
+    paddingVertical: space.md
+  },
+  multiline: {
+    textAlignVertical: "top"
   }
 })

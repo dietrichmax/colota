@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { View, Text, StyleSheet, TextInput, Pressable, FlatList, DeviceEventEmitter, Share } from "react-native"
+import { View, Text, StyleSheet, Pressable, FlatList, DeviceEventEmitter, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
@@ -12,7 +12,7 @@ import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { fontSizes, fonts } from "../styles/typography"
 import { ChevronRight, Wifi, PersonStanding, MapPinHouse, Share2 } from "lucide-react-native"
-import { Button, Card, Container, SectionTitle } from "../components"
+import { Button, Card, Container, SectionTitle, TextField } from "../components"
 import {
   DEFAULT_MAP_ZOOM,
   GEOFENCE_ZOOM_PADDING,
@@ -304,39 +304,21 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
 
                 <View style={styles.inputRow}>
                   <View style={[styles.inputGroup, styles.inputGroupName]}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
-                    <TextInput
+                    <TextField
                       testID="geofence-name-input"
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: colors.background,
-                          color: colors.text,
-                          borderColor: colors.border
-                        }
-                      ]}
+                      label="Name"
                       placeholder="Home, Work..."
-                      placeholderTextColor={colors.placeholder}
                       value={newName}
                       onChangeText={setNewName}
                     />
                   </View>
 
                   <View style={[styles.inputGroup, styles.inputGroupRadius]}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>Radius ({shortDistanceUnit()})</Text>
-                    <TextInput
+                    <TextField
                       testID="geofence-radius-input"
-                      style={[
-                        styles.input,
-                        styles.inputCentered,
-                        {
-                          backgroundColor: colors.background,
-                          color: colors.text,
-                          borderColor: colors.border
-                        }
-                      ]}
+                      label={`Radius (${shortDistanceUnit()})`}
+                      figure
                       placeholder="50"
-                      placeholderTextColor={colors.placeholder}
                       value={newRadius}
                       keyboardType="numeric"
                       onChangeText={setNewRadius}
