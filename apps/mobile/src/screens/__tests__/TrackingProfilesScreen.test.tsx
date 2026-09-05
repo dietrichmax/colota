@@ -161,10 +161,10 @@ describe("TrackingProfilesScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Create Profile")).toBeTruthy()
+      expect(getByText("Create profile")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByText("Create profile"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Profile Editor", {})
   })
@@ -191,7 +191,7 @@ describe("TrackingProfilesScreen", () => {
     fireEvent.press(getByTestId("delete-profile-1"))
 
     await waitFor(() => {
-      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Delete Profile" }))
+      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Delete profile" }))
     })
 
     await waitFor(() => {

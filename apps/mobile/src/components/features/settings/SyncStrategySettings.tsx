@@ -143,7 +143,7 @@ export function SyncStrategySettings({
 
   return (
     <View style={styles.section}>
-      <SectionTitle>Tracking Configuration</SectionTitle>
+      <SectionTitle>Tracking configuration</SectionTitle>
       <Card>
         <View accessibilityRole="radiogroup">
           {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map((preset, index) => (
@@ -165,7 +165,7 @@ export function SyncStrategySettings({
           style={({ pressed }) => [styles.advancedToggle, pressed && { opacity: colors.pressedOpacity }]}
           onPress={() => setShowAdvanced(!showAdvanced)}
         >
-          <Text style={[styles.advancedText, { color: colors.text }]}>Advanced Settings</Text>
+          <Text style={[styles.advancedText, { color: colors.text }]}>Advanced settings</Text>
           {showAdvanced ? (
             <ChevronUp size={size.icon.md} color={colors.textLight} />
           ) : (
@@ -186,10 +186,10 @@ export function SyncStrategySettings({
 
             {/* Tracking Parameters Group */}
             <View style={styles.paramGroup}>
-              <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Tracking Parameters</Text>
+              <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Tracking parameters</Text>
 
               <NumericInput
-                label="Tracking Interval"
+                label="Tracking interval"
                 value={intervalInput}
                 onChange={(val) => handleNumericChange("interval", val, 1)}
                 onBlur={() => handleNumericBlur("interval", 1)}
@@ -200,7 +200,7 @@ export function SyncStrategySettings({
               />
 
               <NumericInput
-                label="Movement Threshold"
+                label="Movement threshold"
                 value={distanceInput}
                 onChange={(val) => handleNumericChange("distance", val, 0)}
                 onBlur={() => handleNumericBlur("distance", 0)}
@@ -217,11 +217,11 @@ export function SyncStrategySettings({
 
                 {/* Network Parameters Group */}
                 <View style={styles.paramGroup}>
-                  <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Network Settings</Text>
+                  <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Network settings</Text>
 
                   {/* Sync Interval */}
                   <View style={styles.settingBlock}>
-                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync Interval</Text>
+                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync interval</Text>
                     <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
                       How often to upload data to server
                     </Text>
@@ -285,7 +285,7 @@ export function SyncStrategySettings({
                   {isCustomSyncInterval && (
                     <View style={styles.customSyncInput}>
                       <NumericInput
-                        label="Custom Sync Interval"
+                        label="Custom sync interval"
                         value={syncIntervalInput}
                         onChange={(val) => {
                           setSyncIntervalInput(val)
@@ -316,7 +316,7 @@ export function SyncStrategySettings({
                   {showOverlandBatchSize && (
                     <View style={styles.customSyncInput}>
                       <NumericInput
-                        label="Batch Size"
+                        label="Batch size"
                         value={overlandBatchSizeInput}
                         onChange={(val) => {
                           setOverlandBatchSizeInput(val)
@@ -347,7 +347,7 @@ export function SyncStrategySettings({
 
                   {/* Sync Condition */}
                   <View style={styles.settingRowSpaced}>
-                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync Only On</Text>
+                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync only on</Text>
                     <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
                       {settings.syncCondition === "any" && "Upload on any network connection"}
                       {settings.syncCondition === "wifi_any" && "Upload only when connected to Wi-Fi"}
@@ -439,9 +439,9 @@ export function SyncStrategySettings({
 
             {/* Quality Parameters Group */}
             <View style={styles.paramGroup}>
-              <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Quality Filters</Text>
+              <Text style={[styles.paramGroupTitle, { color: colors.text }]}>Quality filters</Text>
 
-              <SettingRow label="Filter Inaccurate Locations" hint="Reject fixes the GPS chip reports as imprecise">
+              <SettingRow label="Filter inaccurate locations" hint="Reject fixes the GPS chip reports as imprecise">
                 <Switch
                   value={settings.filterInaccurateLocations}
                   onValueChange={(value) =>
@@ -461,7 +461,7 @@ export function SyncStrategySettings({
               {settings.filterInaccurateLocations && (
                 <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
                   <NumericInput
-                    label="Accuracy Threshold"
+                    label="Accuracy threshold"
                     value={accuracyThresholdInput}
                     onChange={(val) => handleNumericChange("accuracyThreshold", val, 1)}
                     onBlur={() => handleNumericBlur("accuracyThreshold", 1)}

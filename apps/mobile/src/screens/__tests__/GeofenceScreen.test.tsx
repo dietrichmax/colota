@@ -229,10 +229,10 @@ describe("GeofenceScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Place Geofence")).toBeTruthy()
+      expect(getByText("Place geofence")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Place Geofence"))
+    fireEvent.press(getByText("Place geofence"))
 
     expect(mockShowAlert).toHaveBeenCalledWith("Missing Name", "Please enter a name.", "warning")
   })
@@ -241,12 +241,12 @@ describe("GeofenceScreen", () => {
     const { getByText, getByPlaceholderText, getByDisplayValue } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Place Geofence")).toBeTruthy()
+      expect(getByText("Place geofence")).toBeTruthy()
     })
 
     fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
     fireEvent.changeText(getByDisplayValue("50"), "0")
-    fireEvent.press(getByText("Place Geofence"))
+    fireEvent.press(getByText("Place geofence"))
 
     expect(mockShowAlert).toHaveBeenCalledWith("Invalid Radius", "Please enter a valid radius.", "warning")
   })
@@ -255,12 +255,12 @@ describe("GeofenceScreen", () => {
     const { getByText, getByPlaceholderText, getByDisplayValue } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Place Geofence")).toBeTruthy()
+      expect(getByText("Place geofence")).toBeTruthy()
     })
 
     fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
     fireEvent.changeText(getByDisplayValue("50"), "100")
-    fireEvent.press(getByText("Place Geofence"))
+    fireEvent.press(getByText("Place geofence"))
 
     expect(mockShowAlert).not.toHaveBeenCalled()
     expect(getByText("Tap Map to Place...")).toBeTruthy()

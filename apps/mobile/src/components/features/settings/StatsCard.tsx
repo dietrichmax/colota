@@ -159,7 +159,7 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
                     }
                   ]}
                 >
-                  {warningLevel === "critical" ? "Critical Queue Size" : "High Queue Size"}
+                  {warningLevel === "critical" ? "Critical queue size" : "High queue size"}
                 </Text>
                 <Text style={[styles.warningHint, { color: colors.textSecondary }]}>Tap to manage data</Text>
               </View>

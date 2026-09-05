@@ -88,7 +88,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
   const handleDelete = useCallback(
     async (item: SavedTrackingProfile) => {
       const confirmed = await showConfirm({
-        title: "Delete Profile",
+        title: "Delete profile",
         message: `Delete "${item.name}"?`,
         confirmText: "Delete",
         destructive: true
@@ -178,7 +178,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         ListHeaderComponent={
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.text }]}>Tracking Profiles</Text>
+              <Text style={[styles.title, { color: colors.text }]}>Tracking profiles</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 Auto-switch GPS settings based on charging, Android Auto, or speed
               </Text>
@@ -193,7 +193,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
               onPress={() => navigation.navigate("Profile Editor", {})}
             >
               <Plus size={size.icon.md} color={colors.textOnPrimary} />
-              <Text style={[styles.createBtnText, { color: colors.textOnPrimary }]}>Create Profile</Text>
+              <Text style={[styles.createBtnText, { color: colors.textOnPrimary }]}>Create profile</Text>
             </Pressable>
 
             {profiles.length > 0 && (

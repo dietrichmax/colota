@@ -127,7 +127,7 @@ export function ShareSetupScreen() {
           <View style={styles.headerRow}>
             <Share2 size={28} color={colors.primary} />
             <View style={styles.headerText}>
-              <Text style={[styles.title, { color: colors.text }]}>Share Setup</Text>
+              <Text style={[styles.title, { color: colors.text }]}>Share setup</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 Choose what to bundle into a setup link, then share it. The recipient opens it to apply the same
                 configuration.

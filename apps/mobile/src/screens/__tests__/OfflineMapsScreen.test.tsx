@@ -217,7 +217,7 @@ describe("OfflineMapsScreen", () => {
     fireEvent.changeText(getByPlaceholderText("Home area, Trail..."), "my area")
     fireEvent.press(getByTestId("download-btn"))
     await waitFor(() => {
-      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Mobile Data" }))
+      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Mobile data" }))
     })
   })
 
@@ -229,7 +229,7 @@ describe("OfflineMapsScreen", () => {
     fireEvent.changeText(getByPlaceholderText("Home area, Trail..."), "my area")
     fireEvent.press(getByTestId("download-btn"))
     await waitFor(() => {
-      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Mobile Data" }))
+      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Mobile data" }))
       expect(mockCreateOfflinePack).not.toHaveBeenCalled()
     })
   })
@@ -307,7 +307,7 @@ describe("OfflineMapsScreen", () => {
     await waitForMapReady(findByText)
     fireEvent.changeText(getByPlaceholderText("Home area, Trail..."), "my area")
     fireEvent.press(getByTestId("download-btn"))
-    fireEvent.press(await findByText("Cancel Download"))
+    fireEvent.press(await findByText("Cancel download"))
     await waitFor(() => {
       expect(mockDeleteOfflineArea).toHaveBeenCalledWith("my area")
       expect(mockRemoveOfflineAreaBounds).toHaveBeenCalledWith("my area")

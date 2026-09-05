@@ -80,7 +80,7 @@ describe("StatsCard", () => {
       const onManage = jest.fn()
       const { getByText } = render(<StatsCard {...baseProps} queueCount={75} onManageClick={onManage} />)
 
-      expect(getByText("High Queue Size")).toBeTruthy()
+      expect(getByText("High queue size")).toBeTruthy()
       expect(getByText("Tap to manage data")).toBeTruthy()
     })
 
@@ -88,7 +88,7 @@ describe("StatsCard", () => {
       const onManage = jest.fn()
       const { getByText } = render(<StatsCard {...baseProps} queueCount={200} onManageClick={onManage} />)
 
-      expect(getByText("Critical Queue Size")).toBeTruthy()
+      expect(getByText("Critical queue size")).toBeTruthy()
     })
 
     it("calls onManageClick when warning banner is pressed", () => {
@@ -125,8 +125,8 @@ describe("StatsCard", () => {
       const onManage = jest.fn()
       const { queryByText } = render(<StatsCard {...baseProps} queueCount={200} onManageClick={onManage} />)
 
-      expect(queryByText("High Queue Size")).toBeNull()
-      expect(queryByText("Critical Queue Size")).toBeNull()
+      expect(queryByText("High queue size")).toBeNull()
+      expect(queryByText("Critical queue size")).toBeNull()
     })
   })
 })

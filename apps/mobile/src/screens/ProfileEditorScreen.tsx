@@ -183,7 +183,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>{isEditing ? "Edit Profile" : "New Profile"}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{isEditing ? "Edit profile" : "New profile"}</Text>
         </View>
 
         {/* Name & Priority */}
@@ -218,7 +218,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         </Card>
 
         {/* Condition */}
-        <SectionTitle style={styles.sectionGap}>Activation Condition</SectionTitle>
+        <SectionTitle style={styles.sectionGap}>Activation condition</SectionTitle>
         <Card>
           <View style={styles.conditionGrid}>
             {PROFILE_CONDITIONS.map((opt) => {
@@ -269,9 +269,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         </Card>
 
         {/* Tracking Settings */}
-        <SectionTitle style={styles.sectionGap}>Tracking Settings</SectionTitle>
+        <SectionTitle style={styles.sectionGap}>Tracking settings</SectionTitle>
         <Card>
-          <SettingRow label="Tracking Interval" hint={`Default: ${settings.interval}s`}>
+          <SettingRow label="Tracking interval" hint={`Default: ${settings.interval}s`}>
             <View style={styles.inputWithUnit}>
               <TextInput
                 style={inputStyle}
@@ -300,7 +300,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
             </FieldMessage>
           ) : (
             <SettingRow
-              label="Movement Threshold"
+              label="Movement threshold"
               hint={`Default: ${metersToInput(settings.distance)} ${shortDistanceUnit()}`}
             >
               <View style={styles.inputWithUnit}>
@@ -322,7 +322,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               <Divider />
 
               <View style={styles.syncLabelRow}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>Sync Interval</Text>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Sync interval</Text>
                 <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
                   Default: {formatSyncDefault(settings.syncInterval)}
                 </Text>
@@ -378,7 +378,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               {isCustomSyncInterval && (
                 <View style={styles.customSyncInput}>
                   <NumericInput
-                    label="Custom Sync Interval"
+                    label="Custom sync interval"
                     value={syncIntervalStr}
                     onChange={(val) => {
                       setSyncIntervalStr(val)
@@ -409,7 +409,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         <Card>
           {profile.condition.type === "stationary" ? (
             <SettingRow
-              label="Activation Delay"
+              label="Activation delay"
               hint="How long the device must be still before this profile activates. Resumes instantly via the hardware motion sensor when you move again."
             >
               <View style={styles.inputWithUnit}>
@@ -427,7 +427,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           ) : (
             <>
               <SettingRow
-                label="Activation Delay"
+                label="Activation delay"
                 hint="How long the condition must hold before this profile takes over. Avoids switching on brief, temporary changes. 0 = instant."
               >
                 <View style={styles.inputWithUnit}>
@@ -446,7 +446,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               <Divider />
 
               <SettingRow
-                label="Deactivation Delay"
+                label="Deactivation delay"
                 hint="How long after the condition stops before reverting to your defaults. Prevents rapid back-and-forth switching."
               >
                 <View style={styles.inputWithUnit}>
@@ -478,7 +478,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         >
           <Check size={size.icon.md} color={colors.textOnPrimary} />
           <Text style={[styles.saveBtnText, { color: colors.textOnPrimary }]}>
-            {saving ? "Saving..." : isEditing ? "Save Changes" : "Create Profile"}
+            {saving ? "Saving..." : isEditing ? "Save changes" : "Create profile"}
           </Text>
         </Pressable>
       </ScrollView>

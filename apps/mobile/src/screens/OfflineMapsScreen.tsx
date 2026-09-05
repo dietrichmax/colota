@@ -106,7 +106,7 @@ const DownloadForm = memo(
     return (
       <>
         <View style={styles.section}>
-          <SectionTitle>Download Area</SectionTitle>
+          <SectionTitle>Download area</SectionTitle>
           <Card>
             <Text style={[styles.hint, { color: colors.textSecondary }]}>
               Pan and zoom the map to frame the area you want to download, then enter a name and tap Download. Size
@@ -156,7 +156,7 @@ const DownloadForm = memo(
                     pressed && { opacity: colors.pressedOpacity }
                   ]}
                 >
-                  <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel Download</Text>
+                  <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel download</Text>
                 </Pressable>
               </View>
             ) : (
@@ -170,7 +170,7 @@ const DownloadForm = memo(
                 onPress={onDownload}
                 disabled={!estimatedSizeLabel}
               >
-                <Text style={[styles.downloadBtnText, { color: colors.textOnPrimary }]}>Download Area</Text>
+                <Text style={[styles.downloadBtnText, { color: colors.textOnPrimary }]}>Download area</Text>
               </Pressable>
             )}
 
@@ -180,7 +180,7 @@ const DownloadForm = memo(
 
         {areasCount > 0 && (
           <>
-            <SectionTitle>Saved Areas</SectionTitle>
+            <SectionTitle>Saved areas</SectionTitle>
             {totalStorageBytes > 0 && (
               <Text style={[styles.savedAreasMeta, { color: colors.textSecondary }]}>
                 {areasCount} {areasCount === 1 ? "area" : "areas"} · {formatBytes(totalStorageBytes)}
@@ -438,9 +438,9 @@ export function OfflineMapsScreen({}: ScreenProps) {
     const isUnmetered = await NativeLocationService.isUnmeteredConnection()
     if (!isUnmetered) {
       const wifiConfirmed = await showConfirm({
-        title: "Mobile Data",
+        title: "Mobile data",
         message: "You're not on WiFi. Downloading map tiles may use significant mobile data. Continue?",
-        confirmText: "Download Anyway",
+        confirmText: "Download anyway",
         destructive: false
       })
       if (!wifiConfirmed) return
@@ -513,7 +513,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
       const isUnmetered = await NativeLocationService.isUnmeteredConnection()
       if (!isUnmetered) {
         const wifiConfirmed = await showConfirm({
-          title: "Mobile Data",
+          title: "Mobile data",
           message: "You're not on WiFi. Re-downloading may use significant mobile data. Continue?",
           confirmText: "Continue",
           destructive: false
@@ -557,7 +557,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
   const handleDelete = useCallback(
     async (area: OfflineAreaInfo) => {
       const confirmed = await showConfirm({
-        title: "Delete Area",
+        title: "Delete area",
         message: `Delete "${area.name}"? The downloaded tiles will be removed from your device.`,
         confirmText: "Delete",
         destructive: true

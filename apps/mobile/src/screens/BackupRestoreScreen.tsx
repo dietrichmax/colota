@@ -278,7 +278,7 @@ export function BackupRestoreScreen({}: Props) {
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
-          <SectionTitle>Encrypted Backup</SectionTitle>
+          <SectionTitle>Encrypted backup</SectionTitle>
           <Card>
             <Text style={[styles.intro, { color: colors.textSecondary }]}>
               Bundle your locations, settings and credentials into a single encrypted file you can store anywhere.

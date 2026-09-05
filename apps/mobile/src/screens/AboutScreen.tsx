@@ -222,7 +222,7 @@ export function AboutScreen({}: ScreenProps) {
       value: `${buildConfig.MIN_SDK_VERSION} (Android ${getAndroidVersion(buildConfig.MIN_SDK_VERSION)})`
     },
     { label: "Compile SDK", value: buildConfig.COMPILE_SDK_VERSION.toString() },
-    { label: "Build Tools", value: buildConfig.BUILD_TOOLS_VERSION },
+    { label: "Build tools", value: buildConfig.BUILD_TOOLS_VERSION },
     { label: "Kotlin", value: buildConfig.KOTLIN_VERSION },
     { label: "NDK", value: buildConfig.NDK_VERSION }
   ]
@@ -279,7 +279,7 @@ export function AboutScreen({}: ScreenProps) {
         <Card>
           <LinkRow
             icon={FileText}
-            title="Privacy Policy"
+            title="Privacy policy"
             subtitle={PRIVACY_POLICY_URL}
             url={PRIVACY_POLICY_URL}
             colors={colors}
@@ -288,7 +288,7 @@ export function AboutScreen({}: ScreenProps) {
           <Divider />
           <LinkRow
             icon={Code}
-            title="Source Code"
+            title="Source code"
             subtitle="github.com/dietrichmax/colota"
             url={REPO_URL}
             colors={colors}
@@ -316,14 +316,14 @@ export function AboutScreen({}: ScreenProps) {
 
         {/* Map Data Attribution */}
         <View style={styles.section}>
-          <SectionTitle>Map Data</SectionTitle>
+          <SectionTitle>Map data</SectionTitle>
           <Card>
             <Pressable
               style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => handleOpenURL(TILE_SERVER_DOCS_URL)}
             >
               <View style={styles.linkTextContainer}>
-                <Text style={[styles.linkTitle, { color: colors.text }]}>Colota Tiles</Text>
+                <Text style={[styles.linkTitle, { color: colors.text }]}>Colota tiles</Text>
                 <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>
                   Self-hosted map tile server - configure your own
                 </Text>
@@ -372,7 +372,7 @@ export function AboutScreen({}: ScreenProps) {
               >
                 {copied ? <Check size={size.icon.sm} color={colors.success} /> : <Copy size={size.icon.sm} color={colors.primaryDark} />}
                 <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
-                  {copied ? "Copied!" : "Copy Debug Info"}
+                  {copied ? "Copied!" : "Copy debug info"}
                 </Text>
               </Pressable>
 
