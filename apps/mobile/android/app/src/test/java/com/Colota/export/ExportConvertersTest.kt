@@ -48,7 +48,7 @@ class ExportConvertersTest {
     @Test
     fun `mimeTypeFor returns correct mime types`() {
         assertEquals("text/csv", ExportConverters.mimeTypeFor("csv"))
-        assertEquals("application/json", ExportConverters.mimeTypeFor("geojson"))
+        assertEquals("application/geo+json", ExportConverters.mimeTypeFor("geojson"))
         assertEquals("application/gpx+xml", ExportConverters.mimeTypeFor("gpx"))
         assertEquals("application/vnd.google-earth.kml+xml", ExportConverters.mimeTypeFor("kml"))
         assertEquals("text/plain", ExportConverters.mimeTypeFor("unknown"))

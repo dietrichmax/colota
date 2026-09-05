@@ -203,9 +203,14 @@ object ExportConverters {
         return ExportFileMatcher(Regex(pattern.toString()), dateGroup, timeGroup)
     }
 
+    // A SAF provider appends the canonical extension for the MIME it was given when the name does
+    // not already end in one, so files written before the geo+json fix are named ".geojson.json".
+    private const val PROVIDER_SUFFIX_PATTERN = "(?:\\.json|\\.xml|\\.txt)?"
+
     // lazy so it does not depend on where extensionFor's format objects sit in the init order.
     private val EXTENSION_PATTERN: String by lazy {
-        listOf("csv", "geojson", "gpx", "kml").joinToString("|", "(?:", ")") { Regex.escape(extensionFor(it)) }
+        listOf("csv", "geojson", "gpx", "kml").joinToString("|", "(?:", ")") { Regex.escape(extensionFor(it)) } +
+            PROVIDER_SUFFIX_PATTERN
     }
 
     /** The rendered name is trimmed at both ends, so the outermost literals are trimmed too. */
@@ -370,7 +375,7 @@ object ExportConverters {
 
     // The whole export is one MultiPoint feature: coords stream inline while the property columns
     // (parallel arrays, index-aligned to coords) spool to disk and splice in at the footer, keeping memory O(1).
-    private object GeoJsonFormat : FormatWriter(".geojson", "application/json") {
+    private object GeoJsonFormat : FormatWriter(".geojson", "application/geo+json") {
         private val COLUMNS = listOf("accuracy", "altitude", "speed", "bearing", "battery", "battery_status", "note", "time")
 
         override fun newSideChannel(cacheDir: File): AutoCloseable = GeoJsonColumnSpooler(cacheDir, COLUMNS)

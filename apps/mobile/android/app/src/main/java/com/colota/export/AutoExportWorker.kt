@@ -298,7 +298,10 @@ class AutoExportWorker(
      * testable without SAF.
      */
     private fun cleanupOldExports(dirUri: Uri, config: AutoExportConfig) {
-        if (config.retentionCount <= 0) return // 0 = unlimited
+        if (config.retentionCount <= 0) {
+            AppLogger.d(TAG, "Export cleanup skipped - retention is unlimited")
+            return
+        }
 
         try {
             val dir = DocumentFile.fromTreeUri(appContext, dirUri) ?: return
@@ -306,17 +309,17 @@ class AutoExportWorker(
 
             // Each DocumentFile getter is its own query, so only the names that already match pay
             // for lastModified and isFile. A shared folder can hold far more files than ours.
-            val candidates = dir.listFiles()
+            val listed = dir.listFiles()
+            val candidates = listed
                 .map { it to it.name.orEmpty() }
                 .filter { (_, name) -> matchers.any { it.matches(name) } }
                 .map { (file, name) ->
                     file to ExportConverters.ExportEntry(name, file.lastModified(), file.isFile)
                 }
-            val doomed = ExportConverters
+            val selected = ExportConverters
                 .selectForDeletion(candidates.map { it.second }, config.retentionCount, matchers)
                 .map { it.name }
-                .toMutableList()
-            if (doomed.isEmpty()) return
+            val doomed = selected.toMutableList()
 
             var deleted = 0
             candidates.forEach { (file, entry) ->
@@ -330,7 +333,13 @@ class AutoExportWorker(
                 }
             }
 
-            AppLogger.i(TAG, "Cleaned up $deleted old export files (keeping ${config.retentionCount})")
+            // Logged on every run, zeros included: a cleanup that recognised none of its own files
+            // is otherwise indistinguishable from one that found nothing to delete.
+            AppLogger.i(
+                TAG,
+                "Export cleanup: ${listed.size} in folder, ${candidates.size} matched, " +
+                    "${selected.size} selected, $deleted deleted (keeping ${config.retentionCount})"
+            )
         } catch (e: Exception) {
             AppLogger.w(TAG, "Export cleanup failed (non-critical): ${e.message}")
         }

@@ -1,3 +1,4 @@
 - A notification now alerts you when tracking stops on its own, instead of appearing silently
+- Auto-export now deletes old files on storage providers that rename them
 - Unplugging at a low battery no longer restarts tracking in a loop
 - Pause zones no longer take hours to engage when a tracking profile is active

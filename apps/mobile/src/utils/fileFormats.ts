@@ -28,7 +28,7 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     icon: Globe,
     extension: ".geojson",
     exportable: true,
-    mimeType: "application/json",
+    mimeType: "application/geo+json",
     subtitle: "Geographic Data",
     description: "Mapbox, Leaflet, QGIS. Best for backups - re-imports into Colota without losing data."
   },
