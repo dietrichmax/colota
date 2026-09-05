@@ -3,12 +3,11 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useRef, useCallback } from "react"
+import React from "react"
 import {
   Pressable,
   Text,
   View,
-  Animated,
   ActivityIndicator,
   StyleSheet,
   GestureResponderEvent,
@@ -48,26 +47,6 @@ export function Button({
   testID
 }: Props) {
   const { colors } = useTheme()
-  const scale = useRef(new Animated.Value(1)).current
-
-  const handlePressIn = useCallback(() => {
-    Animated.spring(scale, {
-      toValue: 0.97,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4
-    }).start()
-  }, [scale])
-
-  const handlePressOut = useCallback(() => {
-    Animated.spring(scale, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4
-    }).start()
-  }, [scale])
-
   const getVariantStyles = () => {
     switch (variant) {
       case "primary":
@@ -79,10 +58,10 @@ export function Button({
         }
       case "secondary":
         return {
-          bg: "transparent",
-          text: color ?? colors.primaryDark,
-          borderColor: colors.primary,
-          borderWidth: 1.5
+          bg: disabled ? colors.textDisabled : colors.primaryContainer,
+          text: color ?? colors.onPrimaryContainer,
+          borderColor: "transparent",
+          borderWidth: 0
         }
       case "ghost":
         return {
@@ -104,7 +83,7 @@ export function Button({
   const v = getVariantStyles()
 
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, style]}>
+    <View style={style}>
       <Pressable
         testID={testID}
         style={({ pressed }) => [
@@ -118,8 +97,6 @@ export function Button({
           }
         ]}
         onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
         disabled={disabled || loading}
       >
         <View style={styles.content}>
@@ -131,7 +108,7 @@ export function Button({
           <Text style={[styles.text, { color: v.text }]}>{title}</Text>
         </View>
       </Pressable>
-    </Animated.View>
+    </View>
   )
 }
 
