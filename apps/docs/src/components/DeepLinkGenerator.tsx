@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react"
+import { useState, useMemo, useCallback } from "react"
+import { renderSVG } from "uqr"
 import styles from "./DeepLinkGenerator.module.css"
 
 interface KeyValue {
@@ -100,14 +101,6 @@ export default function DeepLinkGenerator() {
 
   // Tracking Profiles
   const [profiles, setProfiles] = useState<ProfileRow[]>([])
-
-  // QR
-  const qrRef = useRef<HTMLDivElement>(null)
-  const [qrLib, setQrLib] = useState<any>(null)
-
-  useEffect(() => {
-    import("qrcode").then((mod) => setQrLib(mod.default || mod)).catch(() => {})
-  }, [])
 
   const config = useMemo(() => {
     const obj: Record<string, unknown> = {}
@@ -251,20 +244,7 @@ export default function DeepLinkGenerator() {
 
   const isQrTooLarge = deepLink.length > QR_MAX_SCANNABLE_LENGTH
 
-  useEffect(() => {
-    if (!qrRef.current || !qrLib || !deepLink) {
-      if (qrRef.current) qrRef.current.innerHTML = ""
-      return
-    }
-
-    const canvas = document.createElement("canvas")
-    qrLib.toCanvas(canvas, deepLink, { width: 400, margin: 2, errorCorrectionLevel: "L" }, (err: Error | null) => {
-      if (!err && qrRef.current) {
-        qrRef.current.innerHTML = ""
-        qrRef.current.appendChild(canvas)
-      }
-    })
-  }, [deepLink, qrLib])
+  const qrSvg = useMemo(() => (deepLink ? renderSVG(deepLink, { ecc: "L", border: 2, pixelSize: 1 }) : ""), [deepLink])
 
   const [copyFeedback, setCopyFeedback] = useState(false)
   const [downloadFeedback, setDownloadFeedback] = useState(false)
@@ -956,12 +936,12 @@ export default function DeepLinkGenerator() {
             </button>
           </div>
 
-          {qrLib && (
+          {qrSvg && (
             <>
               <div className={styles.sectionTitle} style={{ marginTop: "1rem" }}>
                 QR Code
               </div>
-              <div className={styles.qrContainer} ref={qrRef} />
+              <div className={styles.qrContainer} dangerouslySetInnerHTML={{ __html: qrSvg }} />
               {isQrTooLarge && (
                 <div className={styles.qrWarning}>
                   <strong>This QR code may not be readable on all phones.</strong>
