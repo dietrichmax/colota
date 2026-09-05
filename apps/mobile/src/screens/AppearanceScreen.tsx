@@ -4,21 +4,30 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, View, ScrollView, Pressable, TextInput } from "react-native"
+import { StyleSheet, View, ScrollView } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
-import { fonts } from "../styles/typography"
-import { Card, Container, Divider, SettingRow, Toggle } from "../components"
+import {
+  Button,
+  ChipGroup,
+  Container,
+  Divider,
+  FieldMessage,
+  ListItem,
+  SettingRow,
+  TextField,
+  Toggle
+} from "../components"
 import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
 import type { UnitSystem, TimeFormat } from "../utils/geo"
-import { size } from "../constants"
+import { space } from "../constants"
 
 export function AppearanceScreen({}: ScreenProps) {
-  const { mode, toggleTheme, colors } = useTheme()
+  const { mode, toggleTheme } = useTheme()
   const { t } = useTranslation()
 
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(getUnitSystem)
@@ -85,6 +94,8 @@ export function AppearanceScreen({}: ScreenProps) {
     ]).catch((err) => logger.error("[AppearanceScreen] Failed to reset map style URLs:", err))
   }, [])
 
+  const hasCustomMapStyle = Boolean(mapStyleUrlLight.trim() || mapStyleUrlDark.trim())
+
   return (
     <Container>
       <ScrollView
@@ -92,144 +103,93 @@ export function AppearanceScreen({}: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Card>
-          <SettingRow label={t("appearance.darkMode")}>
-            <Toggle
-              testID="dark-mode-switch"
-              value={mode === "dark"}
-              onValueChange={toggleTheme}
-              accessibilityLabel={t("appearance.darkMode")}
+        <SettingRow label={t("appearance.darkMode")} divider>
+          <Toggle
+            testID="dark-mode-switch"
+            value={mode === "dark"}
+            onValueChange={toggleTheme}
+            accessibilityLabel={t("appearance.darkMode")}
+          />
+        </SettingRow>
+
+        <View style={styles.chipBlock}>
+          <ChipGroup
+            label={t("appearance.units")}
+            options={[
+              { value: "metric", label: t("appearance.units.metric"), testID: "unit-metric" },
+              { value: "imperial", label: t("appearance.units.imperial"), testID: "unit-imperial" }
+            ]}
+            selected={unitSystem}
+            onSelect={selectUnitSystem}
+          />
+        </View>
+
+        <Divider tight />
+
+        <View style={styles.chipBlock}>
+          <ChipGroup
+            label={t("appearance.timeFormat")}
+            options={[
+              { value: "24h", label: "24h", testID: "time-format-24h" },
+              { value: "12h", label: "12h", testID: "time-format-12h" }
+            ]}
+            selected={timeFormat}
+            onSelect={selectTimeFormat}
+          />
+        </View>
+
+        <Divider tight />
+
+        <ListItem
+          testID="map-tile-server-toggle"
+          label={t("appearance.mapTileServer")}
+          sub={t("appearance.mapStyle.subtitle")}
+          trailingIcon={showMapTileServer ? ChevronUp : ChevronDown}
+          onPress={() => setShowMapTileServer(!showMapTileServer)}
+        />
+
+        {showMapTileServer && (
+          <View style={styles.mapTilePanel}>
+            <TextField
+              testID="map-style-url-light"
+              label={t("appearance.mapStyle.light")}
+              mono
+              value={mapStyleUrlLight}
+              onChangeText={setMapStyleUrlLight}
+              onBlur={() => saveMapStyleUrl("mapStyleUrlLight", mapStyleUrlLight)}
+              placeholder={t("appearance.mapStyle.placeholder")}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
             />
-          </SettingRow>
 
-          <Divider />
+            <TextField
+              testID="map-style-url-dark"
+              label={t("appearance.mapStyle.dark")}
+              mono
+              value={mapStyleUrlDark}
+              onChangeText={setMapStyleUrlDark}
+              onBlur={() => saveMapStyleUrl("mapStyleUrlDark", mapStyleUrlDark)}
+              placeholder={t("appearance.mapStyle.placeholder")}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              containerStyle={styles.secondField}
+            />
 
-          <SettingRow label={t("appearance.units")}>
-            <View style={styles.chipGroup}>
-              {(["metric", "imperial"] as const).map((unit) => {
-                const selected = unitSystem === unit
-                return (
-                  <Pressable
-                    key={unit}
-                    testID={`unit-${unit}`}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: selected ? colors.primary + "15" : colors.background,
-                        borderColor: selected ? colors.primary : colors.border
-                      }
-                    ]}
-                    onPress={() => selectUnitSystem(unit)}
-                  >
-                    <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>
-                      {unit === "metric" ? t("appearance.units.metric") : t("appearance.units.imperial")}
-                    </Text>
-                  </Pressable>
-                )
-              })}
-            </View>
-          </SettingRow>
+            <FieldMessage>{t("appearance.mapStyle.emptyHint")}</FieldMessage>
 
-          <Divider />
-
-          <SettingRow label={t("appearance.timeFormat")}>
-            <View style={styles.chipGroup}>
-              {(["24h", "12h"] as const).map((fmt) => {
-                const selected = timeFormat === fmt
-                return (
-                  <Pressable
-                    key={fmt}
-                    testID={`time-format-${fmt}`}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: selected ? colors.primary + "15" : colors.background,
-                        borderColor: selected ? colors.primary : colors.border
-                      }
-                    ]}
-                    onPress={() => selectTimeFormat(fmt)}
-                  >
-                    <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>{fmt}</Text>
-                  </Pressable>
-                )
-              })}
-            </View>
-          </SettingRow>
-
-          <Divider />
-
-          <Pressable
-            testID="map-tile-server-toggle"
-            style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
-            onPress={() => setShowMapTileServer(!showMapTileServer)}
-          >
-            <View style={styles.linkContent}>
-              <Text style={[styles.linkLabel, { color: colors.text }]}>{t("appearance.mapTileServer")}</Text>
-              <Text style={[styles.linkSub, { color: colors.textSecondary }]}>{t("appearance.mapStyle.subtitle")}</Text>
-            </View>
-            {showMapTileServer ? (
-              <ChevronUp size={size.icon.md} color={colors.textLight} />
-            ) : (
-              <ChevronDown size={size.icon.md} color={colors.textLight} />
+            {hasCustomMapStyle && (
+              <Button
+                title={t("appearance.mapStyle.reset")}
+                variant="ghost"
+                align="start"
+                onPress={resetMapStyle}
+                style={styles.resetButton}
+              />
             )}
-          </Pressable>
-
-          {showMapTileServer && (
-            <View style={styles.mapTilePanel}>
-              <Text style={[styles.mapStyleSub, styles.mapStyleSubFirst, { color: colors.textSecondary }]}>
-                {t("appearance.mapStyle.light")}
-              </Text>
-              <TextInput
-                testID="map-style-url-light"
-                style={[
-                  styles.mapStyleInput,
-                  { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
-                ]}
-                value={mapStyleUrlLight}
-                onChangeText={setMapStyleUrlLight}
-                onBlur={() => saveMapStyleUrl("mapStyleUrlLight", mapStyleUrlLight)}
-                placeholder={t("appearance.mapStyle.placeholder")}
-                placeholderTextColor={colors.placeholder}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
-              <Text style={[styles.mapStyleSub, styles.mapStyleSubSecond, { color: colors.textSecondary }]}>
-                {t("appearance.mapStyle.dark")}
-              </Text>
-              <TextInput
-                testID="map-style-url-dark"
-                style={[
-                  styles.mapStyleInput,
-                  { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
-                ]}
-                value={mapStyleUrlDark}
-                onChangeText={setMapStyleUrlDark}
-                onBlur={() => saveMapStyleUrl("mapStyleUrlDark", mapStyleUrlDark)}
-                placeholder={t("appearance.mapStyle.placeholder")}
-                placeholderTextColor={colors.placeholder}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
-              <View style={styles.mapStyleFooter}>
-                <Text style={[styles.mapStyleHint, { color: colors.textLight }]}>
-                  {t("appearance.mapStyle.emptyHint")}
-                </Text>
-                {mapStyleUrlLight.trim() || mapStyleUrlDark.trim() ? (
-                  <Pressable
-                    onPress={resetMapStyle}
-                    style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
-                  >
-                    <Text style={[styles.mapStyleHint, { color: colors.primary }]}>
-                      {t("appearance.mapStyle.reset")}
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            </View>
-          )}
-        </Card>
+          </View>
+        )}
       </ScrollView>
     </Container>
   )
@@ -237,68 +197,20 @@ export function AppearanceScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   },
-  linkRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12
-  },
-  linkContent: {
-    flex: 1
-  },
-  linkLabel: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  linkSub: {
-    fontSize: 13,
-    ...fonts.regular
-  },
-  chipGroup: {
-    flexDirection: "row",
-    gap: 8
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5
-  },
-  chipLabel: {
-    fontSize: 13,
-    ...fonts.semiBold
+  chipBlock: {
+    paddingVertical: space.md
   },
   mapTilePanel: {
-    marginTop: 4,
-    paddingBottom: 4
+    paddingTop: space.lg
   },
-  mapStyleSub: {
-    fontSize: 12,
-    ...fonts.medium,
-    marginBottom: 6
+  secondField: {
+    marginTop: space.lg
   },
-  mapStyleSubFirst: { marginTop: 12 },
-  mapStyleSubSecond: { marginTop: 10 },
-  mapStyleInput: {
-    borderWidth: 1.5,
-    padding: 12,
-    borderRadius: 12,
-    fontSize: 13,
-    ...fonts.regular
-  },
-  mapStyleFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8
-  },
-  mapStyleHint: {
-    fontSize: 11,
-    ...fonts.regular
+  resetButton: {
+    marginTop: space.sm
   }
 })

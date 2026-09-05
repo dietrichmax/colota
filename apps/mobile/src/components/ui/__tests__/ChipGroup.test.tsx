@@ -80,6 +80,25 @@ describe("ChipGroup", () => {
     expect(UNSAFE_getByProps({ accessibilityRole: "radiogroup" }).props.accessibilityLabel).toBe("Units")
   })
 
+  // The chips replaced per-option Pressables that screens addressed by testID; the
+  // option carries it so an existing screen test keeps reaching the same control.
+  it("puts an option's testID on the chip that renders it", () => {
+    const { getByTestId } = render(
+      <ChipGroup
+        label="Units"
+        options={[
+          { value: "metric", label: "Metric", testID: "unit-metric" },
+          { value: "imperial", label: "Imperial", testID: "unit-imperial" }
+        ]}
+        selected="metric"
+        onSelect={jest.fn()}
+      />
+    )
+
+    expect(getByTestId("unit-metric").props.accessibilityState).toEqual(expect.objectContaining({ checked: true }))
+    expect(getByTestId("unit-imperial").props.accessibilityState).toEqual(expect.objectContaining({ checked: false }))
+  })
+
   it("reports the pressed value in single-select mode", () => {
     const onSelect = jest.fn()
     const { getByRole } = render(<ChipGroup label="Units" options={OPTIONS} selected="metric" onSelect={onSelect} />)

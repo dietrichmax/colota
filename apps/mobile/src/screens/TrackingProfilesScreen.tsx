@@ -7,37 +7,47 @@ import React, { useState, useEffect, useCallback } from "react"
 import { View, Text, StyleSheet, FlatList, Pressable, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
+import { useTranslation } from "../i18n/useTranslation"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { SavedTrackingProfile, ScreenProps } from "../types/global"
-import { fonts, text } from "../styles/typography"
-import { Container, SectionTitle, Card, Toggle } from "../components"
-import { Plus, X, Zap, Share2 } from "lucide-react-native"
+import { text } from "../styles/typography"
+import { Button, Container, EmptyState, ListItem, SectionTitle, Toggle } from "../components"
+import { Plus, X, Zap } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { buildProfilesLink } from "../utils/setupLink"
-import { size, space, PROFILE_CONDITIONS, MS_TO_KMH, HIT_SLOP_MD } from "../constants"
+import { size, space, PROFILE_CONDITIONS, MS_TO_KMH, STATE_LAYER_ALPHA } from "../constants"
 
-function formatCondition(profile: SavedTrackingProfile): string {
+type Translate = (key: string, options?: Record<string, unknown>) => string
+
+const BULLET = " • "
+
+function formatCondition(profile: SavedTrackingProfile, t: Translate): string {
   const condition = PROFILE_CONDITIONS.find((c) => c.type === profile.condition.type)
   const label = condition?.listLabel || profile.condition.type
   if (profile.condition.type === "speed_above" || profile.condition.type === "speed_below") {
     const kmh = ((profile.condition.speedThreshold ?? 0) * MS_TO_KMH).toFixed(0)
-    return `${label} ${kmh} km/h`
+    return t("profiles.condition.speed", { label, kmh })
   }
   return label
 }
 
-function formatSettings(profile: SavedTrackingProfile, isOfflineMode?: boolean): string {
-  const parts = [`${profile.interval}s interval`]
-  if (profile.distance > 0) parts.push(`${profile.distance}m threshold`)
+function formatSettings(profile: SavedTrackingProfile, isOfflineMode: boolean | undefined, t: Translate): string {
+  const parts = [t("profiles.part.interval", { seconds: profile.interval })]
+  if (profile.distance > 0) parts.push(t("profiles.part.threshold", { meters: profile.distance }))
   if (!isOfflineMode) {
-    parts.push(profile.syncInterval === 0 ? "instant sync" : `${profile.syncInterval}s sync`)
+    parts.push(
+      profile.syncInterval === 0
+        ? t("profiles.part.instantSync")
+        : t("profiles.part.sync", { seconds: profile.syncInterval })
+    )
   }
-  return parts.join(" \u2022 ")
+  return parts.join(BULLET)
 }
 
 export function TrackingProfilesScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { settings, activeProfileName } = useTracking()
   const [profiles, setProfiles] = useState<SavedTrackingProfile[]>([])
 
@@ -68,10 +78,10 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         await ProfileService.updateProfile({ id, enabled: value })
         await loadProfiles()
       } catch {
-        showAlert("Error", "Failed to update profile.", "error")
+        showAlert(t("profiles.error"), t("profiles.error.update"), "error")
       }
     },
-    [loadProfiles]
+    [loadProfiles, t]
   )
 
   const handleShareProfiles = useCallback(async () => {
@@ -80,16 +90,16 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
       await Share.share({ message: buildProfilesLink(profiles) })
     } catch (err) {
       logger.error("[TrackingProfilesScreen] Failed to share profiles:", err)
-      showAlert("Error", "Failed to share profiles.", "error")
+      showAlert(t("profiles.error"), t("profiles.error.share"), "error")
     }
-  }, [profiles])
+  }, [profiles, t])
 
   const handleDelete = useCallback(
     async (item: SavedTrackingProfile) => {
       const confirmed = await showConfirm({
-        title: "Delete Profile",
-        message: `Delete "${item.name}"?`,
-        confirmText: "Delete",
+        title: t("profiles.delete.title"),
+        message: t("profiles.delete.message", { name: item.name }),
+        confirmText: t("profiles.delete.confirm"),
         destructive: true
       })
 
@@ -99,71 +109,56 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         await ProfileService.deleteProfile(item.id)
         await loadProfiles()
       } catch {
-        showAlert("Error", "Failed to delete profile.", "error")
+        showAlert(t("profiles.error"), t("profiles.error.delete"), "error")
       }
     },
-    [loadProfiles]
+    [loadProfiles, t]
   )
 
   const renderItem = useCallback(
-    ({ item }: { item: SavedTrackingProfile }) => {
+    ({ item, index }: { item: SavedTrackingProfile; index: number }) => {
       const condition = PROFILE_CONDITIONS.find((c) => c.type === item.condition.type)
       const ConditionIcon = condition?.icon || Zap
       const isActive = activeProfileName === item.name
+      const details = formatCondition(item, t) + BULLET + formatSettings(item, settings.isOfflineMode, t)
 
       return (
-        <Card style={[styles.card, isActive && styles.activeCard, isActive && { borderColor: colors.primary }]}>
-          <Pressable
-            style={({ pressed }) => [styles.row, pressed && { opacity: colors.pressedOpacity }]}
-            onPress={() => navigation.navigate("Profile Editor", { profileId: item.id })}
-          >
-            <View style={[styles.iconWrap, { backgroundColor: colors.primary + "15" }]}>
-              <ConditionIcon size={size.icon.md} color={colors.primary} />
-            </View>
-
-            <View style={styles.info}>
-              <View style={styles.nameRow}>
-                <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
-                {isActive && (
-                  <View style={[styles.activeBadge, { backgroundColor: colors.success + "20" }]}>
-                    <Text style={[styles.activeBadgeText, { color: colors.success }]}>Active</Text>
-                  </View>
-                )}
-                <View style={[styles.priorityBadge, { backgroundColor: colors.border }]}>
-                  <Text style={[styles.priorityText, { color: colors.textSecondary }]}>P{item.priority}</Text>
-                </View>
-              </View>
-              <Text style={[styles.condition, { color: colors.textSecondary }]}>{formatCondition(item)}</Text>
-              <Text style={[styles.settings, { color: colors.textLight }]}>
-                {formatSettings(item, settings.isOfflineMode)}
-              </Text>
-            </View>
-
+        <ListItem
+          icon={ConditionIcon}
+          label={item.name}
+          sub={
+            isActive
+              ? t("profiles.row.subActive", { priority: item.priority, details })
+              : t("profiles.row.sub", { priority: item.priority, details })
+          }
+          divider={index < profiles.length - 1}
+          style={isActive ? { backgroundColor: colors.primaryContainer } : undefined}
+          onPress={() => navigation.navigate("Profile Editor", { profileId: item.id })}
+          trailingIcon={null}
+          trailing={
             <View style={styles.actions}>
               <Toggle
                 testID={`toggle-profile-${item.id}`}
                 value={item.enabled}
                 onValueChange={(val) => toggleEnabled(item.id, val)}
-                accessibilityLabel={`Enable ${item.name}`}
+                accessibilityLabel={t("profiles.enable", { name: item.name })}
               />
-
               <Pressable
                 testID={`delete-profile-${item.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={t("profiles.deleteAction", { name: item.name })}
+                android_ripple={{ color: colors.error + STATE_LAYER_ALPHA, borderless: true, radius: 20 }}
                 onPress={() => handleDelete(item)}
-                style={({ pressed }) => [
-                  styles.deleteBtn,
-                  { backgroundColor: colors.error + "15" },
-                  pressed && { opacity: colors.pressedOpacity }
-                ]}
+                style={styles.deleteButton}
               >
-                <X size={size.icon.sm} color={colors.error} />
+                <X size={size.icon.md} color={colors.error} />
               </Pressable>
             </View>
-          </Pressable>
-        </Card>
+          }
+        />
       )
     },
-    [colors, activeProfileName, settings.isOfflineMode, toggleEnabled, handleDelete, navigation]
+    [colors, activeProfileName, settings.isOfflineMode, profiles.length, toggleEnabled, handleDelete, navigation, t]
   )
 
   return (
@@ -175,46 +170,30 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <Text style={[styles.intro, { color: colors.textSecondary }]}>
-              Auto-switch GPS settings based on charging, Android Auto, or speed
-            </Text>
+            <Text style={[styles.intro, { color: colors.textSecondary }]}>{t("profiles.intro")}</Text>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.createBtn,
-                { backgroundColor: colors.primary },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
+            <Button
+              testID="create-profile-btn"
+              title={t("profiles.create")}
+              icon={Plus}
               onPress={() => navigation.navigate("Profile Editor", {})}
-            >
-              <Plus size={size.icon.md} color={colors.textOnPrimary} />
-              <Text style={[styles.createBtnText, { color: colors.textOnPrimary }]}>Create Profile</Text>
-            </Pressable>
+              style={styles.createButton}
+            />
 
             {profiles.length > 0 && (
-              <View style={styles.activeHeader}>
-                <SectionTitle>Profiles ({profiles.length})</SectionTitle>
-                <Pressable
-                  testID="share-profiles-btn"
-                  onPress={handleShareProfiles}
-                  hitSlop={HIT_SLOP_MD}
-                  style={({ pressed }) => [styles.shareBtn, pressed && { opacity: colors.pressedOpacity }]}
-                >
-                  <Share2 size={size.icon.md} color={colors.textSecondary} />
-                </Pressable>
-              </View>
+              <SectionTitle
+                action={{
+                  label: t("profiles.share"),
+                  onPress: handleShareProfiles,
+                  testID: "share-profiles-btn"
+                }}
+              >
+                {t("profiles.count", { count: profiles.length })}
+              </SectionTitle>
             )}
           </>
         }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No profiles yet</Text>
-            <Text style={[styles.emptyHint, { color: colors.textLight }]}>
-              Create a profile to automatically switch tracking settings when charging, connected to Android Auto, or
-              based on speed
-            </Text>
-          </View>
-        }
+        ListEmptyComponent={<EmptyState title={t("profiles.empty")} message={t("profiles.empty.message")} />}
         renderItem={renderItem}
       />
     </Container>
@@ -222,54 +201,25 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16, paddingBottom: 40 },
-  intro: { ...text.body, marginBottom: space.xl },
-  createBtn: {
+  list: {
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
+  },
+  intro: {
+    ...text.body
+  },
+  createButton: {
+    marginTop: space.lg
+  },
+  actions: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24
+    alignItems: "center"
   },
-  createBtnText: { fontSize: 15, ...fonts.semiBold },
-  card: { marginBottom: 12 },
-  activeCard: { borderWidth: 2 },
-  row: { flexDirection: "row", alignItems: "center" },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12
-  },
-  info: { flex: 1, marginRight: 12 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
-  name: { fontSize: 15, ...fonts.semiBold },
-  activeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  activeBadgeText: { fontSize: 10, ...fonts.semiBold, textTransform: "uppercase" },
-  priorityBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  priorityText: { fontSize: 10, ...fonts.semiBold },
-  condition: { fontSize: 13, ...fonts.medium, marginBottom: 2 },
-  settings: { fontSize: 11, ...fonts.regular },
-  actions: { alignItems: "center", gap: 8 },
-  deleteBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  deleteButton: {
+    width: size.touch,
+    height: size.touch,
     alignItems: "center",
     justifyContent: "center"
-  },
-  activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  shareBtn: { padding: 4, marginBottom: 12 },
-  empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
-  emptyHint: {
-    fontSize: 13,
-    textAlign: "center",
-    maxWidth: 280,
-    lineHeight: 18
   }
 })

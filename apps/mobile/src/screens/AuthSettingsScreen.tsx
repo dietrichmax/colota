@@ -4,24 +4,19 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react"
-import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
-import { ChevronRight } from "lucide-react-native"
+import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
+import { Plus, X } from "lucide-react-native"
 import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
-import { fonts, fontSizes } from "../styles/typography"
-import { SectionTitle, Toast, Container, Card, Divider, ChipGroup } from "../components"
+import { useTranslation } from "../i18n/useTranslation"
+import { text } from "../styles/typography"
+import { Button, ChipGroup, Container, Divider, ListItem, Notice, SectionTitle, TextField, Toast } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
-import { size, space } from "../constants"
-
-const AUTH_TYPE_OPTIONS: { value: AuthType; label: string }[] = [
-  { value: "none", label: "None" },
-  { value: "basic", label: "Basic Auth" },
-  { value: "bearer", label: "Bearer Token" }
-]
+import { size, space, STATE_LAYER_ALPHA } from "../constants"
 
 type LocalHeader = { key: string; value: string; id: number }
 
@@ -30,6 +25,7 @@ type LocalHeader = { key: string; value: string; id: number }
  */
 export function AuthSettingsScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { restartTracking, settings } = useTracking()
 
   const [config, setConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG)
@@ -55,6 +51,15 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
       }
     })()
   }, [])
+
+  const authTypeOptions = useMemo(
+    () => [
+      { value: "none" as AuthType, label: t("auth.type.none") },
+      { value: "basic" as AuthType, label: t("auth.type.basic") },
+      { value: "bearer" as AuthType, label: t("auth.type.bearer") }
+    ],
+    [t]
+  )
 
   /** Detect duplicate header keys */
   const duplicateKeys = useMemo(() => {
@@ -112,8 +117,8 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
   }, [])
 
   const updateHeaderField = useCallback(
-    (id: number, field: "key" | "value", text: string) => {
-      const next = localHeaders.map((h) => (h.id === id ? { ...h, [field]: text } : h))
+    (id: number, field: "key" | "value", value: string) => {
+      const next = localHeaders.map((h) => (h.id === id ? { ...h, [field]: value } : h))
       setLocalHeaders(next)
       updateConfig({ customHeaders: headersToRecord(next) })
     },
@@ -140,7 +145,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
     return (
       <Container>
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t("auth.loading")}</Text>
         </View>
       </Container>
     )
@@ -153,213 +158,142 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>Secure your endpoint connection</Text>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>{t("auth.intro")}</Text>
 
-        {/* Authentication Section */}
-        <View style={styles.section}>
-          <SectionTitle>Authentication</SectionTitle>
-          <Card>
-            <ChipGroup
-              options={AUTH_TYPE_OPTIONS}
-              selected={config.authType}
-              onSelect={handleAuthTypeChange}
-              colors={colors}
-              accessibilityLabel="Authentication"
+        <View style={styles.chipBlock}>
+          <ChipGroup
+            options={authTypeOptions}
+            selected={config.authType}
+            onSelect={handleAuthTypeChange}
+            accessibilityLabel={t("auth.method")}
+          />
+        </View>
+
+        {config.authType === "basic" && (
+          <View>
+            <TextField
+              label={t("auth.username")}
+              value={config.username}
+              onChangeText={(v) => updateConfig({ username: v })}
+              placeholder={t("auth.username")}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="username"
             />
-
-            {/* Basic Auth fields */}
-            {config.authType === "basic" && (
-              <>
-                <Divider />
-                <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.text }]}>Username</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        borderColor: colors.border,
-                        color: colors.text,
-                        backgroundColor: colors.background
-                      }
-                    ]}
-                    value={config.username}
-                    onChangeText={(v) => updateConfig({ username: v })}
-                    placeholder="Username"
-                    placeholderTextColor={colors.placeholder}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-
-                  <Text style={[styles.fieldLabel, styles.fieldLabelSpaced, { color: colors.text }]}>Password</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        borderColor: colors.border,
-                        color: colors.text,
-                        backgroundColor: colors.background
-                      }
-                    ]}
-                    value={config.password}
-                    onChangeText={(v) => updateConfig({ password: v })}
-                    placeholder="Password"
-                    placeholderTextColor={colors.placeholder}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    secureTextEntry
-                  />
-                </View>
-              </>
-            )}
-
-            {/* Bearer Token field */}
-            {config.authType === "bearer" && (
-              <>
-                <Divider />
-                <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.text }]}>Token</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.tokenInput,
-                      {
-                        borderColor: colors.border,
-                        color: colors.text,
-                        backgroundColor: colors.background
-                      }
-                    ]}
-                    value={config.bearerToken}
-                    onChangeText={(v) => updateConfig({ bearerToken: v })}
-                    placeholder="Bearer token"
-                    placeholderTextColor={colors.placeholder}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    multiline
-                    textAlignVertical="top"
-                  />
-                </View>
-              </>
-            )}
-          </Card>
-        </View>
-
-        {/* Custom Headers Section */}
-        <View style={styles.section}>
-          <SectionTitle>Custom Headers</SectionTitle>
-          <Card>
-            {localHeaders.length === 0 ? (
-              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>No custom headers configured</Text>
-            ) : (
-              localHeaders.map((header, index) => {
-                const isDuplicate = header.key.trim() !== "" && duplicateKeys.has(header.key.trim())
-                return (
-                  <View key={header.id}>
-                    {index > 0 && <Divider />}
-                    <View style={styles.headerRow}>
-                      <View style={styles.headerInputs}>
-                        <TextInput
-                          style={[
-                            styles.headerInput,
-                            {
-                              borderColor: isDuplicate ? colors.error : colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background
-                            }
-                          ]}
-                          value={header.key}
-                          onChangeText={(v) => updateHeaderField(header.id, "key", v)}
-                          placeholder="Header name"
-                          placeholderTextColor={colors.placeholder}
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                        />
-                        <TextInput
-                          style={[
-                            styles.headerInput,
-                            {
-                              borderColor: colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background
-                            }
-                          ]}
-                          value={header.value}
-                          onChangeText={(v) => updateHeaderField(header.id, "value", v)}
-                          placeholder="Value"
-                          placeholderTextColor={colors.placeholder}
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                        />
-                      </View>
-                      <Pressable
-                        onPress={() => removeHeader(header.id)}
-                        style={({ pressed }) => [
-                          styles.removeButton,
-                          { backgroundColor: colors.error + "15" },
-                          pressed && { opacity: colors.pressedOpacity }
-                        ]}
-                      >
-                        <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                )
-              })
-            )}
-
-            {localHeaders.length > 0 && <Divider />}
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.addButton,
-                { borderColor: colors.primary },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-              onPress={addHeader}
-            >
-              <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Header</Text>
-            </Pressable>
-
-            <Text style={[styles.hint, { color: colors.textSecondary }]}>
-              e.g., CF-Access-Client-Id for Cloudflare Access
-            </Text>
-          </Card>
-        </View>
-
-        {/* Duplicate key warning */}
-        {duplicateKeys.size > 0 && (
-          <View
-            style={[styles.warningBanner, { backgroundColor: colors.error + "15", borderColor: colors.error + "40" }]}
-          >
-            <Text style={[styles.warningText, { color: colors.error }]}>
-              Duplicate header names: {[...duplicateKeys].join(", ")}. Only the last value will be sent.
-            </Text>
+            <TextField
+              label={t("auth.password")}
+              value={config.password}
+              onChangeText={(v) => updateConfig({ password: v })}
+              placeholder={t("auth.password")}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="password"
+              secureTextEntry
+              containerStyle={styles.stackedField}
+            />
           </View>
         )}
 
-        <View style={styles.section}>
-          <SectionTitle>Client Certificate</SectionTitle>
-          <Card>
-            <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
-              onPress={() => navigation.navigate("mTLS Settings")}
-            >
-              <View style={styles.linkContent}>
-                <Text style={[styles.linkLabel, { color: colors.text }]}>Client Certificate (mTLS)</Text>
-                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
-                  Authenticate to servers that require a client certificate
-                </Text>
+        {config.authType === "bearer" && (
+          <TextField
+            label={t("auth.token")}
+            mono
+            value={config.bearerToken}
+            onChangeText={(v) => updateConfig({ bearerToken: v })}
+            placeholder={t("auth.token.placeholder")}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="off"
+            importantForAutofill="no"
+            multiline
+            textAlignVertical="top"
+          />
+        )}
+
+        <SectionTitle>{t("auth.customHeaders")}</SectionTitle>
+
+        {localHeaders.length === 0 ? (
+          <Text style={[styles.hint, { color: colors.textSecondary }]}>{t("auth.customHeaders.empty")}</Text>
+        ) : (
+          localHeaders.map((header, index) => {
+            const isDuplicate = header.key.trim() !== "" && duplicateKeys.has(header.key.trim())
+            return (
+              <View key={header.id}>
+                {index > 0 && <Divider tight />}
+                <View style={styles.headerRow}>
+                  <View style={styles.headerInputs}>
+                    <TextField
+                      label={t("auth.header.name")}
+                      error={isDuplicate ? t("auth.header.duplicate") : undefined}
+                      mono
+                      value={header.key}
+                      onChangeText={(v) => updateHeaderField(header.id, "key", v)}
+                      placeholder={t("auth.header.name")}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TextField
+                      label={t("auth.header.value")}
+                      mono
+                      value={header.value}
+                      onChangeText={(v) => updateHeaderField(header.id, "value", v)}
+                      placeholder={t("auth.header.value")}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      autoComplete="off"
+                      importantForAutofill="no"
+                      containerStyle={styles.stackedField}
+                    />
+                  </View>
+                  <Pressable
+                    testID={`remove-header-${header.id}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("auth.header.remove", { name: header.key || t("auth.header.name") })}
+                    android_ripple={{ color: colors.error + STATE_LAYER_ALPHA, borderless: true, radius: 20 }}
+                    onPress={() => removeHeader(header.id)}
+                    style={styles.removeButton}
+                  >
+                    <X size={size.icon.md} color={colors.error} />
+                  </Pressable>
+                </View>
               </View>
-              <ChevronRight size={size.icon.md} color={colors.textLight} />
-            </Pressable>
-          </Card>
+            )
+          })
+        )}
+
+        <Button
+          testID="add-header-btn"
+          title={t("auth.header.add")}
+          variant="ghost"
+          align="start"
+          icon={Plus}
+          onPress={addHeader}
+          style={styles.addButton}
+        />
+
+        <Text style={[styles.hint, { color: colors.textSecondary }]}>{t("auth.customHeaders.example")}</Text>
+
+        {duplicateKeys.size > 0 && (
+          <View style={styles.notice}>
+            <Notice
+              testID="duplicate-headers-notice"
+              variant="error"
+              title={t("auth.header.duplicates", { names: [...duplicateKeys].join(", ") })}
+              message={t("auth.header.duplicates.message")}
+            />
+          </View>
+        )}
+
+        <View style={styles.certGroup}>
+          <ListItem
+            testID="nav-mtls-settings"
+            label={t("auth.clientCertificate")}
+            sub={t("auth.clientCertificate.sub")}
+            onPress={() => navigation.navigate("mTLS Settings")}
+          />
         </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.textLight }]}>
-            Credentials and headers are stored encrypted on device
-          </Text>
-        </View>
+        <Text style={[styles.footer, { color: colors.textLight }]}>{t("auth.storedEncrypted")}</Text>
       </ScrollView>
 
       <Toast saving={saving} success={saveSuccess} />
@@ -369,9 +303,9 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 40
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   },
   loadingContainer: {
     flex: 1,
@@ -379,123 +313,47 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   loadingText: {
-    fontSize: 15,
-    ...fonts.regular
+    ...text.body
   },
   intro: {
-    fontSize: 14,
-    ...fonts.regular,
-    lineHeight: 20,
-    marginBottom: space.xl
+    ...text.body
   },
-  section: {
-    marginBottom: 24
+  chipBlock: {
+    paddingVertical: space.lg
   },
-  fieldGroup: {
-    marginTop: 4
+  stackedField: {
+    marginTop: space.lg
   },
-  fieldLabel: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold,
-    marginBottom: 8
-  },
-  fieldLabelSpaced: {
-    marginTop: 14
-  },
-  input: {
-    borderWidth: 1.5,
-    padding: 14,
-    borderRadius: 12,
-    fontSize: 15
-  },
-  tokenInput: {
-    minHeight: 80,
-    fontFamily: "monospace",
-    fontSize: 13
-  },
-  emptyHint: {
-    fontSize: 14,
-    textAlign: "center",
-    paddingVertical: 8
+  hint: {
+    ...text.label,
+    marginTop: space.sm
   },
   headerRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 8
+    alignItems: "flex-end",
+    gap: space.sm,
+    paddingVertical: space.md
   },
   headerInputs: {
-    flex: 1,
-    gap: 8
-  },
-  headerInput: {
-    borderWidth: 1.5,
-    padding: 12,
-    borderRadius: 10,
-    fontSize: 14
-  },
-  removeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  removeButtonText: {
-    fontSize: 14,
-    ...fonts.bold
-  },
-  addButton: {
-    paddingVertical: 14,
-    alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    marginTop: 4
-  },
-  addButtonText: {
-    fontSize: 15,
-    ...fonts.semiBold
-  },
-  hint: {
-    fontSize: 12,
-    marginTop: 10,
-    textAlign: "center"
-  },
-  warningBanner: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 20
-  },
-  warningText: {
-    fontSize: 12,
-    lineHeight: 18
-  },
-  footer: {
-    paddingVertical: 16,
-    alignItems: "center"
-  },
-  footerText: {
-    fontSize: 11,
-    textAlign: "center"
-  },
-  linkRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12
-  },
-  linkContent: {
     flex: 1
   },
-  linkLabel: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
+  removeButton: {
+    width: size.touch,
+    height: size.touch,
+    alignItems: "center",
+    justifyContent: "center"
   },
-  linkSub: {
-    fontSize: 13,
-    ...fonts.regular
+  addButton: {
+    marginTop: space.sm
+  },
+  notice: {
+    marginTop: space.lg
+  },
+  certGroup: {
+    marginTop: space.xxl
+  },
+  footer: {
+    ...text.caption,
+    marginTop: space.xxl
   }
 })

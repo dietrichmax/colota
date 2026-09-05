@@ -45,15 +45,45 @@ jest.mock("../../hooks/useAutoSave", () => ({
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text, Pressable } = require("react-native")
+  const { View, Text, Pressable, TextInput } = require("react-native")
   return {
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Toast: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
-    Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
-    Button: ({ title, onPress }: any) => R.createElement(Pressable, { onPress }, R.createElement(Text, null, title)),
+    Button: ({ title, onPress, testID }: any) =>
+      R.createElement(Pressable, { testID, onPress }, R.createElement(Text, null, title)),
     FieldMessage: ({ children }: any) => R.createElement(Text, null, children),
+    Notice: ({ testID, title, message }: any) =>
+      R.createElement(
+        View,
+        { testID },
+        R.createElement(Text, null, title),
+        message ? R.createElement(Text, null, message) : null
+      ),
+    ListItem: ({ testID, label, sub, onPress }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress },
+        R.createElement(Text, null, label),
+        sub ? R.createElement(Text, null, sub) : null
+      ),
+    TextField: ({ testID, label, error, value, onChangeText, placeholder, autoComplete, importantForAutofill }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        error ? R.createElement(Text, null, error) : null,
+        R.createElement(TextInput, {
+          testID,
+          value,
+          onChangeText,
+          placeholder,
+          autoComplete,
+          importantForAutofill,
+          accessibilityLabel: label
+        })
+      ),
     ChipGroup: ({ options, onSelect }: any) =>
       R.createElement(
         View,
@@ -110,8 +140,8 @@ describe("AuthSettingsScreen", () => {
       await waitFor(() => {
         expect(getByText("None")).toBeTruthy()
       })
-      expect(getByText("Basic Auth")).toBeTruthy()
-      expect(getByText("Bearer Token")).toBeTruthy()
+      expect(getByText("Basic auth")).toBeTruthy()
+      expect(getByText("Bearer token")).toBeTruthy()
     })
 
     it("defaults to None with no credential fields visible", async () => {
@@ -126,42 +156,42 @@ describe("AuthSettingsScreen", () => {
       expect(queryByText("Token")).toBeNull()
     })
 
-    it("switching to Basic Auth shows username and password fields", async () => {
+    it("switching to Basic auth shows username and password fields", async () => {
       const { getByText } = renderScreen()
 
       await waitFor(() => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
 
       expect(getByText("Username")).toBeTruthy()
       expect(getByText("Password")).toBeTruthy()
     })
 
-    it("switching to Bearer Token shows token field", async () => {
+    it("switching to Bearer token shows token field", async () => {
       const { getByText } = renderScreen()
 
       await waitFor(() => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Bearer Token"))
+      fireEvent.press(getByText("Bearer token"))
 
       expect(getByText("Token")).toBeTruthy()
     })
 
-    it("switching from Basic Auth to Bearer hides username/password, shows token", async () => {
+    it("switching from Basic auth to Bearer hides username/password, shows token", async () => {
       const { getByText, queryByText } = renderScreen()
 
       await waitFor(() => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
       expect(getByText("Username")).toBeTruthy()
 
-      fireEvent.press(getByText("Bearer Token"))
+      fireEvent.press(getByText("Bearer token"))
       expect(queryByText("Username")).toBeNull()
       expect(queryByText("Password")).toBeNull()
       expect(getByText("Token")).toBeTruthy()
@@ -174,7 +204,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Bearer Token"))
+      fireEvent.press(getByText("Bearer token"))
       expect(getByText("Token")).toBeTruthy()
 
       fireEvent.press(getByText("None"))
@@ -188,12 +218,12 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
 
       expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
     })
 
-    it("loads saved Basic Auth config and shows fields", async () => {
+    it("loads saved Basic auth config and shows fields", async () => {
       mockAuthConfig = {
         ...DEFAULT_AUTH_CONFIG,
         authType: "basic",
@@ -234,12 +264,49 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
 
       const usernameInput = getByPlaceholderText("Username")
       fireEvent.changeText(usernameInput, "newuser")
 
       expect(mockDebouncedSaveAndRestart).toHaveBeenCalled()
+    })
+  })
+
+  describe("autofill", () => {
+    // A username and password are account credentials a password manager should offer to
+    // fill; a bearer token and a header value are secrets pasted once, and inviting the
+    // autofill sheet onto them puts them into a store the user never chose.
+    it("offers autofill on the Basic auth pair and keeps it away from the token", async () => {
+      const { getByText, getByLabelText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByText("None")).toBeTruthy()
+      })
+
+      fireEvent.press(getByText("Basic auth"))
+      expect(getByLabelText("Username").props.autoComplete).toBe("username")
+      expect(getByLabelText("Password").props.autoComplete).toBe("password")
+
+      fireEvent.press(getByText("Bearer token"))
+      expect(getByLabelText("Token").props.autoComplete).toBe("off")
+      expect(getByLabelText("Token").props.importantForAutofill).toBe("no")
+    })
+
+    it("keeps autofill away from a custom header value", async () => {
+      mockAuthConfig = {
+        ...DEFAULT_AUTH_CONFIG,
+        customHeaders: { "X-Secret": "s3cret" }
+      }
+
+      const { getByLabelText } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByLabelText("Value")).toBeTruthy()
+      })
+
+      expect(getByLabelText("Value").props.autoComplete).toBe("off")
+      expect(getByLabelText("Value").props.importantForAutofill).toBe("no")
     })
   })
 
@@ -252,14 +319,14 @@ describe("AuthSettingsScreen", () => {
       })
     })
 
-    it("adds a header row when + Add Header is pressed", async () => {
-      const { getByText, getAllByPlaceholderText } = renderScreen()
+    it("adds a header row when Add header is pressed", async () => {
+      const { getByTestId, getAllByPlaceholderText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("+ Add Header")).toBeTruthy()
+        expect(getByTestId("add-header-btn")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("+ Add Header"))
+      fireEvent.press(getByTestId("add-header-btn"))
 
       expect(getAllByPlaceholderText("Header name")).toHaveLength(1)
       expect(getAllByPlaceholderText("Value")).toHaveLength(1)
@@ -280,19 +347,21 @@ describe("AuthSettingsScreen", () => {
       expect(getByDisplayValue("abc123")).toBeTruthy()
     })
 
-    it("removes a header when X is pressed", async () => {
+    // The remove control is icon-only, so its accessible name has to say which header
+    // it drops or Voice Access and TalkBack cannot tell two rows apart.
+    it("removes a header from a control named after that header", async () => {
       mockAuthConfig = {
         ...DEFAULT_AUTH_CONFIG,
         customHeaders: { "X-Custom": "val" }
       }
 
-      const { getByDisplayValue, getByText, queryByDisplayValue } = renderScreen()
+      const { getByDisplayValue, getByLabelText, queryByDisplayValue } = renderScreen()
 
       await waitFor(() => {
         expect(getByDisplayValue("X-Custom")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("X"))
+      fireEvent.press(getByLabelText("Remove header X-Custom"))
 
       expect(queryByDisplayValue("X-Custom")).toBeNull()
       expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
@@ -304,17 +373,17 @@ describe("AuthSettingsScreen", () => {
         customHeaders: { "X-One": "a" }
       }
 
-      const { getByText, getAllByPlaceholderText, queryByText } = renderScreen()
+      const { getByText, getByTestId, getAllByPlaceholderText, queryByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("+ Add Header")).toBeTruthy()
+        expect(getByTestId("add-header-btn")).toBeTruthy()
       })
 
       // No warning initially
       expect(queryByText(/Duplicate header names/)).toBeNull()
 
       // Add second header and type same key
-      fireEvent.press(getByText("+ Add Header"))
+      fireEvent.press(getByTestId("add-header-btn"))
       const nameInputs = getAllByPlaceholderText("Header name")
       fireEvent.changeText(nameInputs[1], "X-One")
 

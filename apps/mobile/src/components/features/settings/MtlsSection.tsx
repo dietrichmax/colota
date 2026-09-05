@@ -4,27 +4,34 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, TextInput, View } from "react-native"
+import { Text, StyleSheet, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
-import { fonts, fontSizes } from "../../../styles/typography"
-import { SectionTitle, Card, Divider, Button, FieldMessage } from "../../index"
+import { useTranslation } from "../../../i18n/useTranslation"
+import { text } from "../../../styles/typography"
+import { space } from "../../../constants"
+import { SectionTitle, Button, FieldMessage, StatRow, TextField } from "../../index"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { ClientCertInfoResult } from "../../../types/global"
 import { logger } from "../../../utils/logger"
 
 const EXPIRY_WARNING_DAYS = 14
+const MS_PER_DAY = 1000 * 60 * 60 * 24
 
 const CLIENT_CERT_ERR: Record<string, string> = {
-  E_CERT_PASSWORD: "Incorrect password",
-  E_CERT_INVALID: "Not a valid PKCS12 file"
+  E_CERT_PASSWORD: "mtls.error.certPassword",
+  E_CERT_INVALID: "mtls.error.certInvalid"
 }
 const SERVER_CA_ERR: Record<string, string> = {
-  E_CA_READ: "Could not read the selected file. Try a smaller file or pick again.",
-  E_CA_INVALID: "Not a valid X.509 certificate. Make sure you're picking the CA cert (PEM or DER)."
+  E_CA_READ: "mtls.error.caRead",
+  E_CA_INVALID: "mtls.error.caInvalid"
 }
 
-function errMsg(map: Record<string, string>, err: any, fallback: string): string {
-  return map[err?.code] ?? err?.message ?? fallback
+type Translate = (key: string, options?: Record<string, unknown>) => string
+
+function errMsg(map: Record<string, string>, err: any, fallbackKey: string, t: Translate): string {
+  const key = map[err?.code]
+  if (key) return t(key)
+  return err?.message ?? t(fallbackKey)
 }
 
 type ImportState =
@@ -32,6 +39,7 @@ type ImportState =
 
 export function MtlsSection() {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const [certInfo, setCertInfo] = useState<ClientCertInfoResult | null>(null)
   const [caInfo, setCaInfo] = useState<ClientCertInfoResult | null>(null)
   const [importState, setImportState] = useState<ImportState>({ kind: "idle" })
@@ -66,9 +74,9 @@ export function MtlsSection() {
       await refresh()
     } catch (err: any) {
       logger.error("[MtlsSection] importServerCa failed:", err)
-      setCaError(errMsg(SERVER_CA_ERR, err, "Could not import the CA"))
+      setCaError(errMsg(SERVER_CA_ERR, err, "mtls.error.caImport", t))
     }
-  }, [refresh])
+  }, [refresh, t])
 
   const handleClearServerCa = useCallback(async () => {
     try {
@@ -87,9 +95,9 @@ export function MtlsSection() {
       await refresh()
     } catch (err: any) {
       logger.error("[MtlsSection] pickKeyChainCert failed:", err)
-      setClientPickError(err?.message || "Could not read the selected certificate")
+      setClientPickError(err?.message || t("mtls.error.certRead"))
     }
-  }, [refresh])
+  }, [refresh, t])
 
   const handlePickFile = useCallback(async () => {
     setClientPickError(null)
@@ -99,9 +107,9 @@ export function MtlsSection() {
       setImportState({ kind: "picked", b64, password: "", importing: false, error: null })
     } catch (err: any) {
       logger.error("[MtlsSection] pick failed:", err)
-      setClientPickError(err?.message || "Could not read the selected file")
+      setClientPickError(err?.message || t("mtls.error.fileRead"))
     }
-  }, [])
+  }, [t])
 
   const handleImport = useCallback(async () => {
     if (importState.kind !== "picked" || !importState.b64) return
@@ -111,9 +119,13 @@ export function MtlsSection() {
       setImportState({ kind: "idle" })
       await refresh()
     } catch (err: any) {
-      setImportState({ ...importState, importing: false, error: errMsg(CLIENT_CERT_ERR, err, "Import failed") })
+      setImportState({
+        ...importState,
+        importing: false,
+        error: errMsg(CLIENT_CERT_ERR, err, "mtls.error.importFailed", t)
+      })
     }
-  }, [importState, refresh])
+  }, [importState, refresh, t])
 
   const handleCancelImport = useCallback(() => {
     setImportState({ kind: "idle" })
@@ -129,188 +141,142 @@ export function MtlsSection() {
   }, [refresh])
 
   if (certInfo === null || caInfo === null) {
-    return (
-      <View style={styles.section}>
-        <Card>
-          <Text style={[styles.muted, { color: colors.textSecondary }]}>Loading...</Text>
-        </Card>
-      </View>
-    )
+    return <Text style={[styles.muted, { color: colors.textSecondary }]}>{t("mtls.loading")}</Text>
   }
 
   return (
     <>
-      <View style={styles.section}>
-        <Card>
-          {importState.kind === "picked" ? (
-            <View>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Password (leave empty if none)</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    borderColor: colors.border,
-                    color: colors.text,
-                    backgroundColor: colors.background
-                  }
-                ]}
-                value={importState.password}
-                onChangeText={(v) => setImportState({ ...importState, password: v, error: null })}
-                placeholder="PKCS12 password"
-                placeholderTextColor={colors.placeholder}
-                autoCapitalize="none"
-                autoCorrect={false}
-                secureTextEntry
-                editable={!importState.importing}
-              />
-              {importState.error && <FieldMessage variant="error">{importState.error}</FieldMessage>}
-              <View style={styles.buttonRow}>
-                <Button
-                  style={styles.flex1}
-                  onPress={handleImport}
-                  title={importState.importing ? "Importing..." : "Save"}
-                />
-                <Button
-                  variant="secondary"
-                  title="Cancel"
-                  onPress={handleCancelImport}
-                  disabled={importState.importing}
-                />
-              </View>
-            </View>
-          ) : certInfo.configured ? (
-            <CertCard
-              info={certInfo}
-              showIssuer
-              expiryWarningDays={EXPIRY_WARNING_DAYS}
-              removeLabel="Remove Certificate"
-              expiredMessage="Certificate has expired. Server will reject connections."
-              expiringSoonMessage={(d) => `Certificate expires in ${d} day(s). Renew soon.`}
-              errorPrefix="Stored certificate could not be read"
-              onRemove={handleRemove}
-              onReimport={handlePickFile}
+      {importState.kind === "picked" ? (
+        <View>
+          <TextField
+            testID="p12-password-input"
+            label={t("mtls.password")}
+            hint={t("mtls.password.hint")}
+            value={importState.password}
+            onChangeText={(v) => setImportState({ ...importState, password: v, error: null })}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="off"
+            importantForAutofill="no"
+            secureTextEntry
+            editable={!importState.importing}
+          />
+          {importState.error && <FieldMessage variant="error">{importState.error}</FieldMessage>}
+          <View style={styles.buttonRow}>
+            <Button
+              style={styles.flex1}
+              onPress={handleImport}
+              loading={importState.importing}
+              title={t("mtls.save")}
             />
-          ) : (
-            <View>
-              <Text style={[styles.muted, { color: colors.textSecondary }]}>
-                No client certificate configured. Required if your server enforces mutual TLS authentication.
-              </Text>
-              <Button style={styles.importButton} onPress={handlePickKeyChain} title="Pick from device certificates" />
-              <FieldMessage>
-                Uses a cert already installed in Android (private key stays in the OS keystore).
-              </FieldMessage>
-              <Button style={styles.importButton} onPress={handlePickFile} title="Import .p12 / .pfx" />
-              {clientPickError && <FieldMessage variant="error">{clientPickError}</FieldMessage>}
-            </View>
-          )}
-        </Card>
-      </View>
+            <Button
+              variant="secondary"
+              title={t("mtls.cancel")}
+              onPress={handleCancelImport}
+              disabled={importState.importing}
+            />
+          </View>
+        </View>
+      ) : certInfo.configured ? (
+        <CertDetails
+          info={certInfo}
+          showIssuer
+          removeLabel={t("mtls.removeCertificate")}
+          expiredMessage={t("mtls.certificate.expired")}
+          expiringSoonMessage={(d) => t("mtls.certificate.expiringSoon", { count: d })}
+          errorMessage={(reason) => t("mtls.certificate.unreadable", { reason })}
+          onRemove={handleRemove}
+          onReimport={handlePickFile}
+        />
+      ) : (
+        <View>
+          <Text style={[styles.muted, { color: colors.textSecondary }]}>{t("mtls.certificate.none")}</Text>
+          <Button style={styles.stackedButton} onPress={handlePickKeyChain} title={t("mtls.pickFromDevice")} />
+          <FieldMessage>{t("mtls.pickFromDevice.hint")}</FieldMessage>
+          <Button style={styles.stackedButton} onPress={handlePickFile} title={t("mtls.importP12")} />
+          {clientPickError && <FieldMessage variant="error">{clientPickError}</FieldMessage>}
+        </View>
+      )}
 
-      <View style={styles.section}>
-        <SectionTitle>Trusted server CA</SectionTitle>
-        <Card>
-          {caInfo.configured ? (
-            <CertCard
-              info={caInfo}
-              showIssuer={false}
-              expiryWarningDays={EXPIRY_WARNING_DAYS}
-              removeLabel="Remove CA"
-              expiredMessage="CA has expired. Server cert validation will fail."
-              expiringSoonMessage={(d) => `CA expires in ${d} day(s). Renew soon.`}
-              errorPrefix="Stored CA could not be read"
-              onRemove={handleClearServerCa}
-              onReimport={handlePickServerCa}
-            />
-          ) : (
-            <View>
-              <Text style={[styles.muted, { color: colors.textSecondary }]}>
-                Only needed if your server uses a private / self-signed CA that public Android trust store doesn't know
-                about. Publicly-trusted certs (Let's Encrypt, Cloudflare) work without this.
-              </Text>
-              <Button style={styles.importButton} onPress={handlePickServerCa} title="Import CA (.crt / .pem)" />
-              {caError && <FieldMessage variant="error">{caError}</FieldMessage>}
-            </View>
-          )}
-        </Card>
-      </View>
+      <SectionTitle>{t("mtls.trustedCa")}</SectionTitle>
+      {caInfo.configured ? (
+        <CertDetails
+          info={caInfo}
+          showIssuer={false}
+          removeLabel={t("mtls.removeCa")}
+          expiredMessage={t("mtls.ca.expired")}
+          expiringSoonMessage={(d) => t("mtls.ca.expiringSoon", { count: d })}
+          errorMessage={(reason) => t("mtls.ca.unreadable", { reason })}
+          onRemove={handleClearServerCa}
+          onReimport={handlePickServerCa}
+        />
+      ) : (
+        <View>
+          <Text style={[styles.muted, { color: colors.textSecondary }]}>{t("mtls.ca.none")}</Text>
+          <Button style={styles.stackedButton} onPress={handlePickServerCa} title={t("mtls.importCa")} />
+          {caError && <FieldMessage variant="error">{caError}</FieldMessage>}
+        </View>
+      )}
     </>
   )
 }
 
-type CertCardProps = {
+type CertDetailsProps = {
   info: Extract<ClientCertInfoResult, { configured: true }>
   showIssuer: boolean
-  expiryWarningDays: number
   removeLabel: string
   expiredMessage: string
   expiringSoonMessage: (days: number) => string
-  errorPrefix: string
+  errorMessage: (reason: string) => string
   onRemove: () => void
   onReimport: () => void
 }
 
-function CertCard({
+function CertDetails({
   info,
   showIssuer,
-  expiryWarningDays,
   removeLabel,
   expiredMessage,
   expiringSoonMessage,
-  errorPrefix,
+  errorMessage,
   onRemove,
   onReimport
-}: CertCardProps) {
+}: CertDetailsProps) {
+  const { t } = useTranslation()
   const issuerMissing = showIssuer && !info.issuer
+
   if (info.error || !info.notAfter || !info.subject || issuerMissing) {
     return (
       <View>
-        <FieldMessage variant="error">
-          {errorPrefix}: {info.error || "missing fields"}. Re-import to fix.
-        </FieldMessage>
+        <FieldMessage variant="error">{errorMessage(info.error || t("mtls.missingFields"))}</FieldMessage>
         <View style={styles.buttonRow}>
-          <Button style={styles.flex1} onPress={onReimport} title="Re-import" />
-          <Button variant="danger" title="Remove" onPress={onRemove} />
+          <Button style={styles.flex1} onPress={onReimport} title={t("mtls.reimport")} />
+          <Button variant="danger" title={t("mtls.remove")} onPress={onRemove} />
         </View>
       </View>
     )
   }
 
   const notAfterDate = new Date(info.notAfter)
-  const daysUntilExpiry = Math.floor((info.notAfter - Date.now()) / (1000 * 60 * 60 * 24))
+  const daysUntilExpiry = Math.floor((info.notAfter - Date.now()) / MS_PER_DAY)
   const expired = daysUntilExpiry < 0
-  const expiringSoon = !expired && daysUntilExpiry < expiryWarningDays
+  const expiringSoon = !expired && daysUntilExpiry < EXPIRY_WARNING_DAYS
 
   return (
     <View>
-      <DetailRow label="Subject" value={shortenDn(info.subject)} />
-      {showIssuer && info.issuer && (
-        <>
-          <Divider />
-          <DetailRow label="Issuer" value={shortenDn(info.issuer)} />
-        </>
-      )}
-      <Divider />
-      <DetailRow
-        label="Expires"
-        value={`${notAfterDate.toISOString().slice(0, 10)} (${expired ? "expired" : `in ${daysUntilExpiry}d`})`}
+      <StatRow label={t("mtls.subject")} value={shortenDn(info.subject)} divider />
+      {showIssuer && info.issuer && <StatRow label={t("mtls.issuer")} value={shortenDn(info.issuer)} divider />}
+      <StatRow
+        label={t("mtls.expires")}
+        value={
+          expired
+            ? t("mtls.expires.past", { date: notAfterDate.toISOString().slice(0, 10) })
+            : t("mtls.expires.future", { date: notAfterDate.toISOString().slice(0, 10), count: daysUntilExpiry })
+        }
       />
       {expired && <FieldMessage variant="error">{expiredMessage}</FieldMessage>}
       {expiringSoon && <FieldMessage variant="warning">{expiringSoonMessage(daysUntilExpiry)}</FieldMessage>}
-      <View style={styles.buttonRow}>
-        <Button style={styles.flex1} variant="danger" title={removeLabel} onPress={onRemove} />
-      </View>
-    </View>
-  )
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  const { colors } = useTheme()
-  return (
-    <View style={styles.detailRow}>
-      <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{label}</Text>
-      <Text style={[styles.detailValue, { color: colors.text }]} numberOfLines={1} ellipsizeMode="middle">
-        {value}
-      </Text>
+      <Button style={styles.stackedButton} variant="dangerGhost" align="start" title={removeLabel} onPress={onRemove} />
     </View>
   )
 }
@@ -325,47 +291,19 @@ function shortenDn(dn: string): string {
 }
 
 const styles = StyleSheet.create({
-  section: {
-    marginBottom: 24
-  },
   muted: {
-    fontSize: 13,
-    ...fonts.regular,
-    lineHeight: 18
+    ...text.body
   },
-  fieldLabel: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold,
-    marginBottom: 8
-  },
-  input: {
-    borderWidth: 1.5,
-    padding: 14,
-    borderRadius: 12,
-    fontSize: 15
-  },
-  importButton: {
-    marginTop: 12
+  stackedButton: {
+    marginTop: space.md
   },
   buttonRow: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 12,
+    gap: space.sm,
+    marginTop: space.md,
     alignItems: "center"
   },
   flex1: {
     flex: 1
-  },
-  detailRow: {
-    paddingVertical: 10
-  },
-  detailLabel: {
-    fontSize: 12,
-    ...fonts.medium,
-    marginBottom: 2
-  },
-  detailValue: {
-    fontSize: 14,
-    ...fonts.regular
   }
 })

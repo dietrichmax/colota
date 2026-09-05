@@ -44,12 +44,50 @@ jest.mock("../../services/NativeLocationService", () => ({
 // Mock barrel exports to avoid native module imports
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text, Pressable } = require("react-native")
+  const { View, Text, Pressable, TextInput } = require("react-native")
   return {
-    SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
+    SectionTitle: ({ children, action }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, children),
+        action
+          ? R.createElement(
+              Pressable,
+              { testID: action.testID, onPress: action.onPress },
+              R.createElement(Text, null, action.label)
+            )
+          : null
+      ),
     Toast: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
+    Notice: ({ testID, title, message }: any) =>
+      R.createElement(
+        View,
+        { testID },
+        R.createElement(Text, null, title),
+        message ? R.createElement(Text, null, message) : null
+      ),
+    Button: ({ title, onPress, testID }: any) =>
+      R.createElement(Pressable, { testID, onPress }, R.createElement(Text, null, title)),
+    TextField: ({ testID, label, hint, error, value, onChangeText, placeholder, trailing }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        hint ? R.createElement(Text, null, hint) : null,
+        error ? R.createElement(Text, null, error) : null,
+        R.createElement(TextInput, { testID, value, onChangeText, placeholder }),
+        trailing
+          ? R.createElement(Pressable, {
+              testID: trailing.testID,
+              accessibilityRole: "button",
+              accessibilityLabel: trailing.accessibilityLabel,
+              onPress: trailing.onPress
+            })
+          : null
+      ),
     ChipGroup: ({ options, selected, onSelect }: any) =>
       R.createElement(
         View,
@@ -189,7 +227,7 @@ describe("ApiSettingsScreen", () => {
 
       fireEvent.press(getByText(/^GET$/))
 
-      expect(getByText("Fields sent as URL query parameters instead of JSON body")).toBeTruthy()
+      expect(getByText("Fields are sent as URL query parameters instead of a JSON body")).toBeTruthy()
     })
 
     it("switching method triggers immediate save", () => {
@@ -210,23 +248,36 @@ describe("ApiSettingsScreen", () => {
   })
 
   describe("field reset", () => {
-    it("shows Modified badge when a field differs from template default", () => {
-      const { getByText, getByDisplayValue } = renderScreen()
+    // The Modified badge was a tinted box; the per-field reset control is what a user
+    // acts on, so its presence is the signal that the field left its template default.
+    it("offers a reset control on the field that differs from the template default", () => {
+      const { queryByTestId, getByDisplayValue } = renderScreen()
 
-      // Change the lat field
-      const latInput = getByDisplayValue("lat")
-      fireEvent.changeText(latInput, "latitude")
+      expect(queryByTestId("reset-lat-btn")).toBeNull()
 
-      expect(getByText("Modified")).toBeTruthy()
+      fireEvent.changeText(getByDisplayValue("lat"), "latitude")
+
+      expect(queryByTestId("reset-lat-btn")).toBeTruthy()
+      expect(queryByTestId("reset-lon-btn")).toBeNull()
     })
 
-    it("shows RESET ALL button when any field is modified", () => {
-      const { getByText, getByDisplayValue } = renderScreen()
+    it("puts the reset-all action on the field mappings heading once anything is modified", () => {
+      const { queryByTestId, getByDisplayValue, getByText } = renderScreen()
 
-      const latInput = getByDisplayValue("lat")
-      fireEvent.changeText(latInput, "latitude")
+      expect(queryByTestId("reset-all-fields-btn")).toBeNull()
 
-      expect(getByText("RESET ALL")).toBeTruthy()
+      fireEvent.changeText(getByDisplayValue("lat"), "latitude")
+
+      expect(getByText("Reset all")).toBeTruthy()
+    })
+
+    it("restores the template default when a field reset is pressed", () => {
+      const { getByTestId, getByDisplayValue } = renderScreen()
+
+      fireEvent.changeText(getByDisplayValue("lat"), "latitude")
+      fireEvent.press(getByTestId("reset-lat-btn"))
+
+      expect(getByDisplayValue("lat")).toBeTruthy()
     })
   })
 
@@ -249,10 +300,10 @@ describe("ApiSettingsScreen", () => {
   })
 
   describe("copy payload", () => {
-    it("renders the COPY button", () => {
+    it("renders the copy button", () => {
       const { getByText } = renderScreen()
 
-      expect(getByText("COPY")).toBeTruthy()
+      expect(getByText("Copy")).toBeTruthy()
     })
   })
 })

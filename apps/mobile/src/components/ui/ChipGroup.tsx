@@ -13,7 +13,7 @@ import { fonts, text } from "../../styles/typography"
 import { size, space, STATE_LAYER_ALPHA } from "../../constants"
 import { FocusRing } from "./FocusRing"
 
-type ChipOption<T extends string> = { value: T; label: string }
+type ChipOption<T extends string> = { value: T; label: string; testID?: string }
 
 type NamedProps = { label: string; accessibilityLabel?: string } | { label?: undefined; accessibilityLabel: string }
 
@@ -90,6 +90,7 @@ function Chip<T extends string>({ option, checked, disabled, multiple, onPress }
     // The 36 chip is painted inside a 48 Pressable rather than given hitSlop, because
     // hitSlop widens touch dispatch only and leaves the accessibility node at 36.
     <Pressable
+      testID={option.testID}
       accessibilityRole={multiple ? "checkbox" : "radio"}
       accessibilityLabel={option.label}
       accessibilityState={{ checked, disabled }}

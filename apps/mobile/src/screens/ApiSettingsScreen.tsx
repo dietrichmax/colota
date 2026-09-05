@@ -4,7 +4,9 @@
  */
 
 import { useState, useCallback, useMemo, useRef } from "react"
-import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
+import { Plus, RotateCcw, X } from "lucide-react-native"
+import { radius } from "@colota/shared"
 import {
   FieldMap,
   DEFAULT_FIELD_MAP,
@@ -19,10 +21,11 @@ import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
+import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
-import { fonts } from "../styles/typography"
-import { space } from "../constants"
-import { SectionTitle, Toast, Container, Divider, ChipGroup } from "../components"
+import { text } from "../styles/typography"
+import { size, space, STATE_LAYER_ALPHA } from "../constants"
+import { Button, ChipGroup, Container, Divider, Notice, SectionTitle, TextField, Toast } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
   buildTraccarJsonPayload,
@@ -31,42 +34,30 @@ import {
   isOverlandFormat
 } from "../utils/apiPayload"
 
+const COPIED_DISPLAY_MS = 2000
+
 type LocalCustomField = CustomField & { id: number }
 
-/** Field descriptions for UI display */
-const FIELD_DESCRIPTIONS: Record<keyof FieldMap, string> = {
-  lat: "Latitude coordinate",
-  lon: "Longitude coordinate",
-  acc: "GPS accuracy in meters",
-  alt: "Altitude in meters",
-  vel: "Speed in m/s",
-  batt: "Battery level percentage",
-  bs: "Battery charging status",
-  tst: "Timestamp",
-  bear: "Direction of travel (0-360°)"
+const FIELD_DESCRIPTION_KEYS: Record<keyof FieldMap, string> = {
+  lat: "api.field.lat",
+  lon: "api.field.lon",
+  acc: "api.field.acc",
+  alt: "api.field.alt",
+  vel: "api.field.vel",
+  batt: "api.field.batt",
+  bs: "api.field.bs",
+  tst: "api.field.tst",
+  bear: "api.field.bear"
 }
-
-const TEMPLATE_OPTIONS: { value: ApiTemplateName; label: string }[] = [
-  { value: "custom", label: "Custom" },
-  ...Object.entries(API_TEMPLATES).map(([key, tmpl]) => ({
-    value: key as ApiTemplateName,
-    label: tmpl.label
-  }))
-]
 
 const HTTP_METHOD_OPTIONS: { value: HttpMethod; label: string }[] = [
   { value: "POST", label: "POST" },
   { value: "GET", label: "GET" }
 ]
 
-const DAWARICH_MODE_OPTIONS: { value: DawarichMode; label: string }[] = [
-  { value: "single", label: "Single point" },
-  { value: "batch", label: "Batch" }
-]
-
 /**
  * Returns the reference field map for the current template.
- * Used for "Modified" badge comparison and "Reset" actions.
+ * Used for the reset actions and for spotting a field that no longer matches its template.
  */
 function getReferenceFieldMap(template: ApiTemplateName): FieldMap {
   if (template === "custom") return DEFAULT_FIELD_MAP
@@ -85,6 +76,7 @@ function getReferenceCustomFields(template: ApiTemplateName): CustomField[] {
 export function ApiSettingsScreen({}: ScreenProps) {
   const { settings, setSettings, restartTracking } = useTracking()
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   const nextIdRef = useRef(0)
   const assignId = () => nextIdRef.current++
@@ -105,6 +97,25 @@ export function ApiSettingsScreen({}: ScreenProps) {
   const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
 
   const referenceFieldMap = getReferenceFieldMap(localTemplate)
+
+  const templateOptions = useMemo(
+    () => [
+      { value: "custom" as ApiTemplateName, label: t("api.template.custom") },
+      ...Object.entries(API_TEMPLATES).map(([key, tmpl]) => ({
+        value: key as ApiTemplateName,
+        label: tmpl.label
+      }))
+    ],
+    [t]
+  )
+
+  const dawarichModeOptions = useMemo(
+    () => [
+      { value: "single" as DawarichMode, label: t("api.dawarich.single") },
+      { value: "batch" as DawarichMode, label: t("api.dawarich.batch") }
+    ],
+    [t]
+  )
 
   /** Set of field keys that differ from the current template's defaults */
   const modifiedFields = useMemo(() => {
@@ -386,8 +397,8 @@ export function ApiSettingsScreen({}: ScreenProps) {
   }, [localCustomFields])
 
   const handleCustomFieldChange = useCallback(
-    (id: number, field: "key" | "value", text: string) => {
-      const newFields = localCustomFields.map((f) => (f.id === id ? { ...f, [field]: text } : f))
+    (id: number, field: "key" | "value", value: string) => {
+      const newFields = localCustomFields.map((f) => (f.id === id ? { ...f, [field]: value } : f))
       setLocalCustomFields(newFields)
 
       // Only reset template when changing a key, not a value
@@ -454,291 +465,190 @@ export function ApiSettingsScreen({}: ScreenProps) {
     try {
       await NativeLocationService.copyToClipboard(examplePayload, "API Payload")
       setCopied(true)
-      copiedTimeout.set(() => setCopied(false), 2000)
+      copiedTimeout.set(() => setCopied(false), COPIED_DISPLAY_MS)
     } catch {
       // Copy failed — no action needed
     }
   }, [examplePayload, copiedTimeout])
 
+  const fieldKeys = Object.keys(DEFAULT_FIELD_MAP) as Array<keyof FieldMap>
+
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>Customize field names sent to your server</Text>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>{t("api.intro")}</Text>
 
-        {/* Template Selector */}
-        <View style={styles.section}>
-          <SectionTitle>Backend template</SectionTitle>
-          <ChipGroup
-            options={TEMPLATE_OPTIONS}
-            selected={localTemplate}
-            onSelect={handleTemplateChange}
-            colors={colors}
-            accessibilityLabel="Backend template"
-          />
-          {localTemplate !== "custom" && (
-            <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-              {API_TEMPLATES[localTemplate].description}
-            </Text>
-          )}
-        </View>
+        <SectionTitle first>{t("api.backendTemplate")}</SectionTitle>
+        <ChipGroup
+          options={templateOptions}
+          selected={localTemplate}
+          onSelect={handleTemplateChange}
+          accessibilityLabel={t("api.backendTemplate")}
+        />
+        {localTemplate !== "custom" && (
+          <Text style={[styles.hint, { color: colors.textSecondary }]}>{API_TEMPLATES[localTemplate].description}</Text>
+        )}
 
-        {/* HTTP Method Selector */}
         {/* Overland template is POST-only by spec; no need to expose the choice */}
         {localTemplate !== "overland" && (
-          <View style={styles.section}>
-            <SectionTitle>HTTP method</SectionTitle>
+          <>
+            <SectionTitle>{t("api.httpMethod")}</SectionTitle>
             <ChipGroup
               options={HTTP_METHOD_OPTIONS}
               selected={localHttpMethod}
               onSelect={handleHttpMethodChange}
-              colors={colors}
-              accessibilityLabel="HTTP method"
+              accessibilityLabel={t("api.httpMethod")}
             />
-            {localHttpMethod === "GET" && (
-              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-                Fields sent as URL query parameters instead of JSON body
-              </Text>
-            )}
-          </View>
+            {isGetMethod && <Text style={[styles.hint, { color: colors.textSecondary }]}>{t("api.getHint")}</Text>}
+          </>
         )}
 
-        {/* Dawarich Mode Selector (Dawarich template only) */}
         {showDawarichChip && (
-          <View style={styles.section}>
-            <SectionTitle>Dawarich mode</SectionTitle>
+          <>
+            <SectionTitle>{t("api.dawarichMode")}</SectionTitle>
             <ChipGroup
-              options={DAWARICH_MODE_OPTIONS}
+              options={dawarichModeOptions}
               selected={localDawarichMode}
               onSelect={handleDawarichModeChange}
-              colors={colors}
               disabled={batchDisabled ? new Set<DawarichMode>(["batch"]) : undefined}
-              accessibilityLabel="Dawarich mode"
+              accessibilityLabel={t("api.dawarichMode")}
             />
-            <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-              {localDawarichMode === "batch"
-                ? "Endpoint: /api/v1/overland/batches?api_key=YOUR_API_KEY"
-                : "Endpoint: /api/v1/owntracks/points?api_key=YOUR_API_KEY"}
+            <Text style={[styles.hint, { color: colors.textSecondary }]}>
+              {localDawarichMode === "batch" ? t("api.dawarich.batchEndpoint") : t("api.dawarich.singleEndpoint")}
             </Text>
             {isInstantSync && (
-              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-                Batch mode requires a non-zero sync interval. Switch to a batched preset to enable it.
-              </Text>
+              <Text style={[styles.hint, { color: colors.textSecondary }]}>{t("api.dawarich.needsInterval")}</Text>
             )}
             {isGetMethod && !isInstantSync && (
-              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-                Batch mode requires POST. Switch HTTP method to POST to enable batch.
-              </Text>
+              <Text style={[styles.hint, { color: colors.textSecondary }]}>{t("api.dawarich.needsPost")}</Text>
             )}
-          </View>
+          </>
         )}
 
-        {/* Field Mapping Section */}
-        <View style={styles.fieldsSection}>
-          <View style={styles.sectionHeader}>
-            <SectionTitle>Field mappings</SectionTitle>
-            {hasModifications && (
-              <Pressable
-                onPress={handleResetAll}
-                style={({ pressed }) => [styles.resetAllButton, pressed && { opacity: colors.pressedOpacity }]}
-              >
-                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>RESET ALL</Text>
-              </Pressable>
-            )}
-          </View>
+        <SectionTitle
+          action={
+            hasModifications
+              ? { label: t("api.resetAll"), onPress: handleResetAll, testID: "reset-all-fields-btn" }
+              : undefined
+          }
+        >
+          {t("api.fieldMappings")}
+        </SectionTitle>
 
-          <View style={[styles.fieldsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {(Object.keys(DEFAULT_FIELD_MAP) as Array<keyof FieldMap>).map((key, index) => {
-              const isFieldModified = modifiedFields.has(key)
-              const fieldValue = localFieldMap[key]?.trim()
-              const isDuplicate = fieldValue != null && duplicateFieldNames.has(fieldValue)
-              return (
-                <View key={key}>
-                  {/* Two-column layout */}
-                  <View style={styles.fieldRow}>
-                    {/* Left: Key info */}
-                    <View style={styles.keyColumn}>
-                      <View style={styles.keyHeader}>
-                        <Text style={[styles.fieldLabel, { color: colors.text }]}>{key.toUpperCase()}</Text>
-                        {isFieldModified && (
-                          <View style={[styles.modifiedBadge, { backgroundColor: colors.primary }]}>
-                            <Text style={[styles.modifiedText, { color: colors.textOnPrimary }]}>Modified</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={[styles.fieldDescription, { color: colors.textSecondary }]} numberOfLines={1}>
-                        {FIELD_DESCRIPTIONS[key]}
-                      </Text>
-                    </View>
+        {fieldKeys.map((key, index) => {
+          const isFieldModified = modifiedFields.has(key)
+          const fieldValue = localFieldMap[key]?.trim()
+          const isDuplicate = fieldValue != null && duplicateFieldNames.has(fieldValue)
+          return (
+            <View key={key} style={index > 0 ? styles.field : undefined}>
+              <TextField
+                label={key}
+                hint={t(FIELD_DESCRIPTION_KEYS[key])}
+                error={isDuplicate ? t("api.duplicateField") : undefined}
+                mono
+                value={localFieldMap[key]}
+                onChangeText={(value) => handleFieldChange(key, value)}
+                placeholder={referenceFieldMap[key]}
+                autoCapitalize="none"
+                autoCorrect={false}
+                trailing={
+                  isFieldModified
+                    ? {
+                        icon: RotateCcw,
+                        onPress: () => handleResetField(key),
+                        accessibilityLabel: t("api.resetField", { field: key }),
+                        testID: `reset-${key}-btn`
+                      }
+                    : undefined
+                }
+              />
+            </View>
+          )
+        })}
 
-                    {/* Right: Value input */}
-                    <View style={styles.valueColumn}>
-                      <View style={styles.inputRow}>
-                        <TextInput
-                          style={[
-                            styles.fieldInput,
-                            {
-                              borderColor: isDuplicate
-                                ? colors.error
-                                : isFieldModified
-                                  ? colors.primary
-                                  : colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background
-                            }
-                          ]}
-                          value={localFieldMap[key]}
-                          onChangeText={(text) => handleFieldChange(key, text)}
-                          placeholder={referenceFieldMap[key]}
-                          placeholderTextColor={colors.placeholder}
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                        />
-                        {isFieldModified && (
-                          <Pressable
-                            onPress={() => handleResetField(key)}
-                            style={({ pressed }) => [
-                              styles.resetButton,
-                              { backgroundColor: colors.border },
-                              pressed && { opacity: colors.pressedOpacity }
-                            ]}
-                          >
-                            <Text style={[styles.resetIcon, { color: colors.textSecondary }]}>↺</Text>
-                          </Pressable>
-                        )}
-                      </View>
-                    </View>
+        <SectionTitle>{t("api.customFields")}</SectionTitle>
+
+        {localCustomFields.length === 0 ? (
+          <Text style={[styles.hint, { color: colors.textSecondary }]}>{t("api.customFields.empty")}</Text>
+        ) : (
+          localCustomFields.map((field, index) => {
+            const isDuplicate = duplicateFieldNames.has(field.key.trim())
+            return (
+              <View key={field.id}>
+                {index > 0 && <Divider tight />}
+                <View style={styles.customFieldRow}>
+                  <View style={styles.customFieldInputs}>
+                    <TextField
+                      label={t("api.customFields.key")}
+                      error={isDuplicate ? t("api.duplicateField") : undefined}
+                      mono
+                      value={field.key}
+                      onChangeText={(value) => handleCustomFieldChange(field.id, "key", value)}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TextField
+                      label={t("api.customFields.value")}
+                      mono
+                      value={field.value}
+                      onChangeText={(value) => handleCustomFieldChange(field.id, "value", value)}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      containerStyle={styles.customFieldValue}
+                    />
                   </View>
-
-                  {index < Object.keys(DEFAULT_FIELD_MAP).length - 1 && <Divider />}
+                  <Pressable
+                    testID={`remove-field-${field.id}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("api.customFields.remove", { name: field.key || t("api.customFields.key") })}
+                    android_ripple={{ color: colors.error + STATE_LAYER_ALPHA, borderless: true, radius: 20 }}
+                    onPress={() => handleRemoveCustomField(field.id)}
+                    style={styles.removeButton}
+                  >
+                    <X size={size.icon.md} color={colors.error} />
+                  </Pressable>
                 </View>
-              )
-            })}
-          </View>
-        </View>
+              </View>
+            )
+          })
+        )}
 
-        {/* Custom Fields Section */}
-        <View style={styles.fieldsSection}>
-          <View style={styles.sectionHeader}>
-            <SectionTitle>Custom fields</SectionTitle>
-          </View>
+        <Button
+          testID="add-field-btn"
+          title={t("api.customFields.add")}
+          variant="ghost"
+          align="start"
+          icon={Plus}
+          onPress={handleAddCustomField}
+          style={styles.addButton}
+        />
 
-          <View style={[styles.fieldsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {localCustomFields.length === 0 ? (
-              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-                No custom fields. Add static key-value pairs to include in every payload.
-              </Text>
-            ) : (
-              localCustomFields.map((field, index) => {
-                const isDuplicate = duplicateFieldNames.has(field.key.trim())
-                return (
-                  <View key={field.id}>
-                    <View style={styles.customFieldRow}>
-                      <TextInput
-                        style={[
-                          styles.customFieldInput,
-                          {
-                            borderColor: isDuplicate ? colors.error : colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
-                        value={field.key}
-                        onChangeText={(text) => handleCustomFieldChange(field.id, "key", text)}
-                        placeholder="Key"
-                        placeholderTextColor={colors.placeholder}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
-                      <TextInput
-                        style={[
-                          styles.customFieldInput,
-                          {
-                            borderColor: colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
-                        value={field.value}
-                        onChangeText={(text) => handleCustomFieldChange(field.id, "value", text)}
-                        placeholder="Value"
-                        placeholderTextColor={colors.placeholder}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
-                      <Pressable
-                        onPress={() => handleRemoveCustomField(field.id)}
-                        style={({ pressed }) => [
-                          styles.removeButton,
-                          { backgroundColor: colors.error + "15" },
-                          pressed && { opacity: colors.pressedOpacity }
-                        ]}
-                      >
-                        <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                      </Pressable>
-                    </View>
-                    {index < localCustomFields.length - 1 && <Divider />}
-                  </View>
-                )
-              })
-            )}
-
-            <Pressable
-              onPress={handleAddCustomField}
-              style={({ pressed }) => [
-                styles.addButton,
-                { borderColor: colors.border },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-            >
-              <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Field</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Duplicate field warning */}
         {duplicateFieldNames.size > 0 && (
-          <View
-            style={[styles.warningBanner, { backgroundColor: colors.error + "15", borderColor: colors.error + "40" }]}
-          >
-            <Text style={[styles.warningText, { color: colors.error }]}>
-              Duplicate field names: {[...duplicateFieldNames].join(", ")}. Resolve duplicates to save changes.
-            </Text>
+          <View style={styles.notice}>
+            <Notice
+              testID="duplicate-fields-notice"
+              variant="error"
+              title={t("api.duplicates.title", { names: [...duplicateFieldNames].join(", ") })}
+              message={t("api.duplicates.message")}
+            />
           </View>
         )}
 
-        {/* Example payload preview */}
-        <View style={styles.exampleSection}>
-          <SectionTitle>{localHttpMethod === "GET" ? "Example request" : "Example payload"}</SectionTitle>
-          <View
-            style={[
-              styles.exampleCard,
-              {
-                backgroundColor: colors.backgroundElevated,
-                borderColor: colors.border
-              }
-            ]}
-          >
-            <Text style={[styles.exampleCode, { color: colors.textSecondary }]}>{examplePayload}</Text>
-            <Pressable
-              onPress={handleCopyPayload}
-              style={({ pressed }) => [styles.copyButton, pressed && { opacity: colors.pressedOpacity }]}
-            >
-              <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
-                {copied ? "COPIED!" : "COPY"}
-              </Text>
-            </Pressable>
-          </View>
+        <SectionTitle>{isGetMethod ? t("api.exampleRequest") : t("api.examplePayload")}</SectionTitle>
+        <View style={[styles.payload, { backgroundColor: colors.well }]}>
+          <Text style={[styles.payloadCode, { color: colors.textSecondary }]}>{examplePayload}</Text>
         </View>
+        <Button
+          testID="copy-payload-btn"
+          title={copied ? t("api.copied") : t("api.copy")}
+          variant="ghost"
+          align="start"
+          onPress={handleCopyPayload}
+        />
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.textLight }]}>
-            Changes apply to new location data immediately
-          </Text>
-        </View>
+        <Text style={[styles.footer, { color: colors.textLight }]}>{t("api.footer")}</Text>
       </ScrollView>
 
-      {/* Floating Save Indicator */}
       <Toast saving={saving} success={saveSuccess} />
     </Container>
   )
@@ -746,191 +656,53 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 40
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   },
   intro: {
-    fontSize: 14,
-    ...fonts.regular,
-    lineHeight: 20,
-    marginBottom: space.xl
+    ...text.body
   },
-  section: {
-    marginBottom: 24
+  hint: {
+    ...text.label,
+    marginTop: space.sm
   },
-  templateHint: {
-    fontSize: 12,
-    marginTop: 8
-  },
-  fieldsSection: {
-    marginBottom: 20
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  resetAllButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8
-  },
-  resetAllText: {
-    fontSize: 11,
-    ...fonts.bold,
-    letterSpacing: 0.5
-  },
-  fieldsCard: {
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1
-  },
-  fieldRow: {
-    flexDirection: "row",
-    paddingVertical: 10,
-    gap: 12
-  },
-  keyColumn: {
-    flex: 1,
-    justifyContent: "center"
-  },
-  keyHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 2
-  },
-  fieldLabel: {
-    fontSize: 13,
-    ...fonts.bold,
-    letterSpacing: 0.5
-  },
-  modifiedBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4
-  },
-  modifiedText: {
-    fontSize: 9,
-    ...fonts.bold,
-    letterSpacing: 0.3
-  },
-  fieldDescription: {
-    fontSize: 11,
-    lineHeight: 15
-  },
-  valueColumn: {
-    flex: 1,
-    justifyContent: "center"
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6
-  },
-  fieldInput: {
-    flex: 1,
-    borderWidth: 1.5,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    fontSize: 14,
-    fontFamily: "monospace"
-  },
-  resetButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  resetIcon: {
-    fontSize: 18,
-    ...fonts.semiBold
+  field: {
+    marginTop: space.lg
   },
   customFieldRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 8
+    alignItems: "flex-end",
+    gap: space.sm,
+    paddingVertical: space.md
   },
-  customFieldInput: {
-    flex: 1,
-    borderWidth: 1.5,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    fontSize: 14,
-    fontFamily: "monospace"
+  customFieldInputs: {
+    flex: 1
+  },
+  customFieldValue: {
+    marginTop: space.sm
   },
   removeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  removeButtonText: {
-    fontSize: 13,
-    ...fonts.bold
+    width: size.touch,
+    height: size.touch,
+    alignItems: "center",
+    justifyContent: "center"
   },
   addButton: {
-    paddingVertical: 12,
-    alignItems: "center",
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    marginTop: 8
+    marginTop: space.sm
   },
-  addButtonText: {
-    fontSize: 14,
-    ...fonts.semiBold
+  notice: {
+    marginTop: space.lg
   },
-  emptyHint: {
-    fontSize: 13,
-    textAlign: "center",
-    paddingVertical: 8
+  payload: {
+    borderRadius: radius.sm,
+    padding: space.lg
   },
-  warningBanner: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 20
-  },
-  warningText: {
-    fontSize: 12,
-    lineHeight: 18
-  },
-  exampleSection: {
-    marginBottom: 20
-  },
-  copyButton: {
-    alignSelf: "flex-end",
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-    marginTop: 8
-  },
-  copyButtonText: {
-    fontSize: 11,
-    ...fonts.bold,
-    letterSpacing: 0.5
-  },
-  exampleCard: {
-    padding: 14,
-    borderRadius: 8,
-    borderWidth: 1
-  },
-  exampleCode: {
-    fontSize: 12,
-    fontFamily: "monospace",
-    lineHeight: 18
+  payloadCode: {
+    ...text.mono
   },
   footer: {
-    paddingVertical: 16,
-    alignItems: "center"
-  },
-  footerText: {
-    fontSize: 11,
-    textAlign: "center"
+    ...text.caption,
+    marginTop: space.xxl
   }
 })

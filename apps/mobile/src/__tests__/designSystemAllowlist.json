@@ -37,23 +37,6 @@
     "hexLiteral"
   ],
   "components/features/map/mapUtils.ts": ["hexLiteral"],
-  "components/features/settings/ConnectionSettings.tsx": ["borderWidth", "borderRadius", "fontSize"],
-  "components/features/settings/MtlsSection.tsx": ["borderWidth", "borderRadius", "fontSize"],
-  "components/features/settings/StatsCard.tsx": [
-    "borderWidth",
-    "borderRadius",
-    "fontSize",
-    "letterSpacing",
-    "textTransform",
-    "fontStyle"
-  ],
-  "components/features/settings/SyncStrategySettings.tsx": [
-    "borderWidth",
-    "borderRadius",
-    "fontSize",
-    "letterSpacing",
-    "textTransform"
-  ],
   "screens/AboutScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "fontStyle"],
   "screens/ActivityLogScreen.tsx": [
     "borderWidth",
@@ -63,9 +46,6 @@
     "fontSize",
     "hexLiteral"
   ],
-  "screens/ApiSettingsScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing"],
-  "screens/AppearanceScreen.tsx": ["borderWidth", "borderRadius", "fontSize"],
-  "screens/AuthSettingsScreen.tsx": ["borderWidth", "borderRadius", "fontSize"],
   "screens/AutoExportScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing", "textTransform"],
   "screens/BackupRestoreScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "fontWeight"],
   "screens/DataManagementScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "fontStyle"],
@@ -90,10 +70,8 @@
     "letterSpacing",
     "textTransform"
   ],
-  "screens/ProfileEditorScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing", "textTransform"],
   "screens/SetupImportScreen.tsx": ["fontSize"],
   "screens/ShareSetupScreen.tsx": ["borderWidth", "fontSize"],
-  "screens/TrackingProfilesScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "textTransform"],
   "screens/TripDetailScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "textTransform"],
   "utils/trips.ts": ["hexLiteral"]
 }

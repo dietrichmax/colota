@@ -81,8 +81,35 @@ jest.mock("../../components", () => {
         onPress: () => onValueChange(!value)
       }),
     Container: ({ children }: any) => R.createElement(View, null, children),
-    SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children, style }: any) => R.createElement(View, { style }, children)
+    SectionTitle: ({ children, action }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, children),
+        action
+          ? R.createElement(
+              Pressable,
+              { testID: action.testID, onPress: action.onPress },
+              R.createElement(Text, null, action.label)
+            )
+          : null
+      ),
+    Button: ({ title, onPress, testID }: any) =>
+      R.createElement(Pressable, { testID, onPress }, R.createElement(Text, null, title)),
+    EmptyState: ({ title, message }: any) =>
+      R.createElement(View, null, R.createElement(Text, null, title), R.createElement(Text, null, message)),
+    ListItem: ({ testID, label, sub, style, onPress, trailing }: any) =>
+      R.createElement(
+        View,
+        { style },
+        R.createElement(
+          Pressable,
+          { testID, onPress },
+          R.createElement(Text, null, label),
+          sub ? R.createElement(Text, null, sub) : null
+        ),
+        trailing
+      )
   }
 })
 
@@ -121,7 +148,7 @@ describe("TrackingProfilesScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("When charging")).toBeTruthy()
+      expect(getByText(/When charging/)).toBeTruthy()
       expect(getByText(/Speed above 50 km\/h/)).toBeTruthy()
     })
   })
@@ -135,12 +162,14 @@ describe("TrackingProfilesScreen", () => {
     })
   })
 
-  it("shows priority badges", async () => {
+  // Priority decides which profile wins when two match at once, so it stays visible
+  // once the tinted badge is gone.
+  it("keeps the priority in the row's sub line", async () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("P10")).toBeTruthy()
-      expect(getByText("P20")).toBeTruthy()
+      expect(getByText(/^P10 /)).toBeTruthy()
+      expect(getByText(/^P20 /)).toBeTruthy()
     })
   })
 
@@ -154,14 +183,14 @@ describe("TrackingProfilesScreen", () => {
     })
   })
 
-  it("navigates to editor when pressing Create Profile", async () => {
-    const { getByText } = renderScreen()
+  it("navigates to editor when pressing Create profile", async () => {
+    const { getByTestId, getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Create Profile")).toBeTruthy()
+      expect(getByText("Create profile")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByTestId("create-profile-btn"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Profile Editor", {})
   })
@@ -188,7 +217,7 @@ describe("TrackingProfilesScreen", () => {
     fireEvent.press(getByTestId("delete-profile-1"))
 
     await waitFor(() => {
-      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Delete Profile" }))
+      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Delete profile" }))
     })
 
     await waitFor(() => {
@@ -200,7 +229,7 @@ describe("TrackingProfilesScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Profiles (2)")).toBeTruthy()
+      expect(getByText("2 profiles")).toBeTruthy()
     })
   })
 
@@ -227,24 +256,29 @@ describe("TrackingProfilesScreen", () => {
     expect(mockAddListener).toHaveBeenCalledWith("focus", expect.any(Function))
   })
 
-  it("shows Active badge when profile matches activeProfileName from context", async () => {
+  // The tinted badge is gone: the active profile is marked by the container fill on the
+  // row plus the word in its sub line, so state never rides on colour alone.
+  it("names the active profile in its sub line and fills the row", async () => {
     mockActiveProfileName = "Charging"
 
-    const { getByText } = renderScreen()
+    const { getByText, getByTestId } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Active")).toBeTruthy()
+      expect(getByText(/^Active /)).toBeTruthy()
     })
+
+    expect(getByTestId("toggle-profile-1")).toBeTruthy()
   })
 
-  it("does not show Active badge when no profile is active", async () => {
+  it("marks no profile active when the context reports none", async () => {
     mockActiveProfileName = null
 
-    const { queryByText } = renderScreen()
+    const { queryByText, getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(queryByText("Active")).toBeNull()
+      expect(getByText("Charging")).toBeTruthy()
     })
+    expect(queryByText(/^Active /)).toBeNull()
   })
 
   describe("share profiles", () => {

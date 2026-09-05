@@ -6,16 +6,15 @@
 import React, { useState, useCallback, useEffect } from "react"
 import { StyleSheet, ScrollView } from "react-native"
 import { ScreenProps, Settings } from "../types/global"
-import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Toast } from "../components/ui/Toast"
 import { Container } from "../components"
 import { ConnectionSettings } from "../components/features/settings/ConnectionSettings"
+import { space } from "../constants"
 
 export function ConnectionScreen({ navigation }: ScreenProps) {
   const { settings, setSettings, restartTracking } = useTracking()
-  const { colors } = useTheme()
   const { saving, saveSuccess, immediateSaveAndRestart } = useAutoSave()
 
   const [endpointInput, setEndpointInput] = useState(settings.endpoint || "")
@@ -46,7 +45,6 @@ export function ConnectionScreen({ navigation }: ScreenProps) {
           endpointInput={endpointInput}
           onEndpointInputChange={setEndpointInput}
           onSettingsChange={handleImmediateSave}
-          colors={colors}
           navigation={navigation}
         />
       </ScrollView>
@@ -58,8 +56,8 @@ export function ConnectionScreen({ navigation }: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   }
 })

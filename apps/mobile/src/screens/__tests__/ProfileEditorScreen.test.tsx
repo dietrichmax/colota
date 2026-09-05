@@ -22,19 +22,23 @@ const mockProfiles: TrackingProfile[] = [
 const mockGetProfiles = jest.fn().mockResolvedValue(mockProfiles)
 const mockCreateProfile = jest.fn().mockResolvedValue(1)
 const mockUpdateProfile = jest.fn().mockResolvedValue(true)
+const mockDeleteProfile = jest.fn().mockResolvedValue(true)
 
 jest.mock("../../services/ProfileService", () => ({
   ProfileService: {
     getProfiles: () => mockGetProfiles(),
     createProfile: (p: any) => mockCreateProfile(p),
-    updateProfile: (p: any) => mockUpdateProfile(p)
+    updateProfile: (p: any) => mockUpdateProfile(p),
+    deleteProfile: (id: number) => mockDeleteProfile(id)
   }
 }))
 
 const mockShowAlert = jest.fn()
+const mockShowConfirm = jest.fn().mockResolvedValue(true)
 
 jest.mock("../../services/modalService", () => ({
-  showAlert: (...args: any[]) => mockShowAlert(...args)
+  showAlert: (...args: any[]) => mockShowAlert(...args),
+  showConfirm: (...args: any[]) => mockShowConfirm(...args)
 }))
 
 jest.mock("../../utils/geo", () => ({
@@ -63,12 +67,53 @@ jest.mock("../../hooks/useTheme", () => ({
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text } = require("react-native")
+  const { View, Text, TextInput, Pressable } = require("react-native")
   return {
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
+    Button: ({ title, onPress, testID, loading }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress, disabled: loading, accessibilityState: { busy: !!loading } },
+        R.createElement(Text, null, title)
+      ),
+    RadioRow: ({ label, caption, selected, onPress, testID }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress, accessibilityRole: "radio", accessibilityState: { checked: selected } },
+        R.createElement(Text, null, label),
+        caption ? R.createElement(Text, null, caption) : null
+      ),
+    TextField: ({ testID, label, value, onChangeText, placeholder, accessibilityLabel }: any) =>
+      R.createElement(
+        View,
+        null,
+        label ? R.createElement(Text, null, label) : null,
+        R.createElement(TextInput, {
+          testID,
+          value,
+          onChangeText,
+          placeholder,
+          accessibilityLabel: accessibilityLabel ?? label
+        })
+      ),
+    NumericInput: ({ label, hint, value, onChange, onBlur, unit, placeholder }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        hint ? R.createElement(Text, null, hint) : null,
+        R.createElement(TextInput, {
+          value,
+          onChangeText: onChange,
+          onBlur,
+          placeholder,
+          keyboardType: "numeric",
+          accessibilityLabel: label
+        }),
+        R.createElement(Text, null, unit)
+      ),
     SettingRow: ({ label, hint, children }: any) =>
       R.createElement(
         View,
@@ -95,6 +140,7 @@ describe("ProfileEditorScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetProfiles.mockResolvedValue(mockProfiles)
+    mockShowConfirm.mockResolvedValue(true)
   })
 
   function renderNewProfile() {
@@ -114,9 +160,12 @@ describe("ProfileEditorScreen", () => {
     expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: "New profile" })
   })
 
-  it("shows Create Profile button for new profile", () => {
-    const { getByText } = renderNewProfile()
-    expect(getByText("Create Profile")).toBeTruthy()
+  // The footer holds one Save action for both modes; the header says which mode it is,
+  // so the button no longer has to.
+  it("shows the save action in the sticky footer for a new profile", () => {
+    const { getByTestId, getByText } = renderNewProfile()
+    expect(getByTestId("save-profile-btn")).toBeTruthy()
+    expect(getByText("Save profile")).toBeTruthy()
   })
 
   it("shows all condition options", () => {
@@ -156,17 +205,17 @@ describe("ProfileEditorScreen", () => {
   // --- Validation ---
 
   it("shows alert when saving with empty name", async () => {
-    const { getByText } = renderNewProfile()
+    const { getByTestId } = renderNewProfile()
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByTestId("save-profile-btn"))
 
     await waitFor(() => {
-      expect(mockShowAlert).toHaveBeenCalledWith("Missing Name", "Please enter a profile name.", "warning")
+      expect(mockShowAlert).toHaveBeenCalledWith("Missing name", "Enter a profile name.", "warning")
     })
   })
 
   it("saves with speed condition when threshold is valid", async () => {
-    const { getByText, getByDisplayValue } = renderNewProfile()
+    const { getByText, getByTestId, getByDisplayValue } = renderNewProfile()
 
     const nameInput = getByDisplayValue("")
     fireEvent.changeText(nameInput, "Speed Test")
@@ -174,7 +223,7 @@ describe("ProfileEditorScreen", () => {
     // Select speed_above condition - defaults to 30 km/h threshold
     fireEvent.press(getByText("Speed Above"))
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByTestId("save-profile-btn"))
 
     await waitFor(() => {
       expect(mockCreateProfile).toHaveBeenCalled()
@@ -185,12 +234,12 @@ describe("ProfileEditorScreen", () => {
   // --- Successful save ---
 
   it("creates profile and navigates back on valid save", async () => {
-    const { getByText, getByDisplayValue } = renderNewProfile()
+    const { getByTestId, getByDisplayValue } = renderNewProfile()
 
     const nameInput = getByDisplayValue("")
     fireEvent.changeText(nameInput, "My Profile")
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByTestId("save-profile-btn"))
 
     await waitFor(() => {
       expect(mockCreateProfile).toHaveBeenCalled()
@@ -199,10 +248,10 @@ describe("ProfileEditorScreen", () => {
   })
 
   it("does not call createProfile when validation fails", async () => {
-    const { getByText } = renderNewProfile()
+    const { getByTestId } = renderNewProfile()
 
     // Try to save with empty name
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByTestId("save-profile-btn"))
 
     await waitFor(() => {
       expect(mockShowAlert).toHaveBeenCalled()
@@ -221,11 +270,11 @@ describe("ProfileEditorScreen", () => {
     })
   })
 
-  it("shows Save Changes button when editing", async () => {
-    const { getByText } = renderEditProfile()
+  it("shows the save action when editing", async () => {
+    const { getByTestId } = renderEditProfile()
 
     await waitFor(() => {
-      expect(getByText("Save Changes")).toBeTruthy()
+      expect(getByTestId("save-profile-btn")).toBeTruthy()
     })
   })
 
@@ -249,13 +298,13 @@ describe("ProfileEditorScreen", () => {
   })
 
   it("calls updateProfile when saving in edit mode", async () => {
-    const { getByText } = renderEditProfile()
+    const { getByTestId } = renderEditProfile()
 
     await waitFor(() => {
-      expect(getByText("Save Changes")).toBeTruthy()
+      expect(getByTestId("save-profile-btn")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Save Changes"))
+    fireEvent.press(getByTestId("save-profile-btn"))
 
     await waitFor(() => {
       expect(mockUpdateProfile).toHaveBeenCalled()
@@ -277,16 +326,62 @@ describe("ProfileEditorScreen", () => {
   it("shows error when save fails", async () => {
     mockCreateProfile.mockRejectedValueOnce(new Error("Save failed"))
 
-    const { getByText, getByDisplayValue } = renderNewProfile()
+    const { getByTestId, getByDisplayValue } = renderNewProfile()
 
     const nameInput = getByDisplayValue("")
     fireEvent.changeText(nameInput, "Fail Profile")
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByTestId("save-profile-btn"))
 
     await waitFor(() => {
       expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to save profile.", "error")
     })
+  })
+
+  // --- Delete ---
+
+  // Deleting is destructive and irreversible, so it sits at the end as a text row rather
+  // than beside Save, and it only exists for a profile that has actually been stored.
+  it("offers delete only when editing an existing profile", async () => {
+    const { queryByTestId } = renderNewProfile()
+    expect(queryByTestId("delete-profile-btn")).toBeNull()
+
+    const edit = renderEditProfile()
+    await waitFor(() => {
+      expect(edit.getByTestId("delete-profile-btn")).toBeTruthy()
+    })
+  })
+
+  it("confirms before deleting, then removes the profile and leaves the editor", async () => {
+    const { getByTestId } = renderEditProfile()
+
+    await waitFor(() => {
+      expect(getByTestId("delete-profile-btn")).toBeTruthy()
+    })
+
+    fireEvent.press(getByTestId("delete-profile-btn"))
+
+    await waitFor(() => {
+      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ destructive: true }))
+      expect(mockDeleteProfile).toHaveBeenCalledWith(1)
+      expect(mockGoBack).toHaveBeenCalled()
+    })
+  })
+
+  it("keeps the profile when the confirm is dismissed", async () => {
+    mockShowConfirm.mockResolvedValue(false)
+    const { getByTestId } = renderEditProfile()
+
+    await waitFor(() => {
+      expect(getByTestId("delete-profile-btn")).toBeTruthy()
+    })
+
+    fireEvent.press(getByTestId("delete-profile-btn"))
+
+    await waitFor(() => {
+      expect(mockShowConfirm).toHaveBeenCalled()
+    })
+    expect(mockDeleteProfile).not.toHaveBeenCalled()
   })
 
   // --- Speed condition visibility ---
@@ -295,15 +390,15 @@ describe("ProfileEditorScreen", () => {
     const { getByText, queryByText } = renderNewProfile()
 
     // Default is charging - no speed input
-    expect(queryByText("Speed Threshold (km/h)")).toBeNull()
+    expect(queryByText("Speed threshold in km/h")).toBeNull()
 
     // Select Speed Above
     fireEvent.press(getByText("Speed Above"))
-    expect(getByText("Speed Threshold (km/h)")).toBeTruthy()
+    expect(getByText("Speed threshold in km/h")).toBeTruthy()
 
     // Switch back to charging
     fireEvent.press(getByText("Charging"))
-    expect(queryByText("Speed Threshold (km/h)")).toBeNull()
+    expect(queryByText("Speed threshold in km/h")).toBeNull()
   })
 
   // --- Activation delay ---
@@ -312,24 +407,24 @@ describe("ProfileEditorScreen", () => {
     const { getByText, queryByText } = renderNewProfile()
 
     // Charging: both delays
-    expect(getByText("Activation Delay")).toBeTruthy()
-    expect(getByText("Deactivation Delay")).toBeTruthy()
+    expect(getByText("Activation delay")).toBeTruthy()
+    expect(getByText("Deactivation delay")).toBeTruthy()
 
     // Stationary: activation delay only (deactivation is instant via the motion sensor)
     fireEvent.press(getByText("Stationary"))
-    expect(getByText("Activation Delay")).toBeTruthy()
-    expect(queryByText("Deactivation Delay")).toBeNull()
+    expect(getByText("Activation delay")).toBeTruthy()
+    expect(queryByText("Deactivation delay")).toBeNull()
   })
 
   it("hides the movement threshold for a stationary profile and shows a note instead", () => {
     const { getByText, queryByText } = renderNewProfile()
 
     // Default (charging): the field is shown
-    expect(getByText("Movement Threshold")).toBeTruthy()
+    expect(getByText("Movement threshold")).toBeTruthy()
 
     // Stationary: field hidden (the distance filter is forced to 0), note shown instead
     fireEvent.press(getByText("Stationary"))
-    expect(queryByText("Movement Threshold")).toBeNull()
+    expect(queryByText("Movement threshold")).toBeNull()
     expect(getByText(/Movement threshold does not apply/)).toBeTruthy()
   })
 

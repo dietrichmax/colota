@@ -10,7 +10,8 @@ import { TRACKING_PRESETS, API_TEMPLATES } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
-import { SectionTitle, Card, Container, Divider, StatsCard, ListItem } from "../components"
+import { useTranslation } from "../i18n/useTranslation"
+import { SectionTitle, Container, ListItem, Notice } from "../components"
 import {
   ExternalLink,
   Cloud,
@@ -30,11 +31,13 @@ import {
   Share2
 } from "lucide-react-native"
 import { logger } from "../utils/logger"
+import { HIGH_QUEUE_THRESHOLD, space } from "../constants"
 
 type Props = RootScreenProps<"Settings">
 
 export function SettingsScreen({ navigation }: Props) {
   const { settings } = useTracking()
+  const { t } = useTranslation()
 
   const [queueCount, setQueueCount] = useState(0)
   const [sentCount, setSentCount] = useState(0)
@@ -68,35 +71,47 @@ export function SettingsScreen({ navigation }: Props) {
   }, [settings.isOfflineMode, settings.endpoint, updateStats])
 
   const connectionSummary = useMemo(() => {
-    if (settings.isOfflineMode) return "Offline - saved locally"
-    if (!settings.endpoint) return "No server configured"
-    try {
-      return new URL(settings.endpoint).host
-    } catch {
-      return settings.endpoint
+    if (settings.isOfflineMode) return t("settings.connection.subOffline", { today: todayCount })
+
+    let host = t("settings.connection.noServer")
+    if (settings.endpoint) {
+      try {
+        host = new URL(settings.endpoint).host
+      } catch {
+        host = settings.endpoint
+      }
     }
-  }, [settings.isOfflineMode, settings.endpoint])
+    return t("settings.connection.sub", {
+      host,
+      queued: queueCount,
+      sent: sentCount,
+      interval: settings.interval
+    })
+  }, [settings.isOfflineMode, settings.endpoint, settings.interval, queueCount, sentCount, todayCount, t])
 
   const syncSummary = useMemo(() => {
     const preset = settings.syncPreset
-    if (preset !== "custom" && TRACKING_PRESETS[preset]) {
-      return `${TRACKING_PRESETS[preset].label} · every ${settings.interval}s`
-    }
-    return `Custom · every ${settings.interval}s`
-  }, [settings.syncPreset, settings.interval])
+    const label =
+      preset !== "custom" && TRACKING_PRESETS[preset] ? TRACKING_PRESETS[preset].label : t("settings.custom")
+    return t("settings.trackingSync.sub", { preset: label, interval: settings.interval })
+  }, [settings.syncPreset, settings.interval, t])
 
   const apiSummary = useMemo(() => {
     const template = settings.apiTemplate
     if (template === "custom") {
       const fieldCount = Object.values(settings.fieldMap).filter(Boolean).length + settings.customFields.length
-      return `Custom (${fieldCount} field${fieldCount === 1 ? "" : "s"})`
+      return t("settings.apiMapping.subCustom", { count: fieldCount })
     }
-    return API_TEMPLATES[template]?.label ?? "Custom"
-  }, [settings.apiTemplate, settings.fieldMap, settings.customFields])
+    return API_TEMPLATES[template]?.label ?? t("settings.custom")
+  }, [settings.apiTemplate, settings.fieldMap, settings.customFields, t])
 
   const handleNavigateDataManagement = useCallback(() => {
     navigation.navigate("Data Management")
   }, [navigation])
+
+  // The banner only earns the top of the screen once the queue is deep enough to act on;
+  // below the threshold the count in the Connection sub line is the whole story.
+  const showQueueNotice = !settings.isOfflineMode && queueCount >= HIGH_QUEUE_THRESHOLD
 
   return (
     <Container>
@@ -105,157 +120,145 @@ export function SettingsScreen({ navigation }: Props) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <StatsCard
-          queueCount={queueCount}
-          sentCount={sentCount}
-          todayCount={todayCount}
-          interval={settings.interval.toString()}
-          onManageClick={handleNavigateDataManagement}
+        {showQueueNotice && (
+          <View style={styles.notice}>
+            <Notice
+              testID="queue-notice"
+              variant="warning"
+              title={t("settings.queueNotice.title", { count: queueCount })}
+              message={t("settings.queueNotice.message")}
+              onPress={handleNavigateDataManagement}
+            />
+          </View>
+        )}
+
+        <ListItem
+          testID="nav-connection"
+          icon={Cloud}
+          label={t("settings.connection")}
+          sub={connectionSummary}
+          divider
+          onPress={() => navigation.navigate("Connection")}
+        />
+        <ListItem
+          testID="nav-tracking-sync"
+          icon={Navigation}
+          label={t("settings.trackingSync")}
+          sub={syncSummary}
+          divider
+          onPress={() => navigation.navigate("Tracking & Sync")}
+        />
+        {!settings.isOfflineMode && (
+          <ListItem
+            testID="nav-api-config"
+            icon={Braces}
+            label={t("settings.apiMapping")}
+            sub={apiSummary}
+            divider
+            onPress={() => navigation.navigate("API Config")}
+          />
+        )}
+        <ListItem
+          testID="nav-tracking-profiles"
+          icon={UserRoundPen}
+          label={t("settings.trackingProfiles")}
+          sub={t("settings.trackingProfiles.sub")}
+          onPress={() => navigation.navigate("Tracking Profiles")}
         />
 
-        <View style={styles.section}>
-          <Card>
-            <ListItem
-              testID="nav-connection"
-              icon={Cloud}
-              label="Connection"
-              sub={connectionSummary}
-              onPress={() => navigation.navigate("Connection")}
-            />
-            <Divider />
-            <ListItem
-              testID="nav-tracking-sync"
-              icon={Navigation}
-              label="Tracking & Sync"
-              sub={syncSummary}
-              onPress={() => navigation.navigate("Tracking & Sync")}
-            />
-            {!settings.isOfflineMode && (
-              <>
-                <Divider />
-                <ListItem
-                  testID="nav-api-config"
-                  icon={Braces}
-                  label="API Field Mapping"
-                  sub={apiSummary}
-                  onPress={() => navigation.navigate("API Config")}
-                />
-              </>
-            )}
-            <Divider />
-            <ListItem
-              testID="nav-tracking-profiles"
-              icon={UserRoundPen}
-              label="Tracking Profiles"
-              sub="Auto-switch GPS settings based on conditions"
-              onPress={() => navigation.navigate("Tracking Profiles")}
-            />
-          </Card>
-        </View>
+        <SectionTitle>{t("settings.display")}</SectionTitle>
+        <ListItem
+          testID="nav-appearance"
+          icon={Palette}
+          label={t("settings.appearance")}
+          sub={t("settings.appearance.sub")}
+          onPress={() => navigation.navigate("Appearance")}
+        />
 
-        <View style={styles.section}>
-          <SectionTitle>Display</SectionTitle>
-          <Card>
-            <ListItem
-              testID="nav-appearance"
-              icon={Palette}
-              label="Appearance"
-              sub="Theme, units, time format and map tiles"
-              onPress={() => navigation.navigate("Appearance")}
-            />
-          </Card>
-        </View>
+        <SectionTitle>{t("settings.data")}</SectionTitle>
+        <ListItem
+          testID="nav-data-management"
+          icon={Database}
+          label={t("settings.dataManagement")}
+          sub={t("settings.dataManagement.sub")}
+          divider
+          onPress={handleNavigateDataManagement}
+        />
+        <ListItem
+          testID="nav-import-locations"
+          icon={Download}
+          label={t("settings.importLocations")}
+          sub={t("settings.importLocations.sub")}
+          divider
+          onPress={() => navigation.navigate("Import Locations")}
+        />
+        <ListItem
+          testID="nav-export-locations"
+          icon={Upload}
+          label={t("settings.exportLocations")}
+          sub={t("settings.exportLocations.sub")}
+          divider
+          onPress={() => navigation.navigate("Export Locations")}
+        />
+        <ListItem
+          testID="nav-auto-export"
+          icon={Clock}
+          label={t("settings.autoExport")}
+          sub={t("settings.autoExport.sub")}
+          divider
+          onPress={() => navigation.navigate("Auto-Export")}
+        />
+        <ListItem
+          testID="nav-backup-restore"
+          icon={ShieldCheck}
+          label={t("settings.backupRestore")}
+          sub={t("settings.backupRestore.sub")}
+          divider
+          onPress={() => navigation.navigate("Backup & Restore")}
+        />
+        <ListItem
+          testID="nav-share-setup"
+          icon={Share2}
+          label={t("settings.shareSetup")}
+          sub={t("settings.shareSetup.sub")}
+          divider
+          onPress={() => navigation.navigate("Share Setup")}
+        />
+        <ListItem
+          testID="nav-offline-maps"
+          icon={Map}
+          label={t("settings.offlineMaps")}
+          sub={t("settings.offlineMaps.sub")}
+          divider
+          onPress={() => navigation.navigate("Offline Maps")}
+        />
+        <ListItem
+          testID="nav-logging"
+          icon={ScrollText}
+          label={t("settings.logging")}
+          sub={t("settings.logging.sub")}
+          onPress={() => navigation.navigate("Logging")}
+        />
 
-        <View style={styles.section}>
-          <SectionTitle>Data</SectionTitle>
-          <Card>
-            <ListItem
-              testID="nav-data-management"
-              icon={Database}
-              label="Data Management"
-              sub="View queue and clear data"
-              onPress={() => navigation.navigate("Data Management")}
-            />
-            <Divider />
-            <ListItem
-              testID="nav-import-locations"
-              icon={Download}
-              label="Import Locations"
-              sub="Merge locations from a GeoJSON or Google Timeline file"
-              onPress={() => navigation.navigate("Import Locations")}
-            />
-            <Divider />
-            <ListItem
-              testID="nav-export-locations"
-              icon={Upload}
-              label="Export Locations"
-              sub="Export locations as CSV, GeoJSON, GPX or KML"
-              onPress={() => navigation.navigate("Export Locations")}
-            />
-            <Divider />
-            <ListItem
-              testID="nav-auto-export"
-              icon={Clock}
-              label="Auto-Export"
-              sub="Schedule daily, weekly or monthly exports"
-              onPress={() => navigation.navigate("Auto-Export")}
-            />
-            <Divider />
-            <ListItem
-              testID="nav-backup-restore"
-              icon={ShieldCheck}
-              label="Backup & Restore"
-              sub="Encrypted backup of all your data"
-              onPress={() => navigation.navigate("Backup & Restore")}
-            />
-            <Divider />
-            <ListItem
-              testID="nav-share-setup"
-              icon={Share2}
-              label="Share Setup"
-              sub="Share your settings, geofences and profiles as a link"
-              onPress={() => navigation.navigate("Share Setup")}
-            />
-            <Divider />
-            <ListItem
-              testID="nav-offline-maps"
-              icon={Map}
-              label="Offline Maps"
-              sub="Download map tiles for use without internet"
-              onPress={() => navigation.navigate("Offline Maps")}
-            />
-            <Divider />
-            <ListItem
-              testID="nav-logging"
-              icon={ScrollText}
-              label="Logging"
-              sub="View activity log and configure file logging"
-              onPress={() => navigation.navigate("Logging")}
-            />
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Card>
-            <ListItem
-              testID="nav-about"
-              icon={Info}
-              label="About Colota"
-              sub="Version, licenses and links"
-              onPress={() => navigation.navigate("About Colota")}
-            />
-            <Divider />
-            <ListItem
-              testID="nav-support"
-              icon={Heart}
-              label="Support"
-              sub="Support development of the app"
-              trailingIcon={ExternalLink}
-              accessibilityRole="link"
-              accessibilityHint="Opens external support page"
-              onPress={() => Linking.openURL("https://mxd.codes/support")}
-            />
-          </Card>
+        <View style={styles.lastGroup}>
+          <ListItem
+            testID="nav-about"
+            icon={Info}
+            label={t("settings.about")}
+            sub={t("settings.about.sub")}
+            divider
+            onPress={() => navigation.navigate("About Colota")}
+          />
+          <ListItem
+            testID="nav-support"
+            icon={Heart}
+            label={t("settings.support")}
+            sub={t("settings.support.sub")}
+            trailingIcon={ExternalLink}
+            accessibilityRole="link"
+            accessibilityHint={t("settings.support.hint")}
+            onPress={() => Linking.openURL("https://mxd.codes/support")}
+          />
         </View>
       </ScrollView>
     </Container>
@@ -264,11 +267,15 @@ export function SettingsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   },
-  section: {
-    marginBottom: 24
+  notice: {
+    marginBottom: space.lg
+  },
+  // The About group carries no heading, so the gap between groups is set here instead.
+  lastGroup: {
+    marginTop: space.xxl
   }
 })
