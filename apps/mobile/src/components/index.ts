@@ -34,7 +34,7 @@ export { RadioDot } from "./ui/RadioDot"
 export { SettingRow } from "./ui/SettingRow"
 export { FieldMessage } from "./ui/FieldMessage"
 export { ListItem } from "./ui/ListItem"
-export { BottomTabBar } from "./ui/BottomTabBar"
+export { BottomTabBar, TAB_ROUTES } from "./ui/BottomTabBar"
 
 // ============================================================================
 // Feature Components - Dashboard
