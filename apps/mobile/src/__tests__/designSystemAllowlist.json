@@ -22,15 +22,6 @@
   "screens/BackupRestoreScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "fontWeight"],
   "screens/DataManagementScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "fontStyle"],
   "screens/ExportLocationsScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing", "textTransform"],
-  "screens/GeofenceEditorScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "fontStyle"],
-  "screens/GeofenceScreen.tsx": [
-    "borderWidth",
-    "borderRadius",
-    "fontSize",
-    "letterSpacing",
-    "textTransform",
-    "duration"
-  ],
   "screens/ImportLocationsScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing", "textTransform"],
   "screens/LocationSummaryScreen.tsx": ["fontSize", "textTransform"],
   "screens/OfflineMapsScreen.tsx": [

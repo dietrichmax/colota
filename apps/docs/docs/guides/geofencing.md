@@ -15,9 +15,12 @@ Create zones where location recording stops automatically. These "pause zones" s
 ## Setup
 
 1. Go to the **Geofences** tab
-2. Enter a name and radius
-3. Tap **Place Geofence**, then tap the map to place it
-4. Tap the **›** arrow on any geofence to open the editor and configure pause options
+2. Tap **+** in the header
+3. Give the zone a name and a radius
+4. Tap **Place on map**, tap the map where the zone belongs, then tap **Use this point**
+5. Set the pause options you want and tap **Save zone**
+
+Everything about a zone lives in the editor, so a zone is complete before it exists. Leaving the map step without picking a point keeps the rest of the draft, and tapping a zone in the list reopens the same editor. The pin next to a zone frames it on the map above the list.
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
@@ -25,7 +28,7 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 ## GPS Pause Options
 
-Each geofence has independent pause settings, configured in the editor (tap **›**):
+Each geofence has independent pause settings, configured in the editor (tap the zone in the list):
 
 ### Don't record in zone
 
@@ -64,7 +67,7 @@ Changes made in the editor take effect immediately, even when you are already in
 You can share all your geofences with another device or another user via a setup link instead of recreating zones by hand.
 
 1. Open the **Geofences** screen
-2. Tap the share icon next to "Active Geofences"
+2. Tap the share icon in the header
 3. The system share sheet opens with a `colota://setup?config=...` link
 4. Send the link through any messenger, email or as a QR code
 

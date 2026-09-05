@@ -85,6 +85,8 @@ export const WORLD_MAP_ZOOM = 2
 export const MAX_MAP_ZOOM = 18
 export const GEOFENCE_ZOOM_PADDING = [80, 80, 80, 80] as const
 export const MAP_ANIMATION_DURATION_MS = 400
+// Framing a single zone travels further than a recentre, so it gets its own duration.
+export const GEOFENCE_FOCUS_DURATION_MS = 600
 export const MIN_STATS_INTERVAL_MS = 2000
 
 // Profiles

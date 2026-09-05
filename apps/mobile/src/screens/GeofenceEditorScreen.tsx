@@ -3,15 +3,25 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { View, Text, StyleSheet, ScrollView, TextInput, DeviceEventEmitter } from "react-native"
+import React, { useState, useEffect, useCallback, useLayoutEffect, useRef, useMemo } from "react"
+import { View, StyleSheet, ScrollView, DeviceEventEmitter } from "react-native"
 import { useTheme } from "../hooks/useTheme"
+import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
-import { fonts } from "../styles/typography"
-import { space } from "../constants"
-import { Container, SectionTitle, Card, SettingRow, Button, FieldMessage, Toggle } from "../components"
-import { Check, Trash2 } from "lucide-react-native"
+import { size, space } from "../constants"
+import {
+  Button,
+  Container,
+  Divider,
+  FieldMessage,
+  ListItem,
+  NumericInput,
+  SectionTitle,
+  SettingRow,
+  TextField,
+  Toggle
+} from "../components"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { parsePositiveInt, isPositiveInt } from "../utils/settingsValidation"
@@ -20,15 +30,26 @@ import type { RootScreenProps } from "../types/navigation"
 declare function requestIdleCallback(callback: () => void): number
 declare function cancelIdleCallback(handle: number): void
 
+// The sticky footer floats over the form, so the scroll content ends above it.
+const FOOTER_HEIGHT = size.touch + space.lg * 2
+
+const COORD_PRECISION = 6
+const DEFAULT_RADIUS_INPUT = 50
+
+type Center = { lat: number; lon: number }
+
 export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geofence Editor">) {
   const { colors } = useTheme()
-  const geofenceId = route?.params?.geofenceId as number | undefined
+  const { t } = useTranslation()
+  const geofenceId = route?.params?.geofenceId
   const isEditing = !!geofenceId
+  const placedLat = route?.params?.lat
+  const placedLon = route?.params?.lon
 
-  const [name, setName] = useState<string>(route?.params?.name ?? "")
-  const initialRadius = route?.params?.radius ?? inputToMeters(50)
-  const [radiusStr, setRadiusStr] = useState(String(metersToInput(initialRadius)))
-  const [radius, setRadius] = useState<number>(initialRadius)
+  const [name, setName] = useState("")
+  const [radiusStr, setRadiusStr] = useState(String(DEFAULT_RADIUS_INPUT))
+  const [radius, setRadius] = useState(inputToMeters(DEFAULT_RADIUS_INPUT))
+  const [center, setCenter] = useState<Center | null>(null)
   const [pauseTracking, setPauseTracking] = useState(true)
   const [pauseOnWifi, setPauseOnWifi] = useState(false)
   const [pauseOnMotionless, setPauseOnMotionless] = useState(false)
@@ -38,8 +59,9 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
   const [saving, setSaving] = useState(false)
 
   const savedState = useRef({
-    name: route?.params?.name ?? ("" as string),
-    radius: (route?.params?.radius ?? inputToMeters(50)) as number,
+    name: "",
+    radius: inputToMeters(DEFAULT_RADIUS_INPUT),
+    center: null as Center | null,
     pauseTracking: true,
     pauseOnWifi: false,
     pauseOnMotionless: false,
@@ -48,11 +70,18 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     heartbeatIntervalStr: "15"
   })
 
+  // headerTitle, not title: SCREEN_CONFIG sets headerTitle and native-stack prefers it.
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerTitle: isEditing ? t("geofenceEditor.edit") : t("geofenceEditor.new") })
+  }, [navigation, isEditing, t])
+
   const hasChanges = useMemo(() => {
     const s = savedState.current
     return (
       name !== s.name ||
       radius !== s.radius ||
+      center?.lat !== s.center?.lat ||
+      center?.lon !== s.center?.lon ||
       pauseTracking !== s.pauseTracking ||
       pauseOnWifi !== s.pauseOnWifi ||
       pauseOnMotionless !== s.pauseOnMotionless ||
@@ -63,6 +92,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
   }, [
     name,
     radius,
+    center,
     pauseTracking,
     pauseOnWifi,
     pauseOnMotionless,
@@ -85,6 +115,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
             setName(existing.name)
             setRadiusStr(String(metersToInput(existing.radius)))
             setRadius(existing.radius)
+            setCenter({ lat: existing.lat, lon: existing.lon })
             setPauseTracking(existing.pauseTracking)
             setPauseOnWifi(existing.pauseOnWifi)
             setPauseOnMotionless(existing.pauseOnMotionless)
@@ -94,6 +125,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
             savedState.current = {
               name: existing.name,
               radius: existing.radius,
+              center: { lat: existing.lat, lon: existing.lon },
               pauseTracking: existing.pauseTracking,
               pauseOnWifi: existing.pauseOnWifi,
               pauseOnMotionless: existing.pauseOnMotionless,
@@ -106,7 +138,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         .catch((err) => {
           if (cancelled) return
           logger.error("[GeofenceEditor] Failed to load geofence:", err)
-          showAlert("Error", "Failed to load geofence data.", "error")
+          showAlert(t("geofenceEditor.error"), t("geofenceEditor.error.load"), "error")
           navigation.goBack()
         })
     })
@@ -115,7 +147,14 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
       cancelled = true
       cancelIdleCallback(handle)
     }
-  }, [geofenceId, navigation])
+  }, [geofenceId, navigation, t])
+
+  // The map step is a pushed route: it hands the centre back as params and the draft, which
+  // never left this screen's state, is still here whether the user confirms or presses back.
+  useEffect(() => {
+    if (placedLat == null || placedLon == null) return
+    setCenter({ lat: placedLat, lon: placedLon })
+  }, [placedLat, placedLon])
 
   const handleRadiusChange = useCallback((val: string) => {
     setRadiusStr(val)
@@ -123,13 +162,26 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     if (!isNaN(num) && num > 0) setRadius(inputToMeters(num))
   }, [])
 
+  const handlePlaceOnMap = useCallback(() => {
+    navigation.navigate("Place Zone", {
+      name: name.trim() || undefined,
+      radius,
+      lat: center?.lat,
+      lon: center?.lon
+    })
+  }, [navigation, name, radius, center])
+
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
-      showAlert("Missing Name", "Please enter a name.", "warning")
+      showAlert(t("geofenceEditor.missingName"), t("geofenceEditor.missingName.message"), "warning")
       return
     }
     if (radius <= 0) {
-      showAlert("Invalid Radius", "Please enter a valid radius.", "warning")
+      showAlert(t("geofenceEditor.invalidRadius"), t("geofenceEditor.invalidRadius.message"), "warning")
+      return
+    }
+    if (!center) {
+      showAlert(t("geofenceEditor.missingLocation"), t("geofenceEditor.missingLocation.message"), "warning")
       return
     }
     const effectiveHeartbeat = parsePositiveInt(heartbeatIntervalStr, 15)
@@ -141,6 +193,8 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         await NativeLocationService.updateGeofence({
           id: geofenceId,
           name: name.trim(),
+          lat: center.lat,
+          lon: center.lon,
           radius,
           pauseTracking,
           pauseOnWifi,
@@ -150,12 +204,10 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           heartbeatIntervalMinutes: effectiveHeartbeat
         })
       } else {
-        const lat = route?.params?.lat as number
-        const lon = route?.params?.lon as number
         await NativeLocationService.createGeofence({
           name: name.trim(),
-          lat,
-          lon,
+          lat: center.lat,
+          lon: center.lon,
           radius,
           enabled: true,
           pauseTracking,
@@ -170,13 +222,14 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
       navigation.goBack()
     } catch (err) {
       logger.error("[GeofenceEditor] Save failed:", err)
-      showAlert("Error", "Failed to save geofence.", "error")
+      showAlert(t("geofenceEditor.error"), t("geofenceEditor.error.save"), "error")
     } finally {
       setSaving(false)
     }
   }, [
     name,
     radius,
+    center,
     pauseTracking,
     pauseOnWifi,
     pauseOnMotionless,
@@ -186,15 +239,15 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     isEditing,
     geofenceId,
     navigation,
-    route
+    t
   ])
 
   const handleDelete = useCallback(async () => {
     if (!geofenceId) return
     const confirmed = await showConfirm({
-      title: "Delete Geofence",
-      message: `Delete "${name}"?`,
-      confirmText: "Delete",
+      title: t("geofenceEditor.delete.title"),
+      message: t("geofenceEditor.delete.message", { name }),
+      confirmText: t("geofenceEditor.delete.confirm"),
       destructive: true
     })
     if (!confirmed) return
@@ -204,187 +257,191 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
       navigation.goBack()
     } catch (err) {
       logger.error("[GeofenceEditor] Delete failed:", err)
-      showAlert("Error", "Failed to delete geofence.", "error")
+      showAlert(t("geofenceEditor.error"), t("geofenceEditor.error.delete"), "error")
     }
-  }, [geofenceId, name, navigation])
+  }, [geofenceId, name, navigation, t])
 
-  const inputStyle = [
-    styles.input,
-    { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }
-  ]
+  const centreLabel = center
+    ? `${center.lat.toFixed(COORD_PRECISION)}, ${center.lon.toFixed(COORD_PRECISION)}`
+    : t("geofenceEditor.place.unset")
 
   return (
     <Container>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <SectionTitle>General</SectionTitle>
-        <Card style={styles.card}>
-          <SettingRow label="Name">
-            <TextInput
-              testID="geofence-name-input"
-              style={[inputStyle, styles.nameInput]}
-              value={name}
-              onChangeText={setName}
-              placeholder="Home, Work..."
-              placeholderTextColor={colors.placeholder}
-            />
-          </SettingRow>
-          <SettingRow label={`Radius (${shortDistanceUnit()})`}>
-            <TextInput
-              testID="geofence-radius-input"
-              style={[inputStyle, styles.numInput]}
-              value={radiusStr}
-              onChangeText={handleRadiusChange}
-              placeholder="50"
-              placeholderTextColor={colors.placeholder}
-              keyboardType="numeric"
-            />
-          </SettingRow>
-        </Card>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <SectionTitle first>{t("geofenceEditor.zone")}</SectionTitle>
 
-        <SectionTitle>GPS Pause Options</SectionTitle>
-        <Card style={styles.card}>
-          <SettingRow label="Don't record in zone" hint="Pause saving and syncing" style={styles.toggleRow}>
-            <Toggle
-              testID="pause-tracking-toggle"
-              value={pauseTracking}
-              onValueChange={setPauseTracking}
-              accessibilityLabel="Don't record in zone"
-            />
-          </SettingRow>
-
-          <SettingRow
-            label="WiFi/Ethernet pause"
-            hint="Stop GPS on unmetered networks"
-            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
-          >
-            <Toggle
-              testID="pause-wifi-toggle"
-              value={pauseOnWifi}
-              onValueChange={setPauseOnWifi}
-              disabled={!pauseTracking}
-              accessibilityLabel="WiFi/Ethernet pause"
-            />
-          </SettingRow>
-
-          <SettingRow
-            label="Motionless pause"
-            hint="Stop GPS after no motion for a set time"
-            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
-          >
-            <Toggle
-              testID="pause-motionless-toggle"
-              value={pauseOnMotionless}
-              onValueChange={setPauseOnMotionless}
-              disabled={!pauseTracking}
-              accessibilityLabel="Motionless pause"
-            />
-          </SettingRow>
-
-          {pauseTracking && pauseOnMotionless && (
-            <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
-              <SettingRow label="Timeout (min)" hint="Minutes without motion before GPS stops">
-                <TextInput
-                  testID="motionless-timeout-input"
-                  style={[inputStyle, styles.numInput]}
-                  value={motionlessTimeoutStr}
-                  onChangeText={setMotionlessTimeoutStr}
-                  placeholder="1"
-                  placeholderTextColor={colors.placeholder}
-                  keyboardType="number-pad"
-                />
-              </SettingRow>
-              {!isPositiveInt(motionlessTimeoutStr) && (
-                <FieldMessage variant="error">Must be at least 1 minute</FieldMessage>
-              )}
-            </View>
-          )}
-
-          <SettingRow
-            label="Stationary heartbeat"
-            hint="Periodic point at the zone center while paused"
-            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
-          >
-            <Toggle
-              testID="heartbeat-toggle"
-              value={heartbeatEnabled}
-              onValueChange={setHeartbeatEnabled}
-              disabled={!pauseTracking}
-              accessibilityLabel="Stationary heartbeat"
-            />
-          </SettingRow>
-
-          {pauseTracking && heartbeatEnabled && (
-            <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
-              <SettingRow label="Interval (min)" hint="How often to record a point">
-                <TextInput
-                  testID="heartbeat-interval-input"
-                  style={[inputStyle, styles.numInput]}
-                  value={heartbeatIntervalStr}
-                  onChangeText={setHeartbeatIntervalStr}
-                  placeholder="15"
-                  placeholderTextColor={colors.placeholder}
-                  keyboardType="number-pad"
-                />
-              </SettingRow>
-              {!isPositiveInt(heartbeatIntervalStr) && (
-                <FieldMessage variant="error">Must be at least 1 minute</FieldMessage>
-              )}
-            </View>
-          )}
-
-          {pauseTracking && pauseOnWifi && pauseOnMotionless && (
-            <View style={[styles.combinedNote, { borderTopColor: colors.border }]}>
-              <Text style={[styles.combinedNoteText, { color: colors.textSecondary }]}>
-                GPS resumes only when both WiFi is disconnected and motion is detected
-              </Text>
-            </View>
-          )}
-        </Card>
-
-        <Button
-          style={styles.action}
-          title={saving ? "Saving..." : "Save Geofence"}
-          onPress={handleSave}
-          disabled={
-            saving ||
-            (isEditing && !hasChanges) ||
-            (heartbeatEnabled && !isPositiveInt(heartbeatIntervalStr)) ||
-            (pauseOnMotionless && !isPositiveInt(motionlessTimeoutStr))
-          }
-          icon={Check}
+        <TextField
+          testID="geofence-name-input"
+          label={t("geofenceEditor.name")}
+          placeholder={t("geofenceEditor.name.placeholder")}
+          value={name}
+          onChangeText={setName}
         />
+
+        <NumericInput
+          testID="geofence-radius-input"
+          label={t("geofenceEditor.radius")}
+          value={radiusStr}
+          onChange={handleRadiusChange}
+          onBlur={() => {}}
+          unit={shortDistanceUnit()}
+          placeholder="50"
+        />
+
+        <Divider tight />
+
+        <ListItem
+          testID="place-on-map-btn"
+          label={t("geofenceEditor.place")}
+          sub={centreLabel}
+          onPress={handlePlaceOnMap}
+        />
+
+        <SectionTitle>{t("geofenceEditor.pauseOptions")}</SectionTitle>
+
+        <SettingRow label={t("geofenceEditor.pauseTracking")} hint={t("geofenceEditor.pauseTracking.hint")}>
+          <Toggle
+            testID="pause-tracking-toggle"
+            value={pauseTracking}
+            onValueChange={setPauseTracking}
+            accessibilityLabel={t("geofenceEditor.pauseTracking")}
+          />
+        </SettingRow>
+
+        <Divider tight />
+
+        <SettingRow label={t("geofenceEditor.wifi")} hint={t("geofenceEditor.wifi.hint")}>
+          <Toggle
+            testID="pause-wifi-toggle"
+            value={pauseOnWifi}
+            onValueChange={setPauseOnWifi}
+            disabled={!pauseTracking}
+            accessibilityLabel={t("geofenceEditor.wifi")}
+          />
+        </SettingRow>
+
+        <Divider tight />
+
+        <SettingRow label={t("geofenceEditor.motionless")} hint={t("geofenceEditor.motionless.hint")}>
+          <Toggle
+            testID="pause-motionless-toggle"
+            value={pauseOnMotionless}
+            onValueChange={setPauseOnMotionless}
+            disabled={!pauseTracking}
+            accessibilityLabel={t("geofenceEditor.motionless")}
+          />
+        </SettingRow>
+
+        {pauseTracking && pauseOnMotionless && (
+          <View style={styles.indented}>
+            <NumericInput
+              testID="motionless-timeout-input"
+              label={t("geofenceEditor.timeout")}
+              hint={t("geofenceEditor.timeout.hint")}
+              value={motionlessTimeoutStr}
+              onChange={setMotionlessTimeoutStr}
+              onBlur={() => {}}
+              unit={t("geofenceEditor.unit.minutes")}
+              placeholder="1"
+            />
+            {!isPositiveInt(motionlessTimeoutStr) && (
+              <FieldMessage variant="error">{t("geofenceEditor.minimumMinutes")}</FieldMessage>
+            )}
+          </View>
+        )}
+
+        <Divider tight />
+
+        <SettingRow label={t("geofenceEditor.heartbeat")} hint={t("geofenceEditor.heartbeat.hint")}>
+          <Toggle
+            testID="heartbeat-toggle"
+            value={heartbeatEnabled}
+            onValueChange={setHeartbeatEnabled}
+            disabled={!pauseTracking}
+            accessibilityLabel={t("geofenceEditor.heartbeat")}
+          />
+        </SettingRow>
+
+        {pauseTracking && heartbeatEnabled && (
+          <View style={styles.indented}>
+            <NumericInput
+              testID="heartbeat-interval-input"
+              label={t("geofenceEditor.interval")}
+              hint={t("geofenceEditor.interval.hint")}
+              value={heartbeatIntervalStr}
+              onChange={setHeartbeatIntervalStr}
+              onBlur={() => {}}
+              unit={t("geofenceEditor.unit.minutes")}
+              placeholder="15"
+            />
+            {!isPositiveInt(heartbeatIntervalStr) && (
+              <FieldMessage variant="error">{t("geofenceEditor.minimumMinutes")}</FieldMessage>
+            )}
+          </View>
+        )}
+
+        {pauseTracking && pauseOnWifi && pauseOnMotionless && (
+          <FieldMessage>{t("geofenceEditor.combined")}</FieldMessage>
+        )}
+
         {isEditing && (
-          <Button style={styles.action} title="Delete Geofence" onPress={handleDelete} variant="danger" icon={Trash2} />
+          <View style={styles.destructive}>
+            <Divider tight inset={space.lg} />
+            <Button
+              testID="delete-geofence-btn"
+              title={t("geofenceEditor.delete")}
+              variant="dangerGhost"
+              align="start"
+              onPress={handleDelete}
+            />
+          </View>
         )}
       </ScrollView>
+
+      <View style={[styles.footer, { backgroundColor: colors.background }]}>
+        <Divider tight />
+        <View style={styles.footerInner}>
+          <Button
+            testID="save-geofence-btn"
+            title={t("geofenceEditor.save")}
+            loading={saving}
+            onPress={handleSave}
+            disabled={
+              (isEditing && !hasChanges) ||
+              (heartbeatEnabled && !isPositiveInt(heartbeatIntervalStr)) ||
+              (pauseOnMotionless && !isPositiveInt(motionlessTimeoutStr))
+            }
+          />
+        </View>
+      </View>
     </Container>
   )
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 40 },
-  action: { marginTop: space.sm },
-  card: { marginBottom: 16 },
-  input: {
-    padding: 10,
-    borderWidth: 1.5,
-    borderRadius: 8,
-    fontSize: 15
+  scrollContent: {
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: FOOTER_HEIGHT + space.xxl
   },
-  nameInput: { flex: 1 },
-  numInput: { width: 80, textAlign: "center" },
-  toggleRow: { paddingVertical: 10 },
-  disabledRow: { opacity: 0.45 },
-  nestedSetting: { marginLeft: 16, paddingLeft: 12, borderLeftWidth: 3, marginTop: 4, marginBottom: 4 },
-  combinedNote: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth
+  // A field that belongs to the row above it starts inside that row's text column.
+  indented: {
+    marginStart: space.lg
   },
-  combinedNoteText: {
-    fontSize: 12,
-    ...fonts.regular,
-    lineHeight: 17,
-    fontStyle: "italic"
+  destructive: {
+    marginTop: space.xxl
+  },
+  footer: {
+    position: "absolute",
+    start: 0,
+    end: 0,
+    bottom: 0
+  },
+  footerInner: {
+    padding: space.lg
   }
 })

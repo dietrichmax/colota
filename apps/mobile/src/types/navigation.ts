@@ -18,7 +18,8 @@ export type RootStackParamList = {
   "Auth Settings": undefined
   "mTLS Settings": undefined
   Geofences: undefined
-  "Geofence Editor": { geofenceId?: number; name?: string; radius?: number; lat?: number; lon?: number } | undefined
+  "Geofence Editor": { geofenceId?: number; lat?: number; lon?: number } | undefined
+  "Place Zone": { name?: string; radius: number; lat?: number; lon?: number }
   "Location History": { initialTab?: InspectorTab; initialDate?: string } | undefined
   "Location Summary": undefined
   "Export Locations": undefined

@@ -25,6 +25,7 @@ import {
   AutoExportScreen,
   GeofenceScreen,
   GeofenceEditorScreen,
+  GeofencePlacementScreen,
   DataManagementScreen,
   LocationHistoryScreen,
   LocationSummaryScreen,
@@ -101,6 +102,11 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     name: "Geofence Editor",
     component: GeofenceEditorScreen,
     title: "Geofence Editor"
+  },
+  {
+    name: "Place Zone",
+    component: GeofencePlacementScreen,
+    title: "Place the zone"
   },
   {
     name: "Location History",

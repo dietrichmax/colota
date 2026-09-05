@@ -104,27 +104,44 @@ jest.mock("../../components/features/map/mapUtils", () => ({
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text } = require("react-native")
+  const { View, Text, Pressable } = require("react-native")
   return {
     Container: ({ children }: any) => R.createElement(View, null, children),
-    SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children, style }: any) => R.createElement(View, { style }, children)
+    Card: ({ children, style }: any) => R.createElement(View, { style }, children),
+    Divider: () => R.createElement(View, { testID: "divider" }),
+    SectionTitle: ({ children, caption }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, children),
+        caption && R.createElement(Text, null, caption)
+      ),
+    ListItem: ({ label, sub, value, dot, onPress, testID }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress },
+        R.createElement(Text, { testID: testID ? `${testID}-dot` : undefined }, dot),
+        R.createElement(Text, null, label),
+        sub && R.createElement(Text, null, sub),
+        value && R.createElement(Text, null, value)
+      ),
+    EmptyState: ({ title, message, actionLabel, onActionPress, testID }: any) =>
+      R.createElement(
+        View,
+        { testID },
+        R.createElement(Text, null, title),
+        R.createElement(Text, null, message),
+        actionLabel &&
+          R.createElement(
+            Pressable,
+            { testID: "empty-action-btn", onPress: onActionPress },
+            R.createElement(Text, null, actionLabel)
+          )
+      )
   }
 })
 
 jest.mock("../../assets/icons/icon.png", () => "mock-icon")
-
-jest.mock("lucide-react-native", () => {
-  const R = require("react")
-  const { Text } = require("react-native")
-  return {
-    ChevronRight: (props: any) => R.createElement(Text, props, "ChevronRight"),
-    Wifi: (props: any) => R.createElement(Text, props, "Wifi"),
-    PersonStanding: (props: any) => R.createElement(Text, props, "PersonStanding"),
-    MapPinHouse: (props: any) => R.createElement(Text, props, "MapPinHouse"),
-    Share2: (props: any) => R.createElement(Text, props, "Share2")
-  }
-})
 
 jest.mock("../../utils/logger", () => ({
   logger: { debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn() }
@@ -137,6 +154,7 @@ jest.mock("../../utils/geo", () => ({
 }))
 
 import { GeofenceScreen } from "../GeofenceScreen"
+import { lightColors } from "@colota/shared"
 
 // --- Test data ---
 
@@ -174,90 +192,140 @@ const mockGeofences: Geofence[] = [
 // --- Tests ---
 
 describe("GeofenceScreen", () => {
+  const mockNavigate = jest.fn()
+  const mockSetOptions = jest.fn()
+  const mockNavigation = { navigate: mockNavigate, setOptions: mockSetOptions }
+
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetGeofences.mockResolvedValue([])
   })
 
   function renderScreen() {
-    return render(<GeofenceScreen navigation={{} as any} />)
+    return render(<GeofenceScreen navigation={mockNavigation as any} />)
   }
 
-  it("shows empty state when no geofences exist", async () => {
-    const { getByText } = renderScreen()
+  /** headerRight is a render prop, so the header controls only exist once it is called. */
+  function renderHeader() {
+    const headerRight = mockSetOptions.mock.calls.at(-1)?.[0]?.headerRight
+    return render(headerRight())
+  }
+
+  it("shows the empty state when no zones exist", async () => {
+    const { getByTestId, getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("No geofences yet")).toBeTruthy()
+      expect(getByTestId("geofences-empty")).toBeTruthy()
     })
+
+    expect(getByText("No zones yet")).toBeTruthy()
   })
 
-  it("renders geofence list with name and radius", async () => {
+  it("opens the editor on an empty draft from the empty state", async () => {
+    const { getByTestId } = renderScreen()
+
+    await waitFor(() => {
+      expect(getByTestId("empty-action-btn")).toBeTruthy()
+    })
+
+    fireEvent.press(getByTestId("empty-action-btn"))
+
+    expect(mockNavigate).toHaveBeenCalledWith("Geofence Editor")
+  })
+
+  // The create form moved into the editor, so nothing on this screen may take a zone's fields.
+  it("holds no create form", async () => {
+    mockGetGeofences.mockResolvedValue(mockGeofences)
+    const { queryByTestId, getByText } = renderScreen()
+
+    await waitFor(() => {
+      expect(getByText("Home")).toBeTruthy()
+    })
+
+    expect(queryByTestId("geofence-name-input")).toBeNull()
+    expect(queryByTestId("geofence-radius-input")).toBeNull()
+    expect(queryByTestId("place-geofence-btn")).toBeNull()
+    expect(mockCreateGeofence).not.toHaveBeenCalled()
+  })
+
+  it("renders a row per zone with the radius and what the zone does", async () => {
     mockGetGeofences.mockResolvedValue(mockGeofences)
 
     const { getByText } = renderScreen()
 
     await waitFor(() => {
       expect(getByText("Home")).toBeTruthy()
-      expect(getByText("100m radius")).toBeTruthy()
-      expect(getByText("Office")).toBeTruthy()
-      expect(getByText("200m radius")).toBeTruthy()
     })
+
+    expect(getByText("100m")).toBeTruthy()
+    expect(getByText("No recording in the zone")).toBeTruthy()
+    expect(getByText("Office")).toBeTruthy()
+    expect(getByText("200m")).toBeTruthy()
+    expect(getByText("Recording continues here")).toBeTruthy()
+    expect(getByText("2 zones")).toBeTruthy()
   })
 
-  it("shows validation alert when name is empty", async () => {
+  // The dot repeats the map's own fill rule, so a row reads as the zone it points at.
+  it("marks a pause zone and a plain zone with the colours the map draws them in", async () => {
+    mockGetGeofences.mockResolvedValue(mockGeofences)
+
+    const { getByTestId } = renderScreen()
+
+    await waitFor(() => {
+      expect(getByTestId("edit-geofence-1-dot")).toBeTruthy()
+    })
+
+    expect(getByTestId("edit-geofence-1-dot").props.children).toBe(lightColors.warning)
+    expect(getByTestId("edit-geofence-2-dot").props.children).toBe(lightColors.info)
+  })
+
+  it("says which zone is holding tracking paused right now", async () => {
+    mockGetGeofences.mockResolvedValue(mockGeofences)
+    mockCheckCurrentPauseZone.mockResolvedValue({ zoneName: "Home" })
+
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Place Geofence")).toBeTruthy()
+      expect(getByText("Paused here now")).toBeTruthy()
     })
-
-    fireEvent.press(getByText("Place Geofence"))
-
-    expect(mockShowAlert).toHaveBeenCalledWith("Missing Name", "Please enter a name.", "warning")
   })
 
-  it("shows validation alert when radius is invalid (0 or negative)", async () => {
-    const { getByText, getByPlaceholderText, getByDisplayValue } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Place Geofence")).toBeTruthy()
-    })
-
-    fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
-    fireEvent.changeText(getByDisplayValue("50"), "0")
-    fireEvent.press(getByText("Place Geofence"))
-
-    expect(mockShowAlert).toHaveBeenCalledWith("Invalid Radius", "Please enter a valid radius.", "warning")
-  })
-
-  it("enters placing mode on valid name and radius", async () => {
-    const { getByText, getByPlaceholderText, getByDisplayValue } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Place Geofence")).toBeTruthy()
-    })
-
-    fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
-    fireEvent.changeText(getByDisplayValue("50"), "100")
-    fireEvent.press(getByText("Place Geofence"))
-
-    expect(mockShowAlert).not.toHaveBeenCalled()
-    expect(getByText("Tap Map to Place...")).toBeTruthy()
-  })
-
-  it("tapping ChevronRight navigates to editor with geofence id", async () => {
+  it("opens the editor for the tapped zone", async () => {
     mockGetGeofences.mockResolvedValue(mockGeofences)
-    const mockNavigate = jest.fn()
 
-    const { getAllByText } = render(<GeofenceScreen navigation={{ navigate: mockNavigate } as any} />)
+    const { getByTestId } = renderScreen()
 
     await waitFor(() => {
-      expect(getAllByText("ChevronRight").length).toBeGreaterThanOrEqual(1)
+      expect(getByTestId("edit-geofence-1")).toBeTruthy()
     })
 
-    fireEvent.press(getAllByText("ChevronRight")[0])
+    fireEvent.press(getByTestId("edit-geofence-1"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Geofence Editor", { geofenceId: 1 })
+  })
+
+  describe("header actions", () => {
+    it("opens the editor on an empty draft from the header", async () => {
+      const { getByTestId } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByTestId("geofences-empty")).toBeTruthy()
+      })
+
+      fireEvent.press(renderHeader().getByTestId("new-geofence-btn"))
+
+      expect(mockNavigate).toHaveBeenCalledWith("Geofence Editor")
+    })
+
+    it("offers no share control while there is nothing to share", async () => {
+      const { getByTestId } = renderScreen()
+
+      await waitFor(() => {
+        expect(getByTestId("geofences-empty")).toBeTruthy()
+      })
+
+      expect(renderHeader().queryByTestId("share-geofences-btn")).toBeNull()
+    })
   })
 
   describe("share geofences", () => {
@@ -271,34 +339,26 @@ describe("GeofenceScreen", () => {
       shareSpy.mockRestore()
     })
 
-    it("does not render the share button when there are no geofences", async () => {
-      const { queryByTestId, getByText } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByText("No geofences yet")).toBeTruthy()
-      })
-
-      expect(queryByTestId("share-geofences-btn")).toBeNull()
-    })
-
     it("renders the share button when at least one geofence exists", async () => {
       mockGetGeofences.mockResolvedValue(mockGeofences)
-      const { getByTestId } = renderScreen()
+      const { getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByTestId("share-geofences-btn")).toBeTruthy()
+        expect(getByText("Home")).toBeTruthy()
       })
+
+      expect(renderHeader().getByTestId("share-geofences-btn")).toBeTruthy()
     })
 
     it("opens the share sheet with a colota://setup link on press", async () => {
       mockGetGeofences.mockResolvedValue(mockGeofences)
-      const { getByTestId } = renderScreen()
+      const { getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByTestId("share-geofences-btn")).toBeTruthy()
+        expect(getByText("Home")).toBeTruthy()
       })
 
-      fireEvent.press(getByTestId("share-geofences-btn"))
+      fireEvent.press(renderHeader().getByTestId("share-geofences-btn"))
 
       await waitFor(() => {
         expect(shareSpy).toHaveBeenCalledTimes(1)
@@ -310,13 +370,13 @@ describe("GeofenceScreen", () => {
 
     it("encodes geofences without id, createdAt, or enabled fields", async () => {
       mockGetGeofences.mockResolvedValue(mockGeofences)
-      const { getByTestId } = renderScreen()
+      const { getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByTestId("share-geofences-btn")).toBeTruthy()
+        expect(getByText("Home")).toBeTruthy()
       })
 
-      fireEvent.press(getByTestId("share-geofences-btn"))
+      fireEvent.press(renderHeader().getByTestId("share-geofences-btn"))
 
       await waitFor(() => {
         expect(shareSpy).toHaveBeenCalledTimes(1)
@@ -348,16 +408,20 @@ describe("GeofenceScreen", () => {
       mockGetGeofences.mockResolvedValue(mockGeofences)
       shareSpy.mockRejectedValueOnce(new Error("share failed"))
 
-      const { getByTestId } = renderScreen()
+      const { getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByTestId("share-geofences-btn")).toBeTruthy()
+        expect(getByText("Home")).toBeTruthy()
       })
 
-      fireEvent.press(getByTestId("share-geofences-btn"))
+      fireEvent.press(renderHeader().getByTestId("share-geofences-btn"))
 
       await waitFor(() => {
-        expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to share geofences.", "error")
+        expect(mockShowAlert).toHaveBeenCalledWith(
+          "Share failed",
+          "Unable to share your zones. Please try again.",
+          "error"
+        )
       })
     })
   })

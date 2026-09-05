@@ -312,8 +312,9 @@ For backups, two `internal` methods support the export/import flow without expos
 | `ApiSettingsScreen` | Endpoint URL, HTTP method, field mapping with backend templates |
 | `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers, with a link row to mTLS Settings |
 | `MtlsSettingsScreen` | Client certificate (PKCS12 import + Android Keystore storage) and Trusted Server CA management |
-| `GeofenceScreen` | Create, edit, and delete pause zones on an interactive map |
-| `GeofenceEditorScreen` | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
+| `GeofenceScreen` | Full-height map of the pause zones over a list of them; the header opens the editor on an empty draft or shares every zone as a link |
+| `GeofenceEditorScreen` | Creates and configures a zone: name, radius, centre, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
+| `GeofencePlacementScreen` | The editor's map step: picks the zone centre and hands it back as a route param, so the draft survives hardware back |
 | `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
 | `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
 | `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip rows, per-trip and multi-select export and multi-select delete |
