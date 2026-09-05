@@ -11,7 +11,7 @@ import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { fonts, fontSizes } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup } from "../components"
+import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup, Button } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
@@ -310,16 +310,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
 
             {localHeaders.length > 0 && <Divider />}
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.addButton,
-                { borderColor: colors.primary },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-              onPress={addHeader}
-            >
-              <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Header</Text>
-            </Pressable>
+            <Button title="+ Add Header" onPress={addHeader} variant="secondary" />
 
             <Text style={[styles.hint, { color: colors.textSecondary }]}>
               e.g., CF-Access-Client-Id for Cloudflare Access
@@ -448,18 +439,6 @@ const styles = StyleSheet.create({
   removeButtonText: {
     fontSize: fontSizes.body,
     ...fonts.bold
-  },
-  addButton: {
-    paddingVertical: 14,
-    alignItems: "center",
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    marginTop: space.xs
-  },
-  addButtonText: {
-    fontSize: fontSizes.input,
-    ...fonts.semiBold
   },
   hint: {
     fontSize: fontSizes.caption,
