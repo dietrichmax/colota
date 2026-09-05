@@ -10,7 +10,7 @@ import { useTheme } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts } from "../styles/typography"
-import { Card, Container, Divider, SettingRow, Toggle } from "../components"
+import { Card, ChipGroup, Container, Divider, SettingRow, Toggle } from "../components"
 import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
@@ -106,55 +106,27 @@ export function AppearanceScreen({}: ScreenProps) {
           <Divider />
 
           <SettingRow label={t("appearance.units")}>
-            <View style={styles.chipGroup}>
-              {(["metric", "imperial"] as const).map((unit) => {
-                const selected = unitSystem === unit
-                return (
-                  <Pressable
-                    key={unit}
-                    testID={`unit-${unit}`}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: selected ? colors.primary + "15" : colors.background,
-                        borderColor: selected ? colors.primary : colors.border
-                      }
-                    ]}
-                    onPress={() => selectUnitSystem(unit)}
-                  >
-                    <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>
-                      {unit === "metric" ? t("appearance.units.metric") : t("appearance.units.imperial")}
-                    </Text>
-                  </Pressable>
-                )
-              })}
-            </View>
+            <ChipGroup
+              options={[
+                { value: "metric", label: t("appearance.units.metric"), testID: "unit-metric" },
+                { value: "imperial", label: t("appearance.units.imperial"), testID: "unit-imperial" }
+              ]}
+              selected={unitSystem}
+              onSelect={selectUnitSystem}
+            />
           </SettingRow>
 
           <Divider />
 
           <SettingRow label={t("appearance.timeFormat")}>
-            <View style={styles.chipGroup}>
-              {(["24h", "12h"] as const).map((fmt) => {
-                const selected = timeFormat === fmt
-                return (
-                  <Pressable
-                    key={fmt}
-                    testID={`time-format-${fmt}`}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: selected ? colors.primary + "15" : colors.background,
-                        borderColor: selected ? colors.primary : colors.border
-                      }
-                    ]}
-                    onPress={() => selectTimeFormat(fmt)}
-                  >
-                    <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>{fmt}</Text>
-                  </Pressable>
-                )
-              })}
-            </View>
+            <ChipGroup
+              options={[
+                { value: "24h", label: "24h", testID: "time-format-24h" },
+                { value: "12h", label: "12h", testID: "time-format-12h" }
+              ]}
+              selected={timeFormat}
+              onSelect={selectTimeFormat}
+            />
           </SettingRow>
 
           <Divider />
@@ -259,20 +231,6 @@ const styles = StyleSheet.create({
   linkSub: {
     fontSize: fontSizes.description,
     ...fonts.regular
-  },
-  chipGroup: {
-    flexDirection: "row",
-    gap: space.sm
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: space.sm,
-    borderRadius: 10,
-    borderWidth: 1.5
-  },
-  chipLabel: {
-    fontSize: fontSizes.description,
-    ...fonts.semiBold
   },
   mapTilePanel: {
     marginTop: space.xs,

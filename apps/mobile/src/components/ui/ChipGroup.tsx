@@ -6,26 +6,31 @@
 import React from "react"
 import { View, Pressable, Text, StyleSheet } from "react-native"
 import { ThemeColors } from "../../types/global"
+import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { space } from "../../constants"
 
 interface ChipGroupProps<T extends string> {
-  options: readonly { value: T; label: string }[]
+  options: readonly { value: T; label: string; testID?: string }[]
   selected: T
   onSelect: (value: T) => void
-  colors: ThemeColors
   disabled?: ReadonlySet<T>
+  /** Ignored: the group reads the theme itself. Kept so existing callers still compile. */
+  colors?: ThemeColors
 }
 
-export function ChipGroup<T extends string>({ options, selected, onSelect, colors, disabled }: ChipGroupProps<T>) {
+export function ChipGroup<T extends string>({ options, selected, onSelect, disabled }: ChipGroupProps<T>) {
+  const { colors } = useTheme()
+
   return (
     <View style={styles.row}>
-      {options.map(({ value, label }) => {
+      {options.map(({ value, label, testID }) => {
         const isSelected = selected === value
         const isDisabled = disabled?.has(value) ?? false
         return (
           <Pressable
             key={value}
+            testID={testID}
             disabled={isDisabled}
             style={({ pressed }) => [
               styles.chip,
