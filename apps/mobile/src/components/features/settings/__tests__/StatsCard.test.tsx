@@ -11,17 +11,7 @@ jest.mock("../../../../contexts/TrackingProvider", () => ({
 
 jest.mock("../../../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      text: "#000",
-      textSecondary: "#6b7280",
-      success: "#22c55e",
-      warning: "#f59e0b",
-      error: "#ef4444",
-      info: "#3b82f6",
-      card: "#fff",
-      border: "#e5e7eb"
-    }
+    colors: require("@colota/shared").lightColors
   })
 }))
 

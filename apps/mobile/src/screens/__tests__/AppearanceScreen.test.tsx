@@ -9,18 +9,7 @@ jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
     mode: "light",
     toggleTheme: mockToggleTheme,
-    colors: {
-      primary: "#0d9488",
-      primaryDark: "#115E59",
-      border: "#e5e7eb",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textLight: "#9ca3af",
-      background: "#fff",
-      card: "#fff",
-      backgroundElevated: "#f9fafb",
-      placeholder: "#9ca3af"
-    }
+    colors: require("@colota/shared").lightColors
   })
 }))
 

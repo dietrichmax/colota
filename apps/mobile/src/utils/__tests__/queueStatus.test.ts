@@ -1,11 +1,5 @@
 import { getQueueColor } from "../queueStatus"
-import { ThemeColors } from "../../types/global"
-
-const mockColors = {
-  text: "#202124",
-  warning: "#FF9800",
-  error: "#D32F2F"
-} as ThemeColors
+import { lightColors as mockColors } from "@colota/shared"
 
 describe("getQueueColor", () => {
   it("returns text color for zero items", () => {

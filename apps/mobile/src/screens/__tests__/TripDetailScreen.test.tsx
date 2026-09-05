@@ -82,19 +82,7 @@ jest.mock("../../components/ui/Card", () => {
 
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textDisabled: "#9ca3af",
-      textOnPrimary: "#fff",
-      border: "#e5e7eb",
-      card: "#fff",
-      background: "#fff",
-      error: "#ef4444",
-      pressedOpacity: 0.7,
-      borderRadius: 8
-    }
+    colors: require("@colota/shared").lightColors
   })
 }))
 

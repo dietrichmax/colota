@@ -1,4 +1,5 @@
 jest.mock("react-native", () => ({
+  Easing: jest.requireActual("react-native").Easing,
   NativeModules: {
     LocationServiceModule: {
       startService: jest.fn().mockResolvedValue(undefined),

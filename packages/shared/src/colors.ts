@@ -9,168 +9,129 @@
 export type ThemeMode = "light" | "dark"
 
 export interface ThemeColors {
-  // Primary colors
+  // Brand
   primary: string
   primaryDark: string
-  primaryLight: string
+  primaryContainer: string
+  onPrimaryContainer: string
 
-  // Secondary colors
-  secondary: string
-  secondaryDark: string
-  secondaryLight: string
-
-  // Semantic colors
+  // Semantic hues
   success: string
-  successDark: string
-  successLight: string
   warning: string
-  warningDark: string
-  warningLight: string
   error: string
-  errorDark: string
-  errorLight: string
   info: string
-  infoDark: string
-  infoLight: string
 
-  // Surfaces & backgrounds
+  // Surfaces
   background: string
-  backgroundElevated: string
   card: string
   cardElevated: string
-  surface: string
+  well: string
 
-  // Text colors
+  // Text
   text: string
   textSecondary: string
   textLight: string
   textDisabled: string
 
-  // Borders & dividers
+  // Lines
   border: string
-  borderLight: string
-  divider: string
+  outline: string
 
-  // Interactive elements
+  // Inverse pair
+  inverseSurface: string
+  inverseOnSurface: string
+
+  // Interactive
   placeholder: string
   link: string
-  linkVisited: string
-
-  // Utility
   overlay: string
-  shadow: string
-  transparent: string
-  pressedOpacity: number
-  borderRadius: number
   textOnPrimary: string
+  pressedOpacity: number
+
+  // Aliases kept for their remaining consumers; deleted once every screen has migrated.
+  backgroundElevated: string
+  surface: string
+  borderLight: string
+  divider: string
+  borderRadius: number
 }
 
 export const lightColors: ThemeColors = {
-  // Brand (Teal)
-  primary: "#0d9488",
-  primaryDark: "#115E59",
-  primaryLight: "#99F6E4",
-  secondary: "#F59E0B",
-  secondaryDark: "#92400E",
-  secondaryLight: "#FDE68A",
+  primary: "#0A7369",
+  primaryDark: "#084F48",
+  primaryContainer: "#D2EBE6",
+  onPrimaryContainer: "#084F48",
 
-  // Status
-  success: "#2E7D32",
-  successDark: "#1B5E20",
-  successLight: "#A5D6A7",
-  warning: "#C2410C",
-  warningDark: "#9A3412",
-  warningLight: "#FED7AA",
-  error: "#D32F2F",
-  errorDark: "#B71C1C",
-  errorLight: "#FFCDD2",
-  info: "#1976D2",
-  infoDark: "#0D47A1",
-  infoLight: "#BBDEFB",
+  success: "#2E6B34",
+  warning: "#A63E0A",
+  error: "#C0392B",
+  info: "#1F5FA8",
 
-  // UI
-  background: "#f8fafb",
-  backgroundElevated: "#FFFFFF",
+  background: "#F4F4F2",
   card: "#FFFFFF",
   cardElevated: "#FFFFFF",
-  surface: "#FFFFFF",
+  well: "#E6E6E3",
 
-  // Text
-  text: "#202124",
-  textSecondary: "#5F6368",
-  textLight: "#9AA0A6",
-  textDisabled: "#9AA0A6",
+  text: "#1B1B1A",
+  textSecondary: "#52524F",
+  textLight: "#676763",
+  textDisabled: "#A2A29E",
 
-  // Border & divider
-  border: "#e5e7eb",
-  borderLight: "#f3f4f6",
-  divider: "#e5e7eb",
+  border: "#DCDCD8",
+  outline: "#838380",
 
-  // Interactive
-  placeholder: "#9AA0A6",
-  link: "#115E59",
-  linkVisited: "#134E4A",
+  inverseSurface: "#2C2C2A",
+  inverseOnSurface: "#F4F4F2",
+
+  placeholder: "#676763",
+  link: "#084F48",
   overlay: "rgba(0, 0, 0, 0.5)",
-  shadow: "rgba(0, 0, 0, 0.1)",
-
-  // Special
-  transparent: "transparent",
+  textOnPrimary: "#FFFFFF",
   pressedOpacity: 0.7,
-  borderRadius: 8,
-  textOnPrimary: "#FFFFFF"
+
+  backgroundElevated: "#FFFFFF",
+  surface: "#FFFFFF",
+  borderLight: "#DCDCD8",
+  divider: "#DCDCD8",
+  borderRadius: 8
 }
 
 export const darkColors: ThemeColors = {
-  // Brand (Teal)
-  primary: "#2DD4BF",
-  primaryDark: "#0d9488",
-  primaryLight: "#99F6E4",
-  secondary: "#FBBF24",
-  secondaryDark: "#F59E0B",
-  secondaryLight: "#FDE68A",
+  primary: "#2FC4B0",
+  primaryDark: "#1FA895",
+  primaryContainer: "#103F3A",
+  onPrimaryContainer: "#9FE3D8",
 
-  // Status
-  success: "#4CAF50",
-  successDark: "#388E3C",
-  successLight: "#C8E6C9",
-  warning: "#FB923C",
-  warningDark: "#F97316",
-  warningLight: "#FED7AA",
-  error: "#EF5350",
-  errorDark: "#D32F2F",
-  errorLight: "#FFCDD2",
-  info: "#4285F4",
-  infoDark: "#1976D2",
-  infoLight: "#BBDEFB",
+  success: "#7BC47F",
+  warning: "#F0A050",
+  error: "#F07A70",
+  info: "#6FA8E8",
 
-  // UI
-  background: "#121212",
-  backgroundElevated: "#1E1E1E",
-  card: "#2D2D2D",
-  cardElevated: "#3D3D3D",
-  surface: "#1E1E1E",
+  background: "#131313",
+  card: "#1E1E1E",
+  cardElevated: "#282828",
+  well: "#222222",
 
-  // Text
-  text: "#E8EAED",
-  textSecondary: "#AAAAAA",
-  textLight: "#888888",
-  textDisabled: "#666666",
+  text: "#EAEAE7",
+  textSecondary: "#B0B0AC",
+  textLight: "#94948F",
+  textDisabled: "#5E5E5B",
 
-  // Border & divider
-  border: "#424242",
-  borderLight: "#333333",
-  divider: "#333333",
+  border: "#2A2A2A",
+  outline: "#7A7A76",
 
-  // Interactive
-  placeholder: "#AAAAAA",
-  link: "#2DD4BF",
-  linkVisited: "#14B8A6",
-  overlay: "rgba(0, 0, 0, 0.7)",
-  shadow: "rgba(0, 0, 0, 0.3)",
+  inverseSurface: "#EAEAE7",
+  inverseOnSurface: "#131313",
 
-  // Special
-  transparent: "transparent",
+  placeholder: "#94948F",
+  link: "#2FC4B0",
+  overlay: "rgba(0, 0, 0, 0.65)",
+  textOnPrimary: "#121212",
   pressedOpacity: 0.7,
-  borderRadius: 8,
-  textOnPrimary: "#121212"
+
+  backgroundElevated: "#1E1E1E",
+  surface: "#1E1E1E",
+  borderLight: "#2A2A2A",
+  divider: "#2A2A2A",
+  borderRadius: 8
 }

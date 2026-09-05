@@ -3,6 +3,8 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import { Easing } from "react-native"
+
 import type { ProfileConditionType } from "../types/global"
 import { Zap, Car, ArrowUp, ArrowDown, Pause } from "lucide-react-native"
 
@@ -22,6 +24,31 @@ export const SETTINGS_READ_RETRY_DELAY_MS = 150
 export const HIT_SLOP_SM = { top: 6, right: 6, bottom: 6, left: 6 } as const
 export const HIT_SLOP_MD = { top: 8, right: 8, bottom: 8, left: 8 } as const
 export const HIT_SLOP_LG = { top: 12, right: 12, bottom: 12, left: 12 } as const
+
+// Spacing scale. A screen writes space.lg, never a number.
+export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const
+
+// Sizes are not spacing: these are the painted or touchable extents of a control.
+export const size = {
+  touch: 48,
+  row: 56,
+  pill: 52,
+  mapControl: 44,
+  chip: 36,
+  iconColumn: 40,
+  column: 560,
+  icon: { sm: 16, md: 20, lg: 24 }
+} as const
+
+// Material 3 standard set. Nothing animates on a literal duration or a bare Easing.bezier.
+export const motion = {
+  enter: { duration: 250, easing: Easing.bezier(0, 0, 0, 1) },
+  exit: { duration: 200, easing: Easing.bezier(0.3, 0, 1, 1) },
+  control: { duration: 200, easing: Easing.bezier(0.2, 0, 0, 1) },
+  onScreen: { duration: 300, easing: Easing.bezier(0.2, 0, 0, 1) }
+} as const
+
+export const elevation = { floating: 2 } as const
 
 // Map
 export const DEFAULT_MAP_ZOOM = 17
