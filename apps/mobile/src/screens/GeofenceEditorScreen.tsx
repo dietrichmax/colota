@@ -374,8 +374,8 @@ const styles = StyleSheet.create({
   toggleRow: { paddingVertical: 10 },
   disabledRow: { opacity: 0.45 },
   nestedSetting: {
-    marginLeft: space.lg,
-    paddingLeft: space.md,
+    marginStart: space.lg,
+    paddingStart: space.md,
     borderLeftWidth: 3,
     marginTop: space.xs,
     marginBottom: space.xs

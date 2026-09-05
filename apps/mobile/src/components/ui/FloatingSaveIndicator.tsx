@@ -53,8 +53,7 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
         style={[
           styles.badge,
           {
-            backgroundColor: saving ? colors.info : isError ? colors.error : colors.success,
-            shadowColor: saving ? colors.info : isError ? colors.error : colors.success
+            backgroundColor: saving ? colors.info : isError ? colors.error : colors.success
           }
         ]}
       >
@@ -86,9 +85,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: space.md,
     borderRadius: 24,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 8
   },
   text: { fontSize: fontSizes.body, ...fonts.semiBold }

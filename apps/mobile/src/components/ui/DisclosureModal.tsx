@@ -117,11 +117,7 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     padding: space.xl,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12
+    elevation: 8
   },
   iconContainer: {
     width: 56,

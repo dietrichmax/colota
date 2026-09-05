@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
   },
   settingContent: {
     flex: 1,
-    marginRight: space.lg
+    marginEnd: space.lg
   },
   settingLabel: {
     fontSize: fontSizes.label,

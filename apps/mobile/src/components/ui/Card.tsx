@@ -59,11 +59,7 @@ export function Card({
           backgroundColor: colors.cardElevated,
           borderColor: "transparent",
           borderWidth: 0,
-          elevation: 1,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 6
+          elevation: 1
         }
       case "outlined":
         return {

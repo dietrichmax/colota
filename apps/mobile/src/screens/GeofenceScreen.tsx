@@ -424,11 +424,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between"
   },
-  zoomBtn: { padding: space.xs, marginRight: space.lg },
+  zoomBtn: { padding: space.xs, marginEnd: space.lg },
   activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   shareBtn: { padding: space.xs, marginBottom: space.md },
   editBtn: { flex: 1, flexDirection: "row", alignItems: "center" },
-  info: { flex: 1, marginRight: space.md },
+  info: { flex: 1, marginEnd: space.md },
   name: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 2 },
   radiusRow: { flexDirection: "row", alignItems: "center", gap: space.xs },
   radius: { fontSize: fontSizes.caption },

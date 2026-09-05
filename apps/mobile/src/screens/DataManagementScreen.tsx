@@ -454,21 +454,25 @@ const ActionRow = ({
   value: string
   onPress: () => void
   disabled: boolean
-}) => (
-  <Pressable
-    style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.7 }]}
-    onPress={onPress}
-    disabled={disabled}
-  >
-    <View style={styles.actionInfo}>
-      <Text style={[styles.actionLabel, { color }]}>{label}</Text>
-      <Text style={[styles.actionHint, { color: textColor }]}>{hint}</Text>
-    </View>
-    <View style={[styles.actionBadge, { backgroundColor: color + "20", borderColor: color }]}>
-      <Text style={[styles.actionBadgeText, { color }]}>{value}</Text>
-    </View>
-  </Pressable>
-)
+}) => {
+  const { colors } = useTheme()
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.actionRow, pressed && { opacity: colors.pressedOpacity }]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <View style={styles.actionInfo}>
+        <Text style={[styles.actionLabel, { color }]}>{label}</Text>
+        <Text style={[styles.actionHint, { color: textColor }]}>{hint}</Text>
+      </View>
+      <View style={[styles.actionBadge, { backgroundColor: color + "20", borderColor: color }]}>
+        <Text style={[styles.actionBadgeText, { color }]}>{value}</Text>
+      </View>
+    </Pressable>
+  )
+}
 
 const styles = StyleSheet.create({
   keyboardAvoid: {

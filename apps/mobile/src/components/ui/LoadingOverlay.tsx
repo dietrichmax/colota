@@ -44,9 +44,6 @@ const styles = StyleSheet.create({
     padding: space.xxl,
     borderRadius: radius.lg,
     alignItems: "center",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 8,
     minWidth: 240
   },
