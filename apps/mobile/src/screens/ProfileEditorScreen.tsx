@@ -437,13 +437,7 @@ const styles = StyleSheet.create({
   header: { marginBottom: 20 },
   inputGroup: { marginBottom: space.xs },
   numInput: {
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 10,
-    fontSize: fontSizes.input,
-    textAlign: "center",
-    width: 64,
-    ...fonts.regular
+    width: 64
   },
   inputWithUnit: { flexDirection: "row", alignItems: "center", gap: 6 },
   unit: { fontSize: fontSizes.body, ...fonts.medium, minWidth: 28 },

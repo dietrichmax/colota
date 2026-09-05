@@ -580,6 +580,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
                           accessibilityLabel={key}
                           testID={`field-${key}`}
                           style={styles.fieldInput}
+                          mono
                           error={isDuplicate}
                           value={localFieldMap[key]}
                           onChangeText={(text) => handleFieldChange(key, text)}
@@ -627,6 +628,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
                         accessibilityLabel="Custom field key"
                         testID={`custom-key-${field.id}`}
                         style={styles.customFieldInput}
+                        mono
                         error={isDuplicate}
                         value={field.key}
                         onChangeText={(text) => handleCustomFieldChange(field.id, "key", text)}
@@ -638,6 +640,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
                         accessibilityLabel="Custom field value"
                         testID={`custom-value-${field.id}`}
                         style={styles.customFieldInput}
+                        mono
                         value={field.value}
                         onChangeText={(text) => handleCustomFieldChange(field.id, "value", text)}
                         placeholder="Value"
@@ -797,13 +800,7 @@ const styles = StyleSheet.create({
     gap: 6
   },
   fieldInput: {
-    flex: 1,
-    borderWidth: 1.5,
-    paddingHorizontal: 10,
-    paddingVertical: space.sm,
-    borderRadius: radius.sm,
-    fontSize: fontSizes.body,
-    fontFamily: "monospace"
+    flex: 1
   },
   customFieldRow: {
     flexDirection: "row",
@@ -812,13 +809,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm
   },
   customFieldInput: {
-    flex: 1,
-    borderWidth: 1.5,
-    paddingHorizontal: 10,
-    paddingVertical: space.sm,
-    borderRadius: radius.sm,
-    fontSize: fontSizes.body,
-    fontFamily: "monospace"
+    flex: 1
   },
   emptyHint: {
     fontSize: fontSizes.description,
