@@ -66,6 +66,10 @@ export const MAP_HERO_SHEET_RESERVE = 200
 // under it and the head of the first figure, and the map takes everything else.
 export const MAP_HERO_IDLE_PEEK = 128
 
+// Trip Detail's map. It carries the screen's chrome, so it is measured against the whole
+// window: the route has no tab bar and no header of its own.
+export const TRIP_MAP_FRACTION = 0.45
+
 // Everything drawn over map tiles clears the safe area by this, on all four sides.
 export const MAP_OVERLAY_GUTTER = space.lg
 

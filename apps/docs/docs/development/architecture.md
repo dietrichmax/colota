@@ -316,8 +316,8 @@ For backups, two `internal` methods support the export/import flow without expos
 | `GeofenceEditorScreen` | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
 | `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
 | `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
-| `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards, per-trip and multi-select export and multi-select delete |
-| `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, per-trip export, and per-trip delete |
+| `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip rows, per-trip and multi-select export and multi-select delete |
+| `TripDetailScreen` | Full trip view with the map as the hero carrying back, share and delete, a sheet with the distance figure and stat rows, speed and elevation profile charts, per-trip export, and per-trip delete |
 | `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
 | `ExportLocationsScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
 | `ImportLocationsScreen` | Import external location files (GeoJSON, Google Timeline legacy + new, GPX, KML, CSV) with auto format detection, dedup preview, and recovery vs migration (queue-for-sync) commit choice |
@@ -350,9 +350,9 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 | --- | --- |
 | `ColotaMapView` | Shared base map component wrapping MapLibre's `MapView` with OpenFreeMap vector tiles, dark mode style transformation, custom compass, and attribution |
 | `DashboardMap` | Live tracking map with user marker, accuracy circle, today's track overlay with toggle button, geofence polygons with labels, auto-center, and center button |
-| `TrackMap` | Location history map with trip-colored track segments, tappable point markers with detail popups, fit-to-track bounds, and trip legend |
+| `TrackMap` | Location history map with trip-colored track segments, tappable point markers whose popup floats at the foot of the map, fit-to-track bounds, and a trip legend at the top |
 | `CalendarPicker` | Day picker with month navigation, dot indicators for days with data, and daily distance/count display |
-| `TripList` | Segmented trip cards with distance, duration, avg speed, elevation gain/loss. Per-trip share icon plus a long-press contextual action bar for multi-select export and delete |
+| `TripList` | Segmented trip rows with a trip-colour dot, start time and one detail line of distance, duration, avg speed and elevation gain/loss. Long-press or the Select trips action opens a contextual action bar for multi-select export, merge and delete |
 | `GeofenceLayers` | Shared geofence rendering (fill polygons, stroke outlines, labels) used by DashboardMap and GeofenceScreen |
 | `UserLocationOverlay` | User position dot with accuracy circle, used by DashboardMap and GeofenceScreen |
 | `MapCenterButton` | Reusable button overlay to re-center the map |

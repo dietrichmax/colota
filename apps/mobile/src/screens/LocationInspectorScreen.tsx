@@ -6,11 +6,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
-import { fonts } from "../styles/typography"
 import { ChartNoAxesColumn } from "lucide-react-native"
-import { Container } from "../components"
+import { Container, MapOverlay } from "../components"
 import { Tab } from "../components/ui/Tab"
 import { useTheme } from "../hooks/useTheme"
+import { useTranslation } from "../i18n/useTranslation"
+import { text } from "../styles/typography"
 import { Trip, LocationCoords, BoundaryAction, BOUNDARY_ACTION_SPLIT } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
@@ -31,12 +32,13 @@ import {
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
-import { size } from "../constants"
+import { size, MAP_OVERLAY_GUTTER, STATE_LAYER_ALPHA } from "../constants"
 
 type TabType = "map" | "trips" | "data"
 
 export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Location History">) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabType>(route?.params?.initialTab ?? "map")
 
   // Map tab state - accept initialDate from Summary screen navigation
@@ -77,7 +79,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   // Sum of per-trip distances (excludes gap jumps between trips)
   const dailyDistance = useMemo(() => {
     if (trips.length === 0) return undefined
-    const meters = trips.reduce((sum, t) => sum + t.distance, 0)
+    const meters = trips.reduce((sum, trip) => sum + trip.distance, 0)
     return meters > 0 ? formatDistance(meters) : undefined
   }, [trips])
 
@@ -89,12 +91,15 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     () => (
       <Pressable
         onPress={() => navigation.navigate("Location Summary")}
-        style={({ pressed }) => [styles.headerBtn, pressed && { opacity: colors.pressedOpacity }]}
+        accessibilityRole="button"
+        accessibilityLabel={t("history.summary")}
+        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.icon.lg }}
+        style={styles.headerBtn}
       >
-        <ChartNoAxesColumn size={size.icon.md} color={colors.text} />
+        <ChartNoAxesColumn size={size.icon.lg} color={colors.text} />
       </Pressable>
     ),
-    [navigation, colors]
+    [navigation, colors, t]
   )
 
   useLayoutEffect(() => {
@@ -196,7 +201,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   // Trip Detail renders what it is handed, so notes saved this visit have to travel with it.
   const handleTripSelect = useCallback(
     (trip: Trip) => {
-      const withSessionNotes = (t: Trip) => ({ ...t, locations: withNotes(t.locations) })
+      const withSessionNotes = (t2: Trip) => ({ ...t2, locations: withNotes(t2.locations) })
       navigation.navigate("Trip Detail", { trip: withSessionNotes(trip), trips: trips.map(withSessionNotes) })
     },
     [navigation, trips, withNotes]
@@ -209,32 +214,40 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       try {
         const dateStr = mapDate.toISOString().slice(0, 10)
         const isSingle = tripsToExport.length === 1
-        const label = isSingle ? `Trip ${tripsToExport[0].index}` : "Trips"
+        const shareTitle = isSingle
+          ? t("history.export.shareTrip", { index: tripsToExport[0].index, date: dateStr })
+          : t("history.export.shareTrips", { date: dateStr })
         const fileName = `colota_${isSingle ? `trip${tripsToExport[0].index}` : "trips"}_${dateStr}${
           EXPORT_FORMATS[format].extension
         }`
         const filePath = await NativeLocationService.exportTripsToFile(
-          tripsToExport.map((t) => ({
-            index: t.index,
-            color: getTripColor(t.index),
-            startTs: t.startTime,
-            endTs: t.endTime
+          tripsToExport.map((trip) => ({
+            index: trip.index,
+            color: getTripColor(trip.index),
+            startTs: trip.startTime,
+            endTs: trip.endTime
           })),
           format,
           fileName
         )
-        await NativeLocationService.shareFile(filePath, EXPORT_FORMATS[format].mimeType, `Colota ${label} - ${dateStr}`)
+        await NativeLocationService.shareFile(filePath, EXPORT_FORMATS[format].mimeType, shareTitle)
       } catch (error) {
         logger.error("[LocationHistory] Trip export failed:", error)
-        showAlert("Export Failed", "Unable to export. Please try again.", "error")
+        showAlert(t("history.export.failed"), t("history.export.failed.message"), "error")
       }
     },
-    [mapDate]
+    [mapDate, t]
   )
 
   const handleShowFullDay = useCallback(() => {
     setSelectedTrip(null)
     setFitVersion((v) => v + 1)
+  }, [])
+
+  const handleShowDayOnMap = useCallback(() => {
+    setSelectedTrip(null)
+    setFitVersion((v) => v + 1)
+    setActiveTab("map")
   }, [])
 
   const refreshAfterEdit = useCallback(async () => {
@@ -254,9 +267,12 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       const first = sorted[0].index
       const last = sorted[sorted.length - 1].index
       const confirmed = await showConfirm({
-        title: `Merge ${sorted.length} trips?`,
-        message: `${sorted.length === 2 ? `Trips ${first} and ${last}` : `Trips ${first}-${last}`} will be combined into one.`,
-        confirmText: "Merge"
+        title: t("history.merge.title", { count: sorted.length }),
+        message:
+          sorted.length === 2
+            ? t("history.merge.messagePair", { first, last })
+            : t("history.merge.messageRange", { first, last }),
+        confirmText: t("history.merge.confirm")
       })
       if (!confirmed) return
       // Each displayed pair can span more than one gap: trips dropped by the extent filter still
@@ -269,38 +285,39 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Trip merge failed:", error)
-        showAlert("Merge Failed", "Unable to merge the selected trips. Please try again.", "error")
+        showAlert(t("history.merge.failed"), t("history.merge.failed.message"), "error")
         // Re-throw so TripList's CAB preserves the selection and lets the user retry.
         throw error
       }
     },
-    [trackLocations, boundaryOverrides, refreshAfterEdit]
+    [trackLocations, boundaryOverrides, refreshAfterEdit, t]
   )
 
   const handleDeleteTrips = useCallback(
     async (toDelete: Trip[]) => {
       if (toDelete.length === 0) return
-      const totalPoints = toDelete.reduce((n, t) => n + t.locationCount, 0)
+      const totalPoints = toDelete.reduce((n, trip) => n + trip.locationCount, 0)
       const confirmed = await showConfirm({
-        title: toDelete.length === 1 ? `Delete Trip ${toDelete[0].index}?` : `Delete ${toDelete.length} trips?`,
-        message: `Removes ${totalPoints} location point${
-          totalPoints === 1 ? "" : "s"
-        } from this device only. Already-synced points remain on your server. Unsent points will not be uploaded.`,
-        confirmText: "Delete",
+        title:
+          toDelete.length === 1
+            ? t("history.delete.titleOne", { index: toDelete[0].index })
+            : t("history.delete.titleMany", { count: toDelete.length }),
+        message: t("history.delete.message", { count: totalPoints }),
+        confirmText: t("history.delete.confirm"),
         destructive: true
       })
       if (!confirmed) return
       try {
         await NativeLocationService.deleteLocationsInRanges(
-          toDelete.map((t) => ({ start: t.startTime, end: t.endTime }))
+          toDelete.map((trip) => ({ start: trip.startTime, end: trip.endTime }))
         )
         await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Trip delete failed:", error)
-        showAlert("Delete Failed", "Unable to delete selection. Please try again.", "error")
+        showAlert(t("history.delete.failed"), t("history.delete.failed.message"), "error")
       }
     },
-    [refreshAfterEdit]
+    [refreshAfterEdit, t]
   )
 
   const splittingPointRef = useRef(false)
@@ -311,19 +328,18 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       const idx = trackLocations.findIndex((l) => l.id === id)
       // The map draws runs the extent filter dropped, so a tap can land outside every trip.
       // Splitting there would exempt both halves from that filter and conjure trips from jitter.
-      const inTrip = trips.some((t) => idx >= t.startIndex && idx < t.startIndex + t.locationCount)
+      const inTrip = trips.some((trip) => idx >= trip.startIndex && idx < trip.startIndex + trip.locationCount)
       const blocked = inTrip ? splitBlockedReason(trackLocations, idx, boundaryOverrides) : SPLIT_BLOCKED_NOT_A_TRIP
       if (blocked) {
-        showAlert("Cannot Split Here", blocked, "info")
+        showAlert(t("history.split.blocked"), blocked, "info")
         return
       }
       const at = trackLocations[idx].timestamp
       const confirmed = await showConfirm({
         // The confirm covers the popup, so name the point in it
-        title: at ? `Start a new trip at ${formatTime(at, true)}?` : "Split Trip?",
-        message:
-          "Everything from this point onwards becomes a separate trip. Your location data is not changed, and you can undo this by merging the two trips again.",
-        confirmText: "Split"
+        title: at ? t("history.split.title", { time: formatTime(at, true) }) : t("history.split.titleUnknown"),
+        message: t("history.split.message"),
+        confirmText: t("history.split.confirm")
       })
       if (!confirmed) return
       splittingPointRef.current = true
@@ -339,12 +355,12 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Trip split failed:", error)
-        showAlert("Split Failed", "Unable to split the trip here. Please try again.", "error")
+        showAlert(t("history.split.failed"), t("history.split.failed.message"), "error")
       } finally {
         splittingPointRef.current = false
       }
     },
-    [trackLocations, trips, boundaryOverrides, refreshAfterEdit]
+    [trackLocations, trips, boundaryOverrides, refreshAfterEdit, t]
   )
 
   const handlePointDelete = useCallback(
@@ -354,10 +370,9 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       const point = trackLocations.find((l) => l.id === id)
       const at = point?.timestamp ? formatTime(point.timestamp, true) : null
       const confirmed = await showConfirm({
-        title: at ? `Delete the point at ${at}?` : "Delete Point?",
-        message:
-          "Removes this point from this device only. If it has already synced it stays on your server, and if it has not it will never be uploaded.",
-        confirmText: "Delete",
+        title: at ? t("history.point.delete.title", { time: at }) : t("history.point.delete.titleUnknown"),
+        message: t("history.point.delete.message"),
+        confirmText: t("history.point.delete.confirm"),
         destructive: true
       })
       if (!confirmed) return
@@ -367,12 +382,12 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Point delete failed:", error)
-        showAlert("Delete Failed", "Unable to delete point. Please try again.", "error")
+        showAlert(t("history.point.delete.failed"), t("history.point.delete.failed.message"), "error")
       } finally {
         deletingPointRef.current = false
       }
     },
-    [trackLocations, refreshAfterEdit]
+    [trackLocations, refreshAfterEdit, t]
   )
 
   const handlePointNoteChange = useCallback(
@@ -386,10 +401,10 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
       } catch (error) {
         logger.error("[LocationHistory] Note update failed:", error)
-        showAlert("Save Failed", "Unable to save note. Please try again.", "error")
+        showAlert(t("history.note.failed"), t("history.note.failed.message"), "error")
       }
     },
-    [mapDate, fetchDaysWithData]
+    [mapDate, fetchDaysWithData, t]
   )
 
   const mapLocations = selectedTrip ? (selectedTrip.locations as LocationCoords[]) : trackLocations
@@ -398,8 +413,14 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   // identity closes its open popup.
   const tableLocations = useMemo(() => withNotes(trackLocations), [trackLocations, withNotes])
 
-  const calendarPicker = useMemo(
-    () => (
+  return (
+    <Container>
+      <View style={styles.tabBar}>
+        <Tab label={t("history.tab.map")} active={activeTab === "map"} onPress={() => setActiveTab("map")} />
+        <Tab label={t("history.tab.trips")} active={activeTab === "trips"} onPress={() => setActiveTab("trips")} />
+        <Tab label={t("history.tab.data")} active={activeTab === "data"} onPress={() => setActiveTab("data")} />
+      </View>
+
       <CalendarPicker
         date={mapDate}
         onDateChange={setMapDate}
@@ -412,31 +433,9 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         onMonthChange={fetchDaysWithData}
         onPrefetchMonth={prefetchMonth}
       />
-    ),
-    [
-      mapDate,
-      trackLocations.length,
-      dailyDistance,
-      colors,
-      daysWithData,
-      daysWithNotes,
-      fetchDaysWithData,
-      prefetchMonth
-    ]
-  )
-
-  return (
-    <Container>
-      {/* Tab Bar */}
-      <View style={styles.tabBar}>
-        <Tab label="Map" active={activeTab === "map"} onPress={() => setActiveTab("map")} colors={colors} />
-        <Tab label="Trips" active={activeTab === "trips"} onPress={() => setActiveTab("trips")} colors={colors} />
-        <Tab label="Data" active={activeTab === "data"} onPress={() => setActiveTab("data")} colors={colors} />
-      </View>
 
       {activeTab === "map" && (
-        <View style={styles.mapContainer}>
-          {calendarPicker}
+        <View style={styles.tabBody}>
           <TrackMap
             locations={mapLocations}
             colors={colors}
@@ -449,25 +448,25 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             onPointSplit={handlePointSplit}
           />
           {selectedTrip && (
-            <Pressable
-              onPress={handleShowFullDay}
-              style={({ pressed }) => [
-                styles.floatingPill,
-                { backgroundColor: colors.primary, borderRadius: colors.borderRadius },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-            >
-              <Text style={[styles.floatingPillText, { color: colors.textOnPrimary }]}>
-                Trip {selectedTrip.index} · Show full day
-              </Text>
-            </Pressable>
+            <View style={styles.fullDaySlot} pointerEvents="box-none">
+              <MapOverlay
+                testID="show-full-day-btn"
+                variant="control"
+                shape="pill"
+                onPress={handleShowFullDay}
+                accessibilityLabel={t("history.map.showFullDay", { index: selectedTrip.index })}
+              >
+                <Text style={[styles.fullDayLabel, { color: colors.text }]}>
+                  {t("history.map.showFullDay", { index: selectedTrip.index })}
+                </Text>
+              </MapOverlay>
+            </View>
           )}
         </View>
       )}
 
       {activeTab === "trips" && (
-        <View style={styles.mapContainer}>
-          {calendarPicker}
+        <View style={styles.tabBody}>
           <TripList
             trips={trips}
             colors={colors}
@@ -476,13 +475,13 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             onExport={exportTrips}
             onDelete={handleDeleteTrips}
             onMerge={handleMergeTrips}
+            onShowOnMap={handleShowDayOnMap}
           />
         </View>
       )}
 
       {activeTab === "data" && (
-        <View style={styles.mapContainer}>
-          {calendarPicker}
+        <View style={styles.tabBody}>
           <LocationTable locations={tableLocations} colors={colors} />
         </View>
       )}
@@ -492,29 +491,26 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
 
 const styles = StyleSheet.create({
   headerBtn: {
-    padding: 8
+    width: size.touch,
+    height: size.touch,
+    alignItems: "center",
+    justifyContent: "center"
   },
-  mapContainer: {
+  tabBody: {
     flex: 1
   },
-  floatingPill: {
+  fullDaySlot: {
+    // Top-centre, not the foot: the map's own centre control and point popup own the bottom.
     position: "absolute",
-    bottom: 16,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4
+    start: 0,
+    end: 0,
+    top: MAP_OVERLAY_GUTTER,
+    alignItems: "center"
   },
-  floatingPillText: {
-    fontSize: 16,
-    ...fonts.semiBold
+  fullDayLabel: {
+    ...text.bodyStrong
   },
   tabBar: {
-    flexDirection: "row",
-    marginBottom: 12
+    flexDirection: "row"
   }
 })

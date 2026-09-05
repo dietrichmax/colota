@@ -2,3 +2,5 @@
 - Calmer section headings, and list rows no longer cut off their description
 - The dashboard map is the hero, with tracking state on the map itself
 - The dashboard sheet stays compact until tracking starts, then grows to hold the live fix
+- Location history is lighter to scan, with trips as plain rows and the point popup at the foot of the map
+- Trip detail leads with the map, carrying back, share and delete on it

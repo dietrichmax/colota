@@ -14,7 +14,7 @@ Two cases the gap threshold gets wrong:
 ## Merging Trips
 
 1. Go to **Location History → Trips**
-2. Long-press a trip card to enter selection mode
+2. Long-press a trip row, or tap **Select trips**, to enter selection mode
 3. Tap the other trips you want to join
 4. Tap the merge icon in the selection header and confirm
 

@@ -1,5 +1,6 @@
 import React from "react"
 import { render, act, fireEvent } from "@testing-library/react-native"
+import { lightColors } from "@colota/shared"
 import { TrackMap } from "../TrackMap"
 import { DEFAULT_MAP_ZOOM } from "../../../../constants"
 import type { Trip } from "../../../../types/global"
@@ -70,15 +71,14 @@ jest.mock("../../../../utils/trips", () => ({
   getTripColor: (index: number) => `#trip${index}`
 }))
 
-const colors = {
-  primary: "#00f",
-  card: "#fff",
-  border: "#ccc",
-  text: "#000",
-  textSecondary: "#666",
-  borderRadius: 8,
-  pressedOpacity: 0.6
-} as any
+jest.mock("../../../../hooks/useTheme", () => ({
+  useTheme: () => ({
+    colors: require("@colota/shared").lightColors,
+    mode: "light"
+  })
+}))
+
+const colors = lightColors as any
 
 const loc = (lat: number, lon: number) => ({
   latitude: lat,
@@ -91,6 +91,18 @@ const loc = (lat: number, lon: number) => ({
   battery: 80,
   battery_status: 2
 })
+
+const tapPoint = (points: any, id: number, note = "") =>
+  fireEvent(points, "press", {
+    nativeEvent: {
+      features: [
+        {
+          properties: { id, color: "#000", speed: 0, timestamp: 1000, accuracy: 5, altitude: 10, note },
+          geometry: { type: "Point", coordinates: [13.4, 52.5] }
+        }
+      ]
+    }
+  })
 
 // Run the auto-fit synchronously, otherwise it lands after the test has torn down
 beforeEach(() => {
@@ -139,19 +151,7 @@ describe("TrackMap auto-fit", () => {
   })
 })
 
-describe("TrackMap point deletion", () => {
-  const tapPoint = (points: any, id: number) =>
-    fireEvent(points, "press", {
-      nativeEvent: {
-        features: [
-          {
-            properties: { id, color: "#000", speed: 0, timestamp: 1000, accuracy: 5, altitude: 10, note: "" },
-            geometry: { type: "Point", coordinates: [13.4, 52.5] }
-          }
-        ]
-      }
-    })
-
+describe("TrackMap point popup", () => {
   it("reports the tapped point's id to the delete handler", () => {
     const onPointDelete = jest.fn()
     const { getByTestId } = render(
@@ -232,6 +232,48 @@ describe("TrackMap point deletion", () => {
     // Delete is a separate opt-in and stays absent on a map that didn't ask for it
     expect(queryByTestId("popup-delete-point")).toBeNull()
   })
+
+  /**
+   * Every action in the popup sits over map tiles, where a mis-hit pans the map instead. Voice
+   * Access and Switch Access both resolve them by their visible words, so each needs a label.
+   */
+  it("gives each popup action a 48 target and a spoken name", () => {
+    const { getByTestId } = render(
+      <TrackMap
+        locations={[loc(52.5, 13.4)]}
+        colors={colors}
+        trackColor="#000"
+        onPointSplit={jest.fn()}
+        onPointDelete={jest.fn()}
+      />
+    )
+
+    tapPoint(getByTestId("track-points"), 42)
+
+    for (const [testID, label] of [
+      ["popup-split-point", "Start a new trip at this point"],
+      ["popup-delete-point", "Delete this point"],
+      ["popup-close", "Close the point"]
+    ]) {
+      const control = getByTestId(testID)
+      const style = ([] as any[]).concat(control.props.style).filter(Boolean)
+      expect(style.some((s) => s.width === 48 && s.height === 48)).toBe(true)
+      expect(control.props.accessibilityLabel).toBe(label)
+    }
+  })
+
+  it("closes the popup from its close action", () => {
+    const { getByTestId, queryByTestId } = render(
+      <TrackMap locations={[loc(52.5, 13.4)]} colors={colors} trackColor="#000" onPointSplit={jest.fn()} />
+    )
+
+    tapPoint(getByTestId("track-points"), 42)
+    expect(getByTestId("point-popup")).toBeTruthy()
+
+    fireEvent.press(getByTestId("popup-close"))
+
+    expect(queryByTestId("point-popup")).toBeNull()
+  })
 })
 
 describe("TrackMap trip coloring", () => {
@@ -250,6 +292,44 @@ describe("TrackMap trip coloring", () => {
     const options = mockBuildSegments.mock.calls[0][2]
     expect(options.locationColors).toEqual(["#trip1", "#trip1", "#track", "#track", "#track", "#trip2", "#trip2"])
     expect([...options.skipIndices].sort((a: number, b: number) => a - b)).toEqual([2, 3, 4, 5])
+  })
+})
+
+describe("TrackMap legend", () => {
+  const twoTrips: Trip[] = [
+    { index: 1, locations: [], startTime: 0, endTime: 0, distance: 1000, locationCount: 1, startIndex: 0 },
+    { index: 2, locations: [], startTime: 0, endTime: 0, distance: 1000, locationCount: 1, startIndex: 1 }
+  ]
+
+  /**
+   * The token is a painted View, never a character: the bundled Inter carries no box-drawing
+   * glyph, so a "▬" would silently fall back to the system font in the middle of the line.
+   */
+  it("draws each token as a painted rule, not a glyph", () => {
+    const { getByTestId, getByText } = render(
+      <TrackMap locations={[loc(52.5, 13.4), loc(52.6, 13.5)]} colors={colors} trips={twoTrips} trackColor="#track" />
+    )
+
+    for (const index of [1, 2]) {
+      const token = getByTestId(`legend-token-${index}`)
+      expect(token.type).toBe("View")
+      const style = ([] as any[]).concat(token.props.style).filter(Boolean)
+      expect(style.some((s) => s.backgroundColor === `#trip${index}`)).toBe(true)
+      expect(getByText(`Trip ${index}`)).toBeTruthy()
+    }
+  })
+
+  it("shows no legend for a single trip, where the colour names nothing", () => {
+    const { queryByTestId } = render(
+      <TrackMap
+        locations={[loc(52.5, 13.4), loc(52.6, 13.5)]}
+        colors={colors}
+        trips={[twoTrips[0]]}
+        trackColor="#track"
+      />
+    )
+
+    expect(queryByTestId("track-legend")).toBeNull()
   })
 })
 
@@ -293,6 +373,25 @@ describe("TrackMap note overrides", () => {
    * effect that clears the popup on a day change would close it mid-edit.
    */
   it("keeps the popup open when a note is saved", () => {
+    const onPointNoteChange = jest.fn()
+    const { getByTestId, queryByTestId } = render(
+      <TrackMap
+        locations={[{ ...loc(52.5, 13.4), id: 42, note: "" }] as any}
+        colors={colors}
+        trackColor="#000"
+        onPointNoteChange={onPointNoteChange}
+      />
+    )
+    tapPoint(getByTestId("track-points"), 42)
+    fireEvent.changeText(getByTestId("popup-note-input"), "lunch")
+    fireEvent.press(getByTestId("popup-note-save"))
+
+    expect(onPointNoteChange).toHaveBeenCalledWith(42, "lunch")
+    expect(queryByTestId("popup-note-input")).not.toBeNull()
+  })
+
+  /** The save action is the only signal that the draft is unsent, so it appears only when it is. */
+  it("offers the save action only while the draft differs from the stored note", () => {
     const { getByTestId, queryByTestId } = render(
       <TrackMap
         locations={[{ ...loc(52.5, 13.4), id: 42, note: "" }] as any}
@@ -301,20 +400,35 @@ describe("TrackMap note overrides", () => {
         onPointNoteChange={jest.fn()}
       />
     )
-    fireEvent(getByTestId("track-points"), "press", {
-      nativeEvent: {
-        features: [
-          {
-            properties: { id: 42, color: "#000", speed: 0, timestamp: 1000, accuracy: 5, altitude: 10, note: "" },
-            geometry: { type: "Point", coordinates: [13.4, 52.5] }
-          }
-        ]
-      }
-    })
-    fireEvent.changeText(getByTestId("popup-note-input"), "lunch")
-    fireEvent.press(getByTestId("popup-note-save"))
+    tapPoint(getByTestId("track-points"), 42)
 
-    expect(queryByTestId("popup-note-input")).not.toBeNull()
+    expect(queryByTestId("popup-note-save")).toBeNull()
+
+    fireEvent.changeText(getByTestId("popup-note-input"), "lunch")
+    expect(getByTestId("popup-note-save")).toBeTruthy()
+
+    fireEvent.press(getByTestId("popup-note-save"))
+    expect(queryByTestId("popup-note-save")).toBeNull()
+  })
+
+  /**
+   * The day and the selected trip both reach the map as a new locations array. An open popup
+   * describes a point that may not be on the map any more, so it has to go with it.
+   */
+  it("closes the popup when the locations identity changes", () => {
+    const first = [{ ...loc(52.5, 13.4), id: 42, note: "" }] as any
+    const second = [{ ...loc(48.1, 11.5), id: 7, note: "" }] as any
+    const { getByTestId, queryByTestId, rerender } = render(
+      <TrackMap locations={first} colors={colors} trackColor="#000" onPointNoteChange={jest.fn()} />
+    )
+    tapPoint(getByTestId("track-points"), 42)
+    expect(getByTestId("point-popup")).toBeTruthy()
+
+    act(() => {
+      rerender(<TrackMap locations={second} colors={colors} trackColor="#000" onPointNoteChange={jest.fn()} />)
+    })
+
+    expect(queryByTestId("point-popup")).toBeNull()
   })
 
   it("leaves the stored note alone when nothing was edited", () => {

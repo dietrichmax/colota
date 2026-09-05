@@ -52,7 +52,8 @@ jest.mock("../../services/modalService", () => ({
 
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
-    colors: require("@colota/shared").lightColors
+    colors: require("@colota/shared").lightColors,
+    mode: "light"
   })
 }))
 
@@ -67,9 +68,16 @@ jest.mock("lucide-react-native", () => {
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View } = require("react-native")
+  const { View, Pressable, Text } = require("react-native")
   return {
-    Container: ({ children }: any) => R.createElement(View, null, children)
+    Container: ({ children }: any) => R.createElement(View, null, children),
+    MapOverlay: ({ children, testID, onPress, accessibilityLabel }: any) =>
+      R.createElement(
+        onPress ? Pressable : View,
+        { testID, onPress, accessibilityLabel, accessibilityRole: onPress ? "button" : undefined },
+        children
+      ),
+    Text
   }
 })
 
@@ -144,6 +152,13 @@ jest.mock("../../components/features/inspector/TripList", () => {
               key: "t",
               testID: "trigger-trip-select",
               onPress: () => props.onTripSelect(props.trips?.[0])
+            })
+          : null,
+        props.onShowOnMap
+          ? R.createElement(Pressable, {
+              key: "e",
+              testID: "trigger-show-on-map",
+              onPress: props.onShowOnMap
             })
           : null
       )
@@ -265,7 +280,7 @@ describe("LocationHistoryScreen", () => {
 
     fireEvent.press(getByTestId("trigger-point-split"))
 
-    await waitFor(() => expect(showAlert).toHaveBeenCalledWith("Cannot Split Here", expect.any(String), "info"))
+    await waitFor(() => expect(showAlert).toHaveBeenCalledWith("Cannot split here", expect.any(String), "info"))
     expect(showConfirm).not.toHaveBeenCalled()
     expect(NativeLocationService.addBoundaryOverrides).not.toHaveBeenCalled()
   })
@@ -304,7 +319,7 @@ describe("LocationHistoryScreen", () => {
     fireEvent.press(getByTestId("trigger-point-split"))
 
     // Explains rather than doing nothing
-    await waitFor(() => expect(showAlert).toHaveBeenCalledWith("Cannot Split Here", expect.any(String), "info"))
+    await waitFor(() => expect(showAlert).toHaveBeenCalledWith("Cannot split here", expect.any(String), "info"))
     expect(showConfirm).not.toHaveBeenCalled()
     expect(NativeLocationService.addBoundaryOverrides).not.toHaveBeenCalled()
   })
@@ -403,6 +418,35 @@ describe("LocationHistoryScreen", () => {
     fireEvent.press(getByText("Data"))
 
     expect(getByTestId("LocationTable")).toBeTruthy()
+  })
+
+  /**
+   * The date line is the screen's chrome, not the map tab's: it names the day every tab shows,
+   * so it survives a tab switch instead of being remounted three times.
+   */
+  it("keeps one date line above the tab body", () => {
+    const props = createProps()
+    const { getAllByTestId, getByText } = render(<LocationHistoryScreen {...props} />)
+
+    expect(getAllByTestId("CalendarPicker")).toHaveLength(1)
+    fireEvent.press(getByText("Trips"))
+    expect(getAllByTestId("CalendarPicker")).toHaveLength(1)
+  })
+
+  /**
+   * The empty day's action belongs to this screen: it shows the day already selected on the map
+   * rather than jumping the user to today, which would answer a question nobody asked.
+   */
+  it("shows the selected day on the map from the empty state's action", async () => {
+    ;(segmentTrips as jest.Mock).mockReturnValue([])
+    const props = createProps()
+    const { getByText, getByTestId, queryByTestId } = render(<LocationHistoryScreen {...props} />)
+
+    fireEvent.press(getByText("Trips"))
+    fireEvent.press(getByTestId("trigger-show-on-map"))
+
+    await waitFor(() => expect(getByTestId("TrackMap")).toBeTruthy())
+    expect(queryByTestId("TripList")).toBeNull()
   })
 })
 

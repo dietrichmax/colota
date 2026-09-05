@@ -1,18 +1,5 @@
 {
-  "components/features/inspector/CalendarPicker.tsx": ["borderWidth", "borderRadius", "fontSize"],
   "components/features/inspector/InteractiveLineChart.tsx": ["hexLiteral"],
-  "components/features/inspector/LocationTable.tsx": ["fontSize", "textTransform"],
-  "components/features/inspector/TrackMap.tsx": [
-    "borderWidth",
-    "borderRadius",
-    "elevation",
-    "shadowColor",
-    "fontSize",
-    "textTransform",
-    "fontWeight",
-    "hexLiteral"
-  ],
-  "components/features/inspector/TripList.tsx": ["borderWidth", "borderRadius", "fontSize"],
   "components/features/log/FileLoggingPanel.tsx": ["fontSize"],
   "components/features/map/UserLocationOverlay.tsx": [
     "borderWidth",
@@ -45,7 +32,6 @@
     "duration"
   ],
   "screens/ImportLocationsScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing", "textTransform"],
-  "screens/LocationInspectorScreen.tsx": ["elevation", "shadowColor", "fontSize", "hexLiteral"],
   "screens/LocationSummaryScreen.tsx": ["fontSize", "textTransform"],
   "screens/OfflineMapsScreen.tsx": [
     "borderWidth",
@@ -57,6 +43,5 @@
   ],
   "screens/SetupImportScreen.tsx": ["fontSize"],
   "screens/ShareSetupScreen.tsx": ["borderWidth", "fontSize"],
-  "screens/TripDetailScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "textTransform"],
   "utils/trips.ts": ["hexLiteral"]
 }
