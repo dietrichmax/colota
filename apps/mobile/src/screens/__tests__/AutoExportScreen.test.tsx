@@ -128,6 +128,16 @@ jest.mock("../../components", () => {
   const RN = require("react-native")
   const { EXPORT_FORMATS, EXPORT_FORMAT_KEYS } = require("../../utils/exportConverters")
   return {
+    RadioRow: function (props: any) {
+      const R = require("react")
+      const RN = require("react-native")
+      return R.createElement(
+        RN.Pressable,
+        { testID: props.testID, onPress: props.onPress, accessibilityState: { checked: props.selected } },
+        R.createElement(RN.Text, null, props.label),
+        props.sub ? R.createElement(RN.Text, null, props.sub) : null
+      )
+    },
     Toggle: function (props: any) {
       return require("react").createElement(require("react-native").Switch, {
         testID: props.testID,

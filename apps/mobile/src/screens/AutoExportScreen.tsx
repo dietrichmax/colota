@@ -7,7 +7,7 @@ import { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
 import { Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
 import { FolderOpen, CircleCheckBig, Share2, TriangleAlert } from "lucide-react-native"
-import { Button, Card, ChipGroup, Container, Divider, FloatingSaveIndicator, FormatSelector, NumericInput, RadioDot, SectionTitle, SettingRow, TimePicker, Toggle } from "../components"
+import { Button, Card, ChipGroup, Container, Divider, FloatingSaveIndicator, FormatSelector, NumericInput, RadioRow, SectionTitle, SettingRow, TimePicker, Toggle } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { useTimeout } from "../hooks/useTimeout"
 import { ScreenProps } from "../types/global"
@@ -504,23 +504,14 @@ export function AutoExportScreen(_props: ScreenProps) {
           <SectionTitle>Export range</SectionTitle>
           <Card>
             {MODE_OPTIONS.map((option, i) => (
-              <View key={option.key}>
-                {i > 0 && <Divider />}
-                <Pressable
-                  style={({ pressed }) => [styles.modeRow, pressed && { opacity: colors.pressedOpacity }]}
-                  onPress={() => handleModeChange(option.key)}
-                >
-                  <View style={styles.modeContent}>
-                    <Text style={[styles.settingLabel, { color: mode === option.key ? colors.primary : colors.text }]}>
-                      {option.label}
-                    </Text>
-                    <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                      {option.description}
-                    </Text>
-                  </View>
-                  <RadioDot selected={mode === option.key} />
-                </Pressable>
-              </View>
+              <RadioRow
+                key={option.key}
+                label={option.label}
+                sub={option.description}
+                selected={mode === option.key}
+                onPress={() => handleModeChange(option.key)}
+                divider={i < MODE_OPTIONS.length - 1}
+              />
             ))}
           </Card>
         </View>
@@ -711,16 +702,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.description,
     ...fonts.regular,
     flex: 1
-  },
-  modeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10
-  },
-  modeContent: {
-    flex: 1,
-    marginEnd: space.lg
   },
   fileRow: {
     flexDirection: "row",
