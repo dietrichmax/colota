@@ -32,7 +32,7 @@ import { logger } from "../utils/logger"
 import { formatShortDistance, shortDistanceUnit, inputToMeters } from "../utils/geo"
 import { buildGeofencesLink } from "../utils/setupLink"
 
-const GeofenceMap = React.memo(function GeofenceMap({
+const GeofenceMap = React.memo(function GeofenceMapView({
   tracking,
   geofenceData,
   currentPauseZone,

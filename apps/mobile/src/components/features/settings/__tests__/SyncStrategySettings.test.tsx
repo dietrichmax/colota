@@ -10,7 +10,6 @@ jest.mock("../../../index", () => {
     ListItem: require("../../../../testing/componentStubs").ListItemStub,
     TextField: require("../../../../testing/componentStubs").TextFieldStub,
     ChipGroup: function (props: any) {
-      const R = require("react")
       const RN = require("react-native")
       return R.createElement(
         RN.View,

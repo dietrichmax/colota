@@ -36,7 +36,7 @@ interface TripRowProps {
   onLongPress: (trip: Trip) => void
 }
 
-const TripRow = React.memo(function TripRow({
+const TripRow = React.memo(function TripRowItem({
   trip,
   colors,
   stats,

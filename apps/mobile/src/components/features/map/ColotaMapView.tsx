@@ -70,7 +70,7 @@ interface Props {
   children?: React.ReactNode
 }
 
-export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapView(
+export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapViewInner(
   { initialCenter, initialZoom = DEFAULT_MAP_ZOOM, onPress, onRegionDidChange, onMapReady, style, children },
   ref
 ) {
@@ -123,8 +123,8 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
     const controller = new AbortController()
     fetch(mapStyle, { signal: controller.signal })
       .then((r) => r.json())
-      .then((style: { sources?: unknown }) => {
-        const parsed = parseStyleAttribution(style?.sources)
+      .then((loadedStyle: { sources?: unknown }) => {
+        const parsed = parseStyleAttribution(loadedStyle?.sources)
         setAttributionLinks(parsed.length > 0 ? parsed : FALLBACK_ATTRIBUTION_LINKS)
       })
       .catch((err) => {

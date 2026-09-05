@@ -81,7 +81,6 @@ jest.mock("../../components", () => {
   return {
     TextField: require("../../testing/componentStubs").TextFieldStub,
     RadioRow: function (props: any) {
-      const R = require("react")
       const RN = require("react-native")
       return R.createElement(
         RN.Pressable,
@@ -91,7 +90,6 @@ jest.mock("../../components", () => {
       )
     },
     ChipGroup: function (props: any) {
-      const R = require("react")
       const RN = require("react-native")
       return R.createElement(
         RN.View,

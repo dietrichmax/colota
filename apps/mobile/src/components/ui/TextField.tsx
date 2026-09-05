@@ -37,7 +37,7 @@ type BaseProps = Omit<TextInputProps, "style" | "editable" | "secureTextEntry"> 
 type TextFieldProps = BaseProps &
   ({ label: string; accessibilityLabel?: string } | { label?: undefined; accessibilityLabel: string })
 
-export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function TextField(
+export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function TextFieldInput(
   {
   label,
   accessibilityLabel,
