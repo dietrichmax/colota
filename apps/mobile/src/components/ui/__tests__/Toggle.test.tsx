@@ -9,24 +9,28 @@ jest.mock("../../../hooks/useTheme", () => ({
 import { Toggle } from "../Toggle"
 
 describe("Toggle", () => {
-  it("paints the track and thumb from the primary hue, which is what the twelve call sites each built by hand", () => {
+  it("paints the on state from the primary hue, which is what the twelve call sites each built by hand", () => {
     const { getByTestId } = render(
       <Toggle testID="t" value={true} onValueChange={jest.fn()} accessibilityLabel="Offline mode" />
     )
 
-    // RN resolves trackColor and thumbColor into these three before they reach the platform.
+    // RN resolves trackColor and thumbColor into these before they reach the platform.
     const el = getByTestId("t")
-    expect(el.props.tintColor).toBe(lightColors.border)
     expect(el.props.onTintColor).toBe(lightColors.primary + "80")
     expect(el.props.thumbTintColor).toBe(lightColors.primary)
   })
 
-  it("moves the thumb to the border colour when off, so an off switch reads as unset rather than tinted", () => {
+  it("leaves the off state to Android, so the thumb is not the colour of its own track", () => {
+    // Tinting both with colors.border made them identical at 1.00:1, so an off switch was a
+    // uniform pill with no visible thumb. Undefined clears the colour filter and restores the
+    // platform drawable, which also fixes how a disabled switch renders.
     const { getByTestId } = render(
       <Toggle testID="t" value={false} onValueChange={jest.fn()} accessibilityLabel="Offline mode" />
     )
 
-    expect(getByTestId("t").props.thumbTintColor).toBe(lightColors.border)
+    const el = getByTestId("t")
+    expect(el.props.thumbTintColor).toBeUndefined()
+    expect(el.props.tintColor).toBeUndefined()
   })
 
   it("takes the warning hue only when asked", () => {
