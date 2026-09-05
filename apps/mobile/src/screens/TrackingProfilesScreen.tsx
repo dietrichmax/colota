@@ -11,7 +11,7 @@ import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { SavedTrackingProfile, ScreenProps } from "../types/global"
 import { fontSizes, fonts } from "../styles/typography"
-import { Button, Card, Container, SectionTitle, Toggle } from "../components"
+import { Button, Card, Container, SectionTitle, Toggle, IconButton } from "../components"
 import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { buildProfilesLink } from "../utils/setupLink"
@@ -148,17 +148,13 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
                 onValueChange={(val) => toggleEnabled(item.id, val)}
               />
 
-              <Pressable
+              <IconButton
+                icon={X}
+                tone="danger"
                 testID={`delete-profile-${item.id}`}
+                accessibilityLabel={`Delete ${item.name}`}
                 onPress={() => handleDelete(item)}
-                style={({ pressed }) => [
-                  styles.deleteBtn,
-                  { backgroundColor: colors.error + "15" },
-                  pressed && { opacity: colors.pressedOpacity }
-                ]}
-              >
-                <X size={size.icon.sm} color={colors.error} />
-              </Pressable>
+              />
             </View>
           </Pressable>
         </Card>
@@ -253,13 +249,6 @@ const styles = StyleSheet.create({
   condition: { fontSize: fontSizes.description, ...fonts.medium, marginBottom: 2 },
   settings: { fontSize: fontSizes.small, ...fonts.regular },
   actions: { alignItems: "center", gap: space.sm },
-  deleteBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.lg,
-    alignItems: "center",
-    justifyContent: "center"
-  },
   activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   shareBtn: { padding: space.xs, marginBottom: space.md },
   empty: { alignItems: "center", paddingVertical: 40 },

@@ -13,7 +13,7 @@ import { ScreenProps } from "../types/global"
 import { useCoords } from "../contexts/TrackingProvider"
 import { fontSizes, fonts } from "../styles/typography"
 import { X, CircleCheckBig, RefreshCw, TriangleAlert } from "lucide-react-native"
-import { Button, Card, Container, SectionTitle, TextField } from "../components"
+import { Button, Card, Container, SectionTitle, TextField, IconButton } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
 import {
   DEFAULT_MAP_ZOOM,
@@ -735,22 +735,15 @@ export function OfflineMapsScreen({}: ScreenProps) {
             ) : (
               <View style={styles.actionBtns}>
                 {item.isComplete && (
-                  <Pressable
+                  <IconButton
+                    icon={RefreshCw}
+                    tone="primary"
                     testID={`refresh-btn-${item.name}`}
+                    accessibilityLabel={`Refresh ${item.name}`}
+                    loading={isRefreshing}
+                    disabled={downloading}
                     onPress={() => handleRefresh(item)}
-                    disabled={downloading || isRefreshing}
-                    style={({ pressed }) => [
-                      styles.actionBtn,
-                      { backgroundColor: colors.primary + "15" },
-                      pressed && { opacity: colors.pressedOpacity }
-                    ]}
-                  >
-                    {isRefreshing ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <RefreshCw size={size.icon.sm} color={colors.primary} />
-                    )}
-                  </Pressable>
+                  />
                 )}
                 <Pressable
                   testID={`delete-btn-${item.name}`}

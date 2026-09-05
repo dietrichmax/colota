@@ -61,6 +61,7 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
+    IconButton: require("../../testing/componentStubs").IconButtonStub,
     ListItem: require("../../testing/componentStubs").ListItemStub,
     TextField: require("../../testing/componentStubs").TextFieldStub,
     Toggle: function (props: any) {
@@ -312,13 +313,14 @@ describe("AuthSettingsScreen", () => {
         customHeaders: { "X-Custom": "val" }
       }
 
-      const { getByDisplayValue, getByText, queryByDisplayValue } = renderScreen()
+      const { getByDisplayValue, getByLabelText, queryByDisplayValue } = renderScreen()
 
       await waitFor(() => {
         expect(getByDisplayValue("X-Custom")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("X"))
+      // The remove control is an icon now, so it is found by the name TalkBack reads.
+      fireEvent.press(getByLabelText("Remove this header"))
 
       expect(queryByDisplayValue("X-Custom")).toBeNull()
       expect(mockImmediateSaveAndRestart).toHaveBeenCalled()

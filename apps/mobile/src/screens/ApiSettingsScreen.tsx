@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useMemo, useRef } from "react"
 import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
+import { RotateCcw, X } from "lucide-react-native"
 import {
   FieldMap,
   DEFAULT_FIELD_MAP,
@@ -21,7 +22,7 @@ import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup, Button, TextField } from "../components"
+import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup, Button, TextField, IconButton } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
   buildTraccarJsonPayload,
@@ -587,16 +588,12 @@ export function ApiSettingsScreen({}: ScreenProps) {
                           autoCorrect={false}
                         />
                         {isFieldModified && (
-                          <Pressable
+                          <IconButton
+                            icon={RotateCcw}
+                            testID={`reset-${key}`}
+                            accessibilityLabel={`Reset ${key} to the default`}
                             onPress={() => handleResetField(key)}
-                            style={({ pressed }) => [
-                              styles.resetButton,
-                              { backgroundColor: colors.border },
-                              pressed && { opacity: colors.pressedOpacity }
-                            ]}
-                          >
-                            <Text style={[styles.resetIcon, { color: colors.textSecondary }]}>↺</Text>
-                          </Pressable>
+                          />
                         )}
                       </View>
                     </View>
@@ -647,16 +644,13 @@ export function ApiSettingsScreen({}: ScreenProps) {
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
-                      <Pressable
+                      <IconButton
+                        icon={X}
+                        tone="danger"
+                        testID={`remove-custom-${field.id}`}
+                        accessibilityLabel="Remove this custom field"
                         onPress={() => handleRemoveCustomField(field.id)}
-                        style={({ pressed }) => [
-                          styles.removeButton,
-                          { backgroundColor: colors.error + "15" },
-                          pressed && { opacity: colors.pressedOpacity }
-                        ]}
-                      >
-                        <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                      </Pressable>
+                      />
                     </View>
                     {index < localCustomFields.length - 1 && <Divider />}
                   </View>
@@ -811,17 +805,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.body,
     fontFamily: "monospace"
   },
-  resetButton: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.lg,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  resetIcon: {
-    fontSize: fontSizes.heading,
-    ...fonts.semiBold
-  },
   customFieldRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -836,17 +819,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     fontSize: fontSizes.body,
     fontFamily: "monospace"
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.lg,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  removeButtonText: {
-    fontSize: fontSizes.description,
-    ...fonts.bold
   },
   emptyHint: {
     fontSize: fontSizes.description,
