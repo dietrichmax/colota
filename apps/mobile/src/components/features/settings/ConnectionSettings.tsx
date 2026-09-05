@@ -204,7 +204,7 @@ export function ConnectionSettings({
                       styles.protocolBadge,
                       {
                         backgroundColor: endpointInput.startsWith("https://")
-                          ? colors.success + "20"
+                          ? colors.well
                           : colors.warning + "20"
                       }
                     ]}
@@ -213,7 +213,7 @@ export function ConnectionSettings({
                       style={[
                         styles.protocolText,
                         {
-                          color: endpointInput.startsWith("https://") ? colors.success : colors.warning
+                          color: endpointInput.startsWith("https://") ? colors.textSecondary : colors.warning
                         }
                       ]}
                     >
@@ -260,13 +260,13 @@ export function ConnectionSettings({
                 style={[
                   styles.responseBox,
                   {
-                    borderColor: testError ? colors.error : colors.success,
-                    backgroundColor: (testError ? colors.error : colors.success) + "15"
+                    borderColor: testError ? colors.error : colors.border,
+                    backgroundColor: testError ? colors.error + "15" : colors.well
                   }
                 ]}
               >
                 {!testError && <CircleCheckBig size={size.icon.sm} color={colors.success} />}
-                <Text style={[styles.responseText, { color: testError ? colors.error : colors.success }]}>
+                <Text style={[styles.responseText, { color: testError ? colors.error : colors.text }]}>
                   {testResponse}
                 </Text>
               </View>
