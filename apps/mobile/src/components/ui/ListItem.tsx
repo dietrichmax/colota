@@ -4,60 +4,104 @@
  */
 
 import React from "react"
-import { Text, StyleSheet, View, Pressable } from "react-native"
+import { Text, StyleSheet, View, Pressable, type StyleProp, type ViewStyle } from "react-native"
 import { ChevronRight } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { text } from "../../styles/typography"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { Divider } from "./Divider"
 
 type IconComponent = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
 
 type ListItemProps = {
   label: string
   sub?: string
+  value?: string
   icon?: IconComponent
-  trailingIcon?: IconComponent
-  onPress: () => void
+  trailingIcon?: IconComponent | null
+  trailing?: React.ReactNode
+  onPress?: () => void
+  divider?: boolean
+  style?: StyleProp<ViewStyle>
   testID?: string
   accessibilityRole?: "button" | "link"
+  accessibilityLabel?: string
   accessibilityHint?: string
 }
 
 export function ListItem({
   label,
   sub,
+  value,
   icon: Icon,
-  trailingIcon: TrailingIcon = ChevronRight,
+  trailingIcon,
+  trailing,
   onPress,
+  divider = false,
+  style,
   testID,
   accessibilityRole = "button",
+  accessibilityLabel,
   accessibilityHint
 }: ListItemProps) {
   const { colors } = useTheme()
-  return (
+
+  const TrailingIcon = trailingIcon === undefined && onPress ? ChevronRight : trailingIcon
+  const composedLabel = accessibilityLabel ?? [label, sub, value].filter(Boolean).join(", ")
+
+  const trailingSlot =
+    trailing ??
+    (value ? (
+      <Text style={[styles.value, { color: colors.text }]} importantForAccessibility="no">
+        {value}
+      </Text>
+    ) : null)
+
+  const body = (
+    <>
+      {Icon ? (
+        <View style={styles.iconColumn} importantForAccessibility="no">
+          <Icon size={size.icon.md} color={colors.textSecondary} />
+        </View>
+      ) : null}
+      <View style={styles.content} accessible={!onPress} accessibilityLabel={onPress ? undefined : composedLabel}>
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+        {sub ? <Text style={[styles.sub, { color: colors.textSecondary }]}>{sub}</Text> : null}
+      </View>
+      {trailingSlot}
+      {TrailingIcon ? (
+        <View importantForAccessibility="no">
+          <TrailingIcon size={size.icon.md} color={colors.textLight} />
+        </View>
+      ) : null}
+    </>
+  )
+
+  const row = onPress ? (
     <Pressable
       testID={testID}
       accessibilityRole={accessibilityRole}
-      accessibilityLabel={label}
+      accessibilityLabel={composedLabel}
       accessibilityHint={accessibilityHint ?? `Opens ${label}`}
-      android_ripple={{ color: colors.border }}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && { opacity: colors.pressedOpacity }]}
+      style={[styles.row, style]}
     >
-      {Icon && (
-        <View style={styles.icon}>
-          <Icon size={22} color={colors.textLight} />
-        </View>
-      )}
-      <View style={styles.content}>
-        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-        {sub ? (
-          <Text style={[styles.sub, { color: colors.textSecondary }]} numberOfLines={1}>
-            {sub}
-          </Text>
-        ) : null}
-      </View>
-      <TrailingIcon size={20} color={colors.textLight} />
+      {body}
     </Pressable>
+  ) : (
+    <View testID={testID} style={[styles.row, style]}>
+      {body}
+    </View>
+  )
+
+  if (!divider) return row
+
+  return (
+    <View>
+      {row}
+      <Divider tight inset={Icon ? size.iconColumn : 0} />
+    </View>
   )
 }
 
@@ -65,23 +109,23 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 56,
-    paddingVertical: 10
+    minHeight: size.row,
+    paddingVertical: space.md
   },
-  icon: {
-    marginRight: 16
+  iconColumn: {
+    width: size.iconColumn
   },
   content: {
     flex: 1,
-    paddingRight: 8
+    paddingEnd: space.md
   },
   label: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
+    ...text.bodyStrong
   },
   sub: {
-    fontSize: 13,
-    ...fonts.regular
+    ...text.label
+  },
+  value: {
+    ...text.figureInline
   }
 })

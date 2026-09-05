@@ -724,7 +724,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Export History")).toBeTruthy()
+      expect(getByText("Export history")).toBeTruthy()
       expect(getByText("colota_export_2026-03-10.geojson")).toBeTruthy()
       expect(getByText("colota_export_2026-03-09.geojson")).toBeTruthy()
     })
@@ -736,7 +736,7 @@ describe("AutoExportScreen", () => {
     const { queryByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(queryByText("Export History")).toBeNull()
+      expect(queryByText("Export history")).toBeNull()
     })
   })
 

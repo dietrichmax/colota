@@ -277,7 +277,7 @@ export function DataManagementScreen({}: ScreenProps) {
 
           {/* Stats */}
           <View style={styles.section}>
-            <SectionTitle>DATABASE STATISTICS</SectionTitle>
+            <SectionTitle>Database statistics</SectionTitle>
             <Card>
               {[
                 ["Total Locations", stats.total.toLocaleString(), colors.text],
@@ -304,7 +304,7 @@ export function DataManagementScreen({}: ScreenProps) {
           {/* Queue Actions */}
           {!isOfflineMode && (
             <View style={styles.section}>
-              <SectionTitle>QUEUE ACTIONS</SectionTitle>
+              <SectionTitle>Queue actions</SectionTitle>
               <Card>
                 <Button onPress={handleManualFlush} disabled={isProcessing || stats.queued === 0} title="Sync Now" />
                 <Text style={[styles.hint, { color: colors.textLight }]}>
@@ -318,7 +318,7 @@ export function DataManagementScreen({}: ScreenProps) {
 
           {/* Cleanup Actions */}
           <View style={styles.section}>
-            <SectionTitle>CLEANUP ACTIONS</SectionTitle>
+            <SectionTitle>Cleanup actions</SectionTitle>
             <Card>
               {!isOfflineMode ? (
                 <>
@@ -414,7 +414,7 @@ export function DataManagementScreen({}: ScreenProps) {
           {/* Dev Tools */}
           {debugMode && (
             <View style={styles.section}>
-              <SectionTitle>DEV TOOLS</SectionTitle>
+              <SectionTitle>Dev tools</SectionTitle>
               <Card>
                 <View style={styles.actionColumn}>
                   <Text style={[styles.actionLabel, { color: colors.text }]}>Insert Dummy Data</Text>

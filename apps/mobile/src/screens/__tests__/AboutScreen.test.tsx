@@ -153,7 +153,7 @@ describe("AboutScreen", () => {
     })
   })
 
-  it("shows BUILD section with SDK info when debug enabled", async () => {
+  it("shows the build section with SDK info when debug enabled", async () => {
     const { getByText } = renderScreen()
 
     const versionText = getByText("Version 1.3.0")
@@ -162,7 +162,7 @@ describe("AboutScreen", () => {
     }
 
     await waitFor(() => {
-      expect(getByText("BUILD")).toBeTruthy()
+      expect(getByText("Build")).toBeTruthy()
     })
 
     expect(getByText("FOSS")).toBeTruthy()

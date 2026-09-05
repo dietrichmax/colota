@@ -4,33 +4,70 @@
  */
 
 import React from "react"
-import { View, StyleSheet, ViewStyle, StyleProp, Text } from "react-native"
+import { View, StyleSheet, ViewStyle, StyleProp, Text, Pressable } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { text } from "../../styles/typography"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+
+type SectionTitleAction = {
+  label: string
+  onPress: () => void
+  testID?: string
+}
 
 type SectionTitleProps = {
   children: React.ReactNode
   style?: StyleProp<ViewStyle>
-  color?: string
+  first?: boolean
+  action?: SectionTitleAction
+  testID?: string
 }
 
-export function SectionTitle({ children, style, color }: SectionTitleProps) {
+export function SectionTitle({ children, style, first = false, action, testID }: SectionTitleProps) {
   const { colors } = useTheme()
 
   return (
-    <View style={style}>
-      <Text style={[styles.sectionTitle, { color: color ? color : colors.primary }]}>{children}</Text>
+    <View testID={testID} style={[styles.container, first && styles.first, style]}>
+      <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
+        {children}
+      </Text>
+      {action ? (
+        <Pressable
+          testID={action.testID}
+          onPress={action.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={action.label}
+          android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA }}
+          style={styles.action}
+        >
+          <Text style={[styles.actionLabel, { color: colors.primaryDark }]}>{action.label}</Text>
+        </Pressable>
+      ) : null}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: {
-    fontSize: 11,
-    textTransform: "uppercase",
-    ...fonts.bold,
-    letterSpacing: 1.2,
-    marginBottom: 12,
-    paddingHorizontal: 4
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: space.xxl,
+    marginBottom: space.sm
+  },
+  first: {
+    marginTop: 0
+  },
+  title: {
+    ...text.heading,
+    flexShrink: 1
+  },
+  action: {
+    minHeight: size.touch,
+    justifyContent: "center",
+    paddingStart: space.md
+  },
+  actionLabel: {
+    ...text.bodyStrong
   }
 })

@@ -136,7 +136,7 @@ export function ShareSetupScreen() {
         </Card>
 
         <View style={styles.section}>
-          <SectionTitle>INCLUDE</SectionTitle>
+          <SectionTitle>Include</SectionTitle>
           <Card>
             {rows.map((row, i) => (
               <View

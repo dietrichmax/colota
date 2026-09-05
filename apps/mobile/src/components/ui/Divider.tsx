@@ -5,16 +5,32 @@
 
 import { View, StyleSheet } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
+import { space } from "../../constants"
 
-export const Divider = () => {
+type DividerProps = {
+  inset?: number
+  tight?: boolean
+  testID?: string
+}
+
+export const Divider = ({ inset = 0, tight = false, testID }: DividerProps) => {
   const { colors } = useTheme()
 
-  return <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+  return (
+    <View
+      testID={testID}
+      style={[styles.divider, { backgroundColor: colors.border, marginStart: inset }, tight && styles.tight]}
+    />
+  )
 }
 
 const styles = StyleSheet.create({
   divider: {
-    height: 1,
-    marginVertical: 16
+    height: StyleSheet.hairlineWidth,
+    // The 55 call sites that predate the row spacing still lean on this margin.
+    marginVertical: space.lg
+  },
+  tight: {
+    marginVertical: 0
   }
 })

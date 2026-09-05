@@ -349,13 +349,13 @@ export function AboutScreen({}: ScreenProps) {
         {showDebugInfo && (
           <>
             <View style={styles.section}>
-              <SectionTitle>BUILD</SectionTitle>
+              <SectionTitle>Build</SectionTitle>
               <InfoCard rows={debugRows} />
             </View>
 
             {deviceRows.length > 0 && (
               <View style={styles.section}>
-                <SectionTitle>DEVICE</SectionTitle>
+                <SectionTitle>Device</SectionTitle>
                 <InfoCard rows={deviceRows} />
               </View>
             )}

@@ -46,7 +46,7 @@ describe("DatabaseStatistics", () => {
   it("shows section title", () => {
     const { getByText } = render(<DatabaseStatistics stats={baseStats} />)
 
-    expect(getByText("DATABASE STATISTICS")).toBeTruthy()
+    expect(getByText("Database statistics")).toBeTruthy()
   })
 
   describe("online mode (default)", () => {

@@ -209,7 +209,7 @@ export function MtlsSection() {
       </View>
 
       <View style={styles.section}>
-        <SectionTitle>Trusted Server CA</SectionTitle>
+        <SectionTitle>Trusted server CA</SectionTitle>
         <Card>
           {caInfo.configured ? (
             <CertCard
