@@ -1,7 +1,14 @@
 import React from "react"
-import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { act, render, fireEvent, waitFor } from "@testing-library/react-native"
 import { DEFAULT_SETTINGS, Settings } from "../../types/global"
-import { MAP_HERO_FRACTION, MAP_HERO_MIN_HEIGHT, MAP_HERO_SHEET_RESERVE, size } from "../../constants"
+import {
+  MAP_HERO_FRACTION,
+  MAP_HERO_MIN_HEIGHT,
+  MAP_HERO_PEEK,
+  MAP_HERO_SHEET_RESERVE,
+  motion,
+  size
+} from "../../constants"
 
 // --- Mocks ---
 
@@ -83,7 +90,12 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
-    DashboardMap: (props: any) => R.createElement(View, { testID: "DashboardMap", ...props }),
+    DashboardMap: ({ onToggleExpand, ...props }: any) =>
+      R.createElement(
+        View,
+        { testID: "DashboardMap", ...props },
+        onToggleExpand ? R.createElement(Pressable, { testID: "expand-map", onPress: onToggleExpand }) : null
+      ),
     CoordinateDisplay: () => R.createElement(View, { testID: "CoordinateDisplay" }),
     DatabaseStatistics: () => R.createElement(View, { testID: "DatabaseStatistics" }),
     ConnectionStatus: () => R.createElement(View, { testID: "ConnectionStatus" }),
@@ -108,6 +120,13 @@ const mockNavigation = { navigate: jest.fn() } as any
 
 const flatten = (style: any): Record<string, unknown> =>
   Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean).map(flatten)) : (style ?? {})
+
+// The seam is an Animated.Value once the expand control drives it, so the height is read
+// through the node rather than compared as a plain number.
+const heightOf = (node: any): number => {
+  const height = flatten(node.props.style).height as any
+  return typeof height === "number" ? height : height.__getValue()
+}
 
 describe("DashboardScreen", () => {
   beforeEach(() => {
@@ -141,14 +160,14 @@ describe("DashboardScreen", () => {
       const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 
       const available = 900 - (size.row + 16)
-      expect(flatten(getByTestId("map-hero").props.style).height).toBe(Math.round(available * MAP_HERO_FRACTION))
+      expect(heightOf(getByTestId("map-hero"))).toBe(Math.round(available * MAP_HERO_FRACTION))
     })
 
     it("holds the floor on a short-but-not-compact window", () => {
       mockWindowHeight = 600
       const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 
-      expect(flatten(getByTestId("map-hero").props.style).height).toBe(MAP_HERO_MIN_HEIGHT)
+      expect(heightOf(getByTestId("map-hero"))).toBe(MAP_HERO_MIN_HEIGHT)
     })
 
     // A landscape phone or a split-screen half: the floor would eat the sheet whole, so the
@@ -158,7 +177,33 @@ describe("DashboardScreen", () => {
       const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 
       const available = 400 - (size.row + 16)
-      expect(flatten(getByTestId("map-hero").props.style).height).toBe(Math.round(available - MAP_HERO_SHEET_RESERVE))
+      expect(heightOf(getByTestId("map-hero"))).toBe(Math.round(available - MAP_HERO_SHEET_RESERVE))
+    })
+
+    // The seam moves, so the map, the pill and the sheet cannot each carry their own copy of it.
+    it("moves the seam to the peek when the map is expanded and back on a second press", () => {
+      jest.useFakeTimers()
+      try {
+        mockWindowHeight = 900
+        const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
+
+        const collapsed = heightOf(getByTestId("map-hero"))
+        const available = 900 - (size.row + 16)
+
+        act(() => fireEvent.press(getByTestId("expand-map")))
+        act(() => {
+          jest.advanceTimersByTime(motion.onScreen.duration * 2)
+        })
+        expect(heightOf(getByTestId("map-hero"))).toBe(available - MAP_HERO_PEEK)
+
+        act(() => fireEvent.press(getByTestId("expand-map")))
+        act(() => {
+          jest.advanceTimersByTime(motion.onScreen.duration * 2)
+        })
+        expect(heightOf(getByTestId("map-hero"))).toBe(collapsed)
+      } finally {
+        jest.useRealTimers()
+      }
     })
 
     it("clears the Start pill with the sheet's top padding", () => {

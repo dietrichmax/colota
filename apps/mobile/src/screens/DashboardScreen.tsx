@@ -4,10 +4,11 @@
  */
 
 import React, { useEffect, useState, useCallback, useRef } from "react"
-import { StyleSheet, View, Text, ScrollView, DeviceEventEmitter, AppState, useWindowDimensions } from "react-native"
+import { Animated, AppState, DeviceEventEmitter, ScrollView, StyleSheet, Text, useWindowDimensions } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
+import { useReduceMotion } from "../hooks/useReduceMotion"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
@@ -30,9 +31,11 @@ import {
   MIN_STATS_INTERVAL_MS,
   MAP_HERO_FRACTION,
   MAP_HERO_MIN_HEIGHT,
+  MAP_HERO_PEEK,
   MAP_HERO_SHEET_RESERVE,
   SHORT_WINDOW_HEIGHT,
   elevation,
+  motion,
   size,
   space
 } from "../constants"
@@ -75,6 +78,26 @@ export function DashboardScreen({ navigation }: ScreenProps) {
         Math.min(available * MAP_HERO_FRACTION, Math.max(available - MAP_HERO_SHEET_RESERVE, 0))
       : Math.max(available * MAP_HERO_FRACTION, MAP_HERO_MIN_HEIGHT)
   )
+
+  // --- Expand control. Self-contained: the seam value, this effect and the two props on
+  // DashboardMap are the whole feature, and back is left to the stack while expanded. ---
+  const [expanded, setExpanded] = useState(false)
+  const reduceMotion = useReduceMotion()
+  const seam = useRef(new Animated.Value(mapHeight)).current
+  const expandedMapHeight = Math.max(available - MAP_HERO_PEEK, mapHeight)
+
+  useEffect(() => {
+    Animated.timing(seam, {
+      toValue: expanded ? expandedMapHeight : mapHeight,
+      duration: reduceMotion ? 0 : motion.onScreen.duration,
+      easing: motion.onScreen.easing,
+      // The seam is a layout edge: the map grows into it, so this cannot ride the native driver.
+      useNativeDriver: false
+    }).start()
+  }, [expanded, expandedMapHeight, mapHeight, reduceMotion, seam])
+
+  const toggleExpanded = useCallback(() => setExpanded((on) => !on), [])
+  // --- End expand control ---
 
   const handleStart = async () => {
     // The control is never disabled: a greyed pill over map tiles has no contrast guarantee,
@@ -213,7 +236,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
   return (
     <Container>
-      <View testID="map-hero" style={[styles.map, { height: mapHeight }]}>
+      <Animated.View testID="map-hero" style={[styles.map, { height: seam }]}>
         <DashboardMap
           tracking={tracking}
           activeZoneName={currentPauseZone}
@@ -222,8 +245,10 @@ export function DashboardScreen({ navigation }: ScreenProps) {
           isBatteryCritical={isBatteryCritical}
           locationEnabled={locationEnabled}
           interval={settings.interval}
+          expanded={expanded}
+          onToggleExpand={toggleExpanded}
         />
-      </View>
+      </Animated.View>
 
       <ScrollView style={styles.sheet} contentContainerStyle={styles.sheetContent} showsVerticalScrollIndicator={false}>
         <Card variant="sheet" style={styles.sheetBody}>
@@ -259,7 +284,10 @@ export function DashboardScreen({ navigation }: ScreenProps) {
         </Card>
       </ScrollView>
 
-      <View style={[styles.pillSlot, { top: mapHeight - PILL_OVERHANG }]} pointerEvents="box-none">
+      <Animated.View
+        style={[styles.pillSlot, { top: Animated.subtract(seam, PILL_OVERHANG) }]}
+        pointerEvents="box-none"
+      >
         {tracking ? (
           <MapOverlay
             testID="tracking-toggle-btn"
@@ -282,7 +310,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
             title={t("dashboard.start")}
           />
         )}
-      </View>
+      </Animated.View>
     </Container>
   )
 }

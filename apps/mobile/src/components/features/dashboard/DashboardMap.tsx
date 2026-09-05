@@ -12,7 +12,8 @@ import { useCoords } from "../../../contexts/TrackingProvider"
 import { useTranslation } from "../../../i18n/useTranslation"
 import { text } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { space, MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM, MAP_OVERLAY_GUTTER } from "../../../constants"
+import { size, space, MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM, MAP_OVERLAY_GUTTER } from "../../../constants"
+import { Expand, Shrink } from "lucide-react-native"
 import { MapOverlay } from "../../ui/MapOverlay"
 import { EmptyState } from "../../ui/EmptyState"
 import { MapCenterButton } from "../map/MapCenterButton"
@@ -35,6 +36,9 @@ type Props = {
   isBatteryCritical: boolean
   locationEnabled: boolean
   interval: number
+  /** Expand control: rendered only when a caller owns the seam and can animate it. */
+  expanded?: boolean
+  onToggleExpand?: () => void
 }
 
 const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
@@ -48,7 +52,9 @@ export function DashboardMap({
   activeProfileName,
   isBatteryCritical,
   locationEnabled,
-  interval
+  interval,
+  expanded = false,
+  onToggleExpand
 }: Props) {
   const coords = useCoords()
   const mapRef = useRef<ColotaMapRef>(null)
@@ -246,6 +252,20 @@ export function DashboardMap({
       >
         {showMap && <MapCenterButton floating={false} visible={!isCentered} onPress={handleCenterMe} />}
         {showMap && showTrack !== null && <TrackToggleButton active={!!showTrack} onPress={handleTrackToggle} />}
+        {showMap && onToggleExpand && (
+          <MapOverlay
+            testID="map-expand-btn"
+            variant="control"
+            onPress={onToggleExpand}
+            accessibilityLabel={expanded ? t("map.collapse") : t("map.expand")}
+          >
+            {expanded ? (
+              <Shrink size={size.icon.md} color={colors.text} />
+            ) : (
+              <Expand size={size.icon.md} color={colors.text} />
+            )}
+          </MapOverlay>
+        )}
       </View>
     </View>
   )
