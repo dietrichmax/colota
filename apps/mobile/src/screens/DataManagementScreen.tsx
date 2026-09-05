@@ -545,12 +545,7 @@ const styles = StyleSheet.create({
     gap: space.sm
   },
   daysInput: {
-    flex: 1,
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: radius.sm,
-    fontSize: fontSizes.input,
-    textAlign: "center"
+    flex: 1
   },
   hintRow: {
     flexDirection: "row",

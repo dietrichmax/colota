@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   card: { marginBottom: space.lg },
   nameInput: { flex: 1 },
-  numInput: { width: 80, textAlign: "center" },
+  numInput: { width: 80 },
   toggleRow: { paddingVertical: 10 },
   nestedSetting: {
     marginStart: space.lg,
