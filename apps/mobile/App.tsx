@@ -42,7 +42,7 @@ import {
   TrackingSyncScreen,
   BackupRestoreScreen
 } from "./src/screens/"
-import { BottomTabBar } from "./src/components"
+import { BottomTabBar, TAB_ROUTES } from "./src/components"
 import { loadDisplayPreferences } from "./src/utils/geo"
 import { registerTileServerUserAgent } from "./src/utils/tileHeaders"
 
@@ -183,7 +183,6 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   }
 ]
 
-const TAB_SCREEN_NAMES = new Set(["Dashboard", "Location History", "Geofences", "Settings"])
 
 function AppNavigator() {
   const { colors, isDark } = useTheme()
@@ -260,7 +259,7 @@ function AppNavigator() {
                   component={screen.component}
                   options={{
                     headerTitle: screen.title,
-                    ...(TAB_SCREEN_NAMES.has(screen.name) && { headerBackVisible: false })
+                    ...(TAB_ROUTES.has(screen.name) && { headerBackVisible: false })
                   }}
                 />
               ))}

@@ -9,27 +9,29 @@ import { Settings, LucideIcon, House, MapPinHouse, Waypoints } from "lucide-reac
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { size, space } from "../../constants"
+import type { RootStackRoute } from "../../types/navigation"
 
 interface Tab {
   name: string
   label: string
   icon: LucideIcon
-  route: string
+  route: RootStackRoute
 }
 
 const TABS: Tab[] = [
   { name: "dashboard", label: "Dashboard", icon: House, route: "Dashboard" },
-  { name: "history", label: "History", icon: Waypoints, route: "Location history" },
+  { name: "history", label: "History", icon: Waypoints, route: "Location History" },
   { name: "geofences", label: "Geofences", icon: MapPinHouse, route: "Geofences" },
   { name: "settings", label: "Settings", icon: Settings, route: "Settings" }
 ]
 
-/** Routes where the tab bar is visible. */
-const TAB_ROUTES = new Set(TABS.map((t) => t.route))
+/** Routes where the tab bar is visible. The one list; App.tsx reads it rather than repeating it. */
+// Typed loosely on purpose: lookups come from navigation state, which is a bare string.
+export const TAB_ROUTES: Set<string> = new Set(TABS.map((t) => t.route))
 
 interface BottomTabBarProps {
   currentRoute: string | undefined
-  onNavigate: (route: string) => void
+  onNavigate: (route: RootStackRoute) => void
 }
 
 export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
@@ -66,7 +68,6 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
   )
 }
 
-export { TAB_ROUTES }
 
 const styles = StyleSheet.create({
   container: {
