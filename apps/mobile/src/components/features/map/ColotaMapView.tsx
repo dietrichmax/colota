@@ -11,10 +11,22 @@ import type { NativeSyntheticEvent } from "react-native"
 import { Compass, Info, X } from "lucide-react-native"
 import { useIsFocused } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
-import { size, DEFAULT_MAP_ZOOM, MAP_STYLE_URL_LIGHT, MAP_STYLE_URL_DARK } from "../../../constants"
-import { fonts } from "../../../styles/typography"
+import { useTranslation } from "../../../i18n/useTranslation"
+import {
+  size,
+  space,
+  DEFAULT_MAP_ZOOM,
+  MAP_STYLE_URL_LIGHT,
+  MAP_STYLE_URL_DARK,
+  MAP_CONTROL_STEP,
+  MAP_OVERLAY_GUTTER,
+  MAP_ANIMATION_DURATION_MS
+} from "../../../constants"
+import { text } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { MapActionButton, mapActionStyles } from "./MapActionButton"
+import { MapOverlay } from "../../ui/MapOverlay"
+
+const ATTRIBUTION_MAX_WIDTH = 320
 
 interface AttributionLink {
   url: string
@@ -66,17 +78,29 @@ interface Props {
   onPress?: (coords: { latitude: number; longitude: number }) => void
   onRegionDidChange?: (payload: RegionChangePayload) => void
   onMapReady?: () => void
+  /** Which bottom corner holds the compass and attribution, so a caller can own the other one. */
+  controlsPlacement?: "start" | "end"
   style?: StyleProp<ViewStyle>
   children?: React.ReactNode
 }
 
 export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapView(
-  { initialCenter, initialZoom = DEFAULT_MAP_ZOOM, onPress, onRegionDidChange, onMapReady, style, children },
+  {
+    initialCenter,
+    initialZoom = DEFAULT_MAP_ZOOM,
+    onPress,
+    onRegionDidChange,
+    onMapReady,
+    controlsPlacement = "end",
+    style,
+    children
+  },
   ref
 ) {
   const cameraRef = useRef<CameraRef>(null)
   const mapViewRef = useRef<MapRef>(null)
   const { colors, mode } = useTheme()
+  const { t } = useTranslation()
   const isDark = mode === "dark"
 
   const [mapStyleLight, setMapStyleLight] = useState(MAP_STYLE_URL_LIGHT)
@@ -149,7 +173,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
     if (cameraRef.current) {
       cameraRef.current.setStop({
         bearing: 0,
-        duration: 300,
+        duration: MAP_ANIMATION_DURATION_MS,
         easing: "ease"
       })
     }
@@ -166,6 +190,9 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
   )
 
   const showCompass = Math.abs(heading) > 3
+  const side = controlsPlacement === "start" ? styles.controlStart : styles.controlEnd
+  // The end column leaves its middle slot free for a floating MapCenterButton; the start column has none.
+  const compassBottom = MAP_OVERLAY_GUTTER + (controlsPlacement === "end" ? 2 : 1) * MAP_CONTROL_STEP
 
   return (
     <View style={[styles.container, style]}>
@@ -192,26 +219,31 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
         {children}
       </Map>
 
-      {/* Custom compass button */}
       {showCompass && (
-        <MapActionButton onPress={handleCompassPress} style={[mapActionStyles.right, styles.compassPosition]}>
+        <MapOverlay
+          testID="map-compass-btn"
+          variant="control"
+          onPress={handleCompassPress}
+          accessibilityLabel={t("map.compass")}
+          style={[styles.control, side, { bottom: compassBottom }]}
+        >
           <View style={{ transform: [{ rotate: `${-heading}deg` }] }}>
-            <Compass size={size.icon.md} color={colors.textLight} />
+            <Compass size={size.icon.md} color={colors.text} />
           </View>
-        </MapActionButton>
+        </MapOverlay>
       )}
 
       {attributionLinks.length > 0 && (
         <>
-          <MapActionButton
+          <MapOverlay
+            testID="map-attribution-btn"
+            variant="control"
             onPress={() => setAttributionOpen(true)}
-            style={mapActionStyles.right}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Show map attribution"
+            accessibilityLabel={t("map.attribution")}
+            style={[styles.control, side, styles.attributionPosition]}
           >
-            <Info size={size.icon.md} color={colors.textLight} />
-          </MapActionButton>
+            <Info size={size.icon.md} color={colors.text} />
+          </MapOverlay>
 
           <Modal
             transparent
@@ -220,31 +252,31 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
             animationType="fade"
             onRequestClose={() => setAttributionOpen(false)}
           >
-            <Pressable style={styles.attributionBackdrop} onPress={() => setAttributionOpen(false)}>
-              <Pressable
-                onPress={() => {}}
-                style={[styles.attributionPopup, { backgroundColor: colors.card, borderColor: colors.border }]}
-              >
-                <Pressable
-                  onPress={() => setAttributionOpen(false)}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Close"
-                  style={({ pressed }) => [styles.attributionClose, pressed && { opacity: colors.pressedOpacity }]}
-                >
-                  <X size={size.icon.md} color={colors.textLight} />
-                </Pressable>
-                {attributionLinks.map((link) => (
+            <Pressable
+              style={[styles.attributionBackdrop, { backgroundColor: colors.overlay }]}
+              onPress={() => setAttributionOpen(false)}
+            >
+              <Pressable onPress={() => {}}>
+                <MapOverlay style={styles.attributionPopup}>
                   <Pressable
-                    key={link.url}
-                    onPress={() => Linking.openURL(link.url)}
-                    style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+                    onPress={() => setAttributionOpen(false)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("map.attribution.close")}
+                    style={({ pressed }) => [styles.attributionClose, pressed && { opacity: colors.pressedOpacity }]}
                   >
-                    <Text style={[styles.attributionPopupText, { color: colors.link }, fonts.regular]}>
-                      {link.label}
-                    </Text>
+                    <X size={size.icon.md} color={colors.textLight} />
                   </Pressable>
-                ))}
+                  {attributionLinks.map((link) => (
+                    <Pressable
+                      key={link.url}
+                      onPress={() => Linking.openURL(link.url)}
+                      style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+                    >
+                      <Text style={[styles.attributionPopupText, { color: colors.link }]}>{link.label}</Text>
+                    </Pressable>
+                  ))}
+                </MapOverlay>
               </Pressable>
             </Pressable>
           </Modal>
@@ -257,36 +289,29 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
-  compassPosition: { bottom: 126 },
+  control: { position: "absolute" },
+  controlStart: { start: MAP_OVERLAY_GUTTER },
+  controlEnd: { end: MAP_OVERLAY_GUTTER },
+  attributionPosition: { bottom: MAP_OVERLAY_GUTTER },
   attributionBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 32
+    paddingHorizontal: space.xxl
   },
   attributionPopup: {
-    maxWidth: 320,
-    width: "100%",
-    paddingLeft: 16,
-    paddingRight: 36,
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    gap: 8,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6
+    maxWidth: ATTRIBUTION_MAX_WIDTH,
+    paddingEnd: size.touch,
+    paddingVertical: space.md,
+    gap: space.sm
   },
   attributionPopupText: {
-    fontSize: 13
+    ...text.caption
   },
   attributionClose: {
     position: "absolute",
-    top: 6,
-    right: 6,
-    padding: 4
+    top: space.xs,
+    end: space.xs,
+    padding: space.xs
   }
 })

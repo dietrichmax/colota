@@ -57,13 +57,20 @@ const Stack = createNativeStackNavigator<RootStackParamList>()
 // size, so a 16 badge and a 24 tab glyph read the same rather than the 16 reading heavier.
 const ICON_STROKE_WIDTH = 1.5
 
-type ScreenConfig = { name: RootStackRoute; component: React.ComponentType<any>; title: string }
+type ScreenConfig = {
+  name: RootStackRoute
+  component: React.ComponentType<any>
+  title: string
+  headerShown?: boolean
+}
 
 const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
+    // The map is the hero and bleeds under the status bar, so no header sits above it.
     name: "Dashboard",
     component: DashboardScreen,
-    title: "Dashboard"
+    title: "Dashboard",
+    headerShown: false
   },
   {
     name: "Settings",
@@ -258,6 +265,7 @@ function AppNavigator() {
                 component={screen.component}
                 options={{
                   headerTitle: screen.title,
+                  ...(screen.headerShown === false && { headerShown: false }),
                   ...(TAB_SCREEN_NAMES.has(screen.name) && { headerBackVisible: false })
                 }}
               />

@@ -4,96 +4,57 @@
  */
 import React from "react"
 import { Text, StyleSheet, View } from "react-native"
-import { SectionTitle, Card } from "../.."
+import { Figure, queueTone } from "../../ui/Figure"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
-import { fonts } from "../../../styles/typography"
+import { useTranslation } from "../../../i18n/useTranslation"
+import { text } from "../../../styles/typography"
+import { space } from "../../../constants"
 import { DatabaseStats } from "../../../types/global"
-import { getQueueColor } from "../../../utils/queueStatus"
 
 type DatabaseStatisticsProps = {
   stats: DatabaseStats
 }
 
+/**
+ * One hero figure and a caption, never a grid: the queue is the only number worth a glance,
+ * and it is the only figure in the app allowed to leave ink once it is deep enough to act on.
+ */
 export const DatabaseStatistics = React.memo(function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
   const { settings } = useTracking()
   const isOfflineMode = settings.isOfflineMode
   const { colors } = useTheme()
-  const queuedColor = getQueueColor(stats.queued, colors)
+  const { t } = useTranslation()
+
+  const size = stats.databaseSizeMB.toFixed(1)
+  const today = stats.today.toLocaleString()
 
   return (
-    <>
-      {/* Database Statistics */}
-      <View style={styles.metricsSection}>
-        <SectionTitle>Database statistics</SectionTitle>
-        {!isOfflineMode ? (
-          <View style={styles.statsGrid}>
-            <Card variant="elevated" style={styles.statCard}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Queued</Text>
-              <Text style={[styles.statValue, { color: queuedColor }]}>{stats.queued.toLocaleString()}</Text>
-              <Text style={[styles.statUnit, { color: colors.textLight }]}>pending</Text>
-            </Card>
-            <Card variant="elevated" style={styles.statCard}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sent</Text>
-              <Text style={[styles.statValue, { color: colors.success }]}>{stats.sent.toLocaleString()}</Text>
-              <Text style={[styles.statUnit, { color: colors.textLight }]}>synced</Text>
-            </Card>
-          </View>
-        ) : (
-          <View style={styles.statsGrid}>
-            <Card variant="elevated" style={styles.statCard}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total</Text>
-              <Text style={[styles.statValue, { color: colors.primary }]}>{stats.total.toLocaleString()}</Text>
-              <Text style={[styles.statUnit, { color: colors.textLight }]}>locations</Text>
-            </Card>
-          </View>
-        )}
-        <View style={[styles.statsGrid, styles.statsGridSpaced]}>
-          <Card variant="elevated" style={styles.statCard}>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Today</Text>
-            <Text style={[styles.statValue, { color: colors.info }]}>{stats.today.toLocaleString()}</Text>
-            <Text style={[styles.statUnit, { color: colors.textLight }]}>tracked</Text>
-          </Card>
-          <Card variant="elevated" style={styles.statCard}>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Storage</Text>
-            <Text style={[styles.statValue, { color: colors.primaryDark }]}>{stats.databaseSizeMB.toFixed(1)}</Text>
-            <Text style={[styles.statUnit, { color: colors.textLight }]}>MB</Text>
-          </Card>
-        </View>
-      </View>
-    </>
+    <View style={styles.block}>
+      {isOfflineMode ? (
+        <Figure testID="stat-total" value={stats.total.toLocaleString()} label={t("dashboard.locations")} />
+      ) : (
+        <Figure
+          testID="stat-queued"
+          value={stats.queued.toLocaleString()}
+          label={t("dashboard.queued")}
+          tone={queueTone(stats.queued)}
+        />
+      )}
+      <Text style={[styles.caption, { color: colors.textSecondary }]}>
+        {isOfflineMode
+          ? t("dashboard.stats.subOffline", { today, size })
+          : t("dashboard.stats.sub", { sent: stats.sent.toLocaleString(), today, size })}
+      </Text>
+    </View>
   )
 })
 
 const styles = StyleSheet.create({
-  metricsSection: {
-    marginBottom: 24
+  block: {
+    gap: space.xs
   },
-  statsGrid: {
-    flexDirection: "row",
-    gap: 12
-  },
-  statsGridSpaced: {
-    marginTop: 12
-  },
-  statCard: {
-    alignItems: "center"
-  },
-  statUnit: {
-    fontSize: 11,
-    ...fonts.medium
-  },
-  statLabel: {
-    fontSize: 10,
-    ...fonts.semiBold,
-    marginBottom: 6,
-    letterSpacing: 0.5,
-    textTransform: "uppercase"
-  },
-  statValue: {
-    fontSize: 24,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: 2
+  caption: {
+    ...text.caption
   }
 })

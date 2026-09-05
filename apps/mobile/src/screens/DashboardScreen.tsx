@@ -4,30 +4,55 @@
  */
 
 import React, { useEffect, useState, useCallback, useRef } from "react"
-import { StyleSheet, View, ScrollView, DeviceEventEmitter, Animated, AppState } from "react-native"
+import { Animated, AppState, DeviceEventEmitter, ScrollView, StyleSheet, Text, useWindowDimensions } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
+import { useReduceMotion } from "../hooks/useReduceMotion"
+import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { useFocusEffect } from "@react-navigation/native"
-import { showConfirm } from "../services/modalService"
+import { showAlert, showConfirm } from "../services/modalService"
 import {
   Button,
+  Card,
   ConnectionStatus,
   DashboardMap,
   CoordinateDisplay,
   Container,
   DatabaseStatistics,
+  Divider,
+  MapOverlay,
   WelcomeCard
 } from "../components"
-import { STATS_REFRESH_IDLE, MIN_STATS_INTERVAL_MS } from "../constants"
+import {
+  STATS_REFRESH_IDLE,
+  MIN_STATS_INTERVAL_MS,
+  MAP_HERO_FRACTION,
+  MAP_HERO_IDLE_PEEK,
+  MAP_HERO_MIN_HEIGHT,
+  MAP_HERO_SHEET_RESERVE,
+  SHORT_WINDOW_HEIGHT,
+  elevation,
+  motion,
+  size,
+  space
+} from "../constants"
+import { text } from "../styles/typography"
 import { Square, Play } from "lucide-react-native"
 import { logger } from "../utils/logger"
+
+// The Start control straddles the seam, so the sheet starts below its lower half.
+const PILL_OVERHANG = size.touch / 2
 
 export function DashboardScreen({ navigation }: ScreenProps) {
   const { settings, tracking, startTracking, stopTracking, setSettings, activeProfileName, settingsHydrated } =
     useTracking()
-  const { colors } = useTheme()
+  const { colors, mode } = useTheme()
+  const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
+  const { height: windowHeight } = useWindowDimensions()
 
   const [stats, setStats] = useState<DatabaseStats>({
     queued: 0,
@@ -40,21 +65,56 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   const prevStats = useRef(stats)
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
   const [pauseReason, setPauseReason] = useState<string | null>(null)
-  const [scrollEnabled, setScrollEnabled] = useState(true)
   const [isBatteryCritical, setIsBatteryCritical] = useState(false)
   const [locationEnabled, setLocationEnabled] = useState(true)
 
-  // Animation for button
-  const buttonScale = useRef(new Animated.Value(1)).current
+  // useWindowDimensions reports the whole window under forced edge-to-edge, and the tab bar is a
+  // flex sibling of the navigator, so the map is measured against what is left after it.
+  const available = Math.max(windowHeight - (size.row + insets.bottom), 0)
+  const trackingMapHeight = Math.round(
+    windowHeight < SHORT_WINDOW_HEIGHT
+      ? // A landscape phone or a split-screen half: the floor gives way so the sheet's first
+        // heading, the coordinate line and the figure stay on screen.
+        Math.min(available * MAP_HERO_FRACTION, Math.max(available - MAP_HERO_SHEET_RESERVE, 0))
+      : Math.max(available * MAP_HERO_FRACTION, MAP_HERO_MIN_HEIGHT)
+  )
+  // The seam follows the state, not a gesture: idle holds no live fix, so the sheet drops to its
+  // peek and the map takes the difference. A window too short for both keeps the tracking height,
+  // which is the taller sheet, rather than inverting the two states.
+  const mapHeight = tracking ? trackingMapHeight : Math.max(available - MAP_HERO_IDLE_PEEK, trackingMapHeight)
+
+  const reduceMotion = useReduceMotion()
+  const seam = useRef(new Animated.Value(mapHeight)).current
+
+  useEffect(() => {
+    Animated.timing(seam, {
+      toValue: mapHeight,
+      duration: reduceMotion ? 0 : motion.onScreen.duration,
+      easing: motion.onScreen.easing,
+      // The seam is a layout edge: the map grows into it, so this cannot ride the native driver.
+      useNativeDriver: false
+    }).start()
+  }, [mapHeight, reduceMotion, seam])
 
   const handleStart = async () => {
+    // The control is never disabled: a greyed pill over map tiles has no contrast guarantee,
+    // so a blocked start says why instead.
+    if (!settingsHydrated) {
+      showAlert(t("dashboard.notReady.title"), t("dashboard.notReady.message"), "warning")
+      return
+    }
+    if (isBatteryCritical) {
+      showAlert(t("dashboard.batteryCritical.title"), t("dashboard.batteryCritical.message"), "warning")
+      return
+    }
+
     const locationOn = await NativeLocationService.isLocationEnabled()
     if (!locationOn) {
       const openSettings = await showConfirm({
-        title: "Please enable Location Services",
-        message: "Location Services are disabled. Tracking will not work until they are enabled in Settings.",
-        confirmText: "Location Settings",
-        cancelText: "Start Anyway"
+        title: t("dashboard.locationServices.title"),
+        message: t("dashboard.locationServices.message"),
+        confirmText: t("dashboard.locationServices.confirm"),
+        cancelText: t("dashboard.locationServices.cancel")
       })
       if (openSettings) {
         await NativeLocationService.openLocationSettings()
@@ -62,36 +122,11 @@ export function DashboardScreen({ navigation }: ScreenProps) {
       }
     }
 
-    // Bounce animation
-    Animated.sequence([
-      Animated.spring(buttonScale, {
-        toValue: 0.92,
-        useNativeDriver: true
-      }),
-      Animated.spring(buttonScale, {
-        toValue: 1,
-        useNativeDriver: true,
-        friction: 3
-      })
-    ]).start()
-
     await startTracking()
     setTimeout(updateStats, 500)
   }
 
   const handleStop = async () => {
-    Animated.sequence([
-      Animated.spring(buttonScale, {
-        toValue: 0.92,
-        useNativeDriver: true
-      }),
-      Animated.spring(buttonScale, {
-        toValue: 1,
-        useNativeDriver: true,
-        friction: 3
-      })
-    ]).start()
-
     await stopTracking()
     updateStats()
   }
@@ -128,7 +163,6 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
   useFocusEffect(
     useCallback(() => {
-      setScrollEnabled(true)
       updateStats()
       if (tracking) updatePauseZone()
       if (!tracking) {
@@ -199,55 +233,25 @@ export function DashboardScreen({ navigation }: ScreenProps) {
 
   return (
     <Container>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        bounces={false}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
-      >
-        {/* Map Section */}
-        <View style={styles.mapSection}>
-          <View
-            style={styles.mapWrapper}
-            onTouchStart={() => setScrollEnabled(false)}
-            onTouchEnd={() => setScrollEnabled(true)}
-          >
-            <DashboardMap
-              tracking={tracking}
-              activeZoneName={currentPauseZone}
-              pauseReason={pauseReason}
-              activeProfileName={activeProfileName}
-              isBatteryCritical={isBatteryCritical}
-              locationEnabled={locationEnabled}
-            />
-          </View>
+      <Animated.View testID="map-hero" style={[styles.map, { height: seam }]}>
+        <DashboardMap
+          tracking={tracking}
+          activeZoneName={currentPauseZone}
+          pauseReason={pauseReason}
+          activeProfileName={activeProfileName}
+          isBatteryCritical={isBatteryCritical}
+          locationEnabled={locationEnabled}
+          interval={settings.interval}
+        />
+      </Animated.View>
 
-          {/* Tracking Control Button */}
-          <Animated.View
-            style={[styles.controlButtonContainer, { transform: [{ scale: buttonScale }] }]}
-            pointerEvents="box-none"
-          >
-            <Button
-              style={styles.controlButton}
-              shape="pill"
-              elevation={4}
-              variant={tracking ? "danger" : "primary"}
-              icon={tracking ? Square : Play}
-              onPress={tracking ? handleStop : handleStart}
-              disabled={!tracking && (isBatteryCritical || !settingsHydrated)}
-              title={tracking ? "Stop Tracking" : "Start Tracking"}
-            />
-          </Animated.View>
-        </View>
-
-        {/* Content Section */}
-        <View style={[styles.content, { backgroundColor: colors.background }]}>
-          {/* Welcome Card (first run). Unhydrated settings read as a first run and cannot be dismissed. */}
+      <ScrollView style={styles.sheet} contentContainerStyle={styles.sheetContent} showsVerticalScrollIndicator={false}>
+        <Card variant="sheet" style={styles.sheetBody}>
+          {/* Welcome checklist (first run). Unhydrated settings read as a first run and cannot be dismissed. */}
           {settingsHydrated && !settings.hasCompletedSetup && (
             <WelcomeCard
               settings={settings}
               tracking={tracking}
-              colors={colors}
               onDismiss={() =>
                 setSettings({ ...settings, hasCompletedSetup: true }).catch((err) =>
                   logger.error("[DashboardScreen] Failed to dismiss welcome card:", err)
@@ -260,56 +264,74 @@ export function DashboardScreen({ navigation }: ScreenProps) {
             />
           )}
 
-          {/* Coordinates */}
-          {tracking && (
-            <View style={styles.metricsSection}>
-              <CoordinateDisplay />
-            </View>
-          )}
+          {tracking && <CoordinateDisplay />}
 
-          {/* Stats Cards */}
+          <Divider />
+
           <DatabaseStatistics stats={stats} />
 
-          {/* Server Connection */}
-          {!settings.isOfflineMode && <ConnectionStatus endpoint={settings.endpoint} navigation={navigation} />}
-        </View>
+          {!settings.isOfflineMode && (
+            <>
+              <Divider />
+              <ConnectionStatus endpoint={settings.endpoint} navigation={navigation} />
+            </>
+          )}
+        </Card>
       </ScrollView>
+
+      <Animated.View
+        testID="pill-slot"
+        style={[styles.pillSlot, { top: Animated.subtract(seam, PILL_OVERHANG) }]}
+        pointerEvents="box-none"
+      >
+        {tracking ? (
+          <MapOverlay
+            testID="tracking-toggle-btn"
+            variant="control"
+            shape="pill"
+            onPress={handleStop}
+            accessibilityLabel={t("dashboard.stop")}
+          >
+            <Square size={size.icon.md} color={colors.text} fill={colors.text} />
+            <Text style={[styles.pillLabel, { color: colors.text }]}>{t("dashboard.stop")}</Text>
+          </MapOverlay>
+        ) : (
+          <Button
+            testID="tracking-toggle-btn"
+            shape="pill"
+            elevation={mode === "dark" ? 0 : elevation.floating}
+            variant="primary"
+            icon={Play}
+            onPress={handleStart}
+            title={t("dashboard.start")}
+          />
+        )}
+      </Animated.View>
     </Container>
   )
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
+  map: {
+    width: "100%"
+  },
+  sheet: {
+    flex: 1
+  },
+  sheetContent: {
     flexGrow: 1
   },
-  mapSection: {
-    height: 480,
-    position: "relative"
+  sheetBody: {
+    paddingTop: PILL_OVERHANG + space.sm,
+    paddingBottom: space.xxl
   },
-  mapWrapper: {
+  pillSlot: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0
-  },
-  controlButtonContainer: {
-    position: "absolute",
-    bottom: 24,
-    left: 0,
-    right: 0,
+    start: 0,
+    end: 0,
     alignItems: "center"
   },
-  controlButton: {
-    minWidth: 200
-  },
-  content: {
-    flex: 1,
-    paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 8
-  },
-  metricsSection: {
-    marginBottom: 20
+  pillLabel: {
+    ...text.bodyStrong
   }
 })

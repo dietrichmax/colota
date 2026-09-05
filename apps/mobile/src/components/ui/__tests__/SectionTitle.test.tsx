@@ -81,6 +81,26 @@ describe("SectionTitle", () => {
     )
   })
 
+  // The Dashboard's fix time sits beside the heading and is not an action: it must not be
+  // announced or targetable as a button.
+  it("puts a caption at the end of the heading row without making it pressable", () => {
+    const { getByText, queryByRole } = render(<SectionTitle caption="12:55">Now</SectionTitle>)
+
+    expect(getByText("12:55")).toBeTruthy()
+    expect(queryByRole("button")).toBeNull()
+  })
+
+  it("lets the action win the end of the row when both are given", () => {
+    const { queryByText, getByText } = render(
+      <SectionTitle caption="12:55" action={{ label: "Clear", onPress: jest.fn() }}>
+        Now
+      </SectionTitle>
+    )
+
+    expect(getByText("Clear")).toBeTruthy()
+    expect(queryByText("12:55")).toBeNull()
+  })
+
   it("renders no action slot when none is given", () => {
     const { queryByRole } = render(<SectionTitle>Entries</SectionTitle>)
 

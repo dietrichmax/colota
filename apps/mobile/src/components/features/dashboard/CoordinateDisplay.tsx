@@ -7,77 +7,45 @@ import React from "react"
 import { View, Text, StyleSheet } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
-import { fonts } from "../../../styles/typography"
+import { useTranslation } from "../../../i18n/useTranslation"
+import { text } from "../../../styles/typography"
+import { formatShortDistance, formatTime } from "../../../utils/geo"
 import { SectionTitle } from "../../ui/SectionTitle"
-import { Card } from "../../ui/Card"
 
+/** The fix, as a heading with its time, the pair itself and the quality below it. */
 export function CoordinateDisplay() {
   const coords = useCoords()
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   if (!coords) return null
 
   const latitude = coords.latitude?.toFixed(6) ?? "0.000000"
   const longitude = coords.longitude?.toFixed(6) ?? "0.000000"
-  const altitude = Math.round(coords.altitude ?? 0).toLocaleString()
-  const accuracy = coords.accuracy?.toFixed(1) ?? "0.0"
-
-  /**
-   * Renders a single coordinate metric card
-   */
-  const renderCard = (label: string, value: string, unit: string) => (
-    <Card variant="elevated">
-      <Text style={[styles.coordLabel, { color: colors.textSecondary }]}>{label}</Text>
-      <Text style={[styles.coordValue, { color: colors.text }]}>
-        {value}
-        <Text style={styles.coordUnit}> {unit}</Text>
-      </Text>
-    </Card>
-  )
+  const pair = `${latitude}, ${longitude}`
+  const detail = t("dashboard.fix.detail", {
+    accuracy: formatShortDistance(coords.accuracy ?? 0),
+    altitude: formatShortDistance(coords.altitude ?? 0)
+  })
+  const fixTime = coords.timestamp ? formatTime(coords.timestamp) : undefined
 
   return (
-    <>
-      <SectionTitle>Current location data</SectionTitle>
-      <View style={styles.container}>
-        {/* First Row: Latitude and Longitude */}
-        <View style={styles.row}>
-          {renderCard("Latitude", latitude, "°")}
-          {renderCard("Longitude", longitude, "°")}
-        </View>
-
-        {/* Second Row: Altitude and Accuracy */}
-        <View style={styles.row}>
-          {renderCard("Altitude", altitude, "m")}
-          {renderCard("Accuracy", `±${accuracy}`, "m")}
-        </View>
-      </View>
-    </>
+    <View testID="coordinate-display">
+      <SectionTitle first caption={fixTime}>
+        {t("dashboard.now")}
+      </SectionTitle>
+      <Text style={[styles.pair, { color: colors.text }]}>{pair}</Text>
+      <Text style={[styles.detail, { color: colors.textSecondary }]}>{detail}</Text>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 10
+  pair: {
+    ...text.coord,
+    writingDirection: "ltr"
   },
-  row: {
-    flexDirection: "row",
-    gap: 10
-  },
-  coordLabel: {
-    fontSize: 10,
-    ...fonts.semiBold,
-    marginBottom: 4,
-    letterSpacing: 0.5,
-    textTransform: "uppercase"
-  },
-  coordValue: {
-    fontSize: 15,
-    ...fonts.bold,
-    letterSpacing: -0.3
-  },
-  coordUnit: {
-    fontSize: 12,
-    ...fonts.medium,
-    opacity: 0.6
+  detail: {
+    ...text.caption
   }
 })

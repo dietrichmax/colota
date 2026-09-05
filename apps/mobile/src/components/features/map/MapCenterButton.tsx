@@ -7,27 +7,41 @@ import React from "react"
 import { ViewStyle, StyleProp, StyleSheet } from "react-native"
 import { LocateFixed } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
-import { MapActionButton, mapActionStyles } from "./MapActionButton"
-import { size } from "../../../constants"
+import { useTranslation } from "../../../i18n/useTranslation"
+import { MapOverlay } from "../../ui/MapOverlay"
+import { size, space } from "../../../constants"
 
 interface Props {
   onPress: () => void
   visible: boolean
+  /** False places the control in a caller-owned stack; true keeps the standalone corner position. */
+  floating?: boolean
   style?: StyleProp<ViewStyle>
 }
 
-export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) => {
+export const MapCenterButton: React.FC<Props> = ({ onPress, visible, floating = true, style }) => {
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   if (!visible) return null
 
   return (
-    <MapActionButton onPress={onPress} style={[mapActionStyles.right, styles.position, style]}>
-      <LocateFixed size={size.icon.md} color={colors.textLight} />
-    </MapActionButton>
+    <MapOverlay
+      testID="map-centre-btn"
+      variant="control"
+      onPress={onPress}
+      accessibilityLabel={t("map.centre")}
+      style={[floating && styles.floating, style]}
+    >
+      <LocateFixed size={size.icon.md} color={colors.text} />
+    </MapOverlay>
   )
 }
 
 const styles = StyleSheet.create({
-  position: { bottom: 78 }
+  floating: {
+    position: "absolute",
+    end: space.lg,
+    bottom: 78
+  }
 })

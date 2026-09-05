@@ -4,43 +4,48 @@
  */
 
 import React, { useState, useCallback, useMemo } from "react"
-import { StyleSheet, View, Text, Pressable, DeviceEventEmitter } from "react-native"
-import { ChevronRight } from "lucide-react-native"
+import { DeviceEventEmitter } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
+import { useTranslation } from "../../../i18n/useTranslation"
 import { ServerStatus, ConnectionStatusProps } from "../../../types/global"
-import { fonts } from "../../../styles/typography"
+import { formatTime } from "../../../utils/geo"
+import { ListItem } from "../../ui/ListItem"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { size } from "../../../constants"
+
+type Resolved = { status: ServerStatus | "offline" | "deviceOffline"; at: number }
 
 export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps) {
   const { colors } = useTheme()
   const { settings } = useTracking()
+  const { t } = useTranslation()
   const isOffline = settings.isOfflineMode
 
-  const [serverStatus, setServerStatus] = useState<ServerStatus | "offline" | "deviceOffline" | null>(null)
+  const [resolved, setResolved] = useState<Resolved | null>(null)
 
   useFocusEffect(
     useCallback(() => {
       // A stale run (e.g. one started before the endpoint loaded) must not overwrite a newer status.
       let cancelled = false
 
+      const settle = (status: Resolved["status"]) => setResolved({ status, at: Math.round(Date.now() / 1000) })
+
       const refresh = async () => {
         if (isOffline) {
-          setServerStatus("offline")
+          settle("offline")
           return
         }
 
         const networkAvailable = await NativeLocationService.isNetworkAvailable()
         if (cancelled) return
         if (!networkAvailable) {
-          setServerStatus("deviceOffline")
+          settle("deviceOffline")
           return
         }
 
         if (!endpoint) {
-          setServerStatus("notConfigured")
+          settle("notConfigured")
           return
         }
 
@@ -49,7 +54,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
           if (cancelled) return
           // Empty queue plus a prior successful send (sent = retained synced rows) means caught up.
           if (stats.queued === 0 && stats.sent > 0) {
-            setServerStatus("connected")
+            settle("connected")
           }
         } catch {
           // getStats is a local DB read; a failure here says nothing about the server.
@@ -57,7 +62,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
       }
 
       refresh()
-      const sub = DeviceEventEmitter.addListener("onSyncError", () => setServerStatus("error"))
+      const sub = DeviceEventEmitter.addListener("onSyncError", () => settle("error"))
       return () => {
         cancelled = true
         sub.remove()
@@ -69,62 +74,33 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
 
   const config = useMemo(() => {
     const statusMap = {
-      connected: { color: colors.success, label: "Connected" },
-      error: { color: colors.error, label: "Unreachable" },
-      notConfigured: { color: colors.warning, label: "No endpoint" },
-      deviceOffline: { color: colors.textSecondary, label: "Device offline" },
-      offline: { color: colors.textSecondary, label: "Offline Mode" },
-      loading: { color: colors.textLight, label: "Checking" }
+      connected: { color: colors.success, label: t("dashboard.server.connected") },
+      error: { color: colors.error, label: t("dashboard.server.unreachable") },
+      notConfigured: { color: colors.warning, label: t("dashboard.server.noEndpoint") },
+      deviceOffline: { color: colors.textSecondary, label: t("dashboard.server.deviceOffline") },
+      offline: { color: colors.textSecondary, label: t("dashboard.server.offlineMode") },
+      loading: { color: colors.textLight, label: t("dashboard.server.checking") }
     }
 
-    if (serverStatus === null) return statusMap.loading
+    if (resolved === null) return statusMap.loading
     if (isOffline) return statusMap.offline
-    if (serverStatus === "deviceOffline") return statusMap.deviceOffline
-    return statusMap[serverStatus as ServerStatus] || statusMap.error
-  }, [serverStatus, colors, isOffline])
+    if (resolved.status === "deviceOffline") return statusMap.deviceOffline
+    return statusMap[resolved.status as ServerStatus] || statusMap.error
+  }, [resolved, colors, isOffline, t])
+
+  // The clock only says something where a real exchange settled the status.
+  const stamped = resolved !== null && (resolved.status === "connected" || resolved.status === "error")
+  const sub = stamped
+    ? t("dashboard.server.sub", { status: config.label, time: formatTime(resolved.at) })
+    : config.label
 
   return (
-    <Pressable
+    <ListItem
+      testID="connection-status"
+      dot={config.color}
+      label={isOffline ? t("dashboard.server.offlineMode") : displayUrl || t("dashboard.server")}
+      sub={isOffline ? undefined : sub}
       onPress={() => navigation.navigate("Connection")}
-      style={({ pressed }) => [
-        styles.container,
-        { backgroundColor: colors.card, borderColor: colors.border },
-        pressed && { opacity: colors.pressedOpacity }
-      ]}
-    >
-      <View style={[styles.dot, { backgroundColor: config.color }]} />
-      <Text style={[styles.host, { color: colors.text }]} numberOfLines={1}>
-        {isOffline ? "Offline Mode" : displayUrl || "Server"}
-      </Text>
-      {!isOffline && <Text style={[styles.status, { color: config.color }]}>{config.label}</Text>}
-      <ChevronRight size={size.icon.sm} color={colors.textLight} />
-    </Pressable>
+    />
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 22
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 12
-  },
-  host: {
-    flex: 1,
-    fontSize: 14,
-    ...fonts.medium
-  },
-  status: {
-    fontSize: 12,
-    ...fonts.medium,
-    marginRight: 8
-  }
-})

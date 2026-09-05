@@ -99,6 +99,19 @@ describe("ListItem", () => {
     expect(UNSAFE_getByProps({ tight: true }).props.inset).toBe(0)
   })
 
+  // A status dot belongs to the label line, not the icon column: the row's text keeps the
+  // screen's own left edge, and the dot never reaches the reading twice.
+  it("puts a dot inline before the label and leaves it out of the reading", () => {
+    const { getByTestId } = render(<ListItem testID="row" dot={lightColors.success} label="example.com" />)
+
+    const dots = getByTestId("row").findAll(
+      (node) =>
+        node.props.importantForAccessibility === "no" &&
+        StyleSheet.flatten(node.props.style)?.backgroundColor === lightColors.success
+    )
+    expect(dots.length).toBeGreaterThan(0)
+  })
+
   it("hides the leading icon from the reading, because it repeats what the label already says", () => {
     const { getByTestId } = render(<ListItem icon={Bell} label="Notifications" onPress={jest.fn()} />)
 
