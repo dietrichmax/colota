@@ -5,14 +5,25 @@
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { View, Text, FlatList, Pressable, StyleSheet, BackHandler } from "react-native"
-import { Clock, Route, Share, TrendingUp, TrendingDown, Gauge, Trash2, X, Merge } from "lucide-react-native"
-import { Card } from "../../ui/Card"
-import { fonts } from "../../../styles/typography"
-import { formatDistance, formatDuration, formatSpeed, formatTime } from "../../../utils/geo"
+import { Check, Merge, Share, X } from "lucide-react-native"
+import { radius } from "@colota/shared"
+import { Button } from "../../ui/Button"
+import { Divider } from "../../ui/Divider"
+import { EmptyState } from "../../ui/EmptyState"
+import { SectionTitle } from "../../ui/SectionTitle"
+import { text } from "../../../styles/typography"
+import { useTranslation } from "../../../i18n/useTranslation"
+import { formatDistance, formatDuration, formatShortDistance, formatSpeed, formatTime } from "../../../utils/geo"
 import type { Trip, ThemeColors } from "../../../types/global"
 import { getTripColor, computeTripStats, type TripStats } from "../../../utils/trips"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../../../utils/exportConverters"
-import { size, HIT_SLOP_SM } from "../../../constants"
+import { showChoice } from "../../../services/modalService"
+import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
+
+const DOT_SIZE = 8
+const SEPARATOR = " · "
+
+type Translate = (key: string, options?: Record<string, unknown>) => string
 
 interface TripListProps {
   trips: Trip[]
@@ -22,12 +33,15 @@ interface TripListProps {
   onExport?: (format: ExportFormat, trips: Trip[]) => void
   onDelete?: (trips: Trip[]) => Promise<void>
   onMerge?: (trips: Trip[]) => Promise<void>
+  /** The empty state's ghost action. Acts on the screen this list sits in, not on the day. */
+  onShowOnMap?: () => void
 }
 
 interface TripRowProps {
   trip: Trip
   colors: ThemeColors
   stats: TripStats | undefined
+  t: Translate
   selectionMode: boolean
   isCabSelected: boolean
   isMapSelected: boolean
@@ -35,10 +49,15 @@ interface TripRowProps {
   onLongPress: (trip: Trip) => void
 }
 
+/**
+ * Selection is a tonal fill plus a check, never a coloured title: all six trip inks fail AA
+ * as text on both grounds, so the ink stays put and the row's container carries the state.
+ */
 const TripRow = React.memo(function TripRow({
   trip,
   colors,
   stats,
+  t,
   selectionMode,
   isCabSelected,
   isMapSelected,
@@ -46,70 +65,57 @@ const TripRow = React.memo(function TripRow({
   onLongPress
 }: TripRowProps) {
   const duration = trip.endTime - trip.startTime
-  const tripColor = getTripColor(trip.index)
-  const selectedBorderColor = isCabSelected ? colors.primary : isMapSelected ? tripColor : null
+  const distance = formatDistance(trip.distance)
+  const selected = isCabSelected || isMapSelected
 
-  const cardStyle = [
-    styles.tripCard,
-    selectedBorderColor && [styles.tripCardSelected, { borderColor: selectedBorderColor }]
+  const detail = [
+    distance,
+    formatDuration(duration),
+    stats && stats.avgSpeed > 0 ? formatSpeed(stats.avgSpeed) : null,
+    stats && stats.elevationGain > 0
+      ? t("history.trips.row.gain", { value: formatShortDistance(stats.elevationGain) })
+      : null,
+    stats && stats.elevationLoss > 0
+      ? t("history.trips.row.loss", { value: formatShortDistance(stats.elevationLoss) })
+      : null
   ]
+    .filter(Boolean)
+    .join(SEPARATOR)
 
-  const accessibilityRole = selectionMode ? "checkbox" : "button"
-  const accessibilityState = selectionMode ? { checked: isCabSelected } : undefined
-  const accessibilityLabel = selectionMode
-    ? `Trip ${trip.index}, ${formatDistance(trip.distance)}, ${formatDuration(duration)}`
-    : `Trip ${trip.index}, ${formatDistance(trip.distance)}, ${formatDuration(duration)}, open details`
+  const label = t(selectionMode ? "history.trips.row.a11y" : "history.trips.row.a11yOpen", {
+    index: trip.index,
+    distance,
+    duration: formatDuration(duration)
+  })
 
   return (
-    <Card
-      variant="interactive"
+    <Pressable
+      testID={`trip-row-${trip.index}`}
       onPress={() => onPress(trip)}
       onLongPress={() => onLongPress(trip)}
-      style={cardStyle}
-      accessibilityRole={accessibilityRole}
-      accessibilityState={accessibilityState}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityHint={selectionMode ? undefined : "Long-press to select multiple trips"}
+      accessibilityRole={selectionMode ? "checkbox" : "button"}
+      accessibilityState={selectionMode ? { checked: isCabSelected } : { selected: isMapSelected }}
+      accessibilityLabel={label}
+      accessibilityHint={selectionMode ? undefined : t("history.trips.row.hint")}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      style={[styles.row, selected && { backgroundColor: colors.primaryContainer }]}
     >
-      <View style={styles.tripHeader}>
-        <View style={styles.tripTitleRow}>
-          <View style={[styles.tripDot, { backgroundColor: tripColor }]} />
-          <Text style={[styles.tripTitle, { color: colors.text }]}>Trip {trip.index}</Text>
+      <View style={styles.rowContent} importantForAccessibility="no">
+        <View style={styles.titleRow}>
+          <View style={[styles.dot, { backgroundColor: getTripColor(trip.index) }]} />
+          <Text style={[styles.title, { color: colors.text }]}>{t("history.trips.row", { index: trip.index })}</Text>
         </View>
-        <Text style={[styles.tripTime, { color: colors.textSecondary }]}>
-          {formatTime(trip.startTime)} - {formatTime(trip.endTime)}
-        </Text>
+        <Text style={[styles.detail, { color: colors.textSecondary }]}>{detail}</Text>
       </View>
-
-      <View style={styles.tripStats}>
-        <View style={styles.stat}>
-          <Route size={size.icon.sm} color={colors.textSecondary} />
-          <Text style={[styles.statText, { color: colors.text }]}>{formatDistance(trip.distance)}</Text>
+      <Text style={[styles.time, { color: colors.textSecondary }]} importantForAccessibility="no">
+        {formatTime(trip.startTime)}
+      </Text>
+      {isCabSelected ? (
+        <View style={styles.check} importantForAccessibility="no">
+          <Check size={size.icon.md} color={colors.text} />
         </View>
-        <View style={styles.stat}>
-          <Clock size={size.icon.sm} color={colors.textSecondary} />
-          <Text style={[styles.statText, { color: colors.text }]}>{formatDuration(duration)}</Text>
-        </View>
-        {stats && stats.avgSpeed > 0 && (
-          <View style={styles.stat}>
-            <Gauge size={size.icon.sm} color={colors.textSecondary} />
-            <Text style={[styles.statText, { color: colors.text }]}>{formatSpeed(stats.avgSpeed)}</Text>
-          </View>
-        )}
-        {stats && stats.elevationGain > 0 && (
-          <View style={styles.stat}>
-            <TrendingUp size={size.icon.sm} color={colors.textSecondary} />
-            <Text style={[styles.statText, { color: colors.text }]}>{Math.round(stats.elevationGain)}m</Text>
-          </View>
-        )}
-        {stats && stats.elevationLoss > 0 && (
-          <View style={styles.stat}>
-            <TrendingDown size={size.icon.sm} color={colors.textSecondary} />
-            <Text style={[styles.statText, { color: colors.text }]}>{Math.round(stats.elevationLoss)}m</Text>
-          </View>
-        )}
-      </View>
-    </Card>
+      ) : null}
+    </Pressable>
   )
 })
 
@@ -120,29 +126,31 @@ export function TripList({
   selectedTripIndex,
   onExport,
   onDelete,
-  onMerge
+  onMerge,
+  onShowOnMap
 }: TripListProps) {
-  const [showExport, setShowExport] = useState(false)
+  const { t } = useTranslation()
   const [selected, setSelected] = useState<Set<number>>(new Set())
-  const selectionMode = selected.size > 0
+  const [selectionArmed, setSelectionArmed] = useState(false)
+  const selectionMode = selectionArmed || selected.size > 0
 
   useEffect(() => {
     setSelected(new Set())
-    setShowExport(false)
+    setSelectionArmed(false)
   }, [trips])
 
   useEffect(() => {
     if (!selectionMode) return
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       setSelected(new Set())
-      setShowExport(false)
+      setSelectionArmed(false)
       return true
     })
     return () => sub.remove()
   }, [selectionMode])
 
-  const selectedTrips = useMemo(() => trips.filter((t) => selected.has(t.index)), [trips, selected])
-  const allSelected = selectionMode && selected.size === trips.length
+  const selectedTrips = useMemo(() => trips.filter((t2) => selected.has(t2.index)), [trips, selected])
+  const allSelected = selected.size === trips.length && trips.length > 0
   // Merging a non-contiguous set would silently swallow the trips in between
   const isAdjacentSelection = useMemo(() => {
     if (selectedTrips.length < 2) return false
@@ -152,7 +160,7 @@ export function TripList({
     return true
   }, [selectedTrips])
 
-  const totalDistance = trips.reduce((sum, t) => sum + t.distance, 0)
+  const totalDistance = trips.reduce((sum, trip) => sum + trip.distance, 0)
 
   const statsCache = useMemo(() => {
     const map = new Map<number, TripStats>()
@@ -181,22 +189,50 @@ export function TripList({
   }, [])
 
   const handleRowLongPress = useCallback((trip: Trip) => {
+    setSelectionArmed(true)
     setSelected((prev) => {
       const next = new Set(prev)
       next.add(trip.index)
       return next
     })
-    setShowExport(false)
   }, [])
 
+  const handleEnterSelection = useCallback(() => setSelectionArmed(true), [])
+
   const handleSelectAllToggle = useCallback(() => {
-    setSelected((prev) => (prev.size === trips.length ? new Set() : new Set(trips.map((t) => t.index))))
+    setSelected((prev) => (prev.size === trips.length ? new Set() : new Set(trips.map((trip) => trip.index))))
   }, [trips])
 
   const handleCancelSelection = useCallback(() => {
     setSelected(new Set())
-    setShowExport(false)
+    setSelectionArmed(false)
   }, [])
+
+  const exportingRef = useRef(false)
+  const askForFormat = useCallback(
+    async (toExport: Trip[]) => {
+      if (!onExport || toExport.length === 0 || exportingRef.current) return
+      exportingRef.current = true
+      try {
+        const chosen = await showChoice({
+          title: t("history.trips.export.title"),
+          message: t("history.trips.export.message"),
+          variant: "info",
+          buttons: [
+            ...EXPORT_FORMAT_KEYS.map((fmt) => ({ text: EXPORT_FORMATS[fmt].label, style: "secondary" as const })),
+            { text: t("history.trips.export.cancel"), style: "secondary" as const }
+          ]
+        })
+        if (chosen < 0 || chosen >= EXPORT_FORMAT_KEYS.length) return
+        onExport(EXPORT_FORMAT_KEYS[chosen], toExport)
+        setSelected(new Set())
+        setSelectionArmed(false)
+      } finally {
+        exportingRef.current = false
+      }
+    },
+    [onExport, t]
+  )
 
   const deletingRef = useRef(false)
   const handleDeleteSelected = useCallback(async () => {
@@ -205,7 +241,7 @@ export function TripList({
     try {
       await onDelete(selectedTrips)
       setSelected(new Set())
-      setShowExport(false)
+      setSelectionArmed(false)
     } finally {
       deletingRef.current = false
     }
@@ -218,7 +254,7 @@ export function TripList({
     try {
       await onMerge(selectedTrips)
       setSelected(new Set())
-      setShowExport(false)
+      setSelectionArmed(false)
     } catch {
       // Caller surfaces its own error UI. Preserve selection so the user can retry.
     } finally {
@@ -232,6 +268,7 @@ export function TripList({
         trip={item}
         colors={colors}
         stats={statsCache.get(item.index)}
+        t={t}
         selectionMode={selectionMode}
         isCabSelected={selected.has(item.index)}
         isMapSelected={!selectionMode && selectedTripIndex === item.index}
@@ -239,282 +276,192 @@ export function TripList({
         onLongPress={handleRowLongPress}
       />
     ),
-    [colors, statsCache, selectionMode, selected, selectedTripIndex, handleRowPress, handleRowLongPress]
+    [colors, statsCache, t, selectionMode, selected, selectedTripIndex, handleRowPress, handleRowLongPress]
   )
 
   if (trips.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Route size={size.icon.lg} color={colors.textDisabled} />
-        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No trips for this day</Text>
-        <Text style={[styles.emptyHint, { color: colors.textDisabled }]}>Need at least 2 points to form a trip</Text>
+      <View style={styles.empty}>
+        <EmptyState
+          testID="trips-empty"
+          title={t("history.trips.empty")}
+          message={t("history.trips.empty.message")}
+          actionLabel={onShowOnMap ? t("history.trips.empty.action") : undefined}
+          onActionPress={onShowOnMap}
+        />
       </View>
     )
   }
 
+  const bulkAvailable = Boolean(onDelete || onMerge || onExport)
+
   return (
     <View style={styles.container}>
       {selectionMode ? (
-        <View style={[styles.headerRow, { backgroundColor: colors.primary + "12" }]}>
-          <View style={styles.cabLeft}>
-            <Pressable
-              onPress={handleCancelSelection}
-              hitSlop={HIT_SLOP_SM}
-              style={({ pressed }) => [styles.cabIconBtn, pressed && { opacity: colors.pressedOpacity }]}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel selection"
-            >
-              <X size={size.icon.md} color={colors.text} />
-            </Pressable>
-            <Text style={[styles.cabSummary, { color: colors.text }]}>{selected.size} selected</Text>
-          </View>
-          <View style={styles.cabActions}>
-            <Pressable
-              onPress={handleSelectAllToggle}
-              hitSlop={HIT_SLOP_SM}
-              style={({ pressed }) => [styles.cabTextBtn, pressed && { opacity: colors.pressedOpacity }]}
-              accessibilityRole="button"
-              accessibilityLabel={allSelected ? "Clear selection" : "Select all trips"}
-            >
-              <Text style={[styles.cabTextBtnLabel, { color: allSelected ? colors.primary : colors.text }]}>
-                {allSelected ? "Clear" : "All"}
-              </Text>
-            </Pressable>
-            {onExport && (
-              <Pressable
-                onPress={() => setShowExport((prev) => !prev)}
-                hitSlop={HIT_SLOP_SM}
-                style={({ pressed }) => [styles.cabIconBtn, pressed && { opacity: colors.pressedOpacity }]}
-                accessibilityRole="button"
-                accessibilityLabel="Export selected trips"
-                accessibilityState={{ expanded: showExport }}
-              >
-                <Share size={size.icon.md} color={showExport ? colors.primary : colors.text} />
-              </Pressable>
-            )}
-            {onMerge && trips.length >= 2 && (
-              <Pressable
-                onPress={handleMergeSelected}
-                disabled={!isAdjacentSelection}
-                hitSlop={HIT_SLOP_SM}
-                style={({ pressed }) => [styles.cabIconBtn, pressed && { opacity: colors.pressedOpacity }]}
-                accessibilityRole="button"
-                accessibilityLabel="Merge selected trips"
-                accessibilityHint={isAdjacentSelection ? undefined : "Select two or more adjacent trips to merge them"}
-                accessibilityState={{ disabled: !isAdjacentSelection }}
-              >
-                <Merge size={size.icon.md} color={isAdjacentSelection ? colors.text : colors.textDisabled} />
-              </Pressable>
-            )}
-            {onDelete && (
-              <Pressable
-                onPress={handleDeleteSelected}
-                hitSlop={HIT_SLOP_SM}
-                style={({ pressed }) => [styles.cabIconBtn, pressed && { opacity: colors.pressedOpacity }]}
-                accessibilityRole="button"
-                accessibilityLabel="Delete selected trips"
-              >
-                <Trash2 size={size.icon.md} color={colors.error} />
-              </Pressable>
-            )}
-          </View>
-        </View>
-      ) : (
-        <View style={styles.headerRow}>
-          <Text style={[styles.summary, { color: colors.textSecondary }]}>
-            {trips.length} {trips.length === 1 ? "trip" : "trips"} · {formatDistance(totalDistance)}
+        <View style={[styles.cab, { backgroundColor: colors.primaryContainer }]}>
+          <Pressable
+            onPress={handleCancelSelection}
+            accessibilityRole="button"
+            accessibilityLabel={t("history.trips.cancelSelection")}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.icon.lg }}
+            style={styles.iconBtn}
+          >
+            <X size={size.icon.md} color={colors.text} />
+          </Pressable>
+          <Text style={[styles.cabCount, { color: colors.text }]}>
+            {t("history.trips.selected", { count: selected.size })}
           </Text>
+          <Pressable
+            onPress={handleSelectAllToggle}
+            accessibilityRole="button"
+            accessibilityLabel={allSelected ? t("history.trips.clearSelection") : t("history.trips.selectAll")}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+            style={styles.textBtn}
+          >
+            <Text style={[styles.textBtnLabel, { color: colors.text }]}>
+              {allSelected ? t("history.trips.clear") : t("history.trips.all")}
+            </Text>
+          </Pressable>
           {onExport && (
             <Pressable
-              onPress={() => setShowExport((prev) => !prev)}
-              style={({ pressed }) => [styles.exportAllBtn, pressed && { opacity: colors.pressedOpacity }]}
+              onPress={() => askForFormat(selectedTrips)}
               accessibilityRole="button"
-              accessibilityLabel="Export all trips"
-              accessibilityState={{ expanded: showExport }}
+              accessibilityLabel={t("history.trips.exportSelected")}
+              android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.icon.lg }}
+              style={styles.iconBtn}
             >
-              <Share size={size.icon.sm} color={showExport ? colors.primary : colors.textSecondary} />
-              <Text style={[styles.exportAllLabel, { color: showExport ? colors.primary : colors.textSecondary }]}>
-                Export All
-              </Text>
+              <Share size={size.icon.md} color={colors.text} />
             </Pressable>
+          )}
+          {onMerge && trips.length >= 2 && (
+            <Pressable
+              onPress={handleMergeSelected}
+              disabled={!isAdjacentSelection}
+              accessibilityRole="button"
+              accessibilityLabel={t("history.trips.mergeSelected")}
+              accessibilityHint={isAdjacentSelection ? undefined : t("history.trips.mergeHint")}
+              accessibilityState={{ disabled: !isAdjacentSelection }}
+              android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.icon.lg }}
+              style={styles.iconBtn}
+            >
+              <Merge size={size.icon.md} color={isAdjacentSelection ? colors.text : colors.textDisabled} />
+            </Pressable>
+          )}
+          {onDelete && (
+            <Button
+              variant="dangerGhost"
+              title={t("history.trips.delete")}
+              onPress={handleDeleteSelected}
+              accessibilityLabel={t("history.trips.deleteSelected")}
+            />
+          )}
+        </View>
+      ) : (
+        <View style={styles.header}>
+          <SectionTitle
+            first
+            action={onExport ? { label: t("history.trips.exportAll"), onPress: () => askForFormat(trips) } : undefined}
+          >
+            {t("history.trips.summary", { count: trips.length, distance: formatDistance(totalDistance) })}
+          </SectionTitle>
+          {bulkAvailable && (
+            <Button
+              testID="select-trips-btn"
+              variant="ghost"
+              align="start"
+              title={t("history.trips.select")}
+              onPress={handleEnterSelection}
+            />
           )}
         </View>
       )}
-      {showExport && onExport && (
-        <View style={styles.exportRow}>
-          {EXPORT_FORMAT_KEYS.map((fmt) => (
-            <Pressable
-              key={fmt}
-              onPress={() => {
-                onExport(fmt, selectionMode ? selectedTrips : trips)
-                setShowExport(false)
-                if (selectionMode) setSelected(new Set())
-              }}
-              style={({ pressed }) => [
-                styles.exportChip,
-                { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={
-                selectionMode
-                  ? `Export ${selectedTrips.length} selected trips as ${EXPORT_FORMATS[fmt].label}`
-                  : `Export all trips as ${EXPORT_FORMATS[fmt].label}`
-              }
-            >
-              <Text style={[styles.exportChipText, { color: colors.primary }]}>{EXPORT_FORMATS[fmt].label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      <Divider tight />
       <FlatList
         data={trips}
         renderItem={renderTrip}
         keyExtractor={(item) => `trip-${item.index}`}
         contentContainerStyle={styles.list}
+        ItemSeparatorComponent={ListSeparator}
         extraData={selected}
       />
     </View>
   )
 }
 
+const ListSeparator = () => <Divider tight />
+
 const styles = StyleSheet.create({
   container: {
     flex: 1
   },
-  headerRow: {
+  header: {
+    paddingHorizontal: space.lg,
+    paddingBottom: space.sm
+  },
+  cab: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 14,
-    minHeight: 54
+    paddingHorizontal: space.sm,
+    gap: space.xs
   },
-  cabLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    flexShrink: 1
+  cabCount: {
+    ...text.bodyStrong,
+    flex: 1,
+    paddingHorizontal: space.sm
   },
-  cabSummary: {
-    fontSize: 13,
-    ...fonts.semiBold
-  },
-  cabActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4
-  },
-  cabIconBtn: {
-    minWidth: 48,
-    minHeight: 48,
+  iconBtn: {
+    width: size.touch,
+    height: size.touch,
     alignItems: "center",
     justifyContent: "center"
   },
-  cabTextBtn: {
-    minHeight: 48,
-    paddingHorizontal: 10,
+  textBtn: {
+    minHeight: size.touch,
+    paddingHorizontal: space.md,
     alignItems: "center",
     justifyContent: "center"
   },
-  cabTextBtnLabel: {
-    fontSize: 13,
-    ...fonts.semiBold
-  },
-  summary: {
-    fontSize: 12,
-    ...fonts.semiBold
-  },
-  exportAllBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    minHeight: 48
-  },
-  exportAllLabel: {
-    fontSize: 11,
-    ...fonts.semiBold
-  },
-  exportRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12
-  },
-  exportChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1
-  },
-  exportChipText: {
-    fontSize: 11,
-    ...fonts.bold
+  textBtnLabel: {
+    ...text.bodyStrong
   },
   list: {
-    paddingHorizontal: 12,
-    paddingBottom: 16
+    paddingBottom: space.xxl
   },
-  tripCard: {
-    marginBottom: 8
-  },
-  tripCardSelected: {
-    borderWidth: 1.5
-  },
-  tripHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8
-  },
-  tripTitleRow: {
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8
+    minHeight: size.row,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    gap: space.md
   },
-  tripDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4
+  rowContent: {
+    flex: 1
   },
-  tripTitle: {
-    fontSize: 15,
-    ...fonts.bold
-  },
-  tripTime: {
-    fontSize: 13,
-    ...fonts.regular
-  },
-  tripStats: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12
-  },
-  stat: {
+  titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4
+    gap: space.sm
   },
-  statText: {
-    fontSize: 13,
-    ...fonts.regular
+  dot: {
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: radius.pill
   },
-  emptyContainer: {
-    flex: 1,
+  title: {
+    ...text.bodyStrong
+  },
+  detail: {
+    ...text.label
+  },
+  time: {
+    ...text.figureInline
+  },
+  check: {
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingTop: 60
+    justifyContent: "center"
   },
-  emptyText: {
-    fontSize: 14,
-    ...fonts.regular
-  },
-  emptyHint: {
-    fontSize: 12,
-    ...fonts.regular
+  empty: {
+    paddingHorizontal: space.lg
   }
 })

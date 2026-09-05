@@ -6,11 +6,15 @@
 import React, { useState, useMemo, useCallback, useRef } from "react"
 import { View, Text, Pressable, StyleSheet, LayoutAnimation } from "react-native"
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react-native"
+import { radius } from "@colota/shared"
 import { ThemeColors } from "../../../types/global"
-import { fonts } from "../../../styles/typography"
+import { text } from "../../../styles/typography"
+import { Button } from "../../ui/Button"
+import { Divider } from "../../ui/Divider"
+import { useTranslation } from "../../../i18n/useTranslation"
 import { formatDistance } from "../../../utils/geo"
 import { pad2 } from "../../../utils/format"
-import { size, HIT_SLOP_LG } from "../../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 
 interface CalendarPickerProps {
   date: Date
@@ -25,7 +29,15 @@ interface CalendarPickerProps {
   onPrefetchMonth?: (year: number, month: number) => void
 }
 
-const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+const DAY_CIRCLE = 32
+const NOTE_DOT = 6
+const DATA_DOT = 4
+
+// 2024-01-01 was a Monday, so seven days from it name the week in the device's own locale
+// and the grid stays Monday-first without seven hand-written abbreviations.
+const WEEKDAYS = Array.from({ length: 7 }, (_, i) =>
+  new Date(2024, 0, 1 + i).toLocaleDateString(undefined, { weekday: "short" })
+)
 
 function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
@@ -47,6 +59,7 @@ export function CalendarPicker({
   onMonthChange,
   onPrefetchMonth
 }: CalendarPickerProps) {
+  const { t } = useTranslation()
   const [isExpanded, setIsExpanded] = useState(false)
   const [viewYear, setViewYear] = useState(date.getFullYear())
   const [viewMonth, setViewMonth] = useState(date.getMonth())
@@ -154,160 +167,181 @@ export function CalendarPicker({
     [date]
   )
 
+  const summary = distance
+    ? t("history.day.summaryDistance", { count: locationCount, distance })
+    : t("history.day.summary", { count: locationCount })
+
   const isFutureMonth =
     viewYear > today.getFullYear() || (viewYear === today.getFullYear() && viewMonth >= today.getMonth())
 
   return (
-    <View style={[styles.container, { borderBottomColor: colors.border }]}>
-      {/* Compact header row */}
-      <View style={styles.row}>
-        <Pressable
-          onPress={goBack}
-          hitSlop={HIT_SLOP_LG}
-          style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
-        >
-          <ChevronLeft size={size.icon.md} color={colors.primary} />
-        </Pressable>
+    <View>
+      <View style={styles.content}>
+        <View style={styles.row}>
+          <Pressable
+            testID="day-previous-btn"
+            onPress={goBack}
+            accessibilityRole="button"
+            accessibilityLabel={t("history.date.previous")}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.icon.lg }}
+            style={styles.navBtn}
+          >
+            <ChevronLeft size={size.icon.md} color={colors.text} />
+          </Pressable>
 
-        <Pressable
-          onPress={toggleExpanded}
-          style={({ pressed }) => [styles.dateContainer, pressed && { opacity: colors.pressedOpacity }]}
-        >
-          <View style={styles.dateLabelRow}>
+          <Pressable
+            testID="day-picker-btn"
+            onPress={toggleExpanded}
+            accessibilityRole="button"
+            accessibilityLabel={formatted}
+            accessibilityHint={t("history.date.open")}
+            accessibilityState={{ expanded: isExpanded }}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+            style={styles.dateContainer}
+          >
             <Text style={[styles.dateText, { color: colors.text }]}>{formatted}</Text>
-            {isToday && (
-              <View style={[styles.todayBadge, { backgroundColor: colors.primary + "20" }]}>
-                <Text style={[styles.todayBadgeText, { color: colors.primary }]}>Today</Text>
-              </View>
-            )}
-            <Calendar size={size.icon.sm} color={colors.textSecondary} style={styles.calendarIcon} />
-          </View>
-          <Text style={[styles.countText, { color: colors.textSecondary }]}>
-            {locationCount} {locationCount === 1 ? "location" : "locations"}
-            {distance ? ` · ${distance}` : ""}
-          </Text>
-        </Pressable>
+            <Calendar size={size.icon.sm} color={colors.textSecondary} />
+          </Pressable>
 
-        <Pressable
-          onPress={goForward}
-          hitSlop={HIT_SLOP_LG}
-          style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
-          disabled={isToday}
-        >
-          <ChevronRight size={size.icon.md} color={isToday ? colors.textDisabled : colors.primary} />
-        </Pressable>
+          <Pressable
+            testID="day-next-btn"
+            onPress={goForward}
+            disabled={isToday}
+            accessibilityRole="button"
+            accessibilityLabel={t("history.date.next")}
+            accessibilityState={{ disabled: isToday }}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.icon.lg }}
+            style={styles.navBtn}
+          >
+            <ChevronRight size={size.icon.md} color={isToday ? colors.textDisabled : colors.text} />
+          </Pressable>
+        </View>
+
+        <Text testID="day-summary" style={[styles.summary, { color: colors.textSecondary }]}>
+          {summary}
+        </Text>
+
+        {!isToday && !isExpanded && (
+          <Button
+            testID="today-btn"
+            title={t("history.date.today")}
+            variant="ghost"
+            align="start"
+            onPress={goToToday}
+          />
+        )}
+
+        {isExpanded && (
+          <View style={styles.calendarContainer}>
+            <View style={styles.monthRow}>
+              <Pressable
+                onPress={() => navigateMonth(-1)}
+                accessibilityRole="button"
+                accessibilityLabel={t("history.calendar.previousMonth")}
+                android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.icon.lg }}
+                style={styles.navBtn}
+              >
+                <ChevronLeft size={size.icon.md} color={colors.text} />
+              </Pressable>
+              <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
+              <Pressable
+                onPress={() => navigateMonth(1)}
+                disabled={isFutureMonth}
+                accessibilityRole="button"
+                accessibilityLabel={t("history.calendar.nextMonth")}
+                accessibilityState={{ disabled: isFutureMonth }}
+                android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.icon.lg }}
+                style={styles.navBtn}
+              >
+                <ChevronRight size={size.icon.md} color={isFutureMonth ? colors.textDisabled : colors.text} />
+              </Pressable>
+            </View>
+
+            <View style={styles.weekdayRow}>
+              {WEEKDAYS.map((day) => (
+                <Text key={day} style={[styles.weekdayText, { color: colors.textSecondary }]}>
+                  {day}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.daysGrid}>
+              {calendarGrid.map((cell) => {
+                if (cell.day === null) {
+                  return <View key={cell.key} style={styles.dayCell} />
+                }
+
+                const dateKey = formatDateKey(viewYear, viewMonth, cell.day)
+                const hasData = daysWithData.has(dateKey)
+                const hasNote = daysWithNotes?.has(dateKey) ?? false
+                const dist = dayDistances?.get(dateKey)
+                const cellDate = new Date(viewYear, viewMonth, cell.day)
+                const isSelected = isSameDay(cellDate, date)
+                const isCellToday = isSameDay(cellDate, today)
+                const isFuture = cellDate > today
+
+                return (
+                  <Pressable
+                    key={cell.key}
+                    style={styles.dayCell}
+                    onPress={() => selectDay(cell.day!)}
+                    disabled={isFuture}
+                    accessibilityRole="button"
+                    accessibilityLabel={cellDate.toLocaleDateString(undefined, {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric"
+                    })}
+                    accessibilityState={{ selected: isSelected, disabled: isFuture }}
+                  >
+                    <View style={[styles.dayCircle, isSelected && { backgroundColor: colors.primary }]}>
+                      <Text
+                        style={[
+                          styles.dayText,
+                          { color: isFuture ? colors.textDisabled : isSelected ? colors.textOnPrimary : colors.text },
+                          isCellToday && !isSelected && { color: colors.primary }
+                        ]}
+                      >
+                        {cell.day}
+                      </Text>
+                      {hasNote && (
+                        <View
+                          style={[
+                            styles.noteDot,
+                            { backgroundColor: isSelected ? colors.textOnPrimary : colors.primary }
+                          ]}
+                        />
+                      )}
+                    </View>
+                    {dist != null && dist > 0 ? (
+                      <Text
+                        style={[styles.dayDist, { color: isSelected ? colors.primary : colors.textLight }]}
+                        numberOfLines={1}
+                      >
+                        {formatDistance(dist)}
+                      </Text>
+                    ) : hasData ? (
+                      <View
+                        style={[styles.dataDot, { backgroundColor: isSelected ? colors.primary : colors.textLight }]}
+                      />
+                    ) : null}
+                  </Pressable>
+                )
+              })}
+            </View>
+          </View>
+        )}
       </View>
 
-      {!isToday && !isExpanded && (
-        <Pressable
-          onPress={goToToday}
-          hitSlop={HIT_SLOP_LG}
-          style={({ pressed }) => [
-            styles.todayBtn,
-            { backgroundColor: colors.primary + "15" },
-            pressed && { opacity: colors.pressedOpacity }
-          ]}
-        >
-          <Text style={[styles.todayText, { color: colors.primary }]}>Today</Text>
-        </Pressable>
-      )}
-
-      {/* Expanded calendar grid */}
-      {isExpanded && (
-        <View style={styles.calendarContainer}>
-          {/* Month navigation */}
-          <View style={styles.monthRow}>
-            <Pressable
-              onPress={() => navigateMonth(-1)}
-              hitSlop={HIT_SLOP_LG}
-              style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
-            >
-              <ChevronLeft size={size.icon.md} color={colors.primary} />
-            </Pressable>
-            <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
-            <Pressable
-              onPress={() => navigateMonth(1)}
-              hitSlop={HIT_SLOP_LG}
-              style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
-              disabled={isFutureMonth}
-            >
-              <ChevronRight size={size.icon.md} color={isFutureMonth ? colors.textDisabled : colors.primary} />
-            </Pressable>
-          </View>
-
-          {/* Weekday headers */}
-          <View style={styles.weekdayRow}>
-            {WEEKDAYS.map((day) => (
-              <Text key={day} style={[styles.weekdayText, { color: colors.textSecondary }]}>
-                {day}
-              </Text>
-            ))}
-          </View>
-
-          {/* Day cells */}
-          <View style={styles.daysGrid}>
-            {calendarGrid.map((cell) => {
-              if (cell.day === null) {
-                return <View key={cell.key} style={styles.dayCell} />
-              }
-
-              const dateKey = formatDateKey(viewYear, viewMonth, cell.day)
-              const hasData = daysWithData.has(dateKey)
-              const hasNote = daysWithNotes?.has(dateKey) ?? false
-              const dist = dayDistances?.get(dateKey)
-              const cellDate = new Date(viewYear, viewMonth, cell.day)
-              const isSelected = isSameDay(cellDate, date)
-              const isCellToday = isSameDay(cellDate, today)
-              const isFuture = cellDate > today
-
-              return (
-                <Pressable
-                  key={cell.key}
-                  style={styles.dayCell}
-                  onPress={() => selectDay(cell.day!)}
-                  disabled={isFuture}
-                >
-                  <View style={[styles.dayCircle, isSelected && { backgroundColor: colors.primary }]}>
-                    <Text
-                      style={[
-                        styles.dayText,
-                        { color: isFuture ? colors.textDisabled : isSelected ? colors.textOnPrimary : colors.text },
-                        isCellToday && !isSelected && { color: colors.primary, ...fonts.bold }
-                      ]}
-                    >
-                      {cell.day}
-                    </Text>
-                    {hasNote && (
-                      <View style={[styles.noteDot, { backgroundColor: colors.primary, borderColor: colors.card }]} />
-                    )}
-                  </View>
-                  {dist != null && dist > 0 ? (
-                    <Text
-                      style={[styles.dayDist, { color: isSelected ? colors.primary : colors.textLight }]}
-                      numberOfLines={1}
-                    >
-                      {formatDistance(dist)}
-                    </Text>
-                  ) : hasData ? (
-                    <View
-                      style={[styles.dataDot, { backgroundColor: isSelected ? colors.primary : colors.textLight }]}
-                    />
-                  ) : null}
-                </Pressable>
-              )
-            })}
-          </View>
-        </View>
-      )}
+      <Divider tight />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth
+  content: {
+    paddingHorizontal: space.lg,
+    paddingBottom: space.sm
   },
   row: {
     flexDirection: "row",
@@ -315,74 +349,46 @@ const styles = StyleSheet.create({
     justifyContent: "space-between"
   },
   navBtn: {
-    padding: 8
+    width: size.touch,
+    height: size.touch,
+    alignItems: "center",
+    justifyContent: "center"
   },
   dateContainer: {
-    alignItems: "center",
-    flex: 1
-  },
-  dateLabelRow: {
+    flex: 1,
+    minHeight: size.touch,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6
-  },
-  calendarIcon: {
-    marginTop: 1
+    justifyContent: "center",
+    gap: space.sm
   },
   dateText: {
-    fontSize: 15,
-    ...fonts.bold
+    ...text.heading
   },
-  todayBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6
-  },
-  todayBadgeText: {
-    fontSize: 10,
-    ...fonts.bold
-  },
-  countText: {
-    fontSize: 12,
-    ...fonts.regular,
-    marginTop: 2
-  },
-  todayBtn: {
-    alignSelf: "center",
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 14
-  },
-  todayText: {
-    fontSize: 12,
-    ...fonts.semiBold
+  summary: {
+    ...text.caption,
+    textAlign: "center"
   },
   calendarContainer: {
-    marginTop: 12
+    marginTop: space.md
   },
   monthRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8
-  },
-  monthNav: {
-    padding: 8
+    marginBottom: space.sm
   },
   monthLabel: {
-    fontSize: 14,
-    ...fonts.semiBold
+    ...text.bodyStrong
   },
   weekdayRow: {
     flexDirection: "row",
-    marginBottom: 4
+    marginBottom: space.xs
   },
   weekdayText: {
+    ...text.caption,
     flex: 1,
-    textAlign: "center",
-    fontSize: 11,
-    ...fonts.semiBold
+    textAlign: "center"
   },
   daysGrid: {
     flexDirection: "row",
@@ -390,39 +396,36 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width: "14.28%",
-    paddingVertical: 4,
+    paddingVertical: space.xs,
     alignItems: "center",
     justifyContent: "center"
   },
   dayCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: DAY_CIRCLE,
+    height: DAY_CIRCLE,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center"
   },
   dayText: {
-    fontSize: 13,
-    ...fonts.regular
+    ...text.label
   },
   dayDist: {
-    fontSize: 9,
-    ...fonts.medium,
+    ...text.caption,
     marginTop: 1
   },
   dataDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: DATA_DOT,
+    height: DATA_DOT,
+    borderRadius: radius.pill,
     marginTop: 2
   },
   noteDot: {
     position: "absolute",
     top: 1,
-    right: 1,
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    borderWidth: 1
+    end: 1,
+    width: NOTE_DOT,
+    height: NOTE_DOT,
+    borderRadius: radius.pill
   }
 })

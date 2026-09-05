@@ -5,9 +5,13 @@
 
 import React, { useCallback, useMemo } from "react"
 import { View, Text, FlatList, ScrollView, StyleSheet } from "react-native"
-import { fonts } from "../../../styles/typography"
+import { text } from "../../../styles/typography"
+import { EmptyState } from "../../ui/EmptyState"
+import { Divider } from "../../ui/Divider"
+import { useTranslation } from "../../../i18n/useTranslation"
 import { LocationCoords, ThemeColors } from "../../../types/global"
 import { formatTime, getSpeedUnit } from "../../../utils/geo"
+import { space } from "../../../constants"
 
 interface Props {
   locations: LocationCoords[]
@@ -20,6 +24,9 @@ interface TableRow extends LocationCoords {
 
 const ROW_HEIGHT = 36
 const TABLE_WIDTH = 870
+const CELL_GUTTER = 2
+// The hairline between rows counts towards the scroll offset, or getItemLayout drifts.
+const ROW_STRIDE = ROW_HEIGHT + StyleSheet.hairlineWidth
 
 function val(v?: number | null, decimals = 0): string {
   if (v == null) return "-"
@@ -27,34 +34,36 @@ function val(v?: number | null, decimals = 0): string {
 }
 
 // Mirrors BatteryStatus.kt.
-const BATTERY_STATUS: Record<number, string> = {
-  0: "Unknown",
-  1: "Discharging",
-  2: "Charging",
-  3: "Full"
+const BATTERY_STATUS_KEYS: Record<number, string> = {
+  0: "history.table.status.unknown",
+  1: "history.table.status.discharging",
+  2: "history.table.status.charging",
+  3: "history.table.status.full"
 }
 
 const LocationRow = React.memo(
   ({
     item,
     speedUnit,
-    colors
+    colors,
+    batteryStatus
   }: {
     item: TableRow
     speedUnit: { factor: number; unit: string }
     colors: ThemeColors
+    batteryStatus: (status: number | null | undefined) => string
   }) => (
-    <View style={[styles.row, { borderBottomColor: colors.border }]}>
+    <View style={styles.row}>
       <Text style={[styles.cell, styles.cellTime, { color: colors.text }]} numberOfLines={1}>
         {item.timestamp ? formatTime(item.timestamp, true) : "-"}
       </Text>
       <Text style={[styles.cell, styles.cellNum, { color: colors.textSecondary }]} numberOfLines={1}>
         {item.delta != null ? `+${item.delta}` : ""}
       </Text>
-      <Text style={[styles.cell, styles.cellCoord, { color: colors.text }]} numberOfLines={1}>
+      <Text style={[styles.coordCell, styles.cellCoord, { color: colors.text }]} numberOfLines={1}>
         {val(item.latitude, 5)}
       </Text>
-      <Text style={[styles.cell, styles.cellCoord, { color: colors.text }]} numberOfLines={1}>
+      <Text style={[styles.coordCell, styles.cellCoord, { color: colors.text }]} numberOfLines={1}>
         {val(item.longitude, 5)}
       </Text>
       <Text style={[styles.cell, styles.cellNum, { color: colors.text }]} numberOfLines={1}>
@@ -73,7 +82,7 @@ const LocationRow = React.memo(
         {item.battery != null ? `${item.battery}%` : "-"}
       </Text>
       <Text style={[styles.cell, styles.cellStatus, { color: colors.text }]} numberOfLines={1}>
-        {item.battery_status != null ? (BATTERY_STATUS[item.battery_status] ?? String(item.battery_status)) : "-"}
+        {batteryStatus(item.battery_status)}
       </Text>
       <Text style={[styles.cell, styles.cellNote, { color: colors.text }]} numberOfLines={1}>
         {item.note ? item.note : "-"}
@@ -84,13 +93,25 @@ const LocationRow = React.memo(
 
 const keyExtractor = (_: TableRow, index: number) => String(index)
 const getItemLayout = (_: any, index: number) => ({
-  length: ROW_HEIGHT,
-  offset: ROW_HEIGHT * index,
+  length: ROW_STRIDE,
+  offset: ROW_STRIDE * index,
   index
 })
 
+const RowSeparator = () => <Divider tight />
+
 export function LocationTable({ locations, colors }: Props) {
+  const { t } = useTranslation()
   const speedUnit = useMemo(() => getSpeedUnit(), [])
+
+  const batteryStatus = useCallback(
+    (status: number | null | undefined) => {
+      if (status == null) return "-"
+      const key = BATTERY_STATUS_KEYS[status]
+      return key ? t(key) : String(status)
+    },
+    [t]
+  )
 
   const data = useMemo<TableRow[]>(() => {
     // Compute deltas in chronological order, then reverse for newest-first display
@@ -105,14 +126,16 @@ export function LocationTable({ locations, colors }: Props) {
   }, [locations])
 
   const renderItem = useCallback(
-    ({ item }: { item: TableRow }) => <LocationRow item={item} speedUnit={speedUnit} colors={colors} />,
-    [colors, speedUnit]
+    ({ item }: { item: TableRow }) => (
+      <LocationRow item={item} speedUnit={speedUnit} colors={colors} batteryStatus={batteryStatus} />
+    ),
+    [colors, speedUnit, batteryStatus]
   )
 
   if (locations.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No data for this day</Text>
+        <EmptyState testID="table-empty" title={t("history.table.empty")} />
       </View>
     )
   }
@@ -120,32 +143,49 @@ export function LocationTable({ locations, colors }: Props) {
   return (
     <ScrollView horizontal style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.tableWrapper}>
-        {/* Header */}
-        <View
-          style={[styles.row, styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}
-        >
-          <Text style={[styles.cell, styles.cellTime, styles.headerText, { color: colors.textSecondary }]}>Time</Text>
-          <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>Δs</Text>
-          <Text style={[styles.cell, styles.cellCoord, styles.headerText, { color: colors.textSecondary }]}>Lat</Text>
-          <Text style={[styles.cell, styles.cellCoord, styles.headerText, { color: colors.textSecondary }]}>Lon</Text>
-          <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>Acc</Text>
+        <View style={styles.row}>
+          <Text style={[styles.cell, styles.cellTime, styles.headerText, { color: colors.textSecondary }]}>
+            {t("history.table.time")}
+          </Text>
+          <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>
+            {t("history.table.delta")}
+          </Text>
+          <Text style={[styles.cell, styles.cellCoord, styles.headerText, { color: colors.textSecondary }]}>
+            {t("history.table.latitude")}
+          </Text>
+          <Text style={[styles.cell, styles.cellCoord, styles.headerText, { color: colors.textSecondary }]}>
+            {t("history.table.longitude")}
+          </Text>
+          <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>
+            {t("history.table.accuracy")}
+          </Text>
           <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>
             {speedUnit.unit}
           </Text>
-          <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>Alt</Text>
-          <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>Bear</Text>
-          <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>Batt</Text>
-          <Text style={[styles.cell, styles.cellStatus, styles.headerText, { color: colors.textSecondary }]}>
-            Charge
+          <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>
+            {t("history.table.altitude")}
           </Text>
-          <Text style={[styles.cell, styles.cellNote, styles.headerText, { color: colors.textSecondary }]}>Note</Text>
+          <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>
+            {t("history.table.bearing")}
+          </Text>
+          <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>
+            {t("history.table.battery")}
+          </Text>
+          <Text style={[styles.cell, styles.cellStatus, styles.headerText, { color: colors.textSecondary }]}>
+            {t("history.table.charge")}
+          </Text>
+          <Text style={[styles.cell, styles.cellNote, styles.headerText, { color: colors.textSecondary }]}>
+            {t("history.table.note")}
+          </Text>
         </View>
+        <Divider tight testID="table-header-rule" />
 
         <FlatList
           data={data}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           getItemLayout={getItemLayout}
+          ItemSeparatorComponent={RowSeparator}
           extraData={locations}
           initialNumToRender={30}
           maxToRenderPerBatch={20}
@@ -164,34 +204,24 @@ const styles = StyleSheet.create({
     flexGrow: 1
   },
   empty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 32
-  },
-  emptyText: {
-    fontSize: 14,
-    ...fonts.regular
-  },
-  header: {
-    borderBottomWidth: 2
+    paddingHorizontal: space.lg
   },
   headerText: {
-    fontSize: 11,
-    ...fonts.bold,
-    textTransform: "uppercase"
+    ...text.caption
   },
   row: {
     flexDirection: "row",
     height: ROW_HEIGHT,
     alignItems: "center",
-    paddingHorizontal: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth
+    paddingHorizontal: space.sm
   },
   cell: {
-    fontSize: 12,
-    ...fonts.regular,
-    paddingHorizontal: 2
+    ...text.caption,
+    paddingHorizontal: CELL_GUTTER
+  },
+  coordCell: {
+    ...text.coord,
+    paddingHorizontal: CELL_GUTTER
   },
   cellTime: {
     width: 80

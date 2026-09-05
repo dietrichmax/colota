@@ -1,5 +1,6 @@
 import React from "react"
 import { render } from "@testing-library/react-native"
+import { lightColors, type } from "@colota/shared"
 import { LocationCoords } from "../../../../types/global"
 
 // --- Mocks ---
@@ -9,14 +10,16 @@ jest.mock("../../../../utils/geo", () => ({
   getSpeedUnit: jest.fn(() => ({ factor: 3.6, unit: "km/h" }))
 }))
 
+jest.mock("../../../../hooks/useTheme", () => ({
+  useTheme: () => ({
+    colors: require("@colota/shared").lightColors,
+    mode: "light"
+  })
+}))
+
 import { LocationTable } from "../LocationTable"
 
-const mockColors = {
-  text: "#000",
-  textSecondary: "#6b7280",
-  border: "#e5e7eb",
-  surface: "#fff"
-} as any
+const mockColors = lightColors as any
 
 const locations: LocationCoords[] = [
   {
@@ -54,6 +57,8 @@ const locations: LocationCoords[] = [
   }
 ]
 
+const TABLE_WIDTH = 870
+
 describe("LocationTable", () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -62,7 +67,7 @@ describe("LocationTable", () => {
   it("shows empty state message when no locations", () => {
     const { getByText } = render(<LocationTable locations={[]} colors={mockColors} />)
 
-    expect(getByText("No data for this day")).toBeTruthy()
+    expect(getByText("No data on this day")).toBeTruthy()
   })
 
   it("renders table header with column names", () => {
@@ -78,6 +83,39 @@ describe("LocationTable", () => {
     expect(getByText("Bear")).toBeTruthy()
     expect(getByText("Batt")).toBeTruthy()
     expect(getByText("Charge")).toBeTruthy()
+    expect(getByText("Note")).toBeTruthy()
+  })
+
+  /** A header block or a heavy rule would fight the rows; one hairline separates them. */
+  it("separates the header from the rows with a hairline, not a block", () => {
+    const { getByTestId } = render(<LocationTable locations={locations} colors={mockColors} />)
+
+    expect(getByTestId("table-header-rule")).toBeTruthy()
+  })
+
+  /**
+   * Latitude and longitude are the one place in the app where digits have to line up column to
+   * column, so they take the tabular `coord` role rather than the caption every other cell uses.
+   */
+  it("sets coordinates in the coord role", () => {
+    const { getByText } = render(<LocationTable locations={locations} colors={mockColors} />)
+
+    for (const value of ["48.30000", "11.70000"]) {
+      const cell = ([] as any[]).concat(getByText(value).props.style).filter(Boolean)
+      expect(cell.some((s) => s.fontSize === type.coord.fontSize)).toBe(true)
+      expect(cell.some((s) => Array.isArray(s.fontVariant) && s.fontVariant.includes("tabular-nums"))).toBe(true)
+    }
+  })
+
+  /** The 11 columns do not fit a phone, so the table keeps its own width and scrolls sideways. */
+  it("keeps the table 870 wide inside a horizontal scroller", () => {
+    const { UNSAFE_root } = render(<LocationTable locations={locations} colors={mockColors} />)
+
+    const widths = UNSAFE_root.findAllByType("View" as any)
+      .flatMap((node: any) => ([] as any[]).concat(node.props.style).filter(Boolean))
+      .map((style: any) => style.width)
+
+    expect(widths).toContain(TABLE_WIDTH)
   })
 
   it("renders location rows with correct values", () => {

@@ -158,9 +158,12 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     title: "Share Setup"
   },
   {
+    // The map carries back, share and delete as floating controls and bleeds under the
+    // status bar, so no header sits above it.
     name: "Trip Detail",
     component: TripDetailScreen,
-    title: "Trip Detail"
+    title: "Trip Detail",
+    headerShown: false
   },
   {
     name: "Offline Maps",

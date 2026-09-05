@@ -13,14 +13,19 @@ interface InteractiveLineChartProps {
   color: string
   fillColor?: string
   textColor: string
+  /** The hairline the plot sits on. */
+  axisColor: string
   backgroundColor: string
   formatValue: (value: number) => string
   height?: number
   activeIndex?: number | null
   onActiveIndexChange?: (index: number | null) => void
+  /** Composed by the caller so it can name the series and its range in the user's language. */
+  accessibilityLabel: string
 }
 
-const CHART_PADDING = { top: 24, bottom: 20, left: 40, right: 0 }
+/** Exported so a caller's own x-axis labels line up with the plot instead of mirroring the number. */
+export const CHART_PADDING = { top: 24, bottom: 20, left: 40, right: 0 }
 const TOOLTIP_WIDTH = 70
 const TOOLTIP_HEIGHT = 22
 
@@ -29,11 +34,13 @@ export function InteractiveLineChart({
   color,
   fillColor,
   textColor,
+  axisColor,
   backgroundColor,
   formatValue,
   height = 140,
   activeIndex: externalIndex,
-  onActiveIndexChange
+  onActiveIndexChange,
+  accessibilityLabel
 }: InteractiveLineChartProps) {
   const [chartWidth, setChartWidth] = useState(0)
   const [internalIndex, setInternalIndex] = useState<number | null>(null)
@@ -113,13 +120,30 @@ export function InteractiveLineChart({
   if (tooltipX + TOOLTIP_WIDTH > chartWidth - 2) tooltipX = chartWidth - TOOLTIP_WIDTH - 2
 
   return (
-    <View style={{ height }} onLayout={onLayout} {...panResponder.panHandlers}>
+    <View
+      style={{ height }}
+      onLayout={onLayout}
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={accessibilityLabel}
+      {...panResponder.panHandlers}
+    >
       <Svg width={chartWidth} height={height}>
         {/* Area fill */}
         <Path d={fillPath} fill={fillColor ?? color + "20"} />
 
         {/* Line */}
         <Path d={linePath} stroke={color} strokeWidth={1.5} fill="none" />
+
+        {/* Axis hairline */}
+        <Line
+          x1={CHART_PADDING.left}
+          y1={CHART_PADDING.top + plotH}
+          x2={chartWidth}
+          y2={CHART_PADDING.top + plotH}
+          stroke={axisColor}
+          strokeWidth={1}
+        />
 
         {/* Y-axis labels and grid lines */}
         {/* Y-axis labels */}

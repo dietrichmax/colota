@@ -32,9 +32,9 @@ The actions above work on the whole database. To remove specific recordings, use
 
 ### Trips
 
-From the **Trips** tab, long-press a trip card to enter selection mode, add any other trips you want to remove, then tap the trash icon in the selection header. You'll be asked to confirm before the underlying location points are permanently deleted from the device.
+From the **Trips** tab, long-press a trip row or tap **Select trips** to enter selection mode, add any other trips you want to remove, then tap **Delete** in the selection header. You'll be asked to confirm before the underlying location points are permanently deleted from the device.
 
-Single-trip delete is also available from the **Trip Detail** screen via the trash icon in the header.
+Single-trip delete is also available from the **Trip Detail** screen via the trash button on the map.
 
 To correct how points are grouped into trips rather than remove them, see [Editing Trips](editing-trips.md).
 

@@ -3,39 +3,31 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useMemo, useState, useCallback, useLayoutEffect, useEffect, useRef } from "react"
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native"
-import {
-  Route,
-  Clock,
-  Gauge,
-  TrendingUp,
-  TrendingDown,
-  MapPin,
-  Share,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  type LucideIcon
-} from "lucide-react-native"
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react"
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { ArrowLeft, Share, Trash2 } from "lucide-react-native"
+import { radius } from "@colota/shared"
 import { useTheme } from "../hooks/useTheme"
-import { fonts } from "../styles/typography"
-import { Card } from "../components/ui/Card"
-import { Container } from "../components/ui/Container"
+import { useTranslation } from "../i18n/useTranslation"
+import { text } from "../styles/typography"
+import { Button, Card, Container, Divider, Figure, MapOverlay, StatRow } from "../components"
 import { TrackMap } from "../components/features/inspector/TrackMap"
-import { InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
+import { CHART_PADDING, InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
 import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
-import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
+import { formatDate, formatDistance, formatDuration, formatShortDistance, formatSpeed, formatTime } from "../utils/geo"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
-import { size, HIT_SLOP_LG } from "../constants"
-import { showAlert, showConfirm } from "../services/modalService"
+import { size, space, MAP_OVERLAY_GUTTER, TRIP_MAP_FRACTION } from "../constants"
+import { showAlert, showChoice, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
 import { BOUNDARY_ACTION_SPLIT } from "../types/global"
-import type { Trip, ThemeColors, BoundaryAction } from "../types/global"
+import type { Trip, BoundaryAction } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
 
 const MAX_BARS = 120
+const DOT_SIZE = 12
+const CHART_TICKS = [0, 0.25, 0.5, 0.75, 1]
 
 /** Downsample an array to at most maxBars entries by averaging buckets. */
 function downsample(values: number[], maxBars: number): number[] {
@@ -54,6 +46,9 @@ function downsample(values: number[], maxBars: number): number[] {
 
 export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip Detail">) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
+  const { height: windowHeight } = useWindowDimensions()
   const trip: Trip = route.params.trip
   const trips: Trip[] = route.params.trips
   const tripColor = getTripColor(trip.index)
@@ -64,9 +59,9 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
   const stats = useMemo(() => computeTripStats(trip.locations), [trip])
   const duration = trip.endTime - trip.startTime
-  const displayName = `Trip ${trip.index}`
+  const displayName = t("tripDetail.title", { index: trip.index })
+  const mapHeight = Math.round(windowHeight * TRIP_MAP_FRACTION)
 
-  const [showExport, setShowExport] = useState(false)
   const [chartActiveIndex, setChartActiveIndex] = useState<number | null>(null)
   // Without these, a boundary the user merged reads as a plain gap and refuses to split
   const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, BoundaryAction>>(() => new Map())
@@ -89,14 +84,13 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
     }
   }, [])
 
-  const currentIdx = trips.findIndex((t) => t.index === trip.index)
+  const currentIdx = trips.findIndex((t2) => t2.index === trip.index)
   const prevTrip = currentIdx > 0 ? trips[currentIdx - 1] : null
   const nextTrip = currentIdx >= 0 && currentIdx < trips.length - 1 ? trips[currentIdx + 1] : null
 
   // Reset transient UI state when switching to a different trip.
   useEffect(() => {
     setChartActiveIndex(null)
-    setShowExport(false)
   }, [trip.index])
 
   const goToTrip = useCallback(
@@ -107,22 +101,25 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
     [navigation]
   )
 
-  const handlePointNoteChange = useCallback(async (id: number, note: string | null) => {
-    try {
-      await NativeLocationService.updateLocationNote(id, note)
-      setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
-    } catch (error) {
-      logger.error("[TripDetail] Note update failed:", error)
-      showAlert("Save Failed", "Unable to save note. Please try again.", "error")
-    }
-  }, [])
+  const handlePointNoteChange = useCallback(
+    async (id: number, note: string | null) => {
+      try {
+        await NativeLocationService.updateLocationNote(id, note)
+        setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
+      } catch (error) {
+        logger.error("[TripDetail] Note update failed:", error)
+        showAlert(t("history.note.failed"), t("history.note.failed.message"), "error")
+      }
+    },
+    [t]
+  )
 
   const splittingRef = useRef(false)
   const handlePointSplit = useCallback(
     async (id: number) => {
       if (splittingRef.current) return
       if (!boundariesLoaded) {
-        showAlert("Cannot Split Here", "Still loading this trip's edits. Try again in a moment.", "info")
+        showAlert(t("history.split.blocked"), t("history.split.loading"), "info")
         return
       }
       // A trip's locations are a contiguous run of the day, so the preceding point is the one
@@ -130,16 +127,15 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
       const idx = trip.locations.findIndex((l) => l.id === id)
       const blocked = splitBlockedReason(trip.locations, idx, boundaryOverrides)
       if (blocked) {
-        showAlert("Cannot Split Here", blocked, "info")
+        showAlert(t("history.split.blocked"), blocked, "info")
         return
       }
       const at = trip.locations[idx].timestamp
       const confirmed = await showConfirm({
         // The confirm covers the popup, so name the point in it
-        title: at ? `Start a new trip at ${formatTime(at, true)}?` : "Split Trip?",
-        message:
-          "Everything from this point onwards becomes a separate trip. Your location data is not changed, and you can undo this by merging the two trips again.",
-        confirmText: "Split"
+        title: at ? t("history.split.title", { time: formatTime(at, true) }) : t("history.split.titleUnknown"),
+        message: t("history.split.message"),
+        confirmText: t("history.split.confirm")
       })
       if (!confirmed) return
       splittingRef.current = true
@@ -156,45 +152,64 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         navigation.goBack()
       } catch (error) {
         logger.error("[TripDetail] Split failed:", error)
-        showAlert("Split Failed", "Unable to split the trip here. Please try again.", "error")
+        showAlert(t("history.split.failed"), t("history.split.failed.message"), "error")
       } finally {
         splittingRef.current = false
       }
     },
-    [trip, boundaryOverrides, boundariesLoaded, navigation]
+    [trip, boundaryOverrides, boundariesLoaded, navigation, t]
   )
 
-  const handleExport = useCallback(
+  const runExport = useCallback(
     async (format: ExportFormat) => {
       try {
         const dateStr = new Date(trip.startTime * 1000).toISOString().slice(0, 10)
         const fileName = `colota_trip${trip.index}_${dateStr}${EXPORT_FORMATS[format].extension}`
         const filePath = await NativeLocationService.exportTripsToFile(
-          [{ index: trip.index, color: getTripColor(trip.index), startTs: trip.startTime, endTs: trip.endTime }],
+          [{ index: trip.index, color: tripColor, startTs: trip.startTime, endTs: trip.endTime }],
           format,
           fileName
         )
         await NativeLocationService.shareFile(
           filePath,
           EXPORT_FORMATS[format].mimeType,
-          `Colota ${displayName} - ${dateStr}`
+          t("history.export.shareTrip", { index: trip.index, date: dateStr })
         )
-        setShowExport(false)
       } catch (error) {
         logger.error("[TripDetail] Export failed:", error)
-        showAlert("Export Failed", "Unable to export. Please try again.", "error")
+        showAlert(t("tripDetail.export.failed"), t("tripDetail.export.failed.message"), "error")
       }
     },
-    [trip, displayName]
+    [trip, tripColor, t]
   )
 
+  const exportingRef = useRef(false)
+  const handleExport = useCallback(async () => {
+    if (exportingRef.current) return
+    exportingRef.current = true
+    try {
+      const chosen = await showChoice({
+        title: t("tripDetail.export.title"),
+        message: t("tripDetail.export.message"),
+        variant: "info",
+        buttons: [
+          ...EXPORT_FORMAT_KEYS.map((fmt) => ({ text: EXPORT_FORMATS[fmt].label, style: "secondary" as const })),
+          { text: t("tripDetail.export.cancel"), style: "secondary" as const }
+        ]
+      })
+      if (chosen < 0 || chosen >= EXPORT_FORMAT_KEYS.length) return
+      await runExport(EXPORT_FORMAT_KEYS[chosen])
+    } finally {
+      exportingRef.current = false
+    }
+  }, [runExport, t])
+
   const handleDelete = useCallback(async () => {
+    if (deleting) return
     const confirmed = await showConfirm({
-      title: `Delete ${displayName}?`,
-      message: `This permanently removes ${trip.locationCount} location point${
-        trip.locationCount === 1 ? "" : "s"
-      } from this device. Unsent points will not be uploaded.`,
-      confirmText: "Delete",
+      title: t("tripDetail.delete.title", { index: trip.index }),
+      message: t("tripDetail.delete.message", { count: trip.locationCount }),
+      confirmText: t("tripDetail.delete.confirm"),
       destructive: true
     })
     if (!confirmed) return
@@ -204,28 +219,10 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
       navigation.goBack()
     } catch (error) {
       logger.error("[TripDetail] Delete failed:", error)
-      showAlert("Delete Failed", "Unable to delete trip. Please try again.", "error")
+      showAlert(t("tripDetail.delete.failed"), t("tripDetail.delete.failed.message"), "error")
       setDeleting(false)
     }
-  }, [trip, displayName, navigation])
-
-  const headerRight = useCallback(
-    () => (
-      <Pressable
-        onPress={handleDelete}
-        disabled={deleting}
-        hitSlop={8}
-        style={({ pressed }) => [styles.headerBtn, (pressed || deleting) && { opacity: colors.pressedOpacity }]}
-      >
-        <Trash2 size={size.icon.md} color={colors.error} />
-      </Pressable>
-    ),
-    [handleDelete, deleting, colors.error, colors.pressedOpacity]
-  )
-
-  useLayoutEffect(() => {
-    navigation.setOptions({ headerRight })
-  }, [navigation, headerRight])
+  }, [trip, deleting, navigation, t])
 
   const speedProfile = useMemo(() => {
     const raw = trip.locations.filter((loc) => loc.speed != null).map((loc) => loc.speed ?? 0)
@@ -248,9 +245,17 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   )
   const elevationRange = maxElevation - minElevation
 
+  const speedRange = t("tripDetail.chart.speedRange", { value: formatSpeed(maxSpeed) })
+  const elevationRangeLabel = t("tripDetail.chart.elevationRange", {
+    min: formatShortDistance(minElevation),
+    max: formatShortDistance(maxElevation)
+  })
+
+  const [distanceValue, distanceUnit] = formatDistance(trip.distance).split(" ")
+
   return (
     <Container>
-      <View style={styles.mapContainer}>
+      <View style={[styles.map, { height: mapHeight }]}>
         <TrackMap
           locations={trip.locations}
           colors={colors}
@@ -260,298 +265,258 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
           onPointNoteChange={handlePointNoteChange}
           onPointSplit={handlePointSplit}
         />
-      </View>
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Header */}
-        <View style={styles.section}>
-          <View style={styles.headerTitleRow}>
-            <Pressable
-              onPress={() => goToTrip(prevTrip)}
-              disabled={!prevTrip}
-              hitSlop={HIT_SLOP_LG}
-              style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.chrome,
+            {
+              top: insets.top + MAP_OVERLAY_GUTTER,
+              start: insets.left + MAP_OVERLAY_GUTTER,
+              end: insets.right + MAP_OVERLAY_GUTTER
+            }
+          ]}
+        >
+          <MapOverlay
+            testID="trip-back-btn"
+            variant="control"
+            onPress={() => navigation.goBack()}
+            accessibilityLabel={t("tripDetail.back")}
+          >
+            <ArrowLeft size={size.icon.md} color={colors.text} />
+          </MapOverlay>
+          <View style={styles.chromeEnd}>
+            <MapOverlay
+              testID="trip-share-btn"
+              variant="control"
+              onPress={handleExport}
+              accessibilityLabel={t("tripDetail.export")}
             >
-              <ChevronLeft size={size.icon.lg} color={prevTrip ? colors.primary : colors.textDisabled} />
-            </Pressable>
-            <View style={styles.headerTitleCenter}>
-              <View style={styles.headerTitleLine}>
-                <View style={[styles.dot, { backgroundColor: tripColor }]} />
-                <Text style={[styles.title, { color: colors.text }]}>{displayName}</Text>
-              </View>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                {formatDate(trip.startTime)} · {formatTime(trip.startTime, true)} - {formatTime(trip.endTime, true)}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => goToTrip(nextTrip)}
-              disabled={!nextTrip}
-              hitSlop={HIT_SLOP_LG}
-              style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
+              <Share size={size.icon.md} color={colors.text} />
+            </MapOverlay>
+            <MapOverlay
+              testID="trip-delete-btn"
+              variant="control"
+              onPress={handleDelete}
+              accessibilityLabel={t("tripDetail.delete")}
             >
-              <ChevronRight size={size.icon.lg} color={nextTrip ? colors.primary : colors.textDisabled} />
-            </Pressable>
+              <Trash2 size={size.icon.md} color={colors.error} />
+            </MapOverlay>
           </View>
         </View>
+      </View>
 
-        {/* Stats grid */}
-        <View style={[styles.statsGrid, styles.section]}>
-          <StatCard icon={Route} label="Distance" value={formatDistance(trip.distance)} colors={colors} />
-          <StatCard icon={Clock} label="Duration" value={formatDuration(duration)} colors={colors} />
-          <StatCard icon={Gauge} label="Avg Speed" value={formatSpeed(stats.avgSpeed)} colors={colors} />
-          <StatCard icon={MapPin} label="Points" value={String(trip.locationCount)} colors={colors} />
+      <ScrollView style={styles.sheet} contentContainerStyle={styles.sheetContent}>
+        <Card variant="sheet" style={styles.sheetBody}>
+          <View style={styles.titleRow}>
+            <View style={[styles.dot, { backgroundColor: tripColor }]} importantForAccessibility="no" />
+            <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
+              {displayName}
+            </Text>
+          </View>
+          <Text style={[styles.date, { color: colors.textSecondary }]}>
+            {t("tripDetail.date", {
+              date: formatDate(trip.startTime),
+              start: formatTime(trip.startTime, true),
+              end: formatTime(trip.endTime, true)
+            })}
+          </Text>
+
+          <View style={styles.figure}>
+            <Figure testID="trip-distance" value={distanceValue} unit={distanceUnit} label={t("tripDetail.distance")} />
+          </View>
+
+          <StatRow label={t("tripDetail.duration")} value={formatDuration(duration)} divider />
+          <StatRow label={t("tripDetail.avgSpeed")} value={formatSpeed(stats.avgSpeed)} divider />
+          <StatRow
+            label={t("tripDetail.points")}
+            value={trip.locationCount.toLocaleString()}
+            divider={stats.elevationGain > 0 || stats.elevationLoss > 0}
+          />
           {stats.elevationGain > 0 && (
-            <StatCard
-              icon={TrendingUp}
-              label="Elev. Gain"
-              value={`${Math.round(stats.elevationGain)}m`}
-              colors={colors}
+            <StatRow
+              label={t("tripDetail.elevationGain")}
+              value={formatShortDistance(stats.elevationGain)}
+              divider={stats.elevationLoss > 0}
             />
           )}
           {stats.elevationLoss > 0 && (
-            <StatCard
-              icon={TrendingDown}
-              label="Elev. Loss"
-              value={`${Math.round(stats.elevationLoss)}m`}
-              colors={colors}
-            />
+            <StatRow label={t("tripDetail.elevationLoss")} value={formatShortDistance(stats.elevationLoss)} />
           )}
-        </View>
 
-        {/* Speed profile */}
-        {speedProfile.length > 2 && (
-          <View style={styles.section}>
-            <Card style={styles.chartCard}>
-              <View style={styles.chartTitleRow}>
-                <Text style={[styles.chartTitle, { color: colors.text }]}>Speed</Text>
-                <Text style={[styles.chartRange, { color: colors.textSecondary }]}>max {formatSpeed(maxSpeed)}</Text>
+          {speedProfile.length > 2 && (
+            <View style={styles.chart}>
+              <View style={styles.chartHeader}>
+                <Text style={[styles.chartTitle, { color: colors.text }]}>{t("tripDetail.chart.speed")}</Text>
+                <Text style={[styles.chartRange, { color: colors.textSecondary }]}>{speedRange}</Text>
               </View>
               <InteractiveLineChart
                 data={speedProfile}
                 color={colors.info}
                 textColor={colors.text}
+                axisColor={colors.border}
                 backgroundColor={colors.card}
                 formatValue={(v) => formatSpeed(v).replace(/\.\d+/, "")}
                 activeIndex={chartActiveIndex}
                 onActiveIndexChange={setChartActiveIndex}
+                accessibilityLabel={t("tripDetail.chart.a11y", {
+                  title: t("tripDetail.chart.speed"),
+                  range: speedRange
+                })}
               />
               <View style={styles.chartLabels}>
-                {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
+                {CHART_TICKS.map((frac) => (
                   <Text key={frac} style={[styles.chartLabel, { color: colors.textSecondary }]}>
                     {formatTime(Math.round(trip.startTime + frac * duration))}
                   </Text>
                 ))}
               </View>
-            </Card>
-          </View>
-        )}
+            </View>
+          )}
 
-        {/* Elevation profile */}
-        {elevationProfile.length > 2 && elevationRange > 0 && (
-          <View style={styles.section}>
-            <Card style={styles.chartCard}>
-              <View style={styles.chartTitleRow}>
-                <Text style={[styles.chartTitle, { color: colors.text }]}>Elevation</Text>
-                <Text style={[styles.chartRange, { color: colors.textSecondary }]}>
-                  {Math.round(minElevation)}m - {Math.round(maxElevation)}m
-                </Text>
+          {elevationProfile.length > 2 && elevationRange > 0 && (
+            <View style={styles.chart}>
+              <View style={styles.chartHeader}>
+                <Text style={[styles.chartTitle, { color: colors.text }]}>{t("tripDetail.chart.elevation")}</Text>
+                <Text style={[styles.chartRange, { color: colors.textSecondary }]}>{elevationRangeLabel}</Text>
               </View>
               <InteractiveLineChart
                 data={elevationProfile}
                 color={colors.primary}
                 textColor={colors.text}
+                axisColor={colors.border}
                 backgroundColor={colors.card}
-                formatValue={(v) => `${Math.round(v)}m`}
+                formatValue={(v) => formatShortDistance(v)}
                 activeIndex={chartActiveIndex}
                 onActiveIndexChange={setChartActiveIndex}
+                accessibilityLabel={t("tripDetail.chart.a11y", {
+                  title: t("tripDetail.chart.elevation"),
+                  range: elevationRangeLabel
+                })}
               />
               <View style={styles.chartLabels}>
-                {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
+                {CHART_TICKS.map((frac) => (
                   <Text key={frac} style={[styles.chartLabel, { color: colors.textSecondary }]}>
                     {formatDistance(trip.distance * frac)}
                   </Text>
                 ))}
               </View>
-            </Card>
-          </View>
-        )}
-
-        {/* Export */}
-        <View style={styles.section}>
-          <Pressable
-            onPress={() => setShowExport((prev) => !prev)}
-            style={({ pressed }) => [
-              styles.exportBtn,
-              { backgroundColor: colors.primary, borderRadius: colors.borderRadius },
-              pressed && { opacity: 0.8 }
-            ]}
-          >
-            <Share size={size.icon.sm} color={colors.textOnPrimary} />
-            <Text style={[styles.exportBtnText, { color: colors.textOnPrimary }]}>Export Trip</Text>
-          </Pressable>
-
-          {showExport && (
-            <View style={styles.exportRow}>
-              {EXPORT_FORMAT_KEYS.map((fmt) => (
-                <Pressable
-                  key={fmt}
-                  onPress={() => handleExport(fmt)}
-                  style={({ pressed }) => [
-                    styles.exportChip,
-                    { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
-                >
-                  <Text style={[styles.exportChipText, { color: colors.primary }]}>{EXPORT_FORMATS[fmt].label}</Text>
-                </Pressable>
-              ))}
             </View>
           )}
-        </View>
+
+          <View style={styles.exportSlot}>
+            <Button
+              testID="export-trip-btn"
+              variant="ghost"
+              align="start"
+              icon={Share}
+              title={t("tripDetail.export")}
+              onPress={handleExport}
+            />
+          </View>
+
+          <Divider tight />
+
+          <View style={styles.footer}>
+            <Button
+              testID="previous-trip-btn"
+              variant="ghost"
+              align="start"
+              title={t("tripDetail.previous")}
+              disabled={!prevTrip}
+              onPress={() => goToTrip(prevTrip)}
+              style={styles.footerBtn}
+            />
+            <Button
+              testID="next-trip-btn"
+              variant="ghost"
+              title={t("tripDetail.next")}
+              disabled={!nextTrip}
+              onPress={() => goToTrip(nextTrip)}
+              style={styles.footerBtn}
+            />
+          </View>
+        </Card>
       </ScrollView>
     </Container>
   )
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  colors
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  colors: ThemeColors
-}) {
-  return (
-    <Card style={styles.statCard}>
-      <Icon size={size.icon.sm} color={colors.primary} />
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
-    </Card>
-  )
-}
-
 const styles = StyleSheet.create({
-  content: {
-    paddingBottom: 32
+  map: {
+    width: "100%"
   },
-  section: {
-    paddingHorizontal: 16,
-    marginTop: 12
-  },
-  mapContainer: {
-    height: 480
-  },
-  headerTitleRow: {
+  chrome: {
+    position: "absolute",
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between"
   },
-  headerTitleCenter: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4
-  },
-  headerTitleLine: {
+  chromeEnd: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10
+    gap: space.sm
   },
-  navBtn: {
-    padding: 4
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6
-  },
-  title: {
-    fontSize: 20,
-    ...fonts.bold
-  },
-  subtitle: {
-    fontSize: 13,
-    ...fonts.regular,
-    textAlign: "center"
-  },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8
-  },
-  statCard: {
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    minWidth: "30%",
+  sheet: {
     flex: 1
   },
-  statValue: {
-    fontSize: 16,
-    ...fonts.bold
+  sheetContent: {
+    flexGrow: 1
   },
-  statLabel: {
-    fontSize: 11,
-    ...fonts.regular,
-    textTransform: "uppercase"
+  sheetBody: {
+    paddingBottom: space.xxl
   },
-  chartCard: {
-    padding: 12
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md
   },
-  chartTitleRow: {
+  dot: {
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: radius.pill
+  },
+  title: {
+    ...text.title
+  },
+  date: {
+    ...text.caption
+  },
+  figure: {
+    marginTop: space.lg,
+    marginBottom: space.md
+  },
+  chart: {
+    marginTop: space.xl
+  },
+  chartHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8
+    marginBottom: space.sm
   },
   chartTitle: {
-    fontSize: 14,
-    ...fonts.semiBold
+    ...text.label
   },
   chartRange: {
-    fontSize: 11,
-    ...fonts.regular
+    ...text.caption
   },
   chartLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 4,
-    paddingLeft: 40
+    marginTop: space.xs,
+    paddingStart: CHART_PADDING.left
   },
   chartLabel: {
-    fontSize: 10,
-    ...fonts.regular
+    ...text.caption
   },
-  exportBtn: {
+  exportSlot: {
+    marginTop: space.xl,
+    marginBottom: space.md
+  },
+  footer: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14
+    justifyContent: "space-between",
+    marginTop: space.sm
   },
-  exportBtnText: {
-    fontSize: 15,
-    ...fonts.semiBold
-  },
-  exportRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 12
-  },
-  exportChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1
-  },
-  exportChipText: {
-    fontSize: 12,
-    ...fonts.bold
-  },
-  headerBtn: {
-    padding: 8
+  footerBtn: {
+    flex: 1
   }
 })

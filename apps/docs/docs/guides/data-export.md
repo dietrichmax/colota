@@ -37,10 +37,10 @@ For exports on a schedule instead of on demand, see [Scheduled Export](#schedule
 
 Go to the **History** tab → **Trips**. There are two ways to export:
 
-- **All trips for the day** - tap **Export All** in the header, pick a format, share.
-- **A custom selection** - long-press any trip card to enter selection mode. Tap additional cards to add or remove them. Use **Select all** to grab every trip. Tap the share icon in the selection header, pick a format, share. Works for a single trip too.
+- **All trips for the day** - tap **Export all** above the list, pick a format, share.
+- **A custom selection** - long-press a trip row, or tap **Select trips**, to enter selection mode. Tap further rows to add or remove them. Use **All** to grab every trip. Tap the share icon in the selection header, pick a format, share. Works for a single trip too.
 
-For a single trip you can also tap the card to open **Trip Detail**, then use the share icon in the header.
+For a single trip you can also tap the row to open **Trip Detail**, then use the share button on the map or **Export trip** below the charts.
 
 Trip exports include a `trip` column/property so each location is tagged with its trip number. Custom selections produce a single file containing only the chosen trips.
 
