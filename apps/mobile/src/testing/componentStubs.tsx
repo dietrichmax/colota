@@ -21,9 +21,9 @@ export function TextFieldStub({ label, error, secure: _secure, mono: _mono, styl
 }
 
 /** Mirrors ListItem: label, sub, and the press target the test fires. */
-export function ListItemStub({ label, sub, onPress, testID, disabled }: any) {
+export function ListItemStub({ label, sub, onPress, testID, disabled, expanded }: any) {
   return (
-    <Pressable testID={testID} onPress={onPress} disabled={disabled}>
+    <Pressable testID={testID} onPress={onPress} disabled={disabled} accessibilityState={{ disabled, expanded }}>
       <Text>{label}</Text>
       {sub ? <Text>{sub}</Text> : null}
     </Pressable>

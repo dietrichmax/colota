@@ -379,7 +379,12 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
         {/* Export */}
         <View style={styles.section}>
-          <Button title="Export trip" icon={Share} onPress={() => setShowExport((prev) => !prev)} />
+          <Button
+            title="Export trip"
+            icon={Share}
+            expanded={showExport}
+            onPress={() => setShowExport((prev) => !prev)}
+          />
 
           {showExport && (
             <View style={styles.exportRow}>

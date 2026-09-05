@@ -31,6 +31,7 @@ type Props = {
   variant?: ButtonVariant
   icon?: LucideIcon
   loading?: boolean
+  expanded?: boolean
   testID?: string
 }
 
@@ -44,6 +45,7 @@ export function Button({
   variant = "primary",
   icon: Icon,
   loading = false,
+  expanded,
   testID
 }: Props) {
   const { colors } = useTheme()
@@ -86,6 +88,8 @@ export function Button({
     <View style={style}>
       <Pressable
         testID={testID}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: disabled || loading, expanded }}
         style={({ pressed }) => [
           styles.button,
           {

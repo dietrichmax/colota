@@ -7,6 +7,7 @@ jest.mock("../../../index", () => {
   const R = require("react")
   const { View, Text, TextInput } = require("react-native")
   return {
+    ListItem: require("../../../../testing/componentStubs").ListItemStub,
     TextField: require("../../../../testing/componentStubs").TextFieldStub,
     ChipGroup: function (props: any) {
       const R = require("react")

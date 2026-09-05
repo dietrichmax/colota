@@ -135,7 +135,7 @@ export function AppearanceScreen({}: ScreenProps) {
             label={t("appearance.mapTileServer")}
             sub={t("appearance.mapStyle.subtitle")}
             trailingIcon={showMapTileServer ? ChevronUp : ChevronDown}
-            accessibilityHint={showMapTileServer ? "Collapses the tile server settings" : "Expands the tile server settings"}
+            expanded={showMapTileServer}
             onPress={() => setShowMapTileServer(!showMapTileServer)}
           />
 
