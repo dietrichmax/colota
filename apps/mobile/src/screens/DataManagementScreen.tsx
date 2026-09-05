@@ -23,7 +23,7 @@ import { useTheme } from "../hooks/useTheme"
 import { fonts, fontSizes } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
+import { Button, SectionTitle, Card, Container, Divider, Toast } from "../components"
 import { STATS_REFRESH_FAST, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"
@@ -429,12 +429,11 @@ export function DataManagementScreen({}: ScreenProps) {
         </ScrollView>
 
         {/* Floating Feedback */}
-        <FloatingSaveIndicator
+        <Toast
           saving={isProcessing}
           success={false}
           message={feedback}
           isError={feedback?.toLowerCase().includes("failed") ?? false}
-          colors={colors}
         />
       </KeyboardAvoidingView>
     </Container>

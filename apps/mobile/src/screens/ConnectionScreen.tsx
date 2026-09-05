@@ -9,7 +9,7 @@ import { ScreenProps, Settings } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
-import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
+import { Toast } from "../components/ui/Toast"
 import { Container } from "../components"
 import { ConnectionSettings } from "../components/features/settings/ConnectionSettings"
 
@@ -51,7 +51,7 @@ export function ConnectionScreen({ navigation }: ScreenProps) {
         />
       </ScrollView>
 
-      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
+      <Toast saving={saving} success={saveSuccess} />
     </Container>
   )
 }

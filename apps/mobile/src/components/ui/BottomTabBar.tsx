@@ -7,7 +7,12 @@ import { View, Pressable, Text, StyleSheet } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Settings, LucideIcon, House, MapPinHouse, Waypoints } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { fonts, text } from "../../styles/typography"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+
+// The set has no filled variants, so the active tab is carried by weight instead.
+const ACTIVE_STROKE_WIDTH = 2.25
+const RIPPLE_RADIUS = 20
 
 interface Tab {
   name: string
@@ -39,25 +44,34 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
 
   return (
     <View
+      testID="bottom-tab-bar"
       style={[
         styles.container,
         {
           backgroundColor: colors.background,
-          paddingBottom: insets.bottom + 8
+          minHeight: size.row + insets.bottom,
+          paddingBottom: insets.bottom + space.sm
         }
       ]}
     >
       {TABS.map((tab) => {
         const active = currentRoute === tab.route
-        const color = active ? colors.primary : colors.textLight
+        const color = active ? colors.primary : colors.textSecondary
         return (
           <Pressable
             key={tab.name}
-            style={({ pressed }) => [styles.tab, pressed && { opacity: 0.6 }]}
+            testID={`tab-${tab.name}`}
+            accessibilityRole="tab"
+            accessibilityLabel={tab.label}
+            accessibilityState={{ selected: active }}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: RIPPLE_RADIUS }}
+            style={({ pressed }) => [styles.tab, pressed && { opacity: colors.pressedOpacity }]}
             onPress={() => onNavigate(tab.route)}
           >
-            <tab.icon size={22} color={color} />
-            <Text style={[styles.label, { color }]}>{tab.label}</Text>
+            <tab.icon size={size.icon.lg} color={color} strokeWidth={active ? ACTIVE_STROKE_WIDTH : undefined} />
+            <Text numberOfLines={2} style={[styles.label, active && fonts.semiBold, { color }]}>
+              {tab.label}
+            </Text>
           </Pressable>
         )
       })}
@@ -70,20 +84,17 @@ export { TAB_ROUTES }
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    paddingTop: 8,
-    paddingBottom: 6,
-    elevation: 0,
-    shadowOpacity: 0,
-    shadowRadius: 0
+    paddingTop: space.sm
   },
   tab: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3
+    paddingHorizontal: space.xs,
+    gap: space.xs
   },
   label: {
-    fontSize: 11,
-    ...fonts.medium
+    ...text.caption,
+    textAlign: "center"
   }
 })

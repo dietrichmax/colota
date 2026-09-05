@@ -245,7 +245,7 @@ function AppNavigator() {
   }, [])
 
   return (
-    <SafeAreaProvider>
+    <>
       <StatusBar {...statusBarConfig} />
       <NavigationContainer linking={linking} ref={navigationRef} onStateChange={handleStateChange}>
         <View style={styles.flex}>
@@ -265,19 +265,23 @@ function AppNavigator() {
           <BottomTabBar currentRoute={currentRoute} onNavigate={handleTabNavigate} />
         </View>
       </NavigationContainer>
-    </SafeAreaProvider>
+    </>
   )
 }
 
 export default function App() {
+  // Outermost on purpose: TrackingProvider mounts the dialogs, and the sheet they render
+  // pads itself with the bottom inset, so the provider has to sit above them.
   return (
-    <ThemeProvider>
-      <ErrorBoundary>
-        <TrackingProvider>
-          <AppNavigator />
-        </TrackingProvider>
-      </ErrorBoundary>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <ErrorBoundary>
+          <TrackingProvider>
+            <AppNavigator />
+          </TrackingProvider>
+        </ErrorBoundary>
+      </ThemeProvider>
+    </SafeAreaProvider>
   )
 }
 

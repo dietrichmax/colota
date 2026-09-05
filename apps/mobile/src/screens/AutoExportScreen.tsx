@@ -15,7 +15,7 @@ import {
   FormatSelector,
   ChipGroup,
   RadioDot,
-  FloatingSaveIndicator,
+  Toast,
   SettingRow,
   Toggle,
   Button,
@@ -660,7 +660,7 @@ export function AutoExportScreen(_props: ScreenProps) {
           </View>
         )}
       </ScrollView>
-      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
+      <Toast saving={saving} success={saveSuccess} />
     </Container>
   )
 }

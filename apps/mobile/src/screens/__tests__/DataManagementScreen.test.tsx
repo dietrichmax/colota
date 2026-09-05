@@ -98,7 +98,7 @@ jest.mock("../../components", () => {
     Divider: function () {
       return R.createElement(RN.View, null)
     },
-    FloatingSaveIndicator: function () {
+    Toast: function () {
       return null
     }
   }

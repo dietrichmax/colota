@@ -13,7 +13,10 @@ export const AUTOSAVE_DEBOUNCE_MS = 1500
 export const STATS_REFRESH_IDLE = 30_000
 export const STATS_REFRESH_FAST = 3_000
 export const CONNECTION_TEST_TIMEOUT = 10_000
-export const SAVE_SUCCESS_DISPLAY_MS = 2000
+// M3's floor for a message the user did not ask for. SAVE_SUCCESS_DISPLAY_MS is the
+// name the save screens still import; PR 15 drops it.
+export const TOAST_DURATION_MS = 4000
+export const SAVE_SUCCESS_DISPLAY_MS = TOAST_DURATION_MS
 export const TEST_RESULT_DISPLAY_MS = 5_000
 export const SERVICE_RESTART_DELAY_MS = 500
 export const RESTART_DEBOUNCE_MS = 100

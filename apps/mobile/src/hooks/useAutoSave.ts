@@ -13,7 +13,7 @@ import { logger } from "../utils/logger"
  *
  * Manages:
  * - Debounced and immediate save triggers
- * - Saving/success state for FloatingSaveIndicator
+ * - Saving/success state for the Toast
  * - Timeout cleanup on unmount (via useTimeout)
  */
 export function useAutoSave() {

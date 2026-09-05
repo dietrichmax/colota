@@ -3,29 +3,50 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React from "react"
-import { Pressable, Text, StyleSheet } from "react-native"
-import { fonts } from "../../styles/typography"
+import React, { useCallback, useState } from "react"
+import { Pressable, Text, StyleSheet, View } from "react-native"
+import { radius } from "@colota/shared"
+import { useTheme } from "../../hooks/useTheme"
+import { text } from "../../styles/typography"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
 import { ThemeColors } from "../../types/global"
+import { FocusRing } from "./FocusRing"
+
+const RULE_HEIGHT = 2
 
 interface TabProps {
   label: string
   active: boolean
   onPress: () => void
-  colors: ThemeColors
+  /** Ignored: the tab reads the theme itself. PR 15 removes it from the call sites. */
+  colors?: ThemeColors
+  testID?: string
 }
 
-export function Tab({ label, active, onPress, colors }: TabProps) {
-  const borderBottomColor = active ? colors.primary : "transparent"
-  const textColor = active ? colors.primary : colors.textSecondary
+/** An in-screen tab: the rule sits under the label, not under the row. */
+export function Tab({ label, active, onPress, testID }: TabProps) {
+  const { colors } = useTheme()
+  const [focused, setFocused] = useState(false)
+
+  const onFocus = useCallback(() => setFocused(true), [])
+  const onBlur = useCallback(() => setFocused(false), [])
+
   return (
     <Pressable
+      testID={testID}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
       onPress={onPress}
-      style={({ pressed }) => [styles.tab, { borderBottomColor }, pressed && { opacity: colors.pressedOpacity }]}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      style={styles.tab}
     >
-      <Text style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive, { color: textColor }]}>
-        {label}
-      </Text>
+      <View>
+        <Text style={[styles.label, { color: active ? colors.text : colors.textSecondary }]}>{label}</Text>
+        {active ? <View testID="tab-rule" style={[styles.rule, { backgroundColor: colors.primary }]} /> : null}
+      </View>
+      <FocusRing visible={focused} color={colors.primary} radius={radius.sm} />
     </Pressable>
   )
 }
@@ -33,17 +54,15 @@ export function Tab({ label, active, onPress, colors }: TabProps) {
 const styles = StyleSheet.create({
   tab: {
     flex: 1,
+    minHeight: size.touch,
     alignItems: "center",
-    padding: 12,
-    borderBottomWidth: 2
+    justifyContent: "center"
   },
-  tabText: {
-    fontSize: 14
+  label: {
+    ...text.bodyStrong
   },
-  tabTextActive: {
-    ...fonts.bold
-  },
-  tabTextInactive: {
-    ...fonts.regular
+  rule: {
+    height: RULE_HEIGHT,
+    marginTop: space.xs
   }
 })

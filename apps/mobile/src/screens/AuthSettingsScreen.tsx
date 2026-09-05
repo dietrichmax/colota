@@ -11,7 +11,7 @@ import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { fonts, fontSizes } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup } from "../components"
+import { SectionTitle, Toast, Container, Card, Divider, ChipGroup } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
@@ -365,7 +365,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         </View>
       </ScrollView>
 
-      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
+      <Toast saving={saving} success={saveSuccess} />
     </Container>
   )
 }

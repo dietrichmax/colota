@@ -1,0 +1,100 @@
+{
+  "components/features/dashboard/ConnectionStatus.tsx": ["borderWidth", "borderRadius", "fontSize"],
+  "components/features/dashboard/CoordinateDisplay.tsx": ["fontSize", "letterSpacing", "textTransform"],
+  "components/features/dashboard/DashboardMap.tsx": ["borderRadius", "fontSize", "hexLiteral"],
+  "components/features/dashboard/DatabaseStatistics.tsx": ["fontSize", "letterSpacing", "textTransform"],
+  "components/features/dashboard/WelcomeCard.tsx": ["borderWidth", "borderRadius", "fontSize"],
+  "components/features/inspector/CalendarPicker.tsx": ["borderWidth", "borderRadius", "fontSize"],
+  "components/features/inspector/InteractiveLineChart.tsx": ["hexLiteral"],
+  "components/features/inspector/LocationTable.tsx": ["fontSize", "textTransform"],
+  "components/features/inspector/TrackMap.tsx": [
+    "borderWidth",
+    "borderRadius",
+    "elevation",
+    "shadowColor",
+    "fontSize",
+    "textTransform",
+    "fontWeight",
+    "hexLiteral"
+  ],
+  "components/features/inspector/TripList.tsx": ["borderWidth", "borderRadius", "fontSize"],
+  "components/features/log/FileLoggingPanel.tsx": ["fontSize"],
+  "components/features/map/ColotaMapView.tsx": [
+    "borderWidth",
+    "borderRadius",
+    "elevation",
+    "shadowColor",
+    "fontSize",
+    "hexLiteral",
+    "duration"
+  ],
+  "components/features/map/MapActionButton.tsx": ["borderRadius", "elevation", "shadowColor", "hexLiteral"],
+  "components/features/map/UserLocationOverlay.tsx": [
+    "borderWidth",
+    "borderRadius",
+    "elevation",
+    "shadowColor",
+    "hexLiteral"
+  ],
+  "components/features/map/mapUtils.ts": ["hexLiteral"],
+  "components/features/settings/ConnectionSettings.tsx": ["borderWidth", "borderRadius", "fontSize"],
+  "components/features/settings/MtlsSection.tsx": ["borderWidth", "borderRadius", "fontSize"],
+  "components/features/settings/StatsCard.tsx": [
+    "borderWidth",
+    "borderRadius",
+    "fontSize",
+    "letterSpacing",
+    "textTransform",
+    "fontStyle"
+  ],
+  "components/features/settings/SyncStrategySettings.tsx": [
+    "borderWidth",
+    "borderRadius",
+    "fontSize",
+    "letterSpacing",
+    "textTransform"
+  ],
+  "screens/AboutScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "fontStyle"],
+  "screens/ActivityLogScreen.tsx": [
+    "borderWidth",
+    "borderRadius",
+    "elevation",
+    "shadowColor",
+    "fontSize",
+    "hexLiteral"
+  ],
+  "screens/ApiSettingsScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing"],
+  "screens/AppearanceScreen.tsx": ["borderWidth", "borderRadius", "fontSize"],
+  "screens/AuthSettingsScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing"],
+  "screens/AutoExportScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing", "textTransform"],
+  "screens/BackupRestoreScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "fontWeight"],
+  "screens/DataManagementScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "fontStyle"],
+  "screens/ExportLocationsScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing", "textTransform"],
+  "screens/GeofenceEditorScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "fontStyle"],
+  "screens/GeofenceScreen.tsx": [
+    "borderWidth",
+    "borderRadius",
+    "fontSize",
+    "letterSpacing",
+    "textTransform",
+    "duration"
+  ],
+  "screens/ImportLocationsScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing", "textTransform"],
+  "screens/LocationInspectorScreen.tsx": ["elevation", "shadowColor", "fontSize", "hexLiteral"],
+  "screens/LocationSummaryScreen.tsx": ["fontSize", "textTransform"],
+  "screens/MtlsSettingsScreen.tsx": ["fontSize", "letterSpacing"],
+  "screens/OfflineMapsScreen.tsx": [
+    "borderWidth",
+    "borderRadius",
+    "elevation",
+    "fontSize",
+    "letterSpacing",
+    "textTransform"
+  ],
+  "screens/ProfileEditorScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing", "textTransform"],
+  "screens/SetupImportScreen.tsx": ["fontSize"],
+  "screens/ShareSetupScreen.tsx": ["borderWidth", "fontSize"],
+  "screens/TrackingProfilesScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "letterSpacing", "textTransform"],
+  "screens/TripDetailScreen.tsx": ["borderWidth", "borderRadius", "fontSize", "textTransform"],
+  "utils/trips.ts": ["hexLiteral"]
+}

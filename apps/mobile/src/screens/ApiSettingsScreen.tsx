@@ -21,7 +21,7 @@ import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
 import { fonts } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup } from "../components"
+import { SectionTitle, Toast, Container, Divider, ChipGroup } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
   buildTraccarJsonPayload,
@@ -744,7 +744,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
       </ScrollView>
 
       {/* Floating Save Indicator */}
-      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
+      <Toast saving={saving} success={saveSuccess} />
     </Container>
   )
 }

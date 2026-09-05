@@ -150,7 +150,7 @@ jest.mock("../../components", () => {
           )
         )
       ),
-    FloatingSaveIndicator: () => null,
+    Toast: () => null,
     SettingRow: (props: any) =>
       R.createElement(
         RN.View,

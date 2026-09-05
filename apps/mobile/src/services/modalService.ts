@@ -15,6 +15,8 @@ export interface ModalRequest {
     text: string
     style: "primary" | "secondary" | "destructive"
   }>
+  /** The sheet has no scrim tap and back does not dismiss it; the user must answer. */
+  blocking?: boolean
   resolve: (buttonIndex: number) => void
 }
 
@@ -45,12 +47,13 @@ export function showChoice(options: {
   title: string
   message: string
   variant?: AlertVariant
+  blocking?: boolean
   buttons: Array<{
     text: string
     style?: "primary" | "secondary" | "destructive"
   }>
 }): Promise<number> {
-  const { title, message, variant = "warning", buttons } = options
+  const { title, message, variant = "warning", blocking = false, buttons } = options
 
   return new Promise((resolve) => {
     if (!_handler) {
@@ -71,6 +74,7 @@ export function showChoice(options: {
       title,
       message,
       variant,
+      blocking,
       buttons: buttons.map((btn) => ({
         text: btn.text,
         style: btn.style ?? "secondary"
@@ -83,11 +87,11 @@ export function showChoice(options: {
 export function showConfirm(options: {
   title: string
   message: string
-  confirmText?: string
+  confirmText: string
   cancelText?: string
   destructive?: boolean
 }): Promise<boolean> {
-  const { title, message, confirmText = "OK", cancelText = "Cancel", destructive = false } = options
+  const { title, message, confirmText, cancelText = "Cancel", destructive = false } = options
 
   return new Promise((resolve) => {
     if (!_handler) {
@@ -95,8 +99,8 @@ export function showConfirm(options: {
         title,
         message,
         [
-          { text: cancelText, style: "cancel", onPress: () => resolve(false) },
-          { text: confirmText, onPress: () => resolve(true) }
+          { text: confirmText, onPress: () => resolve(true) },
+          { text: cancelText, style: "cancel", onPress: () => resolve(false) }
         ],
         { cancelable: false }
       )
@@ -108,10 +112,10 @@ export function showConfirm(options: {
       message,
       variant: destructive ? "error" : "info",
       buttons: [
-        { text: cancelText, style: "secondary" },
-        { text: confirmText, style: destructive ? "destructive" : "primary" }
+        { text: confirmText, style: destructive ? "destructive" : "primary" },
+        { text: cancelText, style: "secondary" }
       ],
-      resolve: (index) => resolve(index === 1)
+      resolve: (index) => resolve(index === 0)
     })
   })
 }
