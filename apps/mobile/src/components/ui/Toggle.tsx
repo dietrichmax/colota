@@ -42,8 +42,8 @@ export function Toggle({
       onValueChange={onValueChange}
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
-      trackColor={{ false: colors.border, true: hue + "80" }}
-      thumbColor={value ? hue : colors.border}
+      trackColor={{ false: undefined, true: hue + "80" }}
+      thumbColor={value ? hue : undefined}
     />
   )
 }
