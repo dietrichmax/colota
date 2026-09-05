@@ -7,6 +7,21 @@ jest.mock("../../../index", () => {
   const R = require("react")
   const { View, Text, TextInput } = require("react-native")
   return {
+    ChipGroup: function (props: any) {
+      const R = require("react")
+      const RN = require("react-native")
+      return R.createElement(
+        RN.View,
+        null,
+        props.options.map(function (o: any) {
+          return R.createElement(
+            RN.Pressable,
+            { key: o.value, testID: o.testID, onPress: () => props.onSelect(o.value) },
+            R.createElement(RN.Text, null, o.label)
+          )
+        })
+      )
+    },
     Button: function (props: any) {
       return require("react").createElement(
         require("react-native").Pressable,

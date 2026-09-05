@@ -21,6 +21,7 @@ type ListItemProps = {
   testID?: string
   accessibilityRole?: "button" | "link"
   accessibilityHint?: string
+  disabled?: boolean
 }
 
 export function ListItem({
@@ -31,7 +32,8 @@ export function ListItem({
   onPress,
   testID,
   accessibilityRole = "button",
-  accessibilityHint
+  accessibilityHint,
+  disabled = false
 }: ListItemProps) {
   const { colors } = useTheme()
   return (
@@ -40,24 +42,26 @@ export function ListItem({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint ?? `Opens ${label}`}
-      android_ripple={{ color: colors.border }}
+      accessibilityState={{ disabled }}
+      android_ripple={disabled ? undefined : { color: colors.border }}
+      disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && { opacity: colors.pressedOpacity }]}
+      style={({ pressed }) => [styles.row, pressed && !disabled && { opacity: colors.pressedOpacity }]}
     >
       {Icon && (
         <View style={styles.icon}>
-          <Icon size={size.icon.md} color={colors.textLight} />
+          <Icon size={size.icon.md} color={disabled ? colors.textDisabled : colors.textLight} />
         </View>
       )}
       <View style={styles.content}>
-        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+        <Text style={[styles.label, { color: disabled ? colors.textDisabled : colors.text }]}>{label}</Text>
         {sub ? (
-          <Text style={[styles.sub, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text style={[styles.sub, { color: disabled ? colors.textDisabled : colors.textSecondary }]} numberOfLines={1}>
             {sub}
           </Text>
         ) : null}
       </View>
-      <TrailingIcon size={size.icon.md} color={colors.textLight} />
+      <TrailingIcon size={size.icon.md} color={disabled ? colors.textDisabled : colors.textLight} />
     </Pressable>
   )
 }

@@ -16,7 +16,7 @@ import {
   size,
   space
 } from "../../../constants"
-import { Card, Divider, NumericInput, SectionTitle, SettingRow, Toggle } from "../../index"
+import { Card, ChipGroup, Divider, NumericInput, SectionTitle, SettingRow, Toggle } from "../../index"
 import { PresetOption } from "./PresetOption"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 import { isOverlandFormat } from "../../../utils/apiPayload"
@@ -233,60 +233,28 @@ export function SyncStrategySettings({
                       How often to upload data to server
                     </Text>
 
-                    <View style={styles.optionsGrid}>
-                      {SYNC_INTERVAL_PRESETS.map((sec) => {
-                        const isSelected = settings.syncInterval === sec && !isCustomSyncInterval
-                        return (
-                          <Pressable
-                            key={sec}
-                            style={({ pressed }) => [
-                              styles.gridOption,
-                              {
-                                borderColor: colors.border,
-                                backgroundColor: colors.background
-                              },
-                              isSelected && {
-                                borderColor: colors.primary,
-                                backgroundColor: colors.primary + "20"
-                              },
-                              pressed && { opacity: colors.pressedOpacity }
-                            ]}
-                            onPress={() => handleGridSelect("syncInterval", sec)}
-                          >
-                            <Text style={[styles.gridLabel, { color: isSelected ? colors.primary : colors.text }]}>
-                              {SYNC_INTERVAL_LABELS[sec]}
-                            </Text>
-                          </Pressable>
-                        )
-                      })}
-                      <Pressable
-                        style={({ pressed }) => [
-                          styles.gridOption,
-                          {
-                            borderColor: colors.border,
-                            backgroundColor: colors.background
-                          },
-                          isCustomSyncInterval && {
-                            borderColor: colors.primary,
-                            backgroundColor: colors.primary + "20"
-                          },
-                          pressed && { opacity: colors.pressedOpacity }
-                        ]}
-                        onPress={() => {
+                    <ChipGroup
+                      options={[
+                        ...SYNC_INTERVAL_PRESETS.map((sec) => ({
+                          value: String(sec),
+                          label: SYNC_INTERVAL_LABELS[sec]
+                        })),
+                        { value: "custom", label: "Custom" }
+                      ]}
+                      selected={isCustomSyncInterval ? "custom" : String(settings.syncInterval)}
+                      onSelect={(value) => {
+                        if (value === "custom") {
+                          // Seeding a value is what makes the mode custom; the field takes over.
                           if (!isCustomSyncInterval) {
                             const customValue = 1800
                             setSyncIntervalInput(customValue.toString())
                             handleGridSelect("syncInterval", customValue)
                           }
-                        }}
-                      >
-                        <Text
-                          style={[styles.gridLabel, { color: isCustomSyncInterval ? colors.primary : colors.text }]}
-                        >
-                          Custom
-                        </Text>
-                      </Pressable>
-                    </View>
+                          return
+                        }
+                        handleGridSelect("syncInterval", Number(value))
+                      }}
+                    />
                   </View>
 
                   {isCustomSyncInterval && (
@@ -361,46 +329,24 @@ export function SyncStrategySettings({
                       {settings.syncCondition === "wifi_ssid" && "Upload only on a specific Wi-Fi network"}
                       {settings.syncCondition === "vpn" && "Upload only when VPN is active"}
                     </Text>
-                    <View style={styles.syncConditionChips}>
-                      {(
-                        [
-                          { value: "any", label: "Any" },
-                          { value: "wifi_any", label: "Wi-Fi" },
-                          { value: "wifi_ssid", label: "SSID" },
-                          { value: "vpn", label: "VPN" }
-                        ] as { value: SyncCondition; label: string }[]
-                      ).map((option) => (
-                        <Pressable
-                          key={option.value}
-                          onPress={() => {
-                            const next = {
-                              ...settings,
-                              syncCondition: option.value,
-                              syncPreset: "custom" as const
-                            }
-                            onSettingsChange(next)
-                            onImmediateSave(next)
-                          }}
-                          style={[
-                            styles.syncConditionChip,
-                            {
-                              backgroundColor:
-                                settings.syncCondition === option.value ? colors.primary + "20" : colors.background,
-                              borderColor: settings.syncCondition === option.value ? colors.primary : colors.border
-                            }
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.syncConditionChipText,
-                              { color: settings.syncCondition === option.value ? colors.primary : colors.textSecondary }
-                            ]}
-                          >
-                            {option.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
+                    <ChipGroup
+                      options={[
+                        { value: "any", label: "Any" },
+                        { value: "wifi_any", label: "Wi-Fi" },
+                        { value: "wifi_ssid", label: "SSID" },
+                        { value: "vpn", label: "VPN" }
+                      ]}
+                      selected={settings.syncCondition}
+                      onSelect={(value) => {
+                        const next = {
+                          ...settings,
+                          syncCondition: value as SyncCondition,
+                          syncPreset: "custom" as const
+                        }
+                        onSettingsChange(next)
+                        onImmediateSave(next)
+                      }}
+                    />
                     {settings.syncCondition === "wifi_ssid" && (
                       <View style={styles.ssidRow}>
                         <TextInput
@@ -540,22 +486,6 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
     lineHeight: 18
   },
-  optionsGrid: {
-    flexDirection: "row",
-    gap: space.sm,
-    flexWrap: "wrap"
-  },
-  gridOption: {
-    width: "31%", // ~3 per row with gap in a flexWrap container
-    borderWidth: 2,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: "center"
-  },
-  gridLabel: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold
-  },
   settingRowSpaced: {
     marginTop: space.lg
   },
@@ -566,20 +496,6 @@ const styles = StyleSheet.create({
   },
   customSyncInput: {
     marginTop: space.md
-  },
-  syncConditionChips: {
-    flexDirection: "row",
-    gap: 6
-  },
-  syncConditionChip: {
-    paddingHorizontal: space.md,
-    paddingVertical: 6,
-    borderRadius: radius.md,
-    borderWidth: 1
-  },
-  syncConditionChipText: {
-    ...fonts.medium,
-    fontSize: fontSizes.caption
   },
   ssidRow: {
     flexDirection: "row",
