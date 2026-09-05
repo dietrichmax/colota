@@ -12,7 +12,7 @@ on:
       - '.github/workflows/build-check.yml'
       - '.github/actions/setup-build/**'
   pull_request:
-    branches: [main, feat/design-system]
+    branches: [main]
     paths:
       - 'apps/mobile/**'
       - '!fastlane/**'
