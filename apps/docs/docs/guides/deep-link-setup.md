@@ -16,7 +16,7 @@ Fill in the settings you want to configure. Only the fields you set will be incl
 
 ## Sharing From the App
 
-You can also generate a setup link straight from an existing installation, without the browser generator. Open **Settings -> Share Setup**, tick which categories to include - Tracking, Sync, API, Geofences, Profiles and Credentials - and tap **Share** to send the `colota://setup` link through any app.
+You can also generate a setup link straight from an existing installation, without the browser generator. Open **Settings → Share Setup**, tick which categories to include - Tracking, Sync, API, Geofences, Tracking profiles and Credentials - and tap **Share** to send the `colota://setup` link through any app.
 
 Credentials are off by default. Enabling them puts your username, password, bearer token or custom headers into the link in plain text, so only share it over a trusted channel.
 

@@ -10,7 +10,7 @@ Reference for the HTTP requests Colota sends to your server.
 
 **Method:** `POST` (default) or `GET`
 
-Configure the HTTP method in **Settings > API Settings > HTTP Method**.
+Configure the HTTP method in **Settings → API Field Mapping → HTTP Method**.
 
 ### POST (default)
 
