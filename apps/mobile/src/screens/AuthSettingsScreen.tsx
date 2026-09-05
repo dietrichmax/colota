@@ -20,8 +20,8 @@ import { radius } from "@colota/shared"
 
 const AUTH_TYPE_OPTIONS: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
-  { value: "basic", label: "Basic Auth" },
-  { value: "bearer", label: "Bearer Token" }
+  { value: "basic", label: "Basic auth" },
+  { value: "bearer", label: "Bearer token" }
 ]
 
 type LocalHeader = { key: string; value: string; id: number }
@@ -249,7 +249,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
 
         {/* Custom Headers Section */}
         <View style={styles.section}>
-          <SectionTitle>Custom Headers</SectionTitle>
+          <SectionTitle>Custom headers</SectionTitle>
           <Card>
             {localHeaders.length === 0 ? (
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>No custom headers configured</Text>
@@ -341,7 +341,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         )}
 
         <View style={styles.section}>
-          <SectionTitle>Client Certificate</SectionTitle>
+          <SectionTitle>Client certificate</SectionTitle>
           <Card>
             <Pressable
               style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}

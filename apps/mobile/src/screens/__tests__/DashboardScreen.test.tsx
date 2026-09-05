@@ -120,7 +120,7 @@ describe("DashboardScreen", () => {
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
 
-    expect(getByText("Start Tracking")).toBeTruthy()
+    expect(getByText("Start tracking")).toBeTruthy()
   })
 
   it("shows Stop Tracking button when tracking", () => {
@@ -128,7 +128,7 @@ describe("DashboardScreen", () => {
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
 
-    expect(getByText("Stop Tracking")).toBeTruthy()
+    expect(getByText("Stop tracking")).toBeTruthy()
   })
 
   it("shows CoordinateDisplay when tracking with valid coords", () => {
@@ -155,7 +155,7 @@ describe("DashboardScreen", () => {
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
 
-    expect(getByText("Start Tracking")).toBeDisabled()
+    expect(getByText("Start tracking")).toBeDisabled()
   })
 
   it("hides WelcomeCard while settings have not been read", () => {
@@ -219,7 +219,7 @@ describe("DashboardScreen", () => {
     mockIsLocationEnabled.mockResolvedValue(true)
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
-    fireEvent.press(getByText("Start Tracking"))
+    fireEvent.press(getByText("Start tracking"))
 
     await waitFor(() => expect(mockStartTracking).toHaveBeenCalled())
     expect(mockShowConfirm).not.toHaveBeenCalled()
@@ -232,7 +232,7 @@ describe("DashboardScreen", () => {
     mockShowConfirm.mockResolvedValue(true) // user taps "Location Settings"
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
-    fireEvent.press(getByText("Start Tracking"))
+    fireEvent.press(getByText("Start tracking"))
 
     await waitFor(() => expect(mockOpenLocationSettings).toHaveBeenCalled())
     expect(mockStartTracking).not.toHaveBeenCalled()
@@ -244,7 +244,7 @@ describe("DashboardScreen", () => {
     mockShowConfirm.mockResolvedValue(false) // user taps "Close"
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
-    fireEvent.press(getByText("Start Tracking"))
+    fireEvent.press(getByText("Start tracking"))
 
     await waitFor(() => expect(mockStartTracking).toHaveBeenCalled())
     expect(mockOpenLocationSettings).not.toHaveBeenCalled()

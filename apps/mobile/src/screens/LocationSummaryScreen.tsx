@@ -30,8 +30,8 @@ import { size, space } from "../constants"
 type Period = "week" | "month" | "30days"
 
 const PERIOD_OPTIONS = [
-  { value: "week" as const, label: "This Week" },
-  { value: "month" as const, label: "This Month" },
+  { value: "week" as const, label: "This week" },
+  { value: "month" as const, label: "This month" },
   { value: "30days" as const, label: "Last 30 Days" }
 ]
 const COUNT_UP_DURATION = 600 // ms
@@ -208,7 +208,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
             format={(n) => String(n)}
             style={[styles.summaryValue, { color: colors.text }]}
           />
-          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Active Days</Text>
+          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Active days</Text>
         </Card>
 
         <Card style={styles.summaryCard}>

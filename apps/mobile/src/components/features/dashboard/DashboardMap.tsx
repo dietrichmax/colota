@@ -164,7 +164,7 @@ export function DashboardMap({
             <Image source={icon} style={styles.icon} />
           </View>
           <Text style={[styles.stateTitle, { color: isBatteryCritical ? colors.error : colors.text }]}>
-            {isBatteryCritical ? "Tracking Stopped" : "Tracking Disabled"}
+            {isBatteryCritical ? "Tracking stopped" : "Tracking disabled"}
           </Text>
           <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
             {isBatteryCritical
@@ -186,7 +186,7 @@ export function DashboardMap({
           <View style={[styles.iconCircle, { backgroundColor: colors.warning + "20" }]}>
             <TriangleAlert size={32} color={colors.warning} />
           </View>
-          <Text style={[styles.stateTitle, { color: colors.warning }]}>Location Services Off</Text>
+          <Text style={[styles.stateTitle, { color: colors.warning }]}>Location services off</Text>
           <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
             Tracking can&apos;t get GPS fixes. Tap to open Settings.
           </Text>

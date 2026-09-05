@@ -223,7 +223,7 @@ describe("AboutScreen", () => {
   it("opens Privacy Policy URL when link pressed", async () => {
     const { getByText } = renderScreen()
 
-    fireEvent.press(getByText("Privacy Policy"))
+    fireEvent.press(getByText("Privacy policy"))
 
     await waitFor(() => {
       expect(Linking.openURL).toHaveBeenCalledWith("https://colota.app/privacy-policy")

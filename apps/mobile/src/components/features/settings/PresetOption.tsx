@@ -66,7 +66,7 @@ export function PresetOption({ preset, isSelected, isOfflineMode, onSelect }: Pr
               {showWarningBadge && (
                 <Badge
                   icon={<Zap size={size.icon.sm} color={colors.warning} />}
-                  label="High Battery Usage"
+                  label="High battery usage"
                   color={colors.warning}
                 />
               )}

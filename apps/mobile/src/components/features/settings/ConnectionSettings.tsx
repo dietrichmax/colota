@@ -63,12 +63,12 @@ export function ConnectionSettings({
           if (stats.queued > 0) {
             const hasEndpoint = !!settings.endpoint
             const buttons = [
-              ...(hasEndpoint ? [{ text: "Sync First", style: "primary" as const }] : []),
+              ...(hasEndpoint ? [{ text: "Sync first", style: "primary" as const }] : []),
               { text: "Keep in Queue", style: "secondary" as const },
               { text: "Cancel", style: "secondary" as const }
             ]
             const choice = await showChoice({
-              title: "Unsent Locations",
+              title: "Unsent locations",
               message: `You have ${stats.queued} locations waiting to sync. What would you like to do?`,
               buttons
             })
@@ -181,7 +181,7 @@ export function ConnectionSettings({
     <View style={styles.section}>
       <SectionTitle>Connection</SectionTitle>
       <Card>
-        <SettingRow label="Offline Mode" hint="Save locally, no network sync">
+        <SettingRow label="Offline mode" hint="Save locally, no network sync">
           <Switch
             value={settings.isOfflineMode}
             onValueChange={handleOfflineModeChange}
@@ -199,7 +199,7 @@ export function ConnectionSettings({
 
             <View style={styles.inputGroup}>
               <View style={styles.inputHeader}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Server Endpoint</Text>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Server endpoint</Text>
                 {endpointInput && (
                   <View
                     style={[
@@ -265,7 +265,7 @@ export function ConnectionSettings({
                 if (!endpointInput || !isEndpointAllowed(endpointInput)) return
                 handleTestEndpoint()
               }}
-              title={testing ? "Testing..." : "Test Connection"}
+              title={testing ? "Testing..." : "Test connection"}
             />
 
             {testResponse && (

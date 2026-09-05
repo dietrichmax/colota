@@ -298,7 +298,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         <View style={[styles.statsGrid, styles.section]}>
           <StatCard icon={Route} label="Distance" value={formatDistance(trip.distance)} colors={colors} />
           <StatCard icon={Clock} label="Duration" value={formatDuration(duration)} colors={colors} />
-          <StatCard icon={Gauge} label="Avg Speed" value={formatSpeed(stats.avgSpeed)} colors={colors} />
+          <StatCard icon={Gauge} label="Avg speed" value={formatSpeed(stats.avgSpeed)} colors={colors} />
           <StatCard icon={MapPin} label="Points" value={String(trip.locationCount)} colors={colors} />
           {stats.elevationGain > 0 && (
             <StatCard
@@ -387,7 +387,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
             ]}
           >
             <Share size={size.icon.sm} color={colors.textOnPrimary} />
-            <Text style={[styles.exportBtnText, { color: colors.textOnPrimary }]}>Export Trip</Text>
+            <Text style={[styles.exportBtnText, { color: colors.textOnPrimary }]}>Export trip</Text>
           </Pressable>
 
           {showExport && (

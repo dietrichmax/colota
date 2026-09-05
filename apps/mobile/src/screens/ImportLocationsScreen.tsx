@@ -216,7 +216,7 @@ export function ImportLocationsScreen({}: ScreenProps) {
         <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Locations</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total locations</Text>
               <Text style={[styles.statValue, { color: colors.primaryDark }]}>{totalLocations.toLocaleString()}</Text>
             </View>
           </View>
@@ -224,7 +224,7 @@ export function ImportLocationsScreen({}: ScreenProps) {
 
         {/* Supported formats */}
         <View style={styles.section}>
-          <SectionTitle>Supported Formats</SectionTitle>
+          <SectionTitle>Supported formats</SectionTitle>
           <Card>
             {SUPPORTED_FORMATS.map((entry, i) => (
               <React.Fragment key={entry.title}>
@@ -247,7 +247,7 @@ export function ImportLocationsScreen({}: ScreenProps) {
               Imported rows are flagged as already replicated by default, so they stay local. If you've configured an
               optional sync backend, the confirm dialog also offers to queue them for upload.
             </Text>
-            <Button onPress={handleChooseFile} disabled={busy} title="Choose File" icon={Download} />
+            <Button onPress={handleChooseFile} disabled={busy} title="Choose file" icon={Download} />
           </Card>
         </View>
       </ScrollView>

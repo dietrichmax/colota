@@ -128,20 +128,20 @@ describe("DashboardMap info cards", () => {
   it("shows Tracking Disabled when not tracking", () => {
     const { getByText } = render(<DashboardMap {...baseProps} tracking={false} />)
 
-    expect(getByText("Tracking Disabled")).toBeTruthy()
+    expect(getByText("Tracking disabled")).toBeTruthy()
   })
 
   it("shows battery critical message when not tracking and battery is critical", () => {
     const { getByText } = render(<DashboardMap {...baseProps} tracking={false} isBatteryCritical={true} />)
 
-    expect(getByText("Tracking Stopped")).toBeTruthy()
+    expect(getByText("Tracking stopped")).toBeTruthy()
     expect(getByText("Battery critically low. Charge your device to resume.")).toBeTruthy()
   })
 
   it("shows normal disabled message when not tracking and battery is fine", () => {
     const { getByText } = render(<DashboardMap {...baseProps} tracking={false} isBatteryCritical={false} />)
 
-    expect(getByText("Tracking Disabled")).toBeTruthy()
+    expect(getByText("Tracking disabled")).toBeTruthy()
     expect(getByText("Start tracking to see the map.")).toBeTruthy()
   })
 
@@ -149,7 +149,7 @@ describe("DashboardMap info cards", () => {
     mockCoords = null
     const { getByText, queryByText } = render(<DashboardMap {...baseProps} locationEnabled={false} />)
 
-    expect(getByText("Location Services Off")).toBeTruthy()
+    expect(getByText("Location services off")).toBeTruthy()
     expect(getByText(/Tap to open Settings/)).toBeTruthy()
     // The Searching GPS spinner overlay should NOT show simultaneously
     expect(queryByText("Searching GPS...")).toBeNull()
@@ -160,7 +160,7 @@ describe("DashboardMap info cards", () => {
     const { getByText, queryByText } = render(<DashboardMap {...baseProps} locationEnabled={true} />)
 
     expect(getByText("Searching GPS...")).toBeTruthy()
-    expect(queryByText("Location Services Off")).toBeNull()
+    expect(queryByText("Location services off")).toBeNull()
   })
 
   it("shows location-off status bar when tracking with cached coords but location services off", () => {
@@ -174,7 +174,7 @@ describe("DashboardMap info cards", () => {
     // Profile chip is hidden while location is off (location-off takes priority)
     expect(queryByText("Charging")).toBeNull()
     // Full-screen overlay should NOT show because we have valid coords
-    expect(queryByText("Location Services Off")).toBeNull()
+    expect(queryByText("Location services off")).toBeNull()
   })
 
   it("hides profile and pause-zone chips when location services are off", () => {

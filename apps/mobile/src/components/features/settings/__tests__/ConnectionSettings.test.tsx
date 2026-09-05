@@ -137,7 +137,7 @@ describe("ConnectionSettings", () => {
   it("shows Offline Mode toggle", () => {
     const { getByText } = renderComponent()
 
-    expect(getByText("Offline Mode")).toBeTruthy()
+    expect(getByText("Offline mode")).toBeTruthy()
     expect(getByText("Save locally, no network sync")).toBeTruthy()
   })
 
@@ -145,13 +145,13 @@ describe("ConnectionSettings", () => {
     it("shows Server Endpoint input", () => {
       const { getByText } = renderComponent()
 
-      expect(getByText("Server Endpoint")).toBeTruthy()
+      expect(getByText("Server endpoint")).toBeTruthy()
     })
 
     it("shows Test Connection button", () => {
       const { getByText } = renderComponent()
 
-      expect(getByText("Test Connection")).toBeTruthy()
+      expect(getByText("Test connection")).toBeTruthy()
     })
 
     it("shows Authentication & Headers link", () => {
@@ -177,13 +177,13 @@ describe("ConnectionSettings", () => {
     it("hides Server Endpoint input", () => {
       const { queryByText } = renderComponent({ isOfflineMode: true })
 
-      expect(queryByText("Server Endpoint")).toBeNull()
+      expect(queryByText("Server endpoint")).toBeNull()
     })
 
     it("hides Test Connection button", () => {
       const { queryByText } = renderComponent({ isOfflineMode: true })
 
-      expect(queryByText("Test Connection")).toBeNull()
+      expect(queryByText("Test connection")).toBeNull()
     })
 
     it("hides Authentication & Headers link", () => {
@@ -217,7 +217,7 @@ describe("ConnectionSettings", () => {
       await waitFor(() => {
         expect(mockShowChoice).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: "Unsent Locations",
+            title: "Unsent locations",
             message: expect.stringContaining("10 locations")
           })
         )
@@ -290,7 +290,7 @@ describe("ConnectionSettings", () => {
       await waitFor(() => {
         expect(mockShowChoice).toHaveBeenCalledWith(
           expect.objectContaining({
-            buttons: expect.not.arrayContaining([expect.objectContaining({ text: "Sync First" })])
+            buttons: expect.not.arrayContaining([expect.objectContaining({ text: "Sync first" })])
           })
         )
       })
@@ -318,7 +318,7 @@ describe("ConnectionSettings", () => {
       })
       const { getByText } = renderComponent({}, "http://example.com/api")
 
-      fireEvent.press(getByText("Test Connection"))
+      fireEvent.press(getByText("Test connection"))
 
       await waitFor(() => {
         expect(getByText(/HTTPS is required for public endpoints/)).toBeTruthy()
@@ -330,7 +330,7 @@ describe("ConnectionSettings", () => {
       mockTestEndpoint.mockResolvedValue({ ok: true, status: 200 })
       const { getByText } = renderComponent({}, "https://example.com/api")
 
-      fireEvent.press(getByText("Test Connection"))
+      fireEvent.press(getByText("Test connection"))
 
       await waitFor(() => {
         expect(getByText("Connection successful")).toBeTruthy()
@@ -346,7 +346,7 @@ describe("ConnectionSettings", () => {
       })
       const { getByText } = renderComponent({}, "https://example.com/api")
 
-      fireEvent.press(getByText("Test Connection"))
+      fireEvent.press(getByText("Test connection"))
 
       await waitFor(() => {
         expect(getByText(/TLS handshake failed/)).toBeTruthy()

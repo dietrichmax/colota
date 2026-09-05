@@ -221,7 +221,7 @@ describe("GeofenceEditorScreen", () => {
     await waitFor(() => {
       expect(mockShowConfirm).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: "Delete Geofence",
+          title: "Delete geofence",
           message: 'Delete "Home"?',
           confirmText: "Delete",
           destructive: true

@@ -288,7 +288,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
         ListHeaderComponent={
           <>
             <View style={styles.section}>
-              <SectionTitle>Create Geofence</SectionTitle>
+              <SectionTitle>Create geofence</SectionTitle>
               <Card>
                 <Text style={[styles.hint, { color: colors.textSecondary }]}>
                   Enter a name and radius, then tap the map to place
@@ -347,7 +347,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
                   disabled={placingGeofence}
                 >
                   <Text style={[styles.placeBtnText, { color: colors.textOnPrimary }]}>
-                    {placingGeofence ? "Tap Map to Place..." : "Place Geofence"}
+                    {placingGeofence ? "Tap Map to Place..." : "Place geofence"}
                   </Text>
                 </Pressable>
               </Card>

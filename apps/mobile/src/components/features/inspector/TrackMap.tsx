@@ -300,7 +300,7 @@ export function TrackMap({
           <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
             <MapPinOff size={32} color={colors.textSecondary} />
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>No locations</Text>
           <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>No tracked locations for this day.</Text>
         </View>
       )}

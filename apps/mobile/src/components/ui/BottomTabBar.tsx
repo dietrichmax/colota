@@ -19,7 +19,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { name: "dashboard", label: "Dashboard", icon: House, route: "Dashboard" },
-  { name: "history", label: "History", icon: Waypoints, route: "Location History" },
+  { name: "history", label: "History", icon: Waypoints, route: "Location history" },
   { name: "geofences", label: "Geofences", icon: MapPinHouse, route: "Geofences" },
   { name: "settings", label: "Settings", icon: Settings, route: "Settings" }
 ]

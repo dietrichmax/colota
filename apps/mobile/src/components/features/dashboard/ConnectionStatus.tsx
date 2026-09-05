@@ -74,7 +74,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
       error: { color: colors.error, label: "Unreachable" },
       notConfigured: { color: colors.warning, label: "No endpoint" },
       deviceOffline: { color: colors.textSecondary, label: "Device offline" },
-      offline: { color: colors.textSecondary, label: "Offline Mode" },
+      offline: { color: colors.textSecondary, label: "Offline mode" },
       loading: { color: colors.textLight, label: "Checking" }
     }
 
@@ -95,7 +95,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
     >
       <View style={[styles.dot, { backgroundColor: config.color }]} />
       <Text style={[styles.host, { color: colors.text }]} numberOfLines={1}>
-        {isOffline ? "Offline Mode" : displayUrl || "Server"}
+        {isOffline ? "Offline mode" : displayUrl || "Server"}
       </Text>
       {!isOffline && <Text style={[styles.status, { color: config.color }]}>{config.label}</Text>}
       <ChevronRight size={size.icon.sm} color={colors.textLight} />

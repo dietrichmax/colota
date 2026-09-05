@@ -57,7 +57,7 @@ class ErrorBoundaryInternal extends Component<ErrorBoundaryInternalProps, ErrorB
             ]}
             onPress={this.handleReset}
           >
-            <Text style={[styles.errorButtonText, { color: colors.textOnPrimary }]}>Try Again</Text>
+            <Text style={[styles.errorButtonText, { color: colors.textOnPrimary }]}>Try again</Text>
           </Pressable>
         </View>
       )

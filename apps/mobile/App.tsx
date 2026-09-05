@@ -69,17 +69,17 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "API Config",
     component: ApiSettingsScreen,
-    title: "API Config"
+    title: "API config"
   },
   {
     name: "Auth Settings",
     component: AuthSettingsScreen,
-    title: "Auth Settings"
+    title: "Auth settings"
   },
   {
     name: "mTLS Settings",
     component: MtlsSettingsScreen,
-    title: "mTLS Settings"
+    title: "mTLS settings"
   },
   {
     name: "Geofences",
@@ -89,12 +89,12 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Geofence Editor",
     component: GeofenceEditorScreen,
-    title: "Geofence Editor"
+    title: "Geofence editor"
   },
   {
     name: "Location History",
     component: LocationHistoryScreen,
-    title: "Location History"
+    title: "Location history"
   },
   {
     name: "Location Summary",
@@ -104,32 +104,32 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Export Locations",
     component: ExportLocationsScreen,
-    title: "Export Locations"
+    title: "Export locations"
   },
   {
     name: "Import Locations",
     component: ImportLocationsScreen,
-    title: "Import Locations"
+    title: "Import locations"
   },
   {
     name: "Auto-Export",
     component: AutoExportScreen,
-    title: "Auto-Export"
+    title: "Auto-export"
   },
   {
     name: "Data Management",
     component: DataManagementScreen,
-    title: "Data Management"
+    title: "Data management"
   },
   {
     name: "Tracking Profiles",
     component: TrackingProfilesScreen,
-    title: "Tracking Profiles"
+    title: "Tracking profiles"
   },
   {
     name: "Profile Editor",
     component: ProfileEditorScreen,
-    title: "Profile Editor"
+    title: "Profile editor"
   },
   {
     name: "About Colota",
@@ -139,22 +139,22 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Setup Import",
     component: SetupImportScreen,
-    title: "Import Configuration"
+    title: "Import configuration"
   },
   {
     name: "Share Setup",
     component: ShareSetupScreen,
-    title: "Share Setup"
+    title: "Share setup"
   },
   {
     name: "Trip Detail",
     component: TripDetailScreen,
-    title: "Trip Detail"
+    title: "Trip detail"
   },
   {
     name: "Offline Maps",
     component: OfflineMapsScreen,
-    title: "Offline Maps"
+    title: "Offline maps"
   },
   {
     name: "Logging",
@@ -164,7 +164,7 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Backup & Restore",
     component: BackupRestoreScreen,
-    title: "Backup & Restore"
+    title: "Backup & restore"
   },
   {
     name: "Appearance",
@@ -179,7 +179,7 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Tracking & Sync",
     component: TrackingSyncScreen,
-    title: "Tracking & Sync"
+    title: "Tracking & sync"
   }
 ]
 

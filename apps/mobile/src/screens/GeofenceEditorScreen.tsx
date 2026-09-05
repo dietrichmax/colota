@@ -193,7 +193,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
   const handleDelete = useCallback(async () => {
     if (!geofenceId) return
     const confirmed = await showConfirm({
-      title: "Delete Geofence",
+      title: "Delete geofence",
       message: `Delete "${name}"?`,
       confirmText: "Delete",
       destructive: true
@@ -347,7 +347,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         </Card>
 
         <Button
-          title={saving ? "Saving..." : "Save Geofence"}
+          title={saving ? "Saving..." : "Save geofence"}
           onPress={handleSave}
           disabled={
             saving ||
@@ -357,7 +357,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           }
           icon={Check}
         />
-        {isEditing && <Button title="Delete Geofence" onPress={handleDelete} variant="danger" icon={Trash2} />}
+        {isEditing && <Button title="Delete geofence" onPress={handleDelete} variant="danger" icon={Trash2} />}
       </ScrollView>
     </Container>
   )

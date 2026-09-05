@@ -180,7 +180,7 @@ describe("SettingsScreen", () => {
   it("navigates to Tracking Profiles", () => {
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    fireEvent.press(getByText("Tracking Profiles"))
+    fireEvent.press(getByText("Tracking profiles"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Tracking Profiles")
   })
@@ -188,7 +188,7 @@ describe("SettingsScreen", () => {
   it("navigates to Data Management", () => {
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    fireEvent.press(getByText("Data Management"))
+    fireEvent.press(getByText("Data management"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Data Management")
   })
@@ -217,7 +217,7 @@ describe("SettingsScreen", () => {
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
     expect(getByText("Connection")).toBeTruthy()
-    expect(getByText("Tracking Profiles")).toBeTruthy()
-    expect(getByText("Data Management")).toBeTruthy()
+    expect(getByText("Tracking profiles")).toBeTruthy()
+    expect(getByText("Data management")).toBeTruthy()
   })
 })

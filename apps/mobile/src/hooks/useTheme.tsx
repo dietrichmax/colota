@@ -108,7 +108,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
  * ```tsx
  * const { colors, mode, toggleTheme } = useTheme();
  * <View style={{ backgroundColor: colors.background }}>
- *   <Button onPress={toggleTheme} title="Toggle Theme" />
+ *   <Button onPress={toggleTheme} title="Toggle theme" />
  * </View>
  * ```
  */

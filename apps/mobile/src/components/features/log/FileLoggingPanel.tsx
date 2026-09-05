@@ -120,7 +120,7 @@ export function FileLoggingPanel() {
 
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
-      <SectionTitle>File Logging</SectionTitle>
+      <SectionTitle>File logging</SectionTitle>
 
       <Card style={styles.card}>
         <Text style={[styles.intro, { color: colors.textSecondary }]}>

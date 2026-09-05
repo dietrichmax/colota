@@ -124,8 +124,8 @@ describe("AuthSettingsScreen", () => {
       await waitFor(() => {
         expect(getByText("None")).toBeTruthy()
       })
-      expect(getByText("Basic Auth")).toBeTruthy()
-      expect(getByText("Bearer Token")).toBeTruthy()
+      expect(getByText("Basic auth")).toBeTruthy()
+      expect(getByText("Bearer token")).toBeTruthy()
     })
 
     it("defaults to None with no credential fields visible", async () => {
@@ -147,7 +147,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
 
       expect(getByText("Username")).toBeTruthy()
       expect(getByText("Password")).toBeTruthy()
@@ -160,7 +160,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Bearer Token"))
+      fireEvent.press(getByText("Bearer token"))
 
       expect(getByText("Token")).toBeTruthy()
     })
@@ -172,10 +172,10 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
       expect(getByText("Username")).toBeTruthy()
 
-      fireEvent.press(getByText("Bearer Token"))
+      fireEvent.press(getByText("Bearer token"))
       expect(queryByText("Username")).toBeNull()
       expect(queryByText("Password")).toBeNull()
       expect(getByText("Token")).toBeTruthy()
@@ -188,7 +188,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Bearer Token"))
+      fireEvent.press(getByText("Bearer token"))
       expect(getByText("Token")).toBeTruthy()
 
       fireEvent.press(getByText("None"))
@@ -202,7 +202,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
 
       expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
     })
@@ -248,7 +248,7 @@ describe("AuthSettingsScreen", () => {
         expect(getByText("None")).toBeTruthy()
       })
 
-      fireEvent.press(getByText("Basic Auth"))
+      fireEvent.press(getByText("Basic auth"))
 
       const usernameInput = getByPlaceholderText("Username")
       fireEvent.changeText(usernameInput, "newuser")

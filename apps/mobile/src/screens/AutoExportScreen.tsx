@@ -410,7 +410,7 @@ export function AutoExportScreen(_props: ScreenProps) {
 
         {/* Export Directory */}
         <View style={styles.section}>
-          <SectionTitle>Export Directory</SectionTitle>
+          <SectionTitle>Export directory</SectionTitle>
           <Card>
             <Pressable
               style={({ pressed }) => [styles.directoryRow, pressed && { opacity: colors.pressedOpacity }]}
@@ -419,7 +419,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <FolderOpen size={size.icon.md} color={colors.primary} />
               <View style={styles.directoryContent}>
                 <Text style={[styles.settingLabel, { color: colors.text }]}>
-                  {directoryUri ? "Directory Selected" : "Select Directory"}
+                  {directoryUri ? "Directory selected" : "Select directory"}
                 </Text>
                 <Text style={[styles.settingDescription, { color: colors.textSecondary }]} numberOfLines={1}>
                   {directoryUri
@@ -442,7 +442,7 @@ export function AutoExportScreen(_props: ScreenProps) {
 
         {/* File Name */}
         <View style={styles.section}>
-          <SectionTitle>File Name</SectionTitle>
+          <SectionTitle>File name</SectionTitle>
           <Card>
             <TextInput
               style={[styles.templateInput, { color: colors.text, borderColor: colors.border }]}
@@ -515,7 +515,7 @@ export function AutoExportScreen(_props: ScreenProps) {
 
         {/* Export Range */}
         <View style={styles.section}>
-          <SectionTitle>Export Range</SectionTitle>
+          <SectionTitle>Export range</SectionTitle>
           <Card>
             {MODE_OPTIONS.map((option, i) => (
               <View key={option.key}>
@@ -541,7 +541,7 @@ export function AutoExportScreen(_props: ScreenProps) {
 
         {/* File Retention */}
         <View style={styles.section}>
-          <SectionTitle>File Retention</SectionTitle>
+          <SectionTitle>File retention</SectionTitle>
           <Card>
             <NumericInput
               label="Files to keep"
@@ -566,21 +566,21 @@ export function AutoExportScreen(_props: ScreenProps) {
           <SectionTitle>Status</SectionTitle>
           <Card>
             <View style={styles.statusRow}>
-              <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last Export</Text>
+              <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last export</Text>
               <Text style={[styles.statusValue, { color: colors.text }]}>{formatExportDateTime(lastExport)}</Text>
             </View>
             {lastFileName && (
               <>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last File</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last file</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]} numberOfLines={1}>
                     {lastFileName}
                   </Text>
                 </View>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Locations Exported</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Locations exported</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]}>{lastRowCount}</Text>
                 </View>
               </>
@@ -600,7 +600,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Next Export</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Next export</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]}>{formatExportDateTime(nextExport)}</Text>
                 </View>
               </>
@@ -609,7 +609,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Export Files</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Export files</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]}>{fileCount}</Text>
                 </View>
               </>
@@ -621,7 +621,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         {directoryUri && (
           <View style={styles.section}>
             <Button
-              title={exporting ? "Exporting..." : "Export Now"}
+              title={exporting ? "Exporting..." : "Export now"}
               onPress={handleExportNow}
               disabled={exporting}
               loading={exporting}
@@ -632,7 +632,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         {/* Export History */}
         {exportFiles.length > 0 && (
           <View style={styles.section}>
-            <SectionTitle>Export History</SectionTitle>
+            <SectionTitle>Export history</SectionTitle>
             <Card>
               {exportFiles.map((file, i) => (
                 <View key={file.name}>

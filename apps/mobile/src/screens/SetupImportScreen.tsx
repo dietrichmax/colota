@@ -167,12 +167,12 @@ export function SetupImportScreen({ route, navigation }: any) {
             <View style={styles.headerRow}>
               <CircleAlert size={28} color={colors.error} />
               <View style={styles.headerText}>
-                <Text style={[styles.title, { color: colors.text }]}>Invalid Configuration</Text>
+                <Text style={[styles.title, { color: colors.text }]}>Invalid configuration</Text>
                 <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{result.error}</Text>
               </View>
             </View>
           </Card>
-          <Button title="Go Back" onPress={handleCancel} variant="primary" />
+          <Button title="Go back" onPress={handleCancel} variant="primary" />
         </ScrollView>
       </Container>
     )
@@ -186,7 +186,7 @@ export function SetupImportScreen({ route, navigation }: any) {
           <View style={styles.headerRow}>
             <Import size={28} color={colors.primary} />
             <View style={styles.headerText}>
-              <Text style={[styles.title, { color: colors.text }]}>Import Configuration</Text>
+              <Text style={[styles.title, { color: colors.text }]}>Import configuration</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 A setup link wants to apply {result.entries.length} setting{result.entries.length !== 1 ? "s" : ""}
               </Text>
@@ -224,7 +224,7 @@ export function SetupImportScreen({ route, navigation }: any) {
 
         <View style={styles.actions}>
           <Button
-            title="Apply Configuration"
+            title="Apply configuration"
             onPress={handleApply}
             variant="primary"
             icon={CircleCheckBig}
