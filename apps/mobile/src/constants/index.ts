@@ -32,6 +32,13 @@ export const size = {
   icon: { sm: 16, md: 20, lg: 24 }
 } as const
 
+/**
+ * Material's pressed state layer: 10 percent of the element's own content colour, concatenated
+ * onto a hex token. Android draws it as a ripple from the touch point, which an opacity fade
+ * of the whole element is not.
+ */
+export const STATE_LAYER_ALPHA = "1A"
+
 export const HIT_SLOP_SM = { top: 6, right: 6, bottom: 6, left: 6 } as const
 export const HIT_SLOP_MD = { top: 8, right: 8, bottom: 8, left: 8 } as const
 export const HIT_SLOP_LG = { top: 12, right: 12, bottom: 12, left: 12 } as const

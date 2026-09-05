@@ -9,7 +9,7 @@ import { Check } from "lucide-react-native"
 import { ThemeColors } from "../../types/global"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
-import { size, space } from "../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
 import { radius } from "@colota/shared"
 
 interface ChipGroupProps<T extends string> {
@@ -39,11 +39,8 @@ export function ChipGroup<T extends string>({ options, selected, onSelect, disab
             disabled={isDisabled}
             accessibilityRole="radio"
             accessibilityState={{ checked: isSelected, disabled: isDisabled }}
-            style={({ pressed }) => [
-              styles.chip,
-              { backgroundColor: isSelected ? colors.primaryContainer : colors.well },
-              pressed && !isDisabled && { opacity: colors.pressedOpacity }
-            ]}
+            android_ripple={isDisabled ? undefined : { color: content + STATE_LAYER_ALPHA }}
+            style={[styles.chip, { backgroundColor: isSelected ? colors.primaryContainer : colors.well }]}
             onPress={() => onSelect(value)}
           >
             {isSelected ? <Check size={size.icon.sm} color={content} strokeWidth={2} /> : null}
@@ -62,6 +59,7 @@ const styles = StyleSheet.create({
     gap: space.sm
   },
   chip: {
+    overflow: "hidden",
     flexDirection: "row",
     alignItems: "center",
     gap: space.xs,

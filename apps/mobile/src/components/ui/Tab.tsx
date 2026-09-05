@@ -7,7 +7,8 @@ import React from "react"
 import { Pressable, Text, StyleSheet } from "react-native"
 import { fontSizes, fonts } from "../../styles/typography"
 import { ThemeColors } from "../../types/global"
-import { space } from "../../constants"
+import { space, STATE_LAYER_ALPHA } from "../../constants"
+import { radius } from "@colota/shared"
 
 interface TabProps {
   label: string
@@ -22,7 +23,8 @@ export function Tab({ label, active, onPress, colors }: TabProps) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.tab, { borderBottomColor }, pressed && { opacity: colors.pressedOpacity }]}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      style={[styles.tab, { borderBottomColor }]}
     >
       <Text style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive, { color: textColor }]}>
         {label}
@@ -36,7 +38,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     padding: space.md,
-    borderBottomWidth: 2
+    borderBottomWidth: 2,
+    // Top corners only: the bottom rule is the active indicator and must stay square.
+    borderTopLeftRadius: radius.sm,
+    borderTopRightRadius: radius.sm,
+    overflow: "hidden"
   },
   tabText: {
     fontSize: fontSizes.body

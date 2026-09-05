@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Settings, LucideIcon, House, MapPinHouse, Waypoints } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
-import { size, space } from "../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
 import type { RootStackRoute } from "../../types/navigation"
 
 interface Tab {
@@ -56,7 +56,8 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
         return (
           <Pressable
             key={tab.name}
-            style={({ pressed }) => [styles.tab, pressed && { opacity: colors.pressedOpacity }]}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.touch / 2 }}
+            style={styles.tab}
             onPress={() => onNavigate(tab.route)}
           >
             <tab.icon size={size.icon.md} color={color} />

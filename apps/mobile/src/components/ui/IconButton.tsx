@@ -7,7 +7,7 @@ import React from "react"
 import { Pressable, ActivityIndicator, StyleSheet, StyleProp, ViewStyle } from "react-native"
 import { type LucideIcon } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { size, space, HIT_SLOP_MD } from "../../constants"
+import { size, space, HIT_SLOP_MD, STATE_LAYER_ALPHA } from "../../constants"
 import { radius } from "@colota/shared"
 
 type IconButtonTone = "neutral" | "primary" | "danger"
@@ -52,12 +52,12 @@ export function IconButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: disabled || loading }}
-      style={({ pressed }) => [
-        styles.button,
-        { backgroundColor: fill },
-        pressed && !disabled && { opacity: colors.pressedOpacity },
-        style
-      ]}
+      android_ripple={
+        disabled || loading
+          ? undefined
+          : { color: content + STATE_LAYER_ALPHA, borderless: true, radius: size.touch / 2 }
+      }
+      style={[styles.button, { backgroundColor: fill }, style]}
     >
       {loading ? (
         <ActivityIndicator size="small" color={content} />
