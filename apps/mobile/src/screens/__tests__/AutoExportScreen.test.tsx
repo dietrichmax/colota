@@ -128,6 +128,15 @@ jest.mock("../../components", () => {
   const RN = require("react-native")
   const { EXPORT_FORMATS, EXPORT_FORMAT_KEYS } = require("../../utils/exportConverters")
   return {
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Container: (props: any) => R.createElement(RN.View, null, props.children),
     Card: (props: any) => R.createElement(RN.View, null, props.children),
     SectionTitle: (props: any) => R.createElement(RN.Text, null, props.children),

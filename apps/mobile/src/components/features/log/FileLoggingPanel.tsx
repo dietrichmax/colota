@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from "react"
-import { View, Text, Switch, StyleSheet, ScrollView, ActivityIndicator } from "react-native"
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native"
 import { Card, Divider, SectionTitle } from "../../index"
 import { Button } from "../../ui/Button"
 import { useTheme } from "../../../hooks/useTheme"
@@ -14,6 +14,7 @@ import { logger } from "../../../utils/logger"
 import { showAlert, showChoice } from "../../../services/modalService"
 import { formatBytes } from "../../../utils/format"
 import { space } from "../../../constants"
+import { Toggle } from "../../../components/ui/Toggle"
 
 export function FileLoggingPanel() {
   const { colors } = useTheme()
@@ -133,11 +134,10 @@ export function FileLoggingPanel() {
           <View style={styles.toggleLabel}>
             <Text style={[styles.label, { color: colors.text }]}>Persistent file logging</Text>
           </View>
-          <Switch
+          <Toggle
+            accessibilityLabel="Persistent file logging"
             value={enabled}
             onValueChange={handleToggle}
-            trackColor={{ false: colors.border, true: colors.primary + "80" }}
-            thumbColor={enabled ? colors.primary : colors.border}
           />
         </View>
 

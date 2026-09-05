@@ -5,22 +5,9 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
-import { Text, StyleSheet, Switch, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
 import { FolderOpen, CircleCheckBig, Share2, TriangleAlert } from "lucide-react-native"
-import {
-  Container,
-  Card,
-  SectionTitle,
-  Divider,
-  FormatSelector,
-  ChipGroup,
-  RadioDot,
-  FloatingSaveIndicator,
-  SettingRow,
-  Button,
-  TimePicker,
-  NumericInput
-} from "../components"
+import { Button, Card, ChipGroup, Container, Divider, FloatingSaveIndicator, FormatSelector, NumericInput, RadioDot, SectionTitle, SettingRow, TimePicker, Toggle } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { useTimeout } from "../hooks/useTimeout"
 import { ScreenProps } from "../types/global"
@@ -399,11 +386,10 @@ export function AutoExportScreen(_props: ScreenProps) {
             label="Enable Auto-Export"
             hint={enabled ? "Auto-Exports are scheduled" : "Auto-Exports are disabled"}
           >
-            <Switch
+            <Toggle
+              accessibilityLabel="Enable auto-export"
               value={enabled}
               onValueChange={handleToggle}
-              trackColor={{ false: colors.border, true: colors.primary + "80" }}
-              thumbColor={enabled ? colors.primary : colors.border}
             />
           </SettingRow>
         </Card>
