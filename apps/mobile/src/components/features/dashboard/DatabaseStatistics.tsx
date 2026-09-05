@@ -16,7 +16,7 @@ type DatabaseStatisticsProps = {
   stats: DatabaseStats
 }
 
-export const DatabaseStatistics = React.memo(function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
+export const DatabaseStatistics = React.memo(function DatabaseStatisticsView({ stats }: DatabaseStatisticsProps) {
   const { settings } = useTracking()
   const isOfflineMode = settings.isOfflineMode
   const { colors } = useTheme()
