@@ -13,7 +13,7 @@ import { ScreenProps } from "../types/global"
 import { useCoords } from "../contexts/TrackingProvider"
 import { fontSizes, fonts } from "../styles/typography"
 import { X, CircleCheckBig, RefreshCw, TriangleAlert } from "lucide-react-native"
-import { Container, SectionTitle, Card } from "../components"
+import { Button, Card, Container, SectionTitle } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
 import {
   DEFAULT_MAP_ZOOM,
@@ -167,18 +167,12 @@ const DownloadForm = memo(
                 </Pressable>
               </View>
             ) : (
-              <Pressable
+              <Button
                 testID="download-btn"
-                style={({ pressed }) => [
-                  styles.downloadBtn,
-                  { backgroundColor: estimatedSizeLabel ? colors.primary : colors.border },
-                  pressed && { opacity: colors.pressedOpacity }
-                ]}
-                onPress={onDownload}
+                title="Download area"
                 disabled={!estimatedSizeLabel}
-              >
-                <Text style={[styles.downloadBtnText, { color: colors.textOnPrimary }]}>Download area</Text>
-              </Pressable>
+                onPress={onDownload}
+              />
             )}
 
             {downloadError && <Text style={[styles.errorText, { color: colors.error }]}>{downloadError}</Text>}
@@ -903,8 +897,6 @@ const styles = StyleSheet.create({
   },
   input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: fontSizes.input },
   sizeEstimate: { fontSize: fontSizes.caption, ...fonts.regular, marginBottom: space.md },
-  downloadBtn: { padding: space.lg, borderRadius: radius.md, alignItems: "center" },
-  downloadBtnText: { fontSize: fontSizes.label, ...fonts.semiBold },
   progressContainer: { gap: 10 },
   progressHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   progressLabel: { fontSize: fontSizes.body, ...fonts.semiBold },

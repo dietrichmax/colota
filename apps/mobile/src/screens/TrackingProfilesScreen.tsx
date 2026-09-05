@@ -11,7 +11,7 @@ import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { SavedTrackingProfile, ScreenProps } from "../types/global"
 import { fontSizes, fonts } from "../styles/typography"
-import { Card, Container, SectionTitle, Toggle } from "../components"
+import { Button, Card, Container, SectionTitle, Toggle } from "../components"
 import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { buildProfilesLink } from "../utils/setupLink"
@@ -182,17 +182,12 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
               </Text>
             </View>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.createBtn,
-                { backgroundColor: colors.primary },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
+            <Button
+              title="Create profile"
+              icon={Plus}
+              style={styles.createBtn}
               onPress={() => navigation.navigate("Profile Editor", {})}
-            >
-              <Plus size={size.icon.md} color={colors.textOnPrimary} />
-              <Text style={[styles.createBtnText, { color: colors.textOnPrimary }]}>Create profile</Text>
-            </Pressable>
+            />
 
             {profiles.length > 0 && (
               <View style={styles.activeHeader}>
@@ -237,7 +232,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     marginBottom: space.xl
   },
-  createBtnText: { fontSize: fontSizes.input, ...fonts.semiBold },
   card: { marginBottom: space.md },
   activeCard: { borderWidth: 2 },
   row: { flexDirection: "row", alignItems: "center" },

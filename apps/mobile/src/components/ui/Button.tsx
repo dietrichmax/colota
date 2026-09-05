@@ -32,6 +32,7 @@ type Props = {
   variant?: ButtonVariant
   icon?: LucideIcon
   loading?: boolean
+  testID?: string
 }
 
 export function Button({
@@ -43,7 +44,8 @@ export function Button({
   color,
   variant = "primary",
   icon: Icon,
-  loading = false
+  loading = false,
+  testID
 }: Props) {
   const { colors } = useTheme()
   const scale = useRef(new Animated.Value(1)).current
@@ -104,6 +106,7 @@ export function Button({
   return (
     <Animated.View style={[{ transform: [{ scale }] }, style]}>
       <Pressable
+        testID={testID}
         style={({ pressed }) => [
           styles.button,
           {
@@ -134,6 +137,9 @@ export function Button({
 
 const styles = StyleSheet.create({
   button: {
+    // Android's minimum touch target; padding alone leaves this at about 43.
+    minHeight: size.touch,
+    justifyContent: "center",
     paddingVertical: space.md,
     paddingHorizontal: space.xl,
     alignItems: "center",

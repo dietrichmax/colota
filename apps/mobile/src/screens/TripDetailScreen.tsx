@@ -20,6 +20,7 @@ import {
 } from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
 import { fontSizes, fonts } from "../styles/typography"
+import { Button } from "../components/ui/Button"
 import { Card } from "../components/ui/Card"
 import { Container } from "../components/ui/Container"
 import { TrackMap } from "../components/features/inspector/TrackMap"
@@ -378,17 +379,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
         {/* Export */}
         <View style={styles.section}>
-          <Pressable
-            onPress={() => setShowExport((prev) => !prev)}
-            style={({ pressed }) => [
-              styles.exportBtn,
-              { backgroundColor: colors.primary, borderRadius: colors.borderRadius },
-              pressed && { opacity: colors.pressedOpacity }
-            ]}
-          >
-            <Share size={size.icon.sm} color={colors.textOnPrimary} />
-            <Text style={[styles.exportBtnText, { color: colors.textOnPrimary }]}>Export trip</Text>
-          </Pressable>
+          <Button title="Export trip" icon={Share} onPress={() => setShowExport((prev) => !prev)} />
 
           {showExport && (
             <View style={styles.exportRow}>
@@ -523,17 +514,6 @@ const styles = StyleSheet.create({
   chartLabel: {
     fontSize: fontSizes.micro,
     ...fonts.regular
-  },
-  exportBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: space.sm,
-    paddingVertical: 14
-  },
-  exportBtnText: {
-    fontSize: fontSizes.input,
-    ...fonts.semiBold
   },
   exportRow: {
     flexDirection: "row",

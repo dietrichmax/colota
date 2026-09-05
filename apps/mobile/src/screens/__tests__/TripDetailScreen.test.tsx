@@ -74,6 +74,16 @@ jest.mock("../../components/ui/Container", () => {
   return { Container: ({ children }: any) => R.createElement(View, null, children) }
 })
 
+jest.mock("../../components/ui/Button", () => ({
+  Button: function (props: any) {
+    return require("react").createElement(
+      require("react-native").Pressable,
+      { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+      require("react").createElement(require("react-native").Text, null, props.title)
+    )
+  }
+}))
+
 jest.mock("../../components/ui/Card", () => {
   const R = require("react")
   const { View } = require("react-native")
