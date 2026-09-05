@@ -32,10 +32,9 @@ export { FormatOption } from "./ui/FormatOption"
 export { FormatSelector } from "./ui/FormatSelector"
 export { RadioDot } from "./ui/RadioDot"
 export { SettingRow } from "./ui/SettingRow"
-export { Toggle } from "./ui/Toggle"
 export { FieldMessage } from "./ui/FieldMessage"
 export { ListItem } from "./ui/ListItem"
-export { BottomTabBar, TAB_ROUTES } from "./ui/BottomTabBar"
+export { BottomTabBar } from "./ui/BottomTabBar"
 
 // ============================================================================
 // Feature Components - Dashboard

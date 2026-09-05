@@ -76,7 +76,7 @@ jest.mock("lucide-react-native", () => {
   const { Text } = require("react-native")
   const stub = (name: string) => (_props: any) => R.createElement(Text, null, name)
   return {
-    ChartNoAxesColumn: stub("ChartNoAxesColumn")
+    BarChart2: stub("BarChart2")
   }
 })
 
@@ -84,15 +84,6 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View } = require("react-native")
   return {
-    Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
-        testID: props.testID,
-        value: props.value,
-        onValueChange: props.onValueChange,
-        disabled: props.disabled,
-        accessibilityLabel: props.accessibilityLabel
-      })
-    },
     Container: ({ children }: any) => R.createElement(View, null, children)
   }
 })
@@ -183,10 +174,7 @@ jest.mock("../../components/features/inspector/LocationTable", () => {
 })
 
 jest.mock("../../styles/typography", () => ({
-  fonts: { regular: {}, bold: {}, semiBold: {} },
-  // The real scale, not stubs: these tests render styles that read a named size, and a
-  // stubbed object would let a renamed key through.
-  fontSizes: jest.requireActual("@colota/shared").fontSizes
+  fonts: { regular: {}, bold: {}, semiBold: {} }
 }))
 
 jest.mock("../../utils/logger", () => ({

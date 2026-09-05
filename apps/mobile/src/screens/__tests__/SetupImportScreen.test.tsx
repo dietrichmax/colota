@@ -68,15 +68,6 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
-    Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
-        testID: props.testID,
-        value: props.value,
-        onValueChange: props.onValueChange,
-        disabled: props.disabled,
-        accessibilityLabel: props.accessibilityLabel
-      })
-    },
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
@@ -116,28 +107,29 @@ describe("SetupImportScreen", () => {
   describe("parsing and validation", () => {
     it("shows error when no config param is provided", () => {
       const { getByText } = renderScreen()
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
       expect(getByText("No configuration data in URL")).toBeTruthy()
     })
 
     it("shows error for invalid base64", () => {
       const { getByText } = renderScreen("!!!not-base64!!!")
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("shows error for valid base64 but invalid JSON", () => {
       const { getByText } = renderScreen(btoa("not json"))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("shows error when config has no valid settings", () => {
       const { getByText } = renderScreen(encode({ unknownKey: "value" }))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
       expect(getByText("No valid settings found in configuration")).toBeTruthy()
     })
 
     it("parses valid endpoint config", () => {
       const { getByText } = renderScreen(encode({ endpoint: "https://my-server.com/api" }))
+      expect(getByText("Import Configuration")).toBeTruthy()
       expect(getByText("Endpoint")).toBeTruthy()
       expect(getByText("https://my-server.com/api")).toBeTruthy()
     })
@@ -169,17 +161,17 @@ describe("SetupImportScreen", () => {
 
     it("rejects invalid interval (negative)", () => {
       const { getByText } = renderScreen(encode({ interval: -5 }))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("rejects invalid auth type", () => {
       const { getByText } = renderScreen(encode({ auth: { type: "oauth" } }))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("rejects invalid API template", () => {
       const { getByText } = renderScreen(encode({ apiTemplate: "invalid" }))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("counts settings correctly in subtitle", () => {
@@ -200,7 +192,7 @@ describe("SetupImportScreen", () => {
       const config = { endpoint: "https://test.com", interval: 15 }
       const { getByText } = renderScreen(encode(config))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockShowAlert).toHaveBeenCalledWith(
@@ -220,7 +212,7 @@ describe("SetupImportScreen", () => {
       const config = { endpoint: "https://test.com", auth: { type: "bearer", bearerToken: "mytoken" } }
       const { getByText } = renderScreen(encode(config))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockSaveAuthConfig).toHaveBeenCalledWith(
@@ -232,7 +224,7 @@ describe("SetupImportScreen", () => {
     it("marks hasCompletedSetup as true", async () => {
       const { getByText } = renderScreen(encode({ endpoint: "https://test.com" }))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockSetSettings).toHaveBeenCalledWith(expect.objectContaining({ hasCompletedSetup: true }))
@@ -243,7 +235,7 @@ describe("SetupImportScreen", () => {
       const config = { interval: 15, distance: 3, syncInterval: 120 }
       const { getByText } = renderScreen(encode(config))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockSetSettings).toHaveBeenCalledWith(expect.objectContaining({ syncPreset: "custom" }))
@@ -260,7 +252,7 @@ describe("SetupImportScreen", () => {
       }
       const { getByText } = renderScreen(encode(config))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockSetSettings).toHaveBeenCalledWith(expect.objectContaining({ syncPreset: "balanced" }))
@@ -271,7 +263,7 @@ describe("SetupImportScreen", () => {
       mockSetSettings.mockRejectedValueOnce(new Error("fail"))
       const { getByText } = renderScreen(encode({ endpoint: "https://test.com" }))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to apply configuration. Please try again.", "error")
@@ -288,7 +280,7 @@ describe("SetupImportScreen", () => {
 
     it("navigates to Dashboard on Go Back (error state)", () => {
       const { getByText } = renderScreen()
-      fireEvent.press(getByText("Go back"))
+      fireEvent.press(getByText("Go Back"))
       expect(mockNavigate).toHaveBeenCalledWith("Dashboard")
     })
   })
@@ -305,12 +297,12 @@ describe("SetupImportScreen", () => {
 
     it("rejects a geofence missing required fields", () => {
       const { getByText } = renderScreen(encode({ geofences: [{ name: "X", lat: 52.5 }] }))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("rejects a geofence with non-positive radius", () => {
       const { getByText } = renderScreen(encode({ geofences: [{ ...validGeofence, radius: 0 }] }))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("skips invalid entries but keeps valid ones", () => {
@@ -325,7 +317,7 @@ describe("SetupImportScreen", () => {
     it("calls createGeofence on apply with defaults filled in", async () => {
       const { getByText } = renderScreen(encode({ geofences: [validGeofence] }))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateGeofence).toHaveBeenCalledTimes(1)
@@ -362,7 +354,7 @@ describe("SetupImportScreen", () => {
       }
       const { getByText } = renderScreen(encode(config))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateGeofence).toHaveBeenCalledTimes(1)
@@ -389,7 +381,7 @@ describe("SetupImportScreen", () => {
       }
       const { getByText } = renderScreen(encode(config))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateGeofence).toHaveBeenCalledTimes(2)
@@ -401,7 +393,7 @@ describe("SetupImportScreen", () => {
     it("does not call createGeofence when no geofences in config", async () => {
       const { getByText } = renderScreen(encode({ endpoint: "https://test.com" }))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockShowAlert).toHaveBeenCalledWith("Configuration Applied", expect.any(String), "success")
@@ -434,7 +426,7 @@ describe("SetupImportScreen", () => {
       mockGetGeofences.mockResolvedValueOnce([{ id: 7, name: "Home", lat: 0, lon: 0, radius: 50, enabled: true }])
       const { getByText } = renderScreen(encode({ geofences: [validGeofence] }))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateGeofence).toHaveBeenCalledTimes(1)
@@ -451,7 +443,7 @@ describe("SetupImportScreen", () => {
       const { getByText, getByTestId } = renderScreen(encode({ geofences: [validGeofence] }))
 
       fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateGeofence).toHaveBeenCalledTimes(1)
@@ -465,7 +457,7 @@ describe("SetupImportScreen", () => {
       const { getByText, getByTestId } = renderScreen(encode({ geofences: [validGeofence] }))
 
       fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateGeofence).toHaveBeenCalledTimes(1)
@@ -487,7 +479,7 @@ describe("SetupImportScreen", () => {
       const { getByText, getByTestId } = renderScreen(encode(config))
 
       fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateGeofence).toHaveBeenCalledTimes(2)
@@ -527,19 +519,19 @@ describe("SetupImportScreen", () => {
 
     it("rejects a profile missing name", () => {
       const { getByText } = renderScreen(encode({ profiles: [{ ...validProfile, name: "" }] }))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("rejects a profile with unknown condition type", () => {
       const config = { profiles: [{ ...validProfile, condition: { type: "bogus" } }] }
       const { getByText } = renderScreen(encode(config))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("rejects a speed profile missing speedThreshold", () => {
       const config = { profiles: [{ ...validProfile, condition: { type: "speed_above" } }] }
       const { getByText } = renderScreen(encode(config))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("accepts a non-speed condition without speedThreshold", () => {
@@ -552,13 +544,13 @@ describe("SetupImportScreen", () => {
 
     it("rejects a profile with interval < 1", () => {
       const { getByText } = renderScreen(encode({ profiles: [{ ...validProfile, interval: 0 }] }))
-      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText("Invalid Configuration")).toBeTruthy()
     })
 
     it("calls createProfile on apply with all fields", async () => {
       const { getByText } = renderScreen(encode({ profiles: [validProfile] }))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateProfile).toHaveBeenCalledTimes(1)
@@ -586,7 +578,7 @@ describe("SetupImportScreen", () => {
       }
       const { getByText } = renderScreen(encode({ profiles: [minimal] }))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateProfile).toHaveBeenCalledTimes(1)
@@ -617,7 +609,7 @@ describe("SetupImportScreen", () => {
       }
       const { getByText } = renderScreen(encode(config))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateProfile).toHaveBeenCalledTimes(1)
@@ -639,7 +631,7 @@ describe("SetupImportScreen", () => {
       }
       const { getByText } = renderScreen(encode(config))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateProfile).toHaveBeenCalledTimes(1)
@@ -653,7 +645,7 @@ describe("SetupImportScreen", () => {
       }
       const { getByText } = renderScreen(encode(config))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateProfile).toHaveBeenCalledTimes(2)
@@ -665,7 +657,7 @@ describe("SetupImportScreen", () => {
     it("does not call createProfile when no profiles in config", async () => {
       const { getByText } = renderScreen(encode({ endpoint: "https://test.com" }))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockShowAlert).toHaveBeenCalledWith("Configuration Applied", expect.any(String), "success")
@@ -701,7 +693,7 @@ describe("SetupImportScreen", () => {
       const { getByText, getByTestId } = renderScreen(encode({ profiles: [validProfile] }))
 
       fireEvent(getByTestId("replace-imports-switch"), "valueChange", true)
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateProfile).toHaveBeenCalledTimes(1)
@@ -726,7 +718,7 @@ describe("SetupImportScreen", () => {
       ])
       const { getByText } = renderScreen(encode({ profiles: [validProfile] }))
 
-      fireEvent.press(getByText("Apply configuration"))
+      fireEvent.press(getByText("Apply Configuration"))
 
       await waitFor(() => {
         expect(mockCreateProfile).toHaveBeenCalledTimes(1)

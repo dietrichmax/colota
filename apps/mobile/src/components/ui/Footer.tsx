@@ -6,8 +6,7 @@
 import React from "react"
 import { View, Text, StyleSheet } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fontSizes, fonts } from "../../styles/typography"
-import { space } from "../../constants"
+import { fonts } from "../../styles/typography"
 
 export function Footer() {
   const { colors } = useTheme()
@@ -21,12 +20,12 @@ export function Footer() {
 
 const styles = StyleSheet.create({
   footer: {
-    marginTop: space.xxl,
-    marginBottom: space.lg,
+    marginTop: 32,
+    marginBottom: 16,
     alignItems: "center"
   },
   copyright: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.regular
   }
 })

@@ -142,7 +142,7 @@ describe("ConnectionStatus", () => {
 
     const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => expect(getByText("Offline mode")).toBeTruthy())
+    await waitFor(() => expect(getByText("Offline Mode")).toBeTruthy())
   })
 
   it("shows 'Device offline' when the device has no network", async () => {

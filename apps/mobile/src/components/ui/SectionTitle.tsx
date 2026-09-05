@@ -6,8 +6,7 @@
 import React from "react"
 import { View, StyleSheet, ViewStyle, StyleProp, Text } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fontSizes, fonts } from "../../styles/typography"
-import { space } from "../../constants"
+import { fonts } from "../../styles/typography"
 
 type SectionTitleProps = {
   children: React.ReactNode
@@ -27,9 +26,11 @@ export function SectionTitle({ children, style, color }: SectionTitleProps) {
 
 const styles = StyleSheet.create({
   sectionTitle: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold,
-    marginBottom: space.md,
-    paddingHorizontal: space.xs
+    fontSize: 11,
+    textTransform: "uppercase",
+    ...fonts.bold,
+    letterSpacing: 1.2,
+    marginBottom: 12,
+    paddingHorizontal: 4
   }
 })

@@ -16,10 +16,9 @@ import BackupService, {
 } from "../services/BackupService"
 import { showAlert, showConfirm, showChoice } from "../services/modalService"
 import { logger } from "../utils/logger"
-import { fontSizes, fonts } from "../styles/typography"
-import { radius } from "@colota/shared"
+import { fonts } from "../styles/typography"
+import { fontSizes } from "@colota/shared"
 import type { ThemeColors } from "../types/global"
-import { size, space } from "../constants"
 
 type Props = RootScreenProps<"Backup & Restore">
 
@@ -93,7 +92,7 @@ function PasswordField({ value, onChangeText, placeholder, editable, autoComplet
         style={styles.eyeButton}
         accessibilityLabel="Hold to show password"
       >
-        <Icon size={size.icon.md} color={colors.textSecondary} />
+        <Icon size={20} color={colors.textSecondary} />
       </Pressable>
     </View>
   )
@@ -278,7 +277,7 @@ export function BackupRestoreScreen({}: Props) {
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
-          <SectionTitle>Encrypted backup</SectionTitle>
+          <SectionTitle>Encrypted Backup</SectionTitle>
           <Card>
             <Text style={[styles.intro, { color: colors.textSecondary }]}>
               Bundle your locations, settings and credentials into a single encrypted file you can store anywhere.
@@ -337,7 +336,7 @@ export function BackupRestoreScreen({}: Props) {
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Restore from backup</SectionTitle>
+          <SectionTitle>Restore from Backup</SectionTitle>
           <Card>
             <Text style={[styles.intro, { color: colors.textSecondary }]}>
               Replace all current data with a previous .colota backup file. You'll be asked for the backup password
@@ -361,49 +360,49 @@ export function BackupRestoreScreen({}: Props) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: space.lg,
+    paddingHorizontal: 16,
     paddingBottom: 40
   },
   section: {
-    marginTop: space.xl
+    marginTop: 24
   },
   intro: {
-    marginBottom: space.md,
-    fontSize: fontSizes.body,
+    marginBottom: 12,
+    fontSize: 14,
     lineHeight: 20
   },
   fieldLabel: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     fontWeight: "500",
-    marginBottom: space.sm
+    marginBottom: 8
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: radius.sm,
-    marginBottom: space.sm
+    borderRadius: 8,
+    marginBottom: 8
   },
   inputField: {
     flex: 1,
-    paddingHorizontal: space.md,
-    paddingVertical: space.md,
-    fontSize: fontSizes.label
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16
   },
   eyeButton: {
-    paddingHorizontal: space.md,
-    paddingVertical: space.md
+    paddingHorizontal: 12,
+    paddingVertical: 12
   },
   strengthRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: space.md,
-    gap: space.sm
+    marginBottom: 12,
+    gap: 8
   },
   strengthBar: {
     flex: 1,
     flexDirection: "row",
-    gap: space.xs
+    gap: 4
   },
   strengthSegment: {
     flex: 1,
@@ -411,46 +410,46 @@ const styles = StyleSheet.create({
     borderRadius: 2
   },
   strengthLabel: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     fontWeight: "600",
     minWidth: 60,
     textAlign: "right"
   },
   errorText: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     marginTop: -4,
-    marginBottom: space.sm
+    marginBottom: 8
   },
   hint: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     lineHeight: 18,
-    marginTop: space.sm,
-    marginBottom: space.lg
+    marginTop: 8,
+    marginBottom: 16
   },
   modalOverlay: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: space.lg
+    paddingHorizontal: 16
   },
   modalCard: {
-    padding: space.lg,
-    borderRadius: radius.md,
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1
   },
   modalTitle: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: space.xs
+    marginBottom: 4
   },
   modalSubtitle: {
     fontSize: fontSizes.description,
     ...fonts.regular,
-    marginBottom: space.lg
+    marginBottom: 16
   },
   modalButtonsRow: {
     flexDirection: "row",
-    gap: space.md,
-    marginTop: space.xs
+    gap: 12,
+    marginTop: 4
   },
   modalButton: {
     flex: 1

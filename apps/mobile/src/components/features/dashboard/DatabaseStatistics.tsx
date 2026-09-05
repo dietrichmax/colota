@@ -7,10 +7,9 @@ import { Text, StyleSheet, View } from "react-native"
 import { SectionTitle, Card } from "../.."
 import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fonts } from "../../../styles/typography"
 import { DatabaseStats } from "../../../types/global"
 import { getQueueColor } from "../../../utils/queueStatus"
-import { space } from "../../../constants"
 
 type DatabaseStatisticsProps = {
   stats: DatabaseStats
@@ -26,7 +25,7 @@ export const DatabaseStatistics = React.memo(function DatabaseStatistics({ stats
     <>
       {/* Database Statistics */}
       <View style={styles.metricsSection}>
-        <SectionTitle>Database statistics</SectionTitle>
+        <SectionTitle>DATABASE STATISTICS</SectionTitle>
         {!isOfflineMode ? (
           <View style={styles.statsGrid}>
             <Card variant="elevated" style={styles.statCard}>
@@ -68,29 +67,31 @@ export const DatabaseStatistics = React.memo(function DatabaseStatistics({ stats
 
 const styles = StyleSheet.create({
   metricsSection: {
-    marginBottom: space.xl
+    marginBottom: 24
   },
   statsGrid: {
     flexDirection: "row",
-    gap: space.md
+    gap: 12
   },
   statsGridSpaced: {
-    marginTop: space.md
+    marginTop: 12
   },
   statCard: {
     alignItems: "center"
   },
   statUnit: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     ...fonts.medium
   },
   statLabel: {
-    fontSize: fontSizes.micro,
+    fontSize: 10,
     ...fonts.semiBold,
-    marginBottom: 6
+    marginBottom: 6,
+    letterSpacing: 0.5,
+    textTransform: "uppercase"
   },
   statValue: {
-    fontSize: fontSizes.statValue,
+    fontSize: 24,
     ...fonts.bold,
     letterSpacing: -0.5,
     marginBottom: 2

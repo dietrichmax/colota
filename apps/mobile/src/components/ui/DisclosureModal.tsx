@@ -6,9 +6,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fontSizes, fonts } from "../../styles/typography"
-import { radius } from "@colota/shared"
-import { space } from "../../constants"
+import { fonts } from "../../styles/typography"
+import { fontSizes } from "@colota/shared"
 
 interface DisclosureModalProps {
   icon: React.ReactNode
@@ -86,7 +85,7 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
               ]}
               onPress={handleNotNow}
             >
-              <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not now</Text>
+              <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not Now</Text>
             </Pressable>
 
             <Pressable
@@ -112,11 +111,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: space.xxl
+    paddingHorizontal: 32
   },
   card: {
     width: "100%",
-    padding: space.xl,
+    padding: 24,
     elevation: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -130,13 +129,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
-    marginBottom: space.lg
+    marginBottom: 16
   },
   title: {
     fontSize: fontSizes.cardTitle,
     ...fonts.bold,
     textAlign: "center",
-    marginBottom: space.lg
+    marginBottom: 16
   },
   body: {
     fontSize: fontSizes.body,
@@ -144,17 +143,17 @@ const styles = StyleSheet.create({
     lineHeight: 20
   },
   bodySpaced: {
-    marginTop: space.sm
+    marginTop: 8
   },
   buttons: {
     flexDirection: "row",
-    gap: space.md,
-    marginTop: space.xl
+    gap: 12,
+    marginTop: 24
   },
   button: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: radius.sm,
+    borderRadius: 8,
     alignItems: "center"
   },
   primaryButton: {},

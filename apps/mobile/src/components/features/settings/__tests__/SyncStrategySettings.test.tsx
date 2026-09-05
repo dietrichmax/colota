@@ -7,15 +7,6 @@ jest.mock("../../../index", () => {
   const R = require("react")
   const { View, Text, TextInput } = require("react-native")
   return {
-    Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
-        testID: props.testID,
-        value: props.value,
-        onValueChange: props.onValueChange,
-        disabled: props.disabled,
-        accessibilityLabel: props.accessibilityLabel
-      })
-    },
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
@@ -159,22 +150,22 @@ describe("SyncStrategySettings", () => {
     it("shows advanced settings when toggle is pressed", () => {
       const { getByText, queryByText } = renderComponent()
 
-      expect(queryByText("Tracking parameters")).toBeNull()
+      expect(queryByText("Tracking Parameters")).toBeNull()
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
-      expect(getByText("Tracking parameters")).toBeTruthy()
-      expect(getByText("Network settings")).toBeTruthy()
+      expect(getByText("Tracking Parameters")).toBeTruthy()
+      expect(getByText("Network Settings")).toBeTruthy()
     })
 
     it("hides advanced settings when toggle is pressed again", () => {
       const { getByText, queryByText } = renderComponent()
 
-      fireEvent.press(getByText("Advanced settings"))
-      expect(getByText("Tracking parameters")).toBeTruthy()
+      fireEvent.press(getByText("Advanced Settings"))
+      expect(getByText("Tracking Parameters")).toBeTruthy()
 
-      fireEvent.press(getByText("Advanced settings"))
-      expect(queryByText("Tracking parameters")).toBeNull()
+      fireEvent.press(getByText("Advanced Settings"))
+      expect(queryByText("Tracking Parameters")).toBeNull()
     })
   })
 
@@ -182,7 +173,7 @@ describe("SyncStrategySettings", () => {
     it("shows custom configuration banner when preset is custom", () => {
       const { getByText } = renderComponent({ syncPreset: "custom" })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(getByText("Using custom configuration")).toBeTruthy()
     })
@@ -190,7 +181,7 @@ describe("SyncStrategySettings", () => {
     it("does not show custom banner when a named preset is selected", () => {
       const { getByText, queryByText } = renderComponent({ syncPreset: "instant" })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(queryByText("Using custom configuration")).toBeNull()
     })
@@ -200,7 +191,7 @@ describe("SyncStrategySettings", () => {
     it("renders all sync interval options inline", () => {
       const { getByText, getAllByText } = renderComponent()
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       expect(getAllByText("Instant").length).toBeGreaterThan(0)
       expect(getByText("1 min")).toBeTruthy()
@@ -212,7 +203,7 @@ describe("SyncStrategySettings", () => {
     it("selecting a sync interval sets preset to custom", () => {
       const { getByText } = renderComponent()
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
       fireEvent.press(getByText("5 min"))
 
       expect(mockOnSettingsChange).toHaveBeenCalledWith(
@@ -234,17 +225,17 @@ describe("SyncStrategySettings", () => {
     it("shows accuracy threshold input when filter is enabled", () => {
       const { getByText } = renderComponent({ filterInaccurateLocations: true })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
-      expect(getByText("Accuracy threshold")).toBeTruthy()
+      expect(getByText("Accuracy Threshold")).toBeTruthy()
     })
 
     it("hides accuracy threshold input when filter is disabled", () => {
       const { getByText, queryByText } = renderComponent({ filterInaccurateLocations: false })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
-      expect(queryByText("Accuracy threshold")).toBeNull()
+      expect(queryByText("Accuracy Threshold")).toBeNull()
     })
   })
 
@@ -255,7 +246,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "0")
@@ -272,7 +263,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "-3")
@@ -288,7 +279,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "abc")
@@ -304,7 +295,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "10")
@@ -322,7 +313,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const distanceInput = getByDisplayValue("10")
       fireEvent.changeText(distanceInput, "-5")
@@ -339,7 +330,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const distanceInput = getByDisplayValue("10")
       fireEvent.changeText(distanceInput, "abc")
@@ -357,7 +348,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const thresholdInput = getByDisplayValue("100")
       fireEvent.changeText(thresholdInput, "0")
@@ -375,7 +366,7 @@ describe("SyncStrategySettings", () => {
         syncPreset: "custom"
       })
 
-      fireEvent.press(getByText("Advanced settings"))
+      fireEvent.press(getByText("Advanced Settings"))
 
       const thresholdInput = getByDisplayValue("100")
       fireEvent.changeText(thresholdInput, "200")

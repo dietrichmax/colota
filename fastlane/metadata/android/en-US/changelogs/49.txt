@@ -2,4 +2,3 @@
 - Auto-export now deletes old files on storage providers that rename them
 - Unplugging at a low battery no longer restarts tracking in a loop
 - Pause zones no longer take hours to engage when a tracking profile is active
-- Headings and labels read as sentences instead of shouting in capitals, and the smallest icons are easier to see

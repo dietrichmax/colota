@@ -83,15 +83,6 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
-    Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
-        testID: props.testID,
-        value: props.value,
-        onValueChange: props.onValueChange,
-        disabled: props.disabled,
-        accessibilityLabel: props.accessibilityLabel
-      })
-    },
     DashboardMap: () => R.createElement(View, { testID: "DashboardMap" }),
     CoordinateDisplay: () => R.createElement(View, { testID: "CoordinateDisplay" }),
     DatabaseStatistics: () => R.createElement(View, { testID: "DatabaseStatistics" }),
@@ -129,7 +120,7 @@ describe("DashboardScreen", () => {
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
 
-    expect(getByText("Start tracking")).toBeTruthy()
+    expect(getByText("Start Tracking")).toBeTruthy()
   })
 
   it("shows Stop Tracking button when tracking", () => {
@@ -137,7 +128,7 @@ describe("DashboardScreen", () => {
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
 
-    expect(getByText("Stop tracking")).toBeTruthy()
+    expect(getByText("Stop Tracking")).toBeTruthy()
   })
 
   it("shows CoordinateDisplay when tracking with valid coords", () => {
@@ -164,7 +155,7 @@ describe("DashboardScreen", () => {
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
 
-    expect(getByText("Start tracking")).toBeDisabled()
+    expect(getByText("Start Tracking")).toBeDisabled()
   })
 
   it("hides WelcomeCard while settings have not been read", () => {
@@ -228,7 +219,7 @@ describe("DashboardScreen", () => {
     mockIsLocationEnabled.mockResolvedValue(true)
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
-    fireEvent.press(getByText("Start tracking"))
+    fireEvent.press(getByText("Start Tracking"))
 
     await waitFor(() => expect(mockStartTracking).toHaveBeenCalled())
     expect(mockShowConfirm).not.toHaveBeenCalled()
@@ -241,7 +232,7 @@ describe("DashboardScreen", () => {
     mockShowConfirm.mockResolvedValue(true) // user taps "Location Settings"
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
-    fireEvent.press(getByText("Start tracking"))
+    fireEvent.press(getByText("Start Tracking"))
 
     await waitFor(() => expect(mockOpenLocationSettings).toHaveBeenCalled())
     expect(mockStartTracking).not.toHaveBeenCalled()
@@ -253,7 +244,7 @@ describe("DashboardScreen", () => {
     mockShowConfirm.mockResolvedValue(false) // user taps "Close"
 
     const { getByText } = render(<DashboardScreen navigation={mockNavigation} />)
-    fireEvent.press(getByText("Start tracking"))
+    fireEvent.press(getByText("Start Tracking"))
 
     await waitFor(() => expect(mockStartTracking).toHaveBeenCalled())
     expect(mockOpenLocationSettings).not.toHaveBeenCalled()

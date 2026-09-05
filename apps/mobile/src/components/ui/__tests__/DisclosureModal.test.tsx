@@ -51,11 +51,11 @@ describe("DisclosureModal", () => {
     expect(getByText("First paragraph.")).toBeTruthy()
     expect(getByText("Second paragraph.")).toBeTruthy()
     expect(getByText("Confirm")).toBeTruthy()
-    expect(getByText("Not now")).toBeTruthy()
+    expect(getByText("Not Now")).toBeTruthy()
 
     // Clean up by dismissing
     await act(async () => {
-      fireEvent.press(getByText("Not now"))
+      fireEvent.press(getByText("Not Now"))
     })
     expect(await resultPromise!).toBe(false)
   })
@@ -84,7 +84,7 @@ describe("DisclosureModal", () => {
     })
 
     await act(async () => {
-      fireEvent.press(getByText("Not now"))
+      fireEvent.press(getByText("Not Now"))
     })
 
     expect(await resultPromise!).toBe(false)

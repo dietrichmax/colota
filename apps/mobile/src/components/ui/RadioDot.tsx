@@ -6,7 +6,6 @@
 import React from "react"
 import { View, StyleSheet } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { radius } from "@colota/shared"
 
 export function RadioDot({ selected }: { selected: boolean }) {
   const { colors } = useTheme()
@@ -25,7 +24,7 @@ const styles = StyleSheet.create({
   radio: {
     width: 24,
     height: 24,
-    borderRadius: radius.md,
+    borderRadius: 12,
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center"

@@ -5,9 +5,22 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
-import { Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
-import { FolderOpen, CircleCheckBig, Share2, TriangleAlert } from "lucide-react-native"
-import { Button, Card, ChipGroup, Container, Divider, FloatingSaveIndicator, FormatSelector, NumericInput, RadioDot, SectionTitle, SettingRow, TimePicker, Toggle } from "../components"
+import { Text, StyleSheet, Switch, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
+import { FolderOpen, CheckCircle, Share2, AlertTriangle } from "lucide-react-native"
+import {
+  Container,
+  Card,
+  SectionTitle,
+  Divider,
+  FormatSelector,
+  ChipGroup,
+  RadioDot,
+  FloatingSaveIndicator,
+  SettingRow,
+  Button,
+  TimePicker,
+  NumericInput
+} from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { useTimeout } from "../hooks/useTimeout"
 import { ScreenProps } from "../types/global"
@@ -21,12 +34,11 @@ import {
   isValidFilenameTemplate,
   renderFilenamePreview
 } from "../utils/exportConverters"
-import { fontSizes, fonts } from "../styles/typography"
+import { fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
 import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
-import { SAVE_SUCCESS_DISPLAY_MS, size, space } from "../constants"
-import { radius } from "@colota/shared"
+import { SAVE_SUCCESS_DISPLAY_MS } from "../constants"
 
 type ExportInterval = "daily" | "weekly" | "monthly"
 type ExportMode = "all" | "incremental"
@@ -386,26 +398,27 @@ export function AutoExportScreen(_props: ScreenProps) {
             label="Enable Auto-Export"
             hint={enabled ? "Auto-Exports are scheduled" : "Auto-Exports are disabled"}
           >
-            <Toggle
-              accessibilityLabel="Enable auto-export"
+            <Switch
               value={enabled}
               onValueChange={handleToggle}
+              trackColor={{ false: colors.border, true: colors.primary + "80" }}
+              thumbColor={enabled ? colors.primary : colors.border}
             />
           </SettingRow>
         </Card>
 
         {/* Export Directory */}
         <View style={styles.section}>
-          <SectionTitle>Export directory</SectionTitle>
+          <SectionTitle>Export Directory</SectionTitle>
           <Card>
             <Pressable
               style={({ pressed }) => [styles.directoryRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={handlePickDirectory}
             >
-              <FolderOpen size={size.icon.md} color={colors.primary} />
+              <FolderOpen size={22} color={colors.primary} />
               <View style={styles.directoryContent}>
                 <Text style={[styles.settingLabel, { color: colors.text }]}>
-                  {directoryUri ? "Directory selected" : "Select directory"}
+                  {directoryUri ? "Directory Selected" : "Select Directory"}
                 </Text>
                 <Text style={[styles.settingDescription, { color: colors.textSecondary }]} numberOfLines={1}>
                   {directoryUri
@@ -413,7 +426,7 @@ export function AutoExportScreen(_props: ScreenProps) {
                     : "Tap to choose where files are saved"}
                 </Text>
               </View>
-              {directoryUri && <CircleCheckBig size={size.icon.md} color={colors.success} />}
+              {directoryUri && <CheckCircle size={18} color={colors.success} />}
             </Pressable>
           </Card>
         </View>
@@ -428,7 +441,7 @@ export function AutoExportScreen(_props: ScreenProps) {
 
         {/* File Name */}
         <View style={styles.section}>
-          <SectionTitle>File name</SectionTitle>
+          <SectionTitle>File Name</SectionTitle>
           <Card>
             <TextInput
               style={[styles.templateInput, { color: colors.text, borderColor: colors.border }]}
@@ -501,7 +514,7 @@ export function AutoExportScreen(_props: ScreenProps) {
 
         {/* Export Range */}
         <View style={styles.section}>
-          <SectionTitle>Export range</SectionTitle>
+          <SectionTitle>Export Range</SectionTitle>
           <Card>
             {MODE_OPTIONS.map((option, i) => (
               <View key={option.key}>
@@ -527,7 +540,7 @@ export function AutoExportScreen(_props: ScreenProps) {
 
         {/* File Retention */}
         <View style={styles.section}>
-          <SectionTitle>File retention</SectionTitle>
+          <SectionTitle>File Retention</SectionTitle>
           <Card>
             <NumericInput
               label="Files to keep"
@@ -552,21 +565,21 @@ export function AutoExportScreen(_props: ScreenProps) {
           <SectionTitle>Status</SectionTitle>
           <Card>
             <View style={styles.statusRow}>
-              <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last export</Text>
+              <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last Export</Text>
               <Text style={[styles.statusValue, { color: colors.text }]}>{formatExportDateTime(lastExport)}</Text>
             </View>
             {lastFileName && (
               <>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last file</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last File</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]} numberOfLines={1}>
                     {lastFileName}
                   </Text>
                 </View>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Locations exported</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Locations Exported</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]}>{lastRowCount}</Text>
                 </View>
               </>
@@ -575,7 +588,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.errorRow}>
-                  <TriangleAlert size={size.icon.sm} color={colors.error} />
+                  <AlertTriangle size={14} color={colors.error} />
                   <Text style={[styles.errorText, { color: colors.error }]} numberOfLines={2}>
                     {lastError}
                   </Text>
@@ -586,7 +599,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Next export</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Next Export</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]}>{formatExportDateTime(nextExport)}</Text>
                 </View>
               </>
@@ -595,7 +608,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Export files</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Export Files</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]}>{fileCount}</Text>
                 </View>
               </>
@@ -607,7 +620,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         {directoryUri && (
           <View style={styles.section}>
             <Button
-              title={exporting ? "Exporting..." : "Export now"}
+              title={exporting ? "Exporting..." : "Export Now"}
               onPress={handleExportNow}
               disabled={exporting}
               loading={exporting}
@@ -618,7 +631,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         {/* Export History */}
         {exportFiles.length > 0 && (
           <View style={styles.section}>
-            <SectionTitle>Export history</SectionTitle>
+            <SectionTitle>Export History</SectionTitle>
             <Card>
               {exportFiles.map((file, i) => (
                 <View key={file.name}>
@@ -636,7 +649,7 @@ export function AutoExportScreen(_props: ScreenProps) {
                       style={({ pressed }) => [styles.shareButton, pressed && { opacity: 0.5 }]}
                       onPress={() => handleShareFile(file)}
                     >
-                      <Share2 size={size.icon.md} color={colors.primary} />
+                      <Share2 size={18} color={colors.primary} />
                     </Pressable>
                   </View>
                 </View>
@@ -652,7 +665,7 @@ export function AutoExportScreen(_props: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: space.lg,
+    paddingHorizontal: 16,
     paddingBottom: 40
   },
   header: {
@@ -660,26 +673,26 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   subtitle: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     lineHeight: 20
   },
   section: {
-    marginTop: space.xl
+    marginTop: 24
   },
   settingLabel: {
-    fontSize: fontSizes.label,
+    fontSize: 16,
     ...fonts.semiBold,
     marginBottom: 2
   },
   settingDescription: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular
   },
   directoryRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.md,
-    paddingVertical: space.xs
+    gap: 12,
+    paddingVertical: 4
   },
   directoryContent: {
     flex: 1
@@ -688,27 +701,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: space.xs
+    paddingVertical: 4
   },
   statusLabel: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.regular
   },
   statusValue: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.semiBold,
     flexShrink: 1,
     textAlign: "right",
-    marginLeft: space.md
+    marginLeft: 12
   },
   errorRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm,
+    gap: 8,
     paddingVertical: 6
   },
   errorText: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular,
     flex: 1
   },
@@ -720,62 +733,64 @@ const styles = StyleSheet.create({
   },
   modeContent: {
     flex: 1,
-    marginRight: space.lg
+    marginRight: 16
   },
   fileRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: space.sm
+    paddingVertical: 8
   },
   fileInfo: {
     flex: 1,
-    marginRight: space.md
+    marginRight: 12
   },
   fileName: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.semiBold,
     marginBottom: 2
   },
   fileMeta: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.regular
   },
   shareButton: {
-    padding: space.sm
+    padding: 8
   },
   fieldLabel: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.semiBold,
-    marginTop: space.md,
-    marginBottom: space.sm
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 12,
+    marginBottom: 8
   },
   templateInput: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.regular,
     borderWidth: 1,
-    borderRadius: radius.sm,
-    paddingHorizontal: space.md,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     paddingVertical: 10
   },
   templateHint: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular,
-    marginTop: space.sm
+    marginTop: 8
   },
   templateTokenRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: space.sm
+    gap: 8
   },
   templateToken: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.semiBold,
-    marginTop: space.sm,
+    marginTop: 8,
     minWidth: 72
   },
   templatePreview: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.semiBold,
-    marginTop: space.sm
+    marginTop: 8
   }
 })

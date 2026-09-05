@@ -8,7 +8,6 @@ import { ViewStyle, StyleProp, StyleSheet } from "react-native"
 import { LocateFixed } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
-import { size } from "../../../constants"
 
 interface Props {
   onPress: () => void
@@ -23,7 +22,7 @@ export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) =>
 
   return (
     <MapActionButton onPress={onPress} style={[mapActionStyles.right, styles.position, style]}>
-      <LocateFixed size={size.icon.md} color={colors.textLight} />
+      <LocateFixed size={20} color={colors.textLight} />
     </MapActionButton>
   )
 }

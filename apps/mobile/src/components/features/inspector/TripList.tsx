@@ -7,13 +7,12 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { View, Text, FlatList, Pressable, StyleSheet, BackHandler } from "react-native"
 import { Clock, Route, Share, TrendingUp, TrendingDown, Gauge, Trash2, X, Merge } from "lucide-react-native"
 import { Card } from "../../ui/Card"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fonts } from "../../../styles/typography"
 import { formatDistance, formatDuration, formatSpeed, formatTime } from "../../../utils/geo"
 import type { Trip, ThemeColors } from "../../../types/global"
 import { getTripColor, computeTripStats, type TripStats } from "../../../utils/trips"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../../../utils/exportConverters"
-import { HIT_SLOP_SM, size, space } from "../../../constants"
-import { radius } from "@colota/shared"
+import { HIT_SLOP_SM } from "../../../constants"
 
 interface TripListProps {
   trips: Trip[]
@@ -84,28 +83,28 @@ const TripRow = React.memo(function TripRow({
 
       <View style={styles.tripStats}>
         <View style={styles.stat}>
-          <Route size={size.icon.sm} color={colors.textSecondary} />
+          <Route size={13} color={colors.textSecondary} />
           <Text style={[styles.statText, { color: colors.text }]}>{formatDistance(trip.distance)}</Text>
         </View>
         <View style={styles.stat}>
-          <Clock size={size.icon.sm} color={colors.textSecondary} />
+          <Clock size={13} color={colors.textSecondary} />
           <Text style={[styles.statText, { color: colors.text }]}>{formatDuration(duration)}</Text>
         </View>
         {stats && stats.avgSpeed > 0 && (
           <View style={styles.stat}>
-            <Gauge size={size.icon.sm} color={colors.textSecondary} />
+            <Gauge size={13} color={colors.textSecondary} />
             <Text style={[styles.statText, { color: colors.text }]}>{formatSpeed(stats.avgSpeed)}</Text>
           </View>
         )}
         {stats && stats.elevationGain > 0 && (
           <View style={styles.stat}>
-            <TrendingUp size={size.icon.sm} color={colors.textSecondary} />
+            <TrendingUp size={13} color={colors.textSecondary} />
             <Text style={[styles.statText, { color: colors.text }]}>{Math.round(stats.elevationGain)}m</Text>
           </View>
         )}
         {stats && stats.elevationLoss > 0 && (
           <View style={styles.stat}>
-            <TrendingDown size={size.icon.sm} color={colors.textSecondary} />
+            <TrendingDown size={13} color={colors.textSecondary} />
             <Text style={[styles.statText, { color: colors.text }]}>{Math.round(stats.elevationLoss)}m</Text>
           </View>
         )}
@@ -265,7 +264,7 @@ export function TripList({
               accessibilityRole="button"
               accessibilityLabel="Cancel selection"
             >
-              <X size={size.icon.md} color={colors.text} />
+              <X size={18} color={colors.text} />
             </Pressable>
             <Text style={[styles.cabSummary, { color: colors.text }]}>{selected.size} selected</Text>
           </View>
@@ -290,7 +289,7 @@ export function TripList({
                 accessibilityLabel="Export selected trips"
                 accessibilityState={{ expanded: showExport }}
               >
-                <Share size={size.icon.md} color={showExport ? colors.primary : colors.text} />
+                <Share size={18} color={showExport ? colors.primary : colors.text} />
               </Pressable>
             )}
             {onMerge && trips.length >= 2 && (
@@ -304,7 +303,7 @@ export function TripList({
                 accessibilityHint={isAdjacentSelection ? undefined : "Select two or more adjacent trips to merge them"}
                 accessibilityState={{ disabled: !isAdjacentSelection }}
               >
-                <Merge size={size.icon.md} color={isAdjacentSelection ? colors.text : colors.textDisabled} />
+                <Merge size={18} color={isAdjacentSelection ? colors.text : colors.textDisabled} />
               </Pressable>
             )}
             {onDelete && (
@@ -315,7 +314,7 @@ export function TripList({
                 accessibilityRole="button"
                 accessibilityLabel="Delete selected trips"
               >
-                <Trash2 size={size.icon.md} color={colors.error} />
+                <Trash2 size={18} color={colors.error} />
               </Pressable>
             )}
           </View>
@@ -333,7 +332,7 @@ export function TripList({
               accessibilityLabel="Export all trips"
               accessibilityState={{ expanded: showExport }}
             >
-              <Share size={size.icon.sm} color={showExport ? colors.primary : colors.textSecondary} />
+              <Share size={14} color={showExport ? colors.primary : colors.textSecondary} />
               <Text style={[styles.exportAllLabel, { color: showExport ? colors.primary : colors.textSecondary }]}>
                 Export All
               </Text>
@@ -387,7 +386,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: space.lg,
+    paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 14,
     minHeight: 54
@@ -395,17 +394,17 @@ const styles = StyleSheet.create({
   cabLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.xs,
+    gap: 4,
     flexShrink: 1
   },
   cabSummary: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.semiBold
   },
   cabActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.xs
+    gap: 4
   },
   cabIconBtn: {
     minWidth: 48,
@@ -420,47 +419,47 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   cabTextBtnLabel: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.semiBold
   },
   summary: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.semiBold
   },
   exportAllBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.xs,
-    paddingHorizontal: space.md,
+    gap: 4,
+    paddingHorizontal: 12,
     minHeight: 48
   },
   exportAllLabel: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     ...fonts.semiBold
   },
   exportRow: {
     flexDirection: "row",
-    gap: space.sm,
-    paddingHorizontal: space.lg,
+    gap: 8,
+    paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: space.md
+    paddingBottom: 12
   },
   exportChip: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: radius.sm,
+    borderRadius: 8,
     borderWidth: 1
   },
   exportChipText: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     ...fonts.bold
   },
   list: {
-    paddingHorizontal: space.md,
-    paddingBottom: space.lg
+    paddingHorizontal: 12,
+    paddingBottom: 16
   },
   tripCard: {
-    marginBottom: space.sm
+    marginBottom: 8
   },
   tripCardSelected: {
     borderWidth: 1.5
@@ -469,53 +468,53 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: space.sm
+    marginBottom: 8
   },
   tripTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm
+    gap: 8
   },
   tripDot: {
     width: 8,
     height: 8,
-    borderRadius: radius.xs
+    borderRadius: 4
   },
   tripTitle: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.bold
   },
   tripTime: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular
   },
   tripStats: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: space.md
+    gap: 12
   },
   stat: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.xs
+    gap: 4
   },
   statText: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular
   },
   emptyContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: space.sm,
+    gap: 8,
     paddingTop: 60
   },
   emptyText: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.regular
   },
   emptyHint: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.regular
   }
 })

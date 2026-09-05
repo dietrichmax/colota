@@ -4,18 +4,17 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { View, Text, ScrollView, StyleSheet, Share } from "react-native"
+import { View, Text, ScrollView, StyleSheet, Switch, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Button, Card, Container, SectionTitle, Toggle } from "../components"
-import { fontSizes, fonts } from "../styles/typography"
+import { Container, Card, Button, SectionTitle } from "../components"
+import { fonts } from "../styles/typography"
 import { Share2, TriangleAlert } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
 import { buildSetupConfig, buildSetupLink, type SetupShareParts, type SetupShareSelection } from "../utils/setupLink"
 import { DEFAULT_AUTH_CONFIG, type AuthConfig, type Geofence, type TrackingProfile } from "../types/global"
-import { size, space } from "../constants"
 
 type ShareCategory = keyof SetupShareSelection
 
@@ -127,6 +126,7 @@ export function ShareSetupScreen() {
           <View style={styles.headerRow}>
             <Share2 size={28} color={colors.primary} />
             <View style={styles.headerText}>
+              <Text style={[styles.title, { color: colors.text }]}>Share Setup</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 Choose what to bundle into a setup link, then share it. The recipient opens it to apply the same
                 configuration.
@@ -153,8 +153,7 @@ export function ShareSetupScreen() {
                   </Text>
                   <Text style={[styles.rowSub, { color: colors.textSecondary }]}>{row.sub}</Text>
                 </View>
-                <Toggle
-                  accessibilityLabel={row.label}
+                <Switch
                   testID={`share-${row.key}`}
                   value={selection[row.key] && !row.disabled}
                   onValueChange={() => toggle(row.key)}
@@ -169,7 +168,7 @@ export function ShareSetupScreen() {
           <View style={styles.section}>
             <Card style={[styles.warningCard, { borderColor: colors.error }]}>
               <View style={styles.headerRow}>
-                <TriangleAlert size={size.icon.md} color={colors.error} />
+                <TriangleAlert size={20} color={colors.error} />
                 <Text style={[styles.warningText, { color: colors.text }]}>
                   This link will contain your {credentialFields.join(", ")} in plain text. Anyone who sees the link can
                   read them - only share it over a trusted channel.
@@ -194,34 +193,38 @@ export function ShareSetupScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    padding: space.lg,
+    padding: 16,
     paddingBottom: 40
   },
   headerCard: {
-    marginBottom: space.lg
+    marginBottom: 16
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.md
+    gap: 12
   },
   headerText: {
     flex: 1
   },
+  title: {
+    fontSize: 18,
+    ...fonts.bold
+  },
   subtitle: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular,
     marginTop: 2
   },
   section: {
-    marginTop: space.sm
+    marginTop: 8
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: space.md,
-    gap: space.md
+    paddingVertical: 12,
+    gap: 12
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth
@@ -230,11 +233,11 @@ const styles = StyleSheet.create({
     flex: 1
   },
   rowLabel: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.semiBold
   },
   rowSub: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.regular,
     marginTop: 2
   },
@@ -243,17 +246,17 @@ const styles = StyleSheet.create({
   },
   warningText: {
     flex: 1,
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.regular,
     lineHeight: 17
   },
   actions: {
-    marginTop: space.xl
+    marginTop: 24
   },
   emptyHint: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.regular,
     textAlign: "center",
-    marginTop: space.sm
+    marginTop: 8
   }
 })

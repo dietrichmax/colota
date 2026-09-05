@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { Download } from "lucide-react-native"
-import { fontSizes, fonts } from "../styles/typography"
+import { fonts } from "../styles/typography"
 import { Button, Card, Container, Divider, LoadingOverlay, SectionTitle } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
@@ -16,8 +16,6 @@ import { logger } from "../utils/logger"
 import { FILE_FORMATS, IMPORT_FORMAT_ORDER, importDescription } from "../utils/fileFormats"
 import { ScreenProps } from "../types/global"
 import type { ThemeColors } from "../types/global"
-import { size, space } from "../constants"
-import { radius } from "@colota/shared"
 
 const IMPORT_FORMAT_LABELS = Object.fromEntries(
   (Object.keys(FILE_FORMATS) as ImportFormat[]).map((k) => [k, FILE_FORMATS[k].label])
@@ -85,7 +83,7 @@ const FormatRow = ({ entry, colors }: { entry: (typeof SUPPORTED_FORMATS)[number
   const Icon = entry.icon
   return (
     <View style={styles.formatRow}>
-      <Icon size={size.icon.md} color={colors.textLight} />
+      <Icon size={22} color={colors.textLight} />
       <View style={styles.formatTextContent}>
         <View style={styles.formatTitleRow}>
           <Text style={[styles.formatTitle, { color: colors.text }]}>{entry.title}</Text>
@@ -216,7 +214,7 @@ export function ImportLocationsScreen({}: ScreenProps) {
         <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total locations</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Locations</Text>
               <Text style={[styles.statValue, { color: colors.primaryDark }]}>{totalLocations.toLocaleString()}</Text>
             </View>
           </View>
@@ -224,7 +222,7 @@ export function ImportLocationsScreen({}: ScreenProps) {
 
         {/* Supported formats */}
         <View style={styles.section}>
-          <SectionTitle>Supported formats</SectionTitle>
+          <SectionTitle>Supported Formats</SectionTitle>
           <Card>
             {SUPPORTED_FORMATS.map((entry, i) => (
               <React.Fragment key={entry.title}>
@@ -237,7 +235,7 @@ export function ImportLocationsScreen({}: ScreenProps) {
 
         {/* Import action */}
         <View style={styles.section}>
-          <SectionTitle>Import from file</SectionTitle>
+          <SectionTitle>Import from File</SectionTitle>
           <Card>
             <Text style={[styles.intro, { color: colors.textSecondary }]}>
               Merge location history from external files into your Colota database. Duplicates are skipped
@@ -247,7 +245,7 @@ export function ImportLocationsScreen({}: ScreenProps) {
               Imported rows are flagged as already replicated by default, so they stay local. If you've configured an
               optional sync backend, the confirm dialog also offers to queue them for upload.
             </Text>
-            <Button onPress={handleChooseFile} disabled={busy} title="Choose file" icon={Download} />
+            <Button onPress={handleChooseFile} disabled={busy} title="Choose File" icon={Download} />
           </Card>
         </View>
       </ScrollView>
@@ -259,14 +257,14 @@ export function ImportLocationsScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: space.lg,
+    paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 40
   },
   statsContainer: {
-    borderRadius: radius.lg,
+    borderRadius: 16,
     borderWidth: 2,
-    marginBottom: space.xl,
+    marginBottom: 24,
     overflow: "hidden"
   },
   statsGrid: {
@@ -278,29 +276,31 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   statLabel: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.semiBold,
-    marginBottom: space.sm
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 8
   },
   statValue: {
-    fontSize: fontSizes.cardTitle,
+    fontSize: 20,
     ...fonts.bold,
     letterSpacing: -0.5,
     textAlign: "center"
   },
   section: {
-    marginBottom: space.xl
+    marginBottom: 24
   },
   intro: {
-    marginBottom: space.md,
-    fontSize: fontSizes.body,
+    marginBottom: 12,
+    fontSize: 14,
     lineHeight: 20
   },
   formatRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 10,
-    gap: space.lg
+    gap: 16
   },
   formatTextContent: {
     flex: 1
@@ -308,27 +308,28 @@ const styles = StyleSheet.create({
   formatTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm,
-    marginBottom: space.xs,
+    gap: 8,
+    marginBottom: 4,
     flexWrap: "wrap"
   },
   formatTitle: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.semiBold,
     letterSpacing: -0.2
   },
   extensionBadge: {
-    paddingHorizontal: space.sm,
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1
   },
   extensionText: {
-    fontSize: fontSizes.micro,
-    ...fonts.bold
+    fontSize: 10,
+    ...fonts.bold,
+    letterSpacing: 0.3
   },
   formatDescription: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     lineHeight: 16
   }
 })

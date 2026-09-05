@@ -128,15 +128,6 @@ jest.mock("../../components", () => {
   const RN = require("react-native")
   const { EXPORT_FORMATS, EXPORT_FORMAT_KEYS } = require("../../utils/exportConverters")
   return {
-    Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
-        testID: props.testID,
-        value: props.value,
-        onValueChange: props.onValueChange,
-        disabled: props.disabled,
-        accessibilityLabel: props.accessibilityLabel
-      })
-    },
     Container: (props: any) => R.createElement(RN.View, null, props.children),
     Card: (props: any) => R.createElement(RN.View, null, props.children),
     SectionTitle: (props: any) => R.createElement(RN.Text, null, props.children),
@@ -215,9 +206,9 @@ jest.mock("lucide-react-native", () => {
   const stub = (name: any) => () => R.createElement(RN.Text, null, name)
   return {
     FolderOpen: stub("FolderOpen"),
-    CircleCheckBig: stub("CircleCheckBig"),
+    CheckCircle: stub("CheckCircle"),
     Share2: stub("Share2"),
-    TriangleAlert: stub("TriangleAlert")
+    AlertTriangle: stub("AlertTriangle")
   }
 })
 
@@ -387,10 +378,10 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Select directory")).toBeTruthy()
+      expect(getByText("Select Directory")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Select directory"))
+    fireEvent.press(getByText("Select Directory"))
 
     await waitFor(() => {
       expect(mockPickExportDirectory).toHaveBeenCalled()
@@ -451,8 +442,8 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Next export")).toBeTruthy()
-      expect(getByText("Export files")).toBeTruthy()
+      expect(getByText("Next Export")).toBeTruthy()
+      expect(getByText("Export Files")).toBeTruthy()
       expect(getByText("3")).toBeTruthy()
     })
   })
@@ -472,8 +463,8 @@ describe("AutoExportScreen", () => {
     const { queryByText, getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(queryByText("Next export")).toBeNull()
-      expect(getByText("Export files")).toBeTruthy()
+      expect(queryByText("Next Export")).toBeNull()
+      expect(getByText("Export Files")).toBeTruthy()
     })
   })
 
@@ -631,7 +622,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Export now")).toBeTruthy()
+      expect(getByText("Export Now")).toBeTruthy()
     })
   })
 
@@ -639,7 +630,7 @@ describe("AutoExportScreen", () => {
     const { queryByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(queryByText("Export now")).toBeNull()
+      expect(queryByText("Export Now")).toBeNull()
     })
   })
 
@@ -658,10 +649,10 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Export now")).toBeTruthy()
+      expect(getByText("Export Now")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Export now"))
+    fireEvent.press(getByText("Export Now"))
 
     await waitFor(() => {
       expect(mockRunAutoExportNow).toHaveBeenCalled()
@@ -711,9 +702,9 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Last file")).toBeTruthy()
+      expect(getByText("Last File")).toBeTruthy()
       expect(getByText("colota_export_2026-03-10_1200.geojson")).toBeTruthy()
-      expect(getByText("Locations exported")).toBeTruthy()
+      expect(getByText("Locations Exported")).toBeTruthy()
       expect(getByText("42")).toBeTruthy()
     })
   })
@@ -750,7 +741,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Export history")).toBeTruthy()
+      expect(getByText("Export History")).toBeTruthy()
       expect(getByText("colota_export_2026-03-10.geojson")).toBeTruthy()
       expect(getByText("colota_export_2026-03-09.geojson")).toBeTruthy()
     })
@@ -762,7 +753,7 @@ describe("AutoExportScreen", () => {
     const { queryByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(queryByText("Export history")).toBeNull()
+      expect(queryByText("Export History")).toBeNull()
     })
   })
 

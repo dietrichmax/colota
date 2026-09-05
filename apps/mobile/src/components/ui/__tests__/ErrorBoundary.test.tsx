@@ -64,7 +64,7 @@ describe("ErrorBoundary", () => {
 
     expect(getByText("Something went wrong")).toBeTruthy()
     expect(getByText("Test error message")).toBeTruthy()
-    expect(getByText("Try again")).toBeTruthy()
+    expect(getByText("Try Again")).toBeTruthy()
   })
 
   it("logs error via logger.error", () => {
@@ -101,7 +101,7 @@ describe("ErrorBoundary", () => {
 
     shouldThrow = false
 
-    fireEvent.press(getByText("Try again"))
+    fireEvent.press(getByText("Try Again"))
 
     expect(getByText("Recovered")).toBeTruthy()
   })

@@ -127,15 +127,6 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
-    Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
-        testID: props.testID,
-        value: props.value,
-        onValueChange: props.onValueChange,
-        disabled: props.disabled,
-        accessibilityLabel: props.accessibilityLabel
-      })
-    },
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children, style }: any) => R.createElement(View, { style }, children)
@@ -238,10 +229,10 @@ describe("GeofenceScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Place geofence")).toBeTruthy()
+      expect(getByText("Place Geofence")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Place geofence"))
+    fireEvent.press(getByText("Place Geofence"))
 
     expect(mockShowAlert).toHaveBeenCalledWith("Missing Name", "Please enter a name.", "warning")
   })
@@ -250,12 +241,12 @@ describe("GeofenceScreen", () => {
     const { getByText, getByPlaceholderText, getByDisplayValue } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Place geofence")).toBeTruthy()
+      expect(getByText("Place Geofence")).toBeTruthy()
     })
 
     fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
     fireEvent.changeText(getByDisplayValue("50"), "0")
-    fireEvent.press(getByText("Place geofence"))
+    fireEvent.press(getByText("Place Geofence"))
 
     expect(mockShowAlert).toHaveBeenCalledWith("Invalid Radius", "Please enter a valid radius.", "warning")
   })
@@ -264,12 +255,12 @@ describe("GeofenceScreen", () => {
     const { getByText, getByPlaceholderText, getByDisplayValue } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Place geofence")).toBeTruthy()
+      expect(getByText("Place Geofence")).toBeTruthy()
     })
 
     fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
     fireEvent.changeText(getByDisplayValue("50"), "100")
-    fireEvent.press(getByText("Place geofence"))
+    fireEvent.press(getByText("Place Geofence"))
 
     expect(mockShowAlert).not.toHaveBeenCalled()
     expect(getByText("Tap Map to Place...")).toBeTruthy()

@@ -4,19 +4,17 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, View, ScrollView, Pressable, TextInput } from "react-native"
+import { Text, StyleSheet, Switch, View, ScrollView, Pressable, TextInput } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
-import { fontSizes, fonts } from "../styles/typography"
-import { Card, Container, Divider, SettingRow, Toggle } from "../components"
+import { fonts } from "../styles/typography"
+import { Card, Container, Divider, SettingRow } from "../components"
 import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
 import type { UnitSystem, TimeFormat } from "../utils/geo"
-import { size, space } from "../constants"
-import { radius } from "@colota/shared"
 
 export function AppearanceScreen({}: ScreenProps) {
   const { mode, toggleTheme, colors } = useTheme()
@@ -95,11 +93,15 @@ export function AppearanceScreen({}: ScreenProps) {
       >
         <Card>
           <SettingRow label={t("appearance.darkMode")}>
-            <Toggle
-              accessibilityLabel={t("appearance.darkMode")}
+            <Switch
               testID="dark-mode-switch"
               value={mode === "dark"}
               onValueChange={toggleTheme}
+              trackColor={{
+                false: colors.border,
+                true: colors.primary + "80"
+              }}
+              thumbColor={mode === "dark" ? colors.primary : colors.border}
             />
           </SettingRow>
 
@@ -169,9 +171,9 @@ export function AppearanceScreen({}: ScreenProps) {
               <Text style={[styles.linkSub, { color: colors.textSecondary }]}>{t("appearance.mapStyle.subtitle")}</Text>
             </View>
             {showMapTileServer ? (
-              <ChevronUp size={size.icon.md} color={colors.textLight} />
+              <ChevronUp size={20} color={colors.textLight} />
             ) : (
-              <ChevronDown size={size.icon.md} color={colors.textLight} />
+              <ChevronDown size={20} color={colors.textLight} />
             )}
           </Pressable>
 
@@ -238,68 +240,68 @@ export function AppearanceScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: space.lg,
-    paddingTop: space.lg,
-    paddingBottom: space.lg
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16
   },
   linkRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: space.md
+    paddingVertical: 12
   },
   linkContent: {
     flex: 1
   },
   linkLabel: {
-    fontSize: fontSizes.label,
+    fontSize: 16,
     ...fonts.semiBold,
     marginBottom: 2
   },
   linkSub: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular
   },
   chipGroup: {
     flexDirection: "row",
-    gap: space.sm
+    gap: 8
   },
   chip: {
     paddingHorizontal: 14,
-    paddingVertical: space.sm,
+    paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1.5
   },
   chipLabel: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.semiBold
   },
   mapTilePanel: {
-    marginTop: space.xs,
-    paddingBottom: space.xs
+    marginTop: 4,
+    paddingBottom: 4
   },
   mapStyleSub: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.medium,
     marginBottom: 6
   },
-  mapStyleSubFirst: { marginTop: space.md },
+  mapStyleSubFirst: { marginTop: 12 },
   mapStyleSubSecond: { marginTop: 10 },
   mapStyleInput: {
     borderWidth: 1.5,
-    padding: space.md,
-    borderRadius: radius.md,
-    fontSize: fontSizes.description,
+    padding: 12,
+    borderRadius: 12,
+    fontSize: 13,
     ...fonts.regular
   },
   mapStyleFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: space.sm
+    marginTop: 8
   },
   mapStyleHint: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     ...fonts.regular
   }
 })

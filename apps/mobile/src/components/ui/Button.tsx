@@ -16,9 +16,8 @@ import {
   ViewStyle
 } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fontSizes, fonts } from "../../styles/typography"
+import { fonts } from "../../styles/typography"
 import { type LucideIcon } from "lucide-react-native"
-import { size, space } from "../../constants"
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 
@@ -123,7 +122,7 @@ export function Button({
           {loading ? (
             <ActivityIndicator size="small" color={v.text} style={styles.icon} />
           ) : Icon ? (
-            <Icon size={size.icon.md} color={v.text} style={styles.icon} />
+            <Icon size={18} color={v.text} style={styles.icon} />
           ) : null}
           <Text style={[styles.text, { color: v.text }]}>{title}</Text>
         </View>
@@ -134,18 +133,18 @@ export function Button({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: space.md,
-    paddingHorizontal: space.xl,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
     alignItems: "center",
-    marginVertical: space.sm
+    marginVertical: 8
   },
   content: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm
+    gap: 8
   },
   text: {
-    fontSize: fontSizes.label,
+    fontSize: 16,
     ...fonts.semiBold
   },
   icon: {

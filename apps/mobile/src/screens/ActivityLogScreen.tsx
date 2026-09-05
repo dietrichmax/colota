@@ -17,7 +17,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Share2, Search, X, ArrowDown } from "lucide-react-native"
-import { fontSizes, fonts } from "../styles/typography"
+import { fonts } from "../styles/typography"
 import { Container, SectionTitle } from "../components"
 import { Tab } from "../components/ui/Tab"
 import { FileLoggingPanel } from "../components/features/log/FileLoggingPanel"
@@ -26,8 +26,6 @@ import { logger, LOG_LEVELS, type LogLevel } from "../utils/logger"
 import { getMergedLogs, exportLogs, MergedLogEntry } from "../utils/logExport"
 import NativeLocationService from "../services/NativeLocationService"
 import { ScreenProps } from "../types/global"
-import { size, space } from "../constants"
-import { radius } from "@colota/shared"
 
 type FilterLevel = LogLevel
 
@@ -111,9 +109,9 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
           style={({ pressed }) => [styles.headerButton, pressed && { opacity: colors.pressedOpacity }]}
         >
           {exporting ? (
-            <ActivityIndicator size={size.icon.md} color={colors.primary} />
+            <ActivityIndicator size={18} color={colors.primary} />
           ) : (
-            <Share2 size={size.icon.md} color={colors.primary} />
+            <Share2 size={20} color={colors.primary} />
           )}
         </Pressable>
       </View>
@@ -206,7 +204,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
       {tabBar}
       <View style={styles.filterBar}>
         <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Search size={size.icon.sm} color={colors.textLight} />
+          <Search size={16} color={colors.textLight} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
             placeholder="Filter logs..."
@@ -218,7 +216,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
           />
           {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery("")}>
-              <X size={size.icon.sm} color={colors.textLight} />
+              <X size={16} color={colors.textLight} />
             </Pressable>
           )}
         </View>
@@ -298,7 +296,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
           onPress={scrollToEnd}
           style={[styles.scrollEndButton, { backgroundColor: colors.primary, bottom: insets.bottom + 24 }]}
         >
-          <ArrowDown size={size.icon.md} color={colors.textOnPrimary} />
+          <ArrowDown size={20} color={colors.textOnPrimary} />
         </Pressable>
       ) : filteredLogs.length > 0 ? (
         <View style={[styles.followingBadge, { backgroundColor: colors.primary + "20", bottom: insets.bottom + 24 }]}>
@@ -312,38 +310,38 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
-    marginBottom: space.md
+    marginBottom: 12
   },
   list: {
-    padding: space.lg,
+    padding: 16,
     paddingBottom: 40
   },
   headerButtons: {
     flexDirection: "row",
-    gap: space.sm
+    gap: 8
   },
   headerButton: {
-    padding: space.sm
+    padding: 8
   },
   filterBar: {
-    paddingHorizontal: space.lg,
-    paddingTop: space.sm,
-    paddingBottom: space.sm,
-    gap: space.sm
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+    gap: 8
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: radius.sm,
+    borderRadius: 8,
     paddingHorizontal: 10,
     height: 40,
-    gap: space.sm
+    gap: 8
   },
   searchInput: {
     flex: 1,
     ...fonts.regular,
-    fontSize: fontSizes.body,
+    fontSize: 14,
     padding: 0
   },
   levelChips: {
@@ -351,22 +349,22 @@ const styles = StyleSheet.create({
     gap: 6
   },
   chip: {
-    paddingHorizontal: space.md,
+    paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: radius.md
+    borderRadius: 12
   },
   separator: {
     height: 1,
-    marginHorizontal: space.lg,
-    marginTop: space.xs
+    marginHorizontal: 16,
+    marginTop: 4
   },
   chipText: {
     ...fonts.semiBold,
-    fontSize: fontSizes.small
+    fontSize: 11
   },
   logText: {
     ...fonts.regular,
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     fontFamily: "monospace",
     lineHeight: 18
   },
@@ -380,12 +378,12 @@ const styles = StyleSheet.create({
     paddingTop: 40
   },
   emptyText: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.medium,
     marginBottom: 6
   },
   emptyHint: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular,
     textAlign: "center",
     lineHeight: 18
@@ -409,12 +407,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 24,
     right: 24,
-    paddingHorizontal: space.md,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: radius.lg
+    borderRadius: 16
   },
   followingText: {
     ...fonts.medium,
-    fontSize: fontSizes.small
+    fontSize: 11
   }
 })

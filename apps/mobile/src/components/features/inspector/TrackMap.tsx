@@ -10,7 +10,7 @@ import type { NativeSyntheticEvent } from "react-native"
 import { MapPinOff, X, Check, Trash2, Split } from "lucide-react-native"
 import { ThemeColors, Trip } from "../../../types/global"
 import { getTripColor } from "../../../utils/trips"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fonts } from "../../../styles/typography"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
 import {
@@ -21,8 +21,7 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
-import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, size, space } from "../../../constants"
-import { radius } from "@colota/shared"
+import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS } from "../../../constants"
 
 const HAS_NOTE = ["!=", ["get", "note"], ""]
 const trackPointStyle: any = {
@@ -300,7 +299,7 @@ export function TrackMap({
           <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
             <MapPinOff size={32} color={colors.textSecondary} />
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No locations</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
           <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>No tracked locations for this day.</Text>
         </View>
       )}
@@ -321,7 +320,7 @@ export function TrackMap({
                   accessibilityRole="button"
                   accessibilityLabel="Start a new trip at this point"
                 >
-                  <Split size={size.icon.sm} color={colors.text} />
+                  <Split size={16} color={colors.text} />
                 </Pressable>
               )}
               {onPointDelete && popup.id >= 0 && (
@@ -333,7 +332,7 @@ export function TrackMap({
                   accessibilityRole="button"
                   accessibilityLabel="Delete this point"
                 >
-                  <Trash2 size={size.icon.sm} color={colors.error} />
+                  <Trash2 size={16} color={colors.error} />
                 </Pressable>
               )}
               <Pressable
@@ -344,7 +343,7 @@ export function TrackMap({
                 hitSlop={HIT_SLOP_MD}
                 style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
               >
-                <X size={size.icon.sm} color={colors.textSecondary} />
+                <X size={16} color={colors.textSecondary} />
               </Pressable>
             </View>
           </View>
@@ -386,7 +385,7 @@ export function TrackMap({
                       hitSlop={HIT_SLOP_MD}
                       style={({ pressed }) => [styles.noteSaveBtn, pressed && { opacity: colors.pressedOpacity }]}
                     >
-                      <Check size={size.icon.md} color={colors.primary} />
+                      <Check size={18} color={colors.primary} />
                     </Pressable>
                   )}
                 </View>
@@ -427,7 +426,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    padding: space.xl,
+    padding: 24,
     zIndex: 20
   },
   iconCircle: {
@@ -436,17 +435,17 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: space.lg
+    marginBottom: 16
   },
   emptyTitle: {
-    fontSize: fontSizes.heading,
+    fontSize: 18,
     ...fonts.bold,
     textAlign: "center"
   },
   emptySubtext: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     textAlign: "center",
-    marginTop: space.sm,
+    marginTop: 8,
     lineHeight: 20
   },
   popupCard: {
@@ -454,8 +453,8 @@ const styles = StyleSheet.create({
     top: 10,
     left: 10,
     right: 10,
-    padding: space.md,
-    borderRadius: radius.md,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
     elevation: 6,
     shadowColor: "#000",
@@ -468,7 +467,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: space.xs
+    marginBottom: 4
   },
   popupActions: {
     flexDirection: "row",
@@ -478,19 +477,20 @@ const styles = StyleSheet.create({
   },
   popupTime: {
     fontWeight: "600",
-    fontSize: fontSizes.description
+    fontSize: 13
   },
   popupRow: {
     flexDirection: "row",
     justifyContent: "space-between"
   },
   popupLabel: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
+    textTransform: "uppercase",
     fontWeight: "600"
   },
   popupValue: {
     fontWeight: "500",
-    fontSize: fontSizes.caption
+    fontSize: 12
   },
   noteSection: {
     marginTop: 6,
@@ -501,11 +501,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 6,
-    marginTop: space.xs
+    marginTop: 4
   },
   noteInput: {
     flex: 1,
-    fontSize: fontSizes.description,
+    fontSize: 13,
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderWidth: 1,
@@ -520,10 +520,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 30,
     left: 10,
-    borderRadius: radius.md,
+    borderRadius: 12,
     borderWidth: 1,
-    padding: space.sm,
-    gap: space.xs,
+    padding: 8,
+    gap: 4,
     elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     borderRadius: 5
   },
   legendLabel: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     fontWeight: "500"
   }
 })

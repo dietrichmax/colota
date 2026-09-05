@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Text, StyleSheet, View, ScrollView } from "react-native"
-import { fontSizes, fonts } from "../styles/typography"
+import { fonts } from "../styles/typography"
 import { MapPinOff, Upload } from "lucide-react-native"
 import { Container, Card, SectionTitle, Button, FormatSelector, LoadingOverlay } from "../components"
 import { useTheme } from "../hooks/useTheme"
@@ -14,8 +14,6 @@ import { EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
 import { logger } from "../utils/logger"
 import { showAlert } from "../services/modalService"
 import { ScreenProps } from "../types/global"
-import { space } from "../constants"
-import { radius } from "@colota/shared"
 
 export function ExportLocationsScreen({}: ScreenProps) {
   const { colors } = useTheme()
@@ -85,7 +83,7 @@ export function ExportLocationsScreen({}: ScreenProps) {
           <Card style={styles.emptyCard}>
             <View style={styles.emptyState}>
               <MapPinOff size={40} color={colors.textLight} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>No locations</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
               <Text style={[styles.emptySubtitle, { color: colors.textLight }]}>
                 Start tracking to record locations that can be exported.
               </Text>
@@ -97,7 +95,7 @@ export function ExportLocationsScreen({}: ScreenProps) {
             <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total locations</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Locations</Text>
                   <Text style={[styles.statValue, { color: colors.primaryDark }]}>
                     {totalLocations.toLocaleString()}
                   </Text>
@@ -107,7 +105,7 @@ export function ExportLocationsScreen({}: ScreenProps) {
 
             {/* Format Selection */}
             <View style={styles.section}>
-              <SectionTitle>Select format</SectionTitle>
+              <SectionTitle>Select Format</SectionTitle>
               <Card>
                 <FormatSelector selectedFormat={selectedFormat} onSelectFormat={setSelectedFormat} />
               </Card>
@@ -128,39 +126,39 @@ export function ExportLocationsScreen({}: ScreenProps) {
         )}
       </ScrollView>
 
-      <LoadingOverlay visible={exporting} title="Exporting data" message={exportProgress} />
+      <LoadingOverlay visible={exporting} title="Exporting Data" message={exportProgress} />
     </Container>
   )
 }
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: space.lg,
+    paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 40
   },
   emptyCard: {
-    marginBottom: space.xl
+    marginBottom: 24
   },
   emptyState: {
     alignItems: "center",
-    paddingVertical: space.xxl
+    paddingVertical: 32
   },
   emptyTitle: {
-    fontSize: fontSizes.heading,
+    fontSize: 18,
     ...fonts.semiBold,
-    marginTop: space.md,
-    marginBottom: space.xs
+    marginTop: 12,
+    marginBottom: 4
   },
   emptySubtitle: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     textAlign: "center",
     lineHeight: 18
   },
   statsContainer: {
-    borderRadius: radius.lg,
+    borderRadius: 16,
     borderWidth: 2,
-    marginBottom: space.xl,
+    marginBottom: 24,
     overflow: "hidden"
   },
   statsGrid: {
@@ -172,20 +170,22 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   statLabel: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.semiBold,
-    marginBottom: space.sm
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 8
   },
   statValue: {
-    fontSize: fontSizes.cardTitle,
+    fontSize: 20,
     ...fonts.bold,
     letterSpacing: -0.5,
     textAlign: "center"
   },
   section: {
-    marginBottom: space.xl
+    marginBottom: 24
   },
   exportButtonWrapper: {
-    marginBottom: space.lg
+    marginBottom: 16
   }
 })

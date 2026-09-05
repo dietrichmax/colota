@@ -24,11 +24,10 @@ import { fonts, fontSizes } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
-import { SAVE_SUCCESS_DISPLAY_MS, STATS_REFRESH_FAST, size, space } from "../constants"
+import { STATS_REFRESH_FAST, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
-import { radius } from "@colota/shared"
 
 const BACKUP_TIP = "Tip: back up your data first (Settings -> Backup & Restore)."
 
@@ -161,7 +160,7 @@ export function DataManagementScreen({}: ScreenProps) {
 
   const handleClearSentHistory = useCallback(async () => {
     const confirmed = await showConfirm({
-      title: "Clear sent history",
+      title: "Clear Sent History",
       message: `Delete ${stats.sent} sent location${stats.sent !== 1 ? "s" : ""}? This cannot be undone.\n\n${BACKUP_TIP}`,
       confirmText: "Clear",
       destructive: true
@@ -176,7 +175,7 @@ export function DataManagementScreen({}: ScreenProps) {
 
   const handleClearQueue = useCallback(async () => {
     const confirmed = await showConfirm({
-      title: "Clear queue",
+      title: "Clear Queue",
       message: `Delete ${stats.queued} pending location${stats.queued !== 1 ? "s" : ""}? These will not be synced.\n\n${BACKUP_TIP}`,
       confirmText: "Clear",
       destructive: true
@@ -191,9 +190,9 @@ export function DataManagementScreen({}: ScreenProps) {
 
   const handleDeleteAllLocations = useCallback(async () => {
     const confirmed = await showConfirm({
-      title: "Delete all locations",
+      title: "Delete All Locations",
       message: `Delete all ${stats.total} stored location${stats.total !== 1 ? "s" : ""}? This cannot be undone.\n\n${BACKUP_TIP}`,
-      confirmText: "Delete all",
+      confirmText: "Delete All",
       destructive: true
     })
     if (!confirmed) return
@@ -212,7 +211,7 @@ export function DataManagementScreen({}: ScreenProps) {
     }
 
     const confirmed = await showConfirm({
-      title: "Delete old locations",
+      title: "Delete Old Locations",
       message: `Delete all locations older than ${days} day${days !== 1 ? "s" : ""}? This cannot be undone.\n\n${BACKUP_TIP}`,
       confirmText: "Delete",
       destructive: true
@@ -227,7 +226,7 @@ export function DataManagementScreen({}: ScreenProps) {
 
   const handleInsertDummyData = useCallback(async () => {
     const confirmed = await showConfirm({
-      title: "Insert dummy data",
+      title: "Insert Dummy Data",
       message: "Insert ~200 fake GPS locations across the past 7 days? This is for testing only.",
       confirmText: "Insert"
     })
@@ -271,12 +270,17 @@ export function DataManagementScreen({}: ScreenProps) {
     <Container>
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.text }]}>Data Management</Text>
+          </View>
+
           {/* Stats */}
           <View style={styles.section}>
-            <SectionTitle>Database statistics</SectionTitle>
+            <SectionTitle>DATABASE STATISTICS</SectionTitle>
             <Card>
               {[
-                ["Total locations", stats.total.toLocaleString(), colors.text],
+                ["Total Locations", stats.total.toLocaleString(), colors.text],
                 ...(!isOfflineMode
                   ? [
                       ["Sent", stats.sent.toLocaleString(), colors.success],
@@ -300,9 +304,9 @@ export function DataManagementScreen({}: ScreenProps) {
           {/* Queue Actions */}
           {!isOfflineMode && (
             <View style={styles.section}>
-              <SectionTitle>Queue actions</SectionTitle>
+              <SectionTitle>QUEUE ACTIONS</SectionTitle>
               <Card>
-                <Button onPress={handleManualFlush} disabled={isProcessing || stats.queued === 0} title="Sync now" />
+                <Button onPress={handleManualFlush} disabled={isProcessing || stats.queued === 0} title="Sync Now" />
                 <Text style={[styles.hint, { color: colors.textLight }]}>
                   {stats.queued === 0
                     ? "Queue is empty"
@@ -314,13 +318,13 @@ export function DataManagementScreen({}: ScreenProps) {
 
           {/* Cleanup Actions */}
           <View style={styles.section}>
-            <SectionTitle>Cleanup actions</SectionTitle>
+            <SectionTitle>CLEANUP ACTIONS</SectionTitle>
             <Card>
               {!isOfflineMode ? (
                 <>
                   {/* Clear Sent History */}
                   <ActionRow
-                    label="Clear sent history"
+                    label="Clear Sent History"
                     hint="Delete all successfully sent locations"
                     color={colors.success}
                     textColor={colors.textLight}
@@ -332,7 +336,7 @@ export function DataManagementScreen({}: ScreenProps) {
 
                   {/* Clear Queue */}
                   <ActionRow
-                    label="Clear queue"
+                    label="Clear Queue"
                     hint="Delete all pending locations"
                     color={colors.warning}
                     textColor={colors.textLight}
@@ -346,7 +350,7 @@ export function DataManagementScreen({}: ScreenProps) {
                 <>
                   {/* Delete All Locations (offline mode) */}
                   <ActionRow
-                    label="Delete all locations"
+                    label="Delete All Locations"
                     hint="Remove all stored locations from the database"
                     color={colors.error}
                     textColor={colors.textLight}
@@ -360,7 +364,7 @@ export function DataManagementScreen({}: ScreenProps) {
 
               {/* Delete Older Than */}
               <View style={styles.actionColumn}>
-                <Text style={[styles.actionLabel, { color: colors.text }]}>Delete old locations</Text>
+                <Text style={[styles.actionLabel, { color: colors.text }]}>Delete Old Locations</Text>
                 <Text style={[styles.actionHint, { color: colors.textLight }]}>
                   Remove locations older than specified days
                 </Text>
@@ -393,12 +397,12 @@ export function DataManagementScreen({}: ScreenProps) {
 
               {/* Vacuum */}
               <View style={styles.actionColumn}>
-                <Text style={[styles.actionLabel, { color: colors.text }]}>Optimize database</Text>
+                <Text style={[styles.actionLabel, { color: colors.text }]}>Optimize Database</Text>
                 <Text style={[styles.actionHint, { color: colors.textLight }]}>
                   Reclaim unused space and improve performance
                 </Text>
                 <View style={styles.hintRow}>
-                  <Lightbulb size={size.icon.sm} color={colors.textLight} />
+                  <Lightbulb size={12} color={colors.textLight} />
                   <Text style={[styles.actionHint, { color: colors.textLight }]}>
                     Run after large deletions to reclaim space
                   </Text>
@@ -410,10 +414,10 @@ export function DataManagementScreen({}: ScreenProps) {
           {/* Dev Tools */}
           {debugMode && (
             <View style={styles.section}>
-              <SectionTitle>Dev tools</SectionTitle>
+              <SectionTitle>DEV TOOLS</SectionTitle>
               <Card>
                 <View style={styles.actionColumn}>
-                  <Text style={[styles.actionLabel, { color: colors.text }]}>Insert dummy data</Text>
+                  <Text style={[styles.actionLabel, { color: colors.text }]}>Insert Dummy Data</Text>
                   <Text style={[styles.actionHint, { color: colors.textLight }]}>
                     Generate ~200 fake GPS locations across the past 7 days for testing trips and calendar
                   </Text>
@@ -475,46 +479,51 @@ const styles = StyleSheet.create({
     flex: 1
   },
   scrollContent: {
-    paddingHorizontal: space.lg,
+    paddingHorizontal: 16,
     paddingBottom: 40
   },
   header: {
     marginTop: 20,
-    marginBottom: space.xl
+    marginBottom: 24
+  },
+  title: {
+    fontSize: 28,
+    ...fonts.bold,
+    marginBottom: 4
   },
   section: {
-    marginBottom: space.xl
+    marginBottom: 24
   },
   statRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: space.sm
+    paddingVertical: 8
   },
   statLabel: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.medium
   },
   statValue: {
-    fontSize: fontSizes.label,
+    fontSize: 16,
     ...fonts.bold
   },
   hint: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.regular,
     textAlign: "center",
     fontStyle: "italic",
     lineHeight: 16,
-    marginTop: space.sm
+    marginTop: 8
   },
   actionRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: space.md
+    paddingVertical: 12
   },
   actionColumn: {
-    paddingVertical: space.md
+    paddingVertical: 12
   },
   actionInfo: {
     flex: 1
@@ -522,36 +531,36 @@ const styles = StyleSheet.create({
   actionLabel: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: space.xs
+    marginBottom: 4
   },
   actionHint: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.regular,
     lineHeight: 16,
     marginTop: 2
   },
   actionBadge: {
-    paddingHorizontal: space.md,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: radius.lg,
+    borderRadius: 16,
     borderWidth: 1
   },
   actionBadgeText: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.bold
   },
   daysInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: space.md,
-    gap: space.sm
+    marginTop: 12,
+    gap: 8
   },
   daysInput: {
     flex: 1,
     borderWidth: 1,
     padding: 10,
-    borderRadius: radius.sm,
-    fontSize: fontSizes.input,
+    borderRadius: 8,
+    fontSize: 15,
     textAlign: "center"
   },
   hintRow: {
@@ -561,7 +570,7 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
   daysLabel: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.medium
   },
   buttonDisabled: {

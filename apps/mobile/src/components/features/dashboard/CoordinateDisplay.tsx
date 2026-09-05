@@ -7,10 +7,9 @@ import React from "react"
 import { View, Text, StyleSheet } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fonts } from "../../../styles/typography"
 import { SectionTitle } from "../../ui/SectionTitle"
 import { Card } from "../../ui/Card"
-import { space } from "../../../constants"
 
 export function CoordinateDisplay() {
   const coords = useCoords()
@@ -38,7 +37,7 @@ export function CoordinateDisplay() {
 
   return (
     <>
-      <SectionTitle>Current location data</SectionTitle>
+      <SectionTitle>CURRENT LOCATION DATA</SectionTitle>
       <View style={styles.container}>
         {/* First Row: Latitude and Longitude */}
         <View style={styles.row}>
@@ -65,17 +64,19 @@ const styles = StyleSheet.create({
     gap: 10
   },
   coordLabel: {
-    fontSize: fontSizes.micro,
+    fontSize: 10,
     ...fonts.semiBold,
-    marginBottom: space.xs
+    marginBottom: 4,
+    letterSpacing: 0.5,
+    textTransform: "uppercase"
   },
   coordValue: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.bold,
     letterSpacing: -0.3
   },
   coordUnit: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.medium,
     opacity: 0.6
   }

@@ -6,10 +6,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { View, Text, TextInput, StyleSheet } from "react-native"
 import { ThemeColors } from "../../types/global"
-import { fontSizes, fonts } from "../../styles/typography"
+import { fonts } from "../../styles/typography"
 import { clamp, pad2 } from "../../utils/format"
-import { space } from "../../constants"
-import { radius } from "@colota/shared"
 
 interface TimePickerProps {
   value: string
@@ -101,21 +99,21 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm,
-    paddingVertical: space.xs
+    gap: 8,
+    paddingVertical: 4
   },
   input: {
     minWidth: 64,
     padding: 14,
-    borderRadius: radius.md,
+    borderRadius: 12,
     borderWidth: 1,
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.semiBold,
     fontVariant: ["tabular-nums"],
     textAlign: "center"
   },
   separator: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.semiBold,
     paddingHorizontal: 2
   }

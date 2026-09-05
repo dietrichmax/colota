@@ -6,8 +6,7 @@
 import React from "react"
 import { View, Pressable, Text, StyleSheet } from "react-native"
 import { ThemeColors } from "../../types/global"
-import { fontSizes, fonts } from "../../styles/typography"
-import { space } from "../../constants"
+import { fonts } from "../../styles/typography"
 
 interface ChipGroupProps<T extends string> {
   options: readonly { value: T; label: string }[]
@@ -48,7 +47,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: space.sm
+    gap: 8
   },
   chip: {
     borderWidth: 2,
@@ -58,7 +57,7 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   label: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.bold
   }
 })

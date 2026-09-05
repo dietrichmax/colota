@@ -7,7 +7,6 @@ import React, { useMemo } from "react"
 import { View, StyleSheet } from "react-native"
 import { GeoJSONSource, Layer, Marker } from "@maplibre/maplibre-react-native"
 import type { LocationCoords, ThemeColors } from "../../../types/global"
-import { radius } from "@colota/shared"
 
 /** meters-per-pixel at zoom 0 on the equator (Web Mercator constant) */
 const METERS_PER_PX_Z0 = 156543.03
@@ -84,7 +83,7 @@ const styles = StyleSheet.create({
   markerDot: {
     width: 24,
     height: 24,
-    borderRadius: radius.md,
+    borderRadius: 12,
     borderWidth: 3,
     borderColor: "white",
     elevation: 4,

@@ -3,14 +3,14 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useLayoutEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
-import { fontSizes, fonts } from "../styles/typography"
+import { fonts } from "../styles/typography"
 import { Container, SectionTitle, Card, Divider, SettingRow, NumericInput, FieldMessage } from "../components"
 import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
@@ -18,15 +18,12 @@ import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import {
   MS_TO_KMH,
   PROFILE_CONDITIONS,
-  STATIONARY_MAX_INTERVAL_SECONDS,
-  SYNC_INTERVAL_LABELS,
   SYNC_INTERVAL_PRESETS,
-  defaultProfileDelays,
-  size,
-  space
+  SYNC_INTERVAL_LABELS,
+  STATIONARY_MAX_INTERVAL_SECONDS,
+  defaultProfileDelays
 } from "../constants"
 import type { RootScreenProps } from "../types/navigation"
-import { radius } from "@colota/shared"
 
 function formatSyncDefault(seconds: number): string {
   if (SYNC_INTERVAL_LABELS[seconds]) return SYNC_INTERVAL_LABELS[seconds]
@@ -60,10 +57,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const [activationDelayStr, setActivationDelayStr] = useState("0")
   const [delayStr, setDelayStr] = useState("60")
   const [syncIntervalStr, setSyncIntervalStr] = useState(String(settings.syncInterval))
-
-  useLayoutEffect(() => {
-    navigation.setOptions({ headerTitle: isEditing ? "Edit profile" : "New profile" })
-  }, [navigation, isEditing])
 
   useEffect(() => {
     if (!profileId) return
@@ -195,6 +188,10 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>{isEditing ? "Edit Profile" : "New Profile"}</Text>
+        </View>
+
         {/* Name & Priority */}
         <SectionTitle>Profile</SectionTitle>
         <Card>
@@ -227,7 +224,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         </Card>
 
         {/* Condition */}
-        <SectionTitle style={styles.sectionGap}>Activation condition</SectionTitle>
+        <SectionTitle style={styles.sectionGap}>Activation Condition</SectionTitle>
         <Card>
           <View style={styles.conditionGrid}>
             {PROFILE_CONDITIONS.map((opt) => {
@@ -246,7 +243,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                   ]}
                   onPress={() => setConditionType(opt.type)}
                 >
-                  <Icon size={size.icon.md} color={selected ? colors.primary : colors.textSecondary} />
+                  <Icon size={20} color={selected ? colors.primary : colors.textSecondary} />
                   <Text style={[styles.conditionLabel, { color: selected ? colors.primary : colors.text }]}>
                     {opt.label}
                   </Text>
@@ -278,9 +275,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         </Card>
 
         {/* Tracking Settings */}
-        <SectionTitle style={styles.sectionGap}>Tracking settings</SectionTitle>
+        <SectionTitle style={styles.sectionGap}>Tracking Settings</SectionTitle>
         <Card>
-          <SettingRow label="Tracking interval" hint={`Default: ${settings.interval}s`}>
+          <SettingRow label="Tracking Interval" hint={`Default: ${settings.interval}s`}>
             <View style={styles.inputWithUnit}>
               <TextInput
                 style={inputStyle}
@@ -309,7 +306,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
             </FieldMessage>
           ) : (
             <SettingRow
-              label="Movement threshold"
+              label="Movement Threshold"
               hint={`Default: ${metersToInput(settings.distance)} ${shortDistanceUnit()}`}
             >
               <View style={styles.inputWithUnit}>
@@ -331,7 +328,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               <Divider />
 
               <View style={styles.syncLabelRow}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>Sync interval</Text>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Sync Interval</Text>
                 <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
                   Default: {formatSyncDefault(settings.syncInterval)}
                 </Text>
@@ -387,7 +384,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               {isCustomSyncInterval && (
                 <View style={styles.customSyncInput}>
                   <NumericInput
-                    label="Custom sync interval"
+                    label="Custom Sync Interval"
                     value={syncIntervalStr}
                     onChange={(val) => {
                       setSyncIntervalStr(val)
@@ -418,7 +415,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         <Card>
           {profile.condition.type === "stationary" ? (
             <SettingRow
-              label="Activation delay"
+              label="Activation Delay"
               hint="How long the device must be still before this profile activates. Resumes instantly via the hardware motion sensor when you move again."
             >
               <View style={styles.inputWithUnit}>
@@ -436,7 +433,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           ) : (
             <>
               <SettingRow
-                label="Activation delay"
+                label="Activation Delay"
                 hint="How long the condition must hold before this profile takes over. Avoids switching on brief, temporary changes. 0 = instant."
               >
                 <View style={styles.inputWithUnit}>
@@ -455,7 +452,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               <Divider />
 
               <SettingRow
-                label="Deactivation delay"
+                label="Deactivation Delay"
                 hint="How long after the condition stops before reverting to your defaults. Prevents rapid back-and-forth switching."
               >
                 <View style={styles.inputWithUnit}>
@@ -485,9 +482,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           onPress={handleSave}
           disabled={saving}
         >
-          <Check size={size.icon.md} color={colors.textOnPrimary} />
+          <Check size={20} color={colors.textOnPrimary} />
           <Text style={[styles.saveBtnText, { color: colors.textOnPrimary }]}>
-            {saving ? "Saving..." : isEditing ? "Save changes" : "Create profile"}
+            {saving ? "Saving..." : isEditing ? "Save Changes" : "Create Profile"}
           </Text>
         </Pressable>
       </ScrollView>
@@ -496,26 +493,29 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: 40 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 },
   header: { marginBottom: 20 },
-  inputGroup: { marginBottom: space.xs },
+  title: { fontSize: 28, ...fonts.bold, letterSpacing: -0.5 },
+  inputGroup: { marginBottom: 4 },
   label: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.semiBold,
-    marginBottom: 6
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.5
   },
-  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: fontSizes.input, ...fonts.regular },
+  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: 15, ...fonts.regular },
   numInput: {
     borderWidth: 1,
     padding: 10,
     borderRadius: 10,
-    fontSize: fontSizes.input,
+    fontSize: 15,
     textAlign: "center",
     width: 64,
     ...fonts.regular
   },
   inputWithUnit: { flexDirection: "row", alignItems: "center", gap: 6 },
-  unit: { fontSize: fontSizes.body, ...fonts.medium, minWidth: 28 },
+  unit: { fontSize: 14, ...fonts.medium, minWidth: 28 },
   conditionGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -523,31 +523,31 @@ const styles = StyleSheet.create({
   },
   conditionOption: {
     width: "47%",
-    padding: space.md,
+    padding: 12,
     borderRadius: 10,
     borderWidth: 1.5,
     alignItems: "center",
-    gap: space.xs
+    gap: 4
   },
-  conditionLabel: { fontSize: fontSizes.description, ...fonts.semiBold },
-  conditionDesc: { fontSize: fontSizes.small, ...fonts.regular, textAlign: "center" },
-  syncLabelRow: { marginBottom: space.sm },
-  settingLabel: { fontSize: fontSizes.label, ...fonts.semiBold, marginBottom: 2 },
-  settingHint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18 },
-  syncGrid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  syncOption: { width: "31%", padding: space.md, borderRadius: 10, borderWidth: 1.5, alignItems: "center" }, // ~3 per row with gap
-  syncOptionLabel: { fontSize: fontSizes.description, ...fonts.semiBold },
-  customSyncInput: { marginTop: space.md },
+  conditionLabel: { fontSize: 13, ...fonts.semiBold },
+  conditionDesc: { fontSize: 11, ...fonts.regular, textAlign: "center" },
+  syncLabelRow: { marginBottom: 8 },
+  settingLabel: { fontSize: 16, ...fonts.semiBold, marginBottom: 2 },
+  settingHint: { fontSize: 13, ...fonts.regular, lineHeight: 18 },
+  syncGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  syncOption: { width: "31%", padding: 12, borderRadius: 10, borderWidth: 1.5, alignItems: "center" }, // ~3 per row with gap
+  syncOptionLabel: { fontSize: 13, ...fonts.semiBold },
+  customSyncInput: { marginTop: 12 },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.sm,
-    padding: space.lg,
-    borderRadius: radius.md,
-    marginTop: space.lg
+    gap: 8,
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16
   },
-  saveBtnText: { fontSize: fontSizes.label, ...fonts.semiBold },
+  saveBtnText: { fontSize: 16, ...fonts.semiBold },
   saveBtnDisabled: { opacity: 0.6 },
-  sectionGap: { marginTop: space.xl }
+  sectionGap: { marginTop: 24 }
 })

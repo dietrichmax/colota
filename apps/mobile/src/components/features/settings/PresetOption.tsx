@@ -6,10 +6,9 @@ import React from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { Zap, Check } from "lucide-react-native"
 import { SelectablePreset, TRACKING_PRESETS } from "../../../types/global"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fonts } from "../../../styles/typography"
 import { useTheme } from "../../../hooks/useTheme"
 import { RadioDot } from "../../ui/RadioDot"
-import { size, space } from "../../../constants"
 
 interface BadgeProps {
   icon: React.ReactElement
@@ -61,16 +60,12 @@ export function PresetOption({ preset, isSelected, isOfflineMode, onSelect }: Pr
                 {config.label}
               </Text>
               {showRecommendedBadge && (
-                <Badge
-                  icon={<Check size={size.icon.sm} color={colors.success} />}
-                  label="Recommended"
-                  color={colors.success}
-                />
+                <Badge icon={<Check size={10} color={colors.success} />} label="Recommended" color={colors.success} />
               )}
               {showWarningBadge && (
                 <Badge
-                  icon={<Zap size={size.icon.sm} color={colors.warning} />}
-                  label="High battery usage"
+                  icon={<Zap size={10} color={colors.warning} />}
+                  label="High Battery Usage"
                   color={colors.warning}
                 />
               )}
@@ -91,7 +86,7 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: space.md
+    paddingVertical: 12
   },
   leftContent: {
     flex: 1
@@ -103,31 +98,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: space.sm,
-    marginBottom: space.xs
+    gap: 8,
+    marginBottom: 4
   },
   label: {
-    fontSize: fontSizes.label,
+    fontSize: 16,
     ...fonts.semiBold,
     letterSpacing: -0.2
   },
   badge: {
-    paddingHorizontal: space.sm,
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6
   },
   badgeContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.xs
+    gap: 4
   },
   badgeText: {
-    fontSize: fontSizes.micro,
+    fontSize: 10,
     ...fonts.bold,
     letterSpacing: 0.3
   },
   description: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular,
     lineHeight: 18
   }

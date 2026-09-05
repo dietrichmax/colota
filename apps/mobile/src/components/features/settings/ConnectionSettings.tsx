@@ -4,21 +4,20 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from "react"
-import { Text, StyleSheet, TextInput, View, Pressable } from "react-native"
-import { CircleCheckBig, ChevronRight } from "lucide-react-native"
+import { Text, StyleSheet, TextInput, Switch, View, Pressable } from "react-native"
+import { CheckCircle, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isEndpointAllowed } from "../../../utils/settingsValidation"
 import { isTraccarJsonFormat, isOverlandFormat } from "../../../utils/apiPayload"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fonts } from "../../../styles/typography"
 import { SettingRow } from "../../ui/SettingRow"
 import { useTimeout } from "../../../hooks/useTimeout"
-import { TEST_RESULT_DISPLAY_MS, size, space } from "../../../constants"
+import { TEST_RESULT_DISPLAY_MS } from "../../../constants"
 import { logger } from "../../../utils/logger"
-import { Button, Card, Divider, FieldMessage, SectionTitle, Toggle } from "../../index"
+import { Button, Card, SectionTitle, Divider, FieldMessage } from "../../index"
 import { showChoice } from "../../../services/modalService"
-import { radius } from "@colota/shared"
 
 interface ConnectionSettingsProps {
   settings: Settings
@@ -63,12 +62,12 @@ export function ConnectionSettings({
           if (stats.queued > 0) {
             const hasEndpoint = !!settings.endpoint
             const buttons = [
-              ...(hasEndpoint ? [{ text: "Sync first", style: "primary" as const }] : []),
-              { text: "Keep in queue", style: "secondary" as const },
+              ...(hasEndpoint ? [{ text: "Sync First", style: "primary" as const }] : []),
+              { text: "Keep in Queue", style: "secondary" as const },
               { text: "Cancel", style: "secondary" as const }
             ]
             const choice = await showChoice({
-              title: "Unsent locations",
+              title: "Unsent Locations",
               message: `You have ${stats.queued} locations waiting to sync. What would you like to do?`,
               buttons
             })
@@ -181,11 +180,15 @@ export function ConnectionSettings({
     <View style={styles.section}>
       <SectionTitle>Connection</SectionTitle>
       <Card>
-        <SettingRow label="Offline mode" hint="Save locally, no network sync">
-          <Toggle
-            accessibilityLabel="Offline mode"
+        <SettingRow label="Offline Mode" hint="Save locally, no network sync">
+          <Switch
             value={settings.isOfflineMode}
             onValueChange={handleOfflineModeChange}
+            trackColor={{
+              false: colors.border,
+              true: colors.primary + "80"
+            }}
+            thumbColor={settings.isOfflineMode ? colors.primary : colors.border}
           />
         </SettingRow>
 
@@ -195,7 +198,7 @@ export function ConnectionSettings({
 
             <View style={styles.inputGroup}>
               <View style={styles.inputHeader}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Server endpoint</Text>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Server Endpoint</Text>
                 {endpointInput && (
                   <View
                     style={[
@@ -261,7 +264,7 @@ export function ConnectionSettings({
                 if (!endpointInput || !isEndpointAllowed(endpointInput)) return
                 handleTestEndpoint()
               }}
-              title={testing ? "Testing..." : "Test connection"}
+              title={testing ? "Testing..." : "Test Connection"}
             />
 
             {testResponse && (
@@ -274,7 +277,7 @@ export function ConnectionSettings({
                   }
                 ]}
               >
-                {!testError && <CircleCheckBig size={size.icon.sm} color={colors.success} />}
+                {!testError && <CheckCircle size={16} color={colors.success} />}
                 <Text style={[styles.responseText, { color: testError ? colors.error : colors.success }]}>
                   {testResponse}
                 </Text>
@@ -288,12 +291,12 @@ export function ConnectionSettings({
               onPress={() => navigation.navigate("Auth Settings")}
             >
               <View style={styles.linkContent}>
-                <Text style={[styles.linkLabel, { color: colors.text }]}>Authentication & headers</Text>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Authentication & Headers</Text>
                 <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
                   Basic auth, bearer tokens, custom headers
                 </Text>
               </View>
-              <ChevronRight size={size.icon.md} color={colors.textLight} />
+              <ChevronRight size={20} color={colors.textLight} />
             </Pressable>
           </>
         )}
@@ -304,10 +307,10 @@ export function ConnectionSettings({
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: space.xl
+    marginBottom: 24
   },
   inputGroup: {
-    marginBottom: space.md
+    marginBottom: 12
   },
   inputHeader: {
     flexDirection: "row",
@@ -316,61 +319,61 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   inputLabel: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.semiBold
   },
   protocolBadge: {
     paddingHorizontal: 10,
-    paddingVertical: space.xs,
-    borderRadius: radius.md
+    paddingVertical: 4,
+    borderRadius: 12
   },
   protocolText: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     ...fonts.bold
   },
   input: {
     borderWidth: 1.5,
-    padding: space.lg,
-    borderRadius: radius.md,
-    fontSize: fontSizes.input,
+    padding: 16,
+    borderRadius: 12,
+    fontSize: 15,
     ...fonts.regular
   },
   testButton: {
-    marginTop: space.md
+    marginTop: 12
   },
   disabledButton: {
     opacity: 0.5
   },
   responseBox: {
-    marginTop: space.md,
+    marginTop: 12,
     padding: 14,
     borderWidth: 1.5,
-    borderRadius: radius.md,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.sm
+    gap: 8
   },
   responseText: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.semiBold
   },
   linkRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: space.md
+    paddingVertical: 12
   },
   linkContent: {
     flex: 1
   },
   linkLabel: {
-    fontSize: fontSizes.label,
+    fontSize: 16,
     ...fonts.semiBold,
     marginBottom: 2
   },
   linkSub: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular
   }
 })

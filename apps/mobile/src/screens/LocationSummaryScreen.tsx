@@ -23,15 +23,14 @@ import { useTheme } from "../hooks/useTheme"
 import { DailyStat } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { formatDistance, formatDuration, startOfDaySec } from "../utils/geo"
-import { fontSizes, fonts } from "../styles/typography"
+import { fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
-import { size, space } from "../constants"
 
 type Period = "week" | "month" | "30days"
 
 const PERIOD_OPTIONS = [
-  { value: "week" as const, label: "This week" },
-  { value: "month" as const, label: "This month" },
+  { value: "week" as const, label: "This Week" },
+  { value: "month" as const, label: "This Month" },
   { value: "30days" as const, label: "Last 30 Days" }
 ]
 const COUNT_UP_DURATION = 600 // ms
@@ -160,7 +159,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
             <Text style={[styles.dayLabel, { color: colors.text }]}>{formatDayLabel(item.day)}</Text>
             <View style={styles.dayHeaderRight}>
               <Text style={[styles.dayDistance, { color: colors.primary }]}>{formatDistance(item.distanceMeters)}</Text>
-              <ChevronRight size={size.icon.sm} color={colors.textDisabled} />
+              <ChevronRight size={14} color={colors.textDisabled} />
             </View>
           </View>
           <View style={styles.dayStats}>
@@ -182,7 +181,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
     () => (
       <View style={styles.summaryGrid}>
         <Card style={styles.summaryCard}>
-          <Route size={size.icon.sm} color={colors.primary} />
+          <Route size={16} color={colors.primary} />
           <AnimatedNumber
             value={summary.totalDistance}
             format={(n) => formatDistance(n)}
@@ -192,7 +191,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
         </Card>
 
         <Card style={styles.summaryCard}>
-          <MapPin size={size.icon.sm} color={colors.primary} />
+          <MapPin size={16} color={colors.primary} />
           <AnimatedNumber
             value={summary.totalTrips}
             format={(n) => String(n)}
@@ -202,17 +201,17 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
         </Card>
 
         <Card style={styles.summaryCard}>
-          <Calendar size={size.icon.sm} color={colors.primary} />
+          <Calendar size={16} color={colors.primary} />
           <AnimatedNumber
             value={summary.activeDays}
             format={(n) => String(n)}
             style={[styles.summaryValue, { color: colors.text }]}
           />
-          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Active days</Text>
+          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Active Days</Text>
         </Card>
 
         <Card style={styles.summaryCard}>
-          <TrendingUp size={size.icon.sm} color={colors.primary} />
+          <TrendingUp size={16} color={colors.primary} />
           <AnimatedNumber
             value={summary.avgDistance}
             format={(n) => formatDistance(n)}
@@ -263,10 +262,10 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.sm,
-    marginBottom: space.sm
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    marginBottom: 8
   },
   loadingContainer: {
     flex: 1,
@@ -274,62 +273,63 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   listContent: {
-    paddingHorizontal: space.md,
+    paddingHorizontal: 12,
     paddingBottom: 20
   },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: space.lg
+    marginBottom: 16
   },
   summaryCard: {
     flexBasis: "45%",
     flexGrow: 1,
     flexShrink: 0,
     alignItems: "center",
-    padding: space.md,
+    padding: 12,
     gap: 2
   },
   summaryValue: {
-    fontSize: fontSizes.heading,
+    fontSize: 18,
     ...fonts.bold
   },
   summaryLabel: {
-    fontSize: fontSizes.micro,
-    ...fonts.semiBold
+    fontSize: 10,
+    ...fonts.semiBold,
+    textTransform: "uppercase"
   },
   dayCard: {
-    marginBottom: space.sm,
-    padding: space.md
+    marginBottom: 8,
+    padding: 12
   },
   dayHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: space.xs
+    marginBottom: 4
   },
   dayHeaderRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.xs
+    gap: 4
   },
   dayLabel: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.bold
   },
   dayDistance: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.bold
   },
   dayStats: {
     flexDirection: "row",
-    gap: space.lg
+    gap: 16
   },
   dayStat: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.regular
   },
   empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold }
+  emptyText: { fontSize: 15, ...fonts.semiBold }
 })

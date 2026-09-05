@@ -7,8 +7,7 @@ import React, { useEffect, useRef } from "react"
 import { View, Text, StyleSheet, Animated } from "react-native"
 import { Check } from "lucide-react-native"
 import { SpinningLoader } from "./SpinningLoader"
-import { fontSizes, fonts } from "../../styles/typography"
-import { size, space } from "../../constants"
+import { fonts } from "../../styles/typography"
 
 interface Props {
   saving: boolean
@@ -59,9 +58,9 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
         ]}
       >
         {saving ? (
-          <SpinningLoader size={size.icon.sm} color={colors.text} />
+          <SpinningLoader size={16} color={colors.text} />
         ) : !hasMessage ? (
-          <Check size={size.icon.sm} color={colors.text} />
+          <Check size={16} color={colors.text} />
         ) : null}
         <Text style={[styles.text, { color: colors.text }]}>{displayText}</Text>
       </View>
@@ -82,14 +81,14 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm,
+    gap: 8,
     paddingHorizontal: 20,
-    paddingVertical: space.md,
+    paddingVertical: 12,
     borderRadius: 24,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8
   },
-  text: { fontSize: fontSizes.body, ...fonts.semiBold }
+  text: { fontSize: 14, ...fonts.semiBold }
 })

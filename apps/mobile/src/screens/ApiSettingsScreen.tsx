@@ -20,7 +20,7 @@ import { useAutoSave } from "../hooks/useAutoSave"
 import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
-import { fontSizes, fonts } from "../styles/typography"
+import { fonts } from "../styles/typography"
 import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
@@ -29,8 +29,6 @@ import {
   isTraccarJsonFormat,
   isOverlandFormat
 } from "../utils/apiPayload"
-import { space } from "../constants"
-import { radius } from "@colota/shared"
 
 type LocalCustomField = CustomField & { id: number }
 
@@ -464,7 +462,9 @@ export function ApiSettingsScreen({}: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        {/* Header */}
         <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>API Field Mapping</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Customize field names sent to your server
           </Text>
@@ -472,7 +472,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
         {/* Template Selector */}
         <View style={styles.section}>
-          <SectionTitle>Backend template</SectionTitle>
+          <SectionTitle>BACKEND TEMPLATE</SectionTitle>
           <ChipGroup
             options={TEMPLATE_OPTIONS}
             selected={localTemplate}
@@ -490,7 +490,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Overland template is POST-only by spec; no need to expose the choice */}
         {localTemplate !== "overland" && (
           <View style={styles.section}>
-            <SectionTitle>HTTP method</SectionTitle>
+            <SectionTitle>HTTP METHOD</SectionTitle>
             <ChipGroup
               options={HTTP_METHOD_OPTIONS}
               selected={localHttpMethod}
@@ -508,7 +508,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Dawarich Mode Selector (Dawarich template only) */}
         {showDawarichChip && (
           <View style={styles.section}>
-            <SectionTitle>Dawarich mode</SectionTitle>
+            <SectionTitle>DAWARICH MODE</SectionTitle>
             <ChipGroup
               options={DAWARICH_MODE_OPTIONS}
               selected={localDawarichMode}
@@ -537,13 +537,13 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Field Mapping Section */}
         <View style={styles.fieldsSection}>
           <View style={styles.sectionHeader}>
-            <SectionTitle>Field mappings</SectionTitle>
+            <SectionTitle>FIELD MAPPINGS</SectionTitle>
             {hasModifications && (
               <Pressable
                 onPress={handleResetAll}
                 style={({ pressed }) => [styles.resetAllButton, pressed && { opacity: colors.pressedOpacity }]}
               >
-                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>Reset all</Text>
+                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>RESET ALL</Text>
               </Pressable>
             )}
           </View>
@@ -621,7 +621,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Custom Fields Section */}
         <View style={styles.fieldsSection}>
           <View style={styles.sectionHeader}>
-            <SectionTitle>Custom fields</SectionTitle>
+            <SectionTitle>CUSTOM FIELDS</SectionTitle>
           </View>
 
           <View style={[styles.fieldsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -748,23 +748,29 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: space.lg,
+    paddingHorizontal: 16,
     paddingBottom: 40
   },
   header: {
     marginTop: 20,
     marginBottom: 20
   },
+  title: {
+    fontSize: 28,
+    ...fonts.bold,
+    letterSpacing: -0.5,
+    marginBottom: 4
+  },
   subtitle: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     lineHeight: 20
   },
   section: {
-    marginBottom: space.xl
+    marginBottom: 24
   },
   templateHint: {
-    fontSize: fontSizes.caption,
-    marginTop: space.sm
+    fontSize: 12,
+    marginTop: 8
   },
   fieldsSection: {
     marginBottom: 20
@@ -775,23 +781,23 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   resetAllButton: {
-    paddingVertical: space.xs,
-    paddingHorizontal: space.sm
+    paddingVertical: 4,
+    paddingHorizontal: 8
   },
   resetAllText: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     ...fonts.bold,
     letterSpacing: 0.5
   },
   fieldsCard: {
-    padding: space.md,
+    padding: 12,
     borderRadius: 10,
     borderWidth: 1
   },
   fieldRow: {
     flexDirection: "row",
     paddingVertical: 10,
-    gap: space.md
+    gap: 12
   },
   keyColumn: {
     flex: 1,
@@ -804,14 +810,14 @@ const styles = StyleSheet.create({
     marginBottom: 2
   },
   fieldLabel: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.bold,
     letterSpacing: 0.5
   },
   modifiedBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: radius.xs
+    borderRadius: 4
   },
   modifiedText: {
     fontSize: 9,
@@ -819,7 +825,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3
   },
   fieldDescription: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     lineHeight: 15
   },
   valueColumn: {
@@ -835,73 +841,73 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1.5,
     paddingHorizontal: 10,
-    paddingVertical: space.sm,
-    borderRadius: radius.sm,
-    fontSize: fontSizes.body,
+    paddingVertical: 8,
+    borderRadius: 8,
+    fontSize: 14,
     fontFamily: "monospace"
   },
   resetButton: {
     width: 32,
     height: 32,
-    borderRadius: radius.lg,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center"
   },
   resetIcon: {
-    fontSize: fontSizes.heading,
+    fontSize: 18,
     ...fonts.semiBold
   },
   customFieldRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm,
-    paddingVertical: space.sm
+    gap: 8,
+    paddingVertical: 8
   },
   customFieldInput: {
     flex: 1,
     borderWidth: 1.5,
     paddingHorizontal: 10,
-    paddingVertical: space.sm,
-    borderRadius: radius.sm,
-    fontSize: fontSizes.body,
+    paddingVertical: 8,
+    borderRadius: 8,
+    fontSize: 14,
     fontFamily: "monospace"
   },
   removeButton: {
     width: 32,
     height: 32,
-    borderRadius: radius.lg,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center"
   },
   removeButtonText: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.bold
   },
   addButton: {
-    paddingVertical: space.md,
+    paddingVertical: 12,
     alignItems: "center",
     borderRadius: 10,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    marginTop: space.sm
+    marginTop: 8
   },
   addButtonText: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.semiBold
   },
   emptyHint: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     textAlign: "center",
-    paddingVertical: space.sm
+    paddingVertical: 8
   },
   warningBanner: {
-    padding: space.md,
-    borderRadius: radius.sm,
+    padding: 12,
+    borderRadius: 8,
     borderWidth: 1,
     marginBottom: 20
   },
   warningText: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     lineHeight: 18
   },
   exampleSection: {
@@ -909,31 +915,31 @@ const styles = StyleSheet.create({
   },
   copyButton: {
     alignSelf: "flex-end",
-    paddingVertical: space.xs,
+    paddingVertical: 4,
     paddingHorizontal: 2,
-    marginTop: space.sm
+    marginTop: 8
   },
   copyButtonText: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     ...fonts.bold,
     letterSpacing: 0.5
   },
   exampleCard: {
     padding: 14,
-    borderRadius: radius.sm,
+    borderRadius: 8,
     borderWidth: 1
   },
   exampleCode: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     fontFamily: "monospace",
     lineHeight: 18
   },
   footer: {
-    paddingVertical: space.lg,
+    paddingVertical: 16,
     alignItems: "center"
   },
   footerText: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     textAlign: "center"
   }
 })

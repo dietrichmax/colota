@@ -8,14 +8,13 @@ import { Text, StyleSheet, View, ScrollView, Linking, Pressable, Image } from "r
 import { ScreenProps, ThemeColors } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { ExternalLink, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check } from "lucide-react-native"
-import { fontSizes, fonts } from "../styles/typography"
+import { fonts } from "../styles/typography"
 import { Card, Container, Divider, SectionTitle, Footer } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
-import { ISSUES_URL, PRIVACY_POLICY_URL, REPO_URL, TILE_SERVER_DOCS_URL, size, space } from "../constants"
+import { REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL, TILE_SERVER_DOCS_URL } from "../constants"
 import { logger } from "../utils/logger"
-import { radius } from "@colota/shared"
 
 // Helper function to map SDK to Android version
 function getAndroidVersion(sdkVersion: number): string {
@@ -68,12 +67,12 @@ const LinkRow = ({
     style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
     onPress={() => onOpenURL(url)}
   >
-    <Icon size={size.icon.md} color={colors.textLight} />
+    <Icon size={20} color={colors.textLight} />
     <View style={styles.linkTextContainer}>
       <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
       <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>{subtitle}</Text>
     </View>
-    <ExternalLink size={size.icon.md} color={colors.textLight} />
+    <ExternalLink size={18} color={colors.textLight} />
   </Pressable>
 )
 
@@ -222,7 +221,7 @@ export function AboutScreen({}: ScreenProps) {
       value: `${buildConfig.MIN_SDK_VERSION} (Android ${getAndroidVersion(buildConfig.MIN_SDK_VERSION)})`
     },
     { label: "Compile SDK", value: buildConfig.COMPILE_SDK_VERSION.toString() },
-    { label: "Build tools", value: buildConfig.BUILD_TOOLS_VERSION },
+    { label: "Build Tools", value: buildConfig.BUILD_TOOLS_VERSION },
     { label: "Kotlin", value: buildConfig.KOTLIN_VERSION },
     { label: "NDK", value: buildConfig.NDK_VERSION }
   ]
@@ -269,7 +268,7 @@ export function AboutScreen({}: ScreenProps) {
                 pressed && { opacity: colors.pressedOpacity }
               ]}
             >
-              <Bug size={size.icon.sm} color={colors.warning} />
+              <Bug size={14} color={colors.warning} />
               <Text style={[styles.debugText, { color: colors.warning }]}>Debug Mode (tap to hide)</Text>
             </Pressable>
           )}
@@ -279,7 +278,7 @@ export function AboutScreen({}: ScreenProps) {
         <Card>
           <LinkRow
             icon={FileText}
-            title="Privacy policy"
+            title="Privacy Policy"
             subtitle={PRIVACY_POLICY_URL}
             url={PRIVACY_POLICY_URL}
             colors={colors}
@@ -288,7 +287,7 @@ export function AboutScreen({}: ScreenProps) {
           <Divider />
           <LinkRow
             icon={Code}
-            title="Source code"
+            title="Source Code"
             subtitle="github.com/dietrichmax/colota"
             url={REPO_URL}
             colors={colors}
@@ -306,7 +305,7 @@ export function AboutScreen({}: ScreenProps) {
           <Divider />
           <LinkRow
             icon={MessageCircle}
-            title="Report a bug"
+            title="Report a Bug"
             subtitle="github.com/dietrichmax/colota/issues"
             url={ISSUES_URL}
             colors={colors}
@@ -316,19 +315,19 @@ export function AboutScreen({}: ScreenProps) {
 
         {/* Map Data Attribution */}
         <View style={styles.section}>
-          <SectionTitle>Map data</SectionTitle>
+          <SectionTitle>Map Data</SectionTitle>
           <Card>
             <Pressable
               style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => handleOpenURL(TILE_SERVER_DOCS_URL)}
             >
               <View style={styles.linkTextContainer}>
-                <Text style={[styles.linkTitle, { color: colors.text }]}>Colota tiles</Text>
+                <Text style={[styles.linkTitle, { color: colors.text }]}>Colota Tiles</Text>
                 <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>
                   Self-hosted map tile server - configure your own
                 </Text>
               </View>
-              <ExternalLink size={size.icon.md} color={colors.textLight} />
+              <ExternalLink size={18} color={colors.textLight} />
             </Pressable>
             <Divider />
             <Pressable
@@ -341,7 +340,7 @@ export function AboutScreen({}: ScreenProps) {
                   Map data by OpenStreetMap contributors
                 </Text>
               </View>
-              <ExternalLink size={size.icon.md} color={colors.textLight} />
+              <ExternalLink size={18} color={colors.textLight} />
             </Pressable>
           </Card>
         </View>
@@ -370,13 +369,9 @@ export function AboutScreen({}: ScreenProps) {
                 ]}
                 onPress={handleCopyDebugInfo}
               >
-                {copied ? (
-                  <Check size={size.icon.sm} color={colors.success} />
-                ) : (
-                  <Copy size={size.icon.sm} color={colors.primaryDark} />
-                )}
+                {copied ? <Check size={16} color={colors.success} /> : <Copy size={16} color={colors.primaryDark} />}
                 <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
-                  {copied ? "Copied!" : "Copy debug info"}
+                  {copied ? "Copied!" : "Copy Debug Info"}
                 </Text>
               </Pressable>
 
@@ -395,13 +390,13 @@ export function AboutScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: space.lg,
+    paddingHorizontal: 16,
     paddingBottom: 40,
-    paddingTop: space.sm
+    paddingTop: 8
   },
   header: {
     marginTop: 20,
-    marginBottom: space.xl,
+    marginBottom: 24,
     alignItems: "center"
   },
   appIconContainer: {
@@ -410,7 +405,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: space.lg,
+    marginBottom: 16,
     overflow: "hidden"
   },
   appIcon: {
@@ -418,85 +413,85 @@ const styles = StyleSheet.create({
     height: 80
   },
   title: {
-    fontSize: fontSizes.screenTitle,
+    fontSize: 28,
     ...fonts.bold,
-    marginBottom: space.xs
+    marginBottom: 4
   },
   version: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular
   },
   linkRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
-    gap: space.md
+    gap: 12
   },
   linkTextContainer: {
     flex: 1
   },
   linkTitle: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.semiBold
   },
   linkSubtitle: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     marginTop: 1
   },
   techRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: space.sm
+    paddingVertical: 8
   },
   techLabel: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.medium
   },
   techValue: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.semiBold
   },
   section: {
-    marginTop: space.xl
+    marginTop: 24
   },
   debugHint: {
-    fontSize: fontSizes.small,
-    marginTop: space.sm,
+    fontSize: 11,
+    marginTop: 8,
     fontStyle: "italic"
   },
   debugBadge: {
-    marginTop: space.md,
-    paddingHorizontal: space.md,
+    marginTop: 12,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: radius.sm,
+    borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 6
   },
   debugText: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.semiBold
   },
   debugActions: {
     gap: 10,
-    marginTop: space.lg
+    marginTop: 16
   },
   copyButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: space.sm,
-    paddingVertical: space.md,
-    borderRadius: radius.md,
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1
   },
   copyButtonText: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.semiBold
   },
   logHint: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     textAlign: "center",
     fontStyle: "italic",
     lineHeight: 16

@@ -15,13 +15,11 @@ import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGrou
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
-import { size, space } from "../constants"
-import { radius } from "@colota/shared"
 
 const AUTH_TYPE_OPTIONS: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
-  { value: "basic", label: "Basic auth" },
-  { value: "bearer", label: "Bearer token" }
+  { value: "basic", label: "Basic Auth" },
+  { value: "bearer", label: "Bearer Token" }
 ]
 
 type LocalHeader = { key: string; value: string; id: number }
@@ -154,7 +152,9 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Header */}
         <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Authentication & Headers</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Secure your endpoint connection</Text>
         </View>
 
@@ -247,7 +247,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
 
         {/* Custom Headers Section */}
         <View style={styles.section}>
-          <SectionTitle>Custom headers</SectionTitle>
+          <SectionTitle>Custom Headers</SectionTitle>
           <Card>
             {localHeaders.length === 0 ? (
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>No custom headers configured</Text>
@@ -339,7 +339,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         )}
 
         <View style={styles.section}>
-          <SectionTitle>Client certificate</SectionTitle>
+          <SectionTitle>Client Certificate</SectionTitle>
           <Card>
             <Pressable
               style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
@@ -351,7 +351,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
                   Authenticate to servers that require a client certificate
                 </Text>
               </View>
-              <ChevronRight size={size.icon.md} color={colors.textLight} />
+              <ChevronRight size={20} color={colors.textLight} />
             </Pressable>
           </Card>
         </View>
@@ -371,8 +371,8 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: space.lg,
-    paddingTop: space.lg,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 40
   },
   loadingContainer: {
@@ -381,27 +381,33 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   loadingText: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.regular
   },
   header: {
     marginBottom: 20
   },
+  title: {
+    fontSize: 28,
+    ...fonts.bold,
+    letterSpacing: -0.5,
+    marginBottom: 4
+  },
   subtitle: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.regular,
     lineHeight: 20
   },
   section: {
-    marginBottom: space.xl
+    marginBottom: 24
   },
   fieldGroup: {
-    marginTop: space.xs
+    marginTop: 4
   },
   fieldLabel: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: space.sm
+    marginBottom: 8
   },
   fieldLabelSpaced: {
     marginTop: 14
@@ -409,34 +415,34 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1.5,
     padding: 14,
-    borderRadius: radius.md,
-    fontSize: fontSizes.input
+    borderRadius: 12,
+    fontSize: 15
   },
   tokenInput: {
     minHeight: 80,
     fontFamily: "monospace",
-    fontSize: fontSizes.description
+    fontSize: 13
   },
   emptyHint: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     textAlign: "center",
-    paddingVertical: space.sm
+    paddingVertical: 8
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm,
-    paddingVertical: space.sm
+    gap: 8,
+    paddingVertical: 8
   },
   headerInputs: {
     flex: 1,
-    gap: space.sm
+    gap: 8
   },
   headerInput: {
     borderWidth: 1.5,
-    padding: space.md,
+    padding: 12,
     borderRadius: 10,
-    fontSize: fontSizes.body
+    fontSize: 14
   },
   removeButton: {
     width: 36,
@@ -446,60 +452,60 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   removeButtonText: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.bold
   },
   addButton: {
     paddingVertical: 14,
     alignItems: "center",
-    borderRadius: radius.md,
+    borderRadius: 12,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    marginTop: space.xs
+    marginTop: 4
   },
   addButtonText: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.semiBold
   },
   hint: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     marginTop: 10,
     textAlign: "center"
   },
   warningBanner: {
-    padding: space.md,
-    borderRadius: radius.sm,
+    padding: 12,
+    borderRadius: 8,
     borderWidth: 1,
     marginBottom: 20
   },
   warningText: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     lineHeight: 18
   },
   footer: {
-    paddingVertical: space.lg,
+    paddingVertical: 16,
     alignItems: "center"
   },
   footerText: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     textAlign: "center"
   },
   linkRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: space.md
+    paddingVertical: 12
   },
   linkContent: {
     flex: 1
   },
   linkLabel: {
-    fontSize: fontSizes.label,
+    fontSize: 16,
     ...fonts.semiBold,
     marginBottom: 2
   },
   linkSub: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular
   }
 })

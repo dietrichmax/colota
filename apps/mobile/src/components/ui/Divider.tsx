@@ -5,7 +5,6 @@
 
 import { View, StyleSheet } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { space } from "../../constants"
 
 export const Divider = () => {
   const { colors } = useTheme()
@@ -16,6 +15,6 @@ export const Divider = () => {
 const styles = StyleSheet.create({
   divider: {
     height: 1,
-    marginVertical: space.lg
+    marginVertical: 16
   }
 })

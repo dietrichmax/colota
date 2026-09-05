@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from "react"
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native"
+import { View, Text, Switch, StyleSheet, ScrollView, ActivityIndicator } from "react-native"
 import { Card, Divider, SectionTitle } from "../../index"
 import { Button } from "../../ui/Button"
 import { useTheme } from "../../../hooks/useTheme"
@@ -13,8 +13,6 @@ import NativeLocationService from "../../../services/NativeLocationService"
 import { logger } from "../../../utils/logger"
 import { showAlert, showChoice } from "../../../services/modalService"
 import { formatBytes } from "../../../utils/format"
-import { space } from "../../../constants"
-import { Toggle } from "../../../components/ui/Toggle"
 
 export function FileLoggingPanel() {
   const { colors } = useTheme()
@@ -121,7 +119,7 @@ export function FileLoggingPanel() {
 
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
-      <SectionTitle>File logging</SectionTitle>
+      <SectionTitle>File Logging</SectionTitle>
 
       <Card style={styles.card}>
         <Text style={[styles.intro, { color: colors.textSecondary }]}>
@@ -134,10 +132,11 @@ export function FileLoggingPanel() {
           <View style={styles.toggleLabel}>
             <Text style={[styles.label, { color: colors.text }]}>Persistent file logging</Text>
           </View>
-          <Toggle
-            accessibilityLabel="Persistent file logging"
+          <Switch
             value={enabled}
             onValueChange={handleToggle}
+            trackColor={{ false: colors.border, true: colors.primary + "80" }}
+            thumbColor={enabled ? colors.primary : colors.border}
           />
         </View>
 
@@ -162,11 +161,11 @@ export function FileLoggingPanel() {
 
 const styles = StyleSheet.create({
   scroll: {
-    padding: space.lg,
+    padding: 16,
     paddingBottom: 40
   },
   card: {
-    marginBottom: space.md
+    marginBottom: 12
   },
   centered: {
     flex: 1,
@@ -174,41 +173,41 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   intro: {
-    marginBottom: space.md,
-    fontSize: fontSizes.body,
+    marginBottom: 12,
+    fontSize: 14,
     lineHeight: 20
   },
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: space.xs
+    paddingVertical: 4
   },
   toggleLabel: {
     flex: 1,
-    paddingRight: space.md
+    paddingRight: 12
   },
   section: {
-    paddingVertical: space.xs
+    paddingVertical: 4
   },
   label: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: space.xs
+    marginBottom: 4
   },
   hint: {
-    fontSize: fontSizes.description,
+    fontSize: 13,
     ...fonts.regular,
     lineHeight: 18,
-    marginBottom: space.md
+    marginBottom: 12
   },
   sizeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: space.xs
+    marginBottom: 4
   },
   sizeValue: {
-    fontSize: fontSizes.input,
+    fontSize: 15,
     ...fonts.medium,
     fontFamily: "monospace"
   }

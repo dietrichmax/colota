@@ -4,14 +4,13 @@
  */
 import React from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
-import { TriangleAlert, ChevronRight } from "lucide-react-native"
+import { AlertTriangle, ChevronRight } from "lucide-react-native"
 import { useTracking } from "../../../contexts/TrackingProvider"
 import { useTheme } from "../../../hooks/useTheme"
 import { getQueueColor } from "../../../utils/queueStatus"
 import { formatCount } from "../../../utils/format"
-import { fontSizes, fonts } from "../../../styles/typography"
-import { CRITICAL_QUEUE_THRESHOLD, HIGH_QUEUE_THRESHOLD, size, space } from "../../../constants"
-import { radius } from "@colota/shared"
+import { fonts } from "../../../styles/typography"
+import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../constants"
 
 interface StatsCardProps {
   queueCount: number
@@ -149,7 +148,7 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
             onPress={onManageClick}
           >
             <View style={styles.warningContent}>
-              <TriangleAlert size={size.icon.md} color={warningLevel === "critical" ? colors.error : colors.warning} />
+              <AlertTriangle size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
               <View style={styles.warningText}>
                 <Text
                   style={[
@@ -159,12 +158,12 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
                     }
                   ]}
                 >
-                  {warningLevel === "critical" ? "Critical queue size" : "High queue size"}
+                  {warningLevel === "critical" ? "Critical Queue Size" : "High Queue Size"}
                 </Text>
                 <Text style={[styles.warningHint, { color: colors.textSecondary }]}>Tap to manage data</Text>
               </View>
             </View>
-            <ChevronRight size={size.icon.md} color={warningLevel === "critical" ? colors.error : colors.warning} />
+            <ChevronRight size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
           </Pressable>
         </View>
       )}
@@ -174,9 +173,9 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: radius.lg,
+    borderRadius: 16,
     borderWidth: 2,
-    marginBottom: space.xl,
+    marginBottom: 24,
     overflow: "hidden"
   },
   gradientOverlay: {
@@ -195,40 +194,42 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   statLabel: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.semiBold,
-    marginBottom: space.sm
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 8
   },
   statValue: {
-    fontSize: fontSizes.statValue,
+    fontSize: 24,
     ...fonts.bold,
     letterSpacing: -0.5
   },
   unit: {
-    fontSize: fontSizes.label,
+    fontSize: 16,
     ...fonts.medium
   },
   disabledHint: {
-    fontSize: fontSizes.small,
+    fontSize: 11,
     marginTop: 2,
     fontStyle: "italic"
   },
   divider: {
     width: 1,
-    marginHorizontal: space.md,
+    marginHorizontal: 12,
     opacity: 0.3
   },
   warningWrapper: {
-    paddingHorizontal: space.md,
-    paddingBottom: space.md
+    paddingHorizontal: 12,
+    paddingBottom: 12
   },
   warningButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: space.lg,
-    paddingVertical: space.md,
-    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1.5
   },
   warningContent: {
@@ -238,15 +239,15 @@ const styles = StyleSheet.create({
   },
   warningText: {
     flex: 1,
-    marginLeft: space.md
+    marginLeft: 12
   },
   warningTitle: {
-    fontSize: fontSizes.body,
+    fontSize: 14,
     ...fonts.semiBold,
     marginBottom: 2
   },
   warningHint: {
-    fontSize: fontSizes.caption,
+    fontSize: 12,
     ...fonts.regular
   }
 })
