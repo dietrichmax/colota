@@ -15,7 +15,16 @@ import { Container, SectionTitle, Card, Divider, SettingRow, NumericInput, Field
 import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
-import { MS_TO_KMH, PROFILE_CONDITIONS, STATIONARY_MAX_INTERVAL_SECONDS, SYNC_INTERVAL_LABELS, SYNC_INTERVAL_PRESETS, defaultProfileDelays, size, space } from "../constants"
+import {
+  MS_TO_KMH,
+  PROFILE_CONDITIONS,
+  STATIONARY_MAX_INTERVAL_SECONDS,
+  SYNC_INTERVAL_LABELS,
+  SYNC_INTERVAL_PRESETS,
+  defaultProfileDelays,
+  size,
+  space
+} from "../constants"
 import type { RootScreenProps } from "../types/navigation"
 import { radius } from "@colota/shared"
 
@@ -494,9 +503,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: fontSizes.caption,
     ...fonts.semiBold,
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5
+    marginBottom: 6
   },
   input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: fontSizes.input, ...fonts.regular },
   numInput: {

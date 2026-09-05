@@ -252,7 +252,7 @@ describe("DataManagementScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("DEV TOOLS")).toBeTruthy()
+      expect(getByText("Dev tools")).toBeTruthy()
       expect(getByText("Insert dummy data")).toBeTruthy()
     })
   })
@@ -263,7 +263,7 @@ describe("DataManagementScreen", () => {
     const { queryByText } = renderScreen()
 
     await waitFor(() => {
-      expect(queryByText("DEV TOOLS")).toBeNull()
+      expect(queryByText("Dev tools")).toBeNull()
       expect(queryByText("Insert dummy data")).toBeNull()
     })
   })
@@ -311,7 +311,7 @@ describe("DataManagementScreen", () => {
         expect(getByText("Data management")).toBeTruthy()
       })
 
-      expect(queryByText("QUEUE ACTIONS")).toBeNull()
+      expect(queryByText("Queue actions")).toBeNull()
       expect(queryByText("Sync now")).toBeNull()
     })
 

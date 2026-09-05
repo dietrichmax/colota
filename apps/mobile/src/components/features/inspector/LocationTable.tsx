@@ -179,8 +179,7 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: fontSizes.small,
-    ...fonts.bold,
-    textTransform: "uppercase"
+    ...fonts.bold
   },
   row: {
     flexDirection: "row",

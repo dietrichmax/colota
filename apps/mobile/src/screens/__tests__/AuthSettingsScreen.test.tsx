@@ -112,7 +112,7 @@ describe("AuthSettingsScreen", () => {
       const { getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Authentication & Headers")).toBeTruthy()
+        expect(getByText("Authentication & headers")).toBeTruthy()
       })
     })
   })

@@ -495,8 +495,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: fontSizes.small,
-    ...fonts.regular,
-    textTransform: "uppercase"
+    ...fonts.regular
   },
   chartCard: {
     padding: space.md

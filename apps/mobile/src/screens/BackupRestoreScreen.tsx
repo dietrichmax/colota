@@ -337,7 +337,7 @@ export function BackupRestoreScreen({}: Props) {
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Restore from Backup</SectionTitle>
+          <SectionTitle>Restore from backup</SectionTitle>
           <Card>
             <Text style={[styles.intro, { color: colors.textSecondary }]}>
               Replace all current data with a previous .colota backup file. You'll be asked for the backup password

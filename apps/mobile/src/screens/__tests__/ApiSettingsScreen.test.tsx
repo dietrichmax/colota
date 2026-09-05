@@ -241,7 +241,7 @@ describe("ApiSettingsScreen", () => {
       const latInput = getByDisplayValue("lat")
       fireEvent.changeText(latInput, "latitude")
 
-      expect(getByText("RESET ALL")).toBeTruthy()
+      expect(getByText("Reset all")).toBeTruthy()
     })
   })
 

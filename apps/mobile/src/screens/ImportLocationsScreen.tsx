@@ -237,7 +237,7 @@ export function ImportLocationsScreen({}: ScreenProps) {
 
         {/* Import action */}
         <View style={styles.section}>
-          <SectionTitle>Import from File</SectionTitle>
+          <SectionTitle>Import from file</SectionTitle>
           <Card>
             <Text style={[styles.intro, { color: colors.textSecondary }]}>
               Merge location history from external files into your Colota database. Duplicates are skipped
@@ -280,8 +280,6 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: fontSizes.caption,
     ...fonts.semiBold,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
     marginBottom: space.sm
   },
   statValue: {
@@ -327,8 +325,7 @@ const styles = StyleSheet.create({
   },
   extensionText: {
     fontSize: fontSizes.micro,
-    ...fonts.bold,
-    letterSpacing: 0.3
+    ...fonts.bold
   },
   formatDescription: {
     fontSize: fontSizes.caption,

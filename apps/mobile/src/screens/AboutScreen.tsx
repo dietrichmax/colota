@@ -306,7 +306,7 @@ export function AboutScreen({}: ScreenProps) {
           <Divider />
           <LinkRow
             icon={MessageCircle}
-            title="Report a Bug"
+            title="Report a bug"
             subtitle="github.com/dietrichmax/colota/issues"
             url={ISSUES_URL}
             colors={colors}
@@ -370,7 +370,11 @@ export function AboutScreen({}: ScreenProps) {
                 ]}
                 onPress={handleCopyDebugInfo}
               >
-                {copied ? <Check size={size.icon.sm} color={colors.success} /> : <Copy size={size.icon.sm} color={colors.primaryDark} />}
+                {copied ? (
+                  <Check size={size.icon.sm} color={colors.success} />
+                ) : (
+                  <Copy size={size.icon.sm} color={colors.primaryDark} />
+                )}
                 <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
                   {copied ? "Copied!" : "Copy debug info"}
                 </Text>
