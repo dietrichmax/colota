@@ -203,7 +203,6 @@ export function SyncStrategySettings({
                 unit="seconds"
                 placeholder="1"
                 hint="How often to capture GPS position"
-                colors={colors}
               />
 
               <NumericInput
@@ -214,7 +213,6 @@ export function SyncStrategySettings({
                 unit={shortDistanceUnit()}
                 placeholder="10"
                 hint="Only record if moved more than this distance"
-                colors={colors}
               />
             </View>
 
@@ -283,7 +281,6 @@ export function SyncStrategySettings({
                         unit="seconds"
                         placeholder="1800"
                         hint="Custom interval in seconds"
-                        colors={colors}
                       />
                     </View>
                   )}
@@ -315,7 +312,6 @@ export function SyncStrategySettings({
                         unit="points"
                         placeholder="50"
                         hint={`Points/upload (${OVERLAND_BATCH_MIN}-${OVERLAND_BATCH_MAX}). Larger = fewer requests, bigger payloads.`}
-                        colors={colors}
                       />
                     </View>
                   )}
@@ -416,7 +412,6 @@ export function SyncStrategySettings({
                     unit={shortDistanceUnit()}
                     placeholder="50"
                     hint="Based on the chip's own estimate, which can be optimistic"
-                    colors={colors}
                   />
                 </View>
               )}

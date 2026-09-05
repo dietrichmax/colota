@@ -349,7 +349,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                     unit="seconds"
                     placeholder="1800"
                     hint="Custom interval in seconds"
-                    colors={colors}
                   />
                 </View>
               )}

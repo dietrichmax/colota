@@ -1,15 +1,10 @@
 import React from "react"
 import { render, fireEvent } from "@testing-library/react-native"
-import { NumericInput } from "../NumericInput"
+jest.mock("../../../hooks/useTheme", () => ({
+  useTheme: () => ({ colors: require("@colota/shared").lightColors })
+}))
 
-const mockColors = {
-  text: "#000",
-  textLight: "#9ca3af",
-  textSecondary: "#6b7280",
-  border: "#e5e7eb",
-  backgroundElevated: "#f9fafb",
-  placeholder: "#9ca3af"
-} as any
+import { NumericInput } from "../NumericInput"
 
 describe("NumericInput", () => {
   const mockOnChange = jest.fn()
@@ -27,7 +22,6 @@ describe("NumericInput", () => {
         onChange={mockOnChange}
         onBlur={mockOnBlur}
         unit="seconds"
-        colors={mockColors}
         {...overrides}
       />
     )

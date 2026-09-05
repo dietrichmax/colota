@@ -153,7 +153,8 @@ const styles = StyleSheet.create({
   },
   figure: {
     textAlign: "center",
-    ...fonts.medium
+    ...fonts.medium,
+    fontVariant: ["tabular-nums"]
   },
   boxMultiline: {
     alignItems: "flex-start",
