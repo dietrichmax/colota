@@ -4,14 +4,17 @@
  */
 
 import React, { useRef, useEffect, useMemo, useCallback, useState } from "react"
-import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image, Pressable } from "react-native"
-import { TriangleAlert } from "lucide-react-native"
+import { View, StyleSheet, Text, DeviceEventEmitter, Pressable } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
-import { fonts } from "../../../styles/typography"
+import { useTranslation } from "../../../i18n/useTranslation"
+import { text } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { size, MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
+import { space, MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM, MAP_OVERLAY_GUTTER } from "../../../constants"
+import { MapOverlay } from "../../ui/MapOverlay"
+import { EmptyState } from "../../ui/EmptyState"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { TrackToggleButton } from "../map/TrackToggleButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
@@ -20,8 +23,9 @@ import { GeofenceLayers } from "../map/GeofenceLayers"
 import { CurrentTrackLayers } from "../map/CurrentTrackLayers"
 import { UserLocationOverlay } from "../map/UserLocationOverlay"
 import { useTodayTrack } from "../../../hooks/useTodayTrack"
-import icon from "../../../assets/icons/icon.png"
 import { logger } from "../../../utils/logger"
+
+const DOT_SIZE = 8
 
 type Props = {
   tracking: boolean
@@ -30,6 +34,7 @@ type Props = {
   activeProfileName: string | null
   isBatteryCritical: boolean
   locationEnabled: boolean
+  interval: number
 }
 
 const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
@@ -42,11 +47,14 @@ export function DashboardMap({
   pauseReason,
   activeProfileName,
   isBatteryCritical,
-  locationEnabled
+  locationEnabled,
+  interval
 }: Props) {
   const coords = useCoords()
   const mapRef = useRef<ColotaMapRef>(null)
   const { colors } = useTheme()
+  const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
   const [geofences, setGeofences] = useState<any[]>([])
   const [isCentered, setIsCentered] = useState(true)
   const [showTrack, setShowTrack] = useState<boolean | null>(null)
@@ -119,21 +127,69 @@ export function DashboardMap({
     }
   }, [])
 
+  const handleTrackToggle = useCallback(() => {
+    const next = !showTrack
+    setShowTrack(next)
+    NativeLocationService.saveSetting("showTrack", String(next)).catch((err) =>
+      logger.error("[DashboardMap] Failed to save showTrack setting:", err)
+    )
+  }, [showTrack])
+
   // Geofence GeoJSON
   const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences, colors), [geofences, colors])
 
-  const showMap = tracking && isValidCoords(coords)
-  const waitingForFix = tracking && !isValidCoords(coords)
+  const showMap = isValidCoords(coords)
   const locationOff = tracking && !locationEnabled
 
+  // Only the dot carries the state hue; the words stay ink so they read over any tile.
+  const chip = ((): { label: string; dot: string; onPress?: () => void } | null => {
+    if (!tracking) return null
+    if (locationOff) {
+      return {
+        label: t("dashboard.chip.locationOff"),
+        dot: colors.error,
+        onPress: () => NativeLocationService.openLocationSettings()
+      }
+    }
+    if (activeZoneName) {
+      const key =
+        pauseReason === "wifi"
+          ? "dashboard.chip.pausedWifi"
+          : pauseReason === "motionless"
+            ? "dashboard.chip.pausedMotionless"
+            : "dashboard.chip.paused"
+      return { label: t(key, { zone: activeZoneName }), dot: colors.warning }
+    }
+    if (!showMap) return { label: t("dashboard.chip.waiting"), dot: colors.textLight }
+    if (activeProfileName) {
+      return {
+        label: t("dashboard.chip.trackingProfile", { profile: activeProfileName, interval }),
+        dot: colors.primary
+      }
+    }
+    return { label: t("dashboard.chip.tracking", { interval }), dot: colors.primary }
+  })()
+
+  const chipNode = chip ? (
+    <MapOverlay testID="map-state-chip" shape="pill" style={styles.chipSurface}>
+      <View style={styles.chipRow}>
+        <View style={[styles.chipDot, { backgroundColor: chip.dot }]} importantForAccessibility="no" />
+        <Text style={[styles.chipLabel, { color: colors.text }]} numberOfLines={1}>
+          {chip.label}
+        </Text>
+      </View>
+    </MapOverlay>
+  ) : null
+
   return (
-    <View style={[styles.container, { borderRadius: colors.borderRadius }]}>
+    <View style={styles.container}>
       {/* Keep map mounted to avoid MapLibre/Fabric unmount race condition.
-          Hide it behind the placeholder when not tracking. */}
+          Hide it while there is no fix to draw. */}
       {hasInitialCoords && initialCoords.current ? (
         <View style={showMap ? styles.mapVisible : styles.mapHidden} pointerEvents={showMap ? "auto" : "none"}>
           <ColotaMapView
             ref={mapRef}
+            controlsPlacement="start"
             initialCenter={[initialCoords.current.longitude, initialCoords.current.latitude]}
             onRegionDidChange={handleRegionChange}
           >
@@ -152,138 +208,80 @@ export function DashboardMap({
         </View>
       ) : null}
 
-      {!tracking && (
+      {!showMap && !tracking && (
+        <View style={[styles.empty, { paddingTop: insets.top + MAP_OVERLAY_GUTTER }]}>
+          <EmptyState
+            testID="map-empty"
+            title={isBatteryCritical ? t("dashboard.map.emptyBattery") : t("dashboard.map.empty")}
+            message={isBatteryCritical ? t("dashboard.map.emptyBattery.message") : t("dashboard.map.empty.message")}
+          />
+        </View>
+      )}
+
+      {chipNode && (
         <View
-          style={[
-            styles.stateContainer,
-            styles.overlay,
-            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
-          ]}
+          accessibilityLiveRegion="polite"
+          style={[styles.chip, { top: insets.top + MAP_OVERLAY_GUTTER, start: insets.left + MAP_OVERLAY_GUTTER }]}
         >
-          <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
-            <Image source={icon} style={styles.icon} />
-          </View>
-          <Text style={[styles.stateTitle, { color: isBatteryCritical ? colors.error : colors.text }]}>
-            {isBatteryCritical ? "Tracking Stopped" : "Tracking Disabled"}
-          </Text>
-          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
-            {isBatteryCritical
-              ? "Battery critically low. Charge your device to resume."
-              : "Start tracking to see the map."}
-          </Text>
+          {chip?.onPress ? (
+            <Pressable
+              onPress={chip.onPress}
+              accessibilityRole="button"
+              accessibilityLabel={chip.label}
+              accessibilityHint={t("dashboard.chip.locationOff.hint")}
+              style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+            >
+              {chipNode}
+            </Pressable>
+          ) : (
+            chipNode
+          )}
         </View>
       )}
 
-      {waitingForFix && locationOff && (
-        <Pressable
-          onPress={() => NativeLocationService.openLocationSettings()}
-          style={[
-            styles.stateContainer,
-            styles.overlay,
-            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
-          ]}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: colors.warning + "20" }]}>
-            <TriangleAlert size={size.icon.lg} color={colors.warning} />
-          </View>
-          <Text style={[styles.stateTitle, { color: colors.warning }]}>Location Services Off</Text>
-          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
-            Tracking can&apos;t get GPS fixes. Tap to open Settings.
-          </Text>
-        </Pressable>
-      )}
-
-      {waitingForFix && !locationOff && (
-        <View
-          style={[
-            styles.stateContainer,
-            styles.overlay,
-            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
-          ]}
-        >
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.stateTitle, styles.stateTitleSpaced, { color: colors.text }]}>Searching GPS...</Text>
-          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Waiting for GPS signal.</Text>
-        </View>
-      )}
-
-      {showMap && <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />}
-      {showMap && showTrack !== null && (
-        <TrackToggleButton
-          active={!!showTrack}
-          onPress={() => {
-            const next = !showTrack
-            setShowTrack(next)
-            NativeLocationService.saveSetting("showTrack", String(next)).catch((err) =>
-              logger.error("[DashboardMap] Failed to save showTrack setting:", err)
-            )
-          }}
-        />
-      )}
-
-      {showMap && locationOff && (
-        <Pressable
-          onPress={() => NativeLocationService.openLocationSettings()}
-          style={[styles.statusBar, { backgroundColor: colors.error + "DD" }]}
-        >
-          <Text style={styles.barText}>Location off - tap to enable</Text>
-        </Pressable>
-      )}
-
-      {showMap && !locationOff && activeZoneName && (
-        <View style={[styles.statusBar, { backgroundColor: colors.warning + "DD" }]}>
-          <Text style={styles.barText}>
-            Paused in {activeZoneName}
-            {pauseReason === "wifi" ? " - WiFi" : pauseReason === "motionless" ? " - Motionless" : ""}
-          </Text>
-        </View>
-      )}
-
-      {showMap && !locationOff && !activeZoneName && activeProfileName && (
-        <View style={[styles.statusBar, { backgroundColor: colors.primary + "DD" }]}>
-          <Text style={styles.barText}>{activeProfileName}</Text>
-        </View>
-      )}
+      <View
+        testID="map-controls"
+        pointerEvents="box-none"
+        style={[styles.controls, { bottom: MAP_OVERLAY_GUTTER, end: insets.right + MAP_OVERLAY_GUTTER }]}
+      >
+        {showMap && <MapCenterButton floating={false} visible={!isCentered} onPress={handleCenterMe} />}
+        {showMap && showTrack !== null && <TrackToggleButton active={!!showTrack} onPress={handleTrackToggle} />}
+      </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, width: "100%", overflow: "hidden" },
+  container: { flex: 1, width: "100%" },
   mapVisible: { flex: 1 },
   mapHidden: { flex: 1, opacity: 0 },
-  overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
-  stateContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24
-  },
-  icon: { width: 64, height: 64 },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16
-  },
-  stateTitle: { fontSize: 18, ...fonts.bold, textAlign: "center" },
-  stateTitleSpaced: { marginTop: 20 },
-  stateSubtext: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 20
-  },
-  statusBar: {
+  empty: {
     position: "absolute",
     top: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: 6,
-    alignItems: "center",
-    zIndex: 5
+    start: 0,
+    end: 0,
+    bottom: 0,
+    paddingHorizontal: space.lg
   },
-  barText: { fontSize: 13, ...fonts.semiBold, color: "#fff" }
+  chip: { position: "absolute" },
+  chipSurface: { paddingVertical: space.xs },
+  chipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm
+  },
+  chipDot: {
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2
+  },
+  chipLabel: {
+    ...text.bodyStrong,
+    flexShrink: 1
+  },
+  controls: {
+    position: "absolute",
+    alignItems: "center",
+    gap: space.md
+  }
 })

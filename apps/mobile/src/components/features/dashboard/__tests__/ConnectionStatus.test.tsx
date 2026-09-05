@@ -1,6 +1,7 @@
 import React from "react"
 import { render, waitFor, act } from "@testing-library/react-native"
 import { DeviceEventEmitter } from "react-native"
+import { lightColors } from "@colota/shared"
 
 jest.mock("../../../../hooks/useTheme", () => ({
   useTheme: () => ({
@@ -30,7 +31,7 @@ jest.mock("@react-navigation/native", () => ({
   }
 }))
 
-// #546: the chip must never issue its own request - a JS fetch bypasses the native TLS
+// #546: the row must never issue its own request - a JS fetch bypasses the native TLS
 // trust and breaks custom-CA / mTLS users.
 const mockFetch = jest.fn()
 ;(globalThis as any).fetch = mockFetch
@@ -62,12 +63,12 @@ describe("ConnectionStatus", () => {
     expect(getByText("Checking")).toBeTruthy()
   })
 
-  it("shows 'Connected' when the queue is empty and locations have synced", async () => {
+  it("stamps 'Connected' with the time the exchange settled", async () => {
     mockGetStats.mockResolvedValue(stats(0, 5))
 
     const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => expect(getByText("Connected")).toBeTruthy())
+    await waitFor(() => expect(getByText(/^Connected · /)).toBeTruthy())
   })
 
   it("stays 'Checking' on a backlog with no sync event yet (does not fabricate a status)", async () => {
@@ -77,8 +78,8 @@ describe("ConnectionStatus", () => {
 
     await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
     expect(getByText("Checking")).toBeTruthy()
-    expect(queryByText("Connected")).toBeNull()
-    expect(queryByText("Unreachable")).toBeNull()
+    expect(queryByText(/Connected/)).toBeNull()
+    expect(queryByText(/Unreachable/)).toBeNull()
   })
 
   it("shows 'Unreachable' on a sync error event", async () => {
@@ -87,7 +88,7 @@ describe("ConnectionStatus", () => {
 
     emit("onSyncError", { message: "send failed", queuedCount: 3 })
 
-    await waitFor(() => expect(getByText("Unreachable")).toBeTruthy())
+    await waitFor(() => expect(getByText(/^Unreachable · /)).toBeTruthy())
   })
 
   it("never performs a network request itself", async () => {
@@ -110,12 +111,12 @@ describe("ConnectionStatus", () => {
     const { getByText, rerender } = render(<ConnectionStatus endpoint="" navigation={mockNavigation} />)
     rerender(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => expect(getByText("Connected")).toBeTruthy())
+    await waitFor(() => expect(getByText(/^Connected · /)).toBeTruthy())
     await act(async () => resolveStale(true))
-    expect(getByText("Connected")).toBeTruthy()
+    expect(getByText(/^Connected · /)).toBeTruthy()
   })
 
-  it("shows 'No endpoint' when endpoint is empty", async () => {
+  it("shows 'No endpoint' with no clock, because nothing was exchanged", async () => {
     const { getByText } = render(<ConnectionStatus endpoint="" navigation={mockNavigation} />)
 
     await waitFor(() => expect(getByText("No endpoint")).toBeTruthy())
@@ -127,12 +128,12 @@ describe("ConnectionStatus", () => {
     await waitFor(() => expect(getByText("No endpoint")).toBeTruthy())
   })
 
-  it("shows 'Offline Mode' when offline mode is enabled", async () => {
+  it("shows 'Offline mode' when offline mode is enabled", async () => {
     mockSettings.isOfflineMode = true
 
     const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => expect(getByText("Offline Mode")).toBeTruthy())
+    await waitFor(() => expect(getByText("Offline mode")).toBeTruthy())
   })
 
   it("shows 'Device offline' when the device has no network", async () => {
@@ -157,5 +158,21 @@ describe("ConnectionStatus", () => {
 
     expect(getByText("Server")).toBeTruthy()
     await waitFor(() => expect(getByText("No endpoint")).toBeTruthy())
+  })
+
+  // The dot is the only place the status hue survives, so the row's text can stay ink and
+  // align with the rest of the sheet instead of starting at an icon column.
+  it("carries the status hue on an inline dot", async () => {
+    mockGetStats.mockResolvedValue(stats(0, 5))
+
+    const { getByTestId } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
+
+    await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
+    const dots = getByTestId("connection-status").findAll(
+      (node: any) =>
+        node.props.importantForAccessibility === "no" &&
+        node.props.style?.some?.((s: any) => s?.backgroundColor === lightColors.success)
+    )
+    expect(dots.length).toBeGreaterThan(0)
   })
 })

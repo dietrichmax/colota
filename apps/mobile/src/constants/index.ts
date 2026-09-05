@@ -53,6 +53,23 @@ export const motion = {
 
 export const elevation = { floating: 2 } as const
 
+// M3 window size classes. Only the short-height case has a consumer so far: the Dashboard
+// map floor, which has to give way on a landscape phone or a split-screen half.
+export const SHORT_WINDOW_HEIGHT = 480
+
+// Dashboard map hero. The map is a ScrollView sibling, so its height is computed from the
+// window rather than measured, and the sheet meets it flush.
+export const MAP_HERO_FRACTION = 0.52
+export const MAP_HERO_MIN_HEIGHT = 320
+export const MAP_HERO_SHEET_RESERVE = 200
+export const MAP_HERO_PEEK = 64
+
+// Everything drawn over map tiles clears the safe area by this, on all four sides.
+export const MAP_OVERLAY_GUTTER = space.lg
+
+// One slot in a corner column of map controls: the 48 target plus the gap to the next.
+export const MAP_CONTROL_STEP = size.touch + space.md
+
 // M3 interaction-state layer: the primitive's own content colour over its container at 10 percent.
 export const STATE_LAYER_ALPHA = "1A"
 

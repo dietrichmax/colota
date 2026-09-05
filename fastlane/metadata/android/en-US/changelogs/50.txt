@@ -1,2 +1,3 @@
 - A calmer colour palette across the app in both light and dark
 - Calmer section headings, and list rows no longer cut off their description
+- The dashboard map is the hero, with tracking state on the map itself

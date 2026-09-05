@@ -1,9 +1,4 @@
 {
-  "components/features/dashboard/ConnectionStatus.tsx": ["borderWidth", "borderRadius", "fontSize"],
-  "components/features/dashboard/CoordinateDisplay.tsx": ["fontSize", "letterSpacing", "textTransform"],
-  "components/features/dashboard/DashboardMap.tsx": ["borderRadius", "fontSize", "hexLiteral"],
-  "components/features/dashboard/DatabaseStatistics.tsx": ["fontSize", "letterSpacing", "textTransform"],
-  "components/features/dashboard/WelcomeCard.tsx": ["borderWidth", "borderRadius", "fontSize"],
   "components/features/inspector/CalendarPicker.tsx": ["borderWidth", "borderRadius", "fontSize"],
   "components/features/inspector/InteractiveLineChart.tsx": ["hexLiteral"],
   "components/features/inspector/LocationTable.tsx": ["fontSize", "textTransform"],
@@ -19,16 +14,6 @@
   ],
   "components/features/inspector/TripList.tsx": ["borderWidth", "borderRadius", "fontSize"],
   "components/features/log/FileLoggingPanel.tsx": ["fontSize"],
-  "components/features/map/ColotaMapView.tsx": [
-    "borderWidth",
-    "borderRadius",
-    "elevation",
-    "shadowColor",
-    "fontSize",
-    "hexLiteral",
-    "duration"
-  ],
-  "components/features/map/MapActionButton.tsx": ["borderRadius", "elevation", "shadowColor", "hexLiteral"],
   "components/features/map/UserLocationOverlay.tsx": [
     "borderWidth",
     "borderRadius",

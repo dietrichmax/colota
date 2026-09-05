@@ -10,44 +10,29 @@ jest.mock("../../../../contexts/TrackingProvider", () => ({
   })
 }))
 
-jest.mock("../../../ui/Card", () => {
-  const R = require("react")
-  const { View } = require("react-native")
-  return {
-    Card: ({ children }: any) => R.createElement(View, null, children)
-  }
-})
-
-jest.mock("lucide-react-native", () => {
-  const R = require("react")
-  const { View } = require("react-native")
-  return {
-    Check: () => R.createElement(View, null),
-    ChevronRight: () => R.createElement(View, null)
-  }
-})
+jest.mock("../../../../hooks/useTheme", () => ({
+  useTheme: () => ({
+    colors: require("@colota/shared").lightColors
+  })
+}))
 
 import { WelcomeCard } from "../WelcomeCard"
-
-const mockColors = {
-  primary: "#0d9488",
-  primaryDark: "#115E59",
-  text: "#000",
-  textSecondary: "#6b7280",
-  textLight: "#9ca3af",
-  success: "#22c55e",
-  border: "#e5e7eb"
-} as any
 
 const defaultProps = {
   settings: DEFAULT_SETTINGS,
   tracking: false,
-  colors: mockColors,
   onDismiss: jest.fn(),
   onStartTracking: jest.fn(),
   onNavigateToConnection: jest.fn(),
   onNavigateToTrackingSync: jest.fn(),
   onNavigateToApiConfig: jest.fn()
+}
+
+const leadingGlyph = (row: any) => {
+  const icons = row.findAll(
+    (node: any) => typeof node.props.testID === "string" && node.props.testID.startsWith("icon-")
+  )
+  return icons.length > 0 ? icons[0].props.testID : null
 }
 
 describe("WelcomeCard", () => {
@@ -56,36 +41,55 @@ describe("WelcomeCard", () => {
     mockSettings = { isOfflineMode: false }
   })
 
-  it("renders welcome title and subtitle", () => {
-    const { getByText } = render(<WelcomeCard {...defaultProps} />)
+  it("heads the checklist and offers a dismiss action", () => {
+    const { getByText, getByTestId } = render(<WelcomeCard {...defaultProps} />)
 
-    expect(getByText("Welcome to Colota")).toBeTruthy()
-    expect(getByText("Get started by completing these steps:")).toBeTruthy()
+    expect(getByText("Get started")).toBeTruthy()
+    fireEvent.press(getByTestId("welcome-dismiss-btn"))
+    expect(defaultProps.onDismiss).toHaveBeenCalledTimes(1)
   })
 
-  it("shows Start tracking checklist item", () => {
-    const { getByText } = render(<WelcomeCard {...defaultProps} />)
+  // The check state has to survive a monochrome reading, so the glyph changes and not only the hue.
+  it("marks a done step with a different glyph", () => {
+    const { getByTestId, rerender } = render(<WelcomeCard {...defaultProps} />)
 
-    expect(getByText("1. Start tracking")).toBeTruthy()
+    expect(leadingGlyph(getByTestId("welcome-start-tracking"))).toBe("icon-Circle")
+
+    rerender(<WelcomeCard {...defaultProps} tracking />)
+
+    expect(leadingGlyph(getByTestId("welcome-start-tracking"))).toBe("icon-CircleCheckBig")
+  })
+
+  it("starts tracking from the first step while it is still open", () => {
+    const { getByTestId } = render(<WelcomeCard {...defaultProps} />)
+
+    fireEvent.press(getByTestId("welcome-start-tracking"))
+
+    expect(defaultProps.onStartTracking).toHaveBeenCalledTimes(1)
   })
 
   describe("online mode (default)", () => {
-    it("shows server endpoint checklist item", () => {
-      const { getByText } = render(<WelcomeCard {...defaultProps} />)
+    it("asks for the server endpoint and opens Connection", () => {
+      const { getByText, getByTestId } = render(<WelcomeCard {...defaultProps} />)
 
-      expect(getByText("2. Configure your server endpoint")).toBeTruthy()
+      expect(getByText("Set your server endpoint")).toBeTruthy()
+      fireEvent.press(getByTestId("welcome-endpoint"))
+      expect(defaultProps.onNavigateToConnection).toHaveBeenCalledTimes(1)
     })
 
-    it("shows API field mapping link", () => {
-      const { getByText } = render(<WelcomeCard {...defaultProps} />)
+    it("marks the endpoint step done once one is configured", () => {
+      const settings = { ...DEFAULT_SETTINGS, endpoint: "https://example.com/api" }
+      const { getByTestId } = render(<WelcomeCard {...defaultProps} settings={settings} />)
 
-      expect(getByText("API field mapping")).toBeTruthy()
+      expect(leadingGlyph(getByTestId("welcome-endpoint"))).toBe("icon-CircleCheckBig")
     })
 
-    it("shows Tracking presets link", () => {
-      const { getByText } = render(<WelcomeCard {...defaultProps} />)
+    it("opens API field mapping", () => {
+      const { getByTestId } = render(<WelcomeCard {...defaultProps} />)
 
-      expect(getByText("Tracking presets")).toBeTruthy()
+      fireEvent.press(getByTestId("welcome-api-mapping"))
+
+      expect(defaultProps.onNavigateToApiConfig).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -94,67 +98,26 @@ describe("WelcomeCard", () => {
       mockSettings = { isOfflineMode: true }
     })
 
-    it("hides server endpoint checklist item", () => {
-      const { queryByText } = render(<WelcomeCard {...defaultProps} />)
+    it("drops both server steps, because there is no server to reach", () => {
+      const { queryByTestId } = render(<WelcomeCard {...defaultProps} />)
 
-      expect(queryByText("2. Configure your server endpoint")).toBeNull()
+      expect(queryByTestId("welcome-endpoint")).toBeNull()
+      expect(queryByTestId("welcome-api-mapping")).toBeNull()
     })
 
-    it("hides API field mapping link", () => {
-      const { queryByText } = render(<WelcomeCard {...defaultProps} />)
+    it("still offers tracking and the presets", () => {
+      const { getByTestId } = render(<WelcomeCard {...defaultProps} />)
 
-      expect(queryByText("API field mapping")).toBeNull()
-    })
-
-    it("still shows Tracking presets link", () => {
-      const { getByText } = render(<WelcomeCard {...defaultProps} />)
-
-      expect(getByText("Tracking presets")).toBeTruthy()
-    })
-
-    it("still shows Start tracking checklist item", () => {
-      const { getByText } = render(<WelcomeCard {...defaultProps} />)
-
-      expect(getByText("1. Start tracking")).toBeTruthy()
+      expect(getByTestId("welcome-start-tracking")).toBeTruthy()
+      expect(getByTestId("welcome-presets")).toBeTruthy()
     })
   })
 
-  it("calls onDismiss when Got it is pressed", () => {
-    const { getByText } = render(<WelcomeCard {...defaultProps} />)
+  it("opens the tracking presets", () => {
+    const { getByTestId } = render(<WelcomeCard {...defaultProps} />)
 
-    fireEvent.press(getByText("Got it"))
-
-    expect(defaultProps.onDismiss).toHaveBeenCalledTimes(1)
-  })
-
-  it("calls onNavigateToTrackingSync when Tracking presets is pressed", () => {
-    const { getByText } = render(<WelcomeCard {...defaultProps} />)
-
-    fireEvent.press(getByText("Tracking presets"))
+    fireEvent.press(getByTestId("welcome-presets"))
 
     expect(defaultProps.onNavigateToTrackingSync).toHaveBeenCalledTimes(1)
-  })
-
-  it("calls onNavigateToConnection when Configure your server endpoint is pressed", () => {
-    const { getByText } = render(<WelcomeCard {...defaultProps} />)
-
-    fireEvent.press(getByText("2. Configure your server endpoint"))
-
-    expect(defaultProps.onNavigateToConnection).toHaveBeenCalledTimes(1)
-  })
-
-  it("calls onNavigateToApiConfig when API field mapping is pressed", () => {
-    const { getByText } = render(<WelcomeCard {...defaultProps} />)
-
-    fireEvent.press(getByText("API field mapping"))
-
-    expect(defaultProps.onNavigateToApiConfig).toHaveBeenCalledTimes(1)
-  })
-
-  it("marks Start tracking as completed when tracking is active", () => {
-    const { getByText } = render(<WelcomeCard {...defaultProps} tracking />)
-
-    const label = getByText("1. Start tracking")
-    expect(label).toBeTruthy()
   })
 })

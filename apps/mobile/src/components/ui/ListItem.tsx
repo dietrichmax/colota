@@ -6,15 +6,20 @@
 import React from "react"
 import { Text, StyleSheet, View, Pressable, type StyleProp, type ViewStyle } from "react-native"
 import { ChevronRight } from "lucide-react-native"
+import { radius } from "@colota/shared"
 import { useTheme } from "../../hooks/useTheme"
 import { text } from "../../styles/typography"
 import { size, space, STATE_LAYER_ALPHA } from "../../constants"
 import { Divider } from "./Divider"
 
+// The status and trip dots read as part of the label line, not as a leading icon column.
+const DOT_SIZE = 8
+
 type IconComponent = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
 
 type ListItemProps = {
   label: string
+  dot?: string
   sub?: string
   value?: string
   icon?: IconComponent
@@ -31,6 +36,7 @@ type ListItemProps = {
 
 export function ListItem({
   label,
+  dot,
   sub,
   value,
   icon: Icon,
@@ -65,7 +71,10 @@ export function ListItem({
         </View>
       ) : null}
       <View style={styles.content} accessible={!onPress} accessibilityLabel={onPress ? undefined : composedLabel}>
-        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+        <View style={styles.labelRow}>
+          {dot ? <View style={[styles.dot, { backgroundColor: dot }]} importantForAccessibility="no" /> : null}
+          <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+        </View>
         {sub ? <Text style={[styles.sub, { color: colors.textSecondary }]}>{sub}</Text> : null}
       </View>
       {trailingSlot}
@@ -118,6 +127,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingEnd: space.md
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm
+  },
+  dot: {
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    borderRadius: radius.pill
   },
   label: {
     ...text.bodyStrong

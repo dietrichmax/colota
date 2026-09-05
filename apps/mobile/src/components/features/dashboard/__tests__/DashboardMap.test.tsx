@@ -1,5 +1,5 @@
 import React from "react"
-import { render } from "@testing-library/react-native"
+import { render, fireEvent, waitFor } from "@testing-library/react-native"
 
 jest.mock("@maplibre/maplibre-react-native", () => {
   const R = require("react")
@@ -14,6 +14,10 @@ jest.mock("@maplibre/maplibre-react-native", () => {
   }
 })
 
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 24, bottom: 16, left: 0, right: 0 })
+}))
+
 jest.mock("@react-navigation/native", () => ({
   useFocusEffect: jest.fn(),
   useIsFocused: () => true
@@ -26,12 +30,16 @@ jest.mock("../../../../hooks/useTheme", () => ({
   })
 }))
 
+const mockOpenLocationSettings = jest.fn().mockResolvedValue(true)
+const mockSaveSetting = jest.fn().mockResolvedValue(undefined)
 jest.mock("../../../../services/NativeLocationService", () => ({
   isNetworkAvailable: jest.fn().mockResolvedValue(true),
   getGeofences: jest.fn().mockResolvedValue([]),
   checkCurrentPauseZone: jest.fn().mockResolvedValue(null),
   getMostRecentLocation: jest.fn().mockResolvedValue(null),
-  getSetting: jest.fn().mockResolvedValue(null)
+  getSetting: jest.fn().mockResolvedValue("true"),
+  saveSetting: (...args: unknown[]) => mockSaveSetting(...args),
+  openLocationSettings: (...args: unknown[]) => mockOpenLocationSettings(...args)
 }))
 
 let mockCoords: { latitude: number; longitude: number; accuracy: number } | null = {
@@ -47,18 +55,11 @@ jest.mock("../../../../hooks/useTodayTrack", () => ({
   useTodayTrack: () => ({ locations: [], version: 0 })
 }))
 
-jest.mock("../../../../assets/icons/icon.png", () => "mock-icon")
-
-jest.mock("../../map/MapCenterButton", () => {
-  const R = require("react")
-  const { View } = require("react-native")
-  return { MapCenterButton: () => R.createElement(View, { testID: "center-button" }) }
-})
-
 import { DashboardMap } from "../DashboardMap"
 
-describe("DashboardMap info cards", () => {
+describe("DashboardMap", () => {
   beforeEach(() => {
+    jest.clearAllMocks()
     mockCoords = { latitude: 48.1, longitude: 11.5, accuracy: 10 }
   })
 
@@ -68,106 +69,106 @@ describe("DashboardMap info cards", () => {
     pauseReason: null as string | null,
     activeProfileName: null as string | null,
     isBatteryCritical: false,
-    locationEnabled: true
+    locationEnabled: true,
+    interval: 5
   }
 
-  it("shows profile name when activeProfileName is set and no pause zone", () => {
-    const { getByText } = render(<DashboardMap {...baseProps} activeProfileName="Charging" />)
+  describe("state chip", () => {
+    // The chip is the only place the running state is said on the map, so each state has to
+    // reach it; the alpha status strips it replaced could stack, this one cannot.
+    it("names the interval while tracking with no profile", () => {
+      const { getByText } = render(<DashboardMap {...baseProps} />)
 
-    expect(getByText("Charging")).toBeTruthy()
+      expect(getByText("Tracking · every 5 s")).toBeTruthy()
+    })
+
+    it("names the active profile beside the interval", () => {
+      const { getByText } = render(<DashboardMap {...baseProps} activeProfileName="Charging" />)
+
+      expect(getByText("Tracking · Charging · every 5 s")).toBeTruthy()
+    })
+
+    it("is absent when tracking is off, because the Start pill already says so", () => {
+      const { queryByTestId } = render(<DashboardMap {...baseProps} tracking={false} />)
+
+      expect(queryByTestId("map-state-chip")).toBeNull()
+    })
+
+    it("says the zone and the reason while paused", () => {
+      const { getByText } = render(<DashboardMap {...baseProps} activeZoneName="Home" pauseReason="wifi" />)
+
+      expect(getByText("Paused · Home · WiFi")).toBeTruthy()
+    })
+
+    it("names the zone alone when the pause has no reason", () => {
+      const { getByText } = render(<DashboardMap {...baseProps} activeZoneName="Home" />)
+
+      expect(getByText("Paused · Home")).toBeTruthy()
+    })
+
+    it("waits for a fix rather than claiming a rate it is not recording at", () => {
+      mockCoords = null
+      const { getByText, queryByText } = render(<DashboardMap {...baseProps} />)
+
+      expect(getByText("Waiting for GPS")).toBeTruthy()
+      expect(queryByText("Tracking · every 5 s")).toBeNull()
+    })
+
+    it("reports location services off ahead of every other state and opens the settings", () => {
+      const { getByText, getByRole } = render(
+        <DashboardMap {...baseProps} activeZoneName="Home" activeProfileName="Charging" locationEnabled={false} />
+      )
+
+      expect(getByText("Location services off")).toBeTruthy()
+      fireEvent.press(getByRole("button", { name: "Location services off" }))
+      expect(mockOpenLocationSettings).toHaveBeenCalled()
+    })
   })
 
-  it("hides profile indicator when no profile is active", () => {
-    const { queryByText } = render(<DashboardMap {...baseProps} activeProfileName={null} />)
+  describe("empty map", () => {
+    it("explains a stopped tracker with no fix to draw", () => {
+      mockCoords = null
+      const { getByText } = render(<DashboardMap {...baseProps} tracking={false} />)
 
-    expect(queryByText("Charging")).toBeNull()
+      expect(getByText("Tracking is off")).toBeTruthy()
+    })
+
+    it("blames the battery when that is what stopped it", () => {
+      mockCoords = null
+      const { getByText } = render(<DashboardMap {...baseProps} tracking={false} isBatteryCritical />)
+
+      expect(getByText("Tracking stopped")).toBeTruthy()
+    })
+
+    it("keeps the last fix on screen after a stop instead of falling back to the empty state", () => {
+      const { queryByTestId } = render(<DashboardMap {...baseProps} tracking={false} />)
+
+      expect(queryByTestId("map-empty")).toBeNull()
+    })
   })
 
-  it("shows pause zone indicator when inside a pause zone", () => {
-    const { getByText } = render(<DashboardMap {...baseProps} activeZoneName="Home" />)
+  describe("controls", () => {
+    it("carries the switch role and the checked state on the track toggle", async () => {
+      const { getByTestId } = render(<DashboardMap {...baseProps} />)
 
-    expect(getByText(/Paused in Home/)).toBeTruthy()
-  })
+      const toggle = await waitFor(() => getByTestId("track-toggle-btn"))
+      expect(toggle.props.accessibilityRole).toBe("switch")
+      expect(toggle.props.accessibilityState).toEqual({ checked: true })
+      expect(toggle.props.accessibilityLabel).toBe("Hide my track")
+    })
 
-  it("shows pause zone indicator when both pause zone and profile are active", () => {
-    const { getByText, queryByText } = render(
-      <DashboardMap {...baseProps} activeZoneName="Home" activeProfileName="Charging" />
-    )
+    it("persists the track toggle", async () => {
+      const { getByTestId } = render(<DashboardMap {...baseProps} />)
 
-    expect(getByText(/Paused in Home/)).toBeTruthy()
-    expect(queryByText("Charging")).toBeNull()
-  })
+      fireEvent.press(await waitFor(() => getByTestId("track-toggle-btn")))
 
-  it("hides standalone profile indicator when pause zone is active", () => {
-    const { queryByText } = render(<DashboardMap {...baseProps} activeZoneName="Office" activeProfileName="Charging" />)
+      expect(mockSaveSetting).toHaveBeenCalledWith("showTrack", "false")
+    })
 
-    expect(queryByText("Charging")).toBeNull()
-  })
+    it("renders the controls outside the map so their elevation is not clipped", () => {
+      const { getByTestId } = render(<DashboardMap {...baseProps} />)
 
-  it("shows pause zone indicator without profile in pause zone", () => {
-    const { getByText } = render(<DashboardMap {...baseProps} activeZoneName="Home" activeProfileName={null} />)
-
-    expect(getByText(/Paused in Home/)).toBeTruthy()
-  })
-
-  it("shows Tracking Disabled when not tracking", () => {
-    const { getByText } = render(<DashboardMap {...baseProps} tracking={false} />)
-
-    expect(getByText("Tracking Disabled")).toBeTruthy()
-  })
-
-  it("shows battery critical message when not tracking and battery is critical", () => {
-    const { getByText } = render(<DashboardMap {...baseProps} tracking={false} isBatteryCritical={true} />)
-
-    expect(getByText("Tracking Stopped")).toBeTruthy()
-    expect(getByText("Battery critically low. Charge your device to resume.")).toBeTruthy()
-  })
-
-  it("shows normal disabled message when not tracking and battery is fine", () => {
-    const { getByText } = render(<DashboardMap {...baseProps} tracking={false} isBatteryCritical={false} />)
-
-    expect(getByText("Tracking Disabled")).toBeTruthy()
-    expect(getByText("Start tracking to see the map.")).toBeTruthy()
-  })
-
-  it("shows Location Services Off overlay when tracking but location services are off", () => {
-    mockCoords = null
-    const { getByText, queryByText } = render(<DashboardMap {...baseProps} locationEnabled={false} />)
-
-    expect(getByText("Location Services Off")).toBeTruthy()
-    expect(getByText(/Tap to open Settings/)).toBeTruthy()
-    // The Searching GPS spinner overlay should NOT show simultaneously
-    expect(queryByText("Searching GPS...")).toBeNull()
-  })
-
-  it("shows Searching GPS overlay when tracking and location services are on but no fix yet", () => {
-    mockCoords = null
-    const { getByText, queryByText } = render(<DashboardMap {...baseProps} locationEnabled={true} />)
-
-    expect(getByText("Searching GPS...")).toBeTruthy()
-    expect(queryByText("Location Services Off")).toBeNull()
-  })
-
-  it("shows location-off status bar when tracking with cached coords but location services off", () => {
-    // Coords are valid (cached from before location was disabled), so the full
-    // overlay doesn't fire - the slim status bar at the top of the map does.
-    const { getByText, queryByText } = render(
-      <DashboardMap {...baseProps} activeProfileName="Charging" locationEnabled={false} />
-    )
-
-    expect(getByText("Location off - tap to enable")).toBeTruthy()
-    // Profile chip is hidden while location is off (location-off takes priority)
-    expect(queryByText("Charging")).toBeNull()
-    // Full-screen overlay should NOT show because we have valid coords
-    expect(queryByText("Location Services Off")).toBeNull()
-  })
-
-  it("hides profile and pause-zone chips when location services are off", () => {
-    const { queryByText } = render(
-      <DashboardMap {...baseProps} activeZoneName="Home" activeProfileName="Charging" locationEnabled={false} />
-    )
-
-    expect(queryByText(/Paused in Home/)).toBeNull()
-    expect(queryByText("Charging")).toBeNull()
+      expect(getByTestId("map-controls")).toBeTruthy()
+    })
   })
 })

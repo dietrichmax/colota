@@ -70,6 +70,22 @@ describe("MapOverlay", () => {
     expect(onPress).toHaveBeenCalled()
   })
 
+  // The Stop control carries a word, so the control shape has to grow past the 44 disc while
+  // keeping the same floating surface and the same 48 minimum.
+  it("paints a labelled control as a pill on the same surface", () => {
+    const { getByTestId } = render(
+      <MapOverlay variant="control" shape="pill" onPress={jest.fn()} accessibilityLabel="Stop" testID="stop-btn">
+        <Text>Stop</Text>
+      </MapOverlay>
+    )
+
+    const style = flatten(getByTestId("stop-btn").props.style)
+    expect(style.minHeight).toBe(size.touch)
+    expect(style.borderRadius).toBe(radius.pill)
+    expect(style.backgroundColor).toBe(lightColors.cardElevated)
+    expect(style.elevation).toBe(elevation.floating)
+  })
+
   it("carries the on state of a control that toggles", () => {
     const { getByRole } = render(
       <MapOverlay

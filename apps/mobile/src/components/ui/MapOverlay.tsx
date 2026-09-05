@@ -27,6 +27,8 @@ type ControlProps = CommonProps & {
   variant: "control"
   onPress: () => void
   accessibilityLabel: string
+  /** A disc for an icon-only control, a pill for one that carries a label. */
+  shape?: "disc" | "pill"
   accessibilityRole?: "button" | "switch"
   accessibilityHint?: string
   accessibilityState?: AccessibilityState
@@ -69,11 +71,14 @@ export function MapOverlay(props: MapOverlayProps) {
     style,
     testID,
     onPress,
+    shape = "disc",
     accessibilityLabel,
     accessibilityRole = "button",
     accessibilityHint,
     accessibilityState
   } = props
+
+  const pill = shape === "pill"
 
   return (
     <Pressable
@@ -86,9 +91,9 @@ export function MapOverlay(props: MapOverlayProps) {
       accessibilityHint={accessibilityHint}
       accessibilityState={accessibilityState}
       android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: RIPPLE_RADIUS }}
-      style={[styles.target, style]}
+      style={[pill ? [styles.pill, surface] : styles.target, style]}
     >
-      <View style={[styles.disc, surface]} importantForAccessibility="no">
+      <View style={pill ? styles.pillContent : [styles.disc, surface]} importantForAccessibility="no">
         {children}
       </View>
       <FocusRing visible={focused} color={colors.primary} radius={radius.pill} />
@@ -113,5 +118,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center"
+  },
+  pill: {
+    minHeight: size.touch,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.xl,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  pillContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm
   }
 })

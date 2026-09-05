@@ -20,10 +20,11 @@ type SectionTitleProps = {
   style?: StyleProp<ViewStyle>
   first?: boolean
   action?: SectionTitleAction
+  caption?: string
   testID?: string
 }
 
-export function SectionTitle({ children, style, first = false, action, testID }: SectionTitleProps) {
+export function SectionTitle({ children, style, first = false, action, caption, testID }: SectionTitleProps) {
   const { colors } = useTheme()
 
   return (
@@ -31,6 +32,7 @@ export function SectionTitle({ children, style, first = false, action, testID }:
       <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
         {children}
       </Text>
+      {!action && caption ? <Text style={[styles.caption, { color: colors.textSecondary }]}>{caption}</Text> : null}
       {action ? (
         <Pressable
           testID={action.testID}
@@ -69,5 +71,9 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     ...text.bodyStrong
+  },
+  caption: {
+    ...text.caption,
+    paddingStart: space.md
   }
 })

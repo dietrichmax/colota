@@ -1,5 +1,7 @@
 import React from "react"
 import { render } from "@testing-library/react-native"
+import { lightColors } from "@colota/shared"
+import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../../constants"
 
 let mockSettings = { isOfflineMode: false }
 
@@ -15,19 +17,6 @@ jest.mock("../../../../hooks/useTheme", () => ({
   })
 }))
 
-jest.mock("../../../index", () => {
-  const R = require("react")
-  const { View, Text } = require("react-native")
-  return {
-    SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children, variant }: any) => R.createElement(View, { testID: `card-${variant || "default"}` }, children)
-  }
-})
-
-jest.mock("../../../../utils/queueStatus", () => ({
-  getQueueColor: () => "#000"
-}))
-
 import { DatabaseStatistics } from "../DatabaseStatistics"
 
 const baseStats = {
@@ -38,81 +27,63 @@ const baseStats = {
   databaseSizeMB: 2.5
 }
 
+const figureInk = (node: any) => {
+  const style = Array.isArray(node.props.style)
+    ? Object.assign({}, ...node.props.style.filter(Boolean))
+    : node.props.style
+  return style.color
+}
+
 describe("DatabaseStatistics", () => {
   beforeEach(() => {
     mockSettings = { isOfflineMode: false }
   })
 
-  it("shows section title", () => {
-    const { getByText } = render(<DatabaseStatistics stats={baseStats} />)
+  it("makes the queue the one figure and puts the rest in a caption", () => {
+    const { getByTestId, getByText } = render(<DatabaseStatistics stats={baseStats} />)
 
-    expect(getByText("Database statistics")).toBeTruthy()
+    expect(getByTestId("stat-queued")).toBeTruthy()
+    expect(getByText("Queued")).toBeTruthy()
+    expect(getByText("12")).toBeTruthy()
+    expect(getByText("100 sent · 8 today · 2.5 MB")).toBeTruthy()
   })
 
-  describe("online mode (default)", () => {
-    it("shows Queued and Sent cards", () => {
-      const { getByText } = render(<DatabaseStatistics stats={baseStats} />)
-
-      expect(getByText("Queued")).toBeTruthy()
-      expect(getByText("12")).toBeTruthy()
-      expect(getByText("pending")).toBeTruthy()
-      expect(getByText("Sent")).toBeTruthy()
-      expect(getByText("100")).toBeTruthy()
-      expect(getByText("synced")).toBeTruthy()
-    })
-
-    it("does not show Total locations card", () => {
-      const { queryByText } = render(<DatabaseStatistics stats={baseStats} />)
-
-      expect(queryByText("locations")).toBeNull()
-    })
-
-    it("shows Today and Storage cards", () => {
-      const { getByText } = render(<DatabaseStatistics stats={baseStats} />)
-
-      expect(getByText("Today")).toBeTruthy()
-      expect(getByText("8")).toBeTruthy()
-      expect(getByText("tracked")).toBeTruthy()
-      expect(getByText("Storage")).toBeTruthy()
-      expect(getByText("2.5")).toBeTruthy()
-      expect(getByText("MB")).toBeTruthy()
-    })
-  })
-
-  describe("offline mode", () => {
-    beforeEach(() => {
-      mockSettings = { isOfflineMode: true }
-    })
-
-    it("shows Total locations card instead of Queued/Sent", () => {
-      const { getByText } = render(<DatabaseStatistics stats={baseStats} />)
-
-      expect(getByText("Total")).toBeTruthy()
-      expect(getByText("500")).toBeTruthy()
-      expect(getByText("locations")).toBeTruthy()
-    })
-
-    it("hides Queued and Sent cards", () => {
-      const { queryByText } = render(<DatabaseStatistics stats={baseStats} />)
-
-      expect(queryByText("Queued")).toBeNull()
-      expect(queryByText("pending")).toBeNull()
-      expect(queryByText("Sent")).toBeNull()
-      expect(queryByText("synced")).toBeNull()
-    })
-
-    it("still shows Today and Storage cards", () => {
-      const { getByText } = render(<DatabaseStatistics stats={baseStats} />)
-
-      expect(getByText("Today")).toBeTruthy()
-      expect(getByText("Storage")).toBeTruthy()
-    })
-  })
-
-  it("formats large numbers with locale string", () => {
+  it("counts every location instead of a queue in offline mode", () => {
     mockSettings = { isOfflineMode: true }
-    const largeStats = { ...baseStats, total: 1234567 }
-    const { getByText } = render(<DatabaseStatistics stats={largeStats} />)
+
+    const { getByTestId, queryByTestId, getByText } = render(<DatabaseStatistics stats={baseStats} />)
+
+    expect(getByTestId("stat-total")).toBeTruthy()
+    expect(queryByTestId("stat-queued")).toBeNull()
+    expect(getByText("Locations")).toBeTruthy()
+    expect(getByText("8 today · 2.5 MB")).toBeTruthy()
+  })
+
+  // A queue that colours itself at 1 cries wolf: below the high threshold a backlog is normal
+  // and only the depth that needs acting on is allowed to leave ink.
+  it("keeps the figure in ink at the high threshold", () => {
+    const { getByText } = render(<DatabaseStatistics stats={{ ...baseStats, queued: HIGH_QUEUE_THRESHOLD }} />)
+
+    expect(figureInk(getByText(String(HIGH_QUEUE_THRESHOLD)))).toBe(lightColors.text)
+  })
+
+  it("turns the figure to warning past the high threshold", () => {
+    const queued = HIGH_QUEUE_THRESHOLD + 1
+    const { getByText } = render(<DatabaseStatistics stats={{ ...baseStats, queued }} />)
+
+    expect(figureInk(getByText(String(queued)))).toBe(lightColors.warning)
+  })
+
+  it("turns the figure to error past the critical threshold", () => {
+    const queued = CRITICAL_QUEUE_THRESHOLD + 1
+    const { getByText } = render(<DatabaseStatistics stats={{ ...baseStats, queued }} />)
+
+    expect(figureInk(getByText(String(queued)))).toBe(lightColors.error)
+  })
+
+  it("formats large counts with the locale separator", () => {
+    mockSettings = { isOfflineMode: true }
+    const { getByText } = render(<DatabaseStatistics stats={{ ...baseStats, total: 1234567 }} />)
 
     expect(getByText((1234567).toLocaleString())).toBeTruthy()
   })
