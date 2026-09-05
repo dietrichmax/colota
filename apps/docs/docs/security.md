@@ -15,7 +15,7 @@ HTTPS is enforced for all public server endpoints. HTTP is only allowed for priv
 Colota's HTTPS chain validation accepts two trust sources, either of which is sufficient:
 
 1. **System CAs** that ship with Android - the normal public web (Let's Encrypt, DigiCert, etc.)
-2. **In-app imported CA** added via Settings -> Authentication & Headers -> Client Certificate (mTLS) -> Trusted Server CA. One slot, trusted only by Colota.
+2. **In-app imported CA** added via Settings → Connection → Authentication & Headers → Client Certificate (mTLS) → Trusted Server CA. One slot, trusted only by Colota.
 
 User-installed device CAs (from Android Settings -> Encryption & credentials) are not honored, so malware or a coerced profile that plants a CA in the device store can't intercept Colota's sync. Self-hosted users running a private CA should import it via the in-app path.
 
