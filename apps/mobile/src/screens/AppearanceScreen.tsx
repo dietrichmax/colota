@@ -10,12 +10,12 @@ import { useTheme } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts } from "../styles/typography"
-import { Card, ChipGroup, Container, Divider, SettingRow, Toggle, TextField } from "../components"
+import { Card, ChipGroup, Container, Divider, SettingRow, Toggle, TextField, ListItem } from "../components"
 import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
 import type { UnitSystem, TimeFormat } from "../utils/geo"
-import { size, space } from "../constants"
+import { space } from "../constants"
 
 export function AppearanceScreen({}: ScreenProps) {
   const { mode, toggleTheme, colors } = useTheme()
@@ -130,21 +130,14 @@ export function AppearanceScreen({}: ScreenProps) {
 
           <Divider />
 
-          <Pressable
+          <ListItem
             testID="map-tile-server-toggle"
-            style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+            label={t("appearance.mapTileServer")}
+            sub={t("appearance.mapStyle.subtitle")}
+            trailingIcon={showMapTileServer ? ChevronUp : ChevronDown}
+            accessibilityHint={showMapTileServer ? "Collapses the tile server settings" : "Expands the tile server settings"}
             onPress={() => setShowMapTileServer(!showMapTileServer)}
-          >
-            <View style={styles.linkContent}>
-              <Text style={[styles.linkLabel, { color: colors.text }]}>{t("appearance.mapTileServer")}</Text>
-              <Text style={[styles.linkSub, { color: colors.textSecondary }]}>{t("appearance.mapStyle.subtitle")}</Text>
-            </View>
-            {showMapTileServer ? (
-              <ChevronUp size={size.icon.md} color={colors.textLight} />
-            ) : (
-              <ChevronDown size={size.icon.md} color={colors.textLight} />
-            )}
-          </Pressable>
+          />
 
           {showMapTileServer && (
             <View style={styles.mapTilePanel}>
@@ -208,24 +201,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingTop: space.lg,
     paddingBottom: space.lg
-  },
-  linkRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: space.md
-  },
-  linkContent: {
-    flex: 1
-  },
-  linkLabel: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  linkSub: {
-    fontSize: fontSizes.description,
-    ...fonts.regular
   },
   mapTilePanel: {
     marginTop: space.xs,

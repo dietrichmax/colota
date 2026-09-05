@@ -5,11 +5,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react"
 import { Text, StyleSheet, View, ScrollView, Linking, Pressable, Image } from "react-native"
-import { ScreenProps, ThemeColors } from "../types/global"
+import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
-import { ExternalLink, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check } from "lucide-react-native"
+import { ExternalLink, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check, type LucideIcon } from "lucide-react-native"
 import { fontSizes, fonts } from "../styles/typography"
-import { Card, Container, Divider, SectionTitle, Footer } from "../components"
+import { Card, Container, Divider, SectionTitle, Footer, ListItem } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
@@ -54,27 +54,23 @@ const LinkRow = ({
   title,
   subtitle,
   url,
-  colors,
   onOpenURL
 }: {
-  icon: React.ComponentType<{ size: number; color: string }>
+  icon: LucideIcon
   title: string
   subtitle: string
   url: string
-  colors: ThemeColors
   onOpenURL: (url: string) => void
 }) => (
-  <Pressable
-    style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+  <ListItem
+    label={title}
+    sub={subtitle}
+    icon={Icon}
+    trailingIcon={ExternalLink}
+    accessibilityRole="link"
+    accessibilityHint={`Opens ${title} in a browser`}
     onPress={() => onOpenURL(url)}
-  >
-    <Icon size={size.icon.md} color={colors.textLight} />
-    <View style={styles.linkTextContainer}>
-      <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
-      <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>{subtitle}</Text>
-    </View>
-    <ExternalLink size={size.icon.md} color={colors.textLight} />
-  </Pressable>
+  />
 )
 
 const DEBUG_MODE_SETTING_KEY = "debug_mode_enabled"
@@ -282,7 +278,6 @@ export function AboutScreen({}: ScreenProps) {
             title="Privacy policy"
             subtitle={PRIVACY_POLICY_URL}
             url={PRIVACY_POLICY_URL}
-            colors={colors}
             onOpenURL={handleOpenURL}
           />
           <Divider />
@@ -291,7 +286,6 @@ export function AboutScreen({}: ScreenProps) {
             title="Source code"
             subtitle="github.com/dietrichmax/colota"
             url={REPO_URL}
-            colors={colors}
             onOpenURL={handleOpenURL}
           />
           <Divider />
@@ -300,7 +294,6 @@ export function AboutScreen({}: ScreenProps) {
             title="License"
             subtitle="GNU AGPLv3"
             url={`${REPO_URL}/blob/main/LICENSE`}
-            colors={colors}
             onOpenURL={handleOpenURL}
           />
           <Divider />
@@ -309,7 +302,6 @@ export function AboutScreen({}: ScreenProps) {
             title="Report a bug"
             subtitle="github.com/dietrichmax/colota/issues"
             url={ISSUES_URL}
-            colors={colors}
             onOpenURL={handleOpenURL}
           />
         </Card>
@@ -318,31 +310,23 @@ export function AboutScreen({}: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>Map data</SectionTitle>
           <Card>
-            <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+            <ListItem
+              label="Colota tiles"
+              sub="Self-hosted map tile server - configure your own"
+              trailingIcon={ExternalLink}
+              accessibilityRole="link"
+              accessibilityHint="Opens Colota tiles in a browser"
               onPress={() => handleOpenURL(TILE_SERVER_DOCS_URL)}
-            >
-              <View style={styles.linkTextContainer}>
-                <Text style={[styles.linkTitle, { color: colors.text }]}>Colota tiles</Text>
-                <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>
-                  Self-hosted map tile server - configure your own
-                </Text>
-              </View>
-              <ExternalLink size={size.icon.md} color={colors.textLight} />
-            </Pressable>
+            />
             <Divider />
-            <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+            <ListItem
+              label="OpenStreetMap"
+              sub="Map data by OpenStreetMap contributors"
+              trailingIcon={ExternalLink}
+              accessibilityRole="link"
+              accessibilityHint="Opens OpenStreetMap in a browser"
               onPress={() => handleOpenURL("https://www.openstreetmap.org/copyright")}
-            >
-              <View style={styles.linkTextContainer}>
-                <Text style={[styles.linkTitle, { color: colors.text }]}>OpenStreetMap</Text>
-                <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>
-                  Map data by OpenStreetMap contributors
-                </Text>
-              </View>
-              <ExternalLink size={size.icon.md} color={colors.textLight} />
-            </Pressable>
+            />
           </Card>
         </View>
 
@@ -425,23 +409,6 @@ const styles = StyleSheet.create({
   version: {
     fontSize: fontSizes.description,
     ...fonts.regular
-  },
-  linkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    gap: space.md
-  },
-  linkTextContainer: {
-    flex: 1
-  },
-  linkTitle: {
-    fontSize: fontSizes.input,
-    ...fonts.semiBold
-  },
-  linkSubtitle: {
-    fontSize: fontSizes.caption,
-    marginTop: 1
   },
   techRow: {
     flexDirection: "row",
