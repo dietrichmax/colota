@@ -247,11 +247,11 @@
   margin-top: 0.75rem;
 }
 
-.qrContainer canvas {
+.qrContainer svg {
   width: 100%;
   max-width: 400px;
   height: auto;
-  image-rendering: pixelated;
+  aspect-ratio: 1;
 }
 
 .qrWarning {
