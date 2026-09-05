@@ -6,6 +6,8 @@
 import React from "react"
 import { View, Pressable, StyleSheet, ViewStyle, StyleProp, AccessibilityRole, AccessibilityState } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
+import { space, STATE_LAYER_ALPHA } from "../../constants"
+import { radius } from "@colota/shared"
 
 type CardVariant = "default" | "elevated" | "outlined" | "interactive"
 
@@ -57,11 +59,7 @@ export function Card({
           backgroundColor: colors.cardElevated,
           borderColor: "transparent",
           borderWidth: 0,
-          elevation: 1,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 6
+          elevation: 1
         }
       case "outlined":
         return {
@@ -89,7 +87,8 @@ export function Card({
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
         accessibilityState={accessibilityState}
-        style={({ pressed }) => ({ opacity: pressed ? colors.pressedOpacity : 1 })}
+        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+        style={styles.pressable}
       >
         {cardView}
       </Pressable>
@@ -102,9 +101,15 @@ export function Card({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
+    padding: space.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
-    width: "100%"
+    width: "100%",
+    // A row inside the card ripples to its own bounds, so the card has to clip the corners.
+    overflow: "hidden"
+  },
+  pressable: {
+    borderRadius: radius.md,
+    overflow: "hidden"
   }
 })

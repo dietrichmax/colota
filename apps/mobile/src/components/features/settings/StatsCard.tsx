@@ -4,13 +4,14 @@
  */
 import React from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
-import { AlertTriangle, ChevronRight } from "lucide-react-native"
+import { TriangleAlert, ChevronRight } from "lucide-react-native"
 import { useTracking } from "../../../contexts/TrackingProvider"
 import { useTheme } from "../../../hooks/useTheme"
 import { getQueueColor } from "../../../utils/queueStatus"
 import { formatCount } from "../../../utils/format"
-import { fonts } from "../../../styles/typography"
-import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../constants"
+import { fontSizes, fonts } from "../../../styles/typography"
+import { CRITICAL_QUEUE_THRESHOLD, HIGH_QUEUE_THRESHOLD, size, space } from "../../../constants"
+import { radius } from "@colota/shared"
 
 interface StatsCardProps {
   queueCount: number
@@ -148,7 +149,7 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
             onPress={onManageClick}
           >
             <View style={styles.warningContent}>
-              <AlertTriangle size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
+              <TriangleAlert size={size.icon.md} color={warningLevel === "critical" ? colors.error : colors.warning} />
               <View style={styles.warningText}>
                 <Text
                   style={[
@@ -158,12 +159,12 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
                     }
                   ]}
                 >
-                  {warningLevel === "critical" ? "Critical Queue Size" : "High Queue Size"}
+                  {warningLevel === "critical" ? "Critical queue size" : "High queue size"}
                 </Text>
                 <Text style={[styles.warningHint, { color: colors.textSecondary }]}>Tap to manage data</Text>
               </View>
             </View>
-            <ChevronRight size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
+            <ChevronRight size={size.icon.md} color={warningLevel === "critical" ? colors.error : colors.warning} />
           </Pressable>
         </View>
       )}
@@ -173,9 +174,9 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 2,
-    marginBottom: 24,
+    marginBottom: space.xl,
     overflow: "hidden"
   },
   gradientOverlay: {
@@ -194,42 +195,35 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.semiBold,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 8
+    marginBottom: space.sm
   },
   statValue: {
-    fontSize: 24,
+    fontSize: fontSizes.statValue,
     ...fonts.bold,
     letterSpacing: -0.5
   },
   unit: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.medium
-  },
-  disabledHint: {
-    fontSize: 11,
-    marginTop: 2,
-    fontStyle: "italic"
   },
   divider: {
     width: 1,
-    marginHorizontal: 12,
+    marginHorizontal: space.md,
     opacity: 0.3
   },
   warningWrapper: {
-    paddingHorizontal: 12,
-    paddingBottom: 12
+    paddingHorizontal: space.md,
+    paddingBottom: space.md
   },
   warningButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+    borderRadius: radius.md,
     borderWidth: 1.5
   },
   warningContent: {
@@ -239,15 +233,15 @@ const styles = StyleSheet.create({
   },
   warningText: {
     flex: 1,
-    marginLeft: 12
+    marginStart: space.md
   },
   warningTitle: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold,
     marginBottom: 2
   },
   warningHint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular
   }
 })

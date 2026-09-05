@@ -63,6 +63,22 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
+    Button: function (props: any) {
+      return require("react").createElement(
+        require("react-native").Pressable,
+        { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+        require("react").createElement(require("react-native").Text, null, props.title)
+      )
+    },
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
@@ -172,7 +188,7 @@ describe("SettingsScreen", () => {
   it("navigates to Tracking & Sync", () => {
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    fireEvent.press(getByText("Tracking & Sync"))
+    fireEvent.press(getByText("Tracking & sync"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Tracking & Sync")
   })
@@ -180,7 +196,7 @@ describe("SettingsScreen", () => {
   it("navigates to Tracking Profiles", () => {
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    fireEvent.press(getByText("Tracking Profiles"))
+    fireEvent.press(getByText("Tracking profiles"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Tracking Profiles")
   })
@@ -188,7 +204,7 @@ describe("SettingsScreen", () => {
   it("navigates to Data Management", () => {
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    fireEvent.press(getByText("Data Management"))
+    fireEvent.press(getByText("Data management"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Data Management")
   })
@@ -217,7 +233,7 @@ describe("SettingsScreen", () => {
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
     expect(getByText("Connection")).toBeTruthy()
-    expect(getByText("Tracking Profiles")).toBeTruthy()
-    expect(getByText("Data Management")).toBeTruthy()
+    expect(getByText("Tracking profiles")).toBeTruthy()
+    expect(getByText("Data management")).toBeTruthy()
   })
 })

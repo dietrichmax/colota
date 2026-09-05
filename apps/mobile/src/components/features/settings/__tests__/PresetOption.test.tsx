@@ -99,6 +99,6 @@ describe("PresetOption", () => {
       <PresetOption preset="instant" isSelected={false} isOfflineMode={false} onSelect={mockOnSelect} />
     )
 
-    expect(getByText("High Battery Usage")).toBeTruthy()
+    expect(getByText("High battery usage")).toBeTruthy()
   })
 })

@@ -4,17 +4,18 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { View, Text, StyleSheet, ScrollView, Switch, TextInput, DeviceEventEmitter } from "react-native"
+import { View, Text, StyleSheet, ScrollView, DeviceEventEmitter } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
-import { fonts } from "../styles/typography"
-import { Container, SectionTitle, Card, SettingRow, Button, FieldMessage } from "../components"
+import { fontSizes, fonts } from "../styles/typography"
+import { Button, Card, Container, FieldMessage, SectionTitle, SettingRow, Toggle, TextField } from "../components"
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { parsePositiveInt, isPositiveInt } from "../utils/settingsValidation"
 import type { RootScreenProps } from "../types/navigation"
+import { space } from "../constants"
 
 declare function requestIdleCallback(callback: () => void): number
 declare function cancelIdleCallback(handle: number): void
@@ -191,7 +192,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
   const handleDelete = useCallback(async () => {
     if (!geofenceId) return
     const confirmed = await showConfirm({
-      title: "Delete Geofence",
+      title: "Delete geofence",
       message: `Delete "${name}"?`,
       confirmText: "Delete",
       destructive: true
@@ -207,10 +208,6 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     }
   }, [geofenceId, name, navigation])
 
-  const inputStyle = [
-    styles.input,
-    { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }
-  ]
 
   return (
     <Container>
@@ -218,23 +215,24 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         <SectionTitle>General</SectionTitle>
         <Card style={styles.card}>
           <SettingRow label="Name">
-            <TextInput
+            <TextField
               testID="geofence-name-input"
-              style={[inputStyle, styles.nameInput]}
+              accessibilityLabel="Name"
+              style={styles.nameInput}
               value={name}
               onChangeText={setName}
               placeholder="Home, Work..."
-              placeholderTextColor={colors.placeholder}
             />
           </SettingRow>
           <SettingRow label={`Radius (${shortDistanceUnit()})`}>
-            <TextInput
+            <TextField
               testID="geofence-radius-input"
-              style={[inputStyle, styles.numInput]}
+              accessibilityLabel="Radius"
+              figure
+              style={styles.numInput}
               value={radiusStr}
               onChangeText={handleRadiusChange}
               placeholder="50"
-              placeholderTextColor={colors.placeholder}
               keyboardType="numeric"
             />
           </SettingRow>
@@ -243,55 +241,56 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         <SectionTitle>GPS Pause Options</SectionTitle>
         <Card style={styles.card}>
           <SettingRow label="Don't record in zone" hint="Pause saving and syncing" style={styles.toggleRow}>
-            <Switch
+            <Toggle
+              accessibilityLabel="Don't record in zone"
               testID="pause-tracking-toggle"
               value={pauseTracking}
               onValueChange={setPauseTracking}
-              trackColor={{ false: colors.border, true: colors.warning + "80" }}
-              thumbColor={pauseTracking ? colors.warning : colors.border}
+              tone="warning"
             />
           </SettingRow>
 
           <SettingRow
             label="WiFi/Ethernet pause"
             hint="Stop GPS on unmetered networks"
-            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+            style={styles.toggleRow}
+            disabled={!pauseTracking}
           >
-            <Switch
+            <Toggle
+              accessibilityLabel="WiFi/Ethernet pause"
               testID="pause-wifi-toggle"
               value={pauseOnWifi}
               onValueChange={setPauseOnWifi}
               disabled={!pauseTracking}
-              trackColor={{ false: colors.border, true: colors.primary + "80" }}
-              thumbColor={pauseOnWifi ? colors.primary : colors.border}
             />
           </SettingRow>
 
           <SettingRow
             label="Motionless pause"
             hint="Stop GPS after no motion for a set time"
-            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+            style={styles.toggleRow}
+            disabled={!pauseTracking}
           >
-            <Switch
+            <Toggle
+              accessibilityLabel="Motionless pause"
               testID="pause-motionless-toggle"
               value={pauseOnMotionless}
               onValueChange={setPauseOnMotionless}
               disabled={!pauseTracking}
-              trackColor={{ false: colors.border, true: colors.primary + "80" }}
-              thumbColor={pauseOnMotionless ? colors.primary : colors.border}
             />
           </SettingRow>
 
           {pauseTracking && pauseOnMotionless && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
               <SettingRow label="Timeout (min)" hint="Minutes without motion before GPS stops">
-                <TextInput
+                <TextField
                   testID="motionless-timeout-input"
-                  style={[inputStyle, styles.numInput]}
+                  accessibilityLabel="Timeout in minutes"
+                  figure
+                  style={styles.numInput}
                   value={motionlessTimeoutStr}
                   onChangeText={setMotionlessTimeoutStr}
                   placeholder="1"
-                  placeholderTextColor={colors.placeholder}
                   keyboardType="number-pad"
                 />
               </SettingRow>
@@ -304,28 +303,29 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           <SettingRow
             label="Stationary heartbeat"
             hint="Periodic point at the zone center while paused"
-            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+            style={styles.toggleRow}
+            disabled={!pauseTracking}
           >
-            <Switch
+            <Toggle
+              accessibilityLabel="Stationary heartbeat"
               testID="heartbeat-toggle"
               value={heartbeatEnabled}
               onValueChange={setHeartbeatEnabled}
               disabled={!pauseTracking}
-              trackColor={{ false: colors.border, true: colors.primary + "80" }}
-              thumbColor={heartbeatEnabled ? colors.primary : colors.border}
             />
           </SettingRow>
 
           {pauseTracking && heartbeatEnabled && (
             <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
               <SettingRow label="Interval (min)" hint="How often to record a point">
-                <TextInput
+                <TextField
                   testID="heartbeat-interval-input"
-                  style={[inputStyle, styles.numInput]}
+                  accessibilityLabel="Interval in minutes"
+                  figure
+                  style={styles.numInput}
                   value={heartbeatIntervalStr}
                   onChangeText={setHeartbeatIntervalStr}
                   placeholder="15"
-                  placeholderTextColor={colors.placeholder}
                   keyboardType="number-pad"
                 />
               </SettingRow>
@@ -345,7 +345,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         </Card>
 
         <Button
-          title={saving ? "Saving..." : "Save Geofence"}
+          title={saving ? "Saving..." : "Save geofence"}
           onPress={handleSave}
           disabled={
             saving ||
@@ -355,7 +355,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           }
           icon={Check}
         />
-        {isEditing && <Button title="Delete Geofence" onPress={handleDelete} variant="danger" icon={Trash2} />}
+        {isEditing && <Button title="Delete geofence" onPress={handleDelete} variant="danger" icon={Trash2} />}
       </ScrollView>
     </Container>
   )
@@ -363,25 +363,24 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 
 const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
-  card: { marginBottom: 16 },
-  input: {
-    padding: 10,
-    borderWidth: 1.5,
-    borderRadius: 8,
-    fontSize: 15
-  },
+  card: { marginBottom: space.lg },
   nameInput: { flex: 1 },
-  numInput: { width: 80, textAlign: "center" },
+  numInput: { width: 80 },
   toggleRow: { paddingVertical: 10 },
-  disabledRow: { opacity: 0.45 },
-  nestedSetting: { marginLeft: 16, paddingLeft: 12, borderLeftWidth: 3, marginTop: 4, marginBottom: 4 },
+  nestedSetting: {
+    marginStart: space.lg,
+    paddingStart: space.md,
+    borderLeftWidth: 3,
+    marginTop: space.xs,
+    marginBottom: space.xs
+  },
   combinedNote: {
-    marginTop: 8,
-    paddingTop: 12,
+    marginTop: space.sm,
+    paddingTop: space.md,
     borderTopWidth: StyleSheet.hairlineWidth
   },
   combinedNoteText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     lineHeight: 17,
     fontStyle: "italic"

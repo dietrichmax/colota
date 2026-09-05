@@ -4,22 +4,24 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { View, Text, StyleSheet, TextInput, Pressable, FlatList, DeviceEventEmitter, Share } from "react-native"
+import { View, Text, StyleSheet, Pressable, FlatList, DeviceEventEmitter, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { ChevronRight, Wifi, PersonStanding, MapPinHouse, Share2 } from "lucide-react-native"
-import { Container, SectionTitle, Card } from "../components"
+import { Button, Card, Container, SectionTitle, TextField } from "../components"
 import {
   DEFAULT_MAP_ZOOM,
-  WORLD_MAP_ZOOM,
   GEOFENCE_ZOOM_PADDING,
+  HIT_SLOP_MD,
   MAP_ANIMATION_DURATION_MS,
   MAX_MAP_ZOOM,
-  HIT_SLOP_MD
+  WORLD_MAP_ZOOM,
+  size,
+  space
 } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
@@ -30,7 +32,7 @@ import { logger } from "../utils/logger"
 import { formatShortDistance, shortDistanceUnit, inputToMeters } from "../utils/geo"
 import { buildGeofencesLink } from "../utils/setupLink"
 
-const GeofenceMap = React.memo(function GeofenceMap({
+const GeofenceMap = React.memo(function GeofenceMapView({
   tracking,
   geofenceData,
   currentPauseZone,
@@ -251,7 +253,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
             hitSlop={HIT_SLOP_MD}
             style={({ pressed }) => [styles.zoomBtn, pressed && { opacity: colors.pressedOpacity }]}
           >
-            <MapPinHouse size={20} color={colors.textSecondary} />
+            <MapPinHouse size={size.icon.md} color={colors.textSecondary} />
           </Pressable>
           <Pressable
             testID={`edit-geofence-${item.id}`}
@@ -264,11 +266,11 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
                 <Text style={[styles.radius, { color: colors.textSecondary }]}>
                   {formatShortDistance(item.radius)} radius
                 </Text>
-                {item.pauseOnWifi && <Wifi size={12} color={colors.textSecondary} />}
-                {item.pauseOnMotionless && <PersonStanding size={12} color={colors.textSecondary} />}
+                {item.pauseOnWifi && <Wifi size={size.icon.sm} color={colors.textSecondary} />}
+                {item.pauseOnMotionless && <PersonStanding size={size.icon.sm} color={colors.textSecondary} />}
               </View>
             </View>
-            <ChevronRight size={20} color={colors.textSecondary} />
+            <ChevronRight size={size.icon.md} color={colors.textSecondary} />
           </Pressable>
         </View>
       </Card>
@@ -294,7 +296,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
         ListHeaderComponent={
           <>
             <View style={styles.section}>
-              <SectionTitle>Create Geofence</SectionTitle>
+              <SectionTitle>Create geofence</SectionTitle>
               <Card>
                 <Text style={[styles.hint, { color: colors.textSecondary }]}>
                   Enter a name and radius, then tap the map to place
@@ -302,39 +304,21 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
 
                 <View style={styles.inputRow}>
                   <View style={[styles.inputGroup, styles.inputGroupName]}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
-                    <TextInput
+                    <TextField
                       testID="geofence-name-input"
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: colors.background,
-                          color: colors.text,
-                          borderColor: colors.border
-                        }
-                      ]}
+                      label="Name"
                       placeholder="Home, Work..."
-                      placeholderTextColor={colors.placeholder}
                       value={newName}
                       onChangeText={setNewName}
                     />
                   </View>
 
                   <View style={[styles.inputGroup, styles.inputGroupRadius]}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>Radius ({shortDistanceUnit()})</Text>
-                    <TextInput
+                    <TextField
                       testID="geofence-radius-input"
-                      style={[
-                        styles.input,
-                        styles.inputCentered,
-                        {
-                          backgroundColor: colors.background,
-                          color: colors.text,
-                          borderColor: colors.border
-                        }
-                      ]}
+                      label={`Radius (${shortDistanceUnit()})`}
+                      figure
                       placeholder="50"
-                      placeholderTextColor={colors.placeholder}
                       value={newRadius}
                       keyboardType="numeric"
                       onChangeText={setNewRadius}
@@ -342,20 +326,11 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
                   </View>
                 </View>
 
-                <Pressable
-                  testID="place-geofence-btn"
-                  style={({ pressed }) => [
-                    styles.placeBtn,
-                    { backgroundColor: colors.primary },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
-                  onPress={startPlacingGeofence}
+                <Button
+                  title={placingGeofence ? "Tap Map to Place..." : "Place geofence"}
                   disabled={placingGeofence}
-                >
-                  <Text style={[styles.placeBtnText, { color: colors.textOnPrimary }]}>
-                    {placingGeofence ? "Tap Map to Place..." : "Place Geofence"}
-                  </Text>
-                </Pressable>
+                  onPress={startPlacingGeofence}
+                />
               </Card>
             </View>
 
@@ -368,7 +343,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
                   hitSlop={HIT_SLOP_MD}
                   style={({ pressed }) => [styles.shareBtn, pressed && { opacity: colors.pressedOpacity }]}
                 >
-                  <Share2 size={20} color={colors.textSecondary} />
+                  <Share2 size={size.icon.md} color={colors.textSecondary} />
                 </Pressable>
               </View>
             )}
@@ -393,9 +368,9 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
 const styles = StyleSheet.create({
   map: { height: 450, overflow: "hidden" },
   list: { padding: 20, paddingBottom: 40 },
-  section: { marginBottom: 16 },
-  hint: { fontSize: 13, ...fonts.regular, lineHeight: 18, marginBottom: 16 },
-  inputRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
+  section: { marginBottom: space.lg },
+  hint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18, marginBottom: space.lg },
+  inputRow: { flexDirection: "row", gap: space.md, marginBottom: space.lg },
   inputGroup: { flex: 1 },
   inputGroupName: {
     flex: 2
@@ -404,37 +379,24 @@ const styles = StyleSheet.create({
     flex: 0,
     minWidth: 90
   },
-  label: {
-    fontSize: 12,
-    ...fonts.semiBold,
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5
-  },
-  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: 15 },
-  inputCentered: {
-    textAlign: "center"
-  },
-  placeBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
-  placeBtnText: { fontSize: 15, ...fonts.semiBold },
-  card: { marginBottom: 12 },
+  card: { marginBottom: space.md },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between"
   },
-  zoomBtn: { padding: 4, marginRight: 16 },
+  zoomBtn: { padding: space.xs, marginEnd: space.lg },
   activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  shareBtn: { padding: 4, marginBottom: 12 },
+  shareBtn: { padding: space.xs, marginBottom: space.md },
   editBtn: { flex: 1, flexDirection: "row", alignItems: "center" },
-  info: { flex: 1, marginRight: 12 },
-  name: { fontSize: 15, ...fonts.semiBold, marginBottom: 2 },
-  radiusRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  radius: { fontSize: 12 },
+  info: { flex: 1, marginEnd: space.md },
+  name: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 2 },
+  radiusRow: { flexDirection: "row", alignItems: "center", gap: space.xs },
+  radius: { fontSize: fontSizes.caption },
   empty: { alignItems: "center", paddingVertical: 20 },
-  emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
+  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 6 },
   emptyHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     textAlign: "center",
     maxWidth: 260,
     lineHeight: 18

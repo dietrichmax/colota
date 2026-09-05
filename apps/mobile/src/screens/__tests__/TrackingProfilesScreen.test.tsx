@@ -83,6 +83,23 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
+    IconButton: require("../../testing/componentStubs").IconButtonStub,
+    Button: function (props: any) {
+      return require("react").createElement(
+        require("react-native").Pressable,
+        { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+        require("react").createElement(require("react-native").Text, null, props.title)
+      )
+    },
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children, style }: any) => R.createElement(View, { style }, children)
@@ -161,10 +178,10 @@ describe("TrackingProfilesScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Create Profile")).toBeTruthy()
+      expect(getByText("Create profile")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByText("Create profile"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Profile Editor", {})
   })
@@ -191,7 +208,7 @@ describe("TrackingProfilesScreen", () => {
     fireEvent.press(getByTestId("delete-profile-1"))
 
     await waitFor(() => {
-      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Delete Profile" }))
+      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Delete profile" }))
     })
 
     await waitFor(() => {

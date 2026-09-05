@@ -7,12 +7,13 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { View, Text, FlatList, Pressable, StyleSheet, BackHandler } from "react-native"
 import { Clock, Route, Share, TrendingUp, TrendingDown, Gauge, Trash2, X, Merge } from "lucide-react-native"
 import { Card } from "../../ui/Card"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { formatDistance, formatDuration, formatSpeed, formatTime } from "../../../utils/geo"
 import type { Trip, ThemeColors } from "../../../types/global"
 import { getTripColor, computeTripStats, type TripStats } from "../../../utils/trips"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../../../utils/exportConverters"
-import { HIT_SLOP_SM } from "../../../constants"
+import { HIT_SLOP_SM, size, space } from "../../../constants"
+import { radius } from "@colota/shared"
 
 interface TripListProps {
   trips: Trip[]
@@ -35,7 +36,7 @@ interface TripRowProps {
   onLongPress: (trip: Trip) => void
 }
 
-const TripRow = React.memo(function TripRow({
+const TripRow = React.memo(function TripRowItem({
   trip,
   colors,
   stats,
@@ -83,28 +84,28 @@ const TripRow = React.memo(function TripRow({
 
       <View style={styles.tripStats}>
         <View style={styles.stat}>
-          <Route size={13} color={colors.textSecondary} />
+          <Route size={size.icon.sm} color={colors.textSecondary} />
           <Text style={[styles.statText, { color: colors.text }]}>{formatDistance(trip.distance)}</Text>
         </View>
         <View style={styles.stat}>
-          <Clock size={13} color={colors.textSecondary} />
+          <Clock size={size.icon.sm} color={colors.textSecondary} />
           <Text style={[styles.statText, { color: colors.text }]}>{formatDuration(duration)}</Text>
         </View>
         {stats && stats.avgSpeed > 0 && (
           <View style={styles.stat}>
-            <Gauge size={13} color={colors.textSecondary} />
+            <Gauge size={size.icon.sm} color={colors.textSecondary} />
             <Text style={[styles.statText, { color: colors.text }]}>{formatSpeed(stats.avgSpeed)}</Text>
           </View>
         )}
         {stats && stats.elevationGain > 0 && (
           <View style={styles.stat}>
-            <TrendingUp size={13} color={colors.textSecondary} />
+            <TrendingUp size={size.icon.sm} color={colors.textSecondary} />
             <Text style={[styles.statText, { color: colors.text }]}>{Math.round(stats.elevationGain)}m</Text>
           </View>
         )}
         {stats && stats.elevationLoss > 0 && (
           <View style={styles.stat}>
-            <TrendingDown size={13} color={colors.textSecondary} />
+            <TrendingDown size={size.icon.sm} color={colors.textSecondary} />
             <Text style={[styles.statText, { color: colors.text }]}>{Math.round(stats.elevationLoss)}m</Text>
           </View>
         )}
@@ -264,7 +265,7 @@ export function TripList({
               accessibilityRole="button"
               accessibilityLabel="Cancel selection"
             >
-              <X size={18} color={colors.text} />
+              <X size={size.icon.md} color={colors.text} />
             </Pressable>
             <Text style={[styles.cabSummary, { color: colors.text }]}>{selected.size} selected</Text>
           </View>
@@ -289,7 +290,7 @@ export function TripList({
                 accessibilityLabel="Export selected trips"
                 accessibilityState={{ expanded: showExport }}
               >
-                <Share size={18} color={showExport ? colors.primary : colors.text} />
+                <Share size={size.icon.md} color={showExport ? colors.primary : colors.text} />
               </Pressable>
             )}
             {onMerge && trips.length >= 2 && (
@@ -303,7 +304,7 @@ export function TripList({
                 accessibilityHint={isAdjacentSelection ? undefined : "Select two or more adjacent trips to merge them"}
                 accessibilityState={{ disabled: !isAdjacentSelection }}
               >
-                <Merge size={18} color={isAdjacentSelection ? colors.text : colors.textDisabled} />
+                <Merge size={size.icon.md} color={isAdjacentSelection ? colors.text : colors.textDisabled} />
               </Pressable>
             )}
             {onDelete && (
@@ -314,7 +315,7 @@ export function TripList({
                 accessibilityRole="button"
                 accessibilityLabel="Delete selected trips"
               >
-                <Trash2 size={18} color={colors.error} />
+                <Trash2 size={size.icon.md} color={colors.error} />
               </Pressable>
             )}
           </View>
@@ -332,7 +333,7 @@ export function TripList({
               accessibilityLabel="Export all trips"
               accessibilityState={{ expanded: showExport }}
             >
-              <Share size={14} color={showExport ? colors.primary : colors.textSecondary} />
+              <Share size={size.icon.sm} color={showExport ? colors.primary : colors.textSecondary} />
               <Text style={[styles.exportAllLabel, { color: showExport ? colors.primary : colors.textSecondary }]}>
                 Export All
               </Text>
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     paddingTop: 10,
     paddingBottom: 14,
     minHeight: 54
@@ -394,17 +395,17 @@ const styles = StyleSheet.create({
   cabLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: space.xs,
     flexShrink: 1
   },
   cabSummary: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold
   },
   cabActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4
+    gap: space.xs
   },
   cabIconBtn: {
     minWidth: 48,
@@ -419,47 +420,47 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   cabTextBtnLabel: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold
   },
   summary: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.semiBold
   },
   exportAllBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
+    gap: space.xs,
+    paddingHorizontal: space.md,
     minHeight: 48
   },
   exportAllLabel: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.semiBold
   },
   exportRow: {
     flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
+    gap: space.sm,
+    paddingHorizontal: space.lg,
     paddingTop: 10,
-    paddingBottom: 12
+    paddingBottom: space.md
   },
   exportChip: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     borderWidth: 1
   },
   exportChipText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.bold
   },
   list: {
-    paddingHorizontal: 12,
-    paddingBottom: 16
+    paddingHorizontal: space.md,
+    paddingBottom: space.lg
   },
   tripCard: {
-    marginBottom: 8
+    marginBottom: space.sm
   },
   tripCardSelected: {
     borderWidth: 1.5
@@ -468,53 +469,53 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8
+    marginBottom: space.sm
   },
   tripTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8
+    gap: space.sm
   },
   tripDot: {
     width: 8,
     height: 8,
-    borderRadius: 4
+    borderRadius: radius.xs
   },
   tripTitle: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.bold
   },
   tripTime: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   },
   tripStats: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12
+    gap: space.md
   },
   stat: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4
+    gap: space.xs
   },
   statText: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   },
   emptyContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: space.sm,
     paddingTop: 60
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.regular
   },
   emptyHint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular
   }
 })

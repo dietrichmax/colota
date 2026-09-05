@@ -4,18 +4,25 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react"
-import { View, Text, StyleSheet, TextInput, Pressable, FlatList, ActivityIndicator, AppState } from "react-native"
+import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, AppState } from "react-native"
 import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
 import type { NativeSyntheticEvent, TextInputInstance } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { showAlert, showConfirm } from "../services/modalService"
 import { ScreenProps } from "../types/global"
 import { useCoords } from "../contexts/TrackingProvider"
-import { fonts } from "../styles/typography"
-import { X, CheckCircle, RefreshCw, AlertTriangle } from "lucide-react-native"
-import { Container, SectionTitle, Card } from "../components"
+import { fontSizes, fonts } from "../styles/typography"
+import { X, CircleCheckBig, RefreshCw, TriangleAlert } from "lucide-react-native"
+import { Button, Card, Container, SectionTitle, TextField, IconButton } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
-import { DEFAULT_MAP_ZOOM, WORLD_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, MAP_STYLE_URL_LIGHT } from "../constants"
+import {
+  DEFAULT_MAP_ZOOM,
+  MAP_ANIMATION_DURATION_MS,
+  MAP_STYLE_URL_LIGHT,
+  WORLD_MAP_ZOOM,
+  size,
+  space
+} from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
 import { logger } from "../utils/logger"
@@ -37,6 +44,7 @@ import {
   saveOfflineAreaBounds,
   removeOfflineAreaBounds
 } from "../components/features/map/OfflinePackManager"
+import { radius } from "@colota/shared"
 
 type ItemAction = { area: string; action: "deleting" | "canceling" | "refreshing" }
 type ThemeColors = ReturnType<typeof useTheme>["colors"]
@@ -105,7 +113,7 @@ const DownloadForm = memo(
     return (
       <>
         <View style={styles.section}>
-          <SectionTitle>Download Area</SectionTitle>
+          <SectionTitle>Download area</SectionTitle>
           <Card>
             <Text style={[styles.hint, { color: colors.textSecondary }]}>
               Pan and zoom the map to frame the area you want to download, then enter a name and tap Download. Size
@@ -113,17 +121,13 @@ const DownloadForm = memo(
             </Text>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
-              <TextInput
+              <TextField
                 ref={nameInputRef}
-                style={[
-                  styles.input,
-                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }
-                ]}
+                testID="area-name-input"
+                label="Name"
                 placeholder="Home area, Trail..."
-                placeholderTextColor={colors.placeholder}
                 onChangeText={onNameChange}
-                editable={!downloading}
+                disabled={downloading}
               />
             </View>
 
@@ -155,22 +159,16 @@ const DownloadForm = memo(
                     pressed && { opacity: colors.pressedOpacity }
                   ]}
                 >
-                  <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel Download</Text>
+                  <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel download</Text>
                 </Pressable>
               </View>
             ) : (
-              <Pressable
+              <Button
                 testID="download-btn"
-                style={({ pressed }) => [
-                  styles.downloadBtn,
-                  { backgroundColor: estimatedSizeLabel ? colors.primary : colors.border },
-                  pressed && { opacity: colors.pressedOpacity }
-                ]}
-                onPress={onDownload}
+                title="Download area"
                 disabled={!estimatedSizeLabel}
-              >
-                <Text style={[styles.downloadBtnText, { color: colors.textOnPrimary }]}>Download Area</Text>
-              </Pressable>
+                onPress={onDownload}
+              />
             )}
 
             {downloadError && <Text style={[styles.errorText, { color: colors.error }]}>{downloadError}</Text>}
@@ -179,7 +177,7 @@ const DownloadForm = memo(
 
         {areasCount > 0 && (
           <>
-            <SectionTitle>Saved Areas</SectionTitle>
+            <SectionTitle>Saved areas</SectionTitle>
             {totalStorageBytes > 0 && (
               <Text style={[styles.savedAreasMeta, { color: colors.textSecondary }]}>
                 {areasCount} {areasCount === 1 ? "area" : "areas"} · {formatBytes(totalStorageBytes)}
@@ -437,9 +435,9 @@ export function OfflineMapsScreen({}: ScreenProps) {
     const isUnmetered = await NativeLocationService.isUnmeteredConnection()
     if (!isUnmetered) {
       const wifiConfirmed = await showConfirm({
-        title: "Mobile Data",
+        title: "Mobile data",
         message: "You're not on WiFi. Downloading map tiles may use significant mobile data. Continue?",
-        confirmText: "Download Anyway",
+        confirmText: "Download anyway",
         destructive: false
       })
       if (!wifiConfirmed) return
@@ -512,7 +510,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
       const isUnmetered = await NativeLocationService.isUnmeteredConnection()
       if (!isUnmetered) {
         const wifiConfirmed = await showConfirm({
-          title: "Mobile Data",
+          title: "Mobile data",
           message: "You're not on WiFi. Re-downloading may use significant mobile data. Continue?",
           confirmText: "Continue",
           destructive: false
@@ -556,7 +554,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
   const handleDelete = useCallback(
     async (area: OfflineAreaInfo) => {
       const confirmed = await showConfirm({
-        title: "Delete Area",
+        title: "Delete area",
         message: `Delete "${area.name}"? The downloaded tiles will be removed from your device.`,
         confirmText: "Delete",
         destructive: true
@@ -699,12 +697,12 @@ export function OfflineMapsScreen({}: ScreenProps) {
               disabled={item.isActive}
             >
               <View style={styles.nameRow}>
-                {item.isComplete && <CheckCircle size={14} color={colors.success} />}
+                {item.isComplete && <CircleCheckBig size={size.icon.sm} color={colors.success} />}
                 {item.isActive && <ActivityIndicator size="small" color={colors.primary} />}
                 <Text style={[styles.areaName, { color: colors.text }]}>{item.name}</Text>
                 {isStale && (
                   <View testID={`stale-indicator-${item.name}`}>
-                    <AlertTriangle size={13} color={colors.warning} />
+                    <TriangleAlert size={size.icon.sm} color={colors.warning} />
                   </View>
                 )}
               </View>
@@ -737,22 +735,15 @@ export function OfflineMapsScreen({}: ScreenProps) {
             ) : (
               <View style={styles.actionBtns}>
                 {item.isComplete && (
-                  <Pressable
+                  <IconButton
+                    icon={RefreshCw}
+                    tone="primary"
                     testID={`refresh-btn-${item.name}`}
+                    accessibilityLabel={`Refresh ${item.name}`}
+                    loading={isRefreshing}
+                    disabled={downloading}
                     onPress={() => handleRefresh(item)}
-                    disabled={downloading || isRefreshing}
-                    style={({ pressed }) => [
-                      styles.actionBtn,
-                      { backgroundColor: colors.primary + "15" },
-                      pressed && { opacity: colors.pressedOpacity }
-                    ]}
-                  >
-                    {isRefreshing ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <RefreshCw size={14} color={colors.primary} />
-                    )}
-                  </Pressable>
+                  />
                 )}
                 <Pressable
                   testID={`delete-btn-${item.name}`}
@@ -767,7 +758,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                   {isDeleting ? (
                     <ActivityIndicator size="small" color={colors.error} />
                   ) : (
-                    <X size={16} color={colors.error} />
+                    <X size={size.icon.sm} color={colors.error} />
                   )}
                 </Pressable>
               </View>
@@ -885,72 +876,67 @@ export function OfflineMapsScreen({}: ScreenProps) {
 const styles = StyleSheet.create({
   map: { height: 450, overflow: "hidden" },
   list: { padding: 20, paddingBottom: 40 },
-  section: { marginBottom: 16 },
-  hint: { fontSize: 13, ...fonts.regular, lineHeight: 18, marginBottom: 16 },
-  inputGroup: { marginBottom: 16 },
-  label: {
-    fontSize: 12,
-    ...fonts.semiBold,
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5
-  },
-  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: 15 },
-  sizeEstimate: { fontSize: 12, ...fonts.regular, marginBottom: 12 },
-  downloadBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
-  downloadBtnText: { fontSize: 16, ...fonts.semiBold },
+  section: { marginBottom: space.lg },
+  hint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18, marginBottom: space.lg },
+  inputGroup: { marginBottom: space.lg },
+  sizeEstimate: { fontSize: fontSizes.caption, ...fonts.regular, marginBottom: space.md },
   progressContainer: { gap: 10 },
   progressHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  progressLabel: { fontSize: 14, ...fonts.semiBold },
+  progressLabel: { fontSize: fontSizes.body, ...fonts.semiBold },
   progressTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 3 },
-  progressSub: { fontSize: 12, ...fonts.regular },
+  progressSub: { fontSize: fontSizes.caption, ...fonts.regular },
   cancelBtn: {
-    padding: 12,
+    padding: space.md,
     borderRadius: 10,
     borderWidth: 1.5,
     alignItems: "center",
-    marginTop: 4
+    marginTop: space.xs
   },
-  cancelBtnText: { fontSize: 14, ...fonts.semiBold },
-  errorText: { fontSize: 13, ...fonts.regular, marginTop: 10 },
-  card: { marginBottom: 12 },
+  cancelBtnText: { fontSize: fontSizes.body, ...fonts.semiBold },
+  errorText: { fontSize: fontSizes.description, ...fonts.regular, marginTop: 10 },
+  card: { marginBottom: space.md },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  info: { flex: 1, marginRight: 12 },
+  info: { flex: 1, marginEnd: space.md },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
-  areaName: { fontSize: 15, ...fonts.semiBold },
-  areaSub: { fontSize: 12 },
-  areaSubDate: { fontSize: 11, ...fonts.regular, marginTop: 2, opacity: 0.7 },
-  savedAreasMeta: { fontSize: 12, ...fonts.regular, marginTop: 2, marginBottom: 12, paddingHorizontal: 4 },
+  areaName: { fontSize: fontSizes.input, ...fonts.semiBold },
+  areaSub: { fontSize: fontSizes.caption },
+  areaSubDate: { fontSize: fontSizes.small, ...fonts.regular, marginTop: 2, opacity: 0.7 },
+  savedAreasMeta: {
+    fontSize: fontSizes.caption,
+    ...fonts.regular,
+    marginTop: 2,
+    marginBottom: space.md,
+    paddingHorizontal: space.xs
+  },
   actionBtns: { flexDirection: "row", gap: 6, alignItems: "center" },
   actionBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     alignItems: "center",
     justifyContent: "center"
   },
   cancelAreaBtn: {
-    paddingHorizontal: 12,
+    paddingHorizontal: space.md,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     borderWidth: 1
   },
-  cancelAreaLabel: { fontSize: 13, ...fonts.semiBold },
+  cancelAreaLabel: { fontSize: fontSizes.description, ...fonts.semiBold },
   empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
-  emptyHint: { fontSize: 13, textAlign: "center", maxWidth: 260, lineHeight: 18 },
+  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 6 },
+  emptyHint: { fontSize: fontSizes.description, textAlign: "center", maxWidth: 260, lineHeight: 18 },
   mapHint: {
     position: "absolute",
     top: 14,
     left: 14,
     right: 14,
-    padding: 12,
-    borderRadius: 12,
+    padding: space.md,
+    borderRadius: radius.md,
     elevation: 8,
-    shadowOpacity: 0.2,
     zIndex: 5,
     alignItems: "center"
   },
-  mapHintText: { fontSize: 13, ...fonts.semiBold }
+  mapHintText: { fontSize: fontSizes.description, ...fonts.semiBold }
 })

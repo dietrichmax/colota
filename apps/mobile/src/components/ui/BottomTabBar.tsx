@@ -7,13 +7,15 @@ import { View, Pressable, Text, StyleSheet } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Settings, LucideIcon, House, MapPinHouse, Waypoints } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import type { RootStackRoute } from "../../types/navigation"
 
 interface Tab {
   name: string
   label: string
   icon: LucideIcon
-  route: string
+  route: RootStackRoute
 }
 
 const TABS: Tab[] = [
@@ -23,12 +25,13 @@ const TABS: Tab[] = [
   { name: "settings", label: "Settings", icon: Settings, route: "Settings" }
 ]
 
-/** Routes where the tab bar is visible. */
-const TAB_ROUTES = new Set(TABS.map((t) => t.route))
+/** Routes where the tab bar is visible. The one list; App.tsx reads it rather than repeating it. */
+// Typed loosely on purpose: lookups come from navigation state, which is a bare string.
+export const TAB_ROUTES: Set<string> = new Set(TABS.map((t) => t.route))
 
 interface BottomTabBarProps {
   currentRoute: string | undefined
-  onNavigate: (route: string) => void
+  onNavigate: (route: RootStackRoute) => void
 }
 
 export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
@@ -53,10 +56,11 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
         return (
           <Pressable
             key={tab.name}
-            style={({ pressed }) => [styles.tab, pressed && { opacity: 0.6 }]}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.touch / 2 }}
+            style={styles.tab}
             onPress={() => onNavigate(tab.route)}
           >
-            <tab.icon size={22} color={color} />
+            <tab.icon size={size.icon.md} color={color} />
             <Text style={[styles.label, { color }]}>{tab.label}</Text>
           </Pressable>
         )
@@ -65,16 +69,13 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
   )
 }
 
-export { TAB_ROUTES }
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    paddingTop: 8,
+    paddingTop: space.sm,
     paddingBottom: 6,
-    elevation: 0,
-    shadowOpacity: 0,
-    shadowRadius: 0
+    elevation: 0
   },
   tab: {
     flex: 1,
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
     gap: 3
   },
   label: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.medium
   }
 })

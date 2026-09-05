@@ -79,6 +79,46 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
+    TextField: require("../../testing/componentStubs").TextFieldStub,
+    RadioRow: function (props: any) {
+      const RN = require("react-native")
+      return R.createElement(
+        RN.Pressable,
+        { testID: props.testID, onPress: props.onPress, accessibilityState: { checked: props.selected } },
+        R.createElement(RN.Text, null, props.label),
+        props.sub ? R.createElement(RN.Text, null, props.sub) : null
+      )
+    },
+    ChipGroup: function (props: any) {
+      const RN = require("react-native")
+      return R.createElement(
+        RN.View,
+        null,
+        props.options.map(function (o: any) {
+          return R.createElement(
+            RN.Pressable,
+            { key: o.value, testID: o.testID, onPress: () => props.onSelect(o.value) },
+            R.createElement(RN.Text, null, o.label)
+          )
+        })
+      )
+    },
+    Button: function (props: any) {
+      return require("react").createElement(
+        require("react-native").Pressable,
+        { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+        require("react").createElement(require("react-native").Text, null, props.title)
+      )
+    },
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
@@ -97,8 +137,10 @@ jest.mock("../../components", () => {
 
 const mockGoBack = jest.fn()
 
+const mockSetOptions = jest.fn()
 const mockNavigation = {
-  goBack: mockGoBack
+  goBack: mockGoBack,
+  setOptions: mockSetOptions
 }
 
 import { ProfileEditorScreen } from "../ProfileEditorScreen"
@@ -119,14 +161,15 @@ describe("ProfileEditorScreen", () => {
 
   // --- New Profile Mode ---
 
-  it("renders new profile title", () => {
-    const { getByText } = renderNewProfile()
-    expect(getByText("New Profile")).toBeTruthy()
+  it("names the new profile in the header rather than in the body", () => {
+    renderNewProfile()
+    // New versus edit is carried by the header title, not by a second title in the body.
+    expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: "New profile" })
   })
 
   it("shows Create Profile button for new profile", () => {
     const { getByText } = renderNewProfile()
-    expect(getByText("Create Profile")).toBeTruthy()
+    expect(getByText("Create profile")).toBeTruthy()
   })
 
   it("shows all condition options", () => {
@@ -168,7 +211,7 @@ describe("ProfileEditorScreen", () => {
   it("shows alert when saving with empty name", async () => {
     const { getByText } = renderNewProfile()
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByText("Create profile"))
 
     await waitFor(() => {
       expect(mockShowAlert).toHaveBeenCalledWith("Missing Name", "Please enter a profile name.", "warning")
@@ -184,7 +227,7 @@ describe("ProfileEditorScreen", () => {
     // Select speed_above condition - defaults to 30 km/h threshold
     fireEvent.press(getByText("Speed Above"))
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByText("Create profile"))
 
     await waitFor(() => {
       expect(mockCreateProfile).toHaveBeenCalled()
@@ -200,7 +243,7 @@ describe("ProfileEditorScreen", () => {
     const nameInput = getByDisplayValue("")
     fireEvent.changeText(nameInput, "My Profile")
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByText("Create profile"))
 
     await waitFor(() => {
       expect(mockCreateProfile).toHaveBeenCalled()
@@ -212,7 +255,7 @@ describe("ProfileEditorScreen", () => {
     const { getByText } = renderNewProfile()
 
     // Try to save with empty name
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByText("Create profile"))
 
     await waitFor(() => {
       expect(mockShowAlert).toHaveBeenCalled()
@@ -223,11 +266,11 @@ describe("ProfileEditorScreen", () => {
 
   // --- Edit Mode ---
 
-  it("renders edit profile title when editing", async () => {
-    const { getByText } = renderEditProfile()
+  it("names the edited profile in the header rather than in the body", async () => {
+    renderEditProfile()
 
     await waitFor(() => {
-      expect(getByText("Edit Profile")).toBeTruthy()
+      expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: "Edit profile" })
     })
   })
 
@@ -235,7 +278,7 @@ describe("ProfileEditorScreen", () => {
     const { getByText } = renderEditProfile()
 
     await waitFor(() => {
-      expect(getByText("Save Changes")).toBeTruthy()
+      expect(getByText("Save changes")).toBeTruthy()
     })
   })
 
@@ -262,10 +305,10 @@ describe("ProfileEditorScreen", () => {
     const { getByText } = renderEditProfile()
 
     await waitFor(() => {
-      expect(getByText("Save Changes")).toBeTruthy()
+      expect(getByText("Save changes")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Save Changes"))
+    fireEvent.press(getByText("Save changes"))
 
     await waitFor(() => {
       expect(mockUpdateProfile).toHaveBeenCalled()
@@ -292,7 +335,7 @@ describe("ProfileEditorScreen", () => {
     const nameInput = getByDisplayValue("")
     fireEvent.changeText(nameInput, "Fail Profile")
 
-    fireEvent.press(getByText("Create Profile"))
+    fireEvent.press(getByText("Create profile"))
 
     await waitFor(() => {
       expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to save profile.", "error")
@@ -322,24 +365,24 @@ describe("ProfileEditorScreen", () => {
     const { getByText, queryByText } = renderNewProfile()
 
     // Charging: both delays
-    expect(getByText("Activation Delay")).toBeTruthy()
-    expect(getByText("Deactivation Delay")).toBeTruthy()
+    expect(getByText("Activation delay")).toBeTruthy()
+    expect(getByText("Deactivation delay")).toBeTruthy()
 
     // Stationary: activation delay only (deactivation is instant via the motion sensor)
     fireEvent.press(getByText("Stationary"))
-    expect(getByText("Activation Delay")).toBeTruthy()
-    expect(queryByText("Deactivation Delay")).toBeNull()
+    expect(getByText("Activation delay")).toBeTruthy()
+    expect(queryByText("Deactivation delay")).toBeNull()
   })
 
   it("hides the movement threshold for a stationary profile and shows a note instead", () => {
     const { getByText, queryByText } = renderNewProfile()
 
     // Default (charging): the field is shown
-    expect(getByText("Movement Threshold")).toBeTruthy()
+    expect(getByText("Movement threshold")).toBeTruthy()
 
     // Stationary: field hidden (the distance filter is forced to 0), note shown instead
     fireEvent.press(getByText("Stationary"))
-    expect(queryByText("Movement Threshold")).toBeNull()
+    expect(queryByText("Movement threshold")).toBeNull()
     expect(getByText(/Movement threshold does not apply/)).toBeTruthy()
   })
 

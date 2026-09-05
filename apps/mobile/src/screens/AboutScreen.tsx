@@ -5,16 +5,17 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react"
 import { Text, StyleSheet, View, ScrollView, Linking, Pressable, Image } from "react-native"
-import { ScreenProps, ThemeColors } from "../types/global"
+import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
-import { ExternalLink, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check } from "lucide-react-native"
-import { fonts } from "../styles/typography"
-import { Card, Container, Divider, SectionTitle, Footer } from "../components"
+import { ExternalLink, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check, type LucideIcon } from "lucide-react-native"
+import { fontSizes, fonts } from "../styles/typography"
+import { Card, Container, Divider, SectionTitle, Footer, ListItem } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
-import { REPO_URL, ISSUES_URL, PRIVACY_POLICY_URL, TILE_SERVER_DOCS_URL } from "../constants"
+import { ISSUES_URL, PRIVACY_POLICY_URL, REPO_URL, TILE_SERVER_DOCS_URL, size, space } from "../constants"
 import { logger } from "../utils/logger"
+import { radius } from "@colota/shared"
 
 // Helper function to map SDK to Android version
 function getAndroidVersion(sdkVersion: number): string {
@@ -53,27 +54,23 @@ const LinkRow = ({
   title,
   subtitle,
   url,
-  colors,
   onOpenURL
 }: {
-  icon: React.ComponentType<{ size: number; color: string }>
+  icon: LucideIcon
   title: string
   subtitle: string
   url: string
-  colors: ThemeColors
   onOpenURL: (url: string) => void
 }) => (
-  <Pressable
-    style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+  <ListItem
+    label={title}
+    sub={subtitle}
+    icon={Icon}
+    trailingIcon={ExternalLink}
+    accessibilityRole="link"
+    accessibilityHint={`Opens ${title} in a browser`}
     onPress={() => onOpenURL(url)}
-  >
-    <Icon size={20} color={colors.textLight} />
-    <View style={styles.linkTextContainer}>
-      <Text style={[styles.linkTitle, { color: colors.text }]}>{title}</Text>
-      <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>{subtitle}</Text>
-    </View>
-    <ExternalLink size={18} color={colors.textLight} />
-  </Pressable>
+  />
 )
 
 const DEBUG_MODE_SETTING_KEY = "debug_mode_enabled"
@@ -221,7 +218,7 @@ export function AboutScreen({}: ScreenProps) {
       value: `${buildConfig.MIN_SDK_VERSION} (Android ${getAndroidVersion(buildConfig.MIN_SDK_VERSION)})`
     },
     { label: "Compile SDK", value: buildConfig.COMPILE_SDK_VERSION.toString() },
-    { label: "Build Tools", value: buildConfig.BUILD_TOOLS_VERSION },
+    { label: "Build tools", value: buildConfig.BUILD_TOOLS_VERSION },
     { label: "Kotlin", value: buildConfig.KOTLIN_VERSION },
     { label: "NDK", value: buildConfig.NDK_VERSION }
   ]
@@ -242,13 +239,13 @@ export function AboutScreen({}: ScreenProps) {
         {/* Header */}
         <View style={styles.header}>
           <Pressable
-            style={({ pressed }) => [styles.appIconContainer, pressed && { opacity: 0.8 }]}
+            style={({ pressed }) => [styles.appIconContainer, pressed && { opacity: colors.pressedOpacity }]}
             onPress={handleVersionTap}
           >
             <Image source={icon} style={styles.appIcon} resizeMode="contain" />
           </Pressable>
           <Text style={[styles.title, { color: colors.text }]}>Colota</Text>
-          <Pressable onPress={handleVersionTap} style={({ pressed }) => pressed && { opacity: 0.8 }}>
+          <Pressable onPress={handleVersionTap} style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}>
             <Text style={[styles.version, { color: colors.textSecondary }]}>Version {buildConfig.VERSION_NAME}</Text>
           </Pressable>
 
@@ -268,7 +265,7 @@ export function AboutScreen({}: ScreenProps) {
                 pressed && { opacity: colors.pressedOpacity }
               ]}
             >
-              <Bug size={14} color={colors.warning} />
+              <Bug size={size.icon.sm} color={colors.warning} />
               <Text style={[styles.debugText, { color: colors.warning }]}>Debug Mode (tap to hide)</Text>
             </Pressable>
           )}
@@ -278,19 +275,17 @@ export function AboutScreen({}: ScreenProps) {
         <Card>
           <LinkRow
             icon={FileText}
-            title="Privacy Policy"
+            title="Privacy policy"
             subtitle={PRIVACY_POLICY_URL}
             url={PRIVACY_POLICY_URL}
-            colors={colors}
             onOpenURL={handleOpenURL}
           />
           <Divider />
           <LinkRow
             icon={Code}
-            title="Source Code"
+            title="Source code"
             subtitle="github.com/dietrichmax/colota"
             url={REPO_URL}
-            colors={colors}
             onOpenURL={handleOpenURL}
           />
           <Divider />
@@ -299,49 +294,39 @@ export function AboutScreen({}: ScreenProps) {
             title="License"
             subtitle="GNU AGPLv3"
             url={`${REPO_URL}/blob/main/LICENSE`}
-            colors={colors}
             onOpenURL={handleOpenURL}
           />
           <Divider />
           <LinkRow
             icon={MessageCircle}
-            title="Report a Bug"
+            title="Report a bug"
             subtitle="github.com/dietrichmax/colota/issues"
             url={ISSUES_URL}
-            colors={colors}
             onOpenURL={handleOpenURL}
           />
         </Card>
 
         {/* Map Data Attribution */}
         <View style={styles.section}>
-          <SectionTitle>Map Data</SectionTitle>
+          <SectionTitle>Map data</SectionTitle>
           <Card>
-            <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+            <ListItem
+              label="Colota tiles"
+              sub="Self-hosted map tile server - configure your own"
+              trailingIcon={ExternalLink}
+              accessibilityRole="link"
+              accessibilityHint="Opens Colota tiles in a browser"
               onPress={() => handleOpenURL(TILE_SERVER_DOCS_URL)}
-            >
-              <View style={styles.linkTextContainer}>
-                <Text style={[styles.linkTitle, { color: colors.text }]}>Colota Tiles</Text>
-                <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>
-                  Self-hosted map tile server - configure your own
-                </Text>
-              </View>
-              <ExternalLink size={18} color={colors.textLight} />
-            </Pressable>
+            />
             <Divider />
-            <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+            <ListItem
+              label="OpenStreetMap"
+              sub="Map data by OpenStreetMap contributors"
+              trailingIcon={ExternalLink}
+              accessibilityRole="link"
+              accessibilityHint="Opens OpenStreetMap in a browser"
               onPress={() => handleOpenURL("https://www.openstreetmap.org/copyright")}
-            >
-              <View style={styles.linkTextContainer}>
-                <Text style={[styles.linkTitle, { color: colors.text }]}>OpenStreetMap</Text>
-                <Text style={[styles.linkSubtitle, { color: colors.textLight }]}>
-                  Map data by OpenStreetMap contributors
-                </Text>
-              </View>
-              <ExternalLink size={18} color={colors.textLight} />
-            </Pressable>
+            />
           </Card>
         </View>
 
@@ -369,9 +354,13 @@ export function AboutScreen({}: ScreenProps) {
                 ]}
                 onPress={handleCopyDebugInfo}
               >
-                {copied ? <Check size={16} color={colors.success} /> : <Copy size={16} color={colors.primaryDark} />}
+                {copied ? (
+                  <Check size={size.icon.sm} color={colors.success} />
+                ) : (
+                  <Copy size={size.icon.sm} color={colors.primaryDark} />
+                )}
                 <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
-                  {copied ? "Copied!" : "Copy Debug Info"}
+                  {copied ? "Copied!" : "Copy debug info"}
                 </Text>
               </Pressable>
 
@@ -390,13 +379,13 @@ export function AboutScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     paddingBottom: 40,
-    paddingTop: 8
+    paddingTop: space.sm
   },
   header: {
     marginTop: 20,
-    marginBottom: 24,
+    marginBottom: space.xl,
     alignItems: "center"
   },
   appIconContainer: {
@@ -405,7 +394,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: space.lg,
     overflow: "hidden"
   },
   appIcon: {
@@ -413,85 +402,68 @@ const styles = StyleSheet.create({
     height: 80
   },
   title: {
-    fontSize: 28,
+    fontSize: fontSizes.screenTitle,
     ...fonts.bold,
-    marginBottom: 4
+    marginBottom: space.xs
   },
   version: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
-  },
-  linkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    gap: 12
-  },
-  linkTextContainer: {
-    flex: 1
-  },
-  linkTitle: {
-    fontSize: 15,
-    ...fonts.semiBold
-  },
-  linkSubtitle: {
-    fontSize: 12,
-    marginTop: 1
   },
   techRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8
+    paddingVertical: space.sm
   },
   techLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.medium
   },
   techValue: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   section: {
-    marginTop: 24
+    marginTop: space.xl
   },
   debugHint: {
-    fontSize: 11,
-    marginTop: 8,
+    fontSize: fontSizes.small,
+    marginTop: space.sm,
     fontStyle: "italic"
   },
   debugBadge: {
-    marginTop: 12,
-    paddingHorizontal: 12,
+    marginTop: space.md,
+    paddingHorizontal: space.md,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     flexDirection: "row",
     alignItems: "center",
     gap: 6
   },
   debugText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.semiBold
   },
   debugActions: {
     gap: 10,
-    marginTop: 16
+    marginTop: space.lg
   },
   copyButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: space.sm,
+    paddingVertical: space.md,
+    borderRadius: radius.md,
     borderWidth: 1
   },
   copyButtonText: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   logHint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     textAlign: "center",
     fontStyle: "italic",
     lineHeight: 16

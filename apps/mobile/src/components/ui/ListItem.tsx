@@ -7,7 +7,9 @@ import React from "react"
 import { Text, StyleSheet, View, Pressable } from "react-native"
 import { ChevronRight } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { radius } from "@colota/shared"
 
 type IconComponent = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
 
@@ -20,6 +22,8 @@ type ListItemProps = {
   testID?: string
   accessibilityRole?: "button" | "link"
   accessibilityHint?: string
+  disabled?: boolean
+  expanded?: boolean
 }
 
 export function ListItem({
@@ -30,7 +34,9 @@ export function ListItem({
   onPress,
   testID,
   accessibilityRole = "button",
-  accessibilityHint
+  accessibilityHint,
+  disabled = false,
+  expanded
 }: ListItemProps) {
   const { colors } = useTheme()
   return (
@@ -39,24 +45,26 @@ export function ListItem({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint ?? `Opens ${label}`}
-      android_ripple={{ color: colors.border }}
+      accessibilityState={{ disabled, expanded }}
+      android_ripple={disabled ? undefined : { color: colors.text + STATE_LAYER_ALPHA }}
+      disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && { opacity: colors.pressedOpacity }]}
+      style={styles.row}
     >
       {Icon && (
         <View style={styles.icon}>
-          <Icon size={22} color={colors.textLight} />
+          <Icon size={size.icon.md} color={disabled ? colors.textDisabled : colors.textLight} />
         </View>
       )}
       <View style={styles.content}>
-        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+        <Text style={[styles.label, { color: disabled ? colors.textDisabled : colors.text }]}>{label}</Text>
         {sub ? (
-          <Text style={[styles.sub, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text style={[styles.sub, { color: disabled ? colors.textDisabled : colors.textSecondary }]} numberOfLines={1}>
             {sub}
           </Text>
         ) : null}
       </View>
-      <TrailingIcon size={20} color={colors.textLight} />
+      <TrailingIcon size={size.icon.md} color={disabled ? colors.textDisabled : colors.textLight} />
     </Pressable>
   )
 }
@@ -66,22 +74,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     minHeight: 56,
-    paddingVertical: 10
+    paddingVertical: 10,
+    // The row sits inset inside a padded Card, so a square state layer floats as a block.
+    borderRadius: radius.sm,
+    overflow: "hidden"
   },
   icon: {
-    marginRight: 16
+    marginEnd: space.lg
   },
   content: {
     flex: 1,
-    paddingRight: 8
+    paddingEnd: space.sm
   },
   label: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
     marginBottom: 2
   },
   sub: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   }
 })

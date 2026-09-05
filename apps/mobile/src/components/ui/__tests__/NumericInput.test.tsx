@@ -1,15 +1,10 @@
 import React from "react"
 import { render, fireEvent } from "@testing-library/react-native"
-import { NumericInput } from "../NumericInput"
+jest.mock("../../../hooks/useTheme", () => ({
+  useTheme: () => ({ colors: require("@colota/shared").lightColors })
+}))
 
-const mockColors = {
-  text: "#000",
-  textLight: "#9ca3af",
-  textSecondary: "#6b7280",
-  border: "#e5e7eb",
-  backgroundElevated: "#f9fafb",
-  placeholder: "#9ca3af"
-} as any
+import { NumericInput } from "../NumericInput"
 
 describe("NumericInput", () => {
   const mockOnChange = jest.fn()
@@ -22,12 +17,11 @@ describe("NumericInput", () => {
   function renderInput(overrides: Partial<React.ComponentProps<typeof NumericInput>> = {}) {
     return render(
       <NumericInput
-        label="Test Label"
+        label="Test label"
         value="10"
         onChange={mockOnChange}
         onBlur={mockOnBlur}
         unit="seconds"
-        colors={mockColors}
         {...overrides}
       />
     )
@@ -36,7 +30,7 @@ describe("NumericInput", () => {
   it("renders label, value, and unit", () => {
     const { getByText, getByDisplayValue } = renderInput()
 
-    expect(getByText("Test Label")).toBeTruthy()
+    expect(getByText("Test label")).toBeTruthy()
     expect(getByDisplayValue("10")).toBeTruthy()
     expect(getByText("seconds")).toBeTruthy()
   })

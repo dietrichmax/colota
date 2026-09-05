@@ -6,8 +6,9 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
-import { fontSizes } from "@colota/shared"
+import { fontSizes, fonts } from "../../styles/typography"
+import { radius } from "@colota/shared"
+import { space, STATE_LAYER_ALPHA } from "../../constants"
 
 interface DisclosureModalProps {
   icon: React.ReactNode
@@ -77,24 +78,16 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
           {/* Buttons */}
           <View style={styles.buttons}>
             <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.secondaryButton,
-                { borderColor: colors.border },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
+              android_ripple={{ color: colors.textSecondary + STATE_LAYER_ALPHA }}
+              style={[styles.button, styles.secondaryButton, { borderColor: colors.border }]}
               onPress={handleNotNow}
             >
-              <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not Now</Text>
+              <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not now</Text>
             </Pressable>
 
             <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.primaryButton,
-                { backgroundColor: colors.primary },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
+              android_ripple={{ color: colors.textOnPrimary + STATE_LAYER_ALPHA }}
+              style={[styles.button, styles.primaryButton, { backgroundColor: colors.primary }]}
               onPress={handleConfirm}
             >
               <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>{confirmLabel}</Text>
@@ -111,16 +104,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 32
+    paddingHorizontal: space.xxl
   },
   card: {
     width: "100%",
-    padding: 24,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12
+    padding: space.xl,
+    elevation: 8
   },
   iconContainer: {
     width: 56,
@@ -129,13 +118,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
-    marginBottom: 16
+    marginBottom: space.lg
   },
   title: {
     fontSize: fontSizes.cardTitle,
     ...fonts.bold,
     textAlign: "center",
-    marginBottom: 16
+    marginBottom: space.lg
   },
   body: {
     fontSize: fontSizes.body,
@@ -143,17 +132,18 @@ const styles = StyleSheet.create({
     lineHeight: 20
   },
   bodySpaced: {
-    marginTop: 8
+    marginTop: space.sm
   },
   buttons: {
     flexDirection: "row",
-    gap: 12,
-    marginTop: 24
+    gap: space.md,
+    marginTop: space.xl
   },
   button: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: radius.sm,
+    overflow: "hidden",
     alignItems: "center"
   },
   primaryButton: {},

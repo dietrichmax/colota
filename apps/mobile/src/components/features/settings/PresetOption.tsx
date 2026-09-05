@@ -6,9 +6,10 @@ import React from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { Zap, Check } from "lucide-react-native"
 import { SelectablePreset, TRACKING_PRESETS } from "../../../types/global"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { useTheme } from "../../../hooks/useTheme"
 import { RadioDot } from "../../ui/RadioDot"
+import { size, space } from "../../../constants"
 
 interface BadgeProps {
   icon: React.ReactElement
@@ -18,7 +19,7 @@ interface BadgeProps {
 
 function Badge({ icon, label, color }: BadgeProps) {
   return (
-    <View style={[styles.badge, { backgroundColor: color + "20", borderColor: color + "40" }]}>
+    <View style={[styles.badge, { backgroundColor: color + "20" }]}>
       <View style={styles.badgeContent}>
         {icon}
         <Text style={[styles.badgeText, { color }]}>{label}</Text>
@@ -60,12 +61,16 @@ export function PresetOption({ preset, isSelected, isOfflineMode, onSelect }: Pr
                 {config.label}
               </Text>
               {showRecommendedBadge && (
-                <Badge icon={<Check size={10} color={colors.success} />} label="Recommended" color={colors.success} />
+                <Badge
+                  icon={<Check size={size.icon.sm} color={colors.success} />}
+                  label="Recommended"
+                  color={colors.success}
+                />
               )}
               {showWarningBadge && (
                 <Badge
-                  icon={<Zap size={10} color={colors.warning} />}
-                  label="High Battery Usage"
+                  icon={<Zap size={size.icon.sm} color={colors.warning} />}
+                  label="High battery usage"
                   color={colors.warning}
                 />
               )}
@@ -86,7 +91,7 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12
+    paddingVertical: space.md
   },
   leftContent: {
     flex: 1
@@ -98,31 +103,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 4
+    gap: space.sm,
+    marginBottom: space.xs
   },
   label: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
     letterSpacing: -0.2
   },
   badge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: space.sm,
     paddingVertical: 3,
     borderRadius: 6
   },
   badgeContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4
+    gap: space.xs
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: fontSizes.micro,
     ...fonts.bold,
     letterSpacing: 0.3
   },
   description: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
     lineHeight: 18
   }

@@ -12,26 +12,17 @@ export interface ThemeColors {
   // Primary colors
   primary: string
   primaryDark: string
-  primaryLight: string
+  primaryContainer: string
+  onPrimaryContainer: string
+  well: string
 
   // Secondary colors
-  secondary: string
-  secondaryDark: string
-  secondaryLight: string
 
   // Semantic colors
   success: string
-  successDark: string
-  successLight: string
   warning: string
-  warningDark: string
-  warningLight: string
   error: string
-  errorDark: string
-  errorLight: string
   info: string
-  infoDark: string
-  infoLight: string
 
   // Surfaces & backgrounds
   background: string
@@ -54,12 +45,9 @@ export interface ThemeColors {
   // Interactive elements
   placeholder: string
   link: string
-  linkVisited: string
 
   // Utility
   overlay: string
-  shadow: string
-  transparent: string
   pressedOpacity: number
   borderRadius: number
   textOnPrimary: string
@@ -69,24 +57,15 @@ export const lightColors: ThemeColors = {
   // Brand (Teal)
   primary: "#0d9488",
   primaryDark: "#115E59",
-  primaryLight: "#99F6E4",
-  secondary: "#F59E0B",
-  secondaryDark: "#92400E",
-  secondaryLight: "#FDE68A",
+  primaryContainer: "#A5F8E9",
+  onPrimaryContainer: "#115E59",
+  well: "#E9EDF0",
 
   // Status
   success: "#2E7D32",
-  successDark: "#1B5E20",
-  successLight: "#A5D6A7",
   warning: "#C2410C",
-  warningDark: "#9A3412",
-  warningLight: "#FED7AA",
   error: "#D32F2F",
-  errorDark: "#B71C1C",
-  errorLight: "#FFCDD2",
   info: "#1976D2",
-  infoDark: "#0D47A1",
-  infoLight: "#BBDEFB",
 
   // UI
   background: "#f8fafb",
@@ -109,12 +88,9 @@ export const lightColors: ThemeColors = {
   // Interactive
   placeholder: "#9AA0A6",
   link: "#115E59",
-  linkVisited: "#134E4A",
   overlay: "rgba(0, 0, 0, 0.5)",
-  shadow: "rgba(0, 0, 0, 0.1)",
 
   // Special
-  transparent: "transparent",
   pressedOpacity: 0.7,
   borderRadius: 8,
   textOnPrimary: "#FFFFFF"
@@ -124,24 +100,15 @@ export const darkColors: ThemeColors = {
   // Brand (Teal)
   primary: "#2DD4BF",
   primaryDark: "#0d9488",
-  primaryLight: "#99F6E4",
-  secondary: "#FBBF24",
-  secondaryDark: "#F59E0B",
-  secondaryLight: "#FDE68A",
+  primaryContainer: "#0F3B36",
+  onPrimaryContainer: "#99F6E4",
+  well: "#232323",
 
   // Status
   success: "#4CAF50",
-  successDark: "#388E3C",
-  successLight: "#C8E6C9",
   warning: "#FB923C",
-  warningDark: "#F97316",
-  warningLight: "#FED7AA",
   error: "#EF5350",
-  errorDark: "#D32F2F",
-  errorLight: "#FFCDD2",
   info: "#4285F4",
-  infoDark: "#1976D2",
-  infoLight: "#BBDEFB",
 
   // UI
   background: "#121212",
@@ -164,12 +131,9 @@ export const darkColors: ThemeColors = {
   // Interactive
   placeholder: "#AAAAAA",
   link: "#2DD4BF",
-  linkVisited: "#14B8A6",
   overlay: "rgba(0, 0, 0, 0.7)",
-  shadow: "rgba(0, 0, 0, 0.3)",
 
   // Special
-  transparent: "transparent",
   pressedOpacity: 0.7,
   borderRadius: 8,
   textOnPrimary: "#121212"

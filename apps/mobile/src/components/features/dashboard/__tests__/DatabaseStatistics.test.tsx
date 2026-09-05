@@ -29,6 +29,22 @@ jest.mock("../../../index", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
+    Button: function (props: any) {
+      return require("react").createElement(
+        require("react-native").Pressable,
+        { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+        require("react").createElement(require("react-native").Text, null, props.title)
+      )
+    },
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children, variant }: any) => R.createElement(View, { testID: `card-${variant || "default"}` }, children)
   }
@@ -56,7 +72,7 @@ describe("DatabaseStatistics", () => {
   it("shows section title", () => {
     const { getByText } = render(<DatabaseStatistics stats={baseStats} />)
 
-    expect(getByText("DATABASE STATISTICS")).toBeTruthy()
+    expect(getByText("Database statistics")).toBeTruthy()
   })
 
   describe("online mode (default)", () => {

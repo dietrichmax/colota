@@ -4,7 +4,8 @@
  */
 
 import { useState, useCallback, useMemo, useRef } from "react"
-import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
+import { RotateCcw, X } from "lucide-react-native"
 import {
   FieldMap,
   DEFAULT_FIELD_MAP,
@@ -20,8 +21,8 @@ import { useAutoSave } from "../hooks/useAutoSave"
 import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
-import { fonts } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup } from "../components"
+import { fontSizes, fonts } from "../styles/typography"
+import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup, Button, TextField, IconButton } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
   buildTraccarJsonPayload,
@@ -29,6 +30,8 @@ import {
   isTraccarJsonFormat,
   isOverlandFormat
 } from "../utils/apiPayload"
+import { space } from "../constants"
+import { radius } from "@colota/shared"
 
 type LocalCustomField = CustomField & { id: number }
 
@@ -462,9 +465,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>API Field Mapping</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Customize field names sent to your server
           </Text>
@@ -472,7 +473,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
         {/* Template Selector */}
         <View style={styles.section}>
-          <SectionTitle>BACKEND TEMPLATE</SectionTitle>
+          <SectionTitle>Backend template</SectionTitle>
           <ChipGroup
             options={TEMPLATE_OPTIONS}
             selected={localTemplate}
@@ -490,7 +491,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Overland template is POST-only by spec; no need to expose the choice */}
         {localTemplate !== "overland" && (
           <View style={styles.section}>
-            <SectionTitle>HTTP METHOD</SectionTitle>
+            <SectionTitle>HTTP method</SectionTitle>
             <ChipGroup
               options={HTTP_METHOD_OPTIONS}
               selected={localHttpMethod}
@@ -508,7 +509,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Dawarich Mode Selector (Dawarich template only) */}
         {showDawarichChip && (
           <View style={styles.section}>
-            <SectionTitle>DAWARICH MODE</SectionTitle>
+            <SectionTitle>Dawarich mode</SectionTitle>
             <ChipGroup
               options={DAWARICH_MODE_OPTIONS}
               selected={localDawarichMode}
@@ -537,13 +538,13 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Field Mapping Section */}
         <View style={styles.fieldsSection}>
           <View style={styles.sectionHeader}>
-            <SectionTitle>FIELD MAPPINGS</SectionTitle>
+            <SectionTitle>Field mappings</SectionTitle>
             {hasModifications && (
               <Pressable
                 onPress={handleResetAll}
                 style={({ pressed }) => [styles.resetAllButton, pressed && { opacity: colors.pressedOpacity }]}
               >
-                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>RESET ALL</Text>
+                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>Reset all</Text>
               </Pressable>
             )}
           </View>
@@ -575,37 +576,25 @@ export function ApiSettingsScreen({}: ScreenProps) {
                     {/* Right: Value input */}
                     <View style={styles.valueColumn}>
                       <View style={styles.inputRow}>
-                        <TextInput
-                          style={[
-                            styles.fieldInput,
-                            {
-                              borderColor: isDuplicate
-                                ? colors.error
-                                : isFieldModified
-                                  ? colors.primary
-                                  : colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background
-                            }
-                          ]}
+                        <TextField
+                          accessibilityLabel={key}
+                          testID={`field-${key}`}
+                          style={styles.fieldInput}
+                          mono
+                          error={isDuplicate}
                           value={localFieldMap[key]}
                           onChangeText={(text) => handleFieldChange(key, text)}
                           placeholder={referenceFieldMap[key]}
-                          placeholderTextColor={colors.placeholder}
                           autoCapitalize="none"
                           autoCorrect={false}
                         />
                         {isFieldModified && (
-                          <Pressable
+                          <IconButton
+                            icon={RotateCcw}
+                            testID={`reset-${key}`}
+                            accessibilityLabel={`Reset ${key} to the default`}
                             onPress={() => handleResetField(key)}
-                            style={({ pressed }) => [
-                              styles.resetButton,
-                              { backgroundColor: colors.border },
-                              pressed && { opacity: colors.pressedOpacity }
-                            ]}
-                          >
-                            <Text style={[styles.resetIcon, { color: colors.textSecondary }]}>↺</Text>
-                          </Pressable>
+                          />
                         )}
                       </View>
                     </View>
@@ -621,7 +610,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Custom Fields Section */}
         <View style={styles.fieldsSection}>
           <View style={styles.sectionHeader}>
-            <SectionTitle>CUSTOM FIELDS</SectionTitle>
+            <SectionTitle>Custom fields</SectionTitle>
           </View>
 
           <View style={[styles.fieldsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -635,48 +624,36 @@ export function ApiSettingsScreen({}: ScreenProps) {
                 return (
                   <View key={field.id}>
                     <View style={styles.customFieldRow}>
-                      <TextInput
-                        style={[
-                          styles.customFieldInput,
-                          {
-                            borderColor: isDuplicate ? colors.error : colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
+                      <TextField
+                        accessibilityLabel="Custom field key"
+                        testID={`custom-key-${field.id}`}
+                        style={styles.customFieldInput}
+                        mono
+                        error={isDuplicate}
                         value={field.key}
                         onChangeText={(text) => handleCustomFieldChange(field.id, "key", text)}
                         placeholder="Key"
-                        placeholderTextColor={colors.placeholder}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
-                      <TextInput
-                        style={[
-                          styles.customFieldInput,
-                          {
-                            borderColor: colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
+                      <TextField
+                        accessibilityLabel="Custom field value"
+                        testID={`custom-value-${field.id}`}
+                        style={styles.customFieldInput}
+                        mono
                         value={field.value}
                         onChangeText={(text) => handleCustomFieldChange(field.id, "value", text)}
                         placeholder="Value"
-                        placeholderTextColor={colors.placeholder}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
-                      <Pressable
+                      <IconButton
+                        icon={X}
+                        tone="danger"
+                        testID={`remove-custom-${field.id}`}
+                        accessibilityLabel="Remove this custom field"
                         onPress={() => handleRemoveCustomField(field.id)}
-                        style={({ pressed }) => [
-                          styles.removeButton,
-                          { backgroundColor: colors.error + "15" },
-                          pressed && { opacity: colors.pressedOpacity }
-                        ]}
-                      >
-                        <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                      </Pressable>
+                      />
                     </View>
                     {index < localCustomFields.length - 1 && <Divider />}
                   </View>
@@ -684,16 +661,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
               })
             )}
 
-            <Pressable
-              onPress={handleAddCustomField}
-              style={({ pressed }) => [
-                styles.addButton,
-                { borderColor: colors.border },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-            >
-              <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Field</Text>
-            </Pressable>
+            <Button title="+ Add Field" onPress={handleAddCustomField} variant="secondary" />
           </View>
         </View>
 
@@ -748,29 +716,23 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     paddingBottom: 40
   },
   header: {
     marginTop: 20,
     marginBottom: 20
   },
-  title: {
-    fontSize: 28,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: 4
-  },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     lineHeight: 20
   },
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   },
   templateHint: {
-    fontSize: 12,
-    marginTop: 8
+    fontSize: fontSizes.caption,
+    marginTop: space.sm
   },
   fieldsSection: {
     marginBottom: 20
@@ -781,23 +743,23 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   resetAllButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8
+    paddingVertical: space.xs,
+    paddingHorizontal: space.sm
   },
   resetAllText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.bold,
     letterSpacing: 0.5
   },
   fieldsCard: {
-    padding: 12,
+    padding: space.md,
     borderRadius: 10,
     borderWidth: 1
   },
   fieldRow: {
     flexDirection: "row",
     paddingVertical: 10,
-    gap: 12
+    gap: space.md
   },
   keyColumn: {
     flex: 1,
@@ -810,14 +772,14 @@ const styles = StyleSheet.create({
     marginBottom: 2
   },
   fieldLabel: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.bold,
     letterSpacing: 0.5
   },
   modifiedBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4
+    borderRadius: radius.xs
   },
   modifiedText: {
     fontSize: 9,
@@ -825,7 +787,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3
   },
   fieldDescription: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     lineHeight: 15
   },
   valueColumn: {
@@ -838,76 +800,30 @@ const styles = StyleSheet.create({
     gap: 6
   },
   fieldInput: {
-    flex: 1,
-    borderWidth: 1.5,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    fontSize: 14,
-    fontFamily: "monospace"
-  },
-  resetButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  resetIcon: {
-    fontSize: 18,
-    ...fonts.semiBold
+    flex: 1
   },
   customFieldRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 8
+    gap: space.sm,
+    paddingVertical: space.sm
   },
   customFieldInput: {
-    flex: 1,
-    borderWidth: 1.5,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    fontSize: 14,
-    fontFamily: "monospace"
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  removeButtonText: {
-    fontSize: 13,
-    ...fonts.bold
-  },
-  addButton: {
-    paddingVertical: 12,
-    alignItems: "center",
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    marginTop: 8
-  },
-  addButtonText: {
-    fontSize: 14,
-    ...fonts.semiBold
+    flex: 1
   },
   emptyHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     textAlign: "center",
-    paddingVertical: 8
+    paddingVertical: space.sm
   },
   warningBanner: {
-    padding: 12,
-    borderRadius: 8,
+    padding: space.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     marginBottom: 20
   },
   warningText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     lineHeight: 18
   },
   exampleSection: {
@@ -915,31 +831,31 @@ const styles = StyleSheet.create({
   },
   copyButton: {
     alignSelf: "flex-end",
-    paddingVertical: 4,
+    paddingVertical: space.xs,
     paddingHorizontal: 2,
-    marginTop: 8
+    marginTop: space.sm
   },
   copyButtonText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.bold,
     letterSpacing: 0.5
   },
   exampleCard: {
     padding: 14,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     borderWidth: 1
   },
   exampleCode: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     fontFamily: "monospace",
     lineHeight: 18
   },
   footer: {
-    paddingVertical: 16,
+    paddingVertical: space.lg,
     alignItems: "center"
   },
   footerText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     textAlign: "center"
   }
 })

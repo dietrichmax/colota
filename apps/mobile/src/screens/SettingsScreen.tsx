@@ -30,6 +30,7 @@ import {
   Share2
 } from "lucide-react-native"
 import { logger } from "../utils/logger"
+import { space } from "../constants"
 
 type Props = RootScreenProps<"Settings">
 
@@ -126,7 +127,7 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-tracking-sync"
               icon={Navigation}
-              label="Tracking & Sync"
+              label="Tracking & sync"
               sub={syncSummary}
               onPress={() => navigation.navigate("Tracking & Sync")}
             />
@@ -146,7 +147,7 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-tracking-profiles"
               icon={UserRoundPen}
-              label="Tracking Profiles"
+              label="Tracking profiles"
               sub="Auto-switch GPS settings based on conditions"
               onPress={() => navigation.navigate("Tracking Profiles")}
             />
@@ -172,7 +173,7 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-data-management"
               icon={Database}
-              label="Data Management"
+              label="Data management"
               sub="View queue and clear data"
               onPress={() => navigation.navigate("Data Management")}
             />
@@ -180,7 +181,7 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-import-locations"
               icon={Download}
-              label="Import Locations"
+              label="Import locations"
               sub="Merge locations from a GeoJSON or Google Timeline file"
               onPress={() => navigation.navigate("Import Locations")}
             />
@@ -188,7 +189,7 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-export-locations"
               icon={Upload}
-              label="Export Locations"
+              label="Export locations"
               sub="Export locations as CSV, GeoJSON, GPX or KML"
               onPress={() => navigation.navigate("Export Locations")}
             />
@@ -204,7 +205,7 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-backup-restore"
               icon={ShieldCheck}
-              label="Backup & Restore"
+              label="Backup & restore"
               sub="Encrypted backup of all your data"
               onPress={() => navigation.navigate("Backup & Restore")}
             />
@@ -212,7 +213,7 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-share-setup"
               icon={Share2}
-              label="Share Setup"
+              label="Share setup"
               sub="Share your settings, geofences and profiles as a link"
               onPress={() => navigation.navigate("Share Setup")}
             />
@@ -220,7 +221,7 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-offline-maps"
               icon={Map}
-              label="Offline Maps"
+              label="Offline maps"
               sub="Download map tiles for use without internet"
               onPress={() => navigation.navigate("Offline Maps")}
             />
@@ -264,11 +265,11 @@ export function SettingsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.lg
   },
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   }
 })

@@ -4,11 +4,10 @@
  */
 
 import React, { useEffect, useState } from "react"
-import { Modal, ScrollView, View, Text, TextInput, Pressable, StyleSheet } from "react-native"
-import { Eye, EyeOff } from "lucide-react-native"
+import { Modal, ScrollView, View, Text, StyleSheet } from "react-native"
 import type { RootScreenProps } from "../types/navigation"
 import { useTheme } from "../hooks/useTheme"
-import { Button, Card, Container, SectionTitle } from "../components"
+import { Button, Card, Container, SectionTitle, TextField } from "../components"
 import BackupService, {
   MIN_BACKUP_PASSWORD_LENGTH,
   MIN_BACKUP_PASSWORD_BITS,
@@ -16,9 +15,10 @@ import BackupService, {
 } from "../services/BackupService"
 import { showAlert, showConfirm, showChoice } from "../services/modalService"
 import { logger } from "../utils/logger"
-import { fonts } from "../styles/typography"
-import { fontSizes } from "@colota/shared"
+import { fontSizes, fonts } from "../styles/typography"
+import { radius } from "@colota/shared"
 import type { ThemeColors } from "../types/global"
+import { space } from "../constants"
 
 type Props = RootScreenProps<"Backup & Restore">
 
@@ -65,36 +65,21 @@ type PasswordFieldProps = {
   placeholder: string
   editable: boolean
   autoComplete: "password" | "new-password"
-  colors: ThemeColors
 }
 
-function PasswordField({ value, onChangeText, placeholder, editable, autoComplete, colors }: PasswordFieldProps) {
-  const [revealed, setRevealed] = useState(false)
-  const Icon = revealed ? EyeOff : Eye
+function PasswordField({ value, onChangeText, placeholder, editable, autoComplete }: PasswordFieldProps) {
   return (
-    <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.background }]}>
-      <TextInput
-        style={[styles.inputField, { color: colors.text }]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.placeholder}
-        autoCapitalize="none"
-        autoCorrect={false}
-        secureTextEntry={!revealed}
-        autoComplete={autoComplete}
-        editable={editable}
-      />
-      <Pressable
-        onPressIn={() => setRevealed(true)}
-        onPressOut={() => setRevealed(false)}
-        hitSlop={8}
-        style={styles.eyeButton}
-        accessibilityLabel="Hold to show password"
-      >
-        <Icon size={20} color={colors.textSecondary} />
-      </Pressable>
-    </View>
+    <TextField
+      accessibilityLabel={placeholder}
+      secure
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      autoCapitalize="none"
+      autoCorrect={false}
+      autoComplete={autoComplete}
+      disabled={!editable}
+    />
   )
 }
 
@@ -141,7 +126,6 @@ function PasswordPromptModal({
             placeholder="Backup password"
             editable={!busy}
             autoComplete="password"
-            colors={colors}
           />
           <View style={styles.modalButtonsRow}>
             <View style={styles.modalButton}>
@@ -277,7 +261,7 @@ export function BackupRestoreScreen({}: Props) {
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
-          <SectionTitle>Encrypted Backup</SectionTitle>
+          <SectionTitle>Encrypted backup</SectionTitle>
           <Card>
             <Text style={[styles.intro, { color: colors.textSecondary }]}>
               Bundle your locations, settings and credentials into a single encrypted file you can store anywhere.
@@ -290,7 +274,6 @@ export function BackupRestoreScreen({}: Props) {
               placeholder={`At least ${MIN_BACKUP_PASSWORD_LENGTH} characters`}
               editable={busy === null}
               autoComplete="new-password"
-              colors={colors}
             />
             {backupPassword.length > 0 && (
               <View style={styles.strengthRow}>
@@ -318,7 +301,6 @@ export function BackupRestoreScreen({}: Props) {
               placeholder="Re-enter the same password"
               editable={busy === null}
               autoComplete="new-password"
-              colors={colors}
             />
             {showMismatch && <Text style={[styles.errorText, { color: colors.error }]}>Passwords do not match.</Text>}
 
@@ -336,7 +318,7 @@ export function BackupRestoreScreen({}: Props) {
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Restore from Backup</SectionTitle>
+          <SectionTitle>Restore from backup</SectionTitle>
           <Card>
             <Text style={[styles.intro, { color: colors.textSecondary }]}>
               Replace all current data with a previous .colota backup file. You'll be asked for the backup password
@@ -360,49 +342,32 @@ export function BackupRestoreScreen({}: Props) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     paddingBottom: 40
   },
   section: {
-    marginTop: 24
+    marginTop: space.xl
   },
   intro: {
-    marginBottom: 12,
-    fontSize: 14,
+    marginBottom: space.md,
+    fontSize: fontSizes.body,
     lineHeight: 20
   },
   fieldLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     fontWeight: "500",
-    marginBottom: 8
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 8
-  },
-  inputField: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16
-  },
-  eyeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 12
+    marginBottom: space.sm
   },
   strengthRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    gap: 8
+    marginBottom: space.md,
+    gap: space.sm
   },
   strengthBar: {
     flex: 1,
     flexDirection: "row",
-    gap: 4
+    gap: space.xs
   },
   strengthSegment: {
     flex: 1,
@@ -410,46 +375,46 @@ const styles = StyleSheet.create({
     borderRadius: 2
   },
   strengthLabel: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     fontWeight: "600",
     minWidth: 60,
     textAlign: "right"
   },
   errorText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     marginTop: -4,
-    marginBottom: 8
+    marginBottom: space.sm
   },
   hint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     lineHeight: 18,
-    marginTop: 8,
-    marginBottom: 16
+    marginTop: space.sm,
+    marginBottom: space.lg
   },
   modalOverlay: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: 16
+    paddingHorizontal: space.lg
   },
   modalCard: {
-    padding: 16,
-    borderRadius: 12,
+    padding: space.lg,
+    borderRadius: radius.md,
     borderWidth: 1
   },
   modalTitle: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: 4
+    marginBottom: space.xs
   },
   modalSubtitle: {
     fontSize: fontSizes.description,
     ...fonts.regular,
-    marginBottom: 16
+    marginBottom: space.lg
   },
   modalButtonsRow: {
     flexDirection: "row",
-    gap: 12,
-    marginTop: 4
+    gap: space.md,
+    marginTop: space.xs
   },
   modalButton: {
     flex: 1

@@ -5,7 +5,9 @@
 
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
+import { space } from "../../constants"
+import { radius } from "@colota/shared"
 
 type Props = {
   visible: boolean
@@ -39,23 +41,20 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   card: {
-    padding: 32,
-    borderRadius: 16,
+    padding: space.xxl,
+    borderRadius: radius.lg,
     alignItems: "center",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 8,
     minWidth: 240
   },
   title: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginTop: 16,
-    marginBottom: 8
+    marginTop: space.lg,
+    marginBottom: space.sm
   },
   message: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     textAlign: "center"
   }
 })

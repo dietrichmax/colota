@@ -20,7 +20,7 @@ import {
   DatabaseStatistics,
   WelcomeCard
 } from "../components"
-import { STATS_REFRESH_IDLE, MIN_STATS_INTERVAL_MS } from "../constants"
+import { MIN_STATS_INTERVAL_MS, STATS_REFRESH_IDLE, space } from "../constants"
 import { Square, Play } from "lucide-react-native"
 import { logger } from "../utils/logger"
 
@@ -53,8 +53,8 @@ export function DashboardScreen({ navigation }: ScreenProps) {
       const openSettings = await showConfirm({
         title: "Please enable Location Services",
         message: "Location Services are disabled. Tracking will not work until they are enabled in Settings.",
-        confirmText: "Location Settings",
-        cancelText: "Start Anyway"
+        confirmText: "Location settings",
+        cancelText: "Start anyway"
       })
       if (openSettings) {
         await NativeLocationService.openLocationSettings()
@@ -232,9 +232,8 @@ export function DashboardScreen({ navigation }: ScreenProps) {
               variant={tracking ? "danger" : "primary"}
               icon={tracking ? Square : Play}
               onPress={tracking ? handleStop : handleStart}
-              activeOpacity={0.9}
               disabled={!tracking && (isBatteryCritical || !settingsHydrated)}
-              title={tracking ? "Stop Tracking" : "Start Tracking"}
+              title={tracking ? "Stop tracking" : "Start tracking"}
             />
           </Animated.View>
         </View>
@@ -302,14 +301,13 @@ const styles = StyleSheet.create({
   controlButton: {
     borderRadius: 28,
     elevation: 4,
-    minWidth: 200,
-    shadowColor: "#000"
+    minWidth: 200
   },
   content: {
     flex: 1,
     paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 8
+    paddingHorizontal: space.lg,
+    paddingBottom: space.sm
   },
   metricsSection: {
     marginBottom: 20

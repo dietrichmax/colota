@@ -7,9 +7,10 @@ import React from "react"
 import { Text, StyleSheet, View, ScrollView } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { Container } from "../components"
 import { MtlsSection } from "../components/features/settings/MtlsSection"
+import { space } from "../constants"
 
 export function MtlsSettingsScreen({}: ScreenProps) {
   const { colors } = useTheme()
@@ -22,7 +23,6 @@ export function MtlsSettingsScreen({}: ScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Client Certificate (mTLS)</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             For endpoints behind a reverse proxy that requires mutual TLS authentication
           </Text>
@@ -36,21 +36,15 @@ export function MtlsSettingsScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
     paddingBottom: 40
   },
   header: {
     marginBottom: 20
   },
-  title: {
-    fontSize: 28,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: 4
-  },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.regular,
     lineHeight: 20
   }

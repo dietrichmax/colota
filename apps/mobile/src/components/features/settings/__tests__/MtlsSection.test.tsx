@@ -5,6 +5,16 @@ jest.mock("../../../index", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
+    TextField: require("../../../../testing/componentStubs").TextFieldStub,
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),

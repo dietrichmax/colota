@@ -45,6 +45,38 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
+    ListItem: require("../../testing/componentStubs").ListItemStub,
+    TextField: require("../../testing/componentStubs").TextFieldStub,
+    ChipGroup: function (props: any) {
+      const RN = require("react-native")
+      return R.createElement(
+        View,
+        null,
+        props.options.map(function (o: any) {
+          return R.createElement(
+            RN.Pressable,
+            { key: o.value, testID: o.testID, onPress: () => props.onSelect(o.value) },
+            R.createElement(Text, null, o.label)
+          )
+        })
+      )
+    },
+    Button: function (props: any) {
+      return require("react").createElement(
+        require("react-native").Pressable,
+        { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+        require("react").createElement(require("react-native").Text, null, props.title)
+      )
+    },
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),

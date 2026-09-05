@@ -5,13 +5,13 @@
 
 import React, { useRef, useEffect, useMemo, useCallback, useState } from "react"
 import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image, Pressable } from "react-native"
-import { AlertTriangle } from "lucide-react-native"
+import { TriangleAlert } from "lucide-react-native"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
+import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM, space } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { TrackToggleButton } from "../map/TrackToggleButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
@@ -164,7 +164,7 @@ export function DashboardMap({
             <Image source={icon} style={styles.icon} />
           </View>
           <Text style={[styles.stateTitle, { color: isBatteryCritical ? colors.error : colors.text }]}>
-            {isBatteryCritical ? "Tracking Stopped" : "Tracking Disabled"}
+            {isBatteryCritical ? "Tracking stopped" : "Tracking disabled"}
           </Text>
           <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
             {isBatteryCritical
@@ -184,9 +184,9 @@ export function DashboardMap({
           ]}
         >
           <View style={[styles.iconCircle, { backgroundColor: colors.warning + "20" }]}>
-            <AlertTriangle size={32} color={colors.warning} />
+            <TriangleAlert size={32} color={colors.warning} />
           </View>
-          <Text style={[styles.stateTitle, { color: colors.warning }]}>Location Services Off</Text>
+          <Text style={[styles.stateTitle, { color: colors.warning }]}>Location services off</Text>
           <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
             Tracking can&apos;t get GPS fixes. Tap to open Settings.
           </Text>
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24
+    padding: space.xl
   },
   icon: { width: 64, height: 64 },
   iconCircle: {
@@ -266,14 +266,14 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16
+    marginBottom: space.lg
   },
-  stateTitle: { fontSize: 18, ...fonts.bold, textAlign: "center" },
+  stateTitle: { fontSize: fontSizes.heading, ...fonts.bold, textAlign: "center" },
   stateTitleSpaced: { marginTop: 20 },
   stateSubtext: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: space.sm,
     lineHeight: 20
   },
   statusBar: {
@@ -285,5 +285,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 5
   },
-  barText: { fontSize: 13, ...fonts.semiBold, color: "#fff" }
+  barText: { fontSize: fontSizes.description, ...fonts.semiBold, color: "#fff" }
 })

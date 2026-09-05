@@ -6,6 +6,7 @@
 import React from "react"
 import { Pressable, StyleSheet, ViewStyle, StyleProp, PressableProps } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
+import { radius } from "@colota/shared"
 
 interface Props {
   onPress: () => void
@@ -43,14 +44,10 @@ const styles = StyleSheet.create({
     bottom: 30,
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: radius.md,
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
     zIndex: 10
   },
   right: { right: 16 },

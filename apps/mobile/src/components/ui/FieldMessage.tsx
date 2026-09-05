@@ -6,7 +6,7 @@
 import React from "react"
 import { Text, StyleSheet, StyleProp, TextStyle } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
 
 type FieldMessageVariant = "info" | "warning" | "error"
 
@@ -25,7 +25,7 @@ export function FieldMessage({ children, variant = "info", style }: FieldMessage
 
 const styles = StyleSheet.create({
   message: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     marginTop: 6,
     ...fonts.medium
   }

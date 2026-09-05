@@ -84,6 +84,23 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
+    ListItem: require("../../testing/componentStubs").ListItemStub,
+    Button: function (props: any) {
+      return require("react").createElement(
+        require("react-native").Pressable,
+        { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+        require("react").createElement(require("react-native").Text, null, props.title)
+      )
+    },
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
@@ -223,7 +240,7 @@ describe("AboutScreen", () => {
   it("opens Privacy Policy URL when link pressed", async () => {
     const { getByText } = renderScreen()
 
-    fireEvent.press(getByText("Privacy Policy"))
+    fireEvent.press(getByText("Privacy policy"))
 
     await waitFor(() => {
       expect(Linking.openURL).toHaveBeenCalledWith("https://colota.app/privacy-policy")

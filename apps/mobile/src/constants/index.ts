@@ -19,6 +19,26 @@ export const SETTINGS_READ_ATTEMPTS = 3
 export const SETTINGS_READ_RETRY_DELAY_MS = 150
 
 // Touch targets
+// Spacing scale. Every padding, margin and gap that sits on the scale reads from here.
+export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const
+
+// Sizes are not spacing: these are the painted or touchable extents of a control.
+export const size = {
+  touch: 48,
+  row: 56,
+  chip: 36,
+  iconButton: 32,
+  iconColumn: 40,
+  icon: { sm: 16, md: 20, lg: 24 }
+} as const
+
+/**
+ * Material's pressed state layer: 10 percent of the element's own content colour, concatenated
+ * onto a hex token. Android draws it as a ripple from the touch point, which an opacity fade
+ * of the whole element is not.
+ */
+export const STATE_LAYER_ALPHA = "1A"
+
 export const HIT_SLOP_SM = { top: 6, right: 6, bottom: 6, left: 6 } as const
 export const HIT_SLOP_MD = { top: 8, right: 8, bottom: 8, left: 8 } as const
 export const HIT_SLOP_LG = { top: 12, right: 12, bottom: 12, left: 12 } as const

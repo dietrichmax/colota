@@ -61,6 +61,24 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
+    IconButton: require("../../testing/componentStubs").IconButtonStub,
+    TextField: require("../../testing/componentStubs").TextFieldStub,
+    Button: function (props: any) {
+      return require("react").createElement(
+        require("react-native").Pressable,
+        { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+        require("react").createElement(require("react-native").Text, null, props.title)
+      )
+    },
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     FloatingSaveIndicator: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
@@ -241,7 +259,7 @@ describe("ApiSettingsScreen", () => {
       const latInput = getByDisplayValue("lat")
       fireEvent.changeText(latInput, "latitude")
 
-      expect(getByText("RESET ALL")).toBeTruthy()
+      expect(getByText("Reset all")).toBeTruthy()
     })
   })
 

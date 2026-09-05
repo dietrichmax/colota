@@ -4,22 +4,24 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react"
-import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
-import { ChevronRight } from "lucide-react-native"
+import { Text, StyleSheet, View, ScrollView } from "react-native"
+import { X } from "lucide-react-native"
 import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { fonts, fontSizes } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup } from "../components"
+import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup, Button, TextField, ListItem, IconButton } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
+import { space } from "../constants"
+import { radius } from "@colota/shared"
 
 const AUTH_TYPE_OPTIONS: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
-  { value: "basic", label: "Basic Auth" },
-  { value: "bearer", label: "Bearer Token" }
+  { value: "basic", label: "Basic auth" },
+  { value: "bearer", label: "Bearer token" }
 ]
 
 type LocalHeader = { key: string; value: string; id: number }
@@ -152,9 +154,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Authentication & Headers</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Secure your endpoint connection</Text>
         </View>
 
@@ -174,41 +174,26 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.text }]}>Username</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        borderColor: colors.border,
-                        color: colors.text,
-                        backgroundColor: colors.background
-                      }
-                    ]}
+                  <TextField
+                    label="Username"
+                    testID="basic-username"
                     value={config.username}
                     onChangeText={(v) => updateConfig({ username: v })}
                     placeholder="Username"
-                    placeholderTextColor={colors.placeholder}
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
 
-                  <Text style={[styles.fieldLabel, styles.fieldLabelSpaced, { color: colors.text }]}>Password</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        borderColor: colors.border,
-                        color: colors.text,
-                        backgroundColor: colors.background
-                      }
-                    ]}
+                  <TextField
+                    label="Password"
+                    testID="basic-password"
+                    style={styles.fieldLabelSpaced}
                     value={config.password}
                     onChangeText={(v) => updateConfig({ password: v })}
                     placeholder="Password"
-                    placeholderTextColor={colors.placeholder}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    secureTextEntry
+                    secure
                   />
                 </View>
               </>
@@ -219,25 +204,16 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.text }]}>Token</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.tokenInput,
-                      {
-                        borderColor: colors.border,
-                        color: colors.text,
-                        backgroundColor: colors.background
-                      }
-                    ]}
+                  <TextField
+                    label="Token"
+                    testID="bearer-token"
+                    mono
                     value={config.bearerToken}
                     onChangeText={(v) => updateConfig({ bearerToken: v })}
                     placeholder="Bearer token"
-                    placeholderTextColor={colors.placeholder}
                     autoCapitalize="none"
                     autoCorrect={false}
                     multiline
-                    textAlignVertical="top"
                   />
                 </View>
               </>
@@ -247,7 +223,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
 
         {/* Custom Headers Section */}
         <View style={styles.section}>
-          <SectionTitle>Custom Headers</SectionTitle>
+          <SectionTitle>Custom headers</SectionTitle>
           <Card>
             {localHeaders.length === 0 ? (
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>No custom headers configured</Text>
@@ -259,49 +235,33 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
                     {index > 0 && <Divider />}
                     <View style={styles.headerRow}>
                       <View style={styles.headerInputs}>
-                        <TextInput
-                          style={[
-                            styles.headerInput,
-                            {
-                              borderColor: isDuplicate ? colors.error : colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background
-                            }
-                          ]}
+                        <TextField
+                          accessibilityLabel="Header name"
+                          testID={`header-key-${header.id}`}
+                          error={isDuplicate}
                           value={header.key}
                           onChangeText={(v) => updateHeaderField(header.id, "key", v)}
                           placeholder="Header name"
-                          placeholderTextColor={colors.placeholder}
                           autoCapitalize="none"
                           autoCorrect={false}
                         />
-                        <TextInput
-                          style={[
-                            styles.headerInput,
-                            {
-                              borderColor: colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background
-                            }
-                          ]}
+                        <TextField
+                          accessibilityLabel="Header value"
+                          testID={`header-value-${header.id}`}
                           value={header.value}
                           onChangeText={(v) => updateHeaderField(header.id, "value", v)}
                           placeholder="Value"
-                          placeholderTextColor={colors.placeholder}
                           autoCapitalize="none"
                           autoCorrect={false}
                         />
                       </View>
-                      <Pressable
+                      <IconButton
+                        icon={X}
+                        tone="danger"
+                        testID={`remove-header-${header.id}`}
+                        accessibilityLabel="Remove this header"
                         onPress={() => removeHeader(header.id)}
-                        style={({ pressed }) => [
-                          styles.removeButton,
-                          { backgroundColor: colors.error + "15" },
-                          pressed && { opacity: colors.pressedOpacity }
-                        ]}
-                      >
-                        <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                      </Pressable>
+                      />
                     </View>
                   </View>
                 )
@@ -310,16 +270,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
 
             {localHeaders.length > 0 && <Divider />}
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.addButton,
-                { borderColor: colors.primary },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-              onPress={addHeader}
-            >
-              <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Header</Text>
-            </Pressable>
+            <Button title="+ Add Header" onPress={addHeader} variant="secondary" />
 
             <Text style={[styles.hint, { color: colors.textSecondary }]}>
               e.g., CF-Access-Client-Id for Cloudflare Access
@@ -339,20 +290,14 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         )}
 
         <View style={styles.section}>
-          <SectionTitle>Client Certificate</SectionTitle>
+          <SectionTitle>Client certificate</SectionTitle>
           <Card>
-            <Pressable
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+            <ListItem
+              testID="nav-mtls-settings"
+              label="Client Certificate (mTLS)"
+              sub="Authenticate to servers that require a client certificate"
               onPress={() => navigation.navigate("mTLS Settings")}
-            >
-              <View style={styles.linkContent}>
-                <Text style={[styles.linkLabel, { color: colors.text }]}>Client Certificate (mTLS)</Text>
-                <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
-                  Authenticate to servers that require a client certificate
-                </Text>
-              </View>
-              <ChevronRight size={20} color={colors.textLight} />
-            </Pressable>
+            />
           </Card>
         </View>
 
@@ -371,8 +316,8 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
     paddingBottom: 40
   },
   loadingContainer: {
@@ -381,131 +326,62 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   loadingText: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.regular
   },
   header: {
     marginBottom: 20
   },
-  title: {
-    fontSize: 28,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: 4
-  },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.regular,
     lineHeight: 20
   },
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   },
   fieldGroup: {
-    marginTop: 4
-  },
-  fieldLabel: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold,
-    marginBottom: 8
+    marginTop: space.xs
   },
   fieldLabelSpaced: {
     marginTop: 14
   },
-  input: {
-    borderWidth: 1.5,
-    padding: 14,
-    borderRadius: 12,
-    fontSize: 15
-  },
-  tokenInput: {
-    minHeight: 80,
-    fontFamily: "monospace",
-    fontSize: 13
-  },
   emptyHint: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     textAlign: "center",
-    paddingVertical: 8
+    paddingVertical: space.sm
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 8
+    gap: space.sm,
+    paddingVertical: space.sm
   },
   headerInputs: {
     flex: 1,
-    gap: 8
-  },
-  headerInput: {
-    borderWidth: 1.5,
-    padding: 12,
-    borderRadius: 10,
-    fontSize: 14
-  },
-  removeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  removeButtonText: {
-    fontSize: 14,
-    ...fonts.bold
-  },
-  addButton: {
-    paddingVertical: 14,
-    alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    marginTop: 4
-  },
-  addButtonText: {
-    fontSize: 15,
-    ...fonts.semiBold
+    gap: space.sm
   },
   hint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     marginTop: 10,
     textAlign: "center"
   },
   warningBanner: {
-    padding: 12,
-    borderRadius: 8,
+    padding: space.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     marginBottom: 20
   },
   warningText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     lineHeight: 18
   },
   footer: {
-    paddingVertical: 16,
+    paddingVertical: space.lg,
     alignItems: "center"
   },
   footerText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     textAlign: "center"
   },
-  linkRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12
-  },
-  linkContent: {
-    flex: 1
-  },
-  linkLabel: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  linkSub: {
-    fontSize: 13,
-    ...fonts.regular
-  }
 })

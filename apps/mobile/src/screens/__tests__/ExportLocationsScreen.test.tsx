@@ -126,6 +126,15 @@ jest.mock("../../components", () => {
   const RN = require("react-native")
   const { EXPORT_FORMATS } = require("../../utils/exportConverters")
   return {
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Container: function (props: any) {
       return R.createElement(RN.View, null, props.children)
     },
@@ -220,7 +229,7 @@ describe("ExportLocationsScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Select Format")).toBeTruthy()
+      expect(getByText("Select format")).toBeTruthy()
     })
   })
 
@@ -230,7 +239,7 @@ describe("ExportLocationsScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("No Locations")).toBeTruthy()
+      expect(getByText("No locations")).toBeTruthy()
       expect(getByText("Start tracking to record locations that can be exported.")).toBeTruthy()
     })
   })
@@ -239,7 +248,7 @@ describe("ExportLocationsScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Total Locations")).toBeTruthy()
+      expect(getByText("Total locations")).toBeTruthy()
       expect(getByText("100")).toBeTruthy()
     })
   })
@@ -288,7 +297,7 @@ describe("ExportLocationsScreen", () => {
     fireEvent.press(getByText("Export CSV"))
 
     await waitFor(() => {
-      expect(getByText("Exporting Data")).toBeTruthy()
+      expect(getByText("Exporting data")).toBeTruthy()
     })
   })
 
@@ -298,7 +307,7 @@ describe("ExportLocationsScreen", () => {
     const { getByText, queryByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("No Locations")).toBeTruthy()
+      expect(getByText("No locations")).toBeTruthy()
     })
 
     // totalLocations is 0 so the format cards are not rendered and no export button exists

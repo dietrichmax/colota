@@ -7,7 +7,8 @@ import React, { useEffect, useRef } from "react"
 import { View, Text, StyleSheet, Animated } from "react-native"
 import { Check } from "lucide-react-native"
 import { SpinningLoader } from "./SpinningLoader"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
+import { size, space } from "../../constants"
 
 interface Props {
   saving: boolean
@@ -52,15 +53,14 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
         style={[
           styles.badge,
           {
-            backgroundColor: saving ? colors.info : isError ? colors.error : colors.success,
-            shadowColor: saving ? colors.info : isError ? colors.error : colors.success
+            backgroundColor: saving ? colors.info : isError ? colors.error : colors.success
           }
         ]}
       >
         {saving ? (
-          <SpinningLoader size={16} color={colors.text} />
+          <SpinningLoader size={size.icon.sm} color={colors.text} />
         ) : !hasMessage ? (
-          <Check size={16} color={colors.text} />
+          <Check size={size.icon.sm} color={colors.text} />
         ) : null}
         <Text style={[styles.text, { color: colors.text }]}>{displayText}</Text>
       </View>
@@ -81,14 +81,11 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: space.sm,
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: space.md,
     borderRadius: 24,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 8
   },
-  text: { fontSize: 14, ...fonts.semiBold }
+  text: { fontSize: fontSizes.body, ...fonts.semiBold }
 })

@@ -7,15 +7,16 @@ import { Text, StyleSheet, View } from "react-native"
 import { SectionTitle, Card } from "../.."
 import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { DatabaseStats } from "../../../types/global"
 import { getQueueColor } from "../../../utils/queueStatus"
+import { space } from "../../../constants"
 
 type DatabaseStatisticsProps = {
   stats: DatabaseStats
 }
 
-export const DatabaseStatistics = React.memo(function DatabaseStatistics({ stats }: DatabaseStatisticsProps) {
+export const DatabaseStatistics = React.memo(function DatabaseStatisticsView({ stats }: DatabaseStatisticsProps) {
   const { settings } = useTracking()
   const isOfflineMode = settings.isOfflineMode
   const { colors } = useTheme()
@@ -25,7 +26,7 @@ export const DatabaseStatistics = React.memo(function DatabaseStatistics({ stats
     <>
       {/* Database Statistics */}
       <View style={styles.metricsSection}>
-        <SectionTitle>DATABASE STATISTICS</SectionTitle>
+        <SectionTitle>Database statistics</SectionTitle>
         {!isOfflineMode ? (
           <View style={styles.statsGrid}>
             <Card variant="elevated" style={styles.statCard}>
@@ -67,31 +68,29 @@ export const DatabaseStatistics = React.memo(function DatabaseStatistics({ stats
 
 const styles = StyleSheet.create({
   metricsSection: {
-    marginBottom: 24
+    marginBottom: space.xl
   },
   statsGrid: {
     flexDirection: "row",
-    gap: 12
+    gap: space.md
   },
   statsGridSpaced: {
-    marginTop: 12
+    marginTop: space.md
   },
   statCard: {
     alignItems: "center"
   },
   statUnit: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.medium
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: fontSizes.micro,
     ...fonts.semiBold,
-    marginBottom: 6,
-    letterSpacing: 0.5,
-    textTransform: "uppercase"
+    marginBottom: 6
   },
   statValue: {
-    fontSize: 24,
+    fontSize: fontSizes.statValue,
     ...fonts.bold,
     letterSpacing: -0.5,
     marginBottom: 2
