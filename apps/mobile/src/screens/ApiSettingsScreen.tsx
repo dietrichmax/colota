@@ -20,7 +20,7 @@ import { useAutoSave } from "../hooks/useAutoSave"
 import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup } from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
@@ -29,6 +29,8 @@ import {
   isTraccarJsonFormat,
   isOverlandFormat
 } from "../utils/apiPayload"
+import { space } from "../constants"
+import { radius } from "@colota/shared"
 
 type LocalCustomField = CustomField & { id: number }
 
@@ -748,7 +750,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     paddingBottom: 40
   },
   header: {
@@ -756,21 +758,21 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   title: {
-    fontSize: 28,
+    fontSize: fontSizes.screenTitle,
     ...fonts.bold,
     letterSpacing: -0.5,
-    marginBottom: 4
+    marginBottom: space.xs
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     lineHeight: 20
   },
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   },
   templateHint: {
-    fontSize: 12,
-    marginTop: 8
+    fontSize: fontSizes.caption,
+    marginTop: space.sm
   },
   fieldsSection: {
     marginBottom: 20
@@ -781,23 +783,23 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   resetAllButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8
+    paddingVertical: space.xs,
+    paddingHorizontal: space.sm
   },
   resetAllText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.bold,
     letterSpacing: 0.5
   },
   fieldsCard: {
-    padding: 12,
+    padding: space.md,
     borderRadius: 10,
     borderWidth: 1
   },
   fieldRow: {
     flexDirection: "row",
     paddingVertical: 10,
-    gap: 12
+    gap: space.md
   },
   keyColumn: {
     flex: 1,
@@ -810,14 +812,14 @@ const styles = StyleSheet.create({
     marginBottom: 2
   },
   fieldLabel: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.bold,
     letterSpacing: 0.5
   },
   modifiedBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4
+    borderRadius: radius.xs
   },
   modifiedText: {
     fontSize: 9,
@@ -825,7 +827,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3
   },
   fieldDescription: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     lineHeight: 15
   },
   valueColumn: {
@@ -841,73 +843,73 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1.5,
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    fontSize: 14,
+    paddingVertical: space.sm,
+    borderRadius: radius.sm,
+    fontSize: fontSizes.body,
     fontFamily: "monospace"
   },
   resetButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     justifyContent: "center",
     alignItems: "center"
   },
   resetIcon: {
-    fontSize: 18,
+    fontSize: fontSizes.heading,
     ...fonts.semiBold
   },
   customFieldRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 8
+    gap: space.sm,
+    paddingVertical: space.sm
   },
   customFieldInput: {
     flex: 1,
     borderWidth: 1.5,
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    fontSize: 14,
+    paddingVertical: space.sm,
+    borderRadius: radius.sm,
+    fontSize: fontSizes.body,
     fontFamily: "monospace"
   },
   removeButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     justifyContent: "center",
     alignItems: "center"
   },
   removeButtonText: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.bold
   },
   addButton: {
-    paddingVertical: 12,
+    paddingVertical: space.md,
     alignItems: "center",
     borderRadius: 10,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    marginTop: 8
+    marginTop: space.sm
   },
   addButtonText: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   emptyHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     textAlign: "center",
-    paddingVertical: 8
+    paddingVertical: space.sm
   },
   warningBanner: {
-    padding: 12,
-    borderRadius: 8,
+    padding: space.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     marginBottom: 20
   },
   warningText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     lineHeight: 18
   },
   exampleSection: {
@@ -915,31 +917,31 @@ const styles = StyleSheet.create({
   },
   copyButton: {
     alignSelf: "flex-end",
-    paddingVertical: 4,
+    paddingVertical: space.xs,
     paddingHorizontal: 2,
-    marginTop: 8
+    marginTop: space.sm
   },
   copyButtonText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.bold,
     letterSpacing: 0.5
   },
   exampleCard: {
     padding: 14,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     borderWidth: 1
   },
   exampleCode: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     fontFamily: "monospace",
     lineHeight: 18
   },
   footer: {
-    paddingVertical: 16,
+    paddingVertical: space.lg,
     alignItems: "center"
   },
   footerText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     textAlign: "center"
   }
 })

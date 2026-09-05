@@ -20,7 +20,7 @@ import {
   DatabaseStatistics,
   WelcomeCard
 } from "../components"
-import { STATS_REFRESH_IDLE, MIN_STATS_INTERVAL_MS } from "../constants"
+import { MIN_STATS_INTERVAL_MS, STATS_REFRESH_IDLE, space } from "../constants"
 import { Square, Play } from "lucide-react-native"
 import { logger } from "../utils/logger"
 
@@ -308,8 +308,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 8
+    paddingHorizontal: space.lg,
+    paddingBottom: space.sm
   },
   metricsSection: {
     marginBottom: 20

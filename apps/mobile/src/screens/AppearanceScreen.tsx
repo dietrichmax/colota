@@ -9,12 +9,14 @@ import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { Card, Container, Divider, SettingRow } from "../components"
 import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
 import type { UnitSystem, TimeFormat } from "../utils/geo"
+import { space } from "../constants"
+import { radius } from "@colota/shared"
 
 export function AppearanceScreen({}: ScreenProps) {
   const { mode, toggleTheme, colors } = useTheme()
@@ -240,68 +242,68 @@ export function AppearanceScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.lg
   },
   linkRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12
+    paddingVertical: space.md
   },
   linkContent: {
     flex: 1
   },
   linkLabel: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
     marginBottom: 2
   },
   linkSub: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   },
   chipGroup: {
     flexDirection: "row",
-    gap: 8
+    gap: space.sm
   },
   chip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: space.sm,
     borderRadius: 10,
     borderWidth: 1.5
   },
   chipLabel: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold
   },
   mapTilePanel: {
-    marginTop: 4,
-    paddingBottom: 4
+    marginTop: space.xs,
+    paddingBottom: space.xs
   },
   mapStyleSub: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.medium,
     marginBottom: 6
   },
-  mapStyleSubFirst: { marginTop: 12 },
+  mapStyleSubFirst: { marginTop: space.md },
   mapStyleSubSecond: { marginTop: 10 },
   mapStyleInput: {
     borderWidth: 1.5,
-    padding: 12,
-    borderRadius: 12,
-    fontSize: 13,
+    padding: space.md,
+    borderRadius: radius.md,
+    fontSize: fontSizes.description,
     ...fonts.regular
   },
   mapStyleFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 8
+    marginTop: space.sm
   },
   mapStyleHint: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.regular
   }
 })

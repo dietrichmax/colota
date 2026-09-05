@@ -10,20 +10,14 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { Container, SectionTitle, Card, Divider, SettingRow, NumericInput, FieldMessage } from "../components"
 import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
-import {
-  MS_TO_KMH,
-  PROFILE_CONDITIONS,
-  SYNC_INTERVAL_PRESETS,
-  SYNC_INTERVAL_LABELS,
-  STATIONARY_MAX_INTERVAL_SECONDS,
-  defaultProfileDelays
-} from "../constants"
+import { MS_TO_KMH, PROFILE_CONDITIONS, STATIONARY_MAX_INTERVAL_SECONDS, SYNC_INTERVAL_LABELS, SYNC_INTERVAL_PRESETS, defaultProfileDelays, space } from "../constants"
 import type { RootScreenProps } from "../types/navigation"
+import { radius } from "@colota/shared"
 
 function formatSyncDefault(seconds: number): string {
   if (SYNC_INTERVAL_LABELS[seconds]) return SYNC_INTERVAL_LABELS[seconds]
@@ -493,29 +487,29 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 },
+  scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: 40 },
   header: { marginBottom: 20 },
-  title: { fontSize: 28, ...fonts.bold, letterSpacing: -0.5 },
-  inputGroup: { marginBottom: 4 },
+  title: { fontSize: fontSizes.screenTitle, ...fonts.bold, letterSpacing: -0.5 },
+  inputGroup: { marginBottom: space.xs },
   label: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.semiBold,
     marginBottom: 6,
     textTransform: "uppercase",
     letterSpacing: 0.5
   },
-  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: 15, ...fonts.regular },
+  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: fontSizes.input, ...fonts.regular },
   numInput: {
     borderWidth: 1,
     padding: 10,
     borderRadius: 10,
-    fontSize: 15,
+    fontSize: fontSizes.input,
     textAlign: "center",
     width: 64,
     ...fonts.regular
   },
   inputWithUnit: { flexDirection: "row", alignItems: "center", gap: 6 },
-  unit: { fontSize: 14, ...fonts.medium, minWidth: 28 },
+  unit: { fontSize: fontSizes.body, ...fonts.medium, minWidth: 28 },
   conditionGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -523,31 +517,31 @@ const styles = StyleSheet.create({
   },
   conditionOption: {
     width: "47%",
-    padding: 12,
+    padding: space.md,
     borderRadius: 10,
     borderWidth: 1.5,
     alignItems: "center",
-    gap: 4
+    gap: space.xs
   },
-  conditionLabel: { fontSize: 13, ...fonts.semiBold },
-  conditionDesc: { fontSize: 11, ...fonts.regular, textAlign: "center" },
-  syncLabelRow: { marginBottom: 8 },
-  settingLabel: { fontSize: 16, ...fonts.semiBold, marginBottom: 2 },
-  settingHint: { fontSize: 13, ...fonts.regular, lineHeight: 18 },
-  syncGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  syncOption: { width: "31%", padding: 12, borderRadius: 10, borderWidth: 1.5, alignItems: "center" }, // ~3 per row with gap
-  syncOptionLabel: { fontSize: 13, ...fonts.semiBold },
-  customSyncInput: { marginTop: 12 },
+  conditionLabel: { fontSize: fontSizes.description, ...fonts.semiBold },
+  conditionDesc: { fontSize: fontSizes.small, ...fonts.regular, textAlign: "center" },
+  syncLabelRow: { marginBottom: space.sm },
+  settingLabel: { fontSize: fontSizes.label, ...fonts.semiBold, marginBottom: 2 },
+  settingHint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18 },
+  syncGrid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  syncOption: { width: "31%", padding: space.md, borderRadius: 10, borderWidth: 1.5, alignItems: "center" }, // ~3 per row with gap
+  syncOptionLabel: { fontSize: fontSizes.description, ...fonts.semiBold },
+  customSyncInput: { marginTop: space.md },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 16
+    gap: space.sm,
+    padding: space.lg,
+    borderRadius: radius.md,
+    marginTop: space.lg
   },
-  saveBtnText: { fontSize: 16, ...fonts.semiBold },
+  saveBtnText: { fontSize: fontSizes.label, ...fonts.semiBold },
   saveBtnDisabled: { opacity: 0.6 },
-  sectionGap: { marginTop: 24 }
+  sectionGap: { marginTop: space.xl }
 })

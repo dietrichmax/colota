@@ -24,10 +24,11 @@ import { fonts, fontSizes } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
-import { STATS_REFRESH_FAST, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
+import { SAVE_SUCCESS_DISPLAY_MS, STATS_REFRESH_FAST, space } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
+import { radius } from "@colota/shared"
 
 const BACKUP_TIP = "Tip: back up your data first (Settings -> Backup & Restore)."
 
@@ -479,51 +480,51 @@ const styles = StyleSheet.create({
     flex: 1
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     paddingBottom: 40
   },
   header: {
     marginTop: 20,
-    marginBottom: 24
+    marginBottom: space.xl
   },
   title: {
-    fontSize: 28,
+    fontSize: fontSizes.screenTitle,
     ...fonts.bold,
-    marginBottom: 4
+    marginBottom: space.xs
   },
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   },
   statRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8
+    paddingVertical: space.sm
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.medium
   },
   statValue: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.bold
   },
   hint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     textAlign: "center",
     fontStyle: "italic",
     lineHeight: 16,
-    marginTop: 8
+    marginTop: space.sm
   },
   actionRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12
+    paddingVertical: space.md
   },
   actionColumn: {
-    paddingVertical: 12
+    paddingVertical: space.md
   },
   actionInfo: {
     flex: 1
@@ -531,36 +532,36 @@ const styles = StyleSheet.create({
   actionLabel: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: 4
+    marginBottom: space.xs
   },
   actionHint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     lineHeight: 16,
     marginTop: 2
   },
   actionBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: space.md,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1
   },
   actionBadgeText: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.bold
   },
   daysInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
-    gap: 8
+    marginTop: space.md,
+    gap: space.sm
   },
   daysInput: {
     flex: 1,
     borderWidth: 1,
     padding: 10,
-    borderRadius: 8,
-    fontSize: 15,
+    borderRadius: radius.sm,
+    fontSize: fontSizes.input,
     textAlign: "center"
   },
   hintRow: {
@@ -570,7 +571,7 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
   daysLabel: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.medium
   },
   buttonDisabled: {

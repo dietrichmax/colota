@@ -5,8 +5,9 @@
 
 import React from "react"
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
 import { useTheme } from "../../hooks/useTheme"
+import { space } from "../../constants"
 
 interface SettingRowProps {
   label: string
@@ -33,19 +34,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4
+    paddingVertical: space.xs
   },
   settingContent: {
     flex: 1,
-    marginRight: 16
+    marginRight: space.lg
   },
   settingLabel: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
     marginBottom: 2
   },
   settingHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
     lineHeight: 18
   }

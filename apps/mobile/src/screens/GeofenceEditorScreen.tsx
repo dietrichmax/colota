@@ -8,13 +8,15 @@ import { View, Text, StyleSheet, ScrollView, Switch, TextInput, DeviceEventEmitt
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { Container, SectionTitle, Card, SettingRow, Button, FieldMessage } from "../components"
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { parsePositiveInt, isPositiveInt } from "../utils/settingsValidation"
 import type { RootScreenProps } from "../types/navigation"
+import { space } from "../constants"
+import { radius } from "@colota/shared"
 
 declare function requestIdleCallback(callback: () => void): number
 declare function cancelIdleCallback(handle: number): void
@@ -363,25 +365,25 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 
 const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
-  card: { marginBottom: 16 },
+  card: { marginBottom: space.lg },
   input: {
     padding: 10,
     borderWidth: 1.5,
-    borderRadius: 8,
-    fontSize: 15
+    borderRadius: radius.sm,
+    fontSize: fontSizes.input
   },
   nameInput: { flex: 1 },
   numInput: { width: 80, textAlign: "center" },
   toggleRow: { paddingVertical: 10 },
   disabledRow: { opacity: 0.45 },
-  nestedSetting: { marginLeft: 16, paddingLeft: 12, borderLeftWidth: 3, marginTop: 4, marginBottom: 4 },
+  nestedSetting: { marginLeft: space.lg, paddingLeft: space.md, borderLeftWidth: 3, marginTop: space.xs, marginBottom: space.xs },
   combinedNote: {
-    marginTop: 8,
-    paddingTop: 12,
+    marginTop: space.sm,
+    paddingTop: space.md,
     borderTopWidth: StyleSheet.hairlineWidth
   },
   combinedNoteText: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     lineHeight: 17,
     fontStyle: "italic"

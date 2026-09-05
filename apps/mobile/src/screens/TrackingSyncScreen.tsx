@@ -12,6 +12,7 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
 import { Container } from "../components"
 import { SyncStrategySettings } from "../components/features/settings/SyncStrategySettings"
+import { space } from "../constants"
 
 export function TrackingSyncScreen({}: ScreenProps) {
   const { settings, setSettings, updateSettingsLocal, restartTracking } = useTracking()
@@ -61,8 +62,8 @@ export function TrackingSyncScreen({}: ScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
     paddingBottom: 40
   }
 })

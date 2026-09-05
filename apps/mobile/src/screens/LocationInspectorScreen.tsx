@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { BarChart2 } from "lucide-react-native"
 import { Container } from "../components"
 import { Tab } from "../components/ui/Tab"
@@ -31,6 +31,7 @@ import {
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
+import { space } from "../constants"
 
 type TabType = "map" | "trips" | "data"
 
@@ -491,7 +492,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
 
 const styles = StyleSheet.create({
   headerBtn: {
-    padding: 8
+    padding: space.sm
   },
   mapContainer: {
     flex: 1
@@ -500,8 +501,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 16,
     alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingHorizontal: space.xl,
+    paddingVertical: space.md,
     elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -509,11 +510,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4
   },
   floatingPillText: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold
   },
   tabBar: {
     flexDirection: "row",
-    marginBottom: 12
+    marginBottom: space.md
   }
 })

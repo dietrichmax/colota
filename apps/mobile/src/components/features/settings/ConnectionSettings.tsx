@@ -11,13 +11,14 @@ import NativeLocationService from "../../../services/NativeLocationService"
 import { isEndpointAllowed } from "../../../utils/settingsValidation"
 import { isTraccarJsonFormat, isOverlandFormat } from "../../../utils/apiPayload"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { SettingRow } from "../../ui/SettingRow"
 import { useTimeout } from "../../../hooks/useTimeout"
-import { TEST_RESULT_DISPLAY_MS } from "../../../constants"
+import { TEST_RESULT_DISPLAY_MS, space } from "../../../constants"
 import { logger } from "../../../utils/logger"
 import { Button, Card, SectionTitle, Divider, FieldMessage } from "../../index"
 import { showChoice } from "../../../services/modalService"
+import { radius } from "@colota/shared"
 
 interface ConnectionSettingsProps {
   settings: Settings
@@ -307,10 +308,10 @@ export function ConnectionSettings({
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   },
   inputGroup: {
-    marginBottom: 12
+    marginBottom: space.md
   },
   inputHeader: {
     flexDirection: "row",
@@ -319,61 +320,61 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   inputLabel: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.semiBold
   },
   protocolBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12
+    paddingVertical: space.xs,
+    borderRadius: radius.md
   },
   protocolText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.bold
   },
   input: {
     borderWidth: 1.5,
-    padding: 16,
-    borderRadius: 12,
-    fontSize: 15,
+    padding: space.lg,
+    borderRadius: radius.md,
+    fontSize: fontSizes.input,
     ...fonts.regular
   },
   testButton: {
-    marginTop: 12
+    marginTop: space.md
   },
   disabledButton: {
     opacity: 0.5
   },
   responseBox: {
-    marginTop: 12,
+    marginTop: space.md,
     padding: 14,
     borderWidth: 1.5,
-    borderRadius: 12,
+    borderRadius: radius.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8
+    gap: space.sm
   },
   responseText: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   linkRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12
+    paddingVertical: space.md
   },
   linkContent: {
     flex: 1
   },
   linkLabel: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
     marginBottom: 2
   },
   linkSub: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   }
 })

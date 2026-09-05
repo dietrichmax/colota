@@ -17,7 +17,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Share2, Search, X, ArrowDown } from "lucide-react-native"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { Container, SectionTitle } from "../components"
 import { Tab } from "../components/ui/Tab"
 import { FileLoggingPanel } from "../components/features/log/FileLoggingPanel"
@@ -26,6 +26,8 @@ import { logger, LOG_LEVELS, type LogLevel } from "../utils/logger"
 import { getMergedLogs, exportLogs, MergedLogEntry } from "../utils/logExport"
 import NativeLocationService from "../services/NativeLocationService"
 import { ScreenProps } from "../types/global"
+import { space } from "../constants"
+import { radius } from "@colota/shared"
 
 type FilterLevel = LogLevel
 
@@ -310,38 +312,38 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
-    marginBottom: 12
+    marginBottom: space.md
   },
   list: {
-    padding: 16,
+    padding: space.lg,
     paddingBottom: 40
   },
   headerButtons: {
     flexDirection: "row",
-    gap: 8
+    gap: space.sm
   },
   headerButton: {
-    padding: 8
+    padding: space.sm
   },
   filterBar: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    gap: 8
+    paddingHorizontal: space.lg,
+    paddingTop: space.sm,
+    paddingBottom: space.sm,
+    gap: space.sm
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     paddingHorizontal: 10,
     height: 40,
-    gap: 8
+    gap: space.sm
   },
   searchInput: {
     flex: 1,
     ...fonts.regular,
-    fontSize: 14,
+    fontSize: fontSizes.body,
     padding: 0
   },
   levelChips: {
@@ -349,22 +351,22 @@ const styles = StyleSheet.create({
     gap: 6
   },
   chip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: space.md,
     paddingVertical: 5,
-    borderRadius: 12
+    borderRadius: radius.md
   },
   separator: {
     height: 1,
-    marginHorizontal: 16,
-    marginTop: 4
+    marginHorizontal: space.lg,
+    marginTop: space.xs
   },
   chipText: {
     ...fonts.semiBold,
-    fontSize: 11
+    fontSize: fontSizes.small
   },
   logText: {
     ...fonts.regular,
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     fontFamily: "monospace",
     lineHeight: 18
   },
@@ -378,12 +380,12 @@ const styles = StyleSheet.create({
     paddingTop: 40
   },
   emptyText: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.medium,
     marginBottom: 6
   },
   emptyHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
     textAlign: "center",
     lineHeight: 18
@@ -407,12 +409,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 24,
     right: 24,
-    paddingHorizontal: 12,
+    paddingHorizontal: space.md,
     paddingVertical: 6,
-    borderRadius: 16
+    borderRadius: radius.lg
   },
   followingText: {
     ...fonts.medium,
-    fontSize: 11
+    fontSize: fontSizes.small
   }
 })

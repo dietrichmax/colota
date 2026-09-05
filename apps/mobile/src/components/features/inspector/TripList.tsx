@@ -7,12 +7,13 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { View, Text, FlatList, Pressable, StyleSheet, BackHandler } from "react-native"
 import { Clock, Route, Share, TrendingUp, TrendingDown, Gauge, Trash2, X, Merge } from "lucide-react-native"
 import { Card } from "../../ui/Card"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { formatDistance, formatDuration, formatSpeed, formatTime } from "../../../utils/geo"
 import type { Trip, ThemeColors } from "../../../types/global"
 import { getTripColor, computeTripStats, type TripStats } from "../../../utils/trips"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../../../utils/exportConverters"
-import { HIT_SLOP_SM } from "../../../constants"
+import { HIT_SLOP_SM, space } from "../../../constants"
+import { radius } from "@colota/shared"
 
 interface TripListProps {
   trips: Trip[]
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: space.lg,
     paddingTop: 10,
     paddingBottom: 14,
     minHeight: 54
@@ -394,17 +395,17 @@ const styles = StyleSheet.create({
   cabLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: space.xs,
     flexShrink: 1
   },
   cabSummary: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold
   },
   cabActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4
+    gap: space.xs
   },
   cabIconBtn: {
     minWidth: 48,
@@ -419,47 +420,47 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   cabTextBtnLabel: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold
   },
   summary: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.semiBold
   },
   exportAllBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
+    gap: space.xs,
+    paddingHorizontal: space.md,
     minHeight: 48
   },
   exportAllLabel: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.semiBold
   },
   exportRow: {
     flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
+    gap: space.sm,
+    paddingHorizontal: space.lg,
     paddingTop: 10,
-    paddingBottom: 12
+    paddingBottom: space.md
   },
   exportChip: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     borderWidth: 1
   },
   exportChipText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.bold
   },
   list: {
-    paddingHorizontal: 12,
-    paddingBottom: 16
+    paddingHorizontal: space.md,
+    paddingBottom: space.lg
   },
   tripCard: {
-    marginBottom: 8
+    marginBottom: space.sm
   },
   tripCardSelected: {
     borderWidth: 1.5
@@ -468,53 +469,53 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8
+    marginBottom: space.sm
   },
   tripTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8
+    gap: space.sm
   },
   tripDot: {
     width: 8,
     height: 8,
-    borderRadius: 4
+    borderRadius: radius.xs
   },
   tripTitle: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.bold
   },
   tripTime: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   },
   tripStats: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12
+    gap: space.md
   },
   stat: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4
+    gap: space.xs
   },
   statText: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   },
   emptyContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: space.sm,
     paddingTop: 60
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.regular
   },
   emptyHint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular
   }
 })

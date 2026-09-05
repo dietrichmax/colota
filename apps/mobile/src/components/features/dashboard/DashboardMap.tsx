@@ -9,9 +9,9 @@ import { AlertTriangle } from "lucide-react-native"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
+import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM, space } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { TrackToggleButton } from "../map/TrackToggleButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24
+    padding: space.xl
   },
   icon: { width: 64, height: 64 },
   iconCircle: {
@@ -266,14 +266,14 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16
+    marginBottom: space.lg
   },
-  stateTitle: { fontSize: 18, ...fonts.bold, textAlign: "center" },
+  stateTitle: { fontSize: fontSizes.heading, ...fonts.bold, textAlign: "center" },
   stateTitleSpaced: { marginTop: 20 },
   stateSubtext: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: space.sm,
     lineHeight: 20
   },
   statusBar: {
@@ -285,5 +285,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 5
   },
-  barText: { fontSize: 13, ...fonts.semiBold, color: "#fff" }
+  barText: { fontSize: fontSizes.description, ...fonts.semiBold, color: "#fff" }
 })

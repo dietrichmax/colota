@@ -23,8 +23,9 @@ import { useTheme } from "../hooks/useTheme"
 import { DailyStat } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { formatDistance, formatDuration, startOfDaySec } from "../utils/geo"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
+import { space } from "../constants"
 
 type Period = "week" | "month" | "30days"
 
@@ -262,10 +263,10 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    marginBottom: 8
+    paddingHorizontal: space.lg,
+    paddingTop: space.md,
+    paddingBottom: space.sm,
+    marginBottom: space.sm
   },
   loadingContainer: {
     flex: 1,
@@ -273,63 +274,63 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   listContent: {
-    paddingHorizontal: 12,
+    paddingHorizontal: space.md,
     paddingBottom: 20
   },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: 16
+    marginBottom: space.lg
   },
   summaryCard: {
     flexBasis: "45%",
     flexGrow: 1,
     flexShrink: 0,
     alignItems: "center",
-    padding: 12,
+    padding: space.md,
     gap: 2
   },
   summaryValue: {
-    fontSize: 18,
+    fontSize: fontSizes.heading,
     ...fonts.bold
   },
   summaryLabel: {
-    fontSize: 10,
+    fontSize: fontSizes.micro,
     ...fonts.semiBold,
     textTransform: "uppercase"
   },
   dayCard: {
-    marginBottom: 8,
-    padding: 12
+    marginBottom: space.sm,
+    padding: space.md
   },
   dayHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4
+    marginBottom: space.xs
   },
   dayHeaderRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4
+    gap: space.xs
   },
   dayLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.bold
   },
   dayDistance: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.bold
   },
   dayStats: {
     flexDirection: "row",
-    gap: 16
+    gap: space.lg
   },
   dayStat: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular
   },
   empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: 15, ...fonts.semiBold }
+  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold }
 })

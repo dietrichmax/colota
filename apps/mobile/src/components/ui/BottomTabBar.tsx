@@ -7,7 +7,8 @@ import { View, Pressable, Text, StyleSheet } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Settings, LucideIcon, House, MapPinHouse, Waypoints } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
+import { space } from "../../constants"
 
 interface Tab {
   name: string
@@ -70,7 +71,7 @@ export { TAB_ROUTES }
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    paddingTop: 8,
+    paddingTop: space.sm,
     paddingBottom: 6,
     elevation: 0,
     shadowOpacity: 0,
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
     gap: 3
   },
   label: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.medium
   }
 })

@@ -8,13 +8,14 @@ import { View, Text, ScrollView, StyleSheet, Switch, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Container, Card, Button, SectionTitle } from "../components"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { Share2, TriangleAlert } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
 import { buildSetupConfig, buildSetupLink, type SetupShareParts, type SetupShareSelection } from "../utils/setupLink"
 import { DEFAULT_AUTH_CONFIG, type AuthConfig, type Geofence, type TrackingProfile } from "../types/global"
+import { space } from "../constants"
 
 type ShareCategory = keyof SetupShareSelection
 
@@ -193,38 +194,38 @@ export function ShareSetupScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    padding: 16,
+    padding: space.lg,
     paddingBottom: 40
   },
   headerCard: {
-    marginBottom: 16
+    marginBottom: space.lg
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12
+    gap: space.md
   },
   headerText: {
     flex: 1
   },
   title: {
-    fontSize: 18,
+    fontSize: fontSizes.heading,
     ...fonts.bold
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
     marginTop: 2
   },
   section: {
-    marginTop: 8
+    marginTop: space.sm
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
-    gap: 12
+    paddingVertical: space.md,
+    gap: space.md
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth
@@ -233,11 +234,11 @@ const styles = StyleSheet.create({
     flex: 1
   },
   rowLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   },
   rowSub: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     marginTop: 2
   },
@@ -246,17 +247,17 @@ const styles = StyleSheet.create({
   },
   warningText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     lineHeight: 17
   },
   actions: {
-    marginTop: 24
+    marginTop: space.xl
   },
   emptyHint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     textAlign: "center",
-    marginTop: 8
+    marginTop: space.sm
   }
 })

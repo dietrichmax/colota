@@ -30,6 +30,7 @@ import {
   Share2
 } from "lucide-react-native"
 import { logger } from "../utils/logger"
+import { space } from "../constants"
 
 type Props = RootScreenProps<"Settings">
 
@@ -264,11 +265,11 @@ export function SettingsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.lg
   },
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
   }
 })

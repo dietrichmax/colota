@@ -6,6 +6,8 @@
 import React from "react"
 import { View, Pressable, StyleSheet, ViewStyle, StyleProp, AccessibilityRole, AccessibilityState } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
+import { space } from "../../constants"
+import { radius } from "@colota/shared"
 
 type CardVariant = "default" | "elevated" | "outlined" | "interactive"
 
@@ -102,8 +104,8 @@ export function Card({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
+    padding: space.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
     width: "100%"
   }
