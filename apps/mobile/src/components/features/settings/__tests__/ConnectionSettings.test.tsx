@@ -318,6 +318,29 @@ describe("ConnectionSettings", () => {
       bearing: 0
     }
 
+    it("disables the test button on an empty endpoint rather than dimming it", () => {
+      // It used to carry a 0.5 opacity and guard inside onPress, so it took the press,
+      // rippled, did nothing, and announced itself as enabled to TalkBack.
+      const { getByText } = renderComponent({}, "")
+
+      // The prop, not the behaviour: a guard inside onPress also stops the call, and that
+      // is the bug this replaced. Only disabled makes the control announce itself correctly.
+      // accessibilityState is what TalkBack reads, and it is only set when disabled is
+      // passed. A guard inside onPress also stops the call, which is the bug this replaced,
+      // but leaves the control announcing itself as enabled.
+      let node: any = getByText("Test connection")
+      while (node && !node.props?.accessibilityState) node = node.parent
+      expect(node?.props.accessibilityState.disabled).toBe(true)
+    })
+
+    it("does not call testEndpoint when the endpoint is not allowed", () => {
+      const { getByText } = renderComponent({}, "http://example.com/api")
+
+      fireEvent.press(getByText("Test connection"))
+
+      expect(mockTestEndpoint).not.toHaveBeenCalled()
+    })
+
     it("shows native error message when testEndpoint rejects the protocol", async () => {
       mockGetMostRecentLocation.mockResolvedValue(location)
       mockTestEndpoint.mockResolvedValue({
