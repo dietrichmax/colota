@@ -38,6 +38,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - name: Validate the Gradle wrapper JAR
+        uses: gradle/actions/wrapper-validation@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Check the wrapper JAR matches the declared Gradle version
+        run: |
+          cd apps/mobile/android
+          version=$(sed -n 's/^distributionUrl=.*gradle-\([0-9][0-9.]*\)-\(bin\|all\)\.zip$/\1/p' gradle/wrapper/gradle-wrapper.properties)
+          if [ -z "$version" ]; then
+            echo "Could not read the Gradle version from gradle-wrapper.properties"
+            exit 1
+          fi
+          url="https://services.gradle.org/distributions/gradle-$version-wrapper.jar.sha256"
+          expected=$(curl -fsSL --retry 3 --retry-all-errors --max-time 30 "$url" || true)
+          if [ -z "$expected" ]; then
+            echo "::warning::Could not reach services.gradle.org, skipping the version match check"
+            exit 0
+          fi
+          actual=$(sha256sum gradle/wrapper/gradle-wrapper.jar | cut -d' ' -f1)
+          if [ "$actual" != "$expected" ]; then
+            echo "gradle-wrapper.jar does not match Gradle $version."
+            echo "  expected $expected"
+            echo "  actual   $actual"
+            echo "Whoever changed distributionUrl did not regenerate the JAR. Run:"
+            echo "  cd apps/mobile/android && ./gradlew wrapper --gradle-version $version"
+            exit 1
+          fi
+          echo "gradle-wrapper.jar matches Gradle $version"
+
       - name: Setup build environment
         uses: ./.github/actions/setup-build
 
