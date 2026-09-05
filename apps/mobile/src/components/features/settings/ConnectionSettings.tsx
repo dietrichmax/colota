@@ -96,8 +96,11 @@ export function ConnectionSettings({
     [settings, onSettingsChange]
   )
 
+  const canTestEndpoint = Boolean(endpointInput) && isEndpointAllowed(endpointInput)
+
   const handleTestEndpoint = useCallback(async () => {
-    if (!endpointInput) return
+    // Guards here as well as on the button: disabled stops the press, this stops a caller.
+    if (!canTestEndpoint) return
     setTesting(true)
     setTestResponse(null)
     setTestError(false)
@@ -175,7 +178,7 @@ export function ConnectionSettings({
       setTesting(false)
       timeout.set(() => setTestResponse(null), TEST_RESULT_DISPLAY_MS)
     }
-  }, [endpointInput, settings, onSettingsChange, timeout])
+  }, [canTestEndpoint, endpointInput, settings, onSettingsChange, timeout])
 
   return (
     <View style={styles.section}>
@@ -253,14 +256,9 @@ export function ConnectionSettings({
             </View>
 
             <Button
-              style={[
-                styles.testButton,
-                (!endpointInput || !isEndpointAllowed(endpointInput)) && styles.disabledButton
-              ]}
-              onPress={() => {
-                if (!endpointInput || !isEndpointAllowed(endpointInput)) return
-                handleTestEndpoint()
-              }}
+              style={styles.testButton}
+              disabled={!canTestEndpoint}
+              onPress={handleTestEndpoint}
               title={testing ? "Testing..." : "Test connection"}
             />
 
@@ -337,9 +335,6 @@ const styles = StyleSheet.create({
   },
   testButton: {
     marginTop: space.md
-  },
-  disabledButton: {
-    opacity: 0.5
   },
   responseBox: {
     marginTop: space.md,
