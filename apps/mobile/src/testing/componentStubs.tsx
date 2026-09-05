@@ -29,3 +29,15 @@ export function ListItemStub({ label, sub, onPress, testID, disabled }: any) {
     </Pressable>
   )
 }
+
+/** Mirrors IconButton: a press target the test can find by testID, named for TalkBack. */
+export function IconButtonStub({ onPress, testID, accessibilityLabel, disabled, loading }: any) {
+  return (
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      disabled={disabled || loading}
+      accessibilityLabel={accessibilityLabel}
+    />
+  )
+}

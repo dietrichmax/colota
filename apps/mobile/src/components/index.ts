@@ -16,6 +16,7 @@
 export { Container } from "./ui/Container"
 export { Card } from "./ui/Card"
 export { Button } from "./ui/Button"
+export { IconButton } from "./ui/IconButton"
 export { SectionTitle } from "./ui/SectionTitle"
 export { Divider } from "./ui/Divider"
 export { TextField } from "./ui/TextField"

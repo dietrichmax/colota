@@ -4,13 +4,14 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react"
-import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
+import { Text, StyleSheet, View, ScrollView } from "react-native"
+import { X } from "lucide-react-native"
 import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { fonts, fontSizes } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup, Button, TextField, ListItem } from "../components"
+import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup, Button, TextField, ListItem, IconButton } from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
@@ -254,16 +255,13 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
                           autoCorrect={false}
                         />
                       </View>
-                      <Pressable
+                      <IconButton
+                        icon={X}
+                        tone="danger"
+                        testID={`remove-header-${header.id}`}
+                        accessibilityLabel="Remove this header"
                         onPress={() => removeHeader(header.id)}
-                        style={({ pressed }) => [
-                          styles.removeButton,
-                          { backgroundColor: colors.error + "15" },
-                          pressed && { opacity: colors.pressedOpacity }
-                        ]}
-                      >
-                        <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                      </Pressable>
+                      />
                     </View>
                   </View>
                 )
@@ -362,17 +360,6 @@ const styles = StyleSheet.create({
   headerInputs: {
     flex: 1,
     gap: space.sm
-  },
-  removeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  removeButtonText: {
-    fontSize: fontSizes.body,
-    ...fonts.bold
   },
   hint: {
     fontSize: fontSizes.caption,

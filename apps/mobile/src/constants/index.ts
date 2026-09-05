@@ -27,6 +27,7 @@ export const size = {
   touch: 48,
   row: 56,
   chip: 36,
+  iconButton: 32,
   iconColumn: 40,
   icon: { sm: 16, md: 20, lg: 24 }
 } as const

@@ -61,6 +61,7 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
+    IconButton: require("../../testing/componentStubs").IconButtonStub,
     TextField: require("../../testing/componentStubs").TextFieldStub,
     Button: function (props: any) {
       return require("react").createElement(
