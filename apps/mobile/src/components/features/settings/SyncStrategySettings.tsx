@@ -150,6 +150,9 @@ export function SyncStrategySettings({
 
   return (
     <View style={styles.section}>
+      <Text style={[styles.intro, { color: colors.textSecondary }]}>
+        How often a fix is recorded, and when it uploads
+      </Text>
       <SectionTitle>Tracking configuration</SectionTitle>
       <Card>
         <View accessibilityRole="radiogroup">
@@ -420,6 +423,12 @@ export function SyncStrategySettings({
 }
 
 const styles = StyleSheet.create({
+  intro: {
+    fontSize: fontSizes.body,
+    ...fonts.regular,
+    lineHeight: 20,
+    marginBottom: space.lg
+  },
   section: {
     marginBottom: space.xl
   },

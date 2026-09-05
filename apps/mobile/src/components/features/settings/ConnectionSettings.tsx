@@ -182,6 +182,7 @@ export function ConnectionSettings({
 
   return (
     <View style={styles.section}>
+      <Text style={[styles.intro, { color: colors.textSecondary }]}>Where your locations are sent</Text>
       <Card>
         <SettingRow label="Offline mode" hint="Save locally, no network sync">
           <Toggle
@@ -284,6 +285,12 @@ export function ConnectionSettings({
 }
 
 const styles = StyleSheet.create({
+  intro: {
+    fontSize: fontSizes.body,
+    ...fonts.regular,
+    lineHeight: 20,
+    marginBottom: space.lg
+  },
   section: {
     marginBottom: space.xl
   },
