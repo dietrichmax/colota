@@ -315,12 +315,14 @@ const styles = StyleSheet.create({
   responseRow: {
     marginTop: space.md,
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
+    justifyContent: "center",
     gap: space.sm
   },
   responseText: {
-    flex: 1,
+    flexShrink: 1,
     fontSize: fontSizes.description,
+    textAlign: "center",
     ...fonts.regular
   },
 })

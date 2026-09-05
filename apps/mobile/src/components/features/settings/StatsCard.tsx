@@ -208,11 +208,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.label,
     ...fonts.medium
   },
-  disabledHint: {
-    fontSize: fontSizes.small,
-    marginTop: 2,
-    fontStyle: "italic"
-  },
   divider: {
     width: 1,
     marginHorizontal: space.md,

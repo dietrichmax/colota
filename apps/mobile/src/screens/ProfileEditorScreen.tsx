@@ -434,7 +434,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 
 const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: 40 },
-  header: { marginBottom: 20 },
   inputGroup: { marginBottom: space.xs },
   numInput: {
     width: 64

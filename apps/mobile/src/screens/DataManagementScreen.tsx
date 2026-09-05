@@ -476,10 +476,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingBottom: 40
   },
-  header: {
-    marginTop: 20,
-    marginBottom: space.xl
-  },
   section: {
     marginBottom: space.xl
   },
