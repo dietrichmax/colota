@@ -4,17 +4,16 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { View, Text, TextInput, StyleSheet } from "react-native"
-import { ThemeColors } from "../../types/global"
+import { View, Text, StyleSheet } from "react-native"
+import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { clamp, pad2 } from "../../utils/format"
 import { space } from "../../constants"
-import { radius } from "@colota/shared"
+import { TextField } from "./TextField"
 
 interface TimePickerProps {
   value: string
   onChange: (value: string) => void
-  colors: ThemeColors
 }
 
 const HOUR_MIN = 0
@@ -32,7 +31,8 @@ function format(h: number, m: number): string {
   return `${pad2(h)}:${pad2(m)}`
 }
 
-export function TimePicker({ value, onChange, colors }: TimePickerProps) {
+export function TimePicker({ value, onChange }: TimePickerProps) {
+  const { colors } = useTheme()
   const { h, m } = useMemo(() => parse(value), [value])
 
   const [hourText, setHourText] = useState(pad2(h))
@@ -64,34 +64,30 @@ export function TimePicker({ value, onChange, colors }: TimePickerProps) {
 
   return (
     <View style={styles.row}>
-      <TextInput
+      <TextField
         testID="timepicker-hour-value"
         accessibilityLabel="Hours"
+        figure
+        style={styles.field}
         value={hourText}
         onChangeText={onHourChange}
         onBlur={commitHour}
         keyboardType="number-pad"
         maxLength={2}
         selectTextOnFocus
-        style={[
-          styles.input,
-          { borderColor: colors.border, backgroundColor: colors.backgroundElevated, color: colors.text }
-        ]}
       />
       <Text style={[styles.separator, { color: colors.text }]}>:</Text>
-      <TextInput
+      <TextField
         testID="timepicker-minute-value"
         accessibilityLabel="Minutes"
+        figure
+        style={styles.field}
         value={minuteText}
         onChangeText={onMinuteChange}
         onBlur={commitMinute}
         keyboardType="number-pad"
         maxLength={2}
         selectTextOnFocus
-        style={[
-          styles.input,
-          { borderColor: colors.border, backgroundColor: colors.backgroundElevated, color: colors.text }
-        ]}
       />
     </View>
   )
@@ -104,15 +100,8 @@ const styles = StyleSheet.create({
     gap: space.sm,
     paddingVertical: space.xs
   },
-  input: {
-    minWidth: 64,
-    padding: 14,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    fontSize: fontSizes.input,
-    ...fonts.semiBold,
-    fontVariant: ["tabular-nums"],
-    textAlign: "center"
+  field: {
+    minWidth: 64
   },
   separator: {
     fontSize: fontSizes.input,

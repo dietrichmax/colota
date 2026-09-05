@@ -4,11 +4,11 @@
  */
 
 import React from "react"
-import { View, Text, StyleSheet, TextInput } from "react-native"
-import { ThemeColors } from "../../types/global"
+import { View, Text, StyleSheet } from "react-native"
+import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { space } from "../../constants"
-import { radius } from "@colota/shared"
+import { TextField } from "./TextField"
 
 interface NumericInputProps {
   label: string
@@ -18,21 +18,13 @@ interface NumericInputProps {
   unit: string
   placeholder?: string
   min?: number
-  colors: ThemeColors
   hint?: string
+  testID?: string
 }
 
 /**
- * NumericInput Component
- *
- * A validated numeric input field with:
- * - Label and optional hint text
- * - Unit display (e.g., "seconds", "meters")
- * - Numeric keyboard
- * - Change and blur handlers for validation
- * - Themed styling
- *
- * Used for interval, distance, and threshold inputs.
+ * A validated numeric field with its own label, an optional hint and a unit beside it. The
+ * label stays here rather than on the TextField because the unit sits in the same row.
  */
 export function NumericInput({
   label,
@@ -41,34 +33,27 @@ export function NumericInput({
   onBlur,
   unit,
   placeholder = "0",
-  colors,
-  hint
+  hint,
+  testID
 }: NumericInputProps) {
+  const { colors } = useTheme()
+
   return (
     <View style={styles.container}>
-      {/* Label */}
       <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-
-      {/* Hint (optional) */}
       {hint && <Text style={[styles.hint, { color: colors.textSecondary }]}>{hint}</Text>}
 
-      {/* Input Row */}
       <View style={styles.inputRow}>
-        <TextInput
-          style={[
-            styles.input,
-            {
-              borderColor: colors.border,
-              color: colors.text,
-              backgroundColor: colors.backgroundElevated
-            }
-          ]}
+        <TextField
+          accessibilityLabel={label}
+          testID={testID}
+          figure
+          style={styles.field}
           keyboardType="numeric"
           value={value}
           onChangeText={onChange}
           onBlur={onBlur}
           placeholder={placeholder}
-          placeholderTextColor={colors.placeholder}
         />
         <Text style={[styles.unit, { color: colors.textSecondary }]}>{unit}</Text>
       </View>
@@ -96,13 +81,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: space.md
   },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    padding: 14,
-    borderRadius: radius.md,
-    fontSize: fontSizes.input,
-    textAlign: "center"
+  field: {
+    flex: 1
   },
   unit: {
     fontSize: fontSizes.input,

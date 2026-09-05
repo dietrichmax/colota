@@ -488,14 +488,13 @@ export function AutoExportScreen(_props: ScreenProps) {
                   unit="day"
                   placeholder="1"
                   min={1}
-                  colors={colors}
                   hint="1-31. Falls back to last day in shorter months."
                 />
               </>
             )}
             <Divider />
             <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Time (24h)</Text>
-            <TimePicker value={timeOfDay} onChange={handleTimeChange} colors={colors} />
+            <TimePicker value={timeOfDay} onChange={handleTimeChange} />
           </Card>
         </View>
 
@@ -528,7 +527,6 @@ export function AutoExportScreen(_props: ScreenProps) {
               unit="files"
               placeholder="10"
               min={0}
-              colors={colors}
               hint={
                 filenameTemplate.includes("{device}")
                   ? "Set to 0 for unlimited. Counts only exports named for this device model, so other models sharing the folder are untouched."
