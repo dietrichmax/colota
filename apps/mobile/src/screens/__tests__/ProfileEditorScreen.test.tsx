@@ -97,8 +97,10 @@ jest.mock("../../components", () => {
 
 const mockGoBack = jest.fn()
 
+const mockSetOptions = jest.fn()
 const mockNavigation = {
-  goBack: mockGoBack
+  goBack: mockGoBack,
+  setOptions: mockSetOptions
 }
 
 import { ProfileEditorScreen } from "../ProfileEditorScreen"
@@ -119,9 +121,10 @@ describe("ProfileEditorScreen", () => {
 
   // --- New Profile Mode ---
 
-  it("renders new profile title", () => {
-    const { getByText } = renderNewProfile()
-    expect(getByText("New profile")).toBeTruthy()
+  it("names the new profile in the header rather than in the body", () => {
+    renderNewProfile()
+    // New versus edit is carried by the header title, not by a second title in the body.
+    expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: "New profile" })
   })
 
   it("shows Create Profile button for new profile", () => {
@@ -223,11 +226,11 @@ describe("ProfileEditorScreen", () => {
 
   // --- Edit Mode ---
 
-  it("renders edit profile title when editing", async () => {
-    const { getByText } = renderEditProfile()
+  it("names the edited profile in the header rather than in the body", async () => {
+    renderEditProfile()
 
     await waitFor(() => {
-      expect(getByText("Edit profile")).toBeTruthy()
+      expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: "Edit profile" })
     })
   })
 

@@ -23,7 +23,6 @@ export function MtlsSettingsScreen({}: ScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Client Certificate (mTLS)</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             For endpoints behind a reverse proxy that requires mutual TLS authentication
           </Text>
@@ -43,12 +42,6 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 20
-  },
-  title: {
-    fontSize: fontSizes.screenTitle,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: space.xs
   },
   subtitle: {
     fontSize: fontSizes.body,

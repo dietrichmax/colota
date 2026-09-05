@@ -129,7 +129,6 @@ describe("SetupImportScreen", () => {
 
     it("parses valid endpoint config", () => {
       const { getByText } = renderScreen(encode({ endpoint: "https://my-server.com/api" }))
-      expect(getByText("Import configuration")).toBeTruthy()
       expect(getByText("Endpoint")).toBeTruthy()
       expect(getByText("https://my-server.com/api")).toBeTruthy()
     })

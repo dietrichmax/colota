@@ -154,9 +154,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Authentication & headers</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Secure your endpoint connection</Text>
         </View>
 
@@ -388,12 +386,6 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 20
-  },
-  title: {
-    fontSize: fontSizes.screenTitle,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: space.xs
   },
   subtitle: {
     fontSize: fontSizes.body,

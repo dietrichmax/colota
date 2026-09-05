@@ -178,7 +178,6 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         ListHeaderComponent={
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.text }]}>Tracking profiles</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 Auto-switch GPS settings based on charging, Android Auto, or speed
               </Text>
@@ -229,7 +228,6 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
 const styles = StyleSheet.create({
   list: { padding: space.lg, paddingBottom: 40 },
   header: { marginBottom: 20 },
-  title: { fontSize: fontSizes.screenTitle, ...fonts.bold, letterSpacing: -0.5, marginBottom: 6 },
   subtitle: { fontSize: fontSizes.body, ...fonts.regular, lineHeight: 20 },
   createBtn: {
     flexDirection: "row",

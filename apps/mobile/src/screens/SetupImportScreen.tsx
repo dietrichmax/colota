@@ -186,7 +186,6 @@ export function SetupImportScreen({ route, navigation }: any) {
           <View style={styles.headerRow}>
             <Import size={28} color={colors.primary} />
             <View style={styles.headerText}>
-              <Text style={[styles.title, { color: colors.text }]}>Import configuration</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 A setup link wants to apply {result.entries.length} setting{result.entries.length !== 1 ? "s" : ""}
               </Text>

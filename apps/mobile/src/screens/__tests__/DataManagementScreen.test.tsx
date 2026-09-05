@@ -168,7 +168,7 @@ describe("DataManagementScreen", () => {
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Data management")).toBeTruthy()
+      expect(getByText("Database statistics")).toBeTruthy()
     })
   })
 
@@ -308,7 +308,7 @@ describe("DataManagementScreen", () => {
       const { queryByText, getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Data management")).toBeTruthy()
+        expect(getByText("Database statistics")).toBeTruthy()
       })
 
       expect(queryByText("Queue actions")).toBeNull()
@@ -319,7 +319,7 @@ describe("DataManagementScreen", () => {
       const { queryByText, getByText } = renderScreen()
 
       await waitFor(() => {
-        expect(getByText("Data management")).toBeTruthy()
+        expect(getByText("Database statistics")).toBeTruthy()
       })
 
       expect(queryByText("Clear sent history")).toBeNull()
