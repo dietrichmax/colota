@@ -14,9 +14,6 @@ function colorVars(colors: ThemeColors) {
     --ifm-color-primary-dark: ${colors.primaryDark};
     --ifm-color-primary-darker: ${colors.primaryDark};
     --ifm-color-primary-darkest: ${colors.primaryDark};
-    --ifm-color-primary-light: ${colors.primaryLight};
-    --ifm-color-primary-lighter: ${colors.primaryLight};
-    --ifm-color-primary-lightest: ${colors.primaryLight};
     --ifm-background-color: ${colors.background};
     --ifm-font-color-base: ${colors.text};
     --ifm-font-color-secondary: ${colors.textSecondary};
