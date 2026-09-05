@@ -172,6 +172,8 @@ export function CalendarPicker({
 
         <Pressable
           onPress={toggleExpanded}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: isExpanded }}
           style={({ pressed }) => [styles.dateContainer, pressed && { opacity: colors.pressedOpacity }]}
         >
           <View style={styles.dateLabelRow}>

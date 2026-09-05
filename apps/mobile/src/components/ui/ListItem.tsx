@@ -22,6 +22,7 @@ type ListItemProps = {
   accessibilityRole?: "button" | "link"
   accessibilityHint?: string
   disabled?: boolean
+  expanded?: boolean
 }
 
 export function ListItem({
@@ -33,7 +34,8 @@ export function ListItem({
   testID,
   accessibilityRole = "button",
   accessibilityHint,
-  disabled = false
+  disabled = false,
+  expanded
 }: ListItemProps) {
   const { colors } = useTheme()
   return (
@@ -42,7 +44,7 @@ export function ListItem({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint ?? `Opens ${label}`}
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, expanded }}
       android_ripple={disabled ? undefined : { color: colors.border }}
       disabled={disabled}
       onPress={onPress}

@@ -29,4 +29,16 @@ describe("Button variants", () => {
 
     expect(flat(getByTestId("save-btn")).minHeight).toBe(48)
   })
+
+  it("says whether the panel it opens is showing", () => {
+    // The Trip Detail export button opens a format row; its TripList twin already announces
+    // this, so a screen reader got two different experiences for the same control.
+    const { getByTestId, rerender } = render(
+      <Button title="Export trip" onPress={jest.fn()} expanded={false} testID="export-btn" />
+    )
+    expect(getByTestId("export-btn").props.accessibilityState.expanded).toBe(false)
+
+    rerender(<Button title="Export trip" onPress={jest.fn()} expanded testID="export-btn" />)
+    expect(getByTestId("export-btn").props.accessibilityState.expanded).toBe(true)
+  })
 })

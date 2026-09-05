@@ -16,7 +16,7 @@ import {
   size,
   space
 } from "../../../constants"
-import { Card, ChipGroup, Divider, NumericInput, SectionTitle, SettingRow, TextField, Toggle } from "../../index"
+import { Card, ChipGroup, Divider, ListItem, NumericInput, SectionTitle, SettingRow, TextField, Toggle } from "../../index"
 import { PresetOption } from "./PresetOption"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 import { isOverlandFormat } from "../../../utils/apiPayload"
@@ -168,17 +168,13 @@ export function SyncStrategySettings({
 
         <Divider />
 
-        <Pressable
-          style={({ pressed }) => [styles.advancedToggle, pressed && { opacity: colors.pressedOpacity }]}
+        <ListItem
+          testID="advanced-settings-toggle"
+          label="Advanced settings"
+          trailingIcon={showAdvanced ? ChevronUp : ChevronDown}
+          expanded={showAdvanced}
           onPress={() => setShowAdvanced(!showAdvanced)}
-        >
-          <Text style={[styles.advancedText, { color: colors.text }]}>Advanced settings</Text>
-          {showAdvanced ? (
-            <ChevronUp size={size.icon.md} color={colors.textLight} />
-          ) : (
-            <ChevronDown size={size.icon.md} color={colors.textLight} />
-          )}
-        </Pressable>
+        />
 
         {showAdvanced && (
           <View style={styles.advancedPanel}>
@@ -429,16 +425,6 @@ const styles = StyleSheet.create({
   },
   presetSpacer: {
     height: 8
-  },
-  advancedToggle: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: space.md
-  },
-  advancedText: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold
   },
   advancedPanel: {
     marginTop: space.lg
