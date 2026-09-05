@@ -232,7 +232,6 @@ export function DashboardScreen({ navigation }: ScreenProps) {
               variant={tracking ? "danger" : "primary"}
               icon={tracking ? Square : Play}
               onPress={tracking ? handleStop : handleStart}
-              activeOpacity={0.9}
               disabled={!tracking && (isBatteryCritical || !settingsHydrated)}
               title={tracking ? "Stop tracking" : "Start tracking"}
             />

@@ -8,7 +8,7 @@ import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-nat
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { radius } from "@colota/shared"
-import { space } from "../../constants"
+import { space, STATE_LAYER_ALPHA } from "../../constants"
 
 interface DisclosureModalProps {
   icon: React.ReactNode
@@ -78,24 +78,16 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
           {/* Buttons */}
           <View style={styles.buttons}>
             <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.secondaryButton,
-                { borderColor: colors.border },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
+              android_ripple={{ color: colors.textSecondary + STATE_LAYER_ALPHA }}
+              style={[styles.button, styles.secondaryButton, { borderColor: colors.border }]}
               onPress={handleNotNow}
             >
               <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not now</Text>
             </Pressable>
 
             <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.primaryButton,
-                { backgroundColor: colors.primary },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
+              android_ripple={{ color: colors.textOnPrimary + STATE_LAYER_ALPHA }}
+              style={[styles.button, styles.primaryButton, { backgroundColor: colors.primary }]}
               onPress={handleConfirm}
             >
               <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>{confirmLabel}</Text>
@@ -151,6 +143,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: radius.sm,
+    overflow: "hidden",
     alignItems: "center"
   },
   primaryButton: {},

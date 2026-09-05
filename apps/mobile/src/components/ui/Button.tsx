@@ -17,7 +17,7 @@ import {
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { type LucideIcon } from "lucide-react-native"
-import { size, space } from "../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 
@@ -26,7 +26,6 @@ type Props = {
   onPress: (event: GestureResponderEvent) => void
   disabled?: boolean
   style?: StyleProp<ViewStyle>
-  activeOpacity?: number
   color?: string
   variant?: ButtonVariant
   icon?: LucideIcon
@@ -40,7 +39,6 @@ export function Button({
   onPress,
   disabled = false,
   style,
-  activeOpacity,
   color,
   variant = "primary",
   icon: Icon,
@@ -90,14 +88,14 @@ export function Button({
         testID={testID}
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading, expanded }}
-        style={({ pressed }) => [
+        android_ripple={disabled || loading ? undefined : { color: v.text + STATE_LAYER_ALPHA }}
+        style={[
           styles.button,
           {
             backgroundColor: v.bg,
             borderColor: v.borderColor,
             borderWidth: v.borderWidth,
-            borderRadius: colors.borderRadius,
-            opacity: pressed ? (activeOpacity ?? colors.pressedOpacity) : 1
+            borderRadius: colors.borderRadius
           }
         ]}
         onPress={onPress}
@@ -120,6 +118,7 @@ const styles = StyleSheet.create({
   button: {
     // Android's minimum touch target; padding alone leaves this at about 43.
     minHeight: size.touch,
+    overflow: "hidden",
     justifyContent: "center",
     paddingVertical: space.md,
     paddingHorizontal: space.xl,

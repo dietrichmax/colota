@@ -8,7 +8,8 @@ import { View, Pressable, Text, StyleSheet } from "react-native"
 import { type LucideIcon } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
-import { size, space } from "../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { radius } from "@colota/shared"
 import { RadioDot } from "./RadioDot"
 
 type RadioRowProps = {
@@ -37,7 +38,8 @@ export function RadioRow({ label, selected, onPress, sub, icon: Icon, divider = 
         accessibilityRole="radio"
         accessibilityState={{ checked: selected }}
         accessibilityLabel={sub ? `${label}, ${sub}` : label}
-        style={({ pressed }) => [styles.row, pressed && { opacity: colors.pressedOpacity }]}
+        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+        style={styles.row}
       >
         <RadioDot selected={selected} />
         {Icon ? <Icon size={size.icon.md} color={colors.textSecondary} /> : null}
@@ -57,7 +59,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: space.md,
     minHeight: size.row,
-    paddingVertical: space.md
+    paddingVertical: space.md,
+    borderRadius: radius.sm,
+    overflow: "hidden"
   },
   text: {
     flex: 1

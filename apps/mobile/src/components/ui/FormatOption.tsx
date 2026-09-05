@@ -9,7 +9,8 @@ import type { LucideIcon } from "lucide-react-native"
 import { fontSizes, fonts } from "../../styles/typography"
 import { useTheme } from "../../hooks/useTheme"
 import { RadioDot } from "./RadioDot"
-import { size, space } from "../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { radius } from "@colota/shared"
 
 export const FormatOption = ({
   icon: Icon,
@@ -32,7 +33,8 @@ export const FormatOption = ({
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.formatOption, pressed && { opacity: colors.pressedOpacity }]}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      style={styles.formatOption}
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
@@ -75,7 +77,9 @@ export const FormatOption = ({
 
 const styles = StyleSheet.create({
   formatOption: {
-    paddingVertical: space.sm
+    paddingVertical: space.sm,
+    borderRadius: radius.sm,
+    overflow: "hidden"
   },
   formatContent: {
     flexDirection: "row",

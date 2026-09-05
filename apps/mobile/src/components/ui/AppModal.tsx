@@ -10,7 +10,7 @@ import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { radius } from "@colota/shared"
 import { type ModalRequest, type AlertVariant, registerModalHandler } from "../../services/modalService"
-import { space } from "../../constants"
+import { space, STATE_LAYER_ALPHA } from "../../constants"
 
 const VARIANT_ICONS = {
   info: Info,
@@ -78,11 +78,11 @@ export function AppModal() {
               return (
                 <Pressable
                   key={i}
-                  style={({ pressed }) => [
+                  android_ripple={{ color: btnStyles.text.color + STATE_LAYER_ALPHA }}
+                  style={[
                     styles.button,
                     current.buttons.length > 2 && styles.buttonFullWidth,
-                    btnStyles.container,
-                    pressed && { opacity: colors.pressedOpacity }
+                    btnStyles.container
                   ]}
                   onPress={() => handlePress(i)}
                 >
@@ -181,6 +181,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: radius.sm,
+    overflow: "hidden",
     alignItems: "center"
   },
   buttonText: {

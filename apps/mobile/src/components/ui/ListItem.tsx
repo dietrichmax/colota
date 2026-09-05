@@ -8,7 +8,8 @@ import { Text, StyleSheet, View, Pressable } from "react-native"
 import { ChevronRight } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
-import { size, space } from "../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { radius } from "@colota/shared"
 
 type IconComponent = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
 
@@ -45,10 +46,10 @@ export function ListItem({
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint ?? `Opens ${label}`}
       accessibilityState={{ disabled, expanded }}
-      android_ripple={disabled ? undefined : { color: colors.border }}
+      android_ripple={disabled ? undefined : { color: colors.text + STATE_LAYER_ALPHA }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && !disabled && { opacity: colors.pressedOpacity }]}
+      style={styles.row}
     >
       {Icon && (
         <View style={styles.icon}>
@@ -73,7 +74,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     minHeight: 56,
-    paddingVertical: 10
+    paddingVertical: 10,
+    // The row sits inset inside a padded Card, so a square state layer floats as a block.
+    borderRadius: radius.sm,
+    overflow: "hidden"
   },
   icon: {
     marginEnd: space.lg
