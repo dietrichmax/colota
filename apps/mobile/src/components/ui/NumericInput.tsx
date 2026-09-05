@@ -4,34 +4,32 @@
  */
 
 import React from "react"
-import { View, Text, StyleSheet, TextInput } from "react-native"
+import { View, Text, StyleSheet, useWindowDimensions } from "react-native"
 import { ThemeColors } from "../../types/global"
-import { fonts } from "../../styles/typography"
+import { useTheme } from "../../hooks/useTheme"
+import { text } from "../../styles/typography"
+import { space } from "../../constants"
+import { SettingRow } from "./SettingRow"
+import { TextField } from "./TextField"
+
+const FIELD_WIDTH = 72
+const CONTENT_SIZED_FROM = 1.3
 
 interface NumericInputProps {
-  label: string
+  label?: string
   value: string
   onChange: (value: string) => void
   onBlur: () => void
   unit: string
   placeholder?: string
   min?: number
-  colors: ThemeColors
   hint?: string
+  accessibilityLabel?: string
+  testID?: string
+  /** Ignored: every primitive reads useTheme itself. Kept so the existing JSX still compiles. */
+  colors?: ThemeColors
 }
 
-/**
- * NumericInput Component
- *
- * A validated numeric input field with:
- * - Label and optional hint text
- * - Unit display (e.g., "seconds", "meters")
- * - Numeric keyboard
- * - Change and blur handlers for validation
- * - Themed styling
- *
- * Used for interval, distance, and threshold inputs.
- */
 export function NumericInput({
   label,
   value,
@@ -39,72 +37,57 @@ export function NumericInput({
   onBlur,
   unit,
   placeholder = "0",
-  colors,
-  hint
+  hint,
+  accessibilityLabel,
+  testID
 }: NumericInputProps) {
-  return (
-    <View style={styles.container}>
-      {/* Label */}
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+  const { colors } = useTheme()
+  const { fontScale } = useWindowDimensions()
 
-      {/* Hint (optional) */}
-      {hint && <Text style={[styles.hint, { color: colors.textSecondary }]}>{hint}</Text>}
+  const name = accessibilityLabel ?? label ?? unit
 
-      {/* Input Row */}
-      <View style={styles.inputRow}>
-        <TextInput
-          style={[
-            styles.input,
-            {
-              borderColor: colors.border,
-              color: colors.text,
-              backgroundColor: colors.backgroundElevated
-            }
-          ]}
-          keyboardType="numeric"
-          value={value}
-          onChangeText={onChange}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          placeholderTextColor={colors.placeholder}
-        />
-        <Text style={[styles.unit, { color: colors.textSecondary }]}>{unit}</Text>
-      </View>
+  const field = (
+    <View style={styles.fieldRow}>
+      <TextField
+        testID={testID}
+        accessibilityLabel={name}
+        accessibilityHint={unit}
+        figure
+        keyboardType="numeric"
+        value={value}
+        onChangeText={onChange}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        containerStyle={fontScale > CONTENT_SIZED_FROM ? styles.fieldContent : styles.fieldFixed}
+      />
+      <Text style={[styles.unit, { color: colors.textSecondary }]} importantForAccessibility="no">
+        {unit}
+      </Text>
     </View>
+  )
+
+  if (!label) return field
+
+  return (
+    <SettingRow label={label} hint={hint}>
+      {field}
+    </SettingRow>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16
-  },
-  label: {
-    fontSize: 14,
-    ...fonts.semiBold,
-    marginBottom: 8
-  },
-  hint: {
-    fontSize: 13,
-    ...fonts.regular,
-    marginBottom: 12,
-    lineHeight: 18
-  },
-  inputRow: {
+  fieldRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12
+    gap: space.sm
   },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    padding: 14,
-    borderRadius: 12,
-    fontSize: 15,
-    textAlign: "center"
+  fieldFixed: {
+    width: FIELD_WIDTH
+  },
+  fieldContent: {
+    minWidth: FIELD_WIDTH
   },
   unit: {
-    fontSize: 15,
-    ...fonts.medium,
-    minWidth: 64
+    ...text.label
   }
 })

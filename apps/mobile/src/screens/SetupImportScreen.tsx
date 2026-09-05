@@ -4,10 +4,11 @@
  */
 
 import React, { useState, useMemo } from "react"
-import { View, Text, ScrollView, StyleSheet, Switch } from "react-native"
+import { View, Text, ScrollView, StyleSheet } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Container, Card, Button, SectionTitle } from "../components"
+import { space } from "../constants"
+import { Container, Card, Button, SectionTitle, Toggle } from "../components"
 import { fonts } from "../styles/typography"
 import { CircleAlert, CircleCheck, Import } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
@@ -215,7 +216,12 @@ export function SetupImportScreen({ route, navigation }: any) {
                     Off: imports are added as new entries
                   </Text>
                 </View>
-                <Switch testID="replace-imports-switch" value={replaceByName} onValueChange={setReplaceByName} />
+                <Toggle
+                  testID="replace-imports-switch"
+                  value={replaceByName}
+                  onValueChange={setReplaceByName}
+                  accessibilityLabel="Replace entries with the same name"
+                />
               </View>
             </Card>
           </View>
@@ -230,7 +236,7 @@ export function SetupImportScreen({ route, navigation }: any) {
             loading={applying}
             disabled={applying}
           />
-          <Button title="Cancel" onPress={handleCancel} variant="ghost" />
+          <Button style={styles.action} title="Cancel" onPress={handleCancel} variant="ghost" />
         </View>
       </ScrollView>
     </Container>
@@ -304,5 +310,8 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: 24
+  },
+  action: {
+    marginTop: space.sm
   }
 })

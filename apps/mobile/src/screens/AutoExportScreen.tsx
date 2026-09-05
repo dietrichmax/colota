@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
-import { Text, StyleSheet, Switch, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
 import { FolderOpen, CheckCircle, Share2, AlertTriangle } from "lucide-react-native"
 import {
   Container,
@@ -17,6 +17,7 @@ import {
   RadioDot,
   FloatingSaveIndicator,
   SettingRow,
+  Toggle,
   Button,
   TimePicker,
   NumericInput
@@ -398,12 +399,7 @@ export function AutoExportScreen(_props: ScreenProps) {
             label="Enable Auto-Export"
             hint={enabled ? "Auto-Exports are scheduled" : "Auto-Exports are disabled"}
           >
-            <Switch
-              value={enabled}
-              onValueChange={handleToggle}
-              trackColor={{ false: colors.border, true: colors.primary + "80" }}
-              thumbColor={enabled ? colors.primary : colors.border}
-            />
+            <Toggle value={enabled} onValueChange={handleToggle} accessibilityLabel="Enable Auto-Export" />
           </SettingRow>
         </Card>
 
@@ -477,12 +473,18 @@ export function AutoExportScreen(_props: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>Frequency</SectionTitle>
           <Card>
-            <ChipGroup options={INTERVAL_OPTIONS} selected={interval} onSelect={handleIntervalChange} colors={colors} />
+            <ChipGroup
+              options={INTERVAL_OPTIONS}
+              selected={interval}
+              onSelect={handleIntervalChange}
+              colors={colors}
+              accessibilityLabel="Frequency"
+            />
             {interval === "weekly" && (
               <>
                 <Divider />
-                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Day of week</Text>
                 <ChipGroup
+                  label="Day of week"
                   options={WEEKDAY_OPTIONS}
                   selected={weeklyDow.toString()}
                   onSelect={handleWeeklyDowChange}

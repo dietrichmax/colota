@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from "react"
-import { Text, StyleSheet, TextInput, Switch, View, Pressable } from "react-native"
+import { Text, StyleSheet, TextInput, View, Pressable } from "react-native"
 import { CheckCircle, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
@@ -13,6 +13,7 @@ import { isTraccarJsonFormat, isOverlandFormat } from "../../../utils/apiPayload
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
 import { fonts } from "../../../styles/typography"
 import { SettingRow } from "../../ui/SettingRow"
+import { Toggle } from "../../ui/Toggle"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { TEST_RESULT_DISPLAY_MS } from "../../../constants"
 import { logger } from "../../../utils/logger"
@@ -181,14 +182,10 @@ export function ConnectionSettings({
       <SectionTitle>Connection</SectionTitle>
       <Card>
         <SettingRow label="Offline Mode" hint="Save locally, no network sync">
-          <Switch
+          <Toggle
             value={settings.isOfflineMode}
             onValueChange={handleOfflineModeChange}
-            trackColor={{
-              false: colors.border,
-              true: colors.primary + "80"
-            }}
-            thumbColor={settings.isOfflineMode ? colors.primary : colors.border}
+            accessibilityLabel="Offline Mode"
           />
         </SettingRow>
 

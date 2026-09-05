@@ -4,17 +4,22 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { View, Text, TextInput, StyleSheet } from "react-native"
+import { View, Text, StyleSheet } from "react-native"
 import { ThemeColors } from "../../types/global"
-import { fonts } from "../../styles/typography"
+import { useTheme } from "../../hooks/useTheme"
+import { text } from "../../styles/typography"
+import { space } from "../../constants"
 import { clamp, pad2 } from "../../utils/format"
+import { TextField } from "./TextField"
 
 interface TimePickerProps {
   value: string
   onChange: (value: string) => void
-  colors: ThemeColors
+  /** Ignored: every primitive reads useTheme itself. Kept so the existing JSX still compiles. */
+  colors?: ThemeColors
 }
 
+const FIELD_WIDTH = 64
 const HOUR_MIN = 0
 const HOUR_MAX = 23
 const MIN_MIN = 0
@@ -30,7 +35,8 @@ function format(h: number, m: number): string {
   return `${pad2(h)}:${pad2(m)}`
 }
 
-export function TimePicker({ value, onChange, colors }: TimePickerProps) {
+export function TimePicker({ value, onChange }: TimePickerProps) {
+  const { colors } = useTheme()
   const { h, m } = useMemo(() => parse(value), [value])
 
   const [hourText, setHourText] = useState(pad2(h))
@@ -39,11 +45,11 @@ export function TimePicker({ value, onChange, colors }: TimePickerProps) {
   useEffect(() => setHourText(pad2(h)), [h])
   useEffect(() => setMinuteText(pad2(m)), [m])
 
-  const onHourChange = useCallback((text: string) => {
-    setHourText(text.replace(/\D/g, "").slice(0, 2))
+  const onHourChange = useCallback((next: string) => {
+    setHourText(next.replace(/\D/g, "").slice(0, 2))
   }, [])
-  const onMinuteChange = useCallback((text: string) => {
-    setMinuteText(text.replace(/\D/g, "").slice(0, 2))
+  const onMinuteChange = useCallback((next: string) => {
+    setMinuteText(next.replace(/\D/g, "").slice(0, 2))
   }, [])
 
   const commitHour = useCallback(() => {
@@ -62,34 +68,32 @@ export function TimePicker({ value, onChange, colors }: TimePickerProps) {
 
   return (
     <View style={styles.row}>
-      <TextInput
+      <TextField
         testID="timepicker-hour-value"
         accessibilityLabel="Hours"
+        figure
         value={hourText}
         onChangeText={onHourChange}
         onBlur={commitHour}
         keyboardType="number-pad"
         maxLength={2}
         selectTextOnFocus
-        style={[
-          styles.input,
-          { borderColor: colors.border, backgroundColor: colors.backgroundElevated, color: colors.text }
-        ]}
+        containerStyle={styles.field}
       />
-      <Text style={[styles.separator, { color: colors.text }]}>:</Text>
-      <TextInput
+      <Text style={[styles.separator, { color: colors.text }]} importantForAccessibility="no">
+        :
+      </Text>
+      <TextField
         testID="timepicker-minute-value"
         accessibilityLabel="Minutes"
+        figure
         value={minuteText}
         onChangeText={onMinuteChange}
         onBlur={commitMinute}
         keyboardType="number-pad"
         maxLength={2}
         selectTextOnFocus
-        style={[
-          styles.input,
-          { borderColor: colors.border, backgroundColor: colors.backgroundElevated, color: colors.text }
-        ]}
+        containerStyle={styles.field}
       />
     </View>
   )
@@ -99,22 +103,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 4
+    gap: space.sm
   },
-  input: {
-    minWidth: 64,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    fontSize: 15,
-    ...fonts.semiBold,
-    fontVariant: ["tabular-nums"],
-    textAlign: "center"
+  field: {
+    width: FIELD_WIDTH
   },
   separator: {
-    fontSize: 15,
-    ...fonts.semiBold,
-    paddingHorizontal: 2
+    ...text.figureInline
   }
 })

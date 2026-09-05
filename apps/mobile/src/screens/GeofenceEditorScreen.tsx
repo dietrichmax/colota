@@ -4,12 +4,13 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { View, Text, StyleSheet, ScrollView, Switch, TextInput, DeviceEventEmitter } from "react-native"
+import { View, Text, StyleSheet, ScrollView, TextInput, DeviceEventEmitter } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { fonts } from "../styles/typography"
-import { Container, SectionTitle, Card, SettingRow, Button, FieldMessage } from "../components"
+import { space } from "../constants"
+import { Container, SectionTitle, Card, SettingRow, Button, FieldMessage, Toggle } from "../components"
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
@@ -243,12 +244,11 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         <SectionTitle>GPS Pause Options</SectionTitle>
         <Card style={styles.card}>
           <SettingRow label="Don't record in zone" hint="Pause saving and syncing" style={styles.toggleRow}>
-            <Switch
+            <Toggle
               testID="pause-tracking-toggle"
               value={pauseTracking}
               onValueChange={setPauseTracking}
-              trackColor={{ false: colors.border, true: colors.warning + "80" }}
-              thumbColor={pauseTracking ? colors.warning : colors.border}
+              accessibilityLabel="Don't record in zone"
             />
           </SettingRow>
 
@@ -257,13 +257,12 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
             hint="Stop GPS on unmetered networks"
             style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
           >
-            <Switch
+            <Toggle
               testID="pause-wifi-toggle"
               value={pauseOnWifi}
               onValueChange={setPauseOnWifi}
               disabled={!pauseTracking}
-              trackColor={{ false: colors.border, true: colors.primary + "80" }}
-              thumbColor={pauseOnWifi ? colors.primary : colors.border}
+              accessibilityLabel="WiFi/Ethernet pause"
             />
           </SettingRow>
 
@@ -272,13 +271,12 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
             hint="Stop GPS after no motion for a set time"
             style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
           >
-            <Switch
+            <Toggle
               testID="pause-motionless-toggle"
               value={pauseOnMotionless}
               onValueChange={setPauseOnMotionless}
               disabled={!pauseTracking}
-              trackColor={{ false: colors.border, true: colors.primary + "80" }}
-              thumbColor={pauseOnMotionless ? colors.primary : colors.border}
+              accessibilityLabel="Motionless pause"
             />
           </SettingRow>
 
@@ -306,13 +304,12 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
             hint="Periodic point at the zone center while paused"
             style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
           >
-            <Switch
+            <Toggle
               testID="heartbeat-toggle"
               value={heartbeatEnabled}
               onValueChange={setHeartbeatEnabled}
               disabled={!pauseTracking}
-              trackColor={{ false: colors.border, true: colors.primary + "80" }}
-              thumbColor={heartbeatEnabled ? colors.primary : colors.border}
+              accessibilityLabel="Stationary heartbeat"
             />
           </SettingRow>
 
@@ -345,6 +342,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         </Card>
 
         <Button
+          style={styles.action}
           title={saving ? "Saving..." : "Save Geofence"}
           onPress={handleSave}
           disabled={
@@ -355,7 +353,9 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           }
           icon={Check}
         />
-        {isEditing && <Button title="Delete Geofence" onPress={handleDelete} variant="danger" icon={Trash2} />}
+        {isEditing && (
+          <Button style={styles.action} title="Delete Geofence" onPress={handleDelete} variant="danger" icon={Trash2} />
+        )}
       </ScrollView>
     </Container>
   )
@@ -363,6 +363,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 
 const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
+  action: { marginTop: space.sm },
   card: { marginBottom: 16 },
   input: {
     padding: 10,

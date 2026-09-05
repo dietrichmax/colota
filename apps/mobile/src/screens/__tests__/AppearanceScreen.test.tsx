@@ -32,8 +32,17 @@ jest.mock("../../utils/geo", () => ({
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text } = require("react-native")
+  const { View, Text, Pressable } = require("react-native")
   return {
+    Toggle: ({ value, onValueChange, disabled, testID, accessibilityLabel }: any) =>
+      R.createElement(Pressable, {
+        testID,
+        disabled,
+        accessibilityRole: "switch",
+        accessibilityLabel,
+        accessibilityState: { checked: value, disabled: !!disabled },
+        onPress: () => onValueChange(!value)
+      }),
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
@@ -96,7 +105,7 @@ describe("AppearanceScreen", () => {
   it("toggles theme when dark mode switch is pressed", () => {
     const { getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
 
-    fireEvent(getByTestId("dark-mode-switch"), "valueChange", true)
+    fireEvent.press(getByTestId("dark-mode-switch"))
 
     expect(mockToggleTheme).toHaveBeenCalled()
   })

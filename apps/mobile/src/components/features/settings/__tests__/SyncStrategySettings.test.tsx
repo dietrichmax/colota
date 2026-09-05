@@ -5,8 +5,17 @@ import { DEFAULT_SETTINGS, TRACKING_PRESETS, Settings } from "../../../../types/
 // Mock barrel export (avoids transitive native module imports)
 jest.mock("../../../index", () => {
   const R = require("react")
-  const { View, Text, TextInput } = require("react-native")
+  const { View, Text, TextInput, Pressable } = require("react-native")
   return {
+    Toggle: ({ value, onValueChange, disabled, testID, accessibilityLabel }: any) =>
+      R.createElement(Pressable, {
+        testID,
+        disabled,
+        accessibilityRole: "switch",
+        accessibilityLabel,
+        accessibilityState: { checked: value, disabled: !!disabled },
+        onPress: () => onValueChange(!value)
+      }),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),

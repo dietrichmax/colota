@@ -6,7 +6,8 @@
 import React from "react"
 import { Text, StyleSheet, StyleProp, TextStyle } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { text } from "../../styles/typography"
+import { space } from "../../constants"
 
 type FieldMessageVariant = "info" | "warning" | "error"
 
@@ -18,15 +19,23 @@ type FieldMessageProps = {
 
 export function FieldMessage({ children, variant = "info", style }: FieldMessageProps) {
   const { colors } = useTheme()
-  const color =
-    variant === "error" ? colors.error : variant === "warning" ? (colors.warning ?? colors.error) : colors.textSecondary
-  return <Text style={[styles.message, { color }, style]}>{children}</Text>
+  const color = variant === "error" ? colors.error : variant === "warning" ? colors.warning : colors.textSecondary
+  const isError = variant === "error"
+
+  return (
+    <Text
+      accessibilityRole={isError ? "alert" : undefined}
+      accessibilityLiveRegion={isError ? "polite" : "none"}
+      style={[styles.message, { color }, style]}
+    >
+      {children}
+    </Text>
+  )
 }
 
 const styles = StyleSheet.create({
   message: {
-    fontSize: 12,
-    marginTop: 6,
-    ...fonts.medium
+    ...text.label,
+    marginTop: space.xs
   }
 })

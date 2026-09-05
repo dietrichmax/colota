@@ -3,34 +3,40 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useRef, useCallback } from "react"
+import React, { useCallback, useState } from "react"
 import {
   Pressable,
   Text,
   View,
-  Animated,
   ActivityIndicator,
   StyleSheet,
   GestureResponderEvent,
   StyleProp,
   ViewStyle
 } from "react-native"
-import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
 import { type LucideIcon } from "lucide-react-native"
+import { radius } from "@colota/shared"
+import { useTheme } from "../../hooks/useTheme"
+import { text } from "../../styles/typography"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { FocusRing } from "./FocusRing"
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "dangerGhost"
 
 type Props = {
   title: string
   onPress: (event: GestureResponderEvent) => void
   disabled?: boolean
   style?: StyleProp<ViewStyle>
-  activeOpacity?: number
-  color?: string
   variant?: ButtonVariant
   icon?: LucideIcon
   loading?: boolean
+  shape?: "rounded" | "pill"
+  elevation?: number
+  align?: "center" | "start"
+  testID?: string
+  accessibilityLabel?: string
+  accessibilityHint?: string
 }
 
 export function Button({
@@ -38,116 +44,109 @@ export function Button({
   onPress,
   disabled = false,
   style,
-  activeOpacity,
-  color,
   variant = "primary",
   icon: Icon,
-  loading = false
+  loading = false,
+  shape = "rounded",
+  elevation,
+  align = "center",
+  testID,
+  accessibilityLabel,
+  accessibilityHint
 }: Props) {
   const { colors } = useTheme()
-  const scale = useRef(new Animated.Value(1)).current
+  const [focused, setFocused] = useState(false)
 
-  const handlePressIn = useCallback(() => {
-    Animated.spring(scale, {
-      toValue: 0.97,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4
-    }).start()
-  }, [scale])
+  const onFocus = useCallback(() => setFocused(true), [])
+  const onBlur = useCallback(() => setFocused(false), [])
 
-  const handlePressOut = useCallback(() => {
-    Animated.spring(scale, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4
-    }).start()
-  }, [scale])
+  const inactive = disabled || loading
+  const filled = variant === "primary" || variant === "secondary" || variant === "danger"
 
-  const getVariantStyles = () => {
+  const fill = (): string => {
+    if (inactive) return filled ? colors.well : "transparent"
     switch (variant) {
       case "primary":
-        return {
-          bg: disabled ? colors.textDisabled : colors.primary,
-          text: color ?? colors.textOnPrimary,
-          borderColor: "transparent",
-          borderWidth: 0
-        }
+        return colors.primary
       case "secondary":
-        return {
-          bg: "transparent",
-          text: color ?? colors.primaryDark,
-          borderColor: colors.primary,
-          borderWidth: 1.5
-        }
-      case "ghost":
-        return {
-          bg: "transparent",
-          text: color ?? colors.primaryDark,
-          borderColor: "transparent",
-          borderWidth: 0
-        }
+        return colors.primaryContainer
       case "danger":
-        return {
-          bg: disabled ? colors.textDisabled : colors.error,
-          text: color ?? colors.textOnPrimary,
-          borderColor: "transparent",
-          borderWidth: 0
-        }
+        return colors.error
+      default:
+        return "transparent"
     }
   }
 
-  const v = getVariantStyles()
+  const ink = (): string => {
+    if (inactive) return colors.textDisabled
+    switch (variant) {
+      case "primary":
+      case "danger":
+        return colors.textOnPrimary
+      case "secondary":
+        return colors.onPrimaryContainer
+      case "dangerGhost":
+        return colors.error
+      default:
+        return colors.primaryDark
+    }
+  }
+
+  const contentColor = ink()
+  // Android draws the shadow from the node that carries the elevation, so shape and
+  // elevation ride on the node that paints the fill or a pill casts a square shadow.
+  const cornerRadius = shape === "pill" ? radius.pill : radius.sm
+  const ringColor = variant === "primary" || variant === "danger" ? colors.textOnPrimary : colors.primary
 
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, style]}>
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          {
-            backgroundColor: v.bg,
-            borderColor: v.borderColor,
-            borderWidth: v.borderWidth,
-            borderRadius: colors.borderRadius,
-            opacity: pressed ? (activeOpacity ?? colors.pressedOpacity) : 1
-          }
-        ]}
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        disabled={disabled || loading}
-      >
-        <View style={styles.content}>
-          {loading ? (
-            <ActivityIndicator size="small" color={v.text} style={styles.icon} />
-          ) : Icon ? (
-            <Icon size={18} color={v.text} style={styles.icon} />
-          ) : null}
-          <Text style={[styles.text, { color: v.text }]}>{title}</Text>
-        </View>
-      </Pressable>
-    </Animated.View>
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: inactive, busy: loading }}
+      android_ripple={inactive ? undefined : { color: contentColor + STATE_LAYER_ALPHA }}
+      onPress={onPress}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      disabled={inactive}
+      style={[
+        styles.button,
+        align === "start" && styles.alignStart,
+        { backgroundColor: fill(), borderRadius: cornerRadius },
+        elevation === undefined ? null : { elevation },
+        style
+      ]}
+    >
+      <View style={styles.content} importantForAccessibility="no">
+        {loading ? (
+          <ActivityIndicator size="small" color={contentColor} />
+        ) : Icon ? (
+          <Icon size={size.icon.md} color={contentColor} />
+        ) : null}
+        <Text style={[styles.title, { color: contentColor }]}>{title}</Text>
+      </View>
+      <FocusRing visible={focused && !inactive} color={ringColor} radius={cornerRadius} />
+    </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    minHeight: size.touch,
+    paddingHorizontal: 20,
     alignItems: "center",
-    marginVertical: 8
+    justifyContent: "center"
+  },
+  alignStart: {
+    alignItems: "flex-start"
   },
   content: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8
+    gap: space.sm
   },
-  text: {
-    fontSize: 16,
-    ...fonts.semiBold
-  },
-  icon: {
-    marginRight: 0
+  title: {
+    ...text.bodyStrong
   }
 })

@@ -7,31 +7,32 @@ import React from "react"
 import { View, StyleSheet } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
 
-export function RadioDot({ selected }: { selected: boolean }) {
+const RING = 20
+const CENTRE = 10
+
+export function RadioDot({ selected, disabled = false }: { selected: boolean; disabled?: boolean }) {
   const { colors } = useTheme()
+  const hue = disabled ? colors.textDisabled : selected ? colors.primary : colors.outline
+
   return (
-    <View
-      style={[styles.radio, { borderColor: selected ? colors.primary : colors.border }]}
-      importantForAccessibility="no"
-      accessibilityElementsHidden
-    >
-      {selected && <View style={[styles.inner, { backgroundColor: colors.primary }]} />}
+    <View style={[styles.ring, { borderColor: hue }]} importantForAccessibility="no" accessibilityElementsHidden>
+      {selected && <View style={[styles.centre, { backgroundColor: hue }]} />}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  ring: {
+    width: RING,
+    height: RING,
+    borderRadius: RING / 2,
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center"
   },
-  inner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6
+  centre: {
+    width: CENTRE,
+    height: CENTRE,
+    borderRadius: CENTRE / 2
   }
 })

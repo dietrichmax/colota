@@ -4,10 +4,10 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { View, Text, ScrollView, StyleSheet, Switch, Share } from "react-native"
+import { View, Text, ScrollView, StyleSheet, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Container, Card, Button, SectionTitle } from "../components"
+import { Container, Card, Button, SectionTitle, Toggle } from "../components"
 import { fonts } from "../styles/typography"
 import { Share2, TriangleAlert } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
@@ -153,11 +153,12 @@ export function ShareSetupScreen() {
                   </Text>
                   <Text style={[styles.rowSub, { color: colors.textSecondary }]}>{row.sub}</Text>
                 </View>
-                <Switch
+                <Toggle
                   testID={`share-${row.key}`}
                   value={selection[row.key] && !row.disabled}
                   onValueChange={() => toggle(row.key)}
                   disabled={row.disabled}
+                  accessibilityLabel={row.label}
                 />
               </View>
             ))}

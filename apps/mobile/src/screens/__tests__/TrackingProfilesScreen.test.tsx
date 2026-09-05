@@ -69,8 +69,17 @@ jest.mock("../../hooks/useTheme", () => ({
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text } = require("react-native")
+  const { View, Text, Pressable } = require("react-native")
   return {
+    Toggle: ({ value, onValueChange, disabled, testID, accessibilityLabel }: any) =>
+      R.createElement(Pressable, {
+        testID,
+        disabled,
+        accessibilityRole: "switch",
+        accessibilityLabel,
+        accessibilityState: { checked: value, disabled: !!disabled },
+        onPress: () => onValueChange(!value)
+      }),
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children, style }: any) => R.createElement(View, { style }, children)
@@ -204,7 +213,7 @@ describe("TrackingProfilesScreen", () => {
       expect(getByText("Driving")).toBeTruthy()
     })
 
-    fireEvent(getByTestId("toggle-profile-2"), "onValueChange", true)
+    fireEvent.press(getByTestId("toggle-profile-2"))
 
     await waitFor(() => {
       expect(mockShowAlert).toHaveBeenCalledWith("Error", expect.any(String), "error")

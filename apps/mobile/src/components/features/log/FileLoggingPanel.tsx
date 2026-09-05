@@ -4,9 +4,11 @@
  */
 
 import React, { useCallback, useEffect, useState } from "react"
-import { View, Text, Switch, StyleSheet, ScrollView, ActivityIndicator } from "react-native"
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native"
 import { Card, Divider, SectionTitle } from "../../index"
+import { space } from "../../../constants"
 import { Button } from "../../ui/Button"
+import { Toggle } from "../../ui/Toggle"
 import { useTheme } from "../../../hooks/useTheme"
 import { fonts, fontSizes } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
@@ -132,12 +134,7 @@ export function FileLoggingPanel() {
           <View style={styles.toggleLabel}>
             <Text style={[styles.label, { color: colors.text }]}>Persistent file logging</Text>
           </View>
-          <Switch
-            value={enabled}
-            onValueChange={handleToggle}
-            trackColor={{ false: colors.border, true: colors.primary + "80" }}
-            thumbColor={enabled ? colors.primary : colors.border}
-          />
+          <Toggle value={enabled} onValueChange={handleToggle} accessibilityLabel="Persistent file logging" />
         </View>
 
         <Divider />
@@ -153,8 +150,14 @@ export function FileLoggingPanel() {
         </View>
       </Card>
 
-      <Button title="Export log file…" onPress={handleExport} loading={busy} />
-      <Button title="Clear log files" variant="danger" onPress={handleClear} disabled={busy || sizeBytes === 0} />
+      <Button style={styles.action} title="Export log file…" onPress={handleExport} loading={busy} />
+      <Button
+        style={styles.action}
+        title="Clear log files"
+        variant="danger"
+        onPress={handleClear}
+        disabled={busy || sizeBytes === 0}
+      />
     </ScrollView>
   )
 }
@@ -166,6 +169,9 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 12
+  },
+  action: {
+    marginTop: space.sm
   },
   centered: {
     flex: 1,

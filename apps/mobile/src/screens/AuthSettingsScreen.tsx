@@ -167,6 +167,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
               selected={config.authType}
               onSelect={handleAuthTypeChange}
               colors={colors}
+              accessibilityLabel="Authentication"
             />
 
             {/* Basic Auth fields */}

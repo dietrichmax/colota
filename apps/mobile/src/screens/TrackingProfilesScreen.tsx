@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react"
-import { View, Text, StyleSheet, FlatList, Switch, Pressable, Share } from "react-native"
+import { View, Text, StyleSheet, FlatList, Pressable, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { SavedTrackingProfile, ScreenProps } from "../types/global"
 import { fonts } from "../styles/typography"
-import { Container, SectionTitle, Card } from "../components"
+import { Container, SectionTitle, Card, Toggle } from "../components"
 import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { buildProfilesLink } from "../utils/setupLink"
@@ -140,12 +140,11 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
             </View>
 
             <View style={styles.actions}>
-              <Switch
+              <Toggle
                 testID={`toggle-profile-${item.id}`}
                 value={item.enabled}
                 onValueChange={(val) => toggleEnabled(item.id, val)}
-                trackColor={{ false: colors.border, true: colors.primary + "80" }}
-                thumbColor={item.enabled ? colors.primary : colors.border}
+                accessibilityLabel={`Enable ${item.name}`}
               />
 
               <Pressable
