@@ -10,7 +10,6 @@ import {
   View,
   ScrollView,
   Pressable,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   NativeEventEmitter,

@@ -4,8 +4,7 @@
  */
 
 import React, { useEffect, useState } from "react"
-import { Modal, ScrollView, View, Text, Pressable, StyleSheet } from "react-native"
-import { Eye, EyeOff } from "lucide-react-native"
+import { Modal, ScrollView, View, Text, StyleSheet } from "react-native"
 import type { RootScreenProps } from "../types/navigation"
 import { useTheme } from "../hooks/useTheme"
 import { Button, Card, Container, SectionTitle, TextField } from "../components"
@@ -19,7 +18,7 @@ import { logger } from "../utils/logger"
 import { fontSizes, fonts } from "../styles/typography"
 import { radius } from "@colota/shared"
 import type { ThemeColors } from "../types/global"
-import { size, space } from "../constants"
+import { space } from "../constants"
 
 type Props = RootScreenProps<"Backup & Restore">
 

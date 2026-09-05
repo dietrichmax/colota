@@ -174,10 +174,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const isSpeed = profile.condition.type === "speed_above" || profile.condition.type === "speed_below"
   const isCustomSyncInterval = !SYNC_INTERVAL_PRESETS.includes(profile.syncInterval)
 
-  const inputStyle = [
-    styles.numInput,
-    { backgroundColor: colors.backgroundElevated, color: colors.text, borderColor: colors.border }
-  ]
 
   return (
     <Container>

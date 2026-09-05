@@ -209,10 +209,6 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     }
   }, [geofenceId, name, navigation])
 
-  const inputStyle = [
-    styles.input,
-    { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }
-  ]
 
   return (
     <Container>
