@@ -10,11 +10,11 @@ No. The app stores location history locally. Server sync is optional.
 
 ### What data does the app send?
 
-Only GPS data (coordinates, accuracy, altitude, speed, bearing, battery status, timestamp) to your configured server. Nothing else. No analytics, no telemetry.
+Only GPS data to your configured server: coordinates, accuracy, altitude, speed, bearing, battery status and timestamp, plus any [custom fields](/docs/configuration/field-mapping) you add yourself. The only other outbound traffic is map tile requests to the tile server set in **Settings → Appearance**.
 
 ### Is this compatible with Google Timeline?
 
-No, but you can use [Dawarich](/docs/integrations/dawarich) or a custom backend for similar functionality.
+You can import your Google Timeline history into Colota, both the legacy Takeout `Records.json` and the new on-device export from Android Settings (see [Data Import](/docs/guides/data-import)), and browse it in the app under **History** on the Map and Trips tabs, but Colota has no web interface and never sends anything back to Google, so pair it with one of the [supported backends](/docs/integrations/overview) if you want a browser view.
 
 ### Does this work without Google Play Services?
 
@@ -40,15 +40,19 @@ To ensure modifications stay open source, especially server-side components.
 
 ### How accurate is the tracking?
 
-3-10 meters in open sky, 10-50 meters in urban areas. The [accuracy filter](/docs/configuration/gps-settings#accuracy-filter) helps remove poor fixes.
+3-10 meters in open sky, 10-50 meters in urban areas. The [accuracy filter](/docs/configuration/tracking-settings#accuracy-filter) helps remove poor fixes.
 
 ### Can I use maps without internet?
 
-Yes. Go to **Settings > Offline Maps** to download map areas to your device. Pan and zoom the map to frame the area you want, give it a name, and tap **Download Area**. Downloaded tiles persist across app restarts and work without any network connection. See [Offline Maps](/docs/guides/offline-maps) for details.
+Yes. Go to **Settings → Offline Maps** to download map areas to your device. Pan and zoom the map to frame the area you want, give it a name, and tap **Download**. Downloaded tiles persist across app restarts and work without any network connection. See [Offline Maps](/docs/guides/offline-maps) for details.
 
 ### Can I export my location history?
 
-Yes. Tap **Export** on the Dashboard to export in CSV, GeoJSON, GPX, or KML. See [Data Export](/docs/guides/data-export) for details.
+Yes. Go to **Settings → Export Locations** to export in CSV, GeoJSON, GPX or KML, or export a single day's trips from the **History** tab. **Settings → Auto-Export** writes the same formats to a folder you pick on a daily, weekly or monthly schedule. See [Data Export](/docs/guides/data-export) for details.
+
+### Can I import location history from another app?
+
+Yes. Go to **Settings → Import Locations** and pick a file. Colota reads GeoJSON, Google Timeline (both the legacy Takeout export and the new on-device one), GPX, KML and CSV, detects the format itself, and shows a preview with the duplicate and invalid counts before anything is written. Imports are additive and duplicates are skipped, so re-importing the same file changes nothing. See [Data Import](/docs/guides/data-import) for details.
 
 ### Can I back up everything and move to a new device?
 
@@ -64,7 +68,11 @@ Yes. Restore is replace-everything: locations, settings, geofences and credentia
 
 ### What happens when the phone restarts?
 
-Colota resumes tracking after a restart if tracking was active before it. There is no setting for this. If it does not resume, see [Troubleshooting](guides/troubleshooting.md).
+Colota resumes tracking after a restart if tracking was active before it. There is no setting for this. If it does not resume, see [Troubleshooting](/docs/guides/troubleshooting).
+
+### Why does tracking stop when the screen is off?
+
+Android is suspending the app to save power. Exempt Colota from battery optimization (the app prompts for this during setup), and on Samsung, Xiaomi, Huawei, Oppo, Vivo and OnePlus devices also allow it to run in the background in the manufacturer's own power menu, which is separate from the Android setting. See [Battery Optimization](/docs/guides/battery-optimization) and [Troubleshooting](/docs/guides/troubleshooting) for the per-manufacturer steps.
 
 ### How much battery does it use?
 
@@ -93,10 +101,10 @@ On Android 17+, apps need the Local Network Access permission to connect to loca
 
 ### Does Colota support mutual TLS (mTLS)?
 
-Yes. Import a PKCS12 (`.p12` / `.pfx`) bundle in **Settings -> Connection -> Authentication & Headers -> Client Certificate (mTLS)**. The private key is stored in the OS keystore and the password isn't saved. For self-signed server certificates, import a CA in the same screen so trust is scoped to Colota only - no need to install a CA at the OS level. See the [mTLS guide](/docs/configuration/mtls) for details.
+Yes. Import a PKCS12 (`.p12` / `.pfx`) bundle in **Settings → Connection → Authentication & Headers → Client Certificate (mTLS)**. The private key is stored in the OS keystore and the password isn't saved. For self-signed server certificates, import a CA in the same screen so trust is scoped to Colota only - no need to install a CA at the OS level. See the [mTLS guide](/docs/configuration/mtls) for details.
 
 ### I was using a CA installed in Android Settings for Colota - does it still work?
 
-No, not anymore. As of this release, Colota only trusts system CAs and an optional CA you import in-app via mTLS Settings - user-installed device CAs are deliberately ignored. If sync starts failing with `Server certificate is not trusted...` after upgrading, you'll need to re-import your CA through the new in-app screen.
+No, not since 1.9.0. Colota only trusts system CAs and an optional CA you import in-app via mTLS Settings - user-installed device CAs are deliberately ignored. If sync starts failing with `Server certificate is not trusted...` after upgrading, you'll need to re-import your CA through the new in-app screen.
 
-The migration is one-time: open Colota -> Settings -> Connection -> Authentication & Headers -> Client Certificate (mTLS) -> Trusted Server CA -> Import CA. The same `.crt` / `.pem` you originally installed in Android Settings works. See [Migrating from earlier behavior](/docs/configuration/mtls#trusting-a-privateinternal-server-ca) for the full walkthrough.
+The migration is one-time: open Colota → Settings → Connection → Authentication & Headers → Client Certificate (mTLS) → Trusted Server CA → Import CA. The same `.crt` / `.pem` you originally installed in Android Settings works. See [Migrating from earlier behavior](/docs/configuration/mtls#trusting-a-privateinternal-server-ca) for the full walkthrough.
