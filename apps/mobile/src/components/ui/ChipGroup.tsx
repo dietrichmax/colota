@@ -5,10 +5,12 @@
 
 import React from "react"
 import { View, Pressable, Text, StyleSheet } from "react-native"
+import { Check } from "lucide-react-native"
 import { ThemeColors } from "../../types/global"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
-import { space } from "../../constants"
+import { size, space } from "../../constants"
+import { radius } from "@colota/shared"
 
 interface ChipGroupProps<T extends string> {
   options: readonly { value: T; label: string; testID?: string }[]
@@ -32,16 +34,28 @@ export function ChipGroup<T extends string>({ options, selected, onSelect, disab
             key={value}
             testID={testID}
             disabled={isDisabled}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: isSelected, disabled: isDisabled }}
             style={({ pressed }) => [
               styles.chip,
-              { borderColor: colors.border, backgroundColor: colors.background },
-              isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + "20" },
+              { backgroundColor: isSelected ? colors.primaryContainer : colors.well },
               isDisabled && { opacity: 0.4 },
               pressed && !isDisabled && { opacity: colors.pressedOpacity }
             ]}
             onPress={() => onSelect(value)}
           >
-            <Text style={[styles.label, { color: isSelected ? colors.primary : colors.text }]}>{label}</Text>
+            {isSelected ? (
+              <Check size={size.icon.sm} color={colors.onPrimaryContainer} strokeWidth={2} />
+            ) : null}
+            <Text
+              style={[
+                styles.label,
+                isSelected && styles.labelSelected,
+                { color: isSelected ? colors.onPrimaryContainer : colors.text }
+              ]}
+            >
+              {label}
+            </Text>
           </Pressable>
         )
       })}
@@ -56,14 +70,20 @@ const styles = StyleSheet.create({
     gap: space.sm
   },
   chip: {
-    borderWidth: 2,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignItems: "center"
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    minHeight: size.chip,
+    borderRadius: radius.sm,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md
   },
   label: {
     fontSize: fontSizes.caption,
-    ...fonts.bold
+    ...fonts.medium
+  },
+  // Selection is a check and a weight step as well as the fill, so it does not rest on colour alone.
+  labelSelected: {
+    ...fonts.semiBold
   }
 })

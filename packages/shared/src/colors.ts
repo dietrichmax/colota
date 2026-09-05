@@ -14,6 +14,7 @@ export interface ThemeColors {
   primaryDark: string
   primaryContainer: string
   onPrimaryContainer: string
+  well: string
 
   // Secondary colors
 
@@ -58,6 +59,7 @@ export const lightColors: ThemeColors = {
   primaryDark: "#115E59",
   primaryContainer: "#A5F8E9",
   onPrimaryContainer: "#115E59",
+  well: "#E9EDF0",
 
   // Status
   success: "#2E7D32",
@@ -100,6 +102,7 @@ export const darkColors: ThemeColors = {
   primaryDark: "#0d9488",
   primaryContainer: "#0F3B36",
   onPrimaryContainer: "#99F6E4",
+  well: "#232323",
 
   // Status
   success: "#4CAF50",
