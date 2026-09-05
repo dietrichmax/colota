@@ -9,7 +9,7 @@ import type { LucideIcon } from "lucide-react-native"
 import { fontSizes, fonts } from "../../styles/typography"
 import { useTheme } from "../../hooks/useTheme"
 import { RadioDot } from "./RadioDot"
-import { space } from "../../constants"
+import { size, space } from "../../constants"
 
 export const FormatOption = ({
   icon: Icon,
@@ -39,7 +39,7 @@ export const FormatOption = ({
     >
       <View style={styles.formatContent}>
         <View style={styles.leftContent}>
-          <Icon size={22} color={colors.textLight} />
+          <Icon size={size.icon.md} color={colors.textLight} />
           <View style={styles.textContent}>
             <View style={styles.titleRow}>
               <Text

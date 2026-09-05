@@ -15,7 +15,7 @@ import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
 import type { UnitSystem, TimeFormat } from "../utils/geo"
-import { space } from "../constants"
+import { size, space } from "../constants"
 import { radius } from "@colota/shared"
 
 export function AppearanceScreen({}: ScreenProps) {
@@ -173,9 +173,9 @@ export function AppearanceScreen({}: ScreenProps) {
               <Text style={[styles.linkSub, { color: colors.textSecondary }]}>{t("appearance.mapStyle.subtitle")}</Text>
             </View>
             {showMapTileServer ? (
-              <ChevronUp size={20} color={colors.textLight} />
+              <ChevronUp size={size.icon.md} color={colors.textLight} />
             ) : (
-              <ChevronDown size={20} color={colors.textLight} />
+              <ChevronDown size={size.icon.md} color={colors.textLight} />
             )}
           </Pressable>
 

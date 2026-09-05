@@ -76,7 +76,7 @@ jest.mock("lucide-react-native", () => {
   const { Text } = require("react-native")
   const stub = (name: string) => (_props: any) => R.createElement(Text, null, name)
   return {
-    BarChart2: stub("BarChart2")
+    ChartNoAxesColumn: stub("ChartNoAxesColumn")
   }
 })
 

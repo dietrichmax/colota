@@ -8,7 +8,7 @@ import { Text, StyleSheet, View, Pressable } from "react-native"
 import { ChevronRight } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
-import { space } from "../../constants"
+import { size, space } from "../../constants"
 
 type IconComponent = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
 
@@ -46,7 +46,7 @@ export function ListItem({
     >
       {Icon && (
         <View style={styles.icon}>
-          <Icon size={22} color={colors.textLight} />
+          <Icon size={size.icon.md} color={colors.textLight} />
         </View>
       )}
       <View style={styles.content}>
@@ -57,7 +57,7 @@ export function ListItem({
           </Text>
         ) : null}
       </View>
-      <TrailingIcon size={20} color={colors.textLight} />
+      <TrailingIcon size={size.icon.md} color={colors.textLight} />
     </Pressable>
   )
 }

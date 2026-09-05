@@ -12,7 +12,7 @@ import { formatDistance, formatDuration, formatSpeed, formatTime } from "../../.
 import type { Trip, ThemeColors } from "../../../types/global"
 import { getTripColor, computeTripStats, type TripStats } from "../../../utils/trips"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../../../utils/exportConverters"
-import { HIT_SLOP_SM, space } from "../../../constants"
+import { HIT_SLOP_SM, size, space } from "../../../constants"
 import { radius } from "@colota/shared"
 
 interface TripListProps {
@@ -84,28 +84,28 @@ const TripRow = React.memo(function TripRow({
 
       <View style={styles.tripStats}>
         <View style={styles.stat}>
-          <Route size={13} color={colors.textSecondary} />
+          <Route size={size.icon.sm} color={colors.textSecondary} />
           <Text style={[styles.statText, { color: colors.text }]}>{formatDistance(trip.distance)}</Text>
         </View>
         <View style={styles.stat}>
-          <Clock size={13} color={colors.textSecondary} />
+          <Clock size={size.icon.sm} color={colors.textSecondary} />
           <Text style={[styles.statText, { color: colors.text }]}>{formatDuration(duration)}</Text>
         </View>
         {stats && stats.avgSpeed > 0 && (
           <View style={styles.stat}>
-            <Gauge size={13} color={colors.textSecondary} />
+            <Gauge size={size.icon.sm} color={colors.textSecondary} />
             <Text style={[styles.statText, { color: colors.text }]}>{formatSpeed(stats.avgSpeed)}</Text>
           </View>
         )}
         {stats && stats.elevationGain > 0 && (
           <View style={styles.stat}>
-            <TrendingUp size={13} color={colors.textSecondary} />
+            <TrendingUp size={size.icon.sm} color={colors.textSecondary} />
             <Text style={[styles.statText, { color: colors.text }]}>{Math.round(stats.elevationGain)}m</Text>
           </View>
         )}
         {stats && stats.elevationLoss > 0 && (
           <View style={styles.stat}>
-            <TrendingDown size={13} color={colors.textSecondary} />
+            <TrendingDown size={size.icon.sm} color={colors.textSecondary} />
             <Text style={[styles.statText, { color: colors.text }]}>{Math.round(stats.elevationLoss)}m</Text>
           </View>
         )}
@@ -265,7 +265,7 @@ export function TripList({
               accessibilityRole="button"
               accessibilityLabel="Cancel selection"
             >
-              <X size={18} color={colors.text} />
+              <X size={size.icon.md} color={colors.text} />
             </Pressable>
             <Text style={[styles.cabSummary, { color: colors.text }]}>{selected.size} selected</Text>
           </View>
@@ -290,7 +290,7 @@ export function TripList({
                 accessibilityLabel="Export selected trips"
                 accessibilityState={{ expanded: showExport }}
               >
-                <Share size={18} color={showExport ? colors.primary : colors.text} />
+                <Share size={size.icon.md} color={showExport ? colors.primary : colors.text} />
               </Pressable>
             )}
             {onMerge && trips.length >= 2 && (
@@ -304,7 +304,7 @@ export function TripList({
                 accessibilityHint={isAdjacentSelection ? undefined : "Select two or more adjacent trips to merge them"}
                 accessibilityState={{ disabled: !isAdjacentSelection }}
               >
-                <Merge size={18} color={isAdjacentSelection ? colors.text : colors.textDisabled} />
+                <Merge size={size.icon.md} color={isAdjacentSelection ? colors.text : colors.textDisabled} />
               </Pressable>
             )}
             {onDelete && (
@@ -315,7 +315,7 @@ export function TripList({
                 accessibilityRole="button"
                 accessibilityLabel="Delete selected trips"
               >
-                <Trash2 size={18} color={colors.error} />
+                <Trash2 size={size.icon.md} color={colors.error} />
               </Pressable>
             )}
           </View>
@@ -333,7 +333,7 @@ export function TripList({
               accessibilityLabel="Export all trips"
               accessibilityState={{ expanded: showExport }}
             >
-              <Share size={14} color={showExport ? colors.primary : colors.textSecondary} />
+              <Share size={size.icon.sm} color={showExport ? colors.primary : colors.textSecondary} />
               <Text style={[styles.exportAllLabel, { color: showExport ? colors.primary : colors.textSecondary }]}>
                 Export All
               </Text>

@@ -26,7 +26,7 @@ import { logger, LOG_LEVELS, type LogLevel } from "../utils/logger"
 import { getMergedLogs, exportLogs, MergedLogEntry } from "../utils/logExport"
 import NativeLocationService from "../services/NativeLocationService"
 import { ScreenProps } from "../types/global"
-import { space } from "../constants"
+import { size, space } from "../constants"
 import { radius } from "@colota/shared"
 
 type FilterLevel = LogLevel
@@ -111,9 +111,9 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
           style={({ pressed }) => [styles.headerButton, pressed && { opacity: colors.pressedOpacity }]}
         >
           {exporting ? (
-            <ActivityIndicator size={18} color={colors.primary} />
+            <ActivityIndicator size={size.icon.md} color={colors.primary} />
           ) : (
-            <Share2 size={20} color={colors.primary} />
+            <Share2 size={size.icon.md} color={colors.primary} />
           )}
         </Pressable>
       </View>
@@ -206,7 +206,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
       {tabBar}
       <View style={styles.filterBar}>
         <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Search size={16} color={colors.textLight} />
+          <Search size={size.icon.sm} color={colors.textLight} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
             placeholder="Filter logs..."
@@ -218,7 +218,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
           />
           {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery("")}>
-              <X size={16} color={colors.textLight} />
+              <X size={size.icon.sm} color={colors.textLight} />
             </Pressable>
           )}
         </View>
@@ -298,7 +298,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
           onPress={scrollToEnd}
           style={[styles.scrollEndButton, { backgroundColor: colors.primary, bottom: insets.bottom + 24 }]}
         >
-          <ArrowDown size={20} color={colors.textOnPrimary} />
+          <ArrowDown size={size.icon.md} color={colors.textOnPrimary} />
         </Pressable>
       ) : filteredLogs.length > 0 ? (
         <View style={[styles.followingBadge, { backgroundColor: colors.primary + "20", bottom: insets.bottom + 24 }]}>

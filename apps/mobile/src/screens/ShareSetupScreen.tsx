@@ -15,7 +15,7 @@ import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
 import { buildSetupConfig, buildSetupLink, type SetupShareParts, type SetupShareSelection } from "../utils/setupLink"
 import { DEFAULT_AUTH_CONFIG, type AuthConfig, type Geofence, type TrackingProfile } from "../types/global"
-import { space } from "../constants"
+import { size, space } from "../constants"
 
 type ShareCategory = keyof SetupShareSelection
 
@@ -169,7 +169,7 @@ export function ShareSetupScreen() {
           <View style={styles.section}>
             <Card style={[styles.warningCard, { borderColor: colors.error }]}>
               <View style={styles.headerRow}>
-                <TriangleAlert size={20} color={colors.error} />
+                <TriangleAlert size={size.icon.md} color={colors.error} />
                 <Text style={[styles.warningText, { color: colors.text }]}>
                   This link will contain your {credentialFields.join(", ")} in plain text. Anyone who sees the link can
                   read them - only share it over a trusted channel.

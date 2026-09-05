@@ -15,7 +15,7 @@ import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGrou
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
-import { space } from "../constants"
+import { size, space } from "../constants"
 import { radius } from "@colota/shared"
 
 const AUTH_TYPE_OPTIONS: { value: AuthType; label: string }[] = [
@@ -353,7 +353,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
                   Authenticate to servers that require a client certificate
                 </Text>
               </View>
-              <ChevronRight size={20} color={colors.textLight} />
+              <ChevronRight size={size.icon.md} color={colors.textLight} />
             </Pressable>
           </Card>
         </View>

@@ -24,7 +24,7 @@ import { fonts, fontSizes } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator } from "../components"
-import { SAVE_SUCCESS_DISPLAY_MS, STATS_REFRESH_FAST, space } from "../constants"
+import { SAVE_SUCCESS_DISPLAY_MS, STATS_REFRESH_FAST, size, space } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
@@ -403,7 +403,7 @@ export function DataManagementScreen({}: ScreenProps) {
                   Reclaim unused space and improve performance
                 </Text>
                 <View style={styles.hintRow}>
-                  <Lightbulb size={12} color={colors.textLight} />
+                  <Lightbulb size={size.icon.sm} color={colors.textLight} />
                   <Text style={[styles.actionHint, { color: colors.textLight }]}>
                     Run after large deletions to reclaim space
                   </Text>

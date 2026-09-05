@@ -10,7 +10,7 @@ import { ThemeColors } from "../../../types/global"
 import { fontSizes, fonts } from "../../../styles/typography"
 import { formatDistance } from "../../../utils/geo"
 import { pad2 } from "../../../utils/format"
-import { HIT_SLOP_LG, space } from "../../../constants"
+import { HIT_SLOP_LG, size, space } from "../../../constants"
 import { radius } from "@colota/shared"
 
 interface CalendarPickerProps {
@@ -167,7 +167,7 @@ export function CalendarPicker({
           hitSlop={HIT_SLOP_LG}
           style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
         >
-          <ChevronLeft size={22} color={colors.primary} />
+          <ChevronLeft size={size.icon.md} color={colors.primary} />
         </Pressable>
 
         <Pressable
@@ -181,7 +181,7 @@ export function CalendarPicker({
                 <Text style={[styles.todayBadgeText, { color: colors.primary }]}>Today</Text>
               </View>
             )}
-            <Calendar size={14} color={colors.textSecondary} style={styles.calendarIcon} />
+            <Calendar size={size.icon.sm} color={colors.textSecondary} style={styles.calendarIcon} />
           </View>
           <Text style={[styles.countText, { color: colors.textSecondary }]}>
             {locationCount} {locationCount === 1 ? "location" : "locations"}
@@ -195,7 +195,7 @@ export function CalendarPicker({
           style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
           disabled={isToday}
         >
-          <ChevronRight size={22} color={isToday ? colors.textDisabled : colors.primary} />
+          <ChevronRight size={size.icon.md} color={isToday ? colors.textDisabled : colors.primary} />
         </Pressable>
       </View>
 
@@ -223,7 +223,7 @@ export function CalendarPicker({
               hitSlop={HIT_SLOP_LG}
               style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
             >
-              <ChevronLeft size={18} color={colors.primary} />
+              <ChevronLeft size={size.icon.md} color={colors.primary} />
             </Pressable>
             <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
             <Pressable
@@ -232,7 +232,7 @@ export function CalendarPicker({
               style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
               disabled={isFutureMonth}
             >
-              <ChevronRight size={18} color={isFutureMonth ? colors.textDisabled : colors.primary} />
+              <ChevronRight size={size.icon.md} color={isFutureMonth ? colors.textDisabled : colors.primary} />
             </Pressable>
           </View>
 

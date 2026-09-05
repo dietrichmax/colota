@@ -9,7 +9,7 @@ import { SelectablePreset, TRACKING_PRESETS } from "../../../types/global"
 import { fontSizes, fonts } from "../../../styles/typography"
 import { useTheme } from "../../../hooks/useTheme"
 import { RadioDot } from "../../ui/RadioDot"
-import { space } from "../../../constants"
+import { size, space } from "../../../constants"
 
 interface BadgeProps {
   icon: React.ReactElement
@@ -61,11 +61,11 @@ export function PresetOption({ preset, isSelected, isOfflineMode, onSelect }: Pr
                 {config.label}
               </Text>
               {showRecommendedBadge && (
-                <Badge icon={<Check size={10} color={colors.success} />} label="Recommended" color={colors.success} />
+                <Badge icon={<Check size={size.icon.sm} color={colors.success} />} label="Recommended" color={colors.success} />
               )}
               {showWarningBadge && (
                 <Badge
-                  icon={<Zap size={10} color={colors.warning} />}
+                  icon={<Zap size={size.icon.sm} color={colors.warning} />}
                   label="High Battery Usage"
                   color={colors.warning}
                 />

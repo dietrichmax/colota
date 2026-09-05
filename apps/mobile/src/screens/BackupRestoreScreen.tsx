@@ -19,7 +19,7 @@ import { logger } from "../utils/logger"
 import { fontSizes, fonts } from "../styles/typography"
 import { radius } from "@colota/shared"
 import type { ThemeColors } from "../types/global"
-import { space } from "../constants"
+import { size, space } from "../constants"
 
 type Props = RootScreenProps<"Backup & Restore">
 
@@ -93,7 +93,7 @@ function PasswordField({ value, onChangeText, placeholder, editable, autoComplet
         style={styles.eyeButton}
         accessibilityLabel="Hold to show password"
       >
-        <Icon size={20} color={colors.textSecondary} />
+        <Icon size={size.icon.md} color={colors.textSecondary} />
       </Pressable>
     </View>
   )
