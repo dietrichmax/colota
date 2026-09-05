@@ -139,10 +139,10 @@ describe("ConnectionSettings", () => {
     )
   }
 
-  it("renders Connection section title", () => {
-    const { getByText } = renderComponent()
+  it("does not repeat the screen name the header already paints", () => {
+    const { queryByText } = renderComponent()
 
-    expect(getByText("Connection")).toBeTruthy()
+    expect(queryByText("Connection")).toBeNull()
   })
 
   it("shows Offline Mode toggle", () => {
