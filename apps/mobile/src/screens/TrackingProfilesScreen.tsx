@@ -15,7 +15,7 @@ import { Container, SectionTitle, Card, Toggle } from "../components"
 import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { buildProfilesLink } from "../utils/setupLink"
-import { PROFILE_CONDITIONS, MS_TO_KMH, HIT_SLOP_MD } from "../constants"
+import { size, PROFILE_CONDITIONS, MS_TO_KMH, HIT_SLOP_MD } from "../constants"
 
 function formatCondition(profile: SavedTrackingProfile): string {
   const condition = PROFILE_CONDITIONS.find((c) => c.type === profile.condition.type)
@@ -118,7 +118,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
             onPress={() => navigation.navigate("Profile Editor", { profileId: item.id })}
           >
             <View style={[styles.iconWrap, { backgroundColor: colors.primary + "15" }]}>
-              <ConditionIcon size={18} color={colors.primary} />
+              <ConditionIcon size={size.icon.md} color={colors.primary} />
             </View>
 
             <View style={styles.info}>
@@ -156,7 +156,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
                   pressed && { opacity: colors.pressedOpacity }
                 ]}
               >
-                <X size={16} color={colors.error} />
+                <X size={size.icon.sm} color={colors.error} />
               </Pressable>
             </View>
           </Pressable>
@@ -190,7 +190,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
               ]}
               onPress={() => navigation.navigate("Profile Editor", {})}
             >
-              <Plus size={20} color={colors.textOnPrimary} />
+              <Plus size={size.icon.md} color={colors.textOnPrimary} />
               <Text style={[styles.createBtnText, { color: colors.textOnPrimary }]}>Create Profile</Text>
             </Pressable>
 
@@ -203,7 +203,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
                   hitSlop={HIT_SLOP_MD}
                   style={({ pressed }) => [styles.shareBtn, pressed && { opacity: colors.pressedOpacity }]}
                 >
-                  <Share2 size={20} color={colors.textSecondary} />
+                  <Share2 size={size.icon.md} color={colors.textSecondary} />
                 </Pressable>
               </View>
             )}

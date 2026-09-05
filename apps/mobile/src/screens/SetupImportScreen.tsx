@@ -7,10 +7,10 @@ import React, { useState, useMemo } from "react"
 import { View, Text, ScrollView, StyleSheet } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
-import { space } from "../constants"
+import { size, space } from "../constants"
 import { Container, Card, Button, SectionTitle, Toggle } from "../components"
 import { fonts } from "../styles/typography"
-import { CircleAlert, CircleCheck, Import } from "lucide-react-native"
+import { CircleAlert, CircleCheckBig, Import } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
@@ -165,7 +165,7 @@ export function SetupImportScreen({ route, navigation }: any) {
         <ScrollView contentContainerStyle={styles.content}>
           <Card style={styles.headerCard}>
             <View style={styles.headerRow}>
-              <CircleAlert size={28} color={colors.error} />
+              <CircleAlert size={size.icon.lg} color={colors.error} />
               <View style={styles.headerText}>
                 <Text style={[styles.title, { color: colors.text }]}>Invalid Configuration</Text>
                 <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{result.error}</Text>
@@ -184,7 +184,7 @@ export function SetupImportScreen({ route, navigation }: any) {
       <ScrollView contentContainerStyle={styles.content}>
         <Card style={styles.headerCard}>
           <View style={styles.headerRow}>
-            <Import size={28} color={colors.primary} />
+            <Import size={size.icon.lg} color={colors.primary} />
             <View style={styles.headerText}>
               <Text style={[styles.title, { color: colors.text }]}>Import Configuration</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
@@ -232,7 +232,7 @@ export function SetupImportScreen({ route, navigation }: any) {
             title="Apply Configuration"
             onPress={handleApply}
             variant="primary"
-            icon={CircleCheck}
+            icon={CircleCheckBig}
             loading={applying}
             disabled={applying}
           />

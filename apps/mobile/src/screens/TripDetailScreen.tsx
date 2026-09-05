@@ -27,7 +27,7 @@ import { InteractiveLineChart } from "../components/features/inspector/Interacti
 import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
-import { HIT_SLOP_LG } from "../constants"
+import { size, HIT_SLOP_LG } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
@@ -217,7 +217,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         hitSlop={8}
         style={({ pressed }) => [styles.headerBtn, (pressed || deleting) && { opacity: colors.pressedOpacity }]}
       >
-        <Trash2 size={20} color={colors.error} />
+        <Trash2 size={size.icon.md} color={colors.error} />
       </Pressable>
     ),
     [handleDelete, deleting, colors.error, colors.pressedOpacity]
@@ -271,7 +271,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               hitSlop={HIT_SLOP_LG}
               style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
             >
-              <ChevronLeft size={24} color={prevTrip ? colors.primary : colors.textDisabled} />
+              <ChevronLeft size={size.icon.lg} color={prevTrip ? colors.primary : colors.textDisabled} />
             </Pressable>
             <View style={styles.headerTitleCenter}>
               <View style={styles.headerTitleLine}>
@@ -288,7 +288,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               hitSlop={HIT_SLOP_LG}
               style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
             >
-              <ChevronRight size={24} color={nextTrip ? colors.primary : colors.textDisabled} />
+              <ChevronRight size={size.icon.lg} color={nextTrip ? colors.primary : colors.textDisabled} />
             </Pressable>
           </View>
         </View>
@@ -385,7 +385,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               pressed && { opacity: 0.8 }
             ]}
           >
-            <Share size={16} color={colors.textOnPrimary} />
+            <Share size={size.icon.sm} color={colors.textOnPrimary} />
             <Text style={[styles.exportBtnText, { color: colors.textOnPrimary }]}>Export Trip</Text>
           </Pressable>
 
@@ -425,7 +425,7 @@ function StatCard({
 }) {
   return (
     <Card style={styles.statCard}>
-      <Icon size={16} color={colors.primary} />
+      <Icon size={size.icon.sm} color={colors.primary} />
       <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
     </Card>

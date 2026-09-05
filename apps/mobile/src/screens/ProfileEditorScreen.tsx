@@ -16,6 +16,7 @@ import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import {
+  size,
   MS_TO_KMH,
   PROFILE_CONDITIONS,
   SYNC_INTERVAL_PRESETS,
@@ -243,7 +244,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                   ]}
                   onPress={() => setConditionType(opt.type)}
                 >
-                  <Icon size={20} color={selected ? colors.primary : colors.textSecondary} />
+                  <Icon size={size.icon.md} color={selected ? colors.primary : colors.textSecondary} />
                   <Text style={[styles.conditionLabel, { color: selected ? colors.primary : colors.text }]}>
                     {opt.label}
                   </Text>
@@ -482,7 +483,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           onPress={handleSave}
           disabled={saving}
         >
-          <Check size={20} color={colors.textOnPrimary} />
+          <Check size={size.icon.md} color={colors.textOnPrimary} />
           <Text style={[styles.saveBtnText, { color: colors.textOnPrimary }]}>
             {saving ? "Saving..." : isEditing ? "Save Changes" : "Create Profile"}
           </Text>

@@ -39,13 +39,25 @@ describe("BottomTabBar", () => {
   it("thickens the active glyph and its label", () => {
     const { getByTestId, getByText } = render(<BottomTabBar currentRoute="Geofences" onNavigate={jest.fn()} />)
 
-    expect(getByTestId("icon-MapPinHouse").props.strokeWidth).toBe(2.25)
+    expect(getByTestId("icon-CircleDotDashed").props.strokeWidth).toBe(2.25)
     expect(getByTestId("icon-House").props.strokeWidth).toBeUndefined()
 
     const active = flatten(getByText("Geofences").props.style)
     expect(active.color).toBe(lightColors.primary)
     expect(active.fontFamily).toBe(`${fontFamily}-SemiBold`)
     expect(flatten(getByText("Dashboard").props.style).color).toBe(lightColors.textSecondary)
+  })
+
+  // History is the one route Lucide has no honest glyph for, so the bar draws its own.
+  // A Lucide export slipping back in here would silently undo that identity.
+  it("draws History with the app's own route mark and every other tab from Lucide", () => {
+    const { getByTestId } = render(<BottomTabBar currentRoute="Location History" onNavigate={jest.fn()} />)
+
+    expect(getByTestId("icon-RouteHistory")).toBeTruthy()
+    expect(getByTestId("icon-RouteHistory").props.strokeWidth).toBe(2.25)
+    expect(getByTestId("icon-House")).toBeTruthy()
+    expect(getByTestId("icon-CircleDotDashed")).toBeTruthy()
+    expect(getByTestId("icon-Settings")).toBeTruthy()
   })
 
   // The label grows with the font scale instead of being clipped to one line, so the bar

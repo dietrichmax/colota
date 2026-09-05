@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffe
 import { View, Text, StyleSheet, Pressable } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { fonts } from "../styles/typography"
-import { BarChart2 } from "lucide-react-native"
+import { ChartNoAxesColumn } from "lucide-react-native"
 import { Container } from "../components"
 import { Tab } from "../components/ui/Tab"
 import { useTheme } from "../hooks/useTheme"
@@ -31,6 +31,7 @@ import {
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
+import { size } from "../constants"
 
 type TabType = "map" | "trips" | "data"
 
@@ -90,7 +91,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         onPress={() => navigation.navigate("Location Summary")}
         style={({ pressed }) => [styles.headerBtn, pressed && { opacity: colors.pressedOpacity }]}
       >
-        <BarChart2 size={20} color={colors.text} />
+        <ChartNoAxesColumn size={size.icon.md} color={colors.text} />
       </Pressable>
     ),
     [navigation, colors]

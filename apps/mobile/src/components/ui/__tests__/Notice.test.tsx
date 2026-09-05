@@ -19,7 +19,7 @@ describe("Notice", () => {
     )
 
     expect(flatten(getByTestId("notice-rule").props.style).backgroundColor).toBe(lightColors.warning)
-    expect(getByTestId("icon-AlertTriangle").props.color).toBe(lightColors.warning)
+    expect(getByTestId("icon-TriangleAlert").props.color).toBe(lightColors.warning)
     expect(flatten(getByText("Queue is filling up").props.style).color).toBe(lightColors.text)
     expect(flatten(getByText("128 points are waiting").props.style).color).toBe(lightColors.textSecondary)
   })

@@ -8,7 +8,13 @@ import { Text, StyleSheet, View, Pressable, TextInput, AppState } from "react-na
 import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
-import { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS, OVERLAND_BATCH_MIN, OVERLAND_BATCH_MAX } from "../../../constants"
+import {
+  size,
+  SYNC_INTERVAL_PRESETS,
+  SYNC_INTERVAL_LABELS,
+  OVERLAND_BATCH_MIN,
+  OVERLAND_BATCH_MAX
+} from "../../../constants"
 import { SectionTitle, Card, Divider, NumericInput, SettingRow, Toggle } from "../../index"
 import { PresetOption } from "./PresetOption"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
@@ -166,9 +172,9 @@ export function SyncStrategySettings({
         >
           <Text style={[styles.advancedText, { color: colors.text }]}>Advanced Settings</Text>
           {showAdvanced ? (
-            <ChevronUp size={20} color={colors.textLight} />
+            <ChevronUp size={size.icon.md} color={colors.textLight} />
           ) : (
-            <ChevronDown size={20} color={colors.textLight} />
+            <ChevronDown size={size.icon.md} color={colors.textLight} />
           )}
         </Pressable>
 
@@ -177,7 +183,7 @@ export function SyncStrategySettings({
             {settings.syncPreset === "custom" && (
               <View style={[styles.customBanner, { backgroundColor: colors.info + "15" }]}>
                 <View style={styles.bannerRow}>
-                  <Lightbulb size={14} color={colors.info} />
+                  <Lightbulb size={size.icon.sm} color={colors.info} />
                   <Text style={[styles.customBannerText, { color: colors.info }]}>Using custom configuration</Text>
                 </View>
               </View>

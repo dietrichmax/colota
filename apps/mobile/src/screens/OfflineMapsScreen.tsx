@@ -12,10 +12,10 @@ import { showAlert, showConfirm } from "../services/modalService"
 import { ScreenProps } from "../types/global"
 import { useCoords } from "../contexts/TrackingProvider"
 import { fonts } from "../styles/typography"
-import { X, CheckCircle, RefreshCw, AlertTriangle } from "lucide-react-native"
+import { X, CircleCheckBig, RefreshCw, TriangleAlert } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
-import { DEFAULT_MAP_ZOOM, WORLD_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, MAP_STYLE_URL_LIGHT } from "../constants"
+import { size, DEFAULT_MAP_ZOOM, WORLD_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, MAP_STYLE_URL_LIGHT } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
 import { logger } from "../utils/logger"
@@ -699,12 +699,12 @@ export function OfflineMapsScreen({}: ScreenProps) {
               disabled={item.isActive}
             >
               <View style={styles.nameRow}>
-                {item.isComplete && <CheckCircle size={14} color={colors.success} />}
+                {item.isComplete && <CircleCheckBig size={size.icon.sm} color={colors.success} />}
                 {item.isActive && <ActivityIndicator size="small" color={colors.primary} />}
                 <Text style={[styles.areaName, { color: colors.text }]}>{item.name}</Text>
                 {isStale && (
                   <View testID={`stale-indicator-${item.name}`}>
-                    <AlertTriangle size={13} color={colors.warning} />
+                    <TriangleAlert size={size.icon.sm} color={colors.warning} />
                   </View>
                 )}
               </View>
@@ -750,7 +750,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                     {isRefreshing ? (
                       <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
-                      <RefreshCw size={14} color={colors.primary} />
+                      <RefreshCw size={size.icon.sm} color={colors.primary} />
                     )}
                   </Pressable>
                 )}
@@ -767,7 +767,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                   {isDeleting ? (
                     <ActivityIndicator size="small" color={colors.error} />
                   ) : (
-                    <X size={16} color={colors.error} />
+                    <X size={size.icon.sm} color={colors.error} />
                   )}
                 </Pressable>
               </View>

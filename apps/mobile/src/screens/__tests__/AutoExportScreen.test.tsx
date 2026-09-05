@@ -198,9 +198,9 @@ jest.mock("lucide-react-native", () => {
   const stub = (name: any) => () => R.createElement(RN.Text, null, name)
   return {
     FolderOpen: stub("FolderOpen"),
-    CheckCircle: stub("CheckCircle"),
+    CircleCheckBig: stub("CircleCheckBig"),
     Share2: stub("Share2"),
-    AlertTriangle: stub("AlertTriangle")
+    TriangleAlert: stub("TriangleAlert")
   }
 })
 

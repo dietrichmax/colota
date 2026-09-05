@@ -14,6 +14,7 @@ import { EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
 import { logger } from "../utils/logger"
 import { showAlert } from "../services/modalService"
 import { ScreenProps } from "../types/global"
+import { size } from "../constants"
 
 export function ExportLocationsScreen({}: ScreenProps) {
   const { colors } = useTheme()
@@ -82,7 +83,7 @@ export function ExportLocationsScreen({}: ScreenProps) {
         {totalLocations === 0 ? (
           <Card style={styles.emptyCard}>
             <View style={styles.emptyState}>
-              <MapPinOff size={40} color={colors.textLight} />
+              <MapPinOff size={size.icon.lg} color={colors.textLight} />
               <Text style={[styles.emptyTitle, { color: colors.text }]}>No Locations</Text>
               <Text style={[styles.emptySubtitle, { color: colors.textLight }]}>
                 Start tracking to record locations that can be exported.

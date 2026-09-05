@@ -25,6 +25,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import { formatDistance, formatDuration, startOfDaySec } from "../utils/geo"
 import { fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
+import { size } from "../constants"
 
 type Period = "week" | "month" | "30days"
 
@@ -159,7 +160,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
             <Text style={[styles.dayLabel, { color: colors.text }]}>{formatDayLabel(item.day)}</Text>
             <View style={styles.dayHeaderRight}>
               <Text style={[styles.dayDistance, { color: colors.primary }]}>{formatDistance(item.distanceMeters)}</Text>
-              <ChevronRight size={14} color={colors.textDisabled} />
+              <ChevronRight size={size.icon.sm} color={colors.textDisabled} />
             </View>
           </View>
           <View style={styles.dayStats}>
@@ -181,7 +182,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
     () => (
       <View style={styles.summaryGrid}>
         <Card style={styles.summaryCard}>
-          <Route size={16} color={colors.primary} />
+          <Route size={size.icon.sm} color={colors.primary} />
           <AnimatedNumber
             value={summary.totalDistance}
             format={(n) => formatDistance(n)}
@@ -191,7 +192,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
         </Card>
 
         <Card style={styles.summaryCard}>
-          <MapPin size={16} color={colors.primary} />
+          <MapPin size={size.icon.sm} color={colors.primary} />
           <AnimatedNumber
             value={summary.totalTrips}
             format={(n) => String(n)}
@@ -201,7 +202,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
         </Card>
 
         <Card style={styles.summaryCard}>
-          <Calendar size={16} color={colors.primary} />
+          <Calendar size={size.icon.sm} color={colors.primary} />
           <AnimatedNumber
             value={summary.activeDays}
             format={(n) => String(n)}
@@ -211,7 +212,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
         </Card>
 
         <Card style={styles.summaryCard}>
-          <TrendingUp size={16} color={colors.primary} />
+          <TrendingUp size={size.icon.sm} color={colors.primary} />
           <AnimatedNumber
             value={summary.avgDistance}
             format={(n) => formatDistance(n)}

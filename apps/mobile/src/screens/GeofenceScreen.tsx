@@ -14,6 +14,7 @@ import { fonts } from "../styles/typography"
 import { ChevronRight, Wifi, PersonStanding, MapPinHouse, Share2 } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
 import {
+  size,
   DEFAULT_MAP_ZOOM,
   WORLD_MAP_ZOOM,
   GEOFENCE_ZOOM_PADDING,
@@ -251,7 +252,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
             hitSlop={HIT_SLOP_MD}
             style={({ pressed }) => [styles.zoomBtn, pressed && { opacity: colors.pressedOpacity }]}
           >
-            <MapPinHouse size={20} color={colors.textSecondary} />
+            <MapPinHouse size={size.icon.md} color={colors.textSecondary} />
           </Pressable>
           <Pressable
             testID={`edit-geofence-${item.id}`}
@@ -264,11 +265,11 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
                 <Text style={[styles.radius, { color: colors.textSecondary }]}>
                   {formatShortDistance(item.radius)} radius
                 </Text>
-                {item.pauseOnWifi && <Wifi size={12} color={colors.textSecondary} />}
-                {item.pauseOnMotionless && <PersonStanding size={12} color={colors.textSecondary} />}
+                {item.pauseOnWifi && <Wifi size={size.icon.sm} color={colors.textSecondary} />}
+                {item.pauseOnMotionless && <PersonStanding size={size.icon.sm} color={colors.textSecondary} />}
               </View>
             </View>
-            <ChevronRight size={20} color={colors.textSecondary} />
+            <ChevronRight size={size.icon.md} color={colors.textSecondary} />
           </Pressable>
         </View>
       </Card>
@@ -368,7 +369,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
                   hitSlop={HIT_SLOP_MD}
                   style={({ pressed }) => [styles.shareBtn, pressed && { opacity: colors.pressedOpacity }]}
                 >
-                  <Share2 size={20} color={colors.textSecondary} />
+                  <Share2 size={size.icon.md} color={colors.textSecondary} />
                 </Pressable>
               </View>
             )}

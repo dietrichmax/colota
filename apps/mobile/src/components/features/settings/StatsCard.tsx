@@ -4,13 +4,13 @@
  */
 import React from "react"
 import { View, Text, StyleSheet, Pressable } from "react-native"
-import { AlertTriangle, ChevronRight } from "lucide-react-native"
+import { TriangleAlert, ChevronRight } from "lucide-react-native"
 import { useTracking } from "../../../contexts/TrackingProvider"
 import { useTheme } from "../../../hooks/useTheme"
 import { getQueueColor } from "../../../utils/queueStatus"
 import { formatCount } from "../../../utils/format"
 import { fonts } from "../../../styles/typography"
-import { HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../constants"
+import { size, HIGH_QUEUE_THRESHOLD, CRITICAL_QUEUE_THRESHOLD } from "../../../constants"
 
 interface StatsCardProps {
   queueCount: number
@@ -148,7 +148,7 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
             onPress={onManageClick}
           >
             <View style={styles.warningContent}>
-              <AlertTriangle size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
+              <TriangleAlert size={size.icon.md} color={warningLevel === "critical" ? colors.error : colors.warning} />
               <View style={styles.warningText}>
                 <Text
                   style={[
@@ -163,7 +163,7 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
                 <Text style={[styles.warningHint, { color: colors.textSecondary }]}>Tap to manage data</Text>
               </View>
             </View>
-            <ChevronRight size={20} color={warningLevel === "critical" ? colors.error : colors.warning} />
+            <ChevronRight size={size.icon.md} color={warningLevel === "critical" ? colors.error : colors.warning} />
           </Pressable>
         </View>
       )}

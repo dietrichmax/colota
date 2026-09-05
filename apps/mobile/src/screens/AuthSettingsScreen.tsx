@@ -15,6 +15,7 @@ import { SectionTitle, Toast, Container, Card, Divider, ChipGroup } from "../com
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
+import { size } from "../constants"
 
 const AUTH_TYPE_OPTIONS: { value: AuthType; label: string }[] = [
   { value: "none", label: "None" },
@@ -352,7 +353,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
                   Authenticate to servers that require a client certificate
                 </Text>
               </View>
-              <ChevronRight size={20} color={colors.textLight} />
+              <ChevronRight size={size.icon.md} color={colors.textLight} />
             </Pressable>
           </Card>
         </View>

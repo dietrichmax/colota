@@ -3,16 +3,16 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { Info, AlertCircle, AlertTriangle, CheckCircle } from "lucide-react-native"
+import { Info, CircleAlert, TriangleAlert, CircleCheckBig } from "lucide-react-native"
 import type { ThemeColors } from "../../types/global"
 
 export type SemanticVariant = "info" | "success" | "warning" | "error"
 
 export const SEMANTIC_ICONS = {
   info: Info,
-  success: CheckCircle,
-  warning: AlertTriangle,
-  error: AlertCircle
+  success: CircleCheckBig,
+  warning: TriangleAlert,
+  error: CircleAlert
 } as const
 
 export function semanticColor(variant: SemanticVariant, colors: ThemeColors): string {

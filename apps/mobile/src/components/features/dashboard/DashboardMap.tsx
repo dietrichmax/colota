@@ -5,13 +5,13 @@
 
 import React, { useRef, useEffect, useMemo, useCallback, useState } from "react"
 import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image, Pressable } from "react-native"
-import { AlertTriangle } from "lucide-react-native"
+import { TriangleAlert } from "lucide-react-native"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
 import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
+import { size, MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { TrackToggleButton } from "../map/TrackToggleButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
@@ -184,7 +184,7 @@ export function DashboardMap({
           ]}
         >
           <View style={[styles.iconCircle, { backgroundColor: colors.warning + "20" }]}>
-            <AlertTriangle size={32} color={colors.warning} />
+            <TriangleAlert size={size.icon.lg} color={colors.warning} />
           </View>
           <Text style={[styles.stateTitle, { color: colors.warning }]}>Location Services Off</Text>
           <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
