@@ -3,6 +3,11 @@
   "postUpdateOptions": ["npmDedupe"],
   "packageRules": [
     {
+      "description": "clsx and prism-react-renderer are dependencies of @docusaurus/theme-classic and theme-common, so they stay in the tree whether or not apps/docs declares them. Both are at their latest release and neither is deprecated, so the abandonment flag reports release inactivity rather than risk.",
+      "matchPackageNames": ["clsx", "prism-react-renderer"],
+      "abandonmentThreshold": null
+    },
+    {
       "description": "Bump react-native, its @react-native/* tooling and the community CLI in one PR. The CLI versions independently but is locked to RN releases and drives the bundle task. Wildcards so new RN packages are covered without editing this list.",
       "groupName": "react-native monorepo",
       "matchPackageNames": [
