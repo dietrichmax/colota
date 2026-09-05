@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react"
 import { Text, StyleSheet, View } from "react-native"
-import { CircleCheckBig } from "lucide-react-native"
+import { CircleAlert, CircleCheckBig } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { isEndpointAllowed } from "../../../utils/settingsValidation"
@@ -204,7 +204,7 @@ export function ConnectionSettings({
                       styles.protocolBadge,
                       {
                         backgroundColor: endpointInput.startsWith("https://")
-                          ? colors.success + "20"
+                          ? colors.well
                           : colors.warning + "20"
                       }
                     ]}
@@ -213,7 +213,7 @@ export function ConnectionSettings({
                       style={[
                         styles.protocolText,
                         {
-                          color: endpointInput.startsWith("https://") ? colors.success : colors.warning
+                          color: endpointInput.startsWith("https://") ? colors.textSecondary : colors.warning
                         }
                       ]}
                     >
@@ -256,17 +256,13 @@ export function ConnectionSettings({
             />
 
             {testResponse && (
-              <View
-                style={[
-                  styles.responseBox,
-                  {
-                    borderColor: testError ? colors.error : colors.success,
-                    backgroundColor: (testError ? colors.error : colors.success) + "15"
-                  }
-                ]}
-              >
-                {!testError && <CircleCheckBig size={size.icon.sm} color={colors.success} />}
-                <Text style={[styles.responseText, { color: testError ? colors.error : colors.success }]}>
+              <View style={styles.responseRow}>
+                {testError ? (
+                  <CircleAlert size={size.icon.sm} color={colors.error} />
+                ) : (
+                  <CircleCheckBig size={size.icon.sm} color={colors.success} />
+                )}
+                <Text style={[styles.responseText, { color: testError ? colors.error : colors.textSecondary }]}>
                   {testResponse}
                 </Text>
               </View>
@@ -316,18 +312,17 @@ const styles = StyleSheet.create({
   testButton: {
     marginTop: space.md
   },
-  responseBox: {
+  responseRow: {
     marginTop: space.md,
-    padding: 14,
-    borderWidth: 1.5,
-    borderRadius: radius.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: space.sm
   },
   responseText: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold
+    flexShrink: 1,
+    fontSize: fontSizes.description,
+    textAlign: "center",
+    ...fonts.regular
   },
 })

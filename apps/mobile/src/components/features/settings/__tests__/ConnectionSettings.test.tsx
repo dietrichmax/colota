@@ -49,15 +49,6 @@ jest.mock("../../../ui/SettingRow", () => {
   }
 })
 
-jest.mock("lucide-react-native", () => {
-  const R = require("react")
-  const { View } = require("react-native")
-  return {
-    CircleCheckBig: () => R.createElement(View, null),
-    ChevronRight: () => R.createElement(View, null)
-  }
-})
-
 const mockGetStats = jest.fn().mockResolvedValue({ queued: 0, sent: 0, total: 0, today: 0, databaseSizeMB: 0 })
 const mockManualFlush = jest.fn().mockResolvedValue(undefined)
 const mockClearQueue = jest.fn().mockResolvedValue(5)

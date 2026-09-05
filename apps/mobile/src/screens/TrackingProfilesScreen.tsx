@@ -126,8 +126,9 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
               <View style={styles.nameRow}>
                 <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
                 {isActive && (
-                  <View style={[styles.activeBadge, { backgroundColor: colors.success + "20" }]}>
-                    <Text style={[styles.activeBadgeText, { color: colors.success }]}>Active</Text>
+                  <View style={[styles.activeBadge, { backgroundColor: colors.border }]}>
+                    <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
+                    <Text style={[styles.activeBadgeText, { color: colors.textSecondary }]}>Active</Text>
                   </View>
                 )}
                 <View style={[styles.priorityBadge, { backgroundColor: colors.border }]}>
@@ -242,7 +243,15 @@ const styles = StyleSheet.create({
   info: { flex: 1, marginEnd: space.md },
   nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm, marginBottom: 2 },
   name: { fontSize: fontSizes.input, ...fonts.semiBold },
-  activeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.xs },
+  activeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.xs
+  },
+  activeDot: { width: 6, height: 6, borderRadius: 3 },
   activeBadgeText: { fontSize: fontSizes.micro, ...fonts.semiBold },
   priorityBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.xs },
   priorityText: { fontSize: fontSizes.micro, ...fonts.semiBold },

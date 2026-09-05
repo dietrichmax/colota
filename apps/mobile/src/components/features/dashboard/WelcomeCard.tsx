@@ -35,14 +35,7 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
   const content = (
     <View style={styles.checklistItem}>
       <View
-        style={[
-          styles.checkCircle,
-          // eslint-disable-next-line react-native/no-inline-styles
-          {
-            borderColor: completed ? colors.success : colors.border,
-            backgroundColor: completed ? colors.success + "20" : "transparent"
-          }
-        ]}
+        style={[styles.checkCircle, { borderColor: colors.border }]}
       >
         {completed && <Check size={size.icon.sm} color={colors.success} />}
       </View>
