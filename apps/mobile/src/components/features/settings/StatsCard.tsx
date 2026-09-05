@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   warningText: {
     flex: 1,
-    marginLeft: space.md
+    marginStart: space.md
   },
   warningTitle: {
     fontSize: fontSizes.body,

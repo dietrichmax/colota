@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: radius.xs,
-    marginRight: space.md
+    marginEnd: space.md
   },
   host: {
     flex: 1,
@@ -126,6 +126,6 @@ const styles = StyleSheet.create({
   status: {
     fontSize: fontSizes.caption,
     ...fonts.medium,
-    marginRight: space.sm
+    marginEnd: space.sm
   }
 })

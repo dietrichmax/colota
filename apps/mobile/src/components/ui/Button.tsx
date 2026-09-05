@@ -149,6 +149,6 @@ const styles = StyleSheet.create({
     ...fonts.semiBold
   },
   icon: {
-    marginRight: 0
+    marginEnd: 0
   }
 })

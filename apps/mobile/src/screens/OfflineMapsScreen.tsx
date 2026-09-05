@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
   errorText: { fontSize: fontSizes.description, ...fonts.regular, marginTop: 10 },
   card: { marginBottom: space.md },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  info: { flex: 1, marginRight: space.md },
+  info: { flex: 1, marginEnd: space.md },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
   areaName: { fontSize: fontSizes.input, ...fonts.semiBold },
   areaSub: { fontSize: fontSizes.caption },
@@ -960,7 +960,6 @@ const styles = StyleSheet.create({
     padding: space.md,
     borderRadius: radius.md,
     elevation: 8,
-    shadowOpacity: 0.2,
     zIndex: 5,
     alignItems: "center"
   },

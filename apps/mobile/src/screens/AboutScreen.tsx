@@ -243,13 +243,13 @@ export function AboutScreen({}: ScreenProps) {
         {/* Header */}
         <View style={styles.header}>
           <Pressable
-            style={({ pressed }) => [styles.appIconContainer, pressed && { opacity: 0.8 }]}
+            style={({ pressed }) => [styles.appIconContainer, pressed && { opacity: colors.pressedOpacity }]}
             onPress={handleVersionTap}
           >
             <Image source={icon} style={styles.appIcon} resizeMode="contain" />
           </Pressable>
           <Text style={[styles.title, { color: colors.text }]}>Colota</Text>
-          <Pressable onPress={handleVersionTap} style={({ pressed }) => pressed && { opacity: 0.8 }}>
+          <Pressable onPress={handleVersionTap} style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}>
             <Text style={[styles.version, { color: colors.textSecondary }]}>Version {buildConfig.VERSION_NAME}</Text>
           </Pressable>
 

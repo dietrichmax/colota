@@ -268,17 +268,13 @@ const styles = StyleSheet.create({
   attributionPopup: {
     maxWidth: 320,
     width: "100%",
-    paddingLeft: space.lg,
-    paddingRight: 36,
+    paddingStart: space.lg,
+    paddingEnd: 36,
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 1,
     gap: space.sm,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6
+    elevation: 8
   },
   attributionPopupText: {
     fontSize: fontSizes.description

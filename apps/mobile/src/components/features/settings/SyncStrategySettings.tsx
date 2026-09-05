@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
   },
   nestedSetting: {
     marginTop: space.md,
-    paddingLeft: space.lg,
+    paddingStart: space.lg,
     borderLeftWidth: 3
   },
   customSyncInput: {

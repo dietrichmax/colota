@@ -70,11 +70,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10
   },
   icon: {
-    marginRight: space.lg
+    marginEnd: space.lg
   },
   content: {
     flex: 1,
-    paddingRight: space.sm
+    paddingEnd: space.sm
   },
   label: {
     fontSize: fontSizes.label,

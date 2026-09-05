@@ -383,7 +383,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
             style={({ pressed }) => [
               styles.exportBtn,
               { backgroundColor: colors.primary, borderRadius: colors.borderRadius },
-              pressed && { opacity: 0.8 }
+              pressed && { opacity: colors.pressedOpacity }
             ]}
           >
             <Share size={size.icon.sm} color={colors.textOnPrimary} />
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: space.xs,
-    paddingLeft: 40
+    paddingStart: 40
   },
   chartLabel: {
     fontSize: fontSizes.micro,

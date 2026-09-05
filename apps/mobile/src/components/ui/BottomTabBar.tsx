@@ -56,7 +56,7 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
         return (
           <Pressable
             key={tab.name}
-            style={({ pressed }) => [styles.tab, pressed && { opacity: 0.6 }]}
+            style={({ pressed }) => [styles.tab, pressed && { opacity: colors.pressedOpacity }]}
             onPress={() => onNavigate(tab.route)}
           >
             <tab.icon size={size.icon.md} color={color} />
@@ -74,9 +74,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingTop: space.sm,
     paddingBottom: 6,
-    elevation: 0,
-    shadowOpacity: 0,
-    shadowRadius: 0
+    elevation: 0
   },
   tab: {
     flex: 1,

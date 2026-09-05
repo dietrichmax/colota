@@ -458,10 +458,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
     zIndex: 10
   },
   popupHeader: {
@@ -525,10 +521,6 @@ const styles = StyleSheet.create({
     padding: space.sm,
     gap: space.xs,
     elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
     zIndex: 10
   },
   legendItem: {

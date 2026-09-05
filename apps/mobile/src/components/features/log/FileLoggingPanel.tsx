@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     flex: 1,
-    paddingRight: space.md
+    paddingEnd: space.md
   },
   section: {
     paddingVertical: space.xs

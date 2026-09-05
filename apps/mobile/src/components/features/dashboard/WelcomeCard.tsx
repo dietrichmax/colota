@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: space.md
+    marginEnd: space.md
   },
   checklistLabel: {
     fontSize: fontSizes.input,

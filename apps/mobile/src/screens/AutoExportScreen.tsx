@@ -633,7 +633,7 @@ export function AutoExportScreen(_props: ScreenProps) {
                       </Text>
                     </View>
                     <Pressable
-                      style={({ pressed }) => [styles.shareButton, pressed && { opacity: 0.5 }]}
+                      style={({ pressed }) => [styles.shareButton, pressed && { opacity: colors.pressedOpacity }]}
                       onPress={() => handleShareFile(file)}
                     >
                       <Share2 size={size.icon.md} color={colors.primary} />
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
     ...fonts.semiBold,
     flexShrink: 1,
     textAlign: "right",
-    marginLeft: space.md
+    marginStart: space.md
   },
   errorRow: {
     flexDirection: "row",
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
   },
   modeContent: {
     flex: 1,
-    marginRight: space.lg
+    marginEnd: space.lg
   },
   fileRow: {
     flexDirection: "row",
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
   },
   fileInfo: {
     flex: 1,
-    marginRight: space.md
+    marginEnd: space.md
   },
   fileName: {
     fontSize: fontSizes.description,

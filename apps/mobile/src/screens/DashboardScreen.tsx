@@ -302,8 +302,7 @@ const styles = StyleSheet.create({
   controlButton: {
     borderRadius: 28,
     elevation: 4,
-    minWidth: 200,
-    shadowColor: "#000"
+    minWidth: 200
   },
   content: {
     flex: 1,

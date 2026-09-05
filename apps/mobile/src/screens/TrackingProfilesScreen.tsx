@@ -247,9 +247,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: space.md
+    marginEnd: space.md
   },
-  info: { flex: 1, marginRight: space.md },
+  info: { flex: 1, marginEnd: space.md },
   nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm, marginBottom: 2 },
   name: { fontSize: fontSizes.input, ...fonts.semiBold },
   activeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.xs },
