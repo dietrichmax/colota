@@ -257,7 +257,8 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           <SettingRow
             label="WiFi/Ethernet pause"
             hint="Stop GPS on unmetered networks"
-            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+            style={styles.toggleRow}
+            disabled={!pauseTracking}
           >
             <Toggle
               accessibilityLabel="WiFi/Ethernet pause"
@@ -271,7 +272,8 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           <SettingRow
             label="Motionless pause"
             hint="Stop GPS after no motion for a set time"
-            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+            style={styles.toggleRow}
+            disabled={!pauseTracking}
           >
             <Toggle
               accessibilityLabel="Motionless pause"
@@ -304,7 +306,8 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           <SettingRow
             label="Stationary heartbeat"
             hint="Periodic point at the zone center while paused"
-            style={[styles.toggleRow, !pauseTracking && styles.disabledRow]}
+            style={styles.toggleRow}
+            disabled={!pauseTracking}
           >
             <Toggle
               accessibilityLabel="Stationary heartbeat"
@@ -372,7 +375,6 @@ const styles = StyleSheet.create({
   nameInput: { flex: 1 },
   numInput: { width: 80, textAlign: "center" },
   toggleRow: { paddingVertical: 10 },
-  disabledRow: { opacity: 0.45 },
   nestedSetting: {
     marginStart: space.lg,
     paddingStart: space.md,

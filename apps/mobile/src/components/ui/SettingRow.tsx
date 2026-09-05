@@ -14,15 +14,20 @@ interface SettingRowProps {
   hint?: string
   children: React.ReactNode
   style?: StyleProp<ViewStyle>
+  disabled?: boolean
 }
 
-export function SettingRow({ label, hint, children, style }: SettingRowProps) {
+export function SettingRow({ label, hint, children, style, disabled = false }: SettingRowProps) {
   const { colors } = useTheme()
   return (
     <View style={[styles.settingRow, style]}>
       <View style={styles.settingContent}>
-        <Text style={[styles.settingLabel, { color: colors.text }]}>{label}</Text>
-        {hint && <Text style={[styles.settingHint, { color: colors.textSecondary }]}>{hint}</Text>}
+        <Text style={[styles.settingLabel, { color: disabled ? colors.textDisabled : colors.text }]}>{label}</Text>
+        {hint && (
+          <Text style={[styles.settingHint, { color: disabled ? colors.textDisabled : colors.textSecondary }]}>
+            {hint}
+          </Text>
+        )}
       </View>
       {children}
     </View>
