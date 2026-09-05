@@ -11,7 +11,7 @@ import type { NativeSyntheticEvent } from "react-native"
 import { Compass, Info, X } from "lucide-react-native"
 import { useIsFocused } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
-import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_DARK, MAP_STYLE_URL_LIGHT, space } from "../../../constants"
+import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_DARK, MAP_STYLE_URL_LIGHT, size, space } from "../../../constants"
 import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
@@ -196,7 +196,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
       {showCompass && (
         <MapActionButton onPress={handleCompassPress} style={[mapActionStyles.right, styles.compassPosition]}>
           <View style={{ transform: [{ rotate: `${-heading}deg` }] }}>
-            <Compass size={20} color={colors.textLight} />
+            <Compass size={size.icon.md} color={colors.textLight} />
           </View>
         </MapActionButton>
       )}
@@ -210,7 +210,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
             accessibilityRole="button"
             accessibilityLabel="Show map attribution"
           >
-            <Info size={20} color={colors.textLight} />
+            <Info size={size.icon.md} color={colors.textLight} />
           </MapActionButton>
 
           <Modal
@@ -232,7 +232,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
                   accessibilityLabel="Close"
                   style={({ pressed }) => [styles.attributionClose, pressed && { opacity: colors.pressedOpacity }]}
                 >
-                  <X size={20} color={colors.textLight} />
+                  <X size={size.icon.md} color={colors.textLight} />
                 </Pressable>
                 {attributionLinks.map((link) => (
                   <Pressable

@@ -5,7 +5,7 @@
 
 import React, { useRef, useEffect, useMemo, useCallback, useState } from "react"
 import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image, Pressable } from "react-native"
-import { AlertTriangle } from "lucide-react-native"
+import { TriangleAlert } from "lucide-react-native"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
@@ -184,7 +184,7 @@ export function DashboardMap({
           ]}
         >
           <View style={[styles.iconCircle, { backgroundColor: colors.warning + "20" }]}>
-            <AlertTriangle size={32} color={colors.warning} />
+            <TriangleAlert size={32} color={colors.warning} />
           </View>
           <Text style={[styles.stateTitle, { color: colors.warning }]}>Location Services Off</Text>
           <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>

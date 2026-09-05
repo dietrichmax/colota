@@ -21,7 +21,7 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
-import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, space } from "../../../constants"
+import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, size, space } from "../../../constants"
 import { radius } from "@colota/shared"
 
 const HAS_NOTE = ["!=", ["get", "note"], ""]
@@ -321,7 +321,7 @@ export function TrackMap({
                   accessibilityRole="button"
                   accessibilityLabel="Start a new trip at this point"
                 >
-                  <Split size={16} color={colors.text} />
+                  <Split size={size.icon.sm} color={colors.text} />
                 </Pressable>
               )}
               {onPointDelete && popup.id >= 0 && (
@@ -333,7 +333,7 @@ export function TrackMap({
                   accessibilityRole="button"
                   accessibilityLabel="Delete this point"
                 >
-                  <Trash2 size={16} color={colors.error} />
+                  <Trash2 size={size.icon.sm} color={colors.error} />
                 </Pressable>
               )}
               <Pressable
@@ -344,7 +344,7 @@ export function TrackMap({
                 hitSlop={HIT_SLOP_MD}
                 style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
               >
-                <X size={16} color={colors.textSecondary} />
+                <X size={size.icon.sm} color={colors.textSecondary} />
               </Pressable>
             </View>
           </View>
@@ -386,7 +386,7 @@ export function TrackMap({
                       hitSlop={HIT_SLOP_MD}
                       style={({ pressed }) => [styles.noteSaveBtn, pressed && { opacity: colors.pressedOpacity }]}
                     >
-                      <Check size={18} color={colors.primary} />
+                      <Check size={size.icon.md} color={colors.primary} />
                     </Pressable>
                   )}
                 </View>

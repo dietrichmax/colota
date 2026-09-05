@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
-import { Info, AlertCircle, AlertTriangle, CheckCircle } from "lucide-react-native"
+import { Info, CircleAlert, TriangleAlert, CircleCheckBig } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { radius } from "@colota/shared"
@@ -14,9 +14,9 @@ import { space } from "../../constants"
 
 const VARIANT_ICONS = {
   info: Info,
-  error: AlertCircle,
-  warning: AlertTriangle,
-  success: CheckCircle
+  error: CircleAlert,
+  warning: TriangleAlert,
+  success: CircleCheckBig
 } as const
 
 export function AppModal() {

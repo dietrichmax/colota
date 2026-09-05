@@ -10,7 +10,7 @@ import { Settings, ThemeColors } from "../../../types/global"
 import { useTracking } from "../../../contexts/TrackingProvider"
 import { fontSizes, fonts } from "../../../styles/typography"
 import { Card } from "../../ui/Card"
-import { space } from "../../../constants"
+import { size, space } from "../../../constants"
 import { radius } from "@colota/shared"
 
 interface WelcomeCardProps {
@@ -44,7 +44,7 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
           }
         ]}
       >
-        {completed && <Check size={13} color={colors.success} />}
+        {completed && <Check size={size.icon.sm} color={colors.success} />}
       </View>
       <Text
         style={[
@@ -55,7 +55,7 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
       >
         {label}
       </Text>
-      {onPress && !completed && <ChevronRight size={18} color={colors.textLight} />}
+      {onPress && !completed && <ChevronRight size={size.icon.md} color={colors.textLight} />}
     </View>
   )
 

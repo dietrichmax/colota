@@ -42,7 +42,7 @@ jest.mock("lucide-react-native", () => {
   const R = require("react")
   const { View } = require("react-native")
   return {
-    CheckCircle: () => R.createElement(View, null),
+    CircleCheckBig: () => R.createElement(View, null),
     ChevronRight: () => R.createElement(View, null)
   }
 })

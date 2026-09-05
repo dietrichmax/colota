@@ -9,7 +9,7 @@ import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Container, Card, Button, SectionTitle } from "../components"
 import { fontSizes, fonts } from "../styles/typography"
-import { CircleAlert, CircleCheck, Import } from "lucide-react-native"
+import { CircleAlert, CircleCheckBig, Import } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
@@ -227,7 +227,7 @@ export function SetupImportScreen({ route, navigation }: any) {
             title="Apply Configuration"
             onPress={handleApply}
             variant="primary"
-            icon={CircleCheck}
+            icon={CircleCheckBig}
             loading={applying}
             disabled={applying}
           />

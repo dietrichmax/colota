@@ -18,7 +18,7 @@ import {
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { type LucideIcon } from "lucide-react-native"
-import { space } from "../../constants"
+import { size, space } from "../../constants"
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 
@@ -123,7 +123,7 @@ export function Button({
           {loading ? (
             <ActivityIndicator size="small" color={v.text} style={styles.icon} />
           ) : Icon ? (
-            <Icon size={18} color={v.text} style={styles.icon} />
+            <Icon size={size.icon.md} color={v.text} style={styles.icon} />
           ) : null}
           <Text style={[styles.text, { color: v.text }]}>{title}</Text>
         </View>

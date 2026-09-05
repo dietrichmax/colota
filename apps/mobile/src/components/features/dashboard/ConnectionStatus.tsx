@@ -12,7 +12,7 @@ import { useTracking } from "../../../contexts/TrackingProvider"
 import { ServerStatus, ConnectionStatusProps } from "../../../types/global"
 import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { space } from "../../../constants"
+import { size, space } from "../../../constants"
 import { radius } from "@colota/shared"
 
 export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps) {
@@ -98,7 +98,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
         {isOffline ? "Offline Mode" : displayUrl || "Server"}
       </Text>
       {!isOffline && <Text style={[styles.status, { color: config.color }]}>{config.label}</Text>}
-      <ChevronRight size={16} color={colors.textLight} />
+      <ChevronRight size={size.icon.sm} color={colors.textLight} />
     </Pressable>
   )
 }

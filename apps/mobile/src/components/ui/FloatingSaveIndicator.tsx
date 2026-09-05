@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, Animated } from "react-native"
 import { Check } from "lucide-react-native"
 import { SpinningLoader } from "./SpinningLoader"
 import { fontSizes, fonts } from "../../styles/typography"
-import { space } from "../../constants"
+import { size, space } from "../../constants"
 
 interface Props {
   saving: boolean
@@ -59,9 +59,9 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
         ]}
       >
         {saving ? (
-          <SpinningLoader size={16} color={colors.text} />
+          <SpinningLoader size={size.icon.sm} color={colors.text} />
         ) : !hasMessage ? (
-          <Check size={16} color={colors.text} />
+          <Check size={size.icon.sm} color={colors.text} />
         ) : null}
         <Text style={[styles.text, { color: colors.text }]}>{displayText}</Text>
       </View>
