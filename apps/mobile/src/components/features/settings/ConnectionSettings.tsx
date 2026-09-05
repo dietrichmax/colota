@@ -16,7 +16,7 @@ import { SettingRow } from "../../ui/SettingRow"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { TEST_RESULT_DISPLAY_MS, size, space } from "../../../constants"
 import { logger } from "../../../utils/logger"
-import { Button, Card, Divider, FieldMessage, SectionTitle, TextField, Toggle, ListItem } from "../../index"
+import { Button, Card, Divider, FieldMessage, TextField, Toggle, ListItem } from "../../index"
 import { showChoice } from "../../../services/modalService"
 import { radius } from "@colota/shared"
 
@@ -182,7 +182,6 @@ export function ConnectionSettings({
 
   return (
     <View style={styles.section}>
-      <SectionTitle>Connection</SectionTitle>
       <Card>
         <SettingRow label="Offline mode" hint="Save locally, no network sync">
           <Toggle
