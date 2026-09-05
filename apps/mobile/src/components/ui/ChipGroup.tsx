@@ -29,6 +29,9 @@ export function ChipGroup<T extends string>({ options, selected, onSelect, disab
       {options.map(({ value, label, testID }) => {
         const isSelected = selected === value
         const isDisabled = disabled?.has(value) ?? false
+        // Disabled recolours the content rather than fading the chip, so the fill still reads
+        // as a chip and the selected one still says which it is.
+        const content = isDisabled ? colors.textDisabled : isSelected ? colors.onPrimaryContainer : colors.text
         return (
           <Pressable
             key={value}
@@ -39,23 +42,12 @@ export function ChipGroup<T extends string>({ options, selected, onSelect, disab
             style={({ pressed }) => [
               styles.chip,
               { backgroundColor: isSelected ? colors.primaryContainer : colors.well },
-              isDisabled && { opacity: 0.4 },
               pressed && !isDisabled && { opacity: colors.pressedOpacity }
             ]}
             onPress={() => onSelect(value)}
           >
-            {isSelected ? (
-              <Check size={size.icon.sm} color={colors.onPrimaryContainer} strokeWidth={2} />
-            ) : null}
-            <Text
-              style={[
-                styles.label,
-                isSelected && styles.labelSelected,
-                { color: isSelected ? colors.onPrimaryContainer : colors.text }
-              ]}
-            >
-              {label}
-            </Text>
+            {isSelected ? <Check size={size.icon.sm} color={content} strokeWidth={2} /> : null}
+            <Text style={[styles.label, isSelected && styles.labelSelected, { color: content }]}>{label}</Text>
           </Pressable>
         )
       })}
