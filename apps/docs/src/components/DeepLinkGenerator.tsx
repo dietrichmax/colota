@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react"
-import { renderSVG } from "uqr"
+import { encode } from "uqr"
 import styles from "./DeepLinkGenerator.module.css"
 
 interface KeyValue {
@@ -244,7 +244,17 @@ export default function DeepLinkGenerator() {
 
   const isQrTooLarge = deepLink.length > QR_MAX_SCANNABLE_LENGTH
 
-  const qrSvg = useMemo(() => (deepLink ? renderSVG(deepLink, { ecc: "L", border: 2, pixelSize: 1 }) : ""), [deepLink])
+  const qr = useMemo(() => {
+    if (!deepLink) return null
+    const { size, data } = encode(deepLink, { ecc: "L", border: 2 })
+    let d = ""
+    for (let row = 0; row < size; row++) {
+      for (let col = 0; col < size; col++) {
+        if (data[row][col]) d += `M${col},${row}h1v1h-1z`
+      }
+    }
+    return { size, d }
+  }, [deepLink])
 
   const [copyFeedback, setCopyFeedback] = useState(false)
   const [downloadFeedback, setDownloadFeedback] = useState(false)
@@ -936,12 +946,17 @@ export default function DeepLinkGenerator() {
             </button>
           </div>
 
-          {qrSvg && (
+          {qr && (
             <>
               <div className={styles.sectionTitle} style={{ marginTop: "1rem" }}>
                 QR Code
               </div>
-              <div className={styles.qrContainer} dangerouslySetInnerHTML={{ __html: qrSvg }} />
+              <div className={styles.qrContainer}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox={`0 0 ${qr.size} ${qr.size}`}>
+                  <rect fill="white" width={qr.size} height={qr.size} />
+                  <path fill="black" d={qr.d} />
+                </svg>
+              </div>
               {isQrTooLarge && (
                 <div className={styles.qrWarning}>
                   <strong>This QR code may not be readable on all phones.</strong>
