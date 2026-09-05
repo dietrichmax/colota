@@ -760,8 +760,6 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: fontSizes.caption,
     ...fonts.semiBold,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
     marginTop: space.md,
     marginBottom: space.sm
   },

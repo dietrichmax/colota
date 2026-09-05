@@ -157,7 +157,7 @@ describe("ConnectionSettings", () => {
     it("shows Authentication & Headers link", () => {
       const { getByText } = renderComponent()
 
-      expect(getByText("Authentication & Headers")).toBeTruthy()
+      expect(getByText("Authentication & headers")).toBeTruthy()
     })
 
     it("shows HTTPS badge for https endpoint", () => {
@@ -189,7 +189,7 @@ describe("ConnectionSettings", () => {
     it("hides Authentication & Headers link", () => {
       const { queryByText } = renderComponent({ isOfflineMode: true })
 
-      expect(queryByText("Authentication & Headers")).toBeNull()
+      expect(queryByText("Authentication & headers")).toBeNull()
     })
   })
 

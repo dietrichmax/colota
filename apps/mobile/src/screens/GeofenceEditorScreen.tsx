@@ -376,7 +376,13 @@ const styles = StyleSheet.create({
   numInput: { width: 80, textAlign: "center" },
   toggleRow: { paddingVertical: 10 },
   disabledRow: { opacity: 0.45 },
-  nestedSetting: { marginLeft: space.lg, paddingLeft: space.md, borderLeftWidth: 3, marginTop: space.xs, marginBottom: space.xs },
+  nestedSetting: {
+    marginLeft: space.lg,
+    paddingLeft: space.md,
+    borderLeftWidth: 3,
+    marginTop: space.xs,
+    marginBottom: space.xs
+  },
   combinedNote: {
     marginTop: space.sm,
     paddingTop: space.md,

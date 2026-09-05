@@ -61,7 +61,11 @@ export function PresetOption({ preset, isSelected, isOfflineMode, onSelect }: Pr
                 {config.label}
               </Text>
               {showRecommendedBadge && (
-                <Badge icon={<Check size={size.icon.sm} color={colors.success} />} label="Recommended" color={colors.success} />
+                <Badge
+                  icon={<Check size={size.icon.sm} color={colors.success} />}
+                  label="Recommended"
+                  color={colors.success}
+                />
               )}
               {showWarningBadge && (
                 <Badge

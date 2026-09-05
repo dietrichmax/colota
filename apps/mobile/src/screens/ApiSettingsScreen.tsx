@@ -474,7 +474,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
         {/* Template Selector */}
         <View style={styles.section}>
-          <SectionTitle>BACKEND TEMPLATE</SectionTitle>
+          <SectionTitle>Backend template</SectionTitle>
           <ChipGroup
             options={TEMPLATE_OPTIONS}
             selected={localTemplate}
@@ -492,7 +492,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Overland template is POST-only by spec; no need to expose the choice */}
         {localTemplate !== "overland" && (
           <View style={styles.section}>
-            <SectionTitle>HTTP METHOD</SectionTitle>
+            <SectionTitle>HTTP method</SectionTitle>
             <ChipGroup
               options={HTTP_METHOD_OPTIONS}
               selected={localHttpMethod}
@@ -510,7 +510,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Dawarich Mode Selector (Dawarich template only) */}
         {showDawarichChip && (
           <View style={styles.section}>
-            <SectionTitle>DAWARICH MODE</SectionTitle>
+            <SectionTitle>Dawarich mode</SectionTitle>
             <ChipGroup
               options={DAWARICH_MODE_OPTIONS}
               selected={localDawarichMode}
@@ -539,13 +539,13 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Field Mapping Section */}
         <View style={styles.fieldsSection}>
           <View style={styles.sectionHeader}>
-            <SectionTitle>FIELD MAPPINGS</SectionTitle>
+            <SectionTitle>Field mappings</SectionTitle>
             {hasModifications && (
               <Pressable
                 onPress={handleResetAll}
                 style={({ pressed }) => [styles.resetAllButton, pressed && { opacity: colors.pressedOpacity }]}
               >
-                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>RESET ALL</Text>
+                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>Reset all</Text>
               </Pressable>
             )}
           </View>
@@ -623,7 +623,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Custom Fields Section */}
         <View style={styles.fieldsSection}>
           <View style={styles.sectionHeader}>
-            <SectionTitle>CUSTOM FIELDS</SectionTitle>
+            <SectionTitle>Custom fields</SectionTitle>
           </View>
 
           <View style={[styles.fieldsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>

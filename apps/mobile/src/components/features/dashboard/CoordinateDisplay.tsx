@@ -38,7 +38,7 @@ export function CoordinateDisplay() {
 
   return (
     <>
-      <SectionTitle>CURRENT LOCATION DATA</SectionTitle>
+      <SectionTitle>Current location data</SectionTitle>
       <View style={styles.container}>
         {/* First Row: Latitude and Longitude */}
         <View style={styles.row}>
@@ -67,9 +67,7 @@ const styles = StyleSheet.create({
   coordLabel: {
     fontSize: fontSizes.micro,
     ...fonts.semiBold,
-    marginBottom: space.xs,
-    letterSpacing: 0.5,
-    textTransform: "uppercase"
+    marginBottom: space.xs
   },
   coordValue: {
     fontSize: fontSizes.input,

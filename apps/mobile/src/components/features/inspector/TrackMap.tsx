@@ -486,7 +486,6 @@ const styles = StyleSheet.create({
   },
   popupLabel: {
     fontSize: fontSizes.small,
-    textTransform: "uppercase",
     fontWeight: "600"
   },
   popupValue: {

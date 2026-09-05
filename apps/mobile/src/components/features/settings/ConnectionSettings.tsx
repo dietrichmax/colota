@@ -64,7 +64,7 @@ export function ConnectionSettings({
             const hasEndpoint = !!settings.endpoint
             const buttons = [
               ...(hasEndpoint ? [{ text: "Sync first", style: "primary" as const }] : []),
-              { text: "Keep in Queue", style: "secondary" as const },
+              { text: "Keep in queue", style: "secondary" as const },
               { text: "Cancel", style: "secondary" as const }
             ]
             const choice = await showChoice({
@@ -292,7 +292,7 @@ export function ConnectionSettings({
               onPress={() => navigation.navigate("Auth Settings")}
             >
               <View style={styles.linkContent}>
-                <Text style={[styles.linkLabel, { color: colors.text }]}>Authentication & Headers</Text>
+                <Text style={[styles.linkLabel, { color: colors.text }]}>Authentication & headers</Text>
                 <Text style={[styles.linkSub, { color: colors.textSecondary }]}>
                   Basic auth, bearer tokens, custom headers
                 </Text>

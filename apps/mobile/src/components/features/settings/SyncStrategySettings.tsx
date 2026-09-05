@@ -8,7 +8,14 @@ import { Text, StyleSheet, Switch, View, Pressable, TextInput, AppState } from "
 import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
-import { OVERLAND_BATCH_MAX, OVERLAND_BATCH_MIN, SYNC_INTERVAL_LABELS, SYNC_INTERVAL_PRESETS, size, space } from "../../../constants"
+import {
+  OVERLAND_BATCH_MAX,
+  OVERLAND_BATCH_MIN,
+  SYNC_INTERVAL_LABELS,
+  SYNC_INTERVAL_PRESETS,
+  size,
+  space
+} from "../../../constants"
 import { SectionTitle, Card, Divider, NumericInput, SettingRow } from "../../index"
 import { PresetOption } from "./PresetOption"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
@@ -520,8 +527,6 @@ const styles = StyleSheet.create({
   paramGroupTitle: {
     fontSize: fontSizes.description,
     ...fonts.bold,
-    textTransform: "uppercase",
-    letterSpacing: 1,
     marginBottom: space.lg,
     opacity: 0.6
   },

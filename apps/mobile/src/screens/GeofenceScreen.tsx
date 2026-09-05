@@ -13,7 +13,16 @@ import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { fontSizes, fonts } from "../styles/typography"
 import { ChevronRight, Wifi, PersonStanding, MapPinHouse, Share2 } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
-import { DEFAULT_MAP_ZOOM, GEOFENCE_ZOOM_PADDING, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM, WORLD_MAP_ZOOM, size, space } from "../constants"
+import {
+  DEFAULT_MAP_ZOOM,
+  GEOFENCE_ZOOM_PADDING,
+  HIT_SLOP_MD,
+  MAP_ANIMATION_DURATION_MS,
+  MAX_MAP_ZOOM,
+  WORLD_MAP_ZOOM,
+  size,
+  space
+} from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
 import { buildGeofencesGeoJSON } from "../components/features/map/mapUtils"
@@ -401,9 +410,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: fontSizes.caption,
     ...fonts.semiBold,
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5
+    marginBottom: 6
   },
   input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: fontSizes.input },
   inputCentered: {

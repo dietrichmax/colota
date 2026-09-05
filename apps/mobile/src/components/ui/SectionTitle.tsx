@@ -28,9 +28,7 @@ export function SectionTitle({ children, style, color }: SectionTitleProps) {
 const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: fontSizes.small,
-    textTransform: "uppercase",
     ...fonts.bold,
-    letterSpacing: 1.2,
     marginBottom: space.md,
     paddingHorizontal: space.xs
   }

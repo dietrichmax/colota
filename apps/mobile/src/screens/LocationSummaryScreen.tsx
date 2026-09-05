@@ -297,8 +297,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: fontSizes.micro,
-    ...fonts.semiBold,
-    textTransform: "uppercase"
+    ...fonts.semiBold
   },
   dayCard: {
     marginBottom: space.sm,

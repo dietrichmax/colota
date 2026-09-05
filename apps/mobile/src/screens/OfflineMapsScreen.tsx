@@ -15,7 +15,14 @@ import { fontSizes, fonts } from "../styles/typography"
 import { X, CircleCheckBig, RefreshCw, TriangleAlert } from "lucide-react-native"
 import { Container, SectionTitle, Card } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
-import { DEFAULT_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, MAP_STYLE_URL_LIGHT, WORLD_MAP_ZOOM, size, space } from "../constants"
+import {
+  DEFAULT_MAP_ZOOM,
+  MAP_ANIMATION_DURATION_MS,
+  MAP_STYLE_URL_LIGHT,
+  WORLD_MAP_ZOOM,
+  size,
+  space
+} from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
 import { logger } from "../utils/logger"
@@ -892,9 +899,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: fontSizes.caption,
     ...fonts.semiBold,
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5
+    marginBottom: 6
   },
   input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: fontSizes.input },
   sizeEstimate: { fontSize: fontSizes.caption, ...fonts.regular, marginBottom: space.md },
@@ -922,7 +927,13 @@ const styles = StyleSheet.create({
   areaName: { fontSize: fontSizes.input, ...fonts.semiBold },
   areaSub: { fontSize: fontSizes.caption },
   areaSubDate: { fontSize: fontSizes.small, ...fonts.regular, marginTop: 2, opacity: 0.7 },
-  savedAreasMeta: { fontSize: fontSizes.caption, ...fonts.regular, marginTop: 2, marginBottom: space.md, paddingHorizontal: space.xs },
+  savedAreasMeta: {
+    fontSize: fontSizes.caption,
+    ...fonts.regular,
+    marginTop: 2,
+    marginBottom: space.md,
+    paddingHorizontal: space.xs
+  },
   actionBtns: { flexDirection: "row", gap: 6, alignItems: "center" },
   actionBtn: {
     width: 32,

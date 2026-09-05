@@ -174,8 +174,6 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: fontSizes.caption,
     ...fonts.semiBold,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
     marginBottom: space.sm
   },
   statValue: {

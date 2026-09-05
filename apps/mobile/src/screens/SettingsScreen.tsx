@@ -127,7 +127,7 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-tracking-sync"
               icon={Navigation}
-              label="Tracking & Sync"
+              label="Tracking & sync"
               sub={syncSummary}
               onPress={() => navigation.navigate("Tracking & Sync")}
             />
@@ -205,7 +205,7 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-backup-restore"
               icon={ShieldCheck}
-              label="Backup & Restore"
+              label="Backup & restore"
               sub="Encrypted backup of all your data"
               onPress={() => navigation.navigate("Backup & Restore")}
             />

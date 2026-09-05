@@ -26,7 +26,7 @@ export const DatabaseStatistics = React.memo(function DatabaseStatistics({ stats
     <>
       {/* Database Statistics */}
       <View style={styles.metricsSection}>
-        <SectionTitle>DATABASE STATISTICS</SectionTitle>
+        <SectionTitle>Database statistics</SectionTitle>
         {!isOfflineMode ? (
           <View style={styles.statsGrid}>
             <Card variant="elevated" style={styles.statCard}>
@@ -87,9 +87,7 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: fontSizes.micro,
     ...fonts.semiBold,
-    marginBottom: 6,
-    letterSpacing: 0.5,
-    textTransform: "uppercase"
+    marginBottom: 6
   },
   statValue: {
     fontSize: fontSizes.statValue,

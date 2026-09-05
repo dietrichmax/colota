@@ -156,7 +156,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Authentication & Headers</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Authentication & headers</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Secure your endpoint connection</Text>
         </View>
 

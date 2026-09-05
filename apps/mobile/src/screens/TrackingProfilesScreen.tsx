@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm, marginBottom: 2 },
   name: { fontSize: fontSizes.input, ...fonts.semiBold },
   activeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.xs },
-  activeBadgeText: { fontSize: fontSizes.micro, ...fonts.semiBold, textTransform: "uppercase" },
+  activeBadgeText: { fontSize: fontSizes.micro, ...fonts.semiBold },
   priorityBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.xs },
   priorityText: { fontSize: fontSizes.micro, ...fonts.semiBold },
   condition: { fontSize: fontSizes.description, ...fonts.medium, marginBottom: 2 },

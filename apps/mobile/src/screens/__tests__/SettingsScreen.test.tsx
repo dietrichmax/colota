@@ -172,7 +172,7 @@ describe("SettingsScreen", () => {
   it("navigates to Tracking & Sync", () => {
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    fireEvent.press(getByText("Tracking & Sync"))
+    fireEvent.press(getByText("Tracking & sync"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Tracking & Sync")
   })
