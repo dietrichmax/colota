@@ -329,46 +329,24 @@ export function SyncStrategySettings({
                       {settings.syncCondition === "wifi_ssid" && "Upload only on a specific Wi-Fi network"}
                       {settings.syncCondition === "vpn" && "Upload only when VPN is active"}
                     </Text>
-                    <View style={styles.syncConditionChips}>
-                      {(
-                        [
-                          { value: "any", label: "Any" },
-                          { value: "wifi_any", label: "Wi-Fi" },
-                          { value: "wifi_ssid", label: "SSID" },
-                          { value: "vpn", label: "VPN" }
-                        ] as { value: SyncCondition; label: string }[]
-                      ).map((option) => (
-                        <Pressable
-                          key={option.value}
-                          onPress={() => {
-                            const next = {
-                              ...settings,
-                              syncCondition: option.value,
-                              syncPreset: "custom" as const
-                            }
-                            onSettingsChange(next)
-                            onImmediateSave(next)
-                          }}
-                          style={[
-                            styles.syncConditionChip,
-                            {
-                              backgroundColor:
-                                settings.syncCondition === option.value ? colors.primary + "20" : colors.background,
-                              borderColor: settings.syncCondition === option.value ? colors.primary : colors.border
-                            }
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.syncConditionChipText,
-                              { color: settings.syncCondition === option.value ? colors.primary : colors.textSecondary }
-                            ]}
-                          >
-                            {option.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
+                    <ChipGroup
+                      options={[
+                        { value: "any", label: "Any" },
+                        { value: "wifi_any", label: "Wi-Fi" },
+                        { value: "wifi_ssid", label: "SSID" },
+                        { value: "vpn", label: "VPN" }
+                      ]}
+                      selected={settings.syncCondition}
+                      onSelect={(value) => {
+                        const next = {
+                          ...settings,
+                          syncCondition: value as SyncCondition,
+                          syncPreset: "custom" as const
+                        }
+                        onSettingsChange(next)
+                        onImmediateSave(next)
+                      }}
+                    />
                     {settings.syncCondition === "wifi_ssid" && (
                       <View style={styles.ssidRow}>
                         <TextInput
@@ -518,20 +496,6 @@ const styles = StyleSheet.create({
   },
   customSyncInput: {
     marginTop: space.md
-  },
-  syncConditionChips: {
-    flexDirection: "row",
-    gap: 6
-  },
-  syncConditionChip: {
-    paddingHorizontal: space.md,
-    paddingVertical: 6,
-    borderRadius: radius.md,
-    borderWidth: 1
-  },
-  syncConditionChipText: {
-    ...fonts.medium,
-    fontSize: fontSizes.caption
   },
   ssidRow: {
     flexDirection: "row",
