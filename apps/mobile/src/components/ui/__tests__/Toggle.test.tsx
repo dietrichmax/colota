@@ -9,14 +9,16 @@ jest.mock("../../../hooks/useTheme", () => ({
 import { Toggle } from "../Toggle"
 
 describe("Toggle", () => {
-  it("paints the on state from the primary hue, which is what the twelve call sites each built by hand", () => {
+  it("puts the thumb on the container, not on its own colour at half alpha", () => {
     const { getByTestId } = render(
       <Toggle testID="t" value={true} onValueChange={jest.fn()} accessibilityLabel="Offline mode" />
     )
 
-    // RN resolves trackColor and thumbColor into these before they reach the platform.
+    // RN resolves trackColor and thumbColor into these before they reach the platform. The track
+    // was the accent at 50 percent, which left the thumb 2.4:1 against its own bar; the container
+    // takes that to 4.1 in light and 6.6 in dark.
     const el = getByTestId("t")
-    expect(el.props.onTintColor).toBe(lightColors.primary + "80")
+    expect(el.props.onTintColor).toBe(lightColors.primaryContainer)
     expect(el.props.thumbTintColor).toBe(lightColors.primary)
   })
 
@@ -42,7 +44,7 @@ describe("Toggle", () => {
     )
 
     const el = getByTestId("t")
-    expect(el.props.onTintColor).toBe(lightColors.primary + "80")
+    expect(el.props.onTintColor).toBe(lightColors.primaryContainer)
     expect(el.props.thumbTintColor).toBe(lightColors.primary)
   })
 
