@@ -78,7 +78,7 @@ function stackedPairs(file: string, source: string): Pair[] {
   let prev: { end: number; indent: string; labelled: boolean } | null = null
 
   lines.forEach((line, index) => {
-    const opening = /^(\s*)<TextField\b/.exec(line)
+    const opening = /^(\s*)<\w*(?:TextField|Field)\b/.exec(line)
     if (!opening) {
       if (
         prev &&

@@ -9,7 +9,7 @@ import { TriangleAlert } from "lucide-react-native"
 import { LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fontSizes, fonts, type } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM, space } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: space.lg
   },
-  stateTitle: { fontSize: fontSizes.heading, ...fonts.bold, textAlign: "center" },
+  stateTitle: { ...type.heading, textAlign: "center" },
   stateTitleSpaced: { marginTop: 20 },
   stateSubtext: {
     fontSize: fontSizes.body,

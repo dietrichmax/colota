@@ -8,7 +8,7 @@ import { Text, StyleSheet, View, Pressable } from "react-native"
 import { Check, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import { useTracking } from "../../../contexts/TrackingProvider"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fontSizes, fonts, type } from "../../../styles/typography"
 import { Button } from "../../ui/Button"
 import { Card } from "../../ui/Card"
 import { size, space } from "../../../constants"
@@ -125,8 +125,7 @@ const styles = StyleSheet.create({
     marginBottom: space.lg
   },
   title: {
-    fontSize: fontSizes.cardTitle,
-    ...fonts.bold,
+    ...type.title,
     marginBottom: space.xs
   },
   subtitle: {

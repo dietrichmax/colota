@@ -9,7 +9,7 @@ import { useTracking } from "../../../contexts/TrackingProvider"
 import { useTheme } from "../../../hooks/useTheme"
 import { getQueueColor } from "../../../utils/queueStatus"
 import { formatCount } from "../../../utils/format"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fontSizes, fonts, type } from "../../../styles/typography"
 import { CRITICAL_QUEUE_THRESHOLD, HIGH_QUEUE_THRESHOLD, size, space } from "../../../constants"
 import { radius } from "@colota/shared"
 
@@ -154,8 +154,7 @@ const styles = StyleSheet.create({
     marginBottom: space.sm
   },
   statValue: {
-    fontSize: fontSizes.statValue,
-    ...fonts.bold,
+    ...type.figure,
     letterSpacing: -0.5
   },
   unit: {

@@ -17,7 +17,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Share2, Search, X, ArrowDown } from "lucide-react-native"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, type } from "../styles/typography"
 import { Container, EmptyState, SectionTitle } from "../components"
 import { Tab } from "../components/ui/Tab"
 import { FileLoggingPanel } from "../components/features/log/FileLoggingPanel"
@@ -369,10 +369,7 @@ const styles = StyleSheet.create({
     ...fonts.semiBold
   },
   logText: {
-    ...fonts.regular,
-    fontSize: fontSizes.caption,
-    fontFamily: "monospace",
-    lineHeight: 18
+    ...type.mono
   },
   centered: {
     flex: 1,

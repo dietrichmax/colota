@@ -19,7 +19,7 @@ import {
   type LucideIcon
 } from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, type } from "../styles/typography"
 import { Button } from "../components/ui/Button"
 import { Card } from "../components/ui/Card"
 import { Container } from "../components/ui/Container"
@@ -465,8 +465,7 @@ const styles = StyleSheet.create({
     borderRadius: 6
   },
   title: {
-    fontSize: fontSizes.cardTitle,
-    ...fonts.bold
+    ...type.title
   },
   subtitle: {
     fontSize: fontSizes.description,

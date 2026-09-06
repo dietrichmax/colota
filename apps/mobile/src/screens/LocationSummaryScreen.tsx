@@ -23,7 +23,7 @@ import { useTheme } from "../hooks/useTheme"
 import { DailyStat } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { formatDistance, formatDuration, startOfDaySec } from "../utils/geo"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, type } from "../styles/typography"
 import { logger } from "../utils/logger"
 import { size, space } from "../constants"
 
@@ -292,8 +292,7 @@ const styles = StyleSheet.create({
     gap: 2
   },
   summaryValue: {
-    fontSize: fontSizes.heading,
-    ...fonts.bold
+    ...type.heading
   },
   summaryLabel: {
     fontSize: fontSizes.micro,

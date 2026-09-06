@@ -8,7 +8,7 @@ import { Text, StyleSheet, View, ScrollView, Image } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { Copy, Check } from "lucide-react-native"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, type } from "../styles/typography"
 import { Button, Card, Container, Divider, SectionTitle, Footer } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
@@ -249,8 +249,7 @@ const styles = StyleSheet.create({
     height: 80
   },
   title: {
-    fontSize: fontSizes.screenTitle,
-    ...fonts.bold,
+    ...type.display,
     marginBottom: space.xs
   },
   version: {
