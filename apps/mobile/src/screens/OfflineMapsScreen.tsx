@@ -156,7 +156,11 @@ const DownloadForm = memo(
                   onPress={onCancelDownload}
                   hitSlop={HIT_SLOP_MD}
                   accessibilityRole="button"
-                  style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: colors.pressedOpacity }]}
+                  style={({ pressed }) => [
+                    styles.cancelBtn,
+                    { backgroundColor: colors.error + "15" },
+                    pressed && { opacity: colors.pressedOpacity }
+                  ]}
                 >
                   <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel download</Text>
                 </Pressable>
@@ -716,7 +720,11 @@ export function OfflineMapsScreen({}: ScreenProps) {
                 disabled={isCanceling}
                 hitSlop={HIT_SLOP_MD}
                 accessibilityRole="button"
-                style={({ pressed }) => [styles.cancelAreaBtn, pressed && { opacity: colors.pressedOpacity }]}
+                style={({ pressed }) => [
+                  styles.cancelAreaBtn,
+                  { backgroundColor: colors.error + "15" },
+                  pressed && { opacity: colors.pressedOpacity }
+                ]}
               >
                 {isCanceling ? (
                   <ActivityIndicator size="small" color={colors.error} />

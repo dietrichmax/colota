@@ -331,10 +331,11 @@ describe("OfflineMapsScreen", () => {
     })
   })
 
-  it("says a cancel is destructive in error text, with no shape around it", async () => {
+  it("gives a cancel a tint to sit in, and no stroke", async () => {
     // It and the per-area cancel were the only two buttons in the app drawing a border, at two
-    // different widths. The plan has two destructive shapes, a filled danger for a confirm step
-    // and a danger ghost for everything else; a cancel is the second.
+    // different widths. Taking the stroke off left the words alone on the ground, so the tint
+    // carries the shape instead: a destructive action that is not a confirm step still has to
+    // read as a control.
     mockShowConfirm.mockResolvedValue(true)
     mockCreateOfflinePack.mockReturnValue(new Promise(() => {}))
     const { findByText, getByTestId, getByPlaceholderText } = renderScreen()
@@ -345,7 +346,7 @@ describe("OfflineMapsScreen", () => {
 
     const style = StyleSheet.flatten(getByTestId("cancel-download-btn").props.style)
     expect(style.borderWidth).toBeUndefined()
-    expect(style.backgroundColor).toBeUndefined()
+    expect(style.backgroundColor).toBe("#ef444415")
   })
 
   it("gives the cancel a touch target, since 44 is under the Android minimum", async () => {
