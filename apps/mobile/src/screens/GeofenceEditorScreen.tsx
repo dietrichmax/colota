@@ -246,7 +246,6 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
               testID="pause-tracking-toggle"
               value={pauseTracking}
               onValueChange={setPauseTracking}
-              tone="warning"
             />
           </SettingRow>
 

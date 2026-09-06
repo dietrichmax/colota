@@ -33,15 +33,17 @@ describe("Toggle", () => {
     expect(el.props.tintColor).toBeUndefined()
   })
 
-  it("takes the warning hue only when asked", () => {
-    // The geofence pause toggle is the one caller that does; every other keeps primary.
+  it("gives every switch the same hue, because being on is not a warning", () => {
+    // The geofence pause toggle used to paint warning. It was the only one, it was not applied
+    // to the three sibling toggles that also stop GPS, and orange reads as a fault rather than
+    // as the setting working.
     const { getByTestId } = render(
-      <Toggle testID="t" value={true} onValueChange={jest.fn()} accessibilityLabel="Pause" tone="warning" />
+      <Toggle testID="t" value={true} onValueChange={jest.fn()} accessibilityLabel="Pause" />
     )
 
     const el = getByTestId("t")
-    expect(el.props.onTintColor).toBe(lightColors.warning + "80")
-    expect(el.props.thumbTintColor).toBe(lightColors.warning)
+    expect(el.props.onTintColor).toBe(lightColors.primary + "80")
+    expect(el.props.thumbTintColor).toBe(lightColors.primary)
   })
 
   it("reports the change so a caller can persist it", () => {

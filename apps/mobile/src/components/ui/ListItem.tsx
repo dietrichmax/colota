@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     minHeight: 56,
+    paddingHorizontal: space.lg,
     paddingVertical: 10,
     // The row sits inset inside a padded Card, so a square state layer floats as a block.
     borderRadius: radius.sm,
