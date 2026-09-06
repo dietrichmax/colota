@@ -27,10 +27,9 @@ import {
   Info,
   Heart,
   Clock,
-  Share2
-} from "lucide-react-native"
+  Share2, Sparkles, MessageCircle, Star } from "lucide-react-native"
 import { logger } from "../utils/logger"
-import { space } from "../constants"
+import { space, RELEASES_URL, ISSUES_URL, PLAY_STORE_MARKET_URL, PLAY_STORE_WEB_URL } from "../constants"
 
 type Props = RootScreenProps<"Settings">
 
@@ -99,6 +98,15 @@ export function SettingsScreen({ navigation }: Props) {
     navigation.navigate("Data Management")
   }, [navigation])
 
+  const handleRateApp = useCallback(async () => {
+    // The Play app resolves market:// straight to the listing; a device without it falls back.
+    try {
+      await Linking.openURL(PLAY_STORE_MARKET_URL)
+    } catch {
+      Linking.openURL(PLAY_STORE_WEB_URL)
+    }
+  }, [])
+
   return (
     <Container>
       <ScrollView
@@ -115,7 +123,7 @@ export function SettingsScreen({ navigation }: Props) {
         />
 
         <View style={styles.section}>
-          <Card>
+          <Card flush>
             <ListItem
               testID="nav-connection"
               icon={Cloud}
@@ -123,7 +131,7 @@ export function SettingsScreen({ navigation }: Props) {
               sub={connectionSummary}
               onPress={() => navigation.navigate("Connection")}
             />
-            <Divider />
+            <Divider tight inset />
             <ListItem
               testID="nav-tracking-sync"
               icon={Navigation}
@@ -133,7 +141,7 @@ export function SettingsScreen({ navigation }: Props) {
             />
             {!settings.isOfflineMode && (
               <>
-                <Divider />
+                <Divider tight inset />
                 <ListItem
                   testID="nav-api-config"
                   icon={Braces}
@@ -143,7 +151,7 @@ export function SettingsScreen({ navigation }: Props) {
                 />
               </>
             )}
-            <Divider />
+            <Divider tight inset />
             <ListItem
               testID="nav-tracking-profiles"
               icon={UserRoundPen}
@@ -156,7 +164,7 @@ export function SettingsScreen({ navigation }: Props) {
 
         <View style={styles.section}>
           <SectionTitle>Display</SectionTitle>
-          <Card>
+          <Card flush>
             <ListItem
               testID="nav-appearance"
               icon={Palette}
@@ -169,7 +177,7 @@ export function SettingsScreen({ navigation }: Props) {
 
         <View style={styles.section}>
           <SectionTitle>Data</SectionTitle>
-          <Card>
+          <Card flush>
             <ListItem
               testID="nav-data-management"
               icon={Database}
@@ -177,7 +185,7 @@ export function SettingsScreen({ navigation }: Props) {
               sub="View queue and clear data"
               onPress={() => navigation.navigate("Data Management")}
             />
-            <Divider />
+            <Divider tight inset />
             <ListItem
               testID="nav-import-locations"
               icon={Download}
@@ -185,7 +193,7 @@ export function SettingsScreen({ navigation }: Props) {
               sub="Merge locations from a GeoJSON or Google Timeline file"
               onPress={() => navigation.navigate("Import Locations")}
             />
-            <Divider />
+            <Divider tight inset />
             <ListItem
               testID="nav-export-locations"
               icon={Upload}
@@ -193,7 +201,7 @@ export function SettingsScreen({ navigation }: Props) {
               sub="Export locations as CSV, GeoJSON, GPX or KML"
               onPress={() => navigation.navigate("Export Locations")}
             />
-            <Divider />
+            <Divider tight inset />
             <ListItem
               testID="nav-auto-export"
               icon={Clock}
@@ -201,7 +209,7 @@ export function SettingsScreen({ navigation }: Props) {
               sub="Schedule daily, weekly or monthly exports"
               onPress={() => navigation.navigate("Auto-Export")}
             />
-            <Divider />
+            <Divider tight inset />
             <ListItem
               testID="nav-backup-restore"
               icon={ShieldCheck}
@@ -209,7 +217,7 @@ export function SettingsScreen({ navigation }: Props) {
               sub="Encrypted backup of all your data"
               onPress={() => navigation.navigate("Backup & Restore")}
             />
-            <Divider />
+            <Divider tight inset />
             <ListItem
               testID="nav-share-setup"
               icon={Share2}
@@ -217,7 +225,7 @@ export function SettingsScreen({ navigation }: Props) {
               sub="Share your settings, geofences and profiles as a link"
               onPress={() => navigation.navigate("Share Setup")}
             />
-            <Divider />
+            <Divider tight inset />
             <ListItem
               testID="nav-offline-maps"
               icon={Map}
@@ -225,7 +233,7 @@ export function SettingsScreen({ navigation }: Props) {
               sub="Download map tiles for use without internet"
               onPress={() => navigation.navigate("Offline Maps")}
             />
-            <Divider />
+            <Divider tight inset />
             <ListItem
               testID="nav-logging"
               icon={ScrollText}
@@ -237,20 +245,59 @@ export function SettingsScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.section}>
-          <Card>
+          <SectionTitle>Colota</SectionTitle>
+          <Card flush>
+            <ListItem
+              testID="nav-whats-new"
+              icon={Sparkles}
+              label="What's new"
+              sub="Release notes for every version"
+              trailingIcon={ExternalLink}
+              accessibilityRole="link"
+              onPress={() => Linking.openURL(RELEASES_URL)}
+            />
+            <Divider tight inset />
+            <ListItem
+              testID="nav-feedback"
+              icon={MessageCircle}
+              label="Feedback & help"
+              sub="Report a bug or ask a question"
+              trailingIcon={ExternalLink}
+              accessibilityRole="link"
+              onPress={() => Linking.openURL(ISSUES_URL)}
+            />
+            <Divider tight inset />
+            <ListItem
+              testID="nav-rate"
+              icon={Star}
+              label="Rate the app"
+              sub="Leave a review on Google Play"
+              trailingIcon={ExternalLink}
+              accessibilityRole="link"
+              onPress={handleRateApp}
+            />
+            <Divider tight inset />
+            <ListItem
+              testID="nav-legal"
+              icon={ScrollText}
+              label="Legal"
+              sub="Privacy policy, license and attribution"
+              onPress={() => navigation.navigate("Legal")}
+            />
+            <Divider tight inset />
             <ListItem
               testID="nav-about"
               icon={Info}
-              label="About Colota"
-              sub="Version, licenses and links"
+              label="About"
+              sub="Version and build details"
               onPress={() => navigation.navigate("About Colota")}
             />
-            <Divider />
+            <Divider tight inset />
             <ListItem
               testID="nav-support"
               icon={Heart}
-              label="Support"
-              sub="Support development of the app"
+              label="Support development"
+              sub="Help keep the app free and open"
               trailingIcon={ExternalLink}
               accessibilityRole="link"
               accessibilityHint="Opens external support page"
@@ -258,6 +305,7 @@ export function SettingsScreen({ navigation }: Props) {
             />
           </Card>
         </View>
+
       </ScrollView>
     </Container>
   )

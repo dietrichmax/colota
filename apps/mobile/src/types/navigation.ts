@@ -28,6 +28,7 @@ export type RootStackParamList = {
   "Tracking Profiles": undefined
   "Profile Editor": { profileId?: number } | undefined
   "About Colota": undefined
+  Legal: undefined
   "Setup Import": undefined
   "Share Setup": undefined
   "Trip Detail": { trip: Trip; trips: Trip[] }

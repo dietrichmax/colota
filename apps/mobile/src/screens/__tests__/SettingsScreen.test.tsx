@@ -1,5 +1,6 @@
 import React from "react"
-import { render, fireEvent } from "@testing-library/react-native"
+import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { Linking } from "react-native"
 import { DEFAULT_SETTINGS, Settings } from "../../types/global"
 
 // --- Mocks ---
@@ -235,5 +236,40 @@ describe("SettingsScreen", () => {
     expect(getByText("Connection")).toBeTruthy()
     expect(getByText("Tracking profiles")).toBeTruthy()
     expect(getByText("Data management")).toBeTruthy()
+  })
+
+  describe("the Colota section", () => {
+    beforeEach(() => {
+      jest.spyOn(Linking, "openURL").mockResolvedValue(true as any)
+    })
+
+    it("opens the release notes from What's new", async () => {
+      const { getByTestId } = render(<SettingsScreen {...mockProps} />)
+
+      fireEvent.press(getByTestId("nav-whats-new"))
+
+      await waitFor(() => {
+        expect(Linking.openURL).toHaveBeenCalledWith("https://colota.app/releases")
+      })
+    })
+
+    it("sends Rate the app to the Play listing", async () => {
+      // market:// resolves inside the Play app; a device without it falls back to the web page.
+      const { getByTestId } = render(<SettingsScreen {...mockProps} />)
+
+      fireEvent.press(getByTestId("nav-rate"))
+
+      await waitFor(() => {
+        expect(Linking.openURL).toHaveBeenCalledWith("market://details?id=com.Colota")
+      })
+    })
+
+    it("keeps the legal detail on its own screen", () => {
+      const { getByTestId } = render(<SettingsScreen {...mockProps} />)
+
+      fireEvent.press(getByTestId("nav-legal"))
+
+      expect(mockNavigate).toHaveBeenCalledWith("Legal")
+    })
   })
 })
