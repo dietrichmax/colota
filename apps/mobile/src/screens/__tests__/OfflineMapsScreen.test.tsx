@@ -94,10 +94,6 @@ const mockEstimateSizeLabel = jest.fn()
 const mockEstimateSizeBytes = jest.fn()
 const mockWillExceedTileLimit = jest.fn()
 
-jest.mock("../../utils/format", () => ({
-  formatBytes: jest.fn().mockReturnValue("5.0 MB")
-}))
-
 jest.mock("../../components/features/map/OfflinePackManager", () => ({
   DOWNLOAD_STATE: { INACTIVE: "inactive", ACTIVE: "active", COMPLETE: "complete" },
   loadOfflineAreas: (...args: any[]) => mockLoadOfflineAreas(...args),
@@ -341,12 +337,12 @@ describe("OfflineMapsScreen", () => {
     await findByText("forest trail")
   })
 
-  it("shows size for a saved area", async () => {
+  it("shows the size the pack actually takes on disk", async () => {
     mockLoadOfflineAreas.mockResolvedValue([
-      { name: "my park", sizeBytes: 2_000_000, isComplete: true, isActive: false }
+      { name: "my park", sizeBytes: 2 * 1024 * 1024, isComplete: true, isActive: false }
     ])
     const { findByText } = renderScreen()
-    await findByText("5.0 MB")
+    await findByText("2.0 MB")
   })
 
   it("shows stale indicator when style URL has changed", async () => {

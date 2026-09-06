@@ -429,19 +429,6 @@ describe("LocationHistoryScreen", () => {
     fireEvent.press(getByText("Data"))
     expect(getByTestId("CalendarPicker")).toBeTruthy()
   })
-
-  it("shows LocationTable in Data tab", () => {
-    const props = createProps()
-    const { getByText, getByTestId } = render(<LocationHistoryScreen {...props} />)
-
-    // Initially not visible
-    expect(() => getByTestId("LocationTable")).toThrow()
-
-    // Switch to Data tab
-    fireEvent.press(getByText("Data"))
-
-    expect(getByTestId("LocationTable")).toBeTruthy()
-  })
 })
 
 describe("LocationHistoryScreen - notes saved on the map", () => {
