@@ -215,19 +215,19 @@ describe("SettingsScreen", () => {
   it("navigates to API Config", () => {
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    fireEvent.press(getByText("API Field Mapping"))
+    fireEvent.press(getByText("API field mapping"))
 
     expect(mockNavigate).toHaveBeenCalledWith("API Config")
   })
 
   // --- Offline mode ---
 
-  it("hides API Field Mapping link when offline mode is enabled", () => {
+  it("hides the API field mapping link when offline mode is enabled", () => {
     mockSettings = { ...DEFAULT_SETTINGS, isOfflineMode: true }
 
     const { queryByText } = render(<SettingsScreen {...mockProps} />)
 
-    expect(queryByText("API Field Mapping")).toBeNull()
+    expect(queryByText("API field mapping")).toBeNull()
   })
 
   it("still shows Connection, Tracking Profiles and Data Management in offline mode", () => {
