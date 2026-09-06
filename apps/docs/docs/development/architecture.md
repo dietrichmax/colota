@@ -164,7 +164,9 @@ deliberately survives process death and reboot. Whether a service exists right n
 `LocationForegroundService.isRunning`. Anything asking "is tracking alive" must read `isRunning`,
 because a service the system killed leaves the flag true. Recovery is layered: the app reconciles
 the two whenever it reaches the foreground, and `TrackingWatchdogScheduler` covers the window while
-the app stays closed.
+the app stays closed. Reconciling can also drop the intent rather than honour it: a revoked location
+permission means no service can be started again, so the foreground reconciler clears the flag and
+the watchdog stops re-arming itself.
 
 ### NotificationHelper
 

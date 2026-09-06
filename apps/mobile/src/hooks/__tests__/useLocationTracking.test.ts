@@ -13,13 +13,15 @@ const mockStop = jest.fn()
 const mockGetMostRecentLocation = jest.fn().mockResolvedValue(null)
 const mockIsTrackingActive = jest.fn().mockResolvedValue(false)
 const mockIsServiceRunning = jest.fn().mockResolvedValue(true)
+const mockSaveSetting = jest.fn().mockResolvedValue(undefined)
 
 jest.mock("../../services/NativeLocationService", () => ({
   start: (...args: any[]) => mockStart(...args),
   stop: (...args: any[]) => mockStop(...args),
   getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args),
   isTrackingActive: (...args: any[]) => mockIsTrackingActive(...args),
-  isServiceRunning: (...args: any[]) => mockIsServiceRunning(...args)
+  isServiceRunning: (...args: any[]) => mockIsServiceRunning(...args),
+  saveSetting: (...args: any[]) => mockSaveSetting(...args)
 }))
 
 // Mock permissions
@@ -50,6 +52,7 @@ beforeEach(() => {
   // clearAllMocks keeps implementations, so restore the defaults each test explicitly overrides
   mockIsTrackingActive.mockResolvedValue(false)
   mockIsServiceRunning.mockResolvedValue(true)
+  mockSaveSetting.mockResolvedValue(undefined)
   mockCheckPermissions.mockResolvedValue({ location: true, background: true, notifications: true })
   jest.spyOn(console, "log").mockImplementation()
   jest.spyOn(console, "error").mockImplementation()
@@ -470,19 +473,31 @@ describe("useLocationTracking", () => {
       expect(mockStart).toHaveBeenCalledTimes(1)
     })
 
-    it("does not restart a dead service when location permission is gone", async () => {
+    it("turns tracking off when the permission was revoked under a running service", async () => {
+      // Revoking location stops the service without killing the process, so no onTrackingStopped
+      // arrives and the DB intent stays true. Offering Stop for a service that can never come back
+      // is the state the user sees until the next cold start, so the hook has to clear it here.
       mockIsTrackingActive.mockResolvedValue(true)
-      mockIsServiceRunning.mockResolvedValue(false)
-      mockCheckPermissions.mockResolvedValue({ location: false, background: false, notifications: true })
       mockGetMostRecentLocation.mockResolvedValue(null)
 
-      renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
+      const { result } = renderHook(() => useLocationTracking(DEFAULT_SETTINGS, true))
+
+      await act(async () => {
+        await result.current.startTracking(DEFAULT_SETTINGS)
+      })
+      expect(result.current.tracking).toBe(true)
+
+      mockIsServiceRunning.mockResolvedValue(false)
+      mockCheckPermissions.mockResolvedValue({ location: false, background: false, notifications: true })
+      mockStart.mockClear()
 
       await act(async () => {
         await appStateCallback("active")
       })
 
       expect(mockStart).not.toHaveBeenCalled()
+      expect(mockSaveSetting).toHaveBeenCalledWith("tracking_enabled", "false")
+      expect(result.current.tracking).toBe(false)
     })
 
     it("does nothing when transitioning to background", async () => {

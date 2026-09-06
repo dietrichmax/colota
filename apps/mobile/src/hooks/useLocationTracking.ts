@@ -271,7 +271,13 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
 
       const perms = await checkPermissions()
       if (!perms.location) {
-        logger.warn("[useLocationTracking] Service is dead but location permission is gone, not restarting")
+        logger.warn("[useLocationTracking] Service is dead and location permission is gone - clearing tracking state")
+        await NativeLocationService.saveSetting("tracking_enabled", "false")
+        if (listenerRef.current) {
+          listenerRef.current.remove()
+          listenerRef.current = null
+        }
+        setTracking(false)
         return
       }
 
