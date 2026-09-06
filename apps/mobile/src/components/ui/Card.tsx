@@ -16,8 +16,9 @@ type CardProps = {
   style?: StyleProp<ViewStyle>
   danger?: boolean
   variant?: CardVariant
-  /** Rows manage their own padding, so the card gives them the full width to ripple across. */
-  flush?: boolean
+  /** A card that is nothing but rows: it gives up its vertical padding so the first and last
+   *  row's state layer reaches its edge. The rows already carry the spacing. */
+  rows?: boolean
   onPress?: () => void
   onLongPress?: () => void
   accessibilityRole?: AccessibilityRole
@@ -31,7 +32,7 @@ export function Card({
   style,
   danger = false,
   variant = "default",
-  flush = false,
+  rows = false,
   onPress,
   onLongPress,
   accessibilityRole,
@@ -79,7 +80,7 @@ export function Card({
     }
   }
 
-  const cardView = <View style={[styles.card, flush && styles.flush, getVariantStyles(), style]}>{children}</View>
+  const cardView = <View style={[styles.card, rows && styles.rowsCard, getVariantStyles(), style]}>{children}</View>
 
   if (variant === "interactive" && (onPress || onLongPress)) {
     return (
@@ -110,8 +111,8 @@ const styles = StyleSheet.create({
     // A row inside the card ripples to its own bounds, so the card has to clip the corners.
     overflow: "hidden"
   },
-  flush: {
-    padding: 0
+  rowsCard: {
+    paddingVertical: 0
   },
   pressable: {
     borderRadius: radius.md,

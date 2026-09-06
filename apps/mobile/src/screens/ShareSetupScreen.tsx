@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { View, Text, ScrollView, StyleSheet, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Button, Card, Container, SectionTitle, Toggle } from "../components"
+import { Button, Card, Container, Divider, SectionTitle, SettingRow, Toggle } from "../components"
 import { fontSizes, fonts } from "../styles/typography"
 import { Share2, TriangleAlert } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
@@ -136,31 +136,21 @@ export function ShareSetupScreen() {
         </Card>
 
         <View style={styles.section}>
-          <SectionTitle>INCLUDE</SectionTitle>
-          <Card>
+          <SectionTitle>Include</SectionTitle>
+          <Card rows>
             {rows.map((row, i) => (
-              <View
-                key={row.key}
-                style={[
-                  styles.row,
-                  i < rows.length - 1 && styles.rowBorder,
-                  i < rows.length - 1 && { borderBottomColor: colors.border }
-                ]}
-              >
-                <View style={styles.rowText}>
-                  <Text style={[styles.rowLabel, { color: row.disabled ? colors.textSecondary : colors.text }]}>
-                    {row.label}
-                  </Text>
-                  <Text style={[styles.rowSub, { color: colors.textSecondary }]}>{row.sub}</Text>
-                </View>
-                <Toggle
-                  accessibilityLabel={row.label}
-                  testID={`share-${row.key}`}
-                  value={selection[row.key] && !row.disabled}
-                  onValueChange={() => toggle(row.key)}
-                  disabled={row.disabled}
-                />
-              </View>
+              <React.Fragment key={row.key}>
+                {i > 0 && <Divider tight />}
+                <SettingRow label={row.label} hint={row.sub} disabled={row.disabled}>
+                  <Toggle
+                    accessibilityLabel={row.label}
+                    testID={`share-${row.key}`}
+                    value={selection[row.key] && !row.disabled}
+                    onValueChange={() => toggle(row.key)}
+                    disabled={row.disabled}
+                  />
+                </SettingRow>
+              </React.Fragment>
             ))}
           </Card>
         </View>
@@ -215,28 +205,6 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: space.sm
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: space.md,
-    gap: space.md
-  },
-  rowBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth
-  },
-  rowText: {
-    flex: 1
-  },
-  rowLabel: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold
-  },
-  rowSub: {
-    fontSize: fontSizes.caption,
-    ...fonts.regular,
-    marginTop: 2
   },
   warningCard: {
     borderWidth: StyleSheet.hairlineWidth

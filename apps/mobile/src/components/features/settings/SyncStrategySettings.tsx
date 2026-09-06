@@ -154,7 +154,7 @@ export function SyncStrategySettings({
         How often a fix is recorded, and when it uploads
       </Text>
       <SectionTitle>Tracking configuration</SectionTitle>
-      <Card>
+      <Card rows>
         <View accessibilityRole="radiogroup">
           {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map((preset, index) => (
             <View key={preset}>

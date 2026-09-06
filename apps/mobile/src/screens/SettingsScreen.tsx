@@ -124,7 +124,7 @@ export function SettingsScreen({ navigation }: Props) {
 
         <View style={styles.section}>
           <SectionTitle>Tracking</SectionTitle>
-          <Card flush>
+          <Card rows>
             <ListItem
               testID="nav-connection"
               icon={Cloud}
@@ -165,7 +165,7 @@ export function SettingsScreen({ navigation }: Props) {
 
         <View style={styles.section}>
           <SectionTitle>Display</SectionTitle>
-          <Card flush>
+          <Card rows>
             <ListItem
               testID="nav-appearance"
               icon={Palette}
@@ -178,7 +178,7 @@ export function SettingsScreen({ navigation }: Props) {
 
         <View style={styles.section}>
           <SectionTitle>Data</SectionTitle>
-          <Card flush>
+          <Card rows>
             <ListItem
               testID="nav-data-management"
               icon={Database}
@@ -247,7 +247,7 @@ export function SettingsScreen({ navigation }: Props) {
 
         <View style={styles.section}>
           <SectionTitle>Colota</SectionTitle>
-          <Card flush>
+          <Card rows>
             <ListItem
               testID="nav-whats-new"
               icon={Sparkles}

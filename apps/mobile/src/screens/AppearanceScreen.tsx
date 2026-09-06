@@ -92,7 +92,7 @@ export function AppearanceScreen({}: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Card>
+        <Card rows style={styles.cardTail}>
           <SettingRow label={t("appearance.darkMode")}>
             <Toggle
               accessibilityLabel={t("appearance.darkMode")}
@@ -197,6 +197,9 @@ export function AppearanceScreen({}: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  // rows drops the card\'s vertical padding for the first row; the last child
+  // here is not a row, so it takes the bottom inset back.
+  cardTail: { paddingBottom: space.lg },
   scrollContent: {
     paddingHorizontal: space.lg,
     paddingTop: space.lg,

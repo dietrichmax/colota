@@ -28,7 +28,7 @@ export function LegalScreen({}: ScreenProps) {
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <SectionTitle>Colota</SectionTitle>
-        <Card flush>
+        <Card rows>
           <ListItem
             label="Privacy policy"
             sub="What the app stores, and what it never sends"
@@ -59,7 +59,7 @@ export function LegalScreen({}: ScreenProps) {
 
         <View style={styles.section}>
           <SectionTitle>Map data</SectionTitle>
-    <Card flush>
+    <Card rows>
             <ListItem
               label="OpenStreetMap"
               sub="Map data by OpenStreetMap contributors, ODbL"

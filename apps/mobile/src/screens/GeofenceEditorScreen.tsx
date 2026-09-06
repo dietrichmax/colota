@@ -213,7 +213,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     <Container>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <SectionTitle>General</SectionTitle>
-        <Card style={styles.card}>
+        <Card rows style={styles.card}>
           <SettingRow label="Name">
             <TextField
               testID="geofence-name-input"
@@ -238,8 +238,8 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           </SettingRow>
         </Card>
 
-        <SectionTitle>GPS Pause Options</SectionTitle>
-        <Card style={styles.card}>
+        <SectionTitle>GPS pause options</SectionTitle>
+        <Card rows style={[styles.card, styles.cardTail]}>
           <SettingRow label="Don't record in zone" hint="Pause saving and syncing" style={styles.toggleRow}>
             <Toggle
               accessibilityLabel="Don't record in zone"
@@ -361,6 +361,9 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 }
 
 const styles = StyleSheet.create({
+  // rows drops the card\'s vertical padding for the first row; the last child
+  // here is not a row, so it takes the bottom inset back.
+  cardTail: { paddingBottom: space.lg },
   content: { padding: 20, paddingBottom: 40 },
   card: { marginBottom: space.lg },
   nameInput: { flex: 1 },

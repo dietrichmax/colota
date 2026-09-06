@@ -9,7 +9,6 @@ import { ChevronRight } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { size, space, STATE_LAYER_ALPHA } from "../../constants"
-import { radius } from "@colota/shared"
 
 type IconComponent = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
 
@@ -73,12 +72,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 56,
-    paddingHorizontal: space.lg,
-    paddingVertical: 10,
-    // The row sits inset inside a padded Card, so a square state layer floats as a block.
-    borderRadius: radius.sm,
-    overflow: "hidden"
+    minHeight: size.row,
+    paddingVertical: space.lg,
+    // The card pads its content, so the row cancels that inset and reapplies it: the content
+    // lands where the card put it while the ripple still reaches the card's own edge.
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg
   },
   icon: {
     marginEnd: space.lg

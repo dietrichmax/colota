@@ -40,8 +40,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     minHeight: size.row,
-    paddingHorizontal: space.lg,
-    paddingVertical: space.md
+    paddingVertical: space.lg,
+    // See ListItem: the inset is cancelled and reapplied so a press fills the card's width.
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg
   },
   settingContent: {
     flex: 1,

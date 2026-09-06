@@ -184,7 +184,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
       >
         {/* Name & Priority */}
         <SectionTitle>Profile</SectionTitle>
-        <Card flush>
+        <Card rows style={styles.cardTop}>
           <View style={styles.inputGroup}>
             <TextField
               testID="profile-name-input"
@@ -212,7 +212,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 
         {/* Condition */}
         <SectionTitle style={styles.sectionGap}>Activation condition</SectionTitle>
-        <Card>
+        <Card rows style={isSpeed && styles.cardTail}>
           {PROFILE_CONDITIONS.map((opt, i) => (
             <RadioRow
               key={opt.type}
@@ -245,7 +245,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 
         {/* Tracking Settings */}
         <SectionTitle style={styles.sectionGap}>Tracking settings</SectionTitle>
-        <Card>
+        <Card rows style={styles.cardTail}>
           <SettingRow label="Tracking interval" hint={`Default: ${settings.interval}s`}>
             <View style={styles.inputWithUnit}>
               <TextField
@@ -357,7 +357,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         </Card>
 
         <SectionTitle style={styles.sectionGap}>Switching</SectionTitle>
-        <Card>
+        <Card rows>
           {profile.condition.type === "stationary" ? (
             <SettingRow
               label="Activation delay"
@@ -433,6 +433,12 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 }
 
 const styles = StyleSheet.create({
+  // rows drops the card's vertical padding for the row at its bottom; the first
+  // child here is not a row, so it takes the top inset back.
+  cardTop: { paddingTop: space.lg },
+  // rows drops the card\'s vertical padding for the first row; the last child
+  // here is not a row, so it takes the bottom inset back.
+  cardTail: { paddingBottom: space.lg },
   scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: 40 },
   inputGroup: { marginBottom: space.xs },
   numInput: {
