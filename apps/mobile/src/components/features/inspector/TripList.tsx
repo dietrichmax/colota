@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { View, Text, FlatList, Pressable, StyleSheet, BackHandler } from "react-native"
-import { Clock, Route, Share, TrendingUp, TrendingDown, Gauge, Trash2, X, Merge } from "lucide-react-native"
+import { Check, Route, Share, Trash2, X, Merge } from "lucide-react-native"
 import { Card } from "../../ui/Card"
 import { EmptyState } from "../../ui/EmptyState"
 import { fontSizes, fonts } from "../../../styles/typography"
@@ -46,9 +46,20 @@ const TripRow = React.memo(function TripRowItem({
 }: TripRowProps) {
   const duration = trip.endTime - trip.startTime
   const tripColor = getTripColor(trip.index)
+  const statLine = [
+    formatDistance(trip.distance),
+    formatDuration(duration),
+    stats && stats.avgSpeed > 0 ? formatSpeed(stats.avgSpeed) : null,
+    stats && stats.elevationGain > 0 ? `+${Math.round(stats.elevationGain)} m` : null,
+    stats && stats.elevationLoss > 0 ? `-${Math.round(stats.elevationLoss)} m` : null
+  ]
+    .filter(Boolean)
+    .join("  ·  ")
   // Selection is a fill, not a stroke: toggling borderWidth on a card that clips its own
   // corners leaves the children clipped away on Android until the list remounts.
-  const cardStyle = [styles.tripCard, isCabSelected && { backgroundColor: colors.primaryContainer }]
+  const cardStyle = isCabSelected && { backgroundColor: colors.primaryContainer }
+  const content = isCabSelected ? colors.onPrimaryContainer : colors.text
+  const subContent = isCabSelected ? colors.onPrimaryContainer : colors.textSecondary
 
   const accessibilityRole = selectionMode ? "checkbox" : "button"
   const accessibilityState = selectionMode ? { checked: isCabSelected } : undefined
@@ -69,42 +80,21 @@ const TripRow = React.memo(function TripRowItem({
     >
       <View style={styles.tripHeader}>
         <View style={styles.tripTitleRow}>
-          <View style={[styles.tripDot, { backgroundColor: tripColor }]} />
-          <Text style={[styles.tripTitle, { color: colors.text }]}>Trip {trip.index}</Text>
+          <View style={styles.tripLead}>
+            {isCabSelected ? (
+              <Check size={size.icon.sm} color={content} />
+            ) : (
+              <View style={[styles.tripDot, { backgroundColor: tripColor }]} />
+            )}
+          </View>
+          <Text style={[styles.tripTitle, { color: content }]}>Trip {trip.index}</Text>
         </View>
-        <Text style={[styles.tripTime, { color: colors.textSecondary }]}>
+        <Text style={[styles.tripTime, { color: content }]}>
           {formatTime(trip.startTime)} - {formatTime(trip.endTime)}
         </Text>
       </View>
 
-      <View style={styles.tripStats}>
-        <View style={styles.stat}>
-          <Route size={size.icon.sm} color={colors.textSecondary} />
-          <Text style={[styles.statText, { color: colors.text }]}>{formatDistance(trip.distance)}</Text>
-        </View>
-        <View style={styles.stat}>
-          <Clock size={size.icon.sm} color={colors.textSecondary} />
-          <Text style={[styles.statText, { color: colors.text }]}>{formatDuration(duration)}</Text>
-        </View>
-        {stats && stats.avgSpeed > 0 && (
-          <View style={styles.stat}>
-            <Gauge size={size.icon.sm} color={colors.textSecondary} />
-            <Text style={[styles.statText, { color: colors.text }]}>{formatSpeed(stats.avgSpeed)}</Text>
-          </View>
-        )}
-        {stats && stats.elevationGain > 0 && (
-          <View style={styles.stat}>
-            <TrendingUp size={size.icon.sm} color={colors.textSecondary} />
-            <Text style={[styles.statText, { color: colors.text }]}>{Math.round(stats.elevationGain)}m</Text>
-          </View>
-        )}
-        {stats && stats.elevationLoss > 0 && (
-          <View style={styles.stat}>
-            <TrendingDown size={size.icon.sm} color={colors.textSecondary} />
-            <Text style={[styles.statText, { color: colors.text }]}>{Math.round(stats.elevationLoss)}m</Text>
-          </View>
-        )}
-      </View>
+      <Text style={[styles.tripStats, { color: subContent }]}>{statLine}</Text>
     </Card>
   )
 })
@@ -439,13 +429,13 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: space.md,
-    paddingBottom: space.lg
+    // gap spaces the rows against each other; the first one still needs clearing the header.
+    paddingTop: space.sm,
+    paddingBottom: space.lg,
+    gap: space.sm
   },
   // so an empty state has room to centre in
   listEmpty: { flexGrow: 1 },
-  tripCard: {
-    marginBottom: space.sm
-  },
   tripHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -457,6 +447,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: space.sm
   },
+  // Both leading marks sit in the same width, so the title does not shift when a row is picked.
+  tripLead: {
+    width: size.icon.sm,
+    alignItems: "center"
+  },
   tripDot: {
     width: 8,
     height: 8,
@@ -464,24 +459,16 @@ const styles = StyleSheet.create({
   },
   tripTitle: {
     fontSize: fontSizes.input,
-    ...fonts.bold
+    ...fonts.medium
   },
   tripTime: {
-    fontSize: fontSizes.description,
-    ...fonts.regular
+    fontSize: fontSizes.input,
+    ...fonts.medium,
+    fontVariant: ["tabular-nums"]
   },
   tripStats: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: space.md
-  },
-  stat: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.xs
-  },
-  statText: {
-    fontSize: fontSizes.description,
-    ...fonts.regular
+    fontSize: fontSizes.caption,
+    ...fonts.regular,
+    fontVariant: ["tabular-nums"]
   }
 })
