@@ -64,7 +64,7 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             accessibilityLabel={tab.label}
-            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.touch / 2 }}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
             style={styles.tab}
             onPress={() => onNavigate(tab.route)}
           >
@@ -79,7 +79,6 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
     </View>
   )
 }
-
 
 const styles = StyleSheet.create({
   container: {
