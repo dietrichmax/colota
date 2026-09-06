@@ -78,6 +78,7 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
           {/* Buttons */}
           <View style={styles.buttons}>
             <Pressable
+              accessibilityRole="button"
               android_ripple={{ color: colors.textSecondary + STATE_LAYER_ALPHA }}
               style={styles.button}
               onPress={handleNotNow}
@@ -86,6 +87,7 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
             </Pressable>
 
             <Pressable
+              accessibilityRole="button"
               android_ripple={{ color: colors.textOnPrimary + STATE_LAYER_ALPHA }}
               style={[styles.button, { backgroundColor: colors.primary }]}
               onPress={handleConfirm}
