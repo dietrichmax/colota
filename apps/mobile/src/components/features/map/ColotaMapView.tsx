@@ -223,7 +223,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
             <Pressable style={styles.attributionBackdrop} onPress={() => setAttributionOpen(false)}>
               <Pressable
                 onPress={() => {}}
-                style={[styles.attributionPopup, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[styles.attributionPopup, { backgroundColor: colors.card }]}
               >
                 <Pressable
                   onPress={() => setAttributionOpen(false)}
@@ -272,7 +272,6 @@ const styles = StyleSheet.create({
     paddingEnd: 36,
     paddingVertical: 14,
     borderRadius: 10,
-    borderWidth: 1,
     gap: space.sm,
     elevation: 8
   },

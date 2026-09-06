@@ -147,9 +147,7 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   primaryButton: {},
-  secondaryButton: {
-    borderWidth: 1.5
-  },
+  secondaryButton: {},
   buttonText: {
     fontSize: fontSizes.label,
     ...fonts.semiBold

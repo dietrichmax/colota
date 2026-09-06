@@ -549,7 +549,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
             )}
           </View>
 
-          <View style={[styles.fieldsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.fieldsCard, { backgroundColor: colors.card }]}>
             {(Object.keys(DEFAULT_FIELD_MAP) as Array<keyof FieldMap>).map((key, index) => {
               const isFieldModified = modifiedFields.has(key)
               const fieldValue = localFieldMap[key]?.trim()
@@ -613,7 +613,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
             <SectionTitle>Custom fields</SectionTitle>
           </View>
 
-          <View style={[styles.fieldsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.fieldsCard, { backgroundColor: colors.card }]}>
             {localCustomFields.length === 0 ? (
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
                 No custom fields. Add static key-value pairs to include in every payload.
@@ -753,8 +753,7 @@ const styles = StyleSheet.create({
   },
   fieldsCard: {
     padding: space.md,
-    borderRadius: 10,
-    borderWidth: 1
+    borderRadius: 10
   },
   fieldRow: {
     flexDirection: "row",
@@ -842,8 +841,7 @@ const styles = StyleSheet.create({
   },
   exampleCard: {
     padding: 14,
-    borderRadius: radius.sm,
-    borderWidth: 1
+    borderRadius: radius.sm
   },
   exampleCode: {
     fontSize: fontSizes.caption,

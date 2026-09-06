@@ -353,7 +353,7 @@ export function TripList({
               }}
               style={({ pressed }) => [
                 styles.exportChip,
-                { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" },
+                { backgroundColor: colors.primary + "12" },
                 pressed && { opacity: colors.pressedOpacity }
               ]}
               accessibilityRole="button"
@@ -448,8 +448,7 @@ const styles = StyleSheet.create({
   exportChip: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: radius.sm,
-    borderWidth: 1
+    borderRadius: radius.sm
   },
   exportChipText: {
     fontSize: fontSizes.small,

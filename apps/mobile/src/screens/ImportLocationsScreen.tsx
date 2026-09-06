@@ -91,7 +91,7 @@ const FormatRow = ({ entry, colors }: { entry: (typeof SUPPORTED_FORMATS)[number
           <View
             style={[
               styles.extensionBadge,
-              { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }
+              { backgroundColor: colors.primary + "15" }
             ]}
           >
             <Text style={[styles.extensionText, { color: colors.primaryDark }]}>{entry.extension}</Text>
@@ -289,8 +289,7 @@ const styles = StyleSheet.create({
   extensionBadge: {
     paddingHorizontal: space.sm,
     paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1
+    borderRadius: 6
   },
   extensionText: {
     fontSize: fontSizes.micro,

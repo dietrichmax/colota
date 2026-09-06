@@ -89,7 +89,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
       onPress={() => navigation.navigate("Connection")}
       style={({ pressed }) => [
         styles.container,
-        { backgroundColor: colors.card, borderColor: colors.border },
+        { backgroundColor: colors.card },
         pressed && { opacity: colors.pressedOpacity }
       ]}
     >
@@ -109,7 +109,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 14,
     borderRadius: radius.md,
-    borderWidth: 1,
     marginBottom: 22
   },
   dot: {

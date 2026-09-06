@@ -115,7 +115,7 @@ function PasswordPromptModal({
       onRequestClose={busy ? undefined : onCancel}
     >
       <View style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}>
-        <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.modalTitle, { color: colors.text }]}>Enter password</Text>
           <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
             For {filename}
@@ -398,8 +398,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     padding: space.lg,
-    borderRadius: radius.md,
-    borderWidth: 1
+    borderRadius: radius.md
   },
   modalTitle: {
     fontSize: fontSizes.label,
