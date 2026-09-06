@@ -297,8 +297,8 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-support"
               icon={Heart}
-              label="Support development"
-              sub="Help keep the app free and open"
+              label="Say thanks"
+              sub="Free, one click, or a donation"
               trailingIcon={ExternalLink}
               accessibilityRole="link"
               accessibilityHint="Opens external support page"
