@@ -22,19 +22,23 @@ const mockProfiles: TrackingProfile[] = [
 const mockGetProfiles = jest.fn().mockResolvedValue(mockProfiles)
 const mockCreateProfile = jest.fn().mockResolvedValue(1)
 const mockUpdateProfile = jest.fn().mockResolvedValue(true)
+const mockDeleteProfile = jest.fn().mockResolvedValue(true)
 
 jest.mock("../../services/ProfileService", () => ({
   ProfileService: {
     getProfiles: () => mockGetProfiles(),
     createProfile: (p: any) => mockCreateProfile(p),
-    updateProfile: (p: any) => mockUpdateProfile(p)
+    updateProfile: (p: any) => mockUpdateProfile(p),
+    deleteProfile: (id: number) => mockDeleteProfile(id)
   }
 }))
 
 const mockShowAlert = jest.fn()
+const mockShowConfirm = jest.fn()
 
 jest.mock("../../services/modalService", () => ({
-  showAlert: (...args: any[]) => mockShowAlert(...args)
+  showAlert: (...args: any[]) => mockShowAlert(...args),
+  showConfirm: (...args: any[]) => mockShowConfirm(...args)
 }))
 
 jest.mock("../../utils/geo", () => ({
@@ -475,6 +479,41 @@ describe("ProfileEditorScreen", () => {
         expect(getByDisplayValue("3600")).toBeTruthy()
       })
       expect(getByText(/may miss the first \d+ minutes of a trip/)).toBeTruthy()
+    })
+  })
+
+  describe("delete", () => {
+    it("offers Delete only while editing, since a draft has nothing to remove", async () => {
+      const { queryByTestId } = renderNewProfile()
+
+      await waitFor(() => expect(queryByTestId("delete-profile-btn")).toBeNull())
+    })
+
+    it("confirms before deleting, then leaves the screen", async () => {
+      // The list could delete a profile and the editor could not, so a profile opened for editing
+      // had to be backed out of and found again.
+      mockShowConfirm.mockResolvedValue(true)
+      const { getByTestId } = renderEditProfile(1)
+
+      await waitFor(() => expect(getByTestId("delete-profile-btn")).toBeTruthy())
+      fireEvent.press(getByTestId("delete-profile-btn"))
+
+      await waitFor(() => {
+        expect(mockDeleteProfile).toHaveBeenCalledWith(1)
+        expect(mockGoBack).toHaveBeenCalled()
+      })
+    })
+
+    it("deletes nothing when the confirm is dismissed", async () => {
+      mockShowConfirm.mockResolvedValue(false)
+      const { getByTestId } = renderEditProfile(1)
+
+      await waitFor(() => expect(getByTestId("delete-profile-btn")).toBeTruthy())
+      fireEvent.press(getByTestId("delete-profile-btn"))
+
+      await waitFor(() => expect(mockShowConfirm).toHaveBeenCalled())
+      expect(mockDeleteProfile).not.toHaveBeenCalled()
+      expect(mockGoBack).not.toHaveBeenCalled()
     })
   })
 })
