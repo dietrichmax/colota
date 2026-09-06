@@ -10,6 +10,11 @@ jest.mock("../../../../contexts/TrackingProvider", () => ({
   })
 }))
 
+// Button reads the theme itself, unlike WelcomeCard, which takes colors as a prop.
+jest.mock("../../../../hooks/useTheme", () => ({
+  useTheme: () => ({ colors: require("@colota/shared").lightColors })
+}))
+
 jest.mock("../../../ui/Card", () => {
   const R = require("react")
   const { View } = require("react-native")

@@ -9,6 +9,7 @@ import { Check, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import { useTracking } from "../../../contexts/TrackingProvider"
 import { fontSizes, fonts } from "../../../styles/typography"
+import { Button } from "../../ui/Button"
 import { Card } from "../../ui/Card"
 import { size, space } from "../../../constants"
 import { radius } from "@colota/shared"
@@ -113,15 +114,7 @@ export function WelcomeCard({
           </Pressable>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.dismissButton,
-            pressed && { opacity: colors.pressedOpacity }
-          ]}
-          onPress={onDismiss}
-        >
-          <Text style={[styles.dismissText, { color: colors.textSecondary }]}>Got it</Text>
-        </Pressable>
+        <Button title="Got it" variant="secondary" onPress={onDismiss} />
       </Card>
     </View>
   )
@@ -175,13 +168,4 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.body,
     ...fonts.semiBold
   },
-  dismissButton: {
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 10
-  },
-  dismissText: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold
-  }
 })
