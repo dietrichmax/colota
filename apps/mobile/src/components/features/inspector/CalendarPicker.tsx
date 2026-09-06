@@ -3,14 +3,14 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useMemo, useCallback, useRef } from "react"
-import { View, Text, Pressable, StyleSheet, LayoutAnimation } from "react-native"
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react-native"
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react"
+import { View, Text, Pressable, StyleSheet, LayoutAnimation, ScrollView, type ScrollViewInstance } from "react-native"
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Calendar } from "lucide-react-native"
 import { ThemeColors } from "../../../types/global"
 import { fontSizes, fonts } from "../../../styles/typography"
 import { formatDistance } from "../../../utils/geo"
 import { pad2 } from "../../../utils/format"
-import { HIT_SLOP_LG, size, space } from "../../../constants"
+import { HIT_SLOP_LG, HIT_SLOP_MD, size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { radius } from "@colota/shared"
 
 interface CalendarPickerProps {
@@ -27,6 +27,19 @@ interface CalendarPickerProps {
 }
 
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+const MONTH_LABELS = Array.from({ length: 12 }, (_, m) =>
+  new Date(2000, m, 1).toLocaleDateString(undefined, { month: "short" })
+)
+
+// Nothing on the bridge reports the oldest recorded point, so the year list runs to a floor
+// instead. Material's own date picker defaults to 1900-2100, so a scrolling range is the norm.
+const EARLIEST_YEAR = 2000
+const YEAR_COLUMNS = 3
+// A row is size.row so the cell inside still clears the 48dp touch target after its padding.
+const YEAR_ROW_HEIGHT = size.row
+const YEAR_PANE_ROWS = 5
+
+type Pane = "days" | "months" | "years"
 
 function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
@@ -51,6 +64,9 @@ export function CalendarPicker({
   const [isExpanded, setIsExpanded] = useState(false)
   const [viewYear, setViewYear] = useState(date.getFullYear())
   const [viewMonth, setViewMonth] = useState(date.getMonth())
+  const [pane, setPane] = useState<Pane>("days")
+  const [pickerYear, setPickerYear] = useState(viewYear)
+  const yearScrollRef = useRef<ScrollViewInstance>(null)
 
   const today = new Date()
   const todayRef = useRef(today)
@@ -80,6 +96,7 @@ export function CalendarPicker({
       setViewYear(date.getFullYear())
       setViewMonth(date.getMonth())
     }
+    setPane("days")
     setIsExpanded((prev) => !prev)
   }, [isExpanded, date])
 
@@ -111,6 +128,37 @@ export function CalendarPicker({
       }
     },
     [viewMonth, viewYear, onMonthChange, onPrefetchMonth]
+  )
+
+  // The header always goes up a level: days to years, years back to days, months back to years.
+  const goUp = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    if (pane === "days") {
+      setPickerYear(viewYear)
+      setPane("years")
+    } else if (pane === "months") {
+      setPane("years")
+    } else {
+      setPane("days")
+    }
+  }, [pane, viewYear])
+
+  const selectYear = useCallback((year: number) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setPickerYear(year)
+    setPane("months")
+  }, [])
+
+  // A jump has no direction, so unlike navigateMonth it prefetches no neighbour.
+  const selectMonth = useCallback(
+    (month: number) => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+      setViewYear(pickerYear)
+      setViewMonth(month)
+      setPane("days")
+      onMonthChange(pickerYear, month)
+    },
+    [pickerYear, onMonthChange]
   )
 
   const selectDay = useCallback(
@@ -158,6 +206,28 @@ export function CalendarPicker({
   const isFutureMonth =
     viewYear > today.getFullYear() || (viewYear === today.getFullYear() && viewMonth >= today.getMonth())
 
+  const todayYear = today.getFullYear()
+  const todayMonth = today.getMonth()
+  const pickerYearLabel = new Date(pickerYear, 0, 1).toLocaleDateString(undefined, { year: "numeric" })
+
+  const years = useMemo(
+    () => Array.from({ length: todayYear - EARLIEST_YEAR + 1 }, (_, i) => todayYear - i),
+    [todayYear]
+  )
+
+  // The list is long, so it opens on the year in view rather than at the top.
+  useEffect(() => {
+    if (pane !== "years") return
+    const index = years.indexOf(pickerYear)
+    const row = index < 0 ? 0 : Math.floor(index / YEAR_COLUMNS)
+    const y = Math.max(0, row - Math.floor(YEAR_PANE_ROWS / 2)) * YEAR_ROW_HEIGHT
+    yearScrollRef.current?.scrollTo({ y, animated: false })
+  }, [pane, pickerYear, years])
+
+  const headerLabel = pane === "months" ? pickerYearLabel : monthLabel
+  const headerHint =
+    pane === "days" ? "Opens the year picker" : pane === "years" ? "Closes the year picker" : "Back to the year picker"
+
   return (
     <View style={[styles.container, { borderBottomColor: colors.border }]}>
       {/* Compact header row */}
@@ -171,6 +241,7 @@ export function CalendarPicker({
         </Pressable>
 
         <Pressable
+          testID="calendar-toggle-btn"
           onPress={toggleExpanded}
           accessibilityRole="button"
           accessibilityState={{ expanded: isExpanded }}
@@ -218,88 +289,182 @@ export function CalendarPicker({
       {/* Expanded calendar grid */}
       {isExpanded && (
         <View style={styles.calendarContainer}>
-          {/* Month navigation */}
+          {/* Month navigation, and the way into the year and month panes */}
           <View style={styles.monthRow}>
+            {pane === "days" ? (
+              <Pressable
+                testID="prev-month-btn"
+                onPress={() => navigateMonth(-1)}
+                hitSlop={HIT_SLOP_LG}
+                accessibilityRole="button"
+                accessibilityLabel="Previous month"
+                style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
+              >
+                <ChevronLeft size={size.icon.md} color={colors.primary} />
+              </Pressable>
+            ) : (
+              <View style={styles.monthNavSpacer} />
+            )}
             <Pressable
-              onPress={() => navigateMonth(-1)}
-              hitSlop={HIT_SLOP_LG}
-              style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
+              testID="calendar-pane-btn"
+              onPress={goUp}
+              hitSlop={HIT_SLOP_MD}
+              accessibilityRole="button"
+              accessibilityHint={headerHint}
+              android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true }}
+              style={styles.monthLabelBtn}
             >
-              <ChevronLeft size={size.icon.md} color={colors.primary} />
+              <Text style={[styles.monthLabel, { color: colors.text }]}>{headerLabel}</Text>
+              {pane === "days" ? (
+                <ChevronDown size={size.icon.sm} color={colors.textSecondary} />
+              ) : (
+                <ChevronUp size={size.icon.sm} color={colors.textSecondary} />
+              )}
             </Pressable>
-            <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
-            <Pressable
-              onPress={() => navigateMonth(1)}
-              hitSlop={HIT_SLOP_LG}
-              style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
-              disabled={isFutureMonth}
-            >
-              <ChevronRight size={size.icon.md} color={isFutureMonth ? colors.textDisabled : colors.primary} />
-            </Pressable>
+            {pane === "days" ? (
+              <Pressable
+                testID="next-month-btn"
+                onPress={() => navigateMonth(1)}
+                hitSlop={HIT_SLOP_LG}
+                accessibilityRole="button"
+                accessibilityLabel="Next month"
+                style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
+                disabled={isFutureMonth}
+              >
+                <ChevronRight size={size.icon.md} color={isFutureMonth ? colors.textDisabled : colors.primary} />
+              </Pressable>
+            ) : (
+              <View style={styles.monthNavSpacer} />
+            )}
           </View>
 
-          {/* Weekday headers */}
-          <View style={styles.weekdayRow}>
-            {WEEKDAYS.map((day) => (
-              <Text key={day} style={[styles.weekdayText, { color: colors.textSecondary }]}>
-                {day}
-              </Text>
-            ))}
-          </View>
+          {pane === "years" && (
+            <ScrollView ref={yearScrollRef} style={styles.pane} testID="year-pane">
+              <View style={styles.paneGrid}>
+                {years.map((year) => {
+                  const isViewed = year === pickerYear
+                  const isCurrent = year === todayYear
+                  const content = isViewed ? colors.onPrimaryContainer : colors.text
+                  return (
+                    <View key={year} style={styles.paneCell}>
+                      <Pressable
+                        testID={`year-${year}`}
+                        onPress={() => selectYear(year)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: isViewed }}
+                        android_ripple={{ color: content + STATE_LAYER_ALPHA }}
+                        style={[styles.paneCellBtn, isViewed && { backgroundColor: colors.primaryContainer }]}
+                      >
+                        <Text
+                          style={[
+                            styles.paneCellText,
+                            { color: content },
+                            isCurrent && !isViewed && { color: colors.primary, ...fonts.bold }
+                          ]}
+                        >
+                          {year}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )
+                })}
+              </View>
+            </ScrollView>
+          )}
 
-          {/* Day cells */}
-          <View style={styles.daysGrid}>
-            {calendarGrid.map((cell) => {
-              if (cell.day === null) {
-                return <View key={cell.key} style={styles.dayCell} />
-              }
-
-              const dateKey = formatDateKey(viewYear, viewMonth, cell.day)
-              const hasData = daysWithData.has(dateKey)
-              const hasNote = daysWithNotes?.has(dateKey) ?? false
-              const dist = dayDistances?.get(dateKey)
-              const cellDate = new Date(viewYear, viewMonth, cell.day)
-              const isSelected = isSameDay(cellDate, date)
-              const isCellToday = isSameDay(cellDate, today)
-              const isFuture = cellDate > today
-
-              return (
-                <Pressable
-                  key={cell.key}
-                  style={styles.dayCell}
-                  onPress={() => selectDay(cell.day!)}
-                  disabled={isFuture}
-                >
-                  <View style={[styles.dayCircle, isSelected && { backgroundColor: colors.primary }]}>
-                    <Text
-                      style={[
-                        styles.dayText,
-                        { color: isFuture ? colors.textDisabled : isSelected ? colors.textOnPrimary : colors.text },
-                        isCellToday && !isSelected && { color: colors.primary, ...fonts.bold }
-                      ]}
+          {pane === "months" && (
+            <View style={[styles.pane, styles.paneGrid]} testID="month-pane">
+              {MONTH_LABELS.map((label, m) => {
+                const isFuture = pickerYear > todayYear || (pickerYear === todayYear && m > todayMonth)
+                const isViewed = pickerYear === viewYear && m === viewMonth
+                const content = isFuture ? colors.textDisabled : isViewed ? colors.onPrimaryContainer : colors.text
+                return (
+                  <View key={m} style={styles.paneCell}>
+                    <Pressable
+                      testID={`month-${m}`}
+                      onPress={() => selectMonth(m)}
+                      disabled={isFuture}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: isViewed, disabled: isFuture }}
+                      android_ripple={isFuture ? undefined : { color: content + STATE_LAYER_ALPHA }}
+                      style={[styles.paneCellBtn, isViewed && { backgroundColor: colors.primaryContainer }]}
                     >
-                      {cell.day}
-                    </Text>
-                    {hasNote && (
-                      <View style={[styles.noteDot, { backgroundColor: colors.primary, borderColor: colors.card }]} />
-                    )}
+                      <Text style={[styles.paneCellText, { color: content }]}>{label}</Text>
+                    </Pressable>
                   </View>
-                  {dist != null && dist > 0 ? (
-                    <Text
-                      style={[styles.dayDist, { color: isSelected ? colors.primary : colors.textLight }]}
-                      numberOfLines={1}
+                )
+              })}
+            </View>
+          )}
+
+          {pane === "days" && (
+            <>
+              {/* Weekday headers */}
+              <View style={styles.weekdayRow}>
+                {WEEKDAYS.map((day) => (
+                  <Text key={day} style={[styles.weekdayText, { color: colors.textSecondary }]}>
+                    {day}
+                  </Text>
+                ))}
+              </View>
+
+              {/* Day cells */}
+              <View style={styles.daysGrid}>
+                {calendarGrid.map((cell) => {
+                  if (cell.day === null) {
+                    return <View key={cell.key} style={styles.dayCell} />
+                  }
+
+                  const dateKey = formatDateKey(viewYear, viewMonth, cell.day)
+                  const hasData = daysWithData.has(dateKey)
+                  const hasNote = daysWithNotes?.has(dateKey) ?? false
+                  const dist = dayDistances?.get(dateKey)
+                  const cellDate = new Date(viewYear, viewMonth, cell.day)
+                  const isSelected = isSameDay(cellDate, date)
+                  const isCellToday = isSameDay(cellDate, today)
+                  const isFuture = cellDate > today
+
+                  return (
+                    <Pressable
+                      key={cell.key}
+                      style={styles.dayCell}
+                      onPress={() => selectDay(cell.day!)}
+                      disabled={isFuture}
                     >
-                      {formatDistance(dist)}
-                    </Text>
-                  ) : hasData ? (
-                    <View
-                      style={[styles.dataDot, { backgroundColor: isSelected ? colors.primary : colors.textLight }]}
-                    />
-                  ) : null}
-                </Pressable>
-              )
-            })}
-          </View>
+                      <View style={[styles.dayCircle, isSelected && { backgroundColor: colors.primary }]}>
+                        <Text
+                          style={[
+                            styles.dayText,
+                            { color: isFuture ? colors.textDisabled : isSelected ? colors.textOnPrimary : colors.text },
+                            isCellToday && !isSelected && { color: colors.primary, ...fonts.bold }
+                          ]}
+                        >
+                          {cell.day}
+                        </Text>
+                        {hasNote && (
+                          <View
+                            style={[styles.noteDot, { backgroundColor: colors.primary, borderColor: colors.card }]}
+                          />
+                        )}
+                      </View>
+                      {dist != null && dist > 0 ? (
+                        <Text
+                          style={[styles.dayDist, { color: isSelected ? colors.primary : colors.textLight }]}
+                          numberOfLines={1}
+                        >
+                          {formatDistance(dist)}
+                        </Text>
+                      ) : hasData ? (
+                        <View
+                          style={[styles.dataDot, { backgroundColor: isSelected ? colors.primary : colors.textLight }]}
+                        />
+                      ) : null}
+                    </Pressable>
+                  )
+                })}
+              </View>
+            </>
+          )}
         </View>
       )}
     </View>
@@ -373,9 +538,42 @@ const styles = StyleSheet.create({
   monthNav: {
     padding: space.sm
   },
+  monthNavSpacer: {
+    width: size.iconColumn
+  },
   monthLabel: {
     fontSize: fontSizes.body,
     ...fonts.semiBold
+  },
+  monthLabelBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xs
+  },
+  pane: {
+    height: YEAR_ROW_HEIGHT * YEAR_PANE_ROWS
+  },
+  paneGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap"
+  },
+  paneCell: {
+    width: "33.33%",
+    height: YEAR_ROW_HEIGHT,
+    padding: space.xs
+  },
+  paneCellBtn: {
+    overflow: "hidden",
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.sm
+  },
+  paneCellText: {
+    fontSize: fontSizes.body,
+    ...fonts.medium
   },
   weekdayRow: {
     flexDirection: "row",
