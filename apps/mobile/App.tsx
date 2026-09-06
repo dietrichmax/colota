@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 import React, { useMemo, useState, useCallback } from "react"
-import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native"
+import { NavigationContainer, NavigationContainerRef, DefaultTheme, DarkTheme } from "@react-navigation/native"
 import { LucideProvider } from "lucide-react-native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { SafeAreaProvider } from "react-native-safe-area-context"
@@ -207,6 +207,7 @@ function AppNavigator() {
         color: colors.text
       },
       headerTitleAlign: "left" as const,
+      contentStyle: { backgroundColor: colors.background },
       headerBackTitleVisible: false,
       ...(Platform.OS === "android" && {
         animation: "slide_from_right" as const
@@ -214,6 +215,20 @@ function AppNavigator() {
     }),
     [colors]
   )
+  const navigationTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: colors.background,
+        card: colors.background,
+        text: colors.text,
+        border: colors.border,
+        primary: colors.primary
+      }
+    }
+  }, [colors, isDark])
   const statusBarConfig = useMemo(
     () => ({
       barStyle: isDark ? ("light-content" as const) : ("dark-content" as const),
@@ -255,7 +270,7 @@ function AppNavigator() {
       {/* One provider so a 16 badge and a 24 tab glyph carry the same painted weight. */}
       <LucideProvider strokeWidth={1.5} absoluteStrokeWidth>
         <StatusBar {...statusBarConfig} />
-        <NavigationContainer linking={linking} ref={navigationRef} onStateChange={handleStateChange}>
+        <NavigationContainer theme={navigationTheme} linking={linking} ref={navigationRef} onStateChange={handleStateChange}>
           <View style={styles.flex}>
             <Stack.Navigator initialRouteName="Dashboard" screenOptions={screenOptions}>
               {SCREEN_CONFIG.map((screen) => (
