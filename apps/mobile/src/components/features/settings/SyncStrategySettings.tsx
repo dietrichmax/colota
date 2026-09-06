@@ -9,6 +9,7 @@ import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
 import {
+  HIT_SLOP_MD,
   OVERLAND_BATCH_MAX,
   OVERLAND_BATCH_MIN,
   SYNC_INTERVAL_LABELS,
@@ -16,7 +17,17 @@ import {
   size,
   space
 } from "../../../constants"
-import { Card, ChipGroup, Divider, ListItem, NumericInput, SectionTitle, SettingRow, TextField, Toggle } from "../../index"
+import {
+  Card,
+  ChipGroup,
+  Divider,
+  ListItem,
+  NumericInput,
+  SectionTitle,
+  SettingRow,
+  TextField,
+  Toggle
+} from "../../index"
 import { PresetOption } from "./PresetOption"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 import { isOverlandFormat } from "../../../utils/apiPayload"
@@ -361,6 +372,8 @@ export function SyncStrategySettings({
                         />
                         {currentSsid !== "" && currentSsid.toLowerCase() !== settings.syncSsid.toLowerCase() && (
                           <Pressable
+                            hitSlop={HIT_SLOP_MD}
+                            accessibilityRole="button"
                             style={({ pressed }) => [
                               styles.ssidFillButton,
                               { backgroundColor: colors.primary + "15" },
@@ -500,8 +513,10 @@ const styles = StyleSheet.create({
   },
   ssidFillButton: {
     alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    justifyContent: "center",
+    minHeight: size.chip,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
     borderRadius: radius.sm
   },
   ssidFillText: {

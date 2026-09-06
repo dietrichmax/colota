@@ -8,6 +8,7 @@ import { StyleSheet } from "react-native"
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
 import { OfflineMapsScreen } from "../OfflineMapsScreen"
 import { logger } from "../../utils/logger"
+import { HIT_SLOP_MD } from "../../constants"
 
 // --- MapLibre ---
 jest.mock("@maplibre/maplibre-react-native", () => ({
@@ -345,6 +346,19 @@ describe("OfflineMapsScreen", () => {
     const style = StyleSheet.flatten(getByTestId("cancel-download-btn").props.style)
     expect(style.borderWidth).toBeUndefined()
     expect(style.backgroundColor).toBeUndefined()
+  })
+
+  it("gives the cancel a touch target, since 44 is under the Android minimum", async () => {
+    // 12 of padding around a body label lands at about 44, and it had no slop at all.
+    mockShowConfirm.mockResolvedValue(true)
+    mockCreateOfflinePack.mockReturnValue(new Promise(() => {}))
+    const { findByText, getByTestId, getByPlaceholderText } = renderScreen()
+    await waitForMapReady(findByText)
+    fireEvent.changeText(getByPlaceholderText("Home area, Trail..."), "my area")
+    fireEvent.press(getByTestId("download-btn"))
+    await findByText("Cancel download")
+
+    expect(getByTestId("cancel-download-btn").props.hitSlop).toEqual(HIT_SLOP_MD)
   })
 
   it("shows saved areas loaded on mount", async () => {

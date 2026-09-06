@@ -29,8 +29,8 @@ describe("AppModal", () => {
   })
 
   it("paints a destructive confirm in the error colour", async () => {
-    // showConfirm puts the confirming button first and marks it destructive, so the colour is
-    // what separates it from the dismissal beside it.
+    // showConfirm renders the confirming button last, on the right, and marks it destructive, so
+    // the colour is what separates it from the dismissal beside it.
     const { getByRole } = render(<AppModal />)
 
     await act(async () => {
