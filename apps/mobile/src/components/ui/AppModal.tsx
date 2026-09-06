@@ -64,7 +64,7 @@ export function AppModal() {
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent>
       <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-        <View style={[styles.card, { backgroundColor: colors.cardElevated, borderRadius: colors.borderRadius + 4 }]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderRadius: radius.lg }]}>
           <View style={[styles.iconContainer, { backgroundColor: iconColor + "15" }]}>
             <Icon size={28} color={iconColor} />
           </View>
