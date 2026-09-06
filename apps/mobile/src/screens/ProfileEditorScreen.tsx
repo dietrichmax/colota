@@ -8,14 +8,35 @@ import { View, Text, StyleSheet, ScrollView } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
-import { showAlert } from "../services/modalService"
+import { showAlert, showConfirm } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
 import { fontSizes, fonts } from "../styles/typography"
-import { Button, Card, ChipGroup, Container, Divider, FieldMessage, NumericInput, RadioRow, SectionTitle, SettingRow, TextField } from "../components"
-import { Check } from "lucide-react-native"
+import {
+  Button,
+  Card,
+  ChipGroup,
+  Container,
+  Divider,
+  FieldMessage,
+  NumericInput,
+  RadioRow,
+  SectionTitle,
+  SettingRow,
+  TextField
+} from "../components"
+import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
-import { MS_TO_KMH, PROFILE_CONDITIONS, STATIONARY_MAX_INTERVAL_SECONDS, SYNC_INTERVAL_LABELS, SYNC_INTERVAL_PRESETS, defaultProfileDelays, size, space } from "../constants"
+import {
+  MS_TO_KMH,
+  PROFILE_CONDITIONS,
+  STATIONARY_MAX_INTERVAL_SECONDS,
+  SYNC_INTERVAL_LABELS,
+  SYNC_INTERVAL_PRESETS,
+  defaultProfileDelays,
+  size,
+  space
+} from "../constants"
 import type { RootScreenProps } from "../types/navigation"
 
 function formatSyncDefault(seconds: number): string {
@@ -139,6 +160,24 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     }
   }, [])
 
+  const handleDelete = useCallback(async () => {
+    if (!profileId) return
+    const confirmed = await showConfirm({
+      title: "Delete profile",
+      message: `Delete "${profile.name}"?`,
+      confirmText: "Delete",
+      destructive: true
+    })
+    if (!confirmed) return
+    try {
+      await ProfileService.deleteProfile(profileId)
+      navigation.goBack()
+    } catch (err) {
+      logger.error("[ProfileEditor] Delete failed:", err)
+      showAlert("Error", "Failed to delete profile.", "error")
+    }
+  }, [profileId, profile.name, navigation])
+
   const handleSave = useCallback(async () => {
     if (!profile.name.trim()) {
       showAlert("Missing Name", "Please enter a profile name.", "warning")
@@ -172,7 +211,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 
   const isSpeed = profile.condition.type === "speed_above" || profile.condition.type === "speed_below"
   const isCustomSyncInterval = !SYNC_INTERVAL_PRESETS.includes(profile.syncInterval)
-
 
   return (
     <Container>
@@ -426,6 +464,15 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           loading={saving}
           onPress={handleSave}
         />
+        {isEditing && (
+          <Button
+            testID="delete-profile-btn"
+            title="Delete profile"
+            icon={Trash2}
+            variant="danger"
+            onPress={handleDelete}
+          />
+        )}
       </ScrollView>
     </Container>
   )

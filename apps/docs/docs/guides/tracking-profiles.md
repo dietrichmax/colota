@@ -26,6 +26,8 @@ Tracking profiles automatically adjust GPS interval, distance filter, and sync s
 5. Set a priority (higher priority profiles take precedence when multiple conditions match)
 6. Tap **Create Profile** to save
 
+Tap a profile in the list to edit it.
+
 ## Condition Types
 
 | Condition       | Trigger                                                   |
