@@ -13,6 +13,8 @@ export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR"
 
 export const LOG_LEVELS: readonly LogLevel[] = ["DEBUG", "INFO", "WARN", "ERROR"]
 
+export const DEFAULT_LOG_LEVELS: readonly LogLevel[] = ["WARN", "ERROR"]
+
 export interface LogEntry {
   timestamp: string
   level: LogLevel

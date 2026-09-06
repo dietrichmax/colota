@@ -148,3 +148,22 @@ describe("logger", () => {
     })
   })
 })
+
+describe("the level the log opens on", () => {
+  it("is problems only, not the debug traffic that drowns them", () => {
+    const { DEFAULT_LOG_LEVELS } = require("../logger")
+
+    expect([...DEFAULT_LOG_LEVELS]).toEqual(["WARN", "ERROR"])
+  })
+
+  it("does not change what is captured: the filter is a view, the export is not", () => {
+    // Dropping DEBUG at the source would empty the one diagnostic this project runs on.
+    const mod = require("../logger")
+    mod.logger.debug("zone lookup")
+    mod.logger.info("sync tick")
+
+    const levels = mod.getLogEntries().map((e: { level: string }) => e.level)
+    expect(levels).toContain("DEBUG")
+    expect(levels).toContain("INFO")
+  })
+})

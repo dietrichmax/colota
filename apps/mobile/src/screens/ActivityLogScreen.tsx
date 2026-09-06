@@ -22,7 +22,7 @@ import { Container, EmptyState, SectionTitle } from "../components"
 import { Tab } from "../components/ui/Tab"
 import { FileLoggingPanel } from "../components/features/log/FileLoggingPanel"
 import { useTheme } from "../hooks/useTheme"
-import { logger, LOG_LEVELS, type LogLevel } from "../utils/logger"
+import { logger, LOG_LEVELS, DEFAULT_LOG_LEVELS, type LogLevel } from "../utils/logger"
 import { getMergedLogs, exportLogs, MergedLogEntry } from "../utils/logExport"
 import NativeLocationService from "../services/NativeLocationService"
 import { ScreenProps } from "../types/global"
@@ -41,7 +41,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeLevels, setActiveLevels] = useState<Set<FilterLevel>>(new Set(LOG_LEVELS))
+  const [activeLevels, setActiveLevels] = useState<Set<FilterLevel>>(new Set(DEFAULT_LOG_LEVELS))
   const [showScrollEnd, setShowScrollEnd] = useState(false)
   const isNearEnd = useRef(true)
   const scrollRef = useRef<ScrollViewInstance>(null)
