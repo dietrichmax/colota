@@ -204,13 +204,13 @@ const styles = StyleSheet.create({
   },
   mapTilePanel: {
     marginTop: space.xs,
-    paddingBottom: space.xs
+    paddingBottom: space.xs,
+    gap: space.lg
   },
   mapStyleFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: space.sm
+    alignItems: "center"
   },
   mapStyleHint: {
     fontSize: fontSizes.small,
