@@ -20,7 +20,6 @@ interface TripListProps {
   trips: Trip[]
   colors: ThemeColors
   onTripSelect: (trip: Trip) => void
-  selectedTripIndex?: number | null
   onExport?: (format: ExportFormat, trips: Trip[]) => void
   onDelete?: (trips: Trip[]) => Promise<void>
   onMerge?: (trips: Trip[]) => Promise<void>
@@ -32,7 +31,6 @@ interface TripRowProps {
   stats: TripStats | undefined
   selectionMode: boolean
   isCabSelected: boolean
-  isMapSelected: boolean
   onPress: (trip: Trip) => void
   onLongPress: (trip: Trip) => void
 }
@@ -43,13 +41,12 @@ const TripRow = React.memo(function TripRowItem({
   stats,
   selectionMode,
   isCabSelected,
-  isMapSelected,
   onPress,
   onLongPress
 }: TripRowProps) {
   const duration = trip.endTime - trip.startTime
   const tripColor = getTripColor(trip.index)
-  const selectedBorderColor = isCabSelected ? colors.primary : isMapSelected ? tripColor : null
+  const selectedBorderColor = isCabSelected ? colors.primary : null
 
   const cardStyle = [
     styles.tripCard,
@@ -115,15 +112,7 @@ const TripRow = React.memo(function TripRowItem({
   )
 })
 
-export function TripList({
-  trips,
-  colors,
-  onTripSelect,
-  selectedTripIndex,
-  onExport,
-  onDelete,
-  onMerge
-}: TripListProps) {
+export function TripList({ trips, colors, onTripSelect, onExport, onDelete, onMerge }: TripListProps) {
   const [showExport, setShowExport] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const selectionMode = selected.size > 0
@@ -236,18 +225,15 @@ export function TripList({
         stats={statsCache.get(item.index)}
         selectionMode={selectionMode}
         isCabSelected={selected.has(item.index)}
-        isMapSelected={!selectionMode && selectedTripIndex === item.index}
         onPress={handleRowPress}
         onLongPress={handleRowLongPress}
       />
     ),
-    [colors, statsCache, selectionMode, selected, selectedTripIndex, handleRowPress, handleRowLongPress]
+    [colors, statsCache, selectionMode, selected, handleRowPress, handleRowLongPress]
   )
 
   if (trips.length === 0) {
-    return (
-      <EmptyState icon={Route} title="No trips for this day" hint="Need at least 2 points to form a trip" />
-    )
+    return <EmptyState icon={Route} title="No trips for this day" hint="Need at least 2 points to form a trip" />
   }
 
   return (
@@ -503,5 +489,5 @@ const styles = StyleSheet.create({
   statText: {
     fontSize: fontSizes.description,
     ...fonts.regular
-  },
+  }
 })
