@@ -132,7 +132,7 @@ function PasswordPromptModal({
           />
           <View style={styles.modalButtonsRow}>
             <View style={styles.modalButton}>
-              <Button title="Cancel" onPress={onCancel} disabled={busy} variant="secondary" />
+              <Button title="Cancel" onPress={onCancel} disabled={busy} variant="ghost" color={colors.textSecondary} />
             </View>
             <View style={styles.modalButton}>
               <Button
