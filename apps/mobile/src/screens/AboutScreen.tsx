@@ -15,7 +15,6 @@ import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
 import { space } from "../constants"
 import { logger } from "../utils/logger"
-import { radius } from "@colota/shared"
 
 // Helper function to map SDK to Android version
 function getAndroidVersion(sdkVersion: number): string {
@@ -279,15 +278,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.small,
     marginTop: space.sm,
     fontStyle: "italic"
-  },
-  debugBadge: {
-    marginTop: space.md,
-    paddingHorizontal: space.md,
-    paddingVertical: 6,
-    borderRadius: radius.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6
   },
   debugText: {
     fontSize: fontSizes.caption,

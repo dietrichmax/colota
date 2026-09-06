@@ -26,7 +26,7 @@ import { logger, LOG_LEVELS, DEFAULT_LOG_LEVELS, type LogLevel } from "../utils/
 import { getMergedLogs, exportLogs, MergedLogEntry } from "../utils/logExport"
 import NativeLocationService from "../services/NativeLocationService"
 import { ScreenProps } from "../types/global"
-import { size, space } from "../constants"
+import { HIT_SLOP_MD, size, space } from "../constants"
 import { radius } from "@colota/shared"
 
 type FilterLevel = LogLevel
@@ -232,6 +232,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
               <Pressable
                 key={level}
                 onPress={() => toggleLevel(level)}
+                hitSlop={HIT_SLOP_MD}
                 style={[
                   styles.chip,
                   {
@@ -348,9 +349,10 @@ const styles = StyleSheet.create({
     gap: 6
   },
   chip: {
+    minHeight: size.chip,
     paddingHorizontal: space.md,
-    paddingVertical: 5,
-    borderRadius: radius.md
+    paddingVertical: space.sm,
+    borderRadius: radius.sm
   },
   separator: {
     height: 1,

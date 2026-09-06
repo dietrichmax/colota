@@ -9,7 +9,7 @@ import { Check } from "lucide-react-native"
 import { ThemeColors } from "../../types/global"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
-import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { HIT_SLOP_MD, STATE_LAYER_ALPHA, size, space } from "../../constants"
 import { radius } from "@colota/shared"
 
 interface ChipGroupProps<T extends string> {
@@ -37,6 +37,7 @@ export function ChipGroup<T extends string>({ options, selected, onSelect, disab
             key={value}
             testID={testID}
             disabled={isDisabled}
+            hitSlop={HIT_SLOP_MD}
             accessibilityRole="radio"
             accessibilityState={{ checked: isSelected, disabled: isDisabled }}
             android_ripple={isDisabled ? undefined : { color: content + STATE_LAYER_ALPHA }}
