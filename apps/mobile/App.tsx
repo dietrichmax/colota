@@ -31,6 +31,7 @@ import {
   ExportLocationsScreen,
   ImportLocationsScreen,
   AboutScreen,
+  LegalScreen,
   TrackingProfilesScreen,
   ProfileEditorScreen,
   SetupImportScreen,
@@ -135,6 +136,11 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     name: "About Colota",
     component: AboutScreen,
     title: "About Colota"
+  },
+  {
+    name: "Legal",
+    component: LegalScreen,
+    title: "Legal"
   },
   {
     name: "Setup Import",
