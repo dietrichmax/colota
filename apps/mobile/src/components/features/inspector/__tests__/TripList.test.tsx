@@ -1,5 +1,7 @@
 import React from "react"
 import { render, fireEvent, act } from "@testing-library/react-native"
+import { StyleSheet, View } from "react-native"
+import { lightColors } from "@colota/shared"
 import type { Trip } from "../../../../types/global"
 import type { ExportFormat } from "../../../../utils/exportConverters"
 
@@ -33,19 +35,7 @@ jest.mock("../../../../utils/exportConverters", () => ({
 }))
 
 jest.mock("../../../../hooks/useTheme", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textDisabled: "#9ca3af",
-      border: "#e5e7eb",
-      card: "#fff",
-      cardElevated: "#f9fafb",
-      error: "#ef4444",
-      pressedOpacity: 0.7
-    }
-  })
+  useTheme: () => ({ colors: jest.requireActual("@colota/shared").lightColors })
 }))
 
 jest.mock("lucide-react-native", () => {
@@ -69,16 +59,9 @@ jest.mock("lucide-react-native", () => {
 
 import { TripList } from "../TripList"
 
-const colors = {
-  primary: "#0d9488",
-  text: "#000",
-  textSecondary: "#6b7280",
-  textDisabled: "#9ca3af",
-  border: "#e5e7eb",
-  card: "#fff",
-  error: "#ef4444",
-  pressedOpacity: 0.7
-} as any
+// The real palette, not a hand-written subset: a missing key reads undefined and the style
+// it feeds silently disappears.
+const colors = lightColors
 
 function makeTrip(index: number, distance = 1000): Trip {
   return {
@@ -98,6 +81,22 @@ function makeTrips(n: number): Trip[] {
 
 describe("TripList - CAB selection", () => {
   beforeEach(() => jest.clearAllMocks())
+
+  it("marks a selected trip with a fill, because a border that comes and goes clips the card", () => {
+    const { getByLabelText, UNSAFE_getAllByType } = render(
+      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} />
+    )
+    const filled = () =>
+      UNSAFE_getAllByType(View).filter(
+        (v) => StyleSheet.flatten(v.props.style)?.backgroundColor === colors.primaryContainer
+      )
+
+    expect(filled()).toHaveLength(0)
+    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+
+    expect(filled()).toHaveLength(1)
+    expect(StyleSheet.flatten(filled()[0].props.style).borderWidth).toBeUndefined()
+  })
 
   it("renders idle header with Export All when trips exist", () => {
     const { getByLabelText, queryByLabelText } = render(

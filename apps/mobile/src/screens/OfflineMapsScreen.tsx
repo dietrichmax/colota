@@ -810,7 +810,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
     ]
   )
 
-  const mapDownloadingStyle = downloading ? { borderColor: colors.primary, borderWidth: 2 as const } : null
+  const mapDownloadingStyle = downloading ? { borderColor: colors.primary } : null
   const savedAreasFillStyle = { fillColor: colors.success, fillOpacity: 0.1 }
   const savedAreasBorderStyle = { lineColor: colors.success, lineWidth: 1.5, lineOpacity: 0.6 }
   const downloadAreaFillStyle = { fillColor: colors.info, fillOpacity: 0.2 }
@@ -875,7 +875,9 @@ export function OfflineMapsScreen({}: ScreenProps) {
 const styles = StyleSheet.create({
   // the list around it already insets its rows
   emptyInset: { paddingHorizontal: 0 },
-  map: { height: 450, overflow: "hidden" },
+  // The border is always drawn and only changes colour: a width that comes and goes on a
+  // view that clips leaves its children unpainted on Android.
+  map: { height: 450, overflow: "hidden", borderWidth: 2, borderColor: "transparent" },
   list: { padding: 20, paddingBottom: 40 },
   section: { marginBottom: space.lg },
   hint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18, marginBottom: space.lg },

@@ -113,7 +113,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
       const isActive = activeProfileName === item.name
 
       return (
-        <Card style={[styles.card, isActive && styles.activeCard, isActive && { borderColor: colors.primary }]}>
+        <Card style={[styles.card, isActive && { backgroundColor: colors.primaryContainer }]}>
           <Pressable
             style={({ pressed }) => [styles.row, pressed && { opacity: colors.pressedOpacity }]}
             onPress={() => navigation.navigate("Profile Editor", { profileId: item.id })}
@@ -179,11 +179,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
               </Text>
             </View>
 
-            <Button
-              title="Create profile"
-              icon={Plus}
-              onPress={() => navigation.navigate("Profile Editor", {})}
-            />
+            <Button title="Create profile" icon={Plus} onPress={() => navigation.navigate("Profile Editor", {})} />
 
             {profiles.length > 0 && (
               <View style={styles.activeHeader}>
@@ -217,7 +213,6 @@ const styles = StyleSheet.create({
   header: { marginBottom: 20 },
   subtitle: { fontSize: fontSizes.body, ...fonts.regular, lineHeight: 20 },
   card: { marginBottom: space.md },
-  activeCard: { borderWidth: 2 },
   row: { flexDirection: "row", alignItems: "center" },
   iconWrap: {
     width: 36,
@@ -246,5 +241,5 @@ const styles = StyleSheet.create({
   settings: { fontSize: fontSizes.small, ...fonts.regular },
   actions: { alignItems: "center", gap: space.sm },
   activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  shareBtn: { padding: space.xs, marginBottom: space.md },
+  shareBtn: { padding: space.xs, marginBottom: space.md }
 })
