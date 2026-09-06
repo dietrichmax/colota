@@ -24,9 +24,21 @@ describe("Button variants", () => {
     expect(style.borderWidth).toBeUndefined()
   })
 
-  it("greys a disabled ghost, which has no fill to grey instead", () => {
-    // Every other variant says disabled by swapping its fill for textDisabled. A ghost has no
-    // fill, so it read as pressable while refusing the press.
+  it("recedes when disabled instead of wearing an enabled label", () => {
+    // The fill itself went to textDisabled while the label stayed textOnPrimary, so Offline maps'
+    // disabled download button was white on grey and still read as a filled button you could press.
+    const { getByTestId } = render(
+      <Button title="Download area" onPress={jest.fn()} disabled testID="download-btn" />
+    )
+
+    expect(flat(getByTestId("download-btn")).backgroundColor).toBe(lightColors.well)
+    expect(StyleSheet.flatten(getByTestId("download-btn").findByType(Text).props.style).color).toBe(
+      lightColors.textDisabled
+    )
+  })
+
+  it("greys a disabled ghost without giving it a fill to recede into", () => {
+    // A ghost is transparent by role, so the recessed fill would draw it a box it never had.
     const { getByTestId, rerender } = render(
       <Button title="Reset all" onPress={jest.fn()} variant="ghost" testID="reset-btn" />
     )
@@ -36,6 +48,7 @@ describe("Button variants", () => {
 
     rerender(<Button title="Reset all" onPress={jest.fn()} variant="ghost" disabled testID="reset-btn" />)
     expect(StyleSheet.flatten(label()).color).toBe(lightColors.textDisabled)
+    expect(flat(getByTestId("reset-btn")).backgroundColor).toBe("transparent")
   })
 
   it("keeps the touch target at the Android minimum", () => {

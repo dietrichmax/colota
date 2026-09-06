@@ -48,27 +48,20 @@ export function Button({
 }: Props) {
   const { colors } = useTheme()
   const getVariantStyles = () => {
+    // Disabled recedes: the container drops to the recessed fill and the content to the disabled
+    // token. Painting the fill itself disabled left a filled button wearing its enabled label.
+    if (disabled) {
+      return { bg: variant === "ghost" ? "transparent" : colors.well, text: colors.textDisabled }
+    }
     switch (variant) {
       case "primary":
-        return {
-          bg: disabled ? colors.textDisabled : colors.primary,
-          text: color ?? colors.textOnPrimary
-        }
+        return { bg: colors.primary, text: color ?? colors.textOnPrimary }
       case "secondary":
-        return {
-          bg: disabled ? colors.textDisabled : colors.primaryContainer,
-          text: color ?? colors.onPrimaryContainer
-        }
+        return { bg: colors.primaryContainer, text: color ?? colors.onPrimaryContainer }
       case "ghost":
-        return {
-          bg: "transparent",
-          text: disabled ? colors.textDisabled : (color ?? colors.primaryDark)
-        }
+        return { bg: "transparent", text: color ?? colors.primaryDark }
       case "danger":
-        return {
-          bg: disabled ? colors.textDisabled : colors.error,
-          text: color ?? colors.textOnPrimary
-        }
+        return { bg: colors.error, text: color ?? colors.textOnPrimary }
     }
   }
 
