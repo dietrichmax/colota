@@ -98,13 +98,14 @@ class AutoExportWorker(
         val db = DatabaseHelper.getInstance(appContext)
         val config = AutoExportConfig.from(db)
 
-        if (!config.enabled) {
+        if (!config.enabled && !isManualRun) {
             AppLogger.d(TAG, "Auto-export is disabled, skipping")
             return Result.success()
         }
 
         if (config.uri == null) {
             AppLogger.e(TAG, "No export directory configured")
+            if (isManualRun) LocationServiceModule.sendAutoExportEvent(false, null, 0, "No export directory configured")
             return Result.failure()
         }
 
@@ -163,6 +164,7 @@ class AutoExportWorker(
                 AppLogger.i(TAG, "No locations to export")
                 showNotification("Auto-Export", "No new locations to export.")
                 cleanupOldExports(dirUri, config)
+                if (isManualRun) LocationServiceModule.sendAutoExportEvent(true, null, 0, null)
                 return Result.success()
             }
 

@@ -5,9 +5,24 @@
 
 import React, { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
-import { Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter } from "react-native"
+import { ActivityIndicator, Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter } from "react-native"
 import { FolderOpen, CircleCheckBig, Share2, TriangleAlert } from "lucide-react-native"
-import { Button, Card, ChipGroup, Container, Divider, FloatingSaveIndicator, FormatSelector, NumericInput, RadioRow, SectionTitle, SettingRow, TimePicker, Toggle, TextField } from "../components"
+import {
+  Button,
+  Card,
+  ChipGroup,
+  Container,
+  Divider,
+  FloatingSaveIndicator,
+  FormatSelector,
+  NumericInput,
+  RadioRow,
+  SectionTitle,
+  SettingRow,
+  TimePicker,
+  Toggle,
+  TextField
+} from "../components"
 import { useTheme } from "../hooks/useTheme"
 import { useTimeout } from "../hooks/useTimeout"
 import { ScreenProps } from "../types/global"
@@ -84,6 +99,7 @@ export function AutoExportScreen(_props: ScreenProps) {
   const [exportFiles, setExportFiles] = useState<ExportFile[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [exportRunning, setExportRunning] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const successTimeout = useTimeout()
@@ -92,6 +108,9 @@ export function AutoExportScreen(_props: ScreenProps) {
     try {
       const status = await NativeLocationService.getAutoExportStatus()
       setEnabled(status.enabled)
+      // Only ever turns it on: the worker's flag is still false between the enqueue and the run
+      // starting, and a reload in that window would wipe the line the press just put up.
+      if (status.running) setExportRunning(true)
       setFormat((status.format as ExportFormat) || "geojson")
       setInterval((status.interval as ExportInterval) || "daily")
       setMode((status.mode as ExportMode) || "all")
@@ -148,15 +167,19 @@ export function AutoExportScreen(_props: ScreenProps) {
     const listener = DeviceEventEmitter.addListener(
       "onAutoExportComplete",
       (event: { success: boolean; fileName: string | null; rowCount: number; error: string | null }) => {
-        if (event.success) {
+        if (!event.success) {
+          setLastError(event.error)
+          showAlert("Export Failed", event.error || "Unknown error", "error")
+        } else if (event.fileName) {
           setLastFileName(event.fileName)
           setLastRowCount(event.rowCount)
           setLastError(null)
           showAlert("Export Complete", `Exported ${event.rowCount} locations to ${event.fileName}`, "success")
         } else {
-          setLastError(event.error)
-          showAlert("Export Failed", event.error || "Unknown error", "error")
+          setLastError(null)
+          showAlert("Export Complete", "No new locations to export.", "success")
         }
+        setExportRunning(false)
         loadStatus()
         loadExportFiles()
       }
@@ -337,7 +360,7 @@ export function AutoExportScreen(_props: ScreenProps) {
     setExporting(true)
     try {
       await NativeLocationService.runAutoExportNow()
-      showAlert("Export Started", "Export is running in the background. The status will update when complete.", "info")
+      setExportRunning(true)
     } catch (error) {
       logger.error("[AutoExportScreen] Export now failed:", error)
       showAlert("Error", "Failed to start export.", "error")
@@ -364,7 +387,9 @@ export function AutoExportScreen(_props: ScreenProps) {
   if (loading)
     return (
       <Container>
-        <View />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       </Container>
     )
 
@@ -385,11 +410,7 @@ export function AutoExportScreen(_props: ScreenProps) {
             label="Enable Auto-Export"
             hint={enabled ? "Auto-Exports are scheduled" : "Auto-Exports are disabled"}
           >
-            <Toggle
-              accessibilityLabel="Enable auto-export"
-              value={enabled}
-              onValueChange={handleToggle}
-            />
+            <Toggle accessibilityLabel="Enable auto-export" value={enabled} onValueChange={handleToggle} />
           </SettingRow>
         </Card>
 
@@ -602,6 +623,14 @@ export function AutoExportScreen(_props: ScreenProps) {
               disabled={exporting}
               loading={exporting}
             />
+            {exportRunning && (
+              <View style={styles.runningRow} testID="export-running">
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+                <Text style={[styles.runningText, { color: colors.textSecondary }]}>
+                  Export running. It continues if you leave this screen.
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -641,6 +670,20 @@ export function AutoExportScreen(_props: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  runningRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm
+  },
+  runningText: {
+    flex: 1,
+    fontSize: fontSizes.caption
+  },
   scrollContent: {
     paddingHorizontal: space.lg,
     paddingBottom: 40

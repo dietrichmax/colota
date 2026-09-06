@@ -255,7 +255,6 @@ class NativeLocationService {
     )
   }
 
-
   // ============================================================================
   // CLEANUP OPERATIONS
   // ============================================================================
@@ -871,6 +870,7 @@ class NativeLocationService {
    */
   static async getAutoExportStatus(): Promise<{
     enabled: boolean
+    running: boolean
     format: string
     interval: string
     uri: string | null
