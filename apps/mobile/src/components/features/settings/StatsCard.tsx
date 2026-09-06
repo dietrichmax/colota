@@ -46,43 +46,8 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
   const warningLevel = getWarningLevel()
   const showWarning = queueCount > HIGH_QUEUE_THRESHOLD
 
-  const getBorderColor = () => {
-    switch (warningLevel) {
-      case "critical":
-        return colors.error
-      case "warning":
-        return colors.warning
-      default:
-        return colors.border
-    }
-  }
-
-  const getBackgroundGradient = () => {
-    switch (warningLevel) {
-      case "critical":
-        return colors.error + "12"
-      case "warning":
-        return colors.warning + "12"
-      default:
-        return "transparent"
-    }
-  }
-
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: colors.card,
-          borderColor: getBorderColor()
-        }
-      ]}
-    >
-      {/* Gradient overlay for warning states */}
-      {warningLevel !== "normal" && (
-        <View style={[styles.gradientOverlay, { backgroundColor: getBackgroundGradient() }]} />
-      )}
-
+    <View style={[styles.container, { backgroundColor: colors.card }]}>
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
         {isOfflineMode ? (
@@ -139,10 +104,7 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
               const accent = warningLevel === "critical" ? colors.error : colors.warning
               return [
                 styles.warningButton,
-                {
-                  backgroundColor: accent + "15",
-                  borderColor: accent + "40"
-                },
+                { backgroundColor: accent + "15" },
                 pressed && { opacity: colors.pressedOpacity }
               ]
             }}
@@ -175,16 +137,8 @@ export function StatsCard({ queueCount, sentCount, todayCount, interval, onManag
 const styles = StyleSheet.create({
   container: {
     borderRadius: radius.lg,
-    borderWidth: 2,
     marginBottom: space.xl,
     overflow: "hidden"
-  },
-  gradientOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0
   },
   statsGrid: {
     flexDirection: "row",
@@ -223,8 +177,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
-    borderRadius: radius.md,
-    borderWidth: 1.5
+    borderRadius: radius.md
   },
   warningContent: {
     flexDirection: "row",
