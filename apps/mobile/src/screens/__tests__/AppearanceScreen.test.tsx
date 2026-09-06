@@ -3,12 +3,13 @@ import { render, fireEvent, waitFor } from "@testing-library/react-native"
 
 // --- Mocks ---
 
-const mockToggleTheme = jest.fn()
+const mockSetPreference = jest.fn()
 
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
     mode: "light",
-    toggleTheme: mockToggleTheme,
+    preference: "system",
+    setPreference: mockSetPreference,
     colors: {
       primary: "#0d9488",
       primaryDark: "#115E59",
@@ -93,13 +94,13 @@ describe("AppearanceScreen", () => {
     jest.clearAllMocks()
   })
 
-  it("renders dark mode, units and time format rows", () => {
+  it("renders theme, units and time format rows", () => {
     const { getByText, getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
 
-    expect(getByText("Dark Mode")).toBeTruthy()
+    expect(getByText("Theme")).toBeTruthy()
     expect(getByText("Units")).toBeTruthy()
-    expect(getByText("Time Format")).toBeTruthy()
-    expect(getByTestId("dark-mode-switch")).toBeTruthy()
+    expect(getByText("Time format")).toBeTruthy()
+    expect(getByTestId("theme-system")).toBeTruthy()
   })
 
   it("shows unit system chips with Metric and Imperial", () => {
@@ -136,12 +137,20 @@ describe("AppearanceScreen", () => {
     })
   })
 
-  it("toggles theme when dark mode switch is pressed", () => {
+  it("offers system alongside light and dark, which a toggle could not", () => {
     const { getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
 
-    fireEvent(getByTestId("dark-mode-switch"), "valueChange", true)
+    expect(getByTestId("theme-system")).toBeTruthy()
+    expect(getByTestId("theme-light")).toBeTruthy()
+    expect(getByTestId("theme-dark")).toBeTruthy()
+  })
 
-    expect(mockToggleTheme).toHaveBeenCalled()
+  it("records the picked mode rather than flipping the current one", () => {
+    const { getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+
+    fireEvent.press(getByTestId("theme-dark"))
+
+    expect(mockSetPreference).toHaveBeenCalledWith("dark")
   })
 
   it("toggles the map tile server panel when pressed", () => {

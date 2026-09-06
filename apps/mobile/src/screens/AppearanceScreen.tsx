@@ -6,11 +6,11 @@
 import React, { useState, useCallback, useEffect } from "react"
 import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
 import { ScreenProps } from "../types/global"
-import { useTheme } from "../hooks/useTheme"
+import { useTheme, type ThemePreference } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts } from "../styles/typography"
-import { Card, ChipGroup, Container, Divider, SettingRow, Toggle, TextField, ListItem } from "../components"
+import { Card, ChipGroup, Container, Divider, SettingRow, TextField, ListItem } from "../components"
 import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
@@ -18,7 +18,7 @@ import type { UnitSystem, TimeFormat } from "../utils/geo"
 import { space } from "../constants"
 
 export function AppearanceScreen({}: ScreenProps) {
-  const { mode, toggleTheme, colors } = useTheme()
+  const { preference, setPreference, colors } = useTheme()
   const { t } = useTranslation()
 
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(getUnitSystem)
@@ -92,13 +92,16 @@ export function AppearanceScreen({}: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Card rows style={styles.cardTail}>
-          <SettingRow label={t("appearance.darkMode")}>
-            <Toggle
-              accessibilityLabel={t("appearance.darkMode")}
-              testID="dark-mode-switch"
-              value={mode === "dark"}
-              onValueChange={toggleTheme}
+        <Card rows style={showMapTileServer && styles.cardTail}>
+          <SettingRow label={t("appearance.theme")}>
+            <ChipGroup
+              options={[
+                { value: "system", label: t("appearance.theme.system"), testID: "theme-system" },
+                { value: "light", label: t("appearance.theme.light"), testID: "theme-light" },
+                { value: "dark", label: t("appearance.theme.dark"), testID: "theme-dark" }
+              ]}
+              selected={preference}
+              onSelect={(value) => setPreference(value as ThemePreference)}
             />
           </SettingRow>
 
