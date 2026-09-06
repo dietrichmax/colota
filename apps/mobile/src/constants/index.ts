@@ -26,7 +26,7 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const
 export const size = {
   touch: 48,
   row: 56,
-  chip: 36,
+  chip: 32,
   iconButton: 32,
   iconColumn: 40,
   numericField: 88,

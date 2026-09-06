@@ -28,7 +28,7 @@ import { InteractiveLineChart } from "../components/features/inspector/Interacti
 import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
-import { HIT_SLOP_LG, size, space } from "../constants"
+import { HIT_SLOP_LG, HIT_SLOP_MD, size, space } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
@@ -392,6 +392,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
                 <Pressable
                   key={fmt}
                   onPress={() => handleExport(fmt)}
+                  hitSlop={HIT_SLOP_MD}
                   style={({ pressed }) => [
                     styles.exportChip,
                     { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" },
@@ -527,7 +528,8 @@ const styles = StyleSheet.create({
     marginTop: space.md
   },
   exportChip: {
-    paddingHorizontal: 14,
+    minHeight: size.chip,
+    paddingHorizontal: space.md,
     paddingVertical: space.sm,
     borderRadius: radius.sm
   },

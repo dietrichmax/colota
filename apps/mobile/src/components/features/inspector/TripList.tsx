@@ -13,7 +13,7 @@ import { formatDistance, formatDuration, formatSpeed, formatTime } from "../../.
 import type { Trip, ThemeColors } from "../../../types/global"
 import { getTripColor, computeTripStats, type TripStats } from "../../../utils/trips"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../../../utils/exportConverters"
-import { HIT_SLOP_SM, size, space } from "../../../constants"
+import { HIT_SLOP_MD, HIT_SLOP_SM, size, space } from "../../../constants"
 import { radius } from "@colota/shared"
 
 interface TripListProps {
@@ -348,6 +348,7 @@ export function TripList({
                 setShowExport(false)
                 if (selectionMode) setSelected(new Set())
               }}
+              hitSlop={HIT_SLOP_MD}
               style={({ pressed }) => [
                 styles.exportChip,
                 { backgroundColor: colors.primary + "12" },
@@ -443,8 +444,9 @@ const styles = StyleSheet.create({
     paddingBottom: space.md
   },
   exportChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    minHeight: size.chip,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
     borderRadius: radius.sm
   },
   exportChipText: {

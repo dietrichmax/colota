@@ -1,5 +1,7 @@
 import React from "react"
 import { render } from "@testing-library/react-native"
+import { StyleSheet } from "react-native"
+import { size } from "../../../constants"
 import { lightColors } from "@colota/shared"
 
 jest.mock("../../../hooks/useTheme", () => ({
@@ -41,4 +43,17 @@ describe("ChipGroup", () => {
     expect(getByTestId("chip-b").props.accessibilityState.checked).toBe(true)
     expect(getByTestId("chip-a").props.accessibilityState.checked).toBe(false)
   })
+
+  it("clears the 48 touch target with its slop, which the chip alone does not", () => {
+    const { getByTestId } = render(
+      <ChipGroup options={[{ value: "a", label: "Metric", testID: "chip-a" }]} selected="a" onSelect={jest.fn()} />
+    )
+    const chip = getByTestId("chip-a")
+    const style = StyleSheet.flatten(chip.props.style)
+    const slop = chip.props.hitSlop
+
+    expect(style.minHeight).toBe(size.chip)
+    expect(style.minHeight + slop.top + slop.bottom).toBeGreaterThanOrEqual(size.touch)
+  })
+
 })
