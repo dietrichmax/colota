@@ -22,7 +22,16 @@ import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup, Button, TextField, IconButton } from "../components"
+import {
+  SectionTitle,
+  FloatingSaveIndicator,
+  Container,
+  Divider,
+  ChipGroup,
+  Button,
+  TextField,
+  IconButton
+} from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
   buildTraccarJsonPayload,
@@ -30,7 +39,7 @@ import {
   isTraccarJsonFormat,
   isOverlandFormat
 } from "../utils/apiPayload"
-import { space } from "../constants"
+import { HIT_SLOP_LG, space } from "../constants"
 import { radius } from "@colota/shared"
 
 type LocalCustomField = CustomField & { id: number }
@@ -542,6 +551,8 @@ export function ApiSettingsScreen({}: ScreenProps) {
             {hasModifications && (
               <Pressable
                 onPress={handleResetAll}
+                hitSlop={HIT_SLOP_LG}
+                accessibilityRole="button"
                 style={({ pressed }) => [styles.resetAllButton, pressed && { opacity: colors.pressedOpacity }]}
               >
                 <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>Reset all</Text>
@@ -691,10 +702,12 @@ export function ApiSettingsScreen({}: ScreenProps) {
             <Text style={[styles.exampleCode, { color: colors.textSecondary }]}>{examplePayload}</Text>
             <Pressable
               onPress={handleCopyPayload}
+              hitSlop={HIT_SLOP_LG}
+              accessibilityRole="button"
               style={({ pressed }) => [styles.copyButton, pressed && { opacity: colors.pressedOpacity }]}
             >
               <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
-                {copied ? "COPIED!" : "COPY"}
+                {copied ? "Copied!" : "Copy"}
               </Text>
             </Pressable>
           </View>
@@ -747,9 +760,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.sm
   },
   resetAllText: {
-    fontSize: fontSizes.small,
-    ...fonts.bold,
-    letterSpacing: 0.5
+    fontSize: fontSizes.label,
+    ...fonts.semiBold
   },
   fieldsCard: {
     padding: space.md,
@@ -831,13 +843,12 @@ const styles = StyleSheet.create({
   copyButton: {
     alignSelf: "flex-end",
     paddingVertical: space.xs,
-    paddingHorizontal: 2,
+    paddingHorizontal: space.sm,
     marginTop: space.sm
   },
   copyButtonText: {
-    fontSize: fontSizes.small,
-    ...fonts.bold,
-    letterSpacing: 0.5
+    fontSize: fontSizes.label,
+    ...fonts.semiBold
   },
   exampleCard: {
     padding: 14,
