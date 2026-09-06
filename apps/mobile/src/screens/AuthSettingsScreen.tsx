@@ -11,7 +11,18 @@ import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
 import { fonts, fontSizes } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Card, Divider, ChipGroup, Button, TextField, ListItem, IconButton } from "../components"
+import {
+  SectionTitle,
+  FloatingSaveIndicator,
+  Container,
+  Card,
+  Divider,
+  ChipGroup,
+  Button,
+  TextField,
+  ListItem,
+  IconButton
+} from "../components"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { findDuplicates } from "../utils/settingsValidation"
@@ -187,7 +198,6 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
                   <TextField
                     label="Password"
                     testID="basic-password"
-                    style={styles.fieldLabelSpaced}
                     value={config.password}
                     onChangeText={(v) => updateConfig({ password: v })}
                     placeholder="Password"
@@ -341,10 +351,8 @@ const styles = StyleSheet.create({
     marginBottom: space.xl
   },
   fieldGroup: {
-    marginTop: space.xs
-  },
-  fieldLabelSpaced: {
-    marginTop: 14
+    marginTop: space.xs,
+    gap: space.lg
   },
   emptyHint: {
     fontSize: fontSizes.body,
@@ -383,5 +391,5 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: fontSizes.small,
     textAlign: "center"
-  },
+  }
 })
