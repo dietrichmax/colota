@@ -146,7 +146,7 @@ export function SettingsScreen({ navigation }: Props) {
                 <ListItem
                   testID="nav-api-config"
                   icon={Braces}
-                  label="API Field Mapping"
+                  label="API field mapping"
                   sub={apiSummary}
                   onPress={() => navigation.navigate("API Config")}
                 />
