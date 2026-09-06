@@ -78,12 +78,9 @@ export function AppModal() {
               return (
                 <Pressable
                   key={i}
+                  accessibilityRole="button"
                   android_ripple={{ color: btnStyles.text.color + STATE_LAYER_ALPHA }}
-                  style={[
-                    styles.button,
-                    current.buttons.length > 2 && styles.buttonFullWidth,
-                    btnStyles.container
-                  ]}
+                  style={[styles.button, current.buttons.length > 2 && styles.buttonFullWidth, btnStyles.container]}
                   onPress={() => handlePress(i)}
                 >
                   <Text style={[styles.buttonText, btnStyles.text]}>{btn.text}</Text>

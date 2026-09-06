@@ -60,6 +60,19 @@ describe("DisclosureModal", () => {
     expect(await resultPromise!).toBe(false)
   })
 
+  it("announces both choices as buttons", async () => {
+    // Both were bare Pressables, so TalkBack read "Not now" and the confirm label as text and
+    // said nothing about them being pressable. This is the disclosure a location grant depends on.
+    const { getByRole } = render(<DisclosureModal {...defaultProps} />)
+
+    await act(async () => {
+      triggerModal()
+    })
+
+    expect(getByRole("button", { name: "Not now" })).toBeTruthy()
+    expect(getByRole("button", { name: "Confirm" })).toBeTruthy()
+  })
+
   it("resolves true when confirm is pressed", async () => {
     const { getByText } = render(<DisclosureModal {...defaultProps} />)
 

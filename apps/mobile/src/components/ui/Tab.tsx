@@ -23,6 +23,8 @@ export function Tab({ label, active, onPress, colors }: TabProps) {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
       android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
       style={[styles.tab, { borderBottomColor }]}
     >
