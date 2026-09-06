@@ -402,15 +402,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
 
     @ReactMethod
-    fun insertDummyData(promise: Promise) {
-        if (!BuildConfig.DEBUG) {
-            promise.reject("ERR_NOT_DEBUG", "insertDummyData is only available in debug builds")
-            return
-        }
-        executeAsync(promise) { DebugSeedData.insertDummyData(dbHelper) }
-    }
-
-    @ReactMethod
     fun manualFlush(promise: Promise) {
         try {
             startServiceWithAction(LocationForegroundService.ACTION_MANUAL_FLUSH)

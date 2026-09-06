@@ -1,5 +1,5 @@
 import React from "react"
-import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { render, waitFor } from "@testing-library/react-native"
 import { Linking } from "react-native"
 
 // --- Mocks ---
@@ -42,8 +42,6 @@ const mockGetBuildConfig = jest.fn().mockReturnValue({
   KOTLIN_VERSION: "2.0.0",
   NDK_VERSION: "27.0.0"
 })
-const mockGetSetting = jest.fn().mockResolvedValue("false")
-const mockSaveSetting = jest.fn().mockResolvedValue(undefined)
 const mockGetDeviceInfo = jest.fn().mockResolvedValue({
   model: "Pixel 8",
   brand: "Google",
@@ -60,8 +58,6 @@ jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
   default: {
     getBuildConfig: (...args: any[]) => mockGetBuildConfig(...args),
-    getSetting: (...args: any[]) => mockGetSetting(...args),
-    saveSetting: (...args: any[]) => mockSaveSetting(...args),
     getDeviceInfo: (...args: any[]) => mockGetDeviceInfo(...args),
     copyToClipboard: (...args: any[]) => mockCopyToClipboard(...args),
     getNativeLogs: (...args: any[]) => mockGetNativeLogs(...args),
@@ -130,7 +126,6 @@ import { AboutScreen } from "../AboutScreen"
 describe("AboutScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockGetSetting.mockResolvedValue("false")
     jest.spyOn(Linking, "openURL").mockResolvedValue(true as any)
   })
 
@@ -139,59 +134,22 @@ describe("AboutScreen", () => {
   }
 
   it("renders app title and version", () => {
-    const { getByText } = renderScreen()
+    // Colota is both the app title and the section heading now, so the version is what
+    // identifies the header.
+    const { getAllByText, getByText } = renderScreen()
 
-    expect(getByText("Colota")).toBeTruthy()
+    expect(getAllByText("Colota").length).toBeGreaterThanOrEqual(1)
     expect(getByText("Version 1.3.0")).toBeTruthy()
   })
 
-  it("shows tap hint after first taps", () => {
+
+
+
+  it("shows the build details", async () => {
     const { getByText } = renderScreen()
-
-    const versionText = getByText("Version 1.3.0")
-    fireEvent.press(versionText)
-
-    expect(getByText("6 more taps to enable debug mode")).toBeTruthy()
-  })
-
-  it("enables debug mode after 7 taps", async () => {
-    const { getByText } = renderScreen()
-
-    const versionText = getByText("Version 1.3.0")
-    for (let i = 0; i < 7; i++) {
-      fireEvent.press(versionText)
-    }
 
     await waitFor(() => {
-      expect(getByText("Debug Mode (tap to hide)")).toBeTruthy()
-    })
-
-    expect(mockSaveSetting).toHaveBeenCalledWith("debug_mode_enabled", "true")
-  })
-
-  it("shows debug badge when debug mode is enabled", async () => {
-    const { getByText } = renderScreen()
-
-    const versionText = getByText("Version 1.3.0")
-    for (let i = 0; i < 7; i++) {
-      fireEvent.press(versionText)
-    }
-
-    await waitFor(() => {
-      expect(getByText("Debug Mode (tap to hide)")).toBeTruthy()
-    })
-  })
-
-  it("shows BUILD section with SDK info when debug enabled", async () => {
-    const { getByText } = renderScreen()
-
-    const versionText = getByText("Version 1.3.0")
-    for (let i = 0; i < 7; i++) {
-      fireEvent.press(versionText)
-    }
-
-    await waitFor(() => {
-      expect(getByText("BUILD")).toBeTruthy()
+      expect(getByText("Build")).toBeTruthy()
     })
 
     expect(getByText("FOSS")).toBeTruthy()
@@ -200,50 +158,5 @@ describe("AboutScreen", () => {
     expect(getByText("35.0.0")).toBeTruthy()
     expect(getByText("2.0.0")).toBeTruthy()
     expect(getByText("27.0.0")).toBeTruthy()
-  })
-
-  it("disables debug mode when debug badge is tapped", async () => {
-    const { getByText, queryByText } = renderScreen()
-
-    const versionText = getByText("Version 1.3.0")
-    for (let i = 0; i < 7; i++) {
-      fireEvent.press(versionText)
-    }
-
-    await waitFor(() => {
-      expect(getByText("Debug Mode (tap to hide)")).toBeTruthy()
-    })
-
-    mockSaveSetting.mockClear()
-
-    fireEvent.press(getByText("Debug Mode (tap to hide)"))
-
-    await waitFor(() => {
-      expect(queryByText("Debug Mode (tap to hide)")).toBeNull()
-    })
-
-    expect(mockSaveSetting).toHaveBeenCalledWith("debug_mode_enabled", "false")
-  })
-
-  it("loads persisted debug mode on mount", async () => {
-    mockGetSetting.mockResolvedValue("true")
-
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Debug Mode (tap to hide)")).toBeTruthy()
-    })
-
-    expect(mockGetSetting).toHaveBeenCalledWith("debug_mode_enabled", "false")
-  })
-
-  it("opens Privacy Policy URL when link pressed", async () => {
-    const { getByText } = renderScreen()
-
-    fireEvent.press(getByText("Privacy policy"))
-
-    await waitFor(() => {
-      expect(Linking.openURL).toHaveBeenCalledWith("https://colota.app/privacy-policy")
-    })
   })
 })

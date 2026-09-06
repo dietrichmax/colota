@@ -4,16 +4,16 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from "react"
-import { Text, StyleSheet, View, ScrollView, Linking, Pressable, Image } from "react-native"
+import { Text, StyleSheet, View, ScrollView, Image } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
-import { ExternalLink, Bug, FileText, Code, ScrollText, MessageCircle, Copy, Check, type LucideIcon } from "lucide-react-native"
+import { Copy, Check } from "lucide-react-native"
 import { fontSizes, fonts } from "../styles/typography"
-import { Card, Container, Divider, SectionTitle, Footer, ListItem } from "../components"
+import { Button, Card, Container, Divider, SectionTitle, Footer } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
-import { ISSUES_URL, PRIVACY_POLICY_URL, REPO_URL, TILE_SERVER_DOCS_URL, size, space } from "../constants"
+import { space } from "../constants"
 import { logger } from "../utils/logger"
 import { radius } from "@colota/shared"
 
@@ -49,32 +49,6 @@ function getVariantLabel(flavor: string): string {
   }
 }
 
-const LinkRow = ({
-  icon: Icon,
-  title,
-  subtitle,
-  url,
-  onOpenURL
-}: {
-  icon: LucideIcon
-  title: string
-  subtitle: string
-  url: string
-  onOpenURL: (url: string) => void
-}) => (
-  <ListItem
-    label={title}
-    sub={subtitle}
-    icon={Icon}
-    trailingIcon={ExternalLink}
-    accessibilityRole="link"
-    accessibilityHint={`Opens ${title} in a browser`}
-    onPress={() => onOpenURL(url)}
-  />
-)
-
-const DEBUG_MODE_SETTING_KEY = "debug_mode_enabled"
-
 function InfoCard({ rows }: { rows: { label: string; value: string }[] }) {
   const { colors } = useTheme()
   return (
@@ -94,8 +68,6 @@ function InfoCard({ rows }: { rows: { label: string; value: string }[] }) {
 
 export function AboutScreen({}: ScreenProps) {
   const { colors } = useTheme()
-  const [showDebugInfo, setShowDebugInfo] = useState(false)
-  const [tapCount, setTapCount] = useState(0)
   const [copied, setCopied] = useState(false)
   const copiedTimeout = useTimeout()
   const [deviceInfo, setDeviceInfo] = useState<{
@@ -109,23 +81,12 @@ export function AboutScreen({}: ScreenProps) {
   const buildConfig = useMemo(() => NativeLocationService.getBuildConfig(), [])
 
   // Load persisted debug mode
-  useEffect(() => {
-    NativeLocationService.getSetting(DEBUG_MODE_SETTING_KEY, "false").then((value) => {
-      if (value === "true") {
-        setShowDebugInfo(true)
-      }
-    })
-  }, [])
 
   // Persist debug mode changes
-  const toggleDebugMode = useCallback((enabled: boolean) => {
-    setShowDebugInfo(enabled)
-    NativeLocationService.saveSetting(DEBUG_MODE_SETTING_KEY, String(enabled))
-  }, [])
 
   // Load device info lazily when debug mode is enabled
   useEffect(() => {
-    if (!showDebugInfo || deviceInfo) return
+    if (deviceInfo) return
 
     NativeLocationService.getDeviceInfo()
       .then((info) => {
@@ -138,29 +99,12 @@ export function AboutScreen({}: ScreenProps) {
         })
       })
       .catch((err) => logger.error("Failed to load device info:", err))
-  }, [showDebugInfo, deviceInfo])
+  }, [deviceInfo])
 
   // Reset tap count after 2 seconds
-  useEffect(() => {
-    if (tapCount > 0) {
-      const timer = setTimeout(() => setTapCount(0), 2000)
-      return () => clearTimeout(timer)
-    }
-  }, [tapCount])
 
-  const handleVersionTap = useCallback(() => {
-    const newCount = tapCount + 1
-    setTapCount(newCount)
 
-    if (newCount >= 7) {
-      toggleDebugMode(true)
-      setTapCount(0)
-    }
-  }, [tapCount, toggleDebugMode])
 
-  const handleOpenURL = useCallback((url: string) => {
-    Linking.openURL(url).catch((err) => logger.error("Failed to open URL:", err))
-  }, [])
 
   const handleCopyDebugInfo = useCallback(async () => {
     if (!buildConfig) return
@@ -238,138 +182,42 @@ export function AboutScreen({}: ScreenProps) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable
-            style={({ pressed }) => [styles.appIconContainer, pressed && { opacity: colors.pressedOpacity }]}
-            onPress={handleVersionTap}
-          >
+          <View style={styles.appIconContainer}>
             <Image source={icon} style={styles.appIcon} resizeMode="contain" />
-          </Pressable>
+          </View>
           <Text style={[styles.title, { color: colors.text }]}>Colota</Text>
-          <Pressable onPress={handleVersionTap} style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}>
-            <Text style={[styles.version, { color: colors.textSecondary }]}>Version {buildConfig.VERSION_NAME}</Text>
-          </Pressable>
-
-          {/* Tap counter hint */}
-          {tapCount > 0 && tapCount < 7 && (
-            <Text style={[styles.debugHint, { color: colors.textLight }]}>
-              {7 - tapCount} more taps to enable debug mode
-            </Text>
-          )}
-
-          {showDebugInfo && (
-            <Pressable
-              onPress={() => toggleDebugMode(false)}
-              style={({ pressed }) => [
-                styles.debugBadge,
-                { backgroundColor: colors.warning + "20" },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-            >
-              <Bug size={size.icon.sm} color={colors.warning} />
-              <Text style={[styles.debugText, { color: colors.warning }]}>Debug Mode (tap to hide)</Text>
-            </Pressable>
-          )}
+          <Text style={[styles.version, { color: colors.textSecondary }]}>
+            Version {buildConfig.VERSION_NAME}
+          </Text>
         </View>
 
-        {/* Links */}
-        <Card>
-          <LinkRow
-            icon={FileText}
-            title="Privacy policy"
-            subtitle={PRIVACY_POLICY_URL}
-            url={PRIVACY_POLICY_URL}
-            onOpenURL={handleOpenURL}
-          />
-          <Divider />
-          <LinkRow
-            icon={Code}
-            title="Source code"
-            subtitle="github.com/dietrichmax/colota"
-            url={REPO_URL}
-            onOpenURL={handleOpenURL}
-          />
-          <Divider />
-          <LinkRow
-            icon={ScrollText}
-            title="License"
-            subtitle="GNU AGPLv3"
-            url={`${REPO_URL}/blob/main/LICENSE`}
-            onOpenURL={handleOpenURL}
-          />
-          <Divider />
-          <LinkRow
-            icon={MessageCircle}
-            title="Report a bug"
-            subtitle="github.com/dietrichmax/colota/issues"
-            url={ISSUES_URL}
-            onOpenURL={handleOpenURL}
-          />
-        </Card>
-
-        {/* Map Data Attribution */}
-        <View style={styles.section}>
-          <SectionTitle>Map data</SectionTitle>
-          <Card>
-            <ListItem
-              label="Colota tiles"
-              sub="Self-hosted map tile server - configure your own"
-              trailingIcon={ExternalLink}
-              accessibilityRole="link"
-              accessibilityHint="Opens Colota tiles in a browser"
-              onPress={() => handleOpenURL(TILE_SERVER_DOCS_URL)}
-            />
-            <Divider />
-            <ListItem
-              label="OpenStreetMap"
-              sub="Map data by OpenStreetMap contributors"
-              trailingIcon={ExternalLink}
-              accessibilityRole="link"
-              accessibilityHint="Opens OpenStreetMap in a browser"
-              onPress={() => handleOpenURL("https://www.openstreetmap.org/copyright")}
-            />
-          </Card>
-        </View>
-
-        {/* Debug Info - Only shown when enabled */}
-        {showDebugInfo && (
-          <>
+        <>
             <View style={styles.section}>
-              <SectionTitle>BUILD</SectionTitle>
+              <SectionTitle>Build</SectionTitle>
               <InfoCard rows={debugRows} />
             </View>
 
             {deviceRows.length > 0 && (
               <View style={styles.section}>
-                <SectionTitle>DEVICE</SectionTitle>
+                <SectionTitle>Device</SectionTitle>
                 <InfoCard rows={deviceRows} />
               </View>
             )}
 
             <View style={styles.debugActions}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.copyButton,
-                  { borderColor: colors.border },
-                  pressed && { opacity: colors.pressedOpacity }
-                ]}
+              <Button
+                variant="secondary"
+                icon={copied ? Check : Copy}
+                title={copied ? "Copied!" : "Copy debug info"}
+                testID="copy-debug-info-btn"
                 onPress={handleCopyDebugInfo}
-              >
-                {copied ? (
-                  <Check size={size.icon.sm} color={colors.success} />
-                ) : (
-                  <Copy size={size.icon.sm} color={colors.primaryDark} />
-                )}
-                <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
-                  {copied ? "Copied!" : "Copy debug info"}
-                </Text>
-              </Pressable>
+              />
 
               <Text style={[styles.logHint, { color: colors.textLight }]}>
                 View and export logs from Settings &gt; Logging.
               </Text>
             </View>
           </>
-        )}
 
         <Footer />
       </ScrollView>
@@ -448,19 +296,6 @@ const styles = StyleSheet.create({
   debugActions: {
     gap: 10,
     marginTop: space.lg
-  },
-  copyButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: space.sm,
-    paddingVertical: space.md,
-    borderRadius: radius.md,
-    borderWidth: 1
-  },
-  copyButtonText: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold
   },
   logHint: {
     fontSize: fontSizes.caption,

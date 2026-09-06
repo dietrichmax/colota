@@ -47,7 +47,6 @@ export function DataManagementScreen({}: ScreenProps) {
   const [daysInput, setDaysInput] = useState("90")
   const [isProcessing, setIsProcessing] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
-  const [debugMode, setDebugMode] = useState(false)
   const feedbackTimeout = useTimeout()
 
   // Update stats
@@ -63,9 +62,6 @@ export function DataManagementScreen({}: ScreenProps) {
   // Load debug mode setting
   useFocusEffect(
     useCallback(() => {
-      NativeLocationService.getSetting("debug_mode_enabled", "false").then((value) => {
-        setDebugMode(value === "true")
-      })
       updateStats()
       const interval = setInterval(updateStats, STATS_REFRESH_FAST)
       return () => clearInterval(interval)
@@ -224,26 +220,6 @@ export function DataManagementScreen({}: ScreenProps) {
     )
   }, [daysInput, handleDeleteAction, showFeedback])
 
-  const handleInsertDummyData = useCallback(async () => {
-    const confirmed = await showConfirm({
-      title: "Insert dummy data",
-      message: "Insert ~200 fake GPS locations across the past 7 days? This is for testing only.",
-      confirmText: "Insert"
-    })
-    if (!confirmed) return
-
-    setIsProcessing(true)
-    try {
-      const count = await NativeLocationService.insertDummyData()
-      await updateStats()
-      showFeedback(`Inserted ${count} dummy locations`)
-    } catch (err) {
-      logger.error("[DataManagementScreen] Insert dummy data failed:", err)
-      showFeedback("Failed to insert dummy data")
-    } finally {
-      setIsProcessing(false)
-    }
-  }, [updateStats, showFeedback])
 
   const handleVacuum = useCallback(async () => {
     setIsProcessing(true)
@@ -401,21 +377,6 @@ export function DataManagementScreen({}: ScreenProps) {
               </View>
             </Card>
           </View>
-          {/* Dev Tools */}
-          {debugMode && (
-            <View style={styles.section}>
-              <SectionTitle>Dev tools</SectionTitle>
-              <Card>
-                <View style={styles.actionColumn}>
-                  <Text style={[styles.actionLabel, { color: colors.text }]}>Insert dummy data</Text>
-                  <Text style={[styles.actionHint, { color: colors.textLight }]}>
-                    Generate ~200 fake GPS locations across the past 7 days for testing trips and calendar
-                  </Text>
-                  <Button onPress={handleInsertDummyData} disabled={isProcessing} title="Insert" variant="secondary" />
-                </View>
-              </Card>
-            </View>
-          )}
         </ScrollView>
 
         {/* Floating Feedback */}

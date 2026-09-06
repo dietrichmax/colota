@@ -35,22 +35,17 @@ jest.mock("../../hooks/useTimeout", () => ({
 }))
 
 const mockGetStats = jest.fn().mockResolvedValue({ queued: 5, sent: 100, total: 105, today: 3, databaseSizeMB: 1.5 })
-const mockGetSetting = jest.fn().mockResolvedValue("false")
 const mockManualFlush = jest.fn().mockResolvedValue(undefined)
 const mockClearSentHistory = jest.fn().mockResolvedValue(undefined)
 const mockClearQueue = jest.fn().mockResolvedValue(5)
 const mockDeleteOlderThan = jest.fn().mockResolvedValue(10)
 const mockVacuumDatabase = jest.fn().mockResolvedValue(undefined)
-const mockInsertDummyData = jest.fn().mockResolvedValue(200)
 
 jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
   default: {
     getStats: function () {
       return mockGetStats.apply(null, arguments)
-    },
-    getSetting: function () {
-      return mockGetSetting.apply(null, arguments)
     },
     manualFlush: function () {
       return mockManualFlush.apply(null, arguments)
@@ -66,9 +61,6 @@ jest.mock("../../services/NativeLocationService", () => ({
     },
     vacuumDatabase: function () {
       return mockVacuumDatabase.apply(null, arguments)
-    },
-    insertDummyData: function () {
-      return mockInsertDummyData.apply(null, arguments)
     }
   }
 }))
@@ -166,7 +158,6 @@ describe("DataManagementScreen", () => {
     jest.clearAllMocks()
     mockIsOfflineMode = false
     mockGetStats.mockResolvedValue({ queued: 5, sent: 100, total: 105, today: 3, databaseSizeMB: 1.5 })
-    mockGetSetting.mockResolvedValue("false")
     mockShowConfirm.mockResolvedValue(true)
   })
 
@@ -256,27 +247,7 @@ describe("DataManagementScreen", () => {
     })
   })
 
-  it("shows DEV TOOLS section when debug mode enabled", async () => {
-    mockGetSetting.mockResolvedValue("true")
 
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Dev tools")).toBeTruthy()
-      expect(getByText("Insert dummy data")).toBeTruthy()
-    })
-  })
-
-  it("hides DEV TOOLS section when debug mode disabled", async () => {
-    mockGetSetting.mockResolvedValue("false")
-
-    const { queryByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(queryByText("Dev tools")).toBeNull()
-      expect(queryByText("Insert dummy data")).toBeNull()
-    })
-  })
 
   it("Clear Sent History shows confirmation dialog", async () => {
     const { getByText, getAllByText } = renderScreen()
