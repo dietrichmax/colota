@@ -445,13 +445,14 @@ const styles = StyleSheet.create({
   },
   exportChip: {
     minHeight: size.chip,
+    justifyContent: "center",
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     borderRadius: radius.sm
   },
   exportChipText: {
-    fontSize: fontSizes.small,
-    ...fonts.bold
+    fontSize: fontSizes.caption,
+    ...fonts.medium
   },
   list: {
     paddingHorizontal: space.md,
