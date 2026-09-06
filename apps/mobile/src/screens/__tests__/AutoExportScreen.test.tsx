@@ -674,11 +674,88 @@ describe("AutoExportScreen", () => {
 
     await waitFor(() => {
       expect(mockRunAutoExportNow).toHaveBeenCalled()
-      expect(mockShowAlert).toHaveBeenCalledWith(
-        "Export Started",
-        "Export is running in the background. The status will update when complete.",
-        "info"
-      )
+    })
+  })
+
+  it("shows the export as running when the screen opens mid-run", async () => {
+    // The line is component state, so returning to the screen while the worker is still going
+    // would have shown nothing; the status map carries the worker's own flag for that.
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      running: true,
+      uri: "content://some-uri",
+      mode: "all",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0
+    })
+
+    const { getByTestId } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByTestId("export-running")).toBeTruthy()
+    })
+  })
+
+  it("says so when a manual export found nothing new", async () => {
+    // The worker reports a zero-row run with no filename, which read as "Exported 0 locations to
+    // null" before.
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      uri: "content://some-uri",
+      mode: "incremental",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0
+    })
+
+    render(<AutoExportScreen {...mockProps} />)
+    await waitFor(() => expect(mockGetAutoExportStatus).toHaveBeenCalled())
+
+    act(() => {
+      DeviceEventEmitter.emit("onAutoExportComplete", { success: true, fileName: null, rowCount: 0, error: null })
+    })
+
+    await waitFor(() => {
+      expect(mockShowAlert).toHaveBeenCalledWith("Export Complete", "No new locations to export.", "success")
+    })
+  })
+
+  it("keeps saying the export is running until the worker reports back", async () => {
+    // runAutoExportNow only enqueues, so the button's own spinner lasts about a frame while a
+    // real export runs for minutes. Nothing on the screen said the work was still going.
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      uri: "content://some-uri",
+      mode: "all",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0
+    })
+
+    const { getByText, getByTestId, queryByTestId } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByText("Export now")).toBeTruthy()
+    })
+    expect(queryByTestId("export-running")).toBeNull()
+
+    fireEvent.press(getByText("Export now"))
+    await waitFor(() => {
+      expect(getByTestId("export-running")).toBeTruthy()
+    })
+
+    act(() => {
+      DeviceEventEmitter.emit("onAutoExportComplete", {
+        success: true,
+        fileName: "colota-2026-09-06.geojson",
+        rowCount: 12,
+        error: null
+      })
+    })
+
+    await waitFor(() => {
+      expect(queryByTestId("export-running")).toBeNull()
     })
   })
 

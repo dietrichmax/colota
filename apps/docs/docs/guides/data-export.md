@@ -63,7 +63,7 @@ Automatically export your location data on a schedule without opening the app.
 5. Pick the **Time** (24-hour) in your device's local timezone. For **Weekly**, also pick a day of week. For **Monthly**, pick a day of month (1-31)
 6. Enable the toggle
 
-You can also tap **Export Now** to trigger an immediate export using your current auto-export settings, without waiting for the next scheduled run.
+You can also tap **Export Now** to trigger an immediate export using your current auto-export settings, without waiting for the next scheduled run. It works whether or not the toggle is on: the toggle governs the schedule, not the button. A line under the button says the export is running, and it keeps running if you leave the screen.
 
 ### Export Range
 
@@ -95,7 +95,7 @@ If several devices export into the same folder and none of the templates include
 
 - Uses Android AlarmManager (`setAndAllowWhileIdle`) to fire at your configured wall-clock time. Typical accuracy is within minutes; Doze mode may delay by up to ~15 minutes
 - After each export the next alarm is armed automatically. Alarms also re-arm after device reboot
-- Exports fire at the configured time, not on enable. To run an export immediately for testing or backup, tap **Export Now**
+- Exports fire at the configured time, not on enable. To run an export immediately for testing or backup, tap **Export Now**, which needs only an export directory
 - Promotes to a foreground service during export, preventing Android from killing long-running exports
 - Streams data in chunks (10,000 locations at a time) to keep memory usage low even with very large datasets
 - Writes to a temporary file first, then copies to the export directory - if something goes wrong mid-export, you never get a partial or corrupted file

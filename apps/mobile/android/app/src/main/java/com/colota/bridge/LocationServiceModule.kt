@@ -29,6 +29,7 @@ import com.Colota.sync.UrlSafety
 import com.Colota.util.DeviceInfoHelper
 import com.Colota.export.AutoExportConfig
 import com.Colota.export.AutoExportScheduler
+import com.Colota.export.AutoExportWorker
 import com.Colota.export.ExportConverters
 import com.Colota.util.AppFileLogger
 import com.Colota.util.FileOperations
@@ -1031,6 +1032,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
         Arguments.createMap().apply {
             putBoolean("enabled", config.enabled)
+            putBoolean("running", AutoExportWorker.isRunning)
             putString("format", config.format)
             putString("interval", config.interval)
             putString("uri", config.uri)
