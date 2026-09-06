@@ -14,7 +14,7 @@ export function Footer() {
 
   return (
     <View style={styles.footer}>
-      <Text style={[styles.copyright, { color: colors.textLight }]}>© 2026 Max Dietrich</Text>
+      <Text style={[styles.copyright, { color: colors.textLight }]}>© 2026 Max Dietrich and contributors</Text>
     </View>
   )
 }

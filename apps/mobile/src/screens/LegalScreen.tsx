@@ -12,7 +12,7 @@ import { Card, Container, Divider, ListItem, SectionTitle } from "../components"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
 import { fontSizes, fonts } from "../styles/typography"
-import { space, ISSUES_URL, OSM_COPYRIGHT_URL, PRIVACY_POLICY_URL, REPO_URL, TILE_SERVER_DOCS_URL } from "../constants"
+import { space, OSM_COPYRIGHT_URL, PRIVACY_POLICY_URL, REPO_URL, TILE_SERVER_DOCS_URL } from "../constants"
 
 export function LegalScreen({}: ScreenProps) {
   const { colors } = useTheme()
@@ -81,9 +81,8 @@ export function LegalScreen({}: ScreenProps) {
         </View>
 
         <Text style={[styles.copyright, { color: colors.textLight }]}>
-          Copyright &copy; 2026 Max Dietrich. Colota is free software: you may redistribute and modify it under the
-          terms of the GNU Affero General Public License. It comes with no warranty. Report a problem at{" "}
-          {ISSUES_URL.replace("https://", "")}.
+          Copyright &copy; 2026 Max Dietrich and contributors. Colota is free software, with no warranty; the License
+          row above has the terms.
         </Text>
       </ScrollView>
     </Container>
