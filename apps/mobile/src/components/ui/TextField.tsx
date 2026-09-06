@@ -97,6 +97,7 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
             onBlur?.(e)
           }}
           multiline={multiline}
+          numberOfLines={multiline ? undefined : 1}
           style={[
             styles.input,
             mono && styles.mono,

@@ -202,7 +202,7 @@ export function ConnectionSettings({
                 mono
                 value={endpointInput}
                 onChangeText={onEndpointInputChange}
-                placeholder="https://your-server.com/api/locations"
+                placeholder="https://your-server.com/api"
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="url"
