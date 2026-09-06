@@ -54,9 +54,7 @@ export function Card({
     switch (variant) {
       case "default":
         return {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderWidth: 1
+          backgroundColor: colors.card
         }
       case "elevated":
         return {
@@ -73,9 +71,7 @@ export function Card({
         }
       case "interactive":
         return {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderWidth: 1
+          backgroundColor: colors.card
         }
     }
   }

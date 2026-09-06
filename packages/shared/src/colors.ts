@@ -68,7 +68,7 @@ export const lightColors: ThemeColors = {
   info: "#1976D2",
 
   // UI
-  background: "#f8fafb",
+  background: "#F1F4F6",
   backgroundElevated: "#FFFFFF",
   card: "#FFFFFF",
   cardElevated: "#FFFFFF",
