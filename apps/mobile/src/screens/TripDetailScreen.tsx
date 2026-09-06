@@ -529,8 +529,7 @@ const styles = StyleSheet.create({
   exportChip: {
     paddingHorizontal: 14,
     paddingVertical: space.sm,
-    borderRadius: radius.sm,
-    borderWidth: 1
+    borderRadius: radius.sm
   },
   exportChipText: {
     fontSize: fontSizes.caption,

@@ -122,7 +122,7 @@ function getButtonStyles(
       }
     case "secondary":
       return {
-        container: { borderWidth: 1.5, borderColor: colors.border } as const,
+        container: {} as const,
         text: { color: colors.textSecondary } as const
       }
     default:

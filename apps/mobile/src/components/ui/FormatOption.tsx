@@ -56,8 +56,7 @@ export const FormatOption = ({
                 style={[
                   styles.extensionBadge,
                   {
-                    backgroundColor: selected ? colors.primary + "20" : colors.primary + "15",
-                    borderColor: selected ? colors.primary + "40" : colors.primary + "30"
+                    backgroundColor: selected ? colors.primary + "20" : colors.primary + "15"
                   }
                 ]}
               >
@@ -108,8 +107,7 @@ const styles = StyleSheet.create({
   extensionBadge: {
     paddingHorizontal: space.sm,
     paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1
+    borderRadius: 6
   },
   extensionText: {
     fontSize: fontSizes.micro,

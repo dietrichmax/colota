@@ -116,7 +116,6 @@ export function WelcomeCard({
         <Pressable
           style={({ pressed }) => [
             styles.dismissButton,
-            { borderColor: colors.border },
             pressed && { opacity: colors.pressedOpacity }
           ]}
           onPress={onDismiss}
@@ -179,8 +178,7 @@ const styles = StyleSheet.create({
   dismissButton: {
     paddingVertical: 10,
     alignItems: "center",
-    borderRadius: 10,
-    borderWidth: 1.5
+    borderRadius: 10
   },
   dismissText: {
     fontSize: fontSizes.body,

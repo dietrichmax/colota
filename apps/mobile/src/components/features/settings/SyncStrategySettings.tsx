@@ -363,7 +363,7 @@ export function SyncStrategySettings({
                           <Pressable
                             style={({ pressed }) => [
                               styles.ssidFillButton,
-                              { borderColor: colors.primary, backgroundColor: colors.primary + "15" },
+                              { backgroundColor: colors.primary + "15" },
                               pressed && { opacity: colors.pressedOpacity }
                             ]}
                             onPress={() => {
@@ -502,8 +502,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: radius.sm,
-    borderWidth: 1
+    borderRadius: radius.sm
   },
   ssidFillText: {
     ...fonts.medium,

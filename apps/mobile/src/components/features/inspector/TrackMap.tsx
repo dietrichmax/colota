@@ -306,7 +306,7 @@ export function TrackMap({
       )}
 
       {!isEmpty && popup && (
-        <View style={[styles.popupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.popupCard, { backgroundColor: colors.card }]}>
           <View style={styles.popupHeader}>
             <Text style={[styles.popupTime, { color: colors.text }]}>
               {popup.timestamp ? new Date(popup.timestamp * 1000).toLocaleTimeString() : "-"}
@@ -401,7 +401,7 @@ export function TrackMap({
       {!isEmpty && <MapCenterButton visible={!isCentered} onPress={handleFitTrack} />}
 
       {!isEmpty && trips && trips.length > 1 && (
-        <View style={[styles.legend, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.legend, { backgroundColor: colors.card }]}>
           {trips.map((trip) => (
             <View key={trip.index} style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: getTripColor(trip.index) }]} />
@@ -456,7 +456,6 @@ const styles = StyleSheet.create({
     right: 10,
     padding: space.md,
     borderRadius: radius.md,
-    borderWidth: 1,
     elevation: 6,
     zIndex: 10
   },
@@ -517,7 +516,6 @@ const styles = StyleSheet.create({
     bottom: 30,
     left: 10,
     borderRadius: radius.md,
-    borderWidth: 1,
     padding: space.sm,
     gap: space.xs,
     elevation: 4,

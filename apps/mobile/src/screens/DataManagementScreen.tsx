@@ -423,7 +423,7 @@ const ActionRow = ({
         <Text style={[styles.actionLabel, { color }]}>{label}</Text>
         <Text style={[styles.actionHint, { color: textColor }]}>{hint}</Text>
       </View>
-      <View style={[styles.actionBadge, { backgroundColor: color + "20", borderColor: color }]}>
+      <View style={[styles.actionBadge, { backgroundColor: color + "20" }]}>
         <Text style={[styles.actionBadgeText, { color }]}>{value}</Text>
       </View>
     </Pressable>
@@ -495,8 +495,7 @@ const styles = StyleSheet.create({
   actionBadge: {
     paddingHorizontal: space.md,
     paddingVertical: 6,
-    borderRadius: radius.lg,
-    borderWidth: 1
+    borderRadius: radius.lg
   },
   actionBadgeText: {
     fontSize: fontSizes.description,
