@@ -240,7 +240,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
                   }
                 ]}
               >
-                <Text style={[styles.chipText, { color: active ? colors.textOnPrimary : colors.textLight }]}>
+                <Text style={[styles.chipText, active && styles.chipTextActive, { color: active ? colors.textOnPrimary : colors.textLight }]}>
                   {level}
                   {count > 0 ? ` ${count}` : ""}
                 </Text>
@@ -350,6 +350,7 @@ const styles = StyleSheet.create({
   },
   chip: {
     minHeight: size.chip,
+    justifyContent: "center",
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     borderRadius: radius.sm
@@ -360,8 +361,12 @@ const styles = StyleSheet.create({
     marginTop: space.xs
   },
   chipText: {
-    ...fonts.semiBold,
-    fontSize: fontSizes.small
+    ...fonts.medium,
+    fontSize: fontSizes.caption
+  },
+  // Selection is a weight step as well as the fill, matching ChipGroup, so it does not rest on colour alone.
+  chipTextActive: {
+    ...fonts.semiBold
   },
   logText: {
     ...fonts.regular,

@@ -395,7 +395,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
                   hitSlop={HIT_SLOP_MD}
                   style={({ pressed }) => [
                     styles.exportChip,
-                    { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" },
+                    { backgroundColor: colors.primary + "12" },
                     pressed && { opacity: colors.pressedOpacity }
                   ]}
                 >
@@ -529,13 +529,14 @@ const styles = StyleSheet.create({
   },
   exportChip: {
     minHeight: size.chip,
+    justifyContent: "center",
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     borderRadius: radius.sm
   },
   exportChipText: {
     fontSize: fontSizes.caption,
-    ...fonts.bold
+    ...fonts.medium
   },
   headerBtn: {
     padding: space.sm
