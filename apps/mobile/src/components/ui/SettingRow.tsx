@@ -7,7 +7,7 @@ import React from "react"
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native"
 import { fontSizes, fonts } from "../../styles/typography"
 import { useTheme } from "../../hooks/useTheme"
-import { space } from "../../constants"
+import { space, size } from "../../constants"
 
 interface SettingRowProps {
   label: string
@@ -39,7 +39,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: space.xs
+    minHeight: size.row,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md
   },
   settingContent: {
     flex: 1,

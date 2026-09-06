@@ -380,7 +380,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         </View>
 
         {/* Enable Toggle */}
-        <Card>
+        <Card flush>
           <SettingRow
             label="Enable Auto-Export"
             hint={enabled ? "Auto-Exports are scheduled" : "Auto-Exports are disabled"}

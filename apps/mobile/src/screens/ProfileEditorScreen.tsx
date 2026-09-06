@@ -184,7 +184,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
       >
         {/* Name & Priority */}
         <SectionTitle>Profile</SectionTitle>
-        <Card>
+        <Card flush>
           <View style={styles.inputGroup}>
             <TextField
               testID="profile-name-input"
@@ -396,7 +396,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                 </View>
               </SettingRow>
 
-              <Divider />
+              <Divider tight />
 
               <SettingRow
                 label="Deactivation delay"

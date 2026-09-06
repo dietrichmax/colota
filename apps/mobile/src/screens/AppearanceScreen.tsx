@@ -102,7 +102,7 @@ export function AppearanceScreen({}: ScreenProps) {
             />
           </SettingRow>
 
-          <Divider />
+          <Divider tight />
 
           <SettingRow label={t("appearance.units")}>
             <ChipGroup
@@ -115,7 +115,7 @@ export function AppearanceScreen({}: ScreenProps) {
             />
           </SettingRow>
 
-          <Divider />
+          <Divider tight />
 
           <SettingRow label={t("appearance.timeFormat")}>
             <ChipGroup
@@ -128,7 +128,7 @@ export function AppearanceScreen({}: ScreenProps) {
             />
           </SettingRow>
 
-          <Divider />
+          <Divider tight />
 
           <ListItem
             testID="map-tile-server-toggle"
