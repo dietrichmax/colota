@@ -10,6 +10,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.WorkerThread
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.Colota.data.DatabaseHelper
@@ -55,7 +56,8 @@ object AutoExportScheduler {
         val request = OneTimeWorkRequestBuilder<AutoExportWorker>()
             .addTag(IMMEDIATE_WORK_TAG)
             .build()
-        WorkManager.getInstance(context.applicationContext).enqueue(request)
+        WorkManager.getInstance(context.applicationContext)
+            .enqueueUniqueWork(IMMEDIATE_WORK_TAG, ExistingWorkPolicy.KEEP, request)
         AppLogger.i(TAG, "Enqueued immediate auto-export")
     }
 

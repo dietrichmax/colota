@@ -115,6 +115,16 @@ class AutoExportSchedulerTest {
     }
 
     @Test
+    fun `a second Export now while one is queued does not enqueue a second run`() {
+        // Each run writes its own file, so a double tap produced two exports a second apart.
+        AutoExportScheduler.runNow(context)
+        AutoExportScheduler.runNow(context)
+
+        val wm = WorkManager.getInstance(context)
+        assertEquals(1, wm.getWorkInfosByTag(AutoExportWorker::class.java.name).get().size)
+    }
+
+    @Test
     fun `the alarm receiver re-arms the alarm before enqueuing so a failed enqueue cannot end the schedule`() {
         mockkObject(AutoExportScheduler)
         every { AutoExportScheduler.enqueueScheduled(any()) } throws RuntimeException("WorkManager not initialized")
