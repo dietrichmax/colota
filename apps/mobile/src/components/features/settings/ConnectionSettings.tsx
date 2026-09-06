@@ -183,7 +183,7 @@ export function ConnectionSettings({
   return (
     <View style={styles.section}>
       <Text style={[styles.intro, { color: colors.textSecondary }]}>Where your locations are sent</Text>
-      <Card>
+      <Card rows>
         <SettingRow label="Offline mode" hint="Save locally, no network sync">
           <Toggle
             accessibilityLabel="Offline mode"

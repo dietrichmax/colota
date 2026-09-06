@@ -380,7 +380,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         </View>
 
         {/* Enable Toggle */}
-        <Card flush>
+        <Card rows>
           <SettingRow
             label="Enable Auto-Export"
             hint={enabled ? "Auto-Exports are scheduled" : "Auto-Exports are disabled"}
@@ -501,7 +501,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         {/* Export Range */}
         <View style={styles.section}>
           <SectionTitle>Export range</SectionTitle>
-          <Card>
+          <Card rows>
             {MODE_OPTIONS.map((option, i) => (
               <RadioRow
                 key={option.key}

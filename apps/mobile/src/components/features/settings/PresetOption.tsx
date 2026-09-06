@@ -9,7 +9,7 @@ import { SelectablePreset, TRACKING_PRESETS } from "../../../types/global"
 import { fontSizes, fonts } from "../../../styles/typography"
 import { useTheme } from "../../../hooks/useTheme"
 import { RadioDot } from "../../ui/RadioDot"
-import { size, space } from "../../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 
 interface BadgeProps {
   icon: React.ReactElement
@@ -43,7 +43,8 @@ export function PresetOption({ preset, isSelected, isOfflineMode, onSelect }: Pr
 
   return (
     <Pressable
-      style={({ pressed }) => [pressed && { opacity: colors.pressedOpacity }]}
+      style={styles.row}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
       onPress={() => onSelect(preset)}
       accessibilityRole="radio"
       accessibilityState={{ checked: isSelected }}
@@ -88,10 +89,15 @@ export function PresetOption({ preset, isSelected, isOfflineMode, onSelect }: Pr
 }
 
 const styles = StyleSheet.create({
+  // See ListItem: the card's inset is cancelled and reapplied so a press fills its width.
+  row: {
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg
+  },
   content: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: space.md
+    paddingVertical: space.lg
   },
   leftContent: {
     flex: 1

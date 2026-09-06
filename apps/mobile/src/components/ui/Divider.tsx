@@ -8,8 +8,8 @@ import { View, StyleSheet } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { space, size } from "../../constants"
 
-/** Where a ListItem's text starts: the row's own padding, its icon and the gap after it. */
-const TEXT_COLUMN = space.lg + size.icon.md + space.lg
+/** Where a ListItem's text starts inside its card: past the icon and the gap after it. */
+const TEXT_COLUMN = size.icon.md + space.lg
 
 type DividerProps = {
   /** Between rows of one group, where the rows already carry their own vertical padding. */

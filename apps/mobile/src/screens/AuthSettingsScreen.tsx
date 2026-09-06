@@ -291,7 +291,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
 
         <View style={styles.section}>
           <SectionTitle>Client certificate</SectionTitle>
-          <Card flush>
+          <Card rows>
             <ListItem
               testID="nav-mtls-settings"
               label="Client Certificate (mTLS)"
