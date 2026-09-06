@@ -126,6 +126,7 @@ jest.mock("../../components", () => {
   const RN = require("react-native")
   const { EXPORT_FORMATS } = require("../../utils/exportConverters")
   return {
+    EmptyState: require("../../testing/componentStubs").EmptyStateStub,
     Toggle: function (props: any) {
       return require("react").createElement(require("react-native").Switch, {
         testID: props.testID,
@@ -240,7 +241,7 @@ describe("ExportLocationsScreen", () => {
 
     await waitFor(() => {
       expect(getByText("No locations")).toBeTruthy()
-      expect(getByText("Start tracking to record locations that can be exported.")).toBeTruthy()
+      expect(getByText("Start tracking to record locations that can be exported")).toBeTruthy()
     })
   })
 

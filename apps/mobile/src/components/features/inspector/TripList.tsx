@@ -7,6 +7,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { View, Text, FlatList, Pressable, StyleSheet, BackHandler } from "react-native"
 import { Clock, Route, Share, TrendingUp, TrendingDown, Gauge, Trash2, X, Merge } from "lucide-react-native"
 import { Card } from "../../ui/Card"
+import { EmptyState } from "../../ui/EmptyState"
 import { fontSizes, fonts } from "../../../styles/typography"
 import { formatDistance, formatDuration, formatSpeed, formatTime } from "../../../utils/geo"
 import type { Trip, ThemeColors } from "../../../types/global"
@@ -245,11 +246,7 @@ export function TripList({
 
   if (trips.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Route size={40} color={colors.textDisabled} />
-        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No trips for this day</Text>
-        <Text style={[styles.emptyHint, { color: colors.textDisabled }]}>Need at least 2 points to form a trip</Text>
-      </View>
+      <EmptyState icon={Route} title="No trips for this day" hint="Need at least 2 points to form a trip" />
     )
   }
 
@@ -372,7 +369,7 @@ export function TripList({
         data={trips}
         renderItem={renderTrip}
         keyExtractor={(item) => `trip-${item.index}`}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, trips.length === 0 && styles.listEmpty]}
         extraData={selected}
       />
     </View>
@@ -458,6 +455,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingBottom: space.lg
   },
+  // so an empty state has room to centre in
+  listEmpty: { flexGrow: 1 },
   tripCard: {
     marginBottom: space.sm
   },
@@ -502,19 +501,4 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.description,
     ...fonts.regular
   },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: space.sm,
-    paddingTop: 60
-  },
-  emptyText: {
-    fontSize: fontSizes.body,
-    ...fonts.regular
-  },
-  emptyHint: {
-    fontSize: fontSizes.caption,
-    ...fonts.regular
-  }
 })

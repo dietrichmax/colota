@@ -18,7 +18,7 @@ import { useFocusEffect } from "@react-navigation/native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Share2, Search, X, ArrowDown } from "lucide-react-native"
 import { fontSizes, fonts } from "../styles/typography"
-import { Container, SectionTitle } from "../components"
+import { Container, EmptyState, SectionTitle } from "../components"
 import { Tab } from "../components/ui/Tab"
 import { FileLoggingPanel } from "../components/features/log/FileLoggingPanel"
 import { useTheme } from "../hooks/useTheme"
@@ -280,16 +280,14 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
             </Text>
           </>
         ) : (
-          <View style={styles.empty}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              {logs.length === 0 ? "No log entries yet" : "No logs match your filter"}
-            </Text>
-            <Text style={[styles.emptyHint, { color: colors.textLight }]}>
-              {logs.length === 0
+          <EmptyState
+            title={logs.length === 0 ? "No log entries yet" : "No logs match your filter"}
+            hint={
+              logs.length === 0
                 ? "Logs are collected automatically as the app runs"
-                : "Try adjusting your search or level filters"}
-            </Text>
-          </View>
+                : "Try adjusting your search or level filters"
+            }
+          />
         )}
       </ScrollView>
 
@@ -374,21 +372,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center"
-  },
-  empty: {
-    alignItems: "center",
-    paddingTop: 40
-  },
-  emptyText: {
-    fontSize: fontSizes.input,
-    ...fonts.medium,
-    marginBottom: 6
-  },
-  emptyHint: {
-    fontSize: fontSizes.description,
-    ...fonts.regular,
-    textAlign: "center",
-    lineHeight: 18
   },
   scrollEndButton: {
     position: "absolute",

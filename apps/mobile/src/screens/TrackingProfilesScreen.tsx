@@ -11,7 +11,7 @@ import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { SavedTrackingProfile, ScreenProps } from "../types/global"
 import { fontSizes, fonts } from "../styles/typography"
-import { Button, Card, Container, SectionTitle, Toggle, IconButton } from "../components"
+import { Button, Card, Container, EmptyState, IconButton, SectionTitle, Toggle } from "../components"
 import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { buildProfilesLink } from "../utils/setupLink"
@@ -201,13 +201,10 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
           </>
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No profiles yet</Text>
-            <Text style={[styles.emptyHint, { color: colors.textLight }]}>
-              Create a profile to automatically switch tracking settings when charging, connected to Android Auto, or
-              based on speed
-            </Text>
-          </View>
+          <EmptyState
+            title="No profiles yet"
+            hint="Create a profile to switch tracking settings automatically when charging, on Android Auto, or by speed"
+          />
         }
         renderItem={renderItem}
       />
@@ -250,12 +247,4 @@ const styles = StyleSheet.create({
   actions: { alignItems: "center", gap: space.sm },
   activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   shareBtn: { padding: space.xs, marginBottom: space.md },
-  empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 6 },
-  emptyHint: {
-    fontSize: fontSizes.description,
-    textAlign: "center",
-    maxWidth: 280,
-    lineHeight: 18
-  }
 })

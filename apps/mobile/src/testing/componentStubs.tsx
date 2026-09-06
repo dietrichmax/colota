@@ -41,3 +41,12 @@ export function IconButtonStub({ onPress, testID, accessibilityLabel, disabled, 
     />
   )
 }
+
+export function EmptyStateStub({ title, hint }: any) {
+  return React.createElement(
+    View,
+    null,
+    React.createElement(Text, null, title),
+    hint ? React.createElement(Text, null, hint) : null
+  )
+}
