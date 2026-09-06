@@ -144,12 +144,9 @@ export function AppearanceScreen({}: ScreenProps) {
 
           {showMapTileServer && (
             <View style={styles.mapTilePanel}>
-              <Text style={[styles.mapStyleSub, styles.mapStyleSubFirst, { color: colors.textSecondary }]}>
-                {t("appearance.mapStyle.light")}
-              </Text>
               <TextField
                 testID="map-style-url-light"
-                accessibilityLabel={t("appearance.mapStyle.light")}
+                label={t("appearance.mapStyle.light")}
                 mono
                 value={mapStyleUrlLight}
                 onChangeText={setMapStyleUrlLight}
@@ -160,12 +157,9 @@ export function AppearanceScreen({}: ScreenProps) {
                 autoCorrect={false}
                 keyboardType="url"
               />
-              <Text style={[styles.mapStyleSub, styles.mapStyleSubSecond, { color: colors.textSecondary }]}>
-                {t("appearance.mapStyle.dark")}
-              </Text>
               <TextField
                 testID="map-style-url-dark"
-                accessibilityLabel={t("appearance.mapStyle.dark")}
+                label={t("appearance.mapStyle.dark")}
                 mono
                 value={mapStyleUrlDark}
                 onChangeText={setMapStyleUrlDark}
@@ -212,13 +206,6 @@ const styles = StyleSheet.create({
     marginTop: space.xs,
     paddingBottom: space.xs
   },
-  mapStyleSub: {
-    fontSize: fontSizes.caption,
-    ...fonts.medium,
-    marginBottom: 6
-  },
-  mapStyleSubFirst: { marginTop: space.md },
-  mapStyleSubSecond: { marginTop: 10 },
   mapStyleFooter: {
     flexDirection: "row",
     justifyContent: "space-between",

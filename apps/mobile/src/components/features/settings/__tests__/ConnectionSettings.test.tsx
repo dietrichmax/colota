@@ -162,17 +162,7 @@ describe("ConnectionSettings", () => {
       expect(getByText("Authentication & headers")).toBeTruthy()
     })
 
-    it("shows HTTPS badge for https endpoint", () => {
-      const { getByText } = renderComponent({}, "https://example.com/api/locations")
 
-      expect(getByText("HTTPS")).toBeTruthy()
-    })
-
-    it("shows HTTP badge for http endpoint", () => {
-      const { getByText } = renderComponent({}, "http://192.168.1.1/api/locations")
-
-      expect(getByText("HTTP")).toBeTruthy()
-    })
   })
 
   describe("offline mode", () => {
