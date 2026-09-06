@@ -7,7 +7,7 @@ import { View, Text, StyleSheet } from "react-native"
 import { ThemeColors } from "../../types/global"
 import { useTheme } from "../../hooks/useTheme"
 import { logger } from "../../utils/logger"
-import { fonts, fontSizes } from "../../styles/typography"
+import { fontSizes, type } from "../../styles/typography"
 
 import { Button } from "./Button"
 
@@ -75,8 +75,7 @@ const styles = StyleSheet.create({
     padding: 20
   },
   errorTitle: {
-    fontSize: fontSizes.screenTitle,
-    ...fonts.bold,
+    ...type.display,
     marginBottom: 10
   },
   errorMessage: {

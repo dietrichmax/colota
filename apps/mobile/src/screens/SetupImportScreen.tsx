@@ -8,7 +8,7 @@ import { View, Text, ScrollView, StyleSheet } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Button, Card, Container, SectionTitle, Toggle } from "../components"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, type } from "../styles/typography"
 import { CircleAlert, CircleCheckBig, Import } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
@@ -259,8 +259,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   title: {
-    fontSize: fontSizes.heading,
-    ...fonts.bold
+    ...type.heading
   },
   subtitle: {
     fontSize: fontSizes.description,

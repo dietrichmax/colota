@@ -60,27 +60,30 @@ function restoreErrorMessage(e: unknown): string {
 }
 
 type PasswordFieldProps = {
+  /** Omitted in the restore prompt, where the modal's own title names the field. */
+  label?: string
   value: string
   onChangeText: (v: string) => void
   placeholder: string
   editable: boolean
   autoComplete: "password" | "new-password"
+  error?: string
 }
 
-function PasswordField({ value, onChangeText, placeholder, editable, autoComplete }: PasswordFieldProps) {
-  return (
-    <TextField
-      accessibilityLabel={placeholder}
-      secure
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      autoCapitalize="none"
-      autoCorrect={false}
-      autoComplete={autoComplete}
-      disabled={!editable}
-    />
-  )
+function PasswordField({ label, value, onChangeText, placeholder, editable, autoComplete, error }: PasswordFieldProps) {
+  const field = {
+    error,
+    secure: true,
+    value,
+    onChangeText,
+    placeholder,
+    autoCapitalize: "none" as const,
+    autoCorrect: false,
+    autoComplete,
+    disabled: !editable
+  }
+
+  return label ? <TextField label={label} {...field} /> : <TextField accessibilityLabel={placeholder} {...field} />
 }
 
 function PasswordPromptModal({
@@ -267,42 +270,44 @@ export function BackupRestoreScreen({}: Props) {
               Bundle your locations, settings and credentials into a single encrypted file you can store anywhere.
             </Text>
 
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Password</Text>
-            <PasswordField
-              value={backupPassword}
-              onChangeText={setBackupPassword}
-              placeholder={`At least ${MIN_BACKUP_PASSWORD_LENGTH} characters`}
-              editable={busy === null}
-              autoComplete="new-password"
-            />
-            {backupPassword.length > 0 && (
-              <View style={styles.strengthRow}>
-                <View style={styles.strengthBar}>
-                  {Array.from({ length: SEGMENT_COUNT }).map((_, i) => (
-                    <View
-                      key={i}
-                      style={[
-                        styles.strengthSegment,
-                        {
-                          backgroundColor: i < strength.score ? meterColor : colors.borderLight
-                        }
-                      ]}
-                    />
-                  ))}
+            <View style={styles.fieldGroup}>
+              <PasswordField
+                label="Password"
+                value={backupPassword}
+                onChangeText={setBackupPassword}
+                placeholder={`At least ${MIN_BACKUP_PASSWORD_LENGTH} characters`}
+                editable={busy === null}
+                autoComplete="new-password"
+              />
+              {backupPassword.length > 0 && (
+                <View style={styles.strengthRow}>
+                  <View style={styles.strengthBar}>
+                    {Array.from({ length: SEGMENT_COUNT }).map((_, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.strengthSegment,
+                          {
+                            backgroundColor: i < strength.score ? meterColor : colors.borderLight
+                          }
+                        ]}
+                      />
+                    ))}
+                  </View>
+                  <Text style={[styles.strengthLabel, { color: meterColor }]}>{strength.label}</Text>
                 </View>
-                <Text style={[styles.strengthLabel, { color: meterColor }]}>{strength.label}</Text>
-              </View>
-            )}
+              )}
 
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Confirm password</Text>
-            <PasswordField
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="Re-enter the same password"
-              editable={busy === null}
-              autoComplete="new-password"
-            />
-            {showMismatch && <Text style={[styles.errorText, { color: colors.error }]}>Passwords do not match.</Text>}
+              <PasswordField
+                label="Confirm password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Re-enter the same password"
+                editable={busy === null}
+                autoComplete="new-password"
+                error={showMismatch ? "Passwords do not match." : undefined}
+              />
+            </View>
 
             <Text style={[styles.hint, { color: colors.textSecondary }]}>
               A random password from a password manager or a long passphrase is safest. Common words and phrases are
@@ -353,15 +358,13 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.body,
     lineHeight: 20
   },
-  fieldLabel: {
-    fontSize: fontSizes.body,
-    fontWeight: "500",
+  fieldGroup: {
+    gap: space.lg,
     marginBottom: space.sm
   },
   strengthRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: space.md,
     gap: space.sm
   },
   strengthBar: {
@@ -379,11 +382,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     minWidth: 60,
     textAlign: "right"
-  },
-  errorText: {
-    fontSize: fontSizes.caption,
-    marginTop: -4,
-    marginBottom: space.sm
   },
   hint: {
     fontSize: fontSizes.caption,

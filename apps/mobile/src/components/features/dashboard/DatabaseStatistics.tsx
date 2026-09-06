@@ -7,7 +7,7 @@ import { Text, StyleSheet, View } from "react-native"
 import { SectionTitle, Card } from "../.."
 import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fontSizes, fonts, type } from "../../../styles/typography"
 import { DatabaseStats } from "../../../types/global"
 import { getQueueColor } from "../../../utils/queueStatus"
 import { space } from "../../../constants"
@@ -90,8 +90,7 @@ const styles = StyleSheet.create({
     marginBottom: 6
   },
   statValue: {
-    fontSize: fontSizes.statValue,
-    ...fonts.bold,
+    ...type.figure,
     letterSpacing: -0.5,
     marginBottom: 2
   }

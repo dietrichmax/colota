@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react"
 import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
 import { Info, CircleAlert, TriangleAlert, CircleCheckBig } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fontSizes, fonts } from "../../styles/typography"
+import { fontSizes, fonts, type } from "../../styles/typography"
 import { radius } from "@colota/shared"
 import { type ModalRequest, type AlertVariant, registerModalHandler } from "../../services/modalService"
 import { space, STATE_LAYER_ALPHA } from "../../constants"
@@ -152,8 +152,7 @@ const styles = StyleSheet.create({
     marginBottom: space.lg
   },
   title: {
-    fontSize: fontSizes.cardTitle,
-    ...fonts.bold,
+    ...type.title,
     textAlign: "center",
     marginBottom: space.md
   },

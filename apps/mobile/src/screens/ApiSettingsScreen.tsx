@@ -21,7 +21,7 @@ import { useAutoSave } from "../hooks/useAutoSave"
 import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, type } from "../styles/typography"
 import {
   SectionTitle,
   FloatingSaveIndicator,
@@ -855,9 +855,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm
   },
   exampleCode: {
-    fontSize: fontSizes.caption,
-    fontFamily: "monospace",
-    lineHeight: 18
+    ...type.mono
   },
   footer: {
     paddingVertical: space.lg,
