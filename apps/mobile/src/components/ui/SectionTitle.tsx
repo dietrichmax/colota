@@ -29,7 +29,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: space.md,
-    paddingHorizontal: space.xs
+    marginBottom: space.md
   }
 })
