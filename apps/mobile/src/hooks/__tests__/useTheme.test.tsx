@@ -67,50 +67,35 @@ describe("useTheme", () => {
     expect(result.current.mode).toBe("light")
   })
 
-  it("toggleTheme switches from light to dark", () => {
+  it("picking a mode overrides the system, which is the point of picking one", () => {
     const { result } = renderHook(() => useTheme(), { wrapper })
 
     act(() => {
-      result.current.toggleTheme()
+      result.current.setPreference("dark")
     })
 
     expect(result.current.mode).toBe("dark")
     expect(result.current.isDark).toBe(true)
   })
 
-  it("toggleTheme switches back from dark to light", () => {
+  it("keeps following the system until something is picked", () => {
     const { result } = renderHook(() => useTheme(), { wrapper })
 
-    act(() => {
-      result.current.toggleTheme()
-    })
-    act(() => {
-      result.current.toggleTheme()
-    })
-
-    expect(result.current.mode).toBe("light")
-    expect(result.current.isDark).toBe(false)
-  })
-
-  it("follows system theme changes when no manual override", () => {
-    renderHook(() => useTheme(), { wrapper })
-
-    expect(appearanceListener).not.toBeNull()
+    expect(result.current.preference).toBe("system")
 
     act(() => {
       appearanceListener!({ colorScheme: "dark" })
     })
 
-    expect(appearanceListener).toBeDefined()
+    expect(result.current.mode).toBe("dark")
   })
 
-  it("ignores system theme changes after manual toggle", () => {
+  it("stops following the system once a mode is picked", () => {
     const { result } = renderHook(() => useTheme(), { wrapper })
 
     act(() => {
-      result.current.toggleTheme()
+      result.current.setPreference("dark")
     })
-    expect(result.current.mode).toBe("dark")
     act(() => {
       appearanceListener?.({ colorScheme: "light" })
     })
@@ -118,14 +103,34 @@ describe("useTheme", () => {
     expect(result.current.mode).toBe("dark")
   })
 
-  it("persists theme mode when toggled", () => {
+  it("follows the system again when system is picked back, which a toggle could not express", () => {
     const { result } = renderHook(() => useTheme(), { wrapper })
 
     act(() => {
-      result.current.toggleTheme()
+      result.current.setPreference("dark")
+    })
+    act(() => {
+      result.current.setPreference("system")
+    })
+    act(() => {
+      appearanceListener?.({ colorScheme: "light" })
     })
 
+    expect(result.current.mode).toBe("light")
+  })
+
+  it("persists the choice, system included, so a restart does not lose it", () => {
+    const { result } = renderHook(() => useTheme(), { wrapper })
+
+    act(() => {
+      result.current.setPreference("dark")
+    })
     expect(NativeLocationService.saveSetting).toHaveBeenCalledWith("themeMode", "dark")
+
+    act(() => {
+      result.current.setPreference("system")
+    })
+    expect(NativeLocationService.saveSetting).toHaveBeenCalledWith("themeMode", "system")
   })
 
   it("restores persisted dark theme on mount", async () => {
@@ -156,11 +161,9 @@ describe("useTheme", () => {
     const lightColors = result.current.colors
 
     act(() => {
-      result.current.toggleTheme()
+      result.current.setPreference("dark")
     })
 
-    const darkColors = result.current.colors
-
-    expect(lightColors).not.toBe(darkColors)
+    expect(lightColors).not.toBe(result.current.colors)
   })
 })

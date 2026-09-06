@@ -11,13 +11,16 @@ import NativeLocationService from "../services/NativeLocationService"
 
 const THEME_MODE_KEY = "themeMode"
 
+export type ThemePreference = "system" | "light" | "dark"
+
 /**
  * Extended theme context with additional utilities
  */
 interface ThemeContextType {
   colors: ThemeColors
   mode: ThemeMode
-  toggleTheme: () => void
+  preference: ThemePreference
+  setPreference: (preference: ThemePreference) => void
   isDark: boolean
 }
 
@@ -34,8 +37,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
  * Theme provider managing theme state and system theme synchronization.
  *
  * Features:
- * - Automatically follows system theme unless manually overridden
- * - Manual theme toggle support
+ * - Follows the system scheme until the user picks light or dark
+ * - The choice persists; picking "system" hands control back
  * - Memoized values for optimal performance
  *
  * @example
@@ -46,41 +49,32 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
  * ```
  */
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [hasManualOverride, setHasManualOverride] = useState(false)
-  const [mode, setMode] = useState<ThemeMode>(() => normalizeScheme(Appearance.getColorScheme()))
+  const [preference, setPreferenceState] = useState<ThemePreference>("system")
+  const [systemScheme, setSystemScheme] = useState<ThemeMode>(() => normalizeScheme(Appearance.getColorScheme()))
 
-  // Restore persisted theme preference on mount
+  // A stored value is an explicit choice; nothing stored means the system decides.
   useEffect(() => {
     NativeLocationService.getSetting(THEME_MODE_KEY).then((saved) => {
-      if (saved === "light" || saved === "dark") {
-        setHasManualOverride(true)
-        setMode(saved)
+      if (saved === "light" || saved === "dark" || saved === "system") {
+        setPreferenceState(saved)
       }
     })
   }, [])
 
-  // Listen to system theme changes
   useEffect(() => {
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      if (!hasManualOverride) {
-        setMode(normalizeScheme(colorScheme))
-      }
+      setSystemScheme(normalizeScheme(colorScheme))
     })
 
     return () => subscription.remove()
-  }, [hasManualOverride])
-
-  /**
-   * Toggles between light and dark theme
-   */
-  const toggleTheme = useCallback(() => {
-    setHasManualOverride(true)
-    setMode((prev: string) => {
-      const next = prev === "light" ? "dark" : "light"
-      NativeLocationService.saveSetting(THEME_MODE_KEY, next)
-      return next
-    })
   }, [])
+
+  const setPreference = useCallback((next: ThemePreference) => {
+    setPreferenceState(next)
+    NativeLocationService.saveSetting(THEME_MODE_KEY, next)
+  }, [])
+
+  const mode: ThemeMode = preference === "system" ? systemScheme : preference
 
   const colors = useMemo(() => (mode === "dark" ? darkColors : lightColors), [mode])
 
@@ -88,10 +82,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     () => ({
       colors,
       mode,
-      toggleTheme,
+      preference,
+      setPreference,
       isDark: mode === "dark"
     }),
-    [colors, mode, toggleTheme]
+    [colors, mode, preference, setPreference]
   )
 
   return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>
@@ -100,15 +95,15 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 /**
  * Hook to access theme context.
  *
- * Provides colors, mode, toggleTheme, and isDark.
+ * Provides colors, mode, preference, setPreference and isDark.
  *
  * @throws If used outside ThemeProvider
  *
  * @example
  * ```tsx
- * const { colors, mode, toggleTheme } = useTheme();
+ * const { colors, mode, setPreference } = useTheme();
  * <View style={{ backgroundColor: colors.background }}>
- *   <Button onPress={toggleTheme} title="Toggle theme" />
+ *   <Button onPress={() => setPreference("dark")} title="Dark" />
  * </View>
  * ```
  */
