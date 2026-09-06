@@ -77,7 +77,7 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
             borderWidth,
             borderColor,
             paddingHorizontal: FIELD_INSET - borderWidth,
-            backgroundColor: colors.background
+            backgroundColor: colors.well
           }
         ]}
       >

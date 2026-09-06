@@ -29,6 +29,7 @@ export const size = {
   chip: 36,
   iconButton: 32,
   iconColumn: 40,
+  numericField: 88,
   icon: { sm: 16, md: 20, lg: 24 }
 } as const
 

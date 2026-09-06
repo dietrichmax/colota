@@ -15,9 +15,8 @@ import { Button, Card, ChipGroup, Container, Divider, FieldMessage, NumericInput
 import { Check } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
-import { MS_TO_KMH, PROFILE_CONDITIONS, STATIONARY_MAX_INTERVAL_SECONDS, SYNC_INTERVAL_LABELS, SYNC_INTERVAL_PRESETS, defaultProfileDelays, space } from "../constants"
+import { MS_TO_KMH, PROFILE_CONDITIONS, STATIONARY_MAX_INTERVAL_SECONDS, SYNC_INTERVAL_LABELS, SYNC_INTERVAL_PRESETS, defaultProfileDelays, size, space } from "../constants"
 import type { RootScreenProps } from "../types/navigation"
-import { radius } from "@colota/shared"
 
 function formatSyncDefault(seconds: number): string {
   if (SYNC_INTERVAL_LABELS[seconds]) return SYNC_INTERVAL_LABELS[seconds]
@@ -195,7 +194,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
             />
           </View>
 
-          <Divider />
+          <Divider tight />
 
           <SettingRow label="Priority" hint="Higher number wins when multiple profiles match">
             <TextField
@@ -214,20 +213,21 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         <SectionTitle style={styles.sectionGap}>Activation condition</SectionTitle>
         <Card rows style={isSpeed && styles.cardTail}>
           {PROFILE_CONDITIONS.map((opt, i) => (
-            <RadioRow
-              key={opt.type}
-              icon={opt.icon}
-              label={opt.label}
-              sub={opt.description}
-              selected={profile.condition.type === opt.type}
-              onPress={() => setConditionType(opt.type)}
-              divider={i < PROFILE_CONDITIONS.length - 1}
-            />
+            <React.Fragment key={opt.type}>
+              {i > 0 && <Divider tight />}
+              <RadioRow
+                icon={opt.icon}
+                label={opt.label}
+                sub={opt.description}
+                selected={profile.condition.type === opt.type}
+                onPress={() => setConditionType(opt.type)}
+              />
+            </React.Fragment>
           ))}
 
           {isSpeed && (
             <>
-              <Divider />
+              <Divider tight />
               <View style={styles.inputGroup}>
                 <TextField
                   testID="speed-threshold-input"
@@ -268,7 +268,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
             </FieldMessage>
           )}
 
-          <Divider />
+          <Divider tight />
 
           {profile.condition.type === "stationary" ? (
             <FieldMessage>
@@ -296,7 +296,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 
           {!settings.isOfflineMode && (
             <>
-              <Divider />
+              <Divider tight />
 
               <View style={styles.syncLabelRow}>
                 <Text style={[styles.settingLabel, { color: colors.text }]}>Sync interval</Text>
@@ -421,10 +421,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 
         {/* Save Button */}
         <Button
-          title={saving ? "Saving…" : isEditing ? "Save changes" : "Create profile"}
+          title={isEditing ? "Save changes" : "Create profile"}
           icon={Check}
           loading={saving}
-          style={styles.saveBtn}
           onPress={handleSave}
         />
       </ScrollView>
@@ -441,23 +440,12 @@ const styles = StyleSheet.create({
   cardTail: { paddingBottom: space.lg },
   scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: 40 },
   inputGroup: { marginBottom: space.xs },
-  numInput: {
-    width: 64
-  },
+  numInput: { width: size.numericField },
   inputWithUnit: { flexDirection: "row", alignItems: "center", gap: 6 },
   unit: { fontSize: fontSizes.body, ...fonts.medium, minWidth: 28 },
   syncLabelRow: { marginBottom: space.sm },
   settingLabel: { fontSize: fontSizes.label, ...fonts.semiBold, marginBottom: 2 },
   settingHint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18 }, // ~3 per row with gap
   customSyncInput: { marginTop: space.md },
-  saveBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: space.sm,
-    padding: space.lg,
-    borderRadius: radius.md,
-    marginTop: space.lg
-  },
   sectionGap: { marginTop: space.xl }
 })

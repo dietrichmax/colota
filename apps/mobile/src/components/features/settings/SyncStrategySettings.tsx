@@ -169,7 +169,7 @@ export function SyncStrategySettings({
           ))}
         </View>
 
-        <Divider />
+        <Divider tight />
 
         <ListItem
           testID="advanced-settings-toggle"
@@ -217,7 +217,7 @@ export function SyncStrategySettings({
 
             {!settings.isOfflineMode && (
               <>
-                <Divider />
+                <Divider tight />
 
                 {/* Network Parameters Group */}
                 <View style={styles.paramGroup}>
@@ -380,7 +380,7 @@ export function SyncStrategySettings({
                   </View>
                 </View>
 
-                <Divider />
+                <Divider tight />
               </>
             )}
 

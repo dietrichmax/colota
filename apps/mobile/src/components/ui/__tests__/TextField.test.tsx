@@ -91,8 +91,12 @@ describe("TextField", () => {
     expect(flat(getByTestId("server-input")).fontFamily).toBe("monospace")
   })
 
-  it("keeps the recessed fill, so a field on a card still reads as a field", () => {
+  it("recesses into its card rather than punching through to the ground behind it", () => {
+    // The fill was colors.background, so a field cut a hole the colour of the screen behind
+    // its card and a card holding fields read as a different tone from one that did not.
     const { getByTestId } = render(<TextField label="Server address" testID="server-input" />)
-    expect(flat(getByTestId("server-input-box")).backgroundColor).toBe(lightColors.background)
+
+    expect(flat(getByTestId("server-input-box")).backgroundColor).toBe(lightColors.well)
+    expect(flat(getByTestId("server-input-box")).backgroundColor).not.toBe(lightColors.background)
   })
 })

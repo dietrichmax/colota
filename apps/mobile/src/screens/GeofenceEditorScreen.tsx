@@ -15,7 +15,7 @@ import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { parsePositiveInt, isPositiveInt } from "../utils/settingsValidation"
 import type { RootScreenProps } from "../types/navigation"
-import { space } from "../constants"
+import { size, space } from "../constants"
 
 declare function requestIdleCallback(callback: () => void): number
 declare function cancelIdleCallback(handle: number): void
@@ -344,7 +344,8 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         </Card>
 
         <Button
-          title={saving ? "Saving..." : "Save geofence"}
+          title="Save geofence"
+          loading={saving}
           onPress={handleSave}
           disabled={
             saving ||
@@ -367,7 +368,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   card: { marginBottom: space.lg },
   nameInput: { flex: 1 },
-  numInput: { width: 80 },
+  numInput: { width: size.numericField },
   toggleRow: { paddingVertical: 10 },
   // See SyncStrategySettings: a dependent control indents, it does not get a rule.
   nestedSetting: {

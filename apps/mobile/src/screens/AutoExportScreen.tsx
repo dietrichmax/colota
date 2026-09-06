@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { useState, useCallback, useEffect } from "react"
+import React, { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
 import { Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter } from "react-native"
 import { FolderOpen, CircleCheckBig, Share2, TriangleAlert } from "lucide-react-native"
@@ -503,14 +503,15 @@ export function AutoExportScreen(_props: ScreenProps) {
           <SectionTitle>Export range</SectionTitle>
           <Card rows>
             {MODE_OPTIONS.map((option, i) => (
-              <RadioRow
-                key={option.key}
-                label={option.label}
-                sub={option.description}
-                selected={mode === option.key}
-                onPress={() => handleModeChange(option.key)}
-                divider={i < MODE_OPTIONS.length - 1}
-              />
+              <React.Fragment key={option.key}>
+                {i > 0 && <Divider tight />}
+                <RadioRow
+                  label={option.label}
+                  sub={option.description}
+                  selected={mode === option.key}
+                  onPress={() => handleModeChange(option.key)}
+                />
+              </React.Fragment>
             ))}
           </Card>
         </View>
