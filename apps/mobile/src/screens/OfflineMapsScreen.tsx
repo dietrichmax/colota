@@ -17,6 +17,7 @@ import { Button, Card, Container, EmptyState, IconButton, SectionTitle, TextFiel
 import { useFocusEffect } from "@react-navigation/native"
 import {
   DEFAULT_MAP_ZOOM,
+  HIT_SLOP_MD,
   MAP_ANIMATION_DURATION_MS,
   MAP_STYLE_URL_LIGHT,
   WORLD_MAP_ZOOM,
@@ -153,6 +154,8 @@ const DownloadForm = memo(
                 <Pressable
                   testID="cancel-download-btn"
                   onPress={onCancelDownload}
+                  hitSlop={HIT_SLOP_MD}
+                  accessibilityRole="button"
                   style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: colors.pressedOpacity }]}
                 >
                   <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel download</Text>
@@ -711,6 +714,8 @@ export function OfflineMapsScreen({}: ScreenProps) {
               <Pressable
                 onPress={() => handleCancelArea(item)}
                 disabled={isCanceling}
+                hitSlop={HIT_SLOP_MD}
+                accessibilityRole="button"
                 style={({ pressed }) => [styles.cancelAreaBtn, pressed && { opacity: colors.pressedOpacity }]}
               >
                 {isCanceling ? (
@@ -905,8 +910,10 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   cancelAreaBtn: {
+    justifyContent: "center",
+    minHeight: size.chip,
     paddingHorizontal: space.md,
-    paddingVertical: 6,
+    paddingVertical: space.sm,
     borderRadius: radius.sm
   },
   cancelAreaLabel: { fontSize: fontSizes.description, ...fonts.semiBold },

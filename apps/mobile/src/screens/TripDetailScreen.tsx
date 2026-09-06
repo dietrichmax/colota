@@ -216,7 +216,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
       <Pressable
         onPress={handleDelete}
         disabled={deleting}
-        hitSlop={8}
+        hitSlop={HIT_SLOP_MD}
         style={({ pressed }) => [styles.headerBtn, (pressed || deleting) && { opacity: colors.pressedOpacity }]}
       >
         <Trash2 size={size.icon.md} color={colors.error} />
