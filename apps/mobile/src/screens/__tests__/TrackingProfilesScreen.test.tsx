@@ -1,6 +1,7 @@
 import React from "react"
 import { render, fireEvent, waitFor } from "@testing-library/react-native"
-import { Share } from "react-native"
+import { Share, StyleSheet, View as RNView } from "react-native"
+import { lightColors } from "@colota/shared"
 import { TrackingProfile } from "../../types/global"
 
 // --- Mocks ---
@@ -62,21 +63,7 @@ jest.mock("../../contexts/TrackingProvider", () => ({
 }))
 
 jest.mock("../../hooks/useTheme", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      border: "#e5e7eb",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textLight: "#9ca3af",
-      background: "#fff",
-      success: "#22c55e",
-      error: "#ef4444",
-      card: "#fff",
-      backgroundElevated: "#f9fafb",
-      textOnPrimary: "#fff"
-    }
-  })
+  useTheme: () => ({ colors: jest.requireActual("@colota/shared").lightColors })
 }))
 
 jest.mock("../../components", () => {
@@ -128,6 +115,20 @@ describe("TrackingProfilesScreen", () => {
   function renderScreen() {
     return render(<TrackingProfilesScreen navigation={mockNavigation as any} />)
   }
+
+  it("marks the active profile with a fill, because a border that comes and goes clips the card", async () => {
+    mockActiveProfileName = "Charging"
+
+    const { UNSAFE_getAllByType, findByText } = renderScreen()
+    await findByText("Active")
+
+    const filled = UNSAFE_getAllByType(RNView).filter(
+      (v) => StyleSheet.flatten(v.props.style)?.backgroundColor === lightColors.primaryContainer
+    )
+
+    expect(filled).toHaveLength(1)
+    expect(StyleSheet.flatten(filled[0].props.style).borderWidth).toBeUndefined()
+  })
 
   it("renders profile list", async () => {
     const { getByText } = renderScreen()

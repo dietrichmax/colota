@@ -46,12 +46,9 @@ const TripRow = React.memo(function TripRowItem({
 }: TripRowProps) {
   const duration = trip.endTime - trip.startTime
   const tripColor = getTripColor(trip.index)
-  const selectedBorderColor = isCabSelected ? colors.primary : null
-
-  const cardStyle = [
-    styles.tripCard,
-    selectedBorderColor && [styles.tripCardSelected, { borderColor: selectedBorderColor }]
-  ]
+  // Selection is a fill, not a stroke: toggling borderWidth on a card that clips its own
+  // corners leaves the children clipped away on Android until the list remounts.
+  const cardStyle = [styles.tripCard, isCabSelected && { backgroundColor: colors.primaryContainer }]
 
   const accessibilityRole = selectionMode ? "checkbox" : "button"
   const accessibilityState = selectionMode ? { checked: isCabSelected } : undefined
@@ -448,9 +445,6 @@ const styles = StyleSheet.create({
   listEmpty: { flexGrow: 1 },
   tripCard: {
     marginBottom: space.sm
-  },
-  tripCardSelected: {
-    borderWidth: 1.5
   },
   tripHeader: {
     flexDirection: "row",

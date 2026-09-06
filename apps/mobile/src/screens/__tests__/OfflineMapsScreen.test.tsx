@@ -4,7 +4,7 @@
  */
 
 import React from "react"
-import { StyleSheet } from "react-native"
+import { StyleSheet, View as RNView } from "react-native"
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
 import { OfflineMapsScreen } from "../OfflineMapsScreen"
 import { logger } from "../../utils/logger"
@@ -184,6 +184,17 @@ beforeEach(() => {
 function renderScreen() {
   return render(<OfflineMapsScreen navigation={mockNavigation as any} />)
 }
+
+it("keeps the map's border drawn at rest, because a width that appears clips the map away", () => {
+  const { UNSAFE_getAllByType } = renderScreen()
+
+  const mapBox = UNSAFE_getAllByType(RNView)
+    .map((v) => StyleSheet.flatten(v.props.style))
+    .find((style) => style?.height === 450)
+
+  expect(mapBox?.borderWidth).toBe(2)
+  expect(mapBox?.borderColor).toBe("transparent")
+})
 
 // Waits for map bounds to be set and the estimate label to appear
 async function waitForMapReady(findByText: ReturnType<typeof render>["findByText"]) {
