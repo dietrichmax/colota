@@ -18,7 +18,6 @@ import { TEST_RESULT_DISPLAY_MS, size, space } from "../../../constants"
 import { logger } from "../../../utils/logger"
 import { Button, Card, Divider, FieldMessage, TextField, Toggle, ListItem } from "../../index"
 import { showChoice } from "../../../services/modalService"
-import { radius } from "@colota/shared"
 
 interface ConnectionSettingsProps {
   settings: Settings
@@ -197,35 +196,8 @@ export function ConnectionSettings({
             <Divider tight />
 
             <View style={styles.inputGroup}>
-              <View style={styles.inputHeader}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Server endpoint</Text>
-                {endpointInput && (
-                  <View
-                    style={[
-                      styles.protocolBadge,
-                      {
-                        backgroundColor: endpointInput.startsWith("https://")
-                          ? colors.well
-                          : colors.warning + "20"
-                      }
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.protocolText,
-                        {
-                          color: endpointInput.startsWith("https://") ? colors.textSecondary : colors.warning
-                        }
-                      ]}
-                    >
-                      {endpointInput.startsWith("https://") ? "HTTPS" : "HTTP"}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
               <TextField
-                accessibilityLabel="Server endpoint"
+                label="Server endpoint"
                 testID="endpoint-input"
                 mono
                 value={endpointInput}
@@ -296,25 +268,6 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     marginBottom: space.md
-  },
-  inputHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10
-  },
-  inputLabel: {
-    fontSize: fontSizes.input,
-    ...fonts.semiBold
-  },
-  protocolBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: space.xs,
-    borderRadius: radius.md
-  },
-  protocolText: {
-    fontSize: fontSizes.small,
-    ...fonts.bold
   },
   testButton: {
     marginTop: space.md
