@@ -280,7 +280,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           </SettingRow>
 
           {pauseTracking && pauseOnMotionless && (
-            <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
+            <View style={styles.nestedSetting}>
               <SettingRow label="Timeout (min)" hint="Minutes without motion before GPS stops">
                 <TextField
                   testID="motionless-timeout-input"
@@ -315,7 +315,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           </SettingRow>
 
           {pauseTracking && heartbeatEnabled && (
-            <View style={[styles.nestedSetting, { borderLeftColor: colors.border }]}>
+            <View style={styles.nestedSetting}>
               <SettingRow label="Interval (min)" hint="How often to record a point">
                 <TextField
                   testID="heartbeat-interval-input"
@@ -369,12 +369,10 @@ const styles = StyleSheet.create({
   nameInput: { flex: 1 },
   numInput: { width: 80 },
   toggleRow: { paddingVertical: 10 },
+  // See SyncStrategySettings: a dependent control indents, it does not get a rule.
   nestedSetting: {
-    marginStart: space.lg,
-    paddingStart: space.md,
-    borderLeftWidth: 3,
-    marginTop: space.xs,
-    marginBottom: space.xs
+    marginTop: space.md,
+    marginStart: space.lg
   },
   combinedNote: {
     marginTop: space.sm,
