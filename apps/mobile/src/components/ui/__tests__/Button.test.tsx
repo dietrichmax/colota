@@ -1,6 +1,6 @@
 import React from "react"
 import { render } from "@testing-library/react-native"
-import { StyleSheet } from "react-native"
+import { StyleSheet, Text } from "react-native"
 import { lightColors } from "@colota/shared"
 
 jest.mock("../../../hooks/useTheme", () => ({
@@ -21,7 +21,21 @@ describe("Button variants", () => {
 
     const style = flat(getByTestId("add-btn"))
     expect(style.backgroundColor).toBe(lightColors.primaryContainer)
-    expect(style.borderWidth).toBe(0)
+    expect(style.borderWidth).toBeUndefined()
+  })
+
+  it("greys a disabled ghost, which has no fill to grey instead", () => {
+    // Every other variant says disabled by swapping its fill for textDisabled. A ghost has no
+    // fill, so it read as pressable while refusing the press.
+    const { getByTestId, rerender } = render(
+      <Button title="Reset all" onPress={jest.fn()} variant="ghost" testID="reset-btn" />
+    )
+    const label = () => getByTestId("reset-btn").findByType(Text).props.style
+
+    expect(StyleSheet.flatten(label()).color).toBe(lightColors.primaryDark)
+
+    rerender(<Button title="Reset all" onPress={jest.fn()} variant="ghost" disabled testID="reset-btn" />)
+    expect(StyleSheet.flatten(label()).color).toBe(lightColors.textDisabled)
   })
 
   it("keeps the touch target at the Android minimum", () => {

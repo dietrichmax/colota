@@ -220,7 +220,6 @@ export function DataManagementScreen({}: ScreenProps) {
     )
   }, [daysInput, handleDeleteAction, showFeedback])
 
-
   const handleVacuum = useCallback(async () => {
     setIsProcessing(true)
     try {
@@ -246,7 +245,9 @@ export function DataManagementScreen({}: ScreenProps) {
     <Container>
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>What this device is storing, and how to clear it</Text>
+          <Text style={[styles.intro, { color: colors.textSecondary }]}>
+            What this device is storing, and how to clear it
+          </Text>
           {/* Stats */}
           <View style={styles.section}>
             <SectionTitle>Database statistics</SectionTitle>
@@ -352,12 +353,7 @@ export function DataManagementScreen({}: ScreenProps) {
                     placeholder="90"
                   />
                   <Text style={[styles.daysLabel, { color: colors.textSecondary }]}>days</Text>
-                  <Button
-                    style={[isProcessing && styles.buttonDisabled]}
-                    onPress={handleDeleteOlderThan}
-                    disabled={isProcessing}
-                    title="Delete"
-                  />
+                  <Button onPress={handleDeleteOlderThan} disabled={isProcessing} title="Delete" />
                 </View>
               </View>
               <Divider />
@@ -519,8 +515,5 @@ const styles = StyleSheet.create({
   daysLabel: {
     fontSize: fontSizes.input,
     ...fonts.medium
-  },
-  buttonDisabled: {
-    opacity: 0.5
   }
 })

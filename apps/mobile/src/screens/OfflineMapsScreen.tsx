@@ -153,22 +153,13 @@ const DownloadForm = memo(
                 <Pressable
                   testID="cancel-download-btn"
                   onPress={onCancelDownload}
-                  style={({ pressed }) => [
-                    styles.cancelBtn,
-                    { borderColor: colors.error + "40" },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
+                  style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: colors.pressedOpacity }]}
                 >
                   <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel download</Text>
                 </Pressable>
               </View>
             ) : (
-              <Button
-                testID="download-btn"
-                title="Download area"
-                disabled={!estimatedSizeLabel}
-                onPress={onDownload}
-              />
+              <Button testID="download-btn" title="Download area" disabled={!estimatedSizeLabel} onPress={onDownload} />
             )}
 
             {downloadError && <Text style={[styles.errorText, { color: colors.error }]}>{downloadError}</Text>}
@@ -720,11 +711,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
               <Pressable
                 onPress={() => handleCancelArea(item)}
                 disabled={isCanceling}
-                style={({ pressed }) => [
-                  styles.cancelAreaBtn,
-                  { backgroundColor: colors.error + "15", borderColor: colors.error + "40" },
-                  pressed && { opacity: colors.pressedOpacity }
-                ]}
+                style={({ pressed }) => [styles.cancelAreaBtn, pressed && { opacity: colors.pressedOpacity }]}
               >
                 {isCanceling ? (
                   <ActivityIndicator size="small" color={colors.error} />
@@ -859,7 +846,8 @@ export function OfflineMapsScreen({}: ScreenProps) {
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
           areas.length === 0 && !downloading ? (
-            <EmptyState style={styles.emptyInset}
+            <EmptyState
+              style={styles.emptyInset}
               title="No saved areas yet"
               hint="Download map tiles to browse your tracks offline while hiking or camping"
             />
@@ -888,8 +876,7 @@ const styles = StyleSheet.create({
   progressSub: { fontSize: fontSizes.caption, ...fonts.regular },
   cancelBtn: {
     padding: space.md,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    borderRadius: radius.sm,
     alignItems: "center",
     marginTop: space.xs
   },
@@ -920,8 +907,7 @@ const styles = StyleSheet.create({
   cancelAreaBtn: {
     paddingHorizontal: space.md,
     paddingVertical: 6,
-    borderRadius: radius.sm,
-    borderWidth: 1
+    borderRadius: radius.sm
   },
   cancelAreaLabel: { fontSize: fontSizes.description, ...fonts.semiBold },
   mapHint: {

@@ -4,6 +4,7 @@
  */
 
 import React from "react"
+import { StyleSheet } from "react-native"
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
 import { OfflineMapsScreen } from "../OfflineMapsScreen"
 import { logger } from "../../utils/logger"
@@ -327,6 +328,23 @@ describe("OfflineMapsScreen", () => {
       expect(mockDeleteOfflineArea).toHaveBeenCalledWith("my area")
       expect(mockRemoveOfflineAreaBounds).toHaveBeenCalledWith("my area")
     })
+  })
+
+  it("says a cancel is destructive in error text, with no shape around it", async () => {
+    // It and the per-area cancel were the only two buttons in the app drawing a border, at two
+    // different widths. The plan has two destructive shapes, a filled danger for a confirm step
+    // and a danger ghost for everything else; a cancel is the second.
+    mockShowConfirm.mockResolvedValue(true)
+    mockCreateOfflinePack.mockReturnValue(new Promise(() => {}))
+    const { findByText, getByTestId, getByPlaceholderText } = renderScreen()
+    await waitForMapReady(findByText)
+    fireEvent.changeText(getByPlaceholderText("Home area, Trail..."), "my area")
+    fireEvent.press(getByTestId("download-btn"))
+    await findByText("Cancel download")
+
+    const style = StyleSheet.flatten(getByTestId("cancel-download-btn").props.style)
+    expect(style.borderWidth).toBeUndefined()
+    expect(style.backgroundColor).toBeUndefined()
   })
 
   it("shows saved areas loaded on mount", async () => {
