@@ -284,8 +284,8 @@ class ConditionMonitorTest {
 
         monitor.stop()
 
-        // Should complete without crash — observer null check returns early
-        // (observer is non-null but connection is null → returns early after observer check)
+        // Nothing was posted to the main looper, because there is no LiveData to remove from.
+        verify(exactly = 0) { mockHandler.post(any()) }
     }
 
     // ========================================================================

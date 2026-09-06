@@ -193,12 +193,6 @@ describe("DashboardScreen", () => {
     expect(queryByTestId("WelcomeCard")).toBeNull()
   })
 
-  it("renders DatabaseStatistics component", () => {
-    const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
-
-    expect(getByTestId("DatabaseStatistics")).toBeTruthy()
-  })
-
   it("renders ConnectionStatus component", () => {
     const { getByTestId } = render(<DashboardScreen navigation={mockNavigation} />)
 

@@ -88,8 +88,8 @@ jest.mock("../../components", () => {
       R.createElement(
         View,
         { testID: "StatsCard" },
-        R.createElement(Text, null, `${queueCount}`),
-        R.createElement(Text, null, `${sentCount}`)
+        R.createElement(Text, null, `queued ${queueCount}`),
+        R.createElement(Text, null, `sent ${sentCount}`)
       ),
     ListItem: ({ testID, label, sub, onPress }: any) =>
       R.createElement(
@@ -122,10 +122,12 @@ describe("SettingsScreen", () => {
     expect(getByText("Colota")).toBeTruthy()
   })
 
-  it("renders StatsCard with stats", () => {
-    const { getByTestId } = render(<SettingsScreen {...mockProps} />)
+  it("hands the card the counts it read from the bridge", async () => {
+    const { findByText } = render(<SettingsScreen {...mockProps} />)
 
-    expect(getByTestId("StatsCard")).toBeTruthy()
+    // The stub labels each slot, so wiring sent into queueCount fails here.
+    expect(await findByText("queued 5")).toBeTruthy()
+    expect(await findByText("sent 42")).toBeTruthy()
   })
 
   // --- Summary rows ---
