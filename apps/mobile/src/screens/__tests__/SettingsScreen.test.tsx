@@ -11,6 +11,7 @@ jest.mock("@react-navigation/native", () => ({
 
 let mockSettings: Settings = { ...DEFAULT_SETTINGS }
 let mockTracking = false
+let mockActiveProfileName: string | null = null
 
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
@@ -18,13 +19,22 @@ jest.mock("../../contexts/TrackingProvider", () => ({
     setSettings: jest.fn(),
     updateSettingsLocal: jest.fn(),
     restartTracking: jest.fn(),
-    tracking: mockTracking
+    tracking: mockTracking,
+    activeProfileName: mockActiveProfileName
   })
+}))
+
+// The real getters fall back to the host locale, which decides the assertion otherwise.
+jest.mock("../../utils/geo", () => ({
+  ...jest.requireActual("../../utils/geo"),
+  getUnitSystem: () => "metric",
+  getTimeFormat: () => "24h"
 }))
 
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
     mode: "light",
+    preference: "dark",
     toggleTheme: jest.fn(),
     colors: {
       primary: "#0d9488",
@@ -45,16 +55,19 @@ jest.mock("../../hooks/useTheme", () => ({
   })
 }))
 
+const mockGetStats = jest.fn()
+const mockGetProfiles = jest.fn()
+
+jest.mock("../../services/ProfileService", () => ({
+  ProfileService: {
+    getProfiles: (...args: unknown[]) => mockGetProfiles(...args)
+  }
+}))
+
 jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
   default: {
-    getStats: jest.fn().mockResolvedValue({
-      queued: 5,
-      sent: 42,
-      total: 100,
-      today: 10,
-      databaseSizeMB: 1.2
-    }),
+    getStats: (...args: unknown[]) => mockGetStats(...args),
     saveSetting: jest.fn().mockResolvedValue(undefined),
     getSetting: jest.fn().mockResolvedValue(null)
   }
@@ -84,13 +97,14 @@ jest.mock("../../components", () => {
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
-    StatsCard: ({ queueCount, sentCount }: any) =>
-      R.createElement(
-        View,
-        { testID: "StatsCard" },
-        R.createElement(Text, null, `queued ${queueCount}`),
-        R.createElement(Text, null, `sent ${sentCount}`)
-      ),
+    QueueWarning: ({ queueCount, onPress }: any) =>
+      queueCount > 50
+        ? R.createElement(
+            Pressable,
+            { testID: "queue-warning", onPress },
+            R.createElement(Text, null, `warning ${queueCount}`)
+          )
+        : null,
     ListItem: ({ testID, label, sub, onPress }: any) =>
       R.createElement(
         Pressable,
@@ -109,8 +123,11 @@ const mockProps = { navigation: { navigate: mockNavigate }, route: { key: "Setti
 describe("SettingsScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockGetStats.mockResolvedValue({ queued: 5, sent: 42, total: 100, today: 10, databaseSizeMB: 1.2 })
+    mockGetProfiles.mockResolvedValue([])
     mockSettings = { ...DEFAULT_SETTINGS }
     mockTracking = false
+    mockActiveProfileName = null
   })
 
   it("renders grouped section headers", () => {
@@ -122,22 +139,63 @@ describe("SettingsScreen", () => {
     expect(getByText("Colota")).toBeTruthy()
   })
 
-  it("hands the card the counts it read from the bridge", async () => {
+  it("carries what is stored on the row that opens it, not what was sent", async () => {
+    // Data management already lists sent in its own grid, and on a healthy setup sent equals
+    // recorded, so the pair would read the same number twice. Size never does.
     const { findByText } = render(<SettingsScreen {...mockProps} />)
 
-    // The stub labels each slot, so wiring sent into queueCount fails here.
-    expect(await findByText("queued 5")).toBeTruthy()
-    expect(await findByText("sent 42")).toBeTruthy()
+    expect(await findByText("100 recorded · 1.2 MB")).toBeTruthy()
+  })
+
+  it("shows the current appearance rather than listing what the screen holds", () => {
+    // Reading the settings it opens costs nothing: both getters are cached module reads.
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
+
+    expect(getByText("Dark · Metric · 24h")).toBeTruthy()
+  })
+
+  it("describes the screen while nothing is recorded, since zero is not worth reporting", async () => {
+    mockGetStats.mockResolvedValue({ queued: 0, sent: 0, total: 0, today: 0, databaseSizeMB: 0 })
+
+    const { findByText } = render(<SettingsScreen {...mockProps} />)
+
+    expect(await findByText("View queue and clear data")).toBeTruthy()
+  })
+
+  it("surfaces the queue warning once it is over the threshold", async () => {
+    mockGetStats.mockResolvedValue({ queued: 120, sent: 42, total: 100, today: 10, databaseSizeMB: 1.2 })
+
+    const { findByTestId } = render(<SettingsScreen {...mockProps} />)
+
+    expect(await findByTestId("queue-warning")).toBeTruthy()
+  })
+
+  it("keeps the queue out of sight until it is backing up", async () => {
+    // The stats strip showed a queue of 5 as prominently as a queue of 500. Below the threshold
+    // the count belongs in the Connection row, and only above it does the queue earn a surface.
+    const { queryByTestId } = render(<SettingsScreen {...mockProps} />)
+
+    await waitFor(() => expect(queryByTestId("queue-warning")).toBeNull())
   })
 
   // --- Summary rows ---
 
-  it("shows the endpoint host as the Connection summary", () => {
+  it("carries the host and the queue on the Connection row", async () => {
+    // The strip above the list used to hold the queue; the row holds it now, so the strip could go.
     mockSettings = { ...DEFAULT_SETTINGS, endpoint: "https://api.example.com/track" }
 
-    const { getByText } = render(<SettingsScreen {...mockProps} />)
+    const { findByText } = render(<SettingsScreen {...mockProps} />)
 
-    expect(getByText("api.example.com")).toBeTruthy()
+    expect(await findByText("api.example.com · 5 queued")).toBeTruthy()
+  })
+
+  it("drops the queued segment when there is nothing waiting", async () => {
+    mockGetStats.mockResolvedValue({ queued: 0, sent: 42, total: 100, today: 10, databaseSizeMB: 1.2 })
+    mockSettings = { ...DEFAULT_SETTINGS, endpoint: "https://api.example.com/track" }
+
+    const { findByText } = render(<SettingsScreen {...mockProps} />)
+
+    expect(await findByText("api.example.com")).toBeTruthy()
   })
 
   it("shows 'No server configured' when endpoint is empty and not offline", () => {
@@ -148,28 +206,54 @@ describe("SettingsScreen", () => {
     expect(getByText("No server configured")).toBeTruthy()
   })
 
-  it("shows 'Offline' as the Connection summary in offline mode", () => {
+  it("counts today's points instead of a queue in offline mode", async () => {
     mockSettings = { ...DEFAULT_SETTINGS, isOfflineMode: true }
 
-    const { getByText } = render(<SettingsScreen {...mockProps} />)
+    const { findByText } = render(<SettingsScreen {...mockProps} />)
 
-    expect(getByText("Offline - saved locally")).toBeTruthy()
+    expect(await findByText("Offline - saved locally · 10 today")).toBeTruthy()
   })
 
-  it("shows the preset label as the Sync Strategy summary", () => {
-    mockSettings = { ...DEFAULT_SETTINGS, syncPreset: "balanced" }
+  it("names the profile overriding the tracking settings, not how many exist", async () => {
+    // A count is inventory: someone with two profiles already knows that. Which one is running is
+    // the thing that changes and the thing that explains the interval they are seeing.
+    mockGetProfiles.mockResolvedValue([{ id: 1 }, { id: 2 }])
+    mockActiveProfileName = "Charging"
 
-    const { getByText } = render(<SettingsScreen {...mockProps} />)
+    const { findByText } = render(<SettingsScreen {...mockProps} />)
 
-    expect(getByText(/Balanced/)).toBeTruthy()
+    expect(await findByText("Charging active")).toBeTruthy()
   })
 
-  it("shows a custom summary when syncPreset is custom", () => {
-    mockSettings = { ...DEFAULT_SETTINGS, syncPreset: "custom", interval: 45 }
+  it("says none is active rather than going quiet when profiles exist but none matches", async () => {
+    mockGetProfiles.mockResolvedValue([{ id: 1 }])
+
+    const { findByText } = render(<SettingsScreen {...mockProps} />)
+
+    expect(await findByText("No profile active")).toBeTruthy()
+  })
+
+  it("describes the feature while no profile exists, because there is no state to show", async () => {
+    const { findByText } = render(<SettingsScreen {...mockProps} />)
+
+    expect(await findByText("Switch GPS settings by condition")).toBeTruthy()
+  })
+
+  it("names both cadences on the row that names both, rather than only the GPS one", () => {
+    // interval is the GPS cadence and syncInterval the upload one; the row read only the first.
+    mockSettings = { ...DEFAULT_SETTINGS, interval: 30, syncInterval: 300 }
 
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    expect(getByText("Custom · every 45s")).toBeTruthy()
+    expect(getByText("Every 30s · syncs every 5m")).toBeTruthy()
+  })
+
+  it("says instantly rather than every 0s when nothing is batched", () => {
+    mockSettings = { ...DEFAULT_SETTINGS, interval: 5, syncInterval: 0 }
+
+    const { getByText } = render(<SettingsScreen {...mockProps} />)
+
+    expect(getByText("Every 5s · syncs instantly")).toBeTruthy()
   })
 
   // --- Navigation ---
