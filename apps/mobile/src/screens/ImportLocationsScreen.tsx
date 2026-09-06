@@ -17,7 +17,6 @@ import { FILE_FORMATS, IMPORT_FORMAT_ORDER, importDescription } from "../utils/f
 import { ScreenProps } from "../types/global"
 import type { ThemeColors } from "../types/global"
 import { size, space } from "../constants"
-import { radius } from "@colota/shared"
 
 const IMPORT_FORMAT_LABELS = Object.fromEntries(
   (Object.keys(FILE_FORMATS) as ImportFormat[]).map((k) => [k, FILE_FORMATS[k].label])
@@ -213,14 +212,9 @@ export function ImportLocationsScreen({}: ScreenProps) {
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Stats Card */}
-        <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total locations</Text>
-              <Text style={[styles.statValue, { color: colors.primaryDark }]}>{totalLocations.toLocaleString()}</Text>
-            </View>
-          </View>
-        </View>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>
+          {totalLocations.toLocaleString()} locations recorded so far
+        </Text>
 
         {/* Supported formats */}
         <View style={styles.section}>
@@ -262,31 +256,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingTop: 20,
     paddingBottom: 40
-  },
-  statsContainer: {
-    borderRadius: radius.lg,
-    borderWidth: 2,
-    marginBottom: space.xl,
-    overflow: "hidden"
-  },
-  statsGrid: {
-    flexDirection: "row",
-    padding: 20
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center"
-  },
-  statLabel: {
-    fontSize: fontSizes.caption,
-    ...fonts.semiBold,
-    marginBottom: space.sm
-  },
-  statValue: {
-    fontSize: fontSizes.cardTitle,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    textAlign: "center"
   },
   section: {
     marginBottom: space.xl

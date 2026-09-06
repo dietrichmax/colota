@@ -244,12 +244,13 @@ describe("ExportLocationsScreen", () => {
     })
   })
 
-  it("shows total location count", async () => {
+  it("says how many locations are about to be exported", async () => {
+    // The count used to be a card of its own for one number. It reads out of the caption now,
+    // so the assertion is on the sentence rather than on a label beside a figure.
     const { getByText } = renderScreen()
 
     await waitFor(() => {
-      expect(getByText("Total locations")).toBeTruthy()
-      expect(getByText("100")).toBeTruthy()
+      expect(getByText(/100 locations/)).toBeTruthy()
     })
   })
 

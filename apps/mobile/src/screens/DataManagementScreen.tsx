@@ -246,6 +246,7 @@ export function DataManagementScreen({}: ScreenProps) {
     <Container>
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>What this device is storing, and how to clear it</Text>
           {/* Stats */}
           <View style={styles.section}>
             <SectionTitle>Database statistics</SectionTitle>
@@ -430,6 +431,12 @@ const ActionRow = ({
 }
 
 const styles = StyleSheet.create({
+  intro: {
+    fontSize: fontSizes.body,
+    ...fonts.regular,
+    lineHeight: 20,
+    marginBottom: space.lg
+  },
   keyboardAvoid: {
     flex: 1
   },

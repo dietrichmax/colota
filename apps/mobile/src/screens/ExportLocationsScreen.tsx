@@ -15,7 +15,6 @@ import { logger } from "../utils/logger"
 import { showAlert } from "../services/modalService"
 import { ScreenProps } from "../types/global"
 import { space } from "../constants"
-import { radius } from "@colota/shared"
 
 export function ExportLocationsScreen({}: ScreenProps) {
   const { colors } = useTheme()
@@ -81,6 +80,9 @@ export function ExportLocationsScreen({}: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>
+          {totalLocations.toLocaleString()} locations. Save them to a file, once
+        </Text>
         {totalLocations === 0 ? (
           <Card style={styles.emptyCard}>
             <View style={styles.emptyState}>
@@ -93,17 +95,6 @@ export function ExportLocationsScreen({}: ScreenProps) {
           </Card>
         ) : (
           <>
-            {/* Stats Card */}
-            <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
-                  <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total locations</Text>
-                  <Text style={[styles.statValue, { color: colors.primaryDark }]}>
-                    {totalLocations.toLocaleString()}
-                  </Text>
-                </View>
-              </View>
-            </View>
 
             {/* Format Selection */}
             <View style={styles.section}>
@@ -134,6 +125,12 @@ export function ExportLocationsScreen({}: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  intro: {
+    fontSize: fontSizes.body,
+    ...fonts.regular,
+    lineHeight: 20,
+    marginBottom: space.lg
+  },
   scrollContent: {
     paddingHorizontal: space.lg,
     paddingTop: 20,
@@ -156,31 +153,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.description,
     textAlign: "center",
     lineHeight: 18
-  },
-  statsContainer: {
-    borderRadius: radius.lg,
-    borderWidth: 2,
-    marginBottom: space.xl,
-    overflow: "hidden"
-  },
-  statsGrid: {
-    flexDirection: "row",
-    padding: 20
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center"
-  },
-  statLabel: {
-    fontSize: fontSizes.caption,
-    ...fonts.semiBold,
-    marginBottom: space.sm
-  },
-  statValue: {
-    fontSize: fontSizes.cardTitle,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    textAlign: "center"
   },
   section: {
     marginBottom: space.xl
