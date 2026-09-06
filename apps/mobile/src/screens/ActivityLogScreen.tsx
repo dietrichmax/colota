@@ -205,7 +205,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
     <Container>
       {tabBar}
       <View style={styles.filterBar}>
-        <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.well }]}>
           <Search size={size.icon.sm} color={colors.textLight} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
@@ -332,7 +332,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
     borderRadius: radius.sm,
     paddingHorizontal: 10,
     height: 40,

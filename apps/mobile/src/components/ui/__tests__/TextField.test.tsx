@@ -26,15 +26,26 @@ describe("TextField", () => {
     expect(focused.borderWidth + focused.paddingHorizontal).toBe(15)
   })
 
-  it("paints the focus ring in primary and the error ring in error", () => {
+  it("rests without a ring and grows one on focus and on error", () => {
+    // A border marks state, so the resting field is a fill. The ring's width is what the box
+    // gives back in padding, or the text would jump sideways as you tap in.
     const { getByTestId, rerender } = render(<TextField label="Server address" testID="server-input" />)
-    expect(flat(getByTestId("server-input-box")).borderColor).toBe(lightColors.border)
+    expect(flat(getByTestId("server-input-box")).borderWidth).toBe(0)
 
     fireEvent(getByTestId("server-input"), "focus")
+    expect(flat(getByTestId("server-input-box")).borderWidth).toBe(2)
     expect(flat(getByTestId("server-input-box")).borderColor).toBe(lightColors.primary)
 
     rerender(<TextField label="Server address" testID="server-input" error="Public hosts need https" />)
     expect(flat(getByTestId("server-input-box")).borderColor).toBe(lightColors.error)
+  })
+
+  it("can be asked for a resting outline, which it does not draw otherwise", () => {
+    const { getByTestId } = render(<TextField label="Server address" testID="server-input" border />)
+    const style = flat(getByTestId("server-input-box"))
+
+    expect(style.borderWidth).toBe(1)
+    expect(style.borderColor).toBe(lightColors.border)
   })
 
   it("reads the error out with the field name, because the ring alone is colour", () => {
@@ -52,7 +63,7 @@ describe("TextField", () => {
     const input = getByTestId("server-input")
     expect(input.props.editable).toBe(false)
     expect(flat(input).color).toBe(lightColors.textDisabled)
-    expect(flat(getByTestId("server-input-box")).borderColor).toBe(lightColors.border)
+    expect(flat(getByTestId("server-input-box")).borderWidth).toBe(0)
   })
 
   it("passes keyboard and autofill props through to the input", () => {
