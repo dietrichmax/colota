@@ -17,7 +17,7 @@ import {
   TextStyle
 } from "react-native"
 import { Route, Calendar, MapPin, TrendingUp, ChevronRight } from "lucide-react-native"
-import { Container, Card } from "../components"
+import { Card, Container, EmptyState } from "../components"
 import { ChipGroup } from "../components/ui/ChipGroup"
 import { useTheme } from "../hooks/useTheme"
 import { DailyStat } from "../types/global"
@@ -251,9 +251,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
           }
           ListHeaderComponent={summaryHeader}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No data for this period</Text>
-            </View>
+            <EmptyState style={styles.emptyInset} title="No data for this period" />
           }
         />
       )}
@@ -262,6 +260,8 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
 }
 
 const styles = StyleSheet.create({
+  // the list around it already insets its rows
+  emptyInset: { paddingHorizontal: 0 },
   header: {
     paddingHorizontal: space.lg,
     paddingTop: space.md,
@@ -330,6 +330,4 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.caption,
     ...fonts.regular
   },
-  empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold }
 })

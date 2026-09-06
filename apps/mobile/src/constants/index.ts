@@ -30,6 +30,8 @@ export const size = {
   iconButton: 32,
   iconColumn: 40,
   numericField: 88,
+  /** The disc behind an empty screen's glyph. */
+  emptyIcon: 64,
   icon: { sm: 16, md: 20, lg: 24 }
 } as const
 

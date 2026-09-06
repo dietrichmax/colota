@@ -9,6 +9,11 @@ const mockSetStop = jest.fn()
 const mockBuildSegments = jest.fn()
 const mockBuildPoints = jest.fn()
 
+// EmptyState reads the theme itself, unlike TrackMap, which takes colors as a prop.
+jest.mock("../../../../hooks/useTheme", () => ({
+  useTheme: () => ({ colors: require("@colota/shared").lightColors })
+}))
+
 jest.mock("../../map/mapUtils", () => {
   const actual = jest.requireActual("../../map/mapUtils")
   return {

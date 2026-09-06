@@ -12,7 +12,7 @@ import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { fontSizes, fonts } from "../styles/typography"
 import { ChevronRight, Wifi, PersonStanding, MapPinHouse, Share2 } from "lucide-react-native"
-import { Button, Card, Container, SectionTitle, TextField } from "../components"
+import { Button, Card, Container, EmptyState, SectionTitle, TextField } from "../components"
 import {
   DEFAULT_MAP_ZOOM,
   GEOFENCE_ZOOM_PADDING,
@@ -351,12 +351,10 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
         }
         ListEmptyComponent={
           geofences.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No geofences yet</Text>
-              <Text style={[styles.emptyHint, { color: colors.textLight }]}>
-                Create a geofence to stop recording locations in specific areas
-              </Text>
-            </View>
+            <EmptyState
+              title="No geofences yet"
+              hint="Create a geofence to stop recording locations in specific areas"
+            />
           ) : undefined
         }
         renderItem={renderItem}
@@ -393,12 +391,4 @@ const styles = StyleSheet.create({
   name: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 2 },
   radiusRow: { flexDirection: "row", alignItems: "center", gap: space.xs },
   radius: { fontSize: fontSizes.caption },
-  empty: { alignItems: "center", paddingVertical: 20 },
-  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 6 },
-  emptyHint: {
-    fontSize: fontSizes.description,
-    textAlign: "center",
-    maxWidth: 260,
-    lineHeight: 18
-  }
 })

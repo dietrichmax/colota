@@ -13,7 +13,7 @@ import { ScreenProps } from "../types/global"
 import { useCoords } from "../contexts/TrackingProvider"
 import { fontSizes, fonts } from "../styles/typography"
 import { X, CircleCheckBig, RefreshCw, TriangleAlert } from "lucide-react-native"
-import { Button, Card, Container, SectionTitle, TextField, IconButton } from "../components"
+import { Button, Card, Container, EmptyState, IconButton, SectionTitle, TextField } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
 import {
   DEFAULT_MAP_ZOOM,
@@ -859,12 +859,10 @@ export function OfflineMapsScreen({}: ScreenProps) {
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
           areas.length === 0 && !downloading ? (
-            <View style={styles.empty}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No saved areas yet</Text>
-              <Text style={[styles.emptyHint, { color: colors.textLight }]}>
-                Download map tiles to browse your tracks offline while hiking or camping
-              </Text>
-            </View>
+            <EmptyState style={styles.emptyInset}
+              title="No saved areas yet"
+              hint="Download map tiles to browse your tracks offline while hiking or camping"
+            />
           ) : undefined
         }
         renderItem={renderItem}
@@ -874,6 +872,8 @@ export function OfflineMapsScreen({}: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  // the list around it already insets its rows
+  emptyInset: { paddingHorizontal: 0 },
   map: { height: 450, overflow: "hidden" },
   list: { padding: 20, paddingBottom: 40 },
   section: { marginBottom: space.lg },
@@ -924,9 +924,6 @@ const styles = StyleSheet.create({
     borderWidth: 1
   },
   cancelAreaLabel: { fontSize: fontSizes.description, ...fonts.semiBold },
-  empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 6 },
-  emptyHint: { fontSize: fontSizes.description, textAlign: "center", maxWidth: 260, lineHeight: 18 },
   mapHint: {
     position: "absolute",
     top: 14,

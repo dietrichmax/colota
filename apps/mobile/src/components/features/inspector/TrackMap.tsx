@@ -10,9 +10,10 @@ import type { NativeSyntheticEvent } from "react-native"
 import { MapPinOff, X, Check, Trash2, Split } from "lucide-react-native"
 import { ThemeColors, Trip } from "../../../types/global"
 import { getTripColor } from "../../../utils/trips"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fontSizes } from "../../../styles/typography"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
+import { EmptyState } from "../../ui/EmptyState"
 import {
   buildTrackSegmentsGeoJSON,
   buildTrackPointsGeoJSON,
@@ -296,12 +297,8 @@ export function TrackMap({
       {mapView}
 
       {isEmpty && (
-        <View style={[styles.emptyOverlay, { backgroundColor: colors.card, borderRadius: colors.borderRadius }]}>
-          <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
-            <MapPinOff size={32} color={colors.textSecondary} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No locations</Text>
-          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>No tracked locations for this day.</Text>
+        <View style={[styles.emptyOverlay, { backgroundColor: colors.background }]}>
+          <EmptyState icon={MapPinOff} title="No locations" hint="No tracked locations for this day" />
         </View>
       )}
 
@@ -429,25 +426,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: space.xl,
     zIndex: 20
-  },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: space.lg
-  },
-  emptyTitle: {
-    fontSize: fontSizes.heading,
-    ...fonts.bold,
-    textAlign: "center"
-  },
-  emptySubtext: {
-    fontSize: fontSizes.body,
-    textAlign: "center",
-    marginTop: space.sm,
-    lineHeight: 20
   },
   popupCard: {
     position: "absolute",

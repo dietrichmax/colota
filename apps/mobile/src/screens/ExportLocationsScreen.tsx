@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Text, StyleSheet, View, ScrollView } from "react-native"
 import { fontSizes, fonts } from "../styles/typography"
 import { MapPinOff, Upload } from "lucide-react-native"
-import { Container, Card, SectionTitle, Button, FormatSelector, LoadingOverlay } from "../components"
+import { Button, Card, Container, EmptyState, FormatSelector, LoadingOverlay, SectionTitle } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { EXPORT_FORMATS, ExportFormat } from "../utils/exportConverters"
@@ -79,20 +79,17 @@ export function ExportLocationsScreen({}: ScreenProps) {
 
   return (
     <Container>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, totalLocations === 0 && styles.scrollEmpty]} showsVerticalScrollIndicator={false}>
         <Text style={[styles.intro, { color: colors.textSecondary }]}>
           {totalLocations.toLocaleString()} locations. Save them to a file, once
         </Text>
         {totalLocations === 0 ? (
-          <Card style={styles.emptyCard}>
-            <View style={styles.emptyState}>
-              <MapPinOff size={40} color={colors.textLight} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>No locations</Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textLight }]}>
-                Start tracking to record locations that can be exported.
-              </Text>
-            </View>
-          </Card>
+          <EmptyState
+            style={styles.emptyInset}
+            icon={MapPinOff}
+            title="No locations"
+            hint="Start tracking to record locations that can be exported"
+          />
         ) : (
           <>
 
@@ -125,6 +122,8 @@ export function ExportLocationsScreen({}: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  // the list around it already insets its rows
+  emptyInset: { paddingHorizontal: 0 },
   intro: {
     fontSize: fontSizes.body,
     ...fonts.regular,
@@ -136,24 +135,8 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 40
   },
-  emptyCard: {
-    marginBottom: space.xl
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: space.xxl
-  },
-  emptyTitle: {
-    fontSize: fontSizes.heading,
-    ...fonts.semiBold,
-    marginTop: space.md,
-    marginBottom: space.xs
-  },
-  emptySubtitle: {
-    fontSize: fontSizes.description,
-    textAlign: "center",
-    lineHeight: 18
-  },
+  // so an empty state has room to centre in
+  scrollEmpty: { flexGrow: 1 },
   section: {
     marginBottom: space.xl
   },

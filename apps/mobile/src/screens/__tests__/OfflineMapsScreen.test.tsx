@@ -139,6 +139,7 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
+    EmptyState: require("../../testing/componentStubs").EmptyStateStub,
     IconButton: require("../../testing/componentStubs").IconButtonStub,
     TextField: require("../../testing/componentStubs").TextFieldStub,
     Button: function (props: any) {
