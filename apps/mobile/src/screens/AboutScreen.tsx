@@ -274,15 +274,6 @@ const styles = StyleSheet.create({
   section: {
     marginTop: space.xl
   },
-  debugHint: {
-    fontSize: fontSizes.small,
-    marginTop: space.sm,
-    fontStyle: "italic"
-  },
-  debugText: {
-    fontSize: fontSizes.caption,
-    ...fonts.semiBold
-  },
   debugActions: {
     gap: 10,
     marginTop: space.lg
