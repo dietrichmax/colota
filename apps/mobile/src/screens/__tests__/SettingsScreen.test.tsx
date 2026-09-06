@@ -116,8 +116,10 @@ describe("SettingsScreen", () => {
   it("renders grouped section headers", () => {
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
+    expect(getByText("Tracking")).toBeTruthy()
     expect(getByText("Display")).toBeTruthy()
     expect(getByText("Data")).toBeTruthy()
+    expect(getByText("Colota")).toBeTruthy()
   })
 
   it("renders StatsCard with stats", () => {

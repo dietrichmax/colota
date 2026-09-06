@@ -123,6 +123,7 @@ export function SettingsScreen({ navigation }: Props) {
         />
 
         <View style={styles.section}>
+          <SectionTitle>Tracking</SectionTitle>
           <Card flush>
             <ListItem
               testID="nav-connection"
