@@ -43,12 +43,9 @@ jest.mock("lucide-react-native", () => {
   const { Text } = require("react-native")
   const stub = (name: string) => (_props: any) => R.createElement(Text, null, name)
   return {
-    Clock: stub("Clock"),
+    Check: stub("Check"),
     Route: stub("Route"),
     Share: stub("Share"),
-    TrendingUp: stub("TrendingUp"),
-    TrendingDown: stub("TrendingDown"),
-    Gauge: stub("Gauge"),
     Trash2: stub("Trash2"),
     X: stub("X"),
     Merge: stub("Merge"),
@@ -96,6 +93,28 @@ describe("TripList - CAB selection", () => {
 
     expect(filled()).toHaveLength(1)
     expect(StyleSheet.flatten(filled()[0].props.style).borderWidth).toBeUndefined()
+  })
+
+  it("puts every stat on one line, so a row is a name, a time and a caption", () => {
+    // The stats were five icon and text pairs that wrapped at three columns on a narrow phone.
+    const { getByText, queryByText } = render(
+      <TripList trips={makeTrips(1)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} />
+    )
+
+    // One node holding every stat, separated by the middot, rather than one node per stat
+    expect(getByText(/· 1m$/)).toBeTruthy()
+    expect(queryByText("Route")).toBeNull()
+  })
+
+  it("swaps the trip colour dot for a check when selected, so the fill is not the only signal", () => {
+    const { getByLabelText, queryByText } = render(
+      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} />
+    )
+
+    expect(queryByText("Check")).toBeNull()
+    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+
+    expect(queryByText("Check")).toBeTruthy()
   })
 
   it("renders idle header with Export All when trips exist", () => {

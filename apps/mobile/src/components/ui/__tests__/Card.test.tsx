@@ -37,6 +37,20 @@ describe("Card", () => {
     expect(getByText("Trip 1")).toBeTruthy()
   })
 
+  it("takes the caller's style on the surface, which is why a margin there spills the ripple", () => {
+    // The trip row spaced itself with marginBottom, which grew the Pressable 8 past the card and
+    // the ripple with it. The margin belongs to the list, and this pins where the style lands.
+    const tree = render(
+      <Card variant="interactive" onPress={jest.fn()} style={{ backgroundColor: lightColors.primaryContainer }}>
+        <Text>Trip 1</Text>
+      </Card>
+    )
+
+    const rippleBox = tree.UNSAFE_getAllByType(View)[0]
+    expect(StyleSheet.flatten(rippleBox.props.style).backgroundColor).toBeUndefined()
+    expect(surfaceOf(tree).backgroundColor).toBe(lightColors.primaryContainer)
+  })
+
   it("pays its own padding unless rows are told to carry it", () => {
     const padded = render(
       <Card>

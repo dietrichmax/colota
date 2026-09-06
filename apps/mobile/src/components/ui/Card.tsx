@@ -13,6 +13,8 @@ type CardVariant = "default" | "elevated" | "outlined" | "interactive"
 
 type CardProps = {
   children: React.ReactNode
+  /** Lands on the surface inside the Pressable, so a margin here grows the ripple box past the
+   *  card it paints. Spacing between cards belongs to the list. */
   style?: StyleProp<ViewStyle>
   danger?: boolean
   variant?: CardVariant
