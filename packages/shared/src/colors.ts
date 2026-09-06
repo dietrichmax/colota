@@ -57,7 +57,7 @@ export const lightColors: ThemeColors = {
   // Brand (Teal)
   primary: "#0B7D73",
   primaryDark: "#115E59",
-  primaryContainer: "#A5F8E9",
+  primaryContainer: "#B9E4DC",
   onPrimaryContainer: "#115E59",
   well: "#E9EDF0",
 
