@@ -255,11 +255,6 @@ class NativeLocationService {
     )
   }
 
-  /** DEV ONLY: Insert dummy location data for testing */
-  static async insertDummyData(): Promise<number> {
-    this.ensureModule()
-    return this.safeExecute(() => LocationServiceModule.insertDummyData(), 0, "insertDummyData failed")
-  }
 
   // ============================================================================
   // CLEANUP OPERATIONS
