@@ -79,7 +79,7 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
           <View style={styles.buttons}>
             <Pressable
               android_ripple={{ color: colors.textSecondary + STATE_LAYER_ALPHA }}
-              style={[styles.button, styles.secondaryButton, { borderColor: colors.border }]}
+              style={styles.button}
               onPress={handleNotNow}
             >
               <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not now</Text>
@@ -87,7 +87,7 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
 
             <Pressable
               android_ripple={{ color: colors.textOnPrimary + STATE_LAYER_ALPHA }}
-              style={[styles.button, styles.primaryButton, { backgroundColor: colors.primary }]}
+              style={[styles.button, { backgroundColor: colors.primary }]}
               onPress={handleConfirm}
             >
               <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>{confirmLabel}</Text>
@@ -146,8 +146,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center"
   },
-  primaryButton: {},
-  secondaryButton: {},
   buttonText: {
     fontSize: fontSizes.label,
     ...fonts.semiBold

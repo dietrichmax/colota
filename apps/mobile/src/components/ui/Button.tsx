@@ -52,30 +52,22 @@ export function Button({
       case "primary":
         return {
           bg: disabled ? colors.textDisabled : colors.primary,
-          text: color ?? colors.textOnPrimary,
-          borderColor: "transparent",
-          borderWidth: 0
+          text: color ?? colors.textOnPrimary
         }
       case "secondary":
         return {
           bg: disabled ? colors.textDisabled : colors.primaryContainer,
-          text: color ?? colors.onPrimaryContainer,
-          borderColor: "transparent",
-          borderWidth: 0
+          text: color ?? colors.onPrimaryContainer
         }
       case "ghost":
         return {
           bg: "transparent",
-          text: color ?? colors.primaryDark,
-          borderColor: "transparent",
-          borderWidth: 0
+          text: disabled ? colors.textDisabled : (color ?? colors.primaryDark)
         }
       case "danger":
         return {
           bg: disabled ? colors.textDisabled : colors.error,
-          text: color ?? colors.textOnPrimary,
-          borderColor: "transparent",
-          borderWidth: 0
+          text: color ?? colors.textOnPrimary
         }
     }
   }
@@ -89,15 +81,7 @@ export function Button({
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading, expanded }}
         android_ripple={disabled || loading ? undefined : { color: v.text + STATE_LAYER_ALPHA }}
-        style={[
-          styles.button,
-          {
-            backgroundColor: v.bg,
-            borderColor: v.borderColor,
-            borderWidth: v.borderWidth,
-            borderRadius: colors.borderRadius
-          }
-        ]}
+        style={[styles.button, { backgroundColor: v.bg, borderRadius: colors.borderRadius }]}
         onPress={onPress}
         disabled={disabled || loading}
       >
