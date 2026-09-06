@@ -43,14 +43,10 @@ describe("SectionTitle", () => {
     expect(getByText("Tracking").props.accessibilityRole).toBe("header")
   })
 
-  it("keeps the arithmetic true: the heading clears AA where primary does not", () => {
+  it("keeps the arithmetic true: the heading clears AA on both surfaces", () => {
     for (const theme of [lightColors, darkColors]) {
       expect(ratio(theme.textSecondary, theme.background)).toBeGreaterThanOrEqual(AA)
       expect(ratio(theme.textSecondary, theme.card)).toBeGreaterThanOrEqual(AA)
     }
-
-    // The reason this component changed: primary fails on both light surfaces.
-    expect(ratio(lightColors.primary, lightColors.background)).toBeLessThan(AA)
-    expect(ratio(lightColors.primary, lightColors.card)).toBeLessThan(AA)
   })
 })

@@ -52,22 +52,10 @@ const PAIRS: Pair[] = [
   ["primary", "well", UI]
 ]
 
-/** Measured 2026-09-06. Every one of these is a palette decision that has not been taken. */
+/** Empty on purpose: every pair clears its floor. A pin here is a palette decision not yet taken. */
 const DEFERRED: Record<string, Record<string, number>> = {
-  light: {
-    "textLight on background": 2.39,
-    "textLight on card": 2.64,
-    "textOnPrimary on primary": 3.74,
-    "primary on background": 3.39,
-    "primary on card": 3.74,
-    "info on background": 4.17
-  },
-  dark: {
-    "textLight on card": 3.89,
-    "primaryDark on card": 3.68,
-    "error on card": 3.95,
-    "info on card": 3.86
-  }
+  light: {},
+  dark: {}
 }
 
 function luminance(hex: string): number {

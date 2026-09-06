@@ -55,7 +55,7 @@ export interface ThemeColors {
 
 export const lightColors: ThemeColors = {
   // Brand (Teal)
-  primary: "#0d9488",
+  primary: "#0B7D73",
   primaryDark: "#115E59",
   primaryContainer: "#A5F8E9",
   onPrimaryContainer: "#115E59",
@@ -65,7 +65,7 @@ export const lightColors: ThemeColors = {
   success: "#2E7D32",
   warning: "#C2410C",
   error: "#D32F2F",
-  info: "#1976D2",
+  info: "#1870C8",
 
   // UI
   background: "#F1F4F6",
@@ -77,7 +77,7 @@ export const lightColors: ThemeColors = {
   // Text
   text: "#202124",
   textSecondary: "#5F6368",
-  textLight: "#9AA0A6",
+  textLight: "#697077",
   textDisabled: "#9AA0A6",
 
   // Border & divider
@@ -99,7 +99,7 @@ export const lightColors: ThemeColors = {
 export const darkColors: ThemeColors = {
   // Brand (Teal)
   primary: "#2DD4BF",
-  primaryDark: "#0d9488",
+  primaryDark: "#0FA698",
   primaryContainer: "#0F3B36",
   onPrimaryContainer: "#99F6E4",
   well: "#232323",
@@ -107,8 +107,8 @@ export const darkColors: ThemeColors = {
   // Status
   success: "#4CAF50",
   warning: "#FB923C",
-  error: "#EF5350",
-  info: "#4285F4",
+  error: "#F16765",
+  info: "#5793F5",
 
   // UI
   background: "#121212",
@@ -120,7 +120,7 @@ export const darkColors: ThemeColors = {
   // Text
   text: "#E8EAED",
   textSecondary: "#AAAAAA",
-  textLight: "#888888",
+  textLight: "#949494",
   textDisabled: "#666666",
 
   // Border & divider

@@ -21,13 +21,7 @@ type ToggleProps = {
  * track and thumb live here instead. Every switch takes the same hue: a semantic colour marks
  * a state, and a toggle being on is not a warning.
  */
-export function Toggle({
-  value,
-  onValueChange,
-  accessibilityLabel,
-  disabled = false,
-  testID
-}: ToggleProps) {
+export function Toggle({ value, onValueChange, accessibilityLabel, disabled = false, testID }: ToggleProps) {
   const { colors } = useTheme()
   return (
     <Switch
@@ -36,7 +30,7 @@ export function Toggle({
       onValueChange={onValueChange}
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
-      trackColor={{ false: undefined, true: colors.primary + "80" }}
+      trackColor={{ false: undefined, true: colors.primaryContainer }}
       thumbColor={value ? colors.primary : undefined}
     />
   )
