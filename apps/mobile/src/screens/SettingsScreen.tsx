@@ -6,11 +6,12 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
 import { StyleSheet, View, ScrollView, Linking, DeviceEventEmitter } from "react-native"
-import { TRACKING_PRESETS, API_TEMPLATES } from "../types/global"
+import { API_TEMPLATES } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
-import { SectionTitle, Card, Container, Divider, StatsCard, ListItem } from "../components"
+import { useTheme } from "../hooks/useTheme"
+import { SectionTitle, Card, Container, Divider, QueueWarning, ListItem } from "../components"
 import {
   ExternalLink,
   Cloud,
@@ -27,27 +28,43 @@ import {
   Info,
   Heart,
   Clock,
-  Share2, Sparkles, MessageCircle, Star } from "lucide-react-native"
+  Share2,
+  Sparkles,
+  MessageCircle,
+  Star
+} from "lucide-react-native"
+import { formatDuration, getTimeFormat, getUnitSystem } from "../utils/geo"
+import { formatCount } from "../utils/format"
+import { ProfileService } from "../services/ProfileService"
 import { logger } from "../utils/logger"
 import { space, RELEASES_URL, ISSUES_URL, PLAY_STORE_MARKET_URL, PLAY_STORE_WEB_URL } from "../constants"
 
 type Props = RootScreenProps<"Settings">
 
 export function SettingsScreen({ navigation }: Props) {
-  const { settings } = useTracking()
+  const { settings, activeProfileName } = useTracking()
+  const { preference } = useTheme()
 
   const [queueCount, setQueueCount] = useState(0)
-  const [sentCount, setSentCount] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const [databaseSizeMB, setDatabaseSizeMB] = useState(0)
   const [todayCount, setTodayCount] = useState(0)
+  const [profileCount, setProfileCount] = useState(0)
 
   const updateStats = useCallback(async () => {
     try {
       const stats = await NativeLocationService.getStats()
       setQueueCount(stats.queued)
-      setSentCount(stats.sent)
+      setTotalCount(stats.total)
+      setDatabaseSizeMB(stats.databaseSizeMB)
       setTodayCount(stats.today)
     } catch (err) {
       logger.error("[SettingsScreen] Failed to get stats:", err)
+    }
+    try {
+      setProfileCount((await ProfileService.getProfiles()).length)
+    } catch (err) {
+      logger.error("[SettingsScreen] Failed to count profiles:", err)
     }
   }, [])
 
@@ -67,23 +84,48 @@ export function SettingsScreen({ navigation }: Props) {
     updateStats()
   }, [settings.isOfflineMode, settings.endpoint, updateStats])
 
+  // The row carries the numbers the stats strip used to, so the strip could go. One line, so a
+  // segment only appears when it has something to say.
   const connectionSummary = useMemo(() => {
-    if (settings.isOfflineMode) return "Offline - saved locally"
+    if (settings.isOfflineMode) return `Offline - saved locally · ${todayCount.toLocaleString()} today`
     if (!settings.endpoint) return "No server configured"
+    let host = settings.endpoint
     try {
-      return new URL(settings.endpoint).host
+      host = new URL(settings.endpoint).host
     } catch {
-      return settings.endpoint
+      host = settings.endpoint
     }
-  }, [settings.isOfflineMode, settings.endpoint])
+    return queueCount > 0 ? `${host} · ${formatCount(queueCount)} queued` : host
+  }, [settings.isOfflineMode, settings.endpoint, queueCount, todayCount])
 
+  // The row names both, so it shows both: interval is the GPS cadence and syncInterval the upload
+  // one. The preset label stood in for numbers the row now carries.
   const syncSummary = useMemo(() => {
-    const preset = settings.syncPreset
-    if (preset !== "custom" && TRACKING_PRESETS[preset]) {
-      return `${TRACKING_PRESETS[preset].label} · every ${settings.interval}s`
-    }
-    return `Custom · every ${settings.interval}s`
-  }, [settings.syncPreset, settings.interval])
+    const sync = settings.syncInterval <= 0 ? "syncs instantly" : `syncs every ${formatDuration(settings.syncInterval)}`
+    return `Every ${settings.interval}s · ${sync}`
+  }, [settings.interval, settings.syncInterval])
+
+  // Both getters read a module cache the Appearance screen refreshes on save, so this costs no
+  // bridge call; the screen re-reads on focus, which is when a change can have happened.
+  const appearanceSummary = useMemo(() => {
+    const theme = preference.charAt(0).toUpperCase() + preference.slice(1)
+    const units = getUnitSystem() === "imperial" ? "Imperial" : "Metric"
+    return `${theme} · ${units} · ${getTimeFormat()}`
+  }, [preference])
+
+  // Nothing recorded yet is not state worth reporting, and it is the first thing a new install
+  // shows under this heading.
+  const dataSummary = useMemo(() => {
+    if (totalCount === 0) return "View queue and clear data"
+    return `${formatCount(totalCount)} recorded · ${databaseSizeMB.toFixed(1)} MB`
+  }, [totalCount, databaseSizeMB])
+
+  // Which profile is overriding the tracking settings, not how many exist: a count is inventory
+  // and tells a user with profiles nothing they do not know.
+  const profileSummary = useMemo(() => {
+    if (profileCount === 0) return "Switch GPS settings by condition"
+    return activeProfileName ? `${activeProfileName} active` : "No profile active"
+  }, [profileCount, activeProfileName])
 
   const apiSummary = useMemo(() => {
     const template = settings.apiTemplate
@@ -114,13 +156,7 @@ export function SettingsScreen({ navigation }: Props) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <StatsCard
-          queueCount={queueCount}
-          sentCount={sentCount}
-          todayCount={todayCount}
-          interval={settings.interval.toString()}
-          onManageClick={handleNavigateDataManagement}
-        />
+        <QueueWarning queueCount={queueCount} onPress={handleNavigateDataManagement} />
 
         <View style={styles.section}>
           <SectionTitle>Tracking</SectionTitle>
@@ -157,7 +193,7 @@ export function SettingsScreen({ navigation }: Props) {
               testID="nav-tracking-profiles"
               icon={UserRoundPen}
               label="Tracking profiles"
-              sub="Auto-switch GPS settings based on conditions"
+              sub={profileSummary}
               onPress={() => navigation.navigate("Tracking Profiles")}
             />
           </Card>
@@ -170,7 +206,7 @@ export function SettingsScreen({ navigation }: Props) {
               testID="nav-appearance"
               icon={Palette}
               label="Appearance"
-              sub="Theme, units, time format and map tiles"
+              sub={appearanceSummary}
               onPress={() => navigation.navigate("Appearance")}
             />
           </Card>
@@ -183,7 +219,7 @@ export function SettingsScreen({ navigation }: Props) {
               testID="nav-data-management"
               icon={Database}
               label="Data management"
-              sub="View queue and clear data"
+              sub={dataSummary}
               onPress={() => navigation.navigate("Data Management")}
             />
             <Divider tight inset />
@@ -306,7 +342,6 @@ export function SettingsScreen({ navigation }: Props) {
             />
           </Card>
         </View>
-
       </ScrollView>
     </Container>
   )
