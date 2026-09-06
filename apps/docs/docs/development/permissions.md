@@ -117,4 +117,4 @@ Lets Colota briefly hold the CPU awake when a heartbeat alarm fires during Doze.
 
 ## Revoking Permissions
 
-You can revoke any permission at any time through Android Settings → Apps → Colota → Permissions. Revoking location permissions will stop tracking. Other permissions can be toggled without affecting the core tracking functionality.
+You can revoke any permission at any time through Android Settings → Apps → Colota → Permissions. Revoking a location permission stops the tracking service, and Colota turns the tracking toggle off the next time you open the app. Other permissions can be toggled without affecting the core tracking functionality.
