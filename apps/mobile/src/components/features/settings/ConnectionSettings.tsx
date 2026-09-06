@@ -194,7 +194,7 @@ export function ConnectionSettings({
 
         {!settings.isOfflineMode && (
           <>
-            <Divider />
+            <Divider tight />
 
             <View style={styles.inputGroup}>
               <View style={styles.inputHeader}>
@@ -269,7 +269,7 @@ export function ConnectionSettings({
               </View>
             )}
 
-            <Divider />
+            <Divider tight />
 
             <ListItem
               testID="nav-auth-settings"

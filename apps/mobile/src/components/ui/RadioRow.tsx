@@ -17,8 +17,6 @@ type RadioRowProps = {
   onPress: () => void
   sub?: string
   icon?: LucideIcon
-  /** A hairline below the row, from the text column. Omit on the last row of a group. */
-  divider?: boolean
   testID?: string
 }
 
@@ -26,29 +24,26 @@ type RadioRowProps = {
  * The whole row is the radio; RadioDot is decoration, which is why it is hidden from
  * accessibility and the state lives here.
  */
-export function RadioRow({ label, selected, onPress, sub, icon: Icon, divider = false, testID }: RadioRowProps) {
+export function RadioRow({ label, selected, onPress, sub, icon: Icon, testID }: RadioRowProps) {
   const { colors } = useTheme()
 
   return (
-    <View>
-      <Pressable
-        testID={testID}
-        onPress={onPress}
-        accessibilityRole="radio"
-        accessibilityState={{ checked: selected }}
-        accessibilityLabel={sub ? `${label}, ${sub}` : label}
-        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
-        style={styles.row}
-      >
-        <RadioDot selected={selected} />
-        {Icon ? <Icon size={size.icon.md} color={colors.textSecondary} /> : null}
-        <View style={styles.text}>
-          <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-          {sub ? <Text style={[styles.sub, { color: colors.textSecondary }]}>{sub}</Text> : null}
-        </View>
-      </Pressable>
-      {divider ? <View style={[styles.divider, { backgroundColor: colors.border }]} /> : null}
-    </View>
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={sub ? `${label}, ${sub}` : label}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      style={styles.row}
+    >
+      <RadioDot selected={selected} />
+      {Icon ? <Icon size={size.icon.md} color={colors.textSecondary} /> : null}
+      <View style={styles.text}>
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+        {sub ? <Text style={[styles.sub, { color: colors.textSecondary }]}>{sub}</Text> : null}
+      </View>
+    </Pressable>
   )
 }
 
@@ -74,9 +69,5 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.description,
     ...fonts.regular,
     marginTop: 2
-  },
-  divider: {
-    height: 1,
-    marginStart: size.iconColumn
   }
 })

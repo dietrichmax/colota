@@ -182,7 +182,6 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
             <Button
               title="Create profile"
               icon={Plus}
-              style={styles.createBtn}
               onPress={() => navigation.navigate("Profile Editor", {})}
             />
 
@@ -220,15 +219,6 @@ const styles = StyleSheet.create({
   list: { padding: space.lg, paddingBottom: 40 },
   header: { marginBottom: 20 },
   subtitle: { fontSize: fontSizes.body, ...fonts.regular, lineHeight: 20 },
-  createBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: space.sm,
-    padding: space.lg,
-    borderRadius: radius.md,
-    marginBottom: space.xl
-  },
   card: { marginBottom: space.md },
   activeCard: { borderWidth: 2 },
   row: { flexDirection: "row", alignItems: "center" },
