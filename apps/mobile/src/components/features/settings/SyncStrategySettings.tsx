@@ -203,7 +203,7 @@ export function SyncStrategySettings({
 
             {/* Tracking Parameters Group */}
             <View style={styles.paramGroup}>
-              <SectionTitle color={colors.textSecondary}>Tracking parameters</SectionTitle>
+              <SectionTitle>Tracking parameters</SectionTitle>
 
               <NumericInput
                 label="Tracking interval"
@@ -232,7 +232,7 @@ export function SyncStrategySettings({
 
                 {/* Network Parameters Group */}
                 <View style={styles.paramGroup}>
-                  <SectionTitle color={colors.textSecondary}>Network settings</SectionTitle>
+                  <SectionTitle>Network settings</SectionTitle>
 
                   {/* Sync Interval */}
                   <View style={styles.settingBlock}>
@@ -399,7 +399,7 @@ export function SyncStrategySettings({
 
             {/* Quality Parameters Group */}
             <View style={styles.paramGroup}>
-              <SectionTitle color={colors.textSecondary}>Quality filters</SectionTitle>
+              <SectionTitle>Quality filters</SectionTitle>
 
               <SettingRow
                 style={styles.firstInGroup}

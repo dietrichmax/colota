@@ -12,15 +12,16 @@ import { space } from "../../constants"
 type SectionTitleProps = {
   children: React.ReactNode
   style?: StyleProp<ViewStyle>
-  color?: string
 }
 
-export function SectionTitle({ children, style, color }: SectionTitleProps) {
+export function SectionTitle({ children, style }: SectionTitleProps) {
   const { colors } = useTheme()
 
   return (
     <View style={style}>
-      <Text style={[styles.sectionTitle, { color: color ? color : colors.primary }]}>{children}</Text>
+      <Text accessibilityRole="header" style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+        {children}
+      </Text>
     </View>
   )
 }
