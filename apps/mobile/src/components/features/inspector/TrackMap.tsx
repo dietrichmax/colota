@@ -373,7 +373,7 @@ export function TrackMap({
                     onChangeText={setNoteDraft}
                     placeholder="Add a note"
                     placeholderTextColor={colors.textSecondary}
-                    style={[styles.noteInput, { color: colors.text, borderColor: colors.border }]}
+                    style={[styles.noteInput, { color: colors.text, backgroundColor: colors.well }]}
                     multiline
                   />
                   {noteDraft.trim() !== popup.note && (
@@ -481,7 +481,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.description,
     paddingVertical: 2,
     paddingHorizontal: 6,
-    borderWidth: 1,
     borderRadius: 6,
     minHeight: 32,
     maxHeight: 80

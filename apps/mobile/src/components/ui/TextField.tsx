@@ -14,8 +14,9 @@ import { radius } from "@colota/shared"
 import { FieldMessage } from "./FieldMessage"
 
 /**
- * Distance from the outer edge to the text. The border grows from 1 to 2 on focus and on
- * error, so the padding shrinks by the same amount or the text jumps sideways as you tap in.
+ * Distance from the outer edge to the text. The resting field has no border, only a fill; the
+ * ring appears on focus and on error, so the padding shrinks by the same amount it grows or
+ * the text jumps sideways as you tap in.
  */
 const FIELD_INSET = 15
 
@@ -23,12 +24,11 @@ const FIELD_INSET = 15
 const MULTILINE_MIN_HEIGHT = 80
 
 type BaseProps = Omit<TextInputProps, "style" | "editable" | "secureTextEntry"> & {
-  /** A string shows the ring and the message; true shows the ring alone, when a caller says it elsewhere. */
   error?: string | boolean
   disabled?: boolean
   secure?: boolean
   mono?: boolean
-  /** A number the user reads back: centred and weighted, so the value is the thing you see. */
+  border?: boolean
   figure?: boolean
   style?: StyleProp<ViewStyle>
   testID?: string
@@ -45,6 +45,7 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
   disabled = false,
   secure = false,
   mono = false,
+  border = false,
   figure = false,
   style,
   testID,
@@ -60,8 +61,8 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
   const [revealed, setRevealed] = useState(false)
 
   const name = label ?? accessibilityLabel ?? ""
-  const borderWidth = error || (focused && !disabled) ? 2 : 1
-  const borderColor = disabled ? colors.border : error ? colors.error : focused ? colors.primary : colors.border
+  const borderWidth = error || (focused && !disabled) ? 2 : border ? 1 : 0
+  const borderColor = error ? colors.error : focused && !disabled ? colors.primary : colors.border
   const RevealIcon = revealed ? EyeOff : Eye
   const labelColor = disabled ? colors.textDisabled : focused ? colors.primary : colors.textSecondary
 
