@@ -253,13 +253,15 @@ describe("ApiSettingsScreen", () => {
       expect(getByText("Modified")).toBeTruthy()
     })
 
-    it("shows RESET ALL button when any field is modified", () => {
-      const { getByText, getByDisplayValue } = renderScreen()
+    it("offers Reset all as a button once a field is modified", () => {
+      // The heading's action was a bare Pressable, so a screen reader announced the words with
+      // no role and nothing said it was pressable.
+      const { getByRole, getByDisplayValue } = renderScreen()
 
       const latInput = getByDisplayValue("lat")
       fireEvent.changeText(latInput, "latitude")
 
-      expect(getByText("Reset all")).toBeTruthy()
+      expect(getByRole("button", { name: "Reset all" })).toBeTruthy()
     })
   })
 
@@ -282,10 +284,12 @@ describe("ApiSettingsScreen", () => {
   })
 
   describe("copy payload", () => {
-    it("renders the COPY button", () => {
-      const { getByText } = renderScreen()
+    it("offers the payload copy as a button, in sentence case", () => {
+      // A bare Pressable with no role: TalkBack announced the word and nothing else. COPY was
+      // also the last caps label left after the sentence-case sweep.
+      const { getByRole } = renderScreen()
 
-      expect(getByText("COPY")).toBeTruthy()
+      expect(getByRole("button", { name: "Copy" })).toBeTruthy()
     })
   })
 })
