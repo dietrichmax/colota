@@ -5,29 +5,34 @@
 import React from "react"
 import { View, Pressable, Text, StyleSheet } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Settings, LucideIcon, House, MapPinHouse, Waypoints } from "lucide-react-native"
+import { Settings, House, CircleDot, Route } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { size, space, STATE_LAYER_ALPHA } from "../../constants"
 import type { RootStackRoute } from "../../types/navigation"
 
+type TabIcon = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
+
 interface Tab {
   name: string
   label: string
-  icon: LucideIcon
+  icon: TabIcon
   route: RootStackRoute
 }
 
 const TABS: Tab[] = [
   { name: "dashboard", label: "Dashboard", icon: House, route: "Dashboard" },
-  { name: "history", label: "History", icon: Waypoints, route: "Location History" },
-  { name: "geofences", label: "Geofences", icon: MapPinHouse, route: "Geofences" },
+  { name: "history", label: "History", icon: Route, route: "Location History" },
+  { name: "geofences", label: "Geofences", icon: CircleDot, route: "Geofences" },
   { name: "settings", label: "Settings", icon: Settings, route: "Settings" }
 ]
 
 /** Routes where the tab bar is visible. The one list; App.tsx reads it rather than repeating it. */
 // Typed loosely on purpose: lookups come from navigation state, which is a bare string.
 export const TAB_ROUTES: Set<string> = new Set(TABS.map((t) => t.route))
+
+/** The semibold of a glyph: with no filled variants in the set, weight carries the active tab. */
+const ACTIVE_STROKE = 2.25
 
 interface BottomTabBarProps {
   currentRoute: string | undefined
@@ -52,16 +57,22 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
     >
       {TABS.map((tab) => {
         const active = currentRoute === tab.route
-        const color = active ? colors.primary : colors.textLight
+        const color = active ? colors.primary : colors.textSecondary
         return (
           <Pressable
             key={tab.name}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={tab.label}
             android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.touch / 2 }}
             style={styles.tab}
             onPress={() => onNavigate(tab.route)}
           >
-            <tab.icon size={size.icon.md} color={color} />
-            <Text style={[styles.label, { color }]}>{tab.label}</Text>
+            {/* The set has no filled variants, so weight is what marks the active glyph. */}
+            <tab.icon size={size.icon.lg} color={color} strokeWidth={active ? ACTIVE_STROKE : undefined} />
+            <Text numberOfLines={2} style={[styles.label, active && fonts.semiBold, { color }]}>
+              {tab.label}
+            </Text>
           </Pressable>
         )
       })}
@@ -79,6 +90,7 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
+    minHeight: size.row,
     alignItems: "center",
     justifyContent: "center",
     gap: 3
