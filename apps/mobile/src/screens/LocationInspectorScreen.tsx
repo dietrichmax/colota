@@ -4,9 +4,8 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react"
-import { View, Text, StyleSheet, Pressable } from "react-native"
+import { View, StyleSheet, Pressable } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
-import { fontSizes, fonts } from "../styles/typography"
 import { ChartNoAxesColumn } from "lucide-react-native"
 import { Container } from "../components"
 import { Tab } from "../components/ui/Tab"
@@ -58,7 +57,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   )
 
   const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, BoundaryAction>>(() => new Map())
-  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [fitVersion, setFitVersion] = useState(0)
 
   // Calendar state
@@ -160,7 +158,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         setTrackLocations(result || [])
         setBoundaryOverrides(buildBoundaryOverrideMap(overrides))
         setNoteOverrides({})
-        setSelectedTrip(null)
         setFitVersion((v) => v + 1)
       }
     } catch (err) {
@@ -169,7 +166,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         setTrackLocations([])
         setBoundaryOverrides(new Map())
         setNoteOverrides({})
-        setSelectedTrip(null)
         setFitVersion((v) => v + 1)
       }
     }
@@ -231,11 +227,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     },
     [mapDate]
   )
-
-  const handleShowFullDay = useCallback(() => {
-    setSelectedTrip(null)
-    setFitVersion((v) => v + 1)
-  }, [])
 
   const refreshAfterEdit = useCallback(async () => {
     const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
@@ -392,8 +383,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     [mapDate, fetchDaysWithData]
   )
 
-  const mapLocations = selectedTrip ? (selectedTrip.locations as LocationCoords[]) : trackLocations
-
   // The map gets the overrides as a prop rather than merged in here, because a new locations
   // identity closes its open popup.
   const tableLocations = useMemo(() => withNotes(trackLocations), [trackLocations, withNotes])
@@ -438,30 +427,16 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         <View style={styles.mapContainer}>
           {calendarPicker}
           <TrackMap
-            locations={mapLocations}
+            locations={trackLocations}
             colors={colors}
             noteOverrides={noteOverrides}
-            trips={selectedTrip ? undefined : trips}
+            trips={trips}
             trackColor={colors.primary}
             fitVersion={fitVersion}
             onPointNoteChange={handlePointNoteChange}
             onPointDelete={handlePointDelete}
             onPointSplit={handlePointSplit}
           />
-          {selectedTrip && (
-            <Pressable
-              onPress={handleShowFullDay}
-              style={({ pressed }) => [
-                styles.floatingPill,
-                { backgroundColor: colors.primary, borderRadius: colors.borderRadius },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-            >
-              <Text style={[styles.floatingPillText, { color: colors.textOnPrimary }]}>
-                Trip {selectedTrip.index} · Show full day
-              </Text>
-            </Pressable>
-          )}
         </View>
       )}
 
@@ -472,7 +447,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             trips={trips}
             colors={colors}
             onTripSelect={handleTripSelect}
-            selectedTripIndex={selectedTrip?.index ?? null}
             onExport={exportTrips}
             onDelete={handleDeleteTrips}
             onMerge={handleMergeTrips}
@@ -496,18 +470,6 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     flex: 1
-  },
-  floatingPill: {
-    position: "absolute",
-    bottom: 16,
-    alignSelf: "center",
-    paddingHorizontal: space.xl,
-    paddingVertical: space.md,
-    elevation: 4
-  },
-  floatingPillText: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold
   },
   tabBar: {
     flexDirection: "row",
