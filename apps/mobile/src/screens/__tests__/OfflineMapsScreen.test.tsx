@@ -204,6 +204,15 @@ async function waitForMapReady(findByText: ReturnType<typeof render>["findByText
 // ---------------------------------------------------------------------------
 
 describe("OfflineMapsScreen", () => {
+  it("names the delete disc, which the hand-built Pressable beside its IconButton sibling never did", async () => {
+    mockLoadOfflineAreas.mockResolvedValue([{ name: "my park", sizeBytes: 2_000_000, isComplete: true, isActive: false }])
+    const { getByTestId } = renderScreen()
+
+    await waitFor(() => expect(getByTestId("delete-btn-my park")).toBeTruthy())
+
+    expect(getByTestId("delete-btn-my park").props.accessibilityLabel).toBe("Delete my park")
+  })
+
   it("renders the name input and download button", async () => {
     const { getByPlaceholderText, findByText, getByTestId } = renderScreen()
     await waitForMapReady(findByText)
