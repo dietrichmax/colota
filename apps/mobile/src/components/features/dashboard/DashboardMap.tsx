@@ -12,7 +12,7 @@ import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
 import { fontSizes, fonts, lineHeights, type } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM, space } from "../../../constants"
+import { DEFAULT_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, space } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { TrackToggleButton } from "../map/TrackToggleButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
@@ -105,7 +105,7 @@ export function DashboardMap({
     if (coords && mapRef.current?.camera) {
       mapRef.current.camera.flyTo({
         center: [coords.longitude, coords.latitude],
-        zoom: MAX_MAP_ZOOM,
+        zoom: DEFAULT_MAP_ZOOM,
         duration: MAP_ANIMATION_DURATION_MS
       })
       isCenteredRef.current = true

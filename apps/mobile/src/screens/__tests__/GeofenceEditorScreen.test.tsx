@@ -83,6 +83,13 @@ jest.mock("../../components", () => {
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     SettingRow: ({ label, children }: any) => R.createElement(View, null, R.createElement(Text, null, label), children),
+    ListItem: ({ label, sub, onPress, testID }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress, accessibilityRole: "button" },
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, sub)
+      ),
     Button: ({ title, onPress, disabled }: any) =>
       R.createElement(
         Pressable,
@@ -107,7 +114,8 @@ jest.mock("lucide-react-native", () => {
 })
 
 const mockGoBack = jest.fn()
-const mockNavigation = { goBack: mockGoBack }
+const mockNavigate = jest.fn()
+const mockNavigation = { goBack: mockGoBack, navigate: mockNavigate }
 
 const mockExistingGeofence: Geofence = {
   id: 1,
@@ -136,6 +144,15 @@ describe("GeofenceEditorScreen", () => {
     mockDeleteGeofence.mockResolvedValue(true)
     mockUpdateGeofence.mockResolvedValue(true)
   })
+
+  function renderEditAt(lat: number, lon: number) {
+    return render(
+      <GeofenceEditorScreen
+        navigation={mockNavigation as any}
+        route={{ params: { geofenceId: 1, lat, lon } } as any}
+      />
+    )
+  }
 
   function renderEdit(geofenceId = 1) {
     return render(<GeofenceEditorScreen navigation={mockNavigation as any} route={{ params: { geofenceId } } as any} />)
@@ -273,5 +290,28 @@ describe("GeofenceEditorScreen", () => {
       expect(mockUpdateGeofence).toHaveBeenCalledWith(expect.objectContaining({ id: 1, name: "Home Renamed" }))
       expect(mockGoBack).toHaveBeenCalled()
     })
+  })
+
+  it("saves a moved zone, which delete-and-recreate was the only way to do before", async () => {
+    const { getByText } = renderEditAt(40.7, -74)
+
+    await waitFor(() => expect(getByText("Save geofence")).toBeTruthy())
+    fireEvent.press(getByText("Save geofence"))
+
+    await waitFor(() =>
+      expect(mockUpdateGeofence).toHaveBeenCalledWith(expect.objectContaining({ id: 1, lat: 40.7, lon: -74 }))
+    )
+  })
+
+  it("opens Place Zone carrying the draft, so the radius is drawn as it will be", async () => {
+    const { getByTestId } = renderEdit()
+
+    await waitFor(() => expect(getByTestId("place-zone-row")).toBeTruthy())
+    fireEvent.press(getByTestId("place-zone-row"))
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "Place Zone",
+      expect.objectContaining({ name: "Home", lat: 48.1, lon: 11.5 })
+    )
   })
 })
