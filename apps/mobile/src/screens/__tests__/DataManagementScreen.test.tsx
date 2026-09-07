@@ -1,5 +1,7 @@
 import React from "react"
 import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { StyleSheet } from "react-native"
+import { lightColors } from "@colota/shared"
 
 // --- Mocks ---
 
@@ -8,26 +10,7 @@ jest.mock("@react-navigation/native", () => ({
 }))
 
 jest.mock("../../hooks/useTheme", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      primaryDark: "#115E59",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textLight: "#9ca3af",
-      card: "#fff",
-      border: "#e5e7eb",
-      background: "#fff",
-      backgroundElevated: "#f9fafb",
-      success: "#22c55e",
-      warning: "#f59e0b",
-      info: "#3b82f6",
-      error: "#ef4444",
-      placeholder: "#9ca3af",
-      textOnPrimary: "#fff",
-      overlay: "rgba(0,0,0,0.5)"
-    }
-  })
+  useTheme: () => ({ colors: jest.requireActual("@colota/shared").lightColors })
 }))
 
 jest.mock("../../hooks/useTimeout", () => ({
@@ -99,9 +82,16 @@ jest.mock("../../components", () => {
       })
     },
     Button: function (props: any) {
+      // variant and testID ride through, so a screen test can assert which button it asked for.
       return R.createElement(
         RN.Pressable,
-        { onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+        {
+          testID: props.testID,
+          variant: props.variant ?? "primary",
+          onPress: props.onPress,
+          disabled: props.disabled,
+          accessibilityRole: "button"
+        },
         R.createElement(RN.Text, null, props.title)
       )
     },
@@ -164,6 +154,38 @@ describe("DataManagementScreen", () => {
   function renderScreen() {
     return render(<DataManagementScreen navigation={{} as any} />)
   }
+
+  it("says a cleanup row is a button, because nothing but the label marks it as one", async () => {
+    const { getByLabelText } = renderScreen()
+
+    await waitFor(() => expect(getByLabelText(/^Clear sent history,/)).toBeTruthy())
+    expect(getByLabelText(/^Clear sent history,/).props.accessibilityRole).toBe("button")
+  })
+
+  it("paints every cleanup label in error, since all three delete locations for good", async () => {
+    const { getByText } = renderScreen()
+
+    await waitFor(() => expect(getByText("Clear sent history")).toBeTruthy())
+    for (const label of ["Clear sent history", "Clear queue"]) {
+      expect(StyleSheet.flatten(getByText(label).props.style).color).toBe(lightColors.error)
+    }
+  })
+
+  it("recedes a cleanup row with nothing to clear, so error does not advertise a dead action", async () => {
+    mockGetStats.mockResolvedValue({ queued: 0, sent: 100, total: 100, today: 3, databaseSizeMB: 1.5 })
+    const { getByText } = renderScreen()
+
+    await waitFor(() => expect(getByText("Clear queue")).toBeTruthy())
+    expect(StyleSheet.flatten(getByText("Clear queue").props.style).color).toBe(lightColors.textDisabled)
+    expect(StyleSheet.flatten(getByText("Clear sent history").props.style).color).toBe(lightColors.error)
+  })
+
+  it("gives the retention Delete the danger fill, since it drops locations like the rows above it", async () => {
+    const { getByTestId } = renderScreen()
+
+    await waitFor(() => expect(getByTestId("delete-older-btn")).toBeTruthy())
+    expect(getByTestId("delete-older-btn").props.variant).toBe("danger")
+  })
 
   it("renders Data Management title", async () => {
     const { getByText } = renderScreen()
