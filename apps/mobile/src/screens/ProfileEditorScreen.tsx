@@ -11,14 +11,13 @@ import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
 import { fontSizes, fonts, lineHeights } from "../styles/typography"
+import { SyncIntervalPicker } from "../components/features/settings/SyncIntervalPicker"
 import {
   Button,
   Card,
-  ChipGroup,
   Container,
   Divider,
   FieldMessage,
-  NumericInput,
   RadioRow,
   SectionTitle,
   SettingRow,
@@ -30,9 +29,8 @@ import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import {
   MS_TO_KMH,
   PROFILE_CONDITIONS,
-  STATIONARY_MAX_INTERVAL_SECONDS,
   SYNC_INTERVAL_LABELS,
-  SYNC_INTERVAL_PRESETS,
+  STATIONARY_MAX_INTERVAL_SECONDS,
   defaultProfileDelays,
   size,
   space
@@ -70,7 +68,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const [priorityStr, setPriorityStr] = useState("10")
   const [activationDelayStr, setActivationDelayStr] = useState("0")
   const [delayStr, setDelayStr] = useState("60")
-  const [syncIntervalStr, setSyncIntervalStr] = useState(String(settings.syncInterval))
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerTitle: isEditing ? "Edit profile" : "New profile" })
@@ -99,7 +96,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           setPriorityStr(String(existing.priority))
           setActivationDelayStr(String(existing.activationDelay))
           setDelayStr(String(existing.deactivationDelay))
-          setSyncIntervalStr(String(existing.syncInterval))
           if (existing.condition.speedThreshold) {
             setSpeedKmh((existing.condition.speedThreshold * MS_TO_KMH).toFixed(0))
           }
@@ -210,8 +206,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   }, [profile, isEditing, profileId, navigation])
 
   const isSpeed = profile.condition.type === "speed_above" || profile.condition.type === "speed_below"
-  const [customSyncOpen, setCustomSyncOpen] = useState(false)
-  const isCustomSyncInterval = customSyncOpen || !SYNC_INTERVAL_PRESETS.includes(profile.syncInterval)
 
   return (
     <Container>
@@ -337,56 +331,15 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
             <>
               <Divider tight />
 
-              <View style={styles.syncLabelRow}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>Sync interval</Text>
-                <Text style={[styles.settingHint, { color: colors.textSecondary }]}>
-                  Default: {formatSyncDefault(settings.syncInterval)}
-                </Text>
-              </View>
-              <ChipGroup
-                options={[
-                  ...SYNC_INTERVAL_PRESETS.map((sec) => ({
-                    value: String(sec),
-                    label: SYNC_INTERVAL_LABELS[sec]
-                  })),
-                  { value: "custom", label: "Custom" }
-                ]}
-                selected={isCustomSyncInterval ? "custom" : String(profile.syncInterval)}
-                onSelect={(value) => {
-                  if (value === "custom") {
-                    setSyncIntervalStr(profile.syncInterval.toString())
-                    setCustomSyncOpen(true)
-                    return
-                  }
-                  setCustomSyncOpen(false)
-                  setProfile((prev) => ({ ...prev, syncInterval: Number(value) }))
-                }}
+              <SyncIntervalPicker
+                label="Sync interval"
+                hint={`Default: ${formatSyncDefault(settings.syncInterval)}`}
+                value={profile.syncInterval}
+                min={0}
+                onSelect={(seconds) => setProfile((prev) => ({ ...prev, syncInterval: seconds }))}
+                onChange={(seconds) => setProfile((prev) => ({ ...prev, syncInterval: seconds }))}
+                onClamp={(seconds) => setProfile((prev) => ({ ...prev, syncInterval: seconds }))}
               />
-
-              {isCustomSyncInterval && (
-                <View style={styles.customSyncInput}>
-                  <NumericInput
-                    label="Custom sync interval"
-                    value={syncIntervalStr}
-                    onChange={(val) => {
-                      setSyncIntervalStr(val)
-                      const num = Number(val)
-                      if (!isNaN(num) && num >= 0) {
-                        setProfile((prev) => ({ ...prev, syncInterval: num }))
-                      }
-                    }}
-                    onBlur={() => {
-                      const num = Number(syncIntervalStr)
-                      if (isNaN(num) || num < 0) {
-                        setSyncIntervalStr("0")
-                        setProfile((prev) => ({ ...prev, syncInterval: 0 }))
-                      }
-                    }}
-                    unit="seconds"
-                    hint="Custom interval in seconds"
-                  />
-                </View>
-              )}
             </>
           )}
         </Card>
