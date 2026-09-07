@@ -3,9 +3,8 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useEffect } from "react"
+import React, { useState, useCallback, useEffect, useMemo } from "react"
 import { Text, StyleSheet, View, Pressable, AppState } from "react-native"
-import { Lightbulb, ChevronDown, ChevronUp } from "lucide-react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes } from "../../../styles/typography"
 import {
@@ -17,18 +16,7 @@ import {
   size,
   space
 } from "../../../constants"
-import {
-  Card,
-  ChipGroup,
-  Divider,
-  ListItem,
-  NumericInput,
-  SectionTitle,
-  SettingRow,
-  TextField,
-  Toggle
-} from "../../index"
-import { PresetOption } from "./PresetOption"
+import { Card, ChipGroup, NumericInput, RadioRow, SectionTitle, SettingRow, TextField, Toggle } from "../../index"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 import { isOverlandFormat } from "../../../utils/apiPayload"
 import NativeLocationService from "../../../services/NativeLocationService"
@@ -40,6 +28,14 @@ interface SyncStrategySettingsProps {
   onDebouncedSave: (newSettings: Settings) => void
   onImmediateSave: (newSettings: Settings) => void
   colors: ThemeColors
+}
+
+function presetSummary(preset: SelectablePreset, isOfflineMode: boolean): string {
+  const config = TRACKING_PRESETS[preset]
+  const base = isOfflineMode ? config.description.split(" • ")[0] : config.description
+  if (preset === "balanced") return `${base} • recommended`
+  if (config.batteryImpact === "High") return `${base} • high battery`
+  return base
 }
 
 export function SyncStrategySettings({
@@ -56,7 +52,6 @@ export function SyncStrategySettings({
   )
   const [syncIntervalInput, setSyncIntervalInput] = useState(settings.syncInterval.toString())
   const [overlandBatchSizeInput, setOverlandBatchSizeInput] = useState(settings.overlandBatchSize.toString())
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const showOverlandBatchSize = isOverlandFormat(settings.apiTemplate, settings.dawarichMode)
   const [currentSsid, setCurrentSsid] = useState("")
 
@@ -129,6 +124,21 @@ export function SyncStrategySettings({
     [intervalInput, distanceInput, accuracyThresholdInput, settings, onSettingsChange, onImmediateSave]
   )
 
+  const isCustomPreset = settings.syncPreset === "custom"
+
+  const customSummary = useMemo(() => {
+    const track = `Track every ${settings.interval}s`
+    if (settings.isOfflineMode) return track
+    const send = settings.syncInterval === 0 ? "Send instantly" : `Batch ${Math.round(settings.syncInterval / 60)} min`
+    return `${track} • ${send}`
+  }, [settings.interval, settings.syncInterval, settings.isOfflineMode])
+
+  const handleCustomSelect = useCallback(() => {
+    const next: Settings = { ...settings, syncPreset: "custom" }
+    onSettingsChange(next)
+    onImmediateSave(next)
+  }, [settings, onSettingsChange, onImmediateSave])
+
   const handlePresetSelect = useCallback(
     (preset: SelectablePreset) => {
       const config = TRACKING_PRESETS[preset]
@@ -167,44 +177,26 @@ export function SyncStrategySettings({
       <SectionTitle>Tracking configuration</SectionTitle>
       <Card rows>
         <View accessibilityRole="radiogroup">
-          {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map((preset, index) => (
-            <View key={preset}>
-              {index > 0 && <View style={styles.presetSpacer} />}
-              <PresetOption
-                preset={preset}
-                isSelected={settings.syncPreset === preset}
-                isOfflineMode={settings.isOfflineMode}
-                onSelect={handlePresetSelect}
-              />
-            </View>
+          {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map((preset) => (
+            <RadioRow
+              key={preset}
+              testID={`preset-${preset}`}
+              label={TRACKING_PRESETS[preset].label}
+              sub={presetSummary(preset, settings.isOfflineMode)}
+              selected={settings.syncPreset === preset}
+              onPress={() => handlePresetSelect(preset)}
+            />
           ))}
-        </View>
+          <RadioRow
+            testID="preset-custom"
+            label="Custom"
+            sub={customSummary}
+            selected={isCustomPreset}
+            onPress={handleCustomSelect}
+          />
 
-        <Divider tight />
-
-        <ListItem
-          testID="advanced-settings-toggle"
-          label="Advanced settings"
-          trailingIcon={showAdvanced ? ChevronUp : ChevronDown}
-          expanded={showAdvanced}
-          onPress={() => setShowAdvanced(!showAdvanced)}
-        />
-
-        {showAdvanced && (
-          <View style={styles.advancedPanel}>
-            {settings.syncPreset === "custom" && (
-              <View style={[styles.customBanner, { backgroundColor: colors.info + "15" }]}>
-                <View style={styles.bannerRow}>
-                  <Lightbulb size={size.icon.sm} color={colors.info} />
-                  <Text style={[styles.customBannerText, { color: colors.info }]}>Using custom configuration</Text>
-                </View>
-              </View>
-            )}
-
-            {/* Tracking Parameters Group */}
-            <View style={styles.paramGroup}>
-              <SectionTitle>Tracking parameters</SectionTitle>
-
+          {isCustomPreset && (
+            <View style={styles.customParams}>
               <NumericInput
                 label="Tracking interval"
                 value={intervalInput}
@@ -225,209 +217,201 @@ export function SyncStrategySettings({
                 hint="Only record if moved more than this distance"
               />
             </View>
+          )}
+        </View>
+      </Card>
 
-            {!settings.isOfflineMode && (
-              <>
-                <Divider tight />
+      {!settings.isOfflineMode && (
+        <>
+          <SectionTitle style={styles.groupTop}>Network settings</SectionTitle>
+          <Card rows>
+            {/* Sync Interval */}
+            <View style={styles.settingBlock}>
+              <Text style={[styles.blockLabel, { color: colors.text }]}>Sync interval</Text>
+              <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
+                How often to upload data to server
+              </Text>
 
-                {/* Network Parameters Group */}
-                <View style={styles.paramGroup}>
-                  <SectionTitle>Network settings</SectionTitle>
+              <ChipGroup
+                options={[
+                  ...SYNC_INTERVAL_PRESETS.map((sec) => ({
+                    value: String(sec),
+                    label: SYNC_INTERVAL_LABELS[sec]
+                  })),
+                  { value: "custom", label: "Custom" }
+                ]}
+                selected={isCustomSyncInterval ? "custom" : String(settings.syncInterval)}
+                onSelect={(value) => {
+                  if (value === "custom") {
+                    // Seeding a value is what makes the mode custom; the field takes over.
+                    if (!isCustomSyncInterval) {
+                      const customValue = 1800
+                      setSyncIntervalInput(customValue.toString())
+                      handleGridSelect("syncInterval", customValue)
+                    }
+                    return
+                  }
+                  handleGridSelect("syncInterval", Number(value))
+                }}
+              />
+            </View>
 
-                  {/* Sync Interval */}
-                  <View style={styles.settingBlock}>
-                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync interval</Text>
-                    <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
-                      How often to upload data to server
-                    </Text>
+            {isCustomSyncInterval && (
+              <View style={styles.customSyncInput}>
+                <NumericInput
+                  label="Custom sync interval"
+                  value={syncIntervalInput}
+                  onChange={(val) => {
+                    setSyncIntervalInput(val)
+                    const num = Number(val)
+                    if (!isNaN(num) && num >= 1) {
+                      const next = { ...settings, syncInterval: num, syncPreset: "custom" as const }
+                      onDebouncedSave(next)
+                    }
+                  }}
+                  onBlur={() => {
+                    let val = Number(syncIntervalInput)
+                    if (isNaN(val) || val < 1) {
+                      val = 1
+                      setSyncIntervalInput("1")
+                      const next = { ...settings, syncInterval: val, syncPreset: "custom" as const }
+                      onSettingsChange(next)
+                      onImmediateSave(next)
+                    }
+                  }}
+                  unit="seconds"
+                  placeholder="1800"
+                  hint="Custom interval in seconds"
+                />
+              </View>
+            )}
 
-                    <ChipGroup
-                      options={[
-                        ...SYNC_INTERVAL_PRESETS.map((sec) => ({
-                          value: String(sec),
-                          label: SYNC_INTERVAL_LABELS[sec]
-                        })),
-                        { value: "custom", label: "Custom" }
+            {showOverlandBatchSize && (
+              <View style={styles.customSyncInput}>
+                <NumericInput
+                  label="Batch size"
+                  value={overlandBatchSizeInput}
+                  onChange={(val) => {
+                    setOverlandBatchSizeInput(val)
+                    const num = Number(val)
+                    if (!isNaN(num) && num >= OVERLAND_BATCH_MIN && num <= OVERLAND_BATCH_MAX) {
+                      const next = { ...settings, overlandBatchSize: num }
+                      onDebouncedSave(next)
+                    }
+                  }}
+                  onBlur={() => {
+                    let val = Number(overlandBatchSizeInput)
+                    if (isNaN(val) || val < OVERLAND_BATCH_MIN) val = OVERLAND_BATCH_MIN
+                    if (val > OVERLAND_BATCH_MAX) val = OVERLAND_BATCH_MAX
+                    if (val !== settings.overlandBatchSize || overlandBatchSizeInput !== val.toString()) {
+                      setOverlandBatchSizeInput(val.toString())
+                      const next = { ...settings, overlandBatchSize: val }
+                      onSettingsChange(next)
+                      onImmediateSave(next)
+                    }
+                  }}
+                  unit="points"
+                  placeholder="50"
+                  hint={`Points/upload (${OVERLAND_BATCH_MIN}-${OVERLAND_BATCH_MAX}). Larger = fewer requests, bigger payloads.`}
+                />
+              </View>
+            )}
+
+            {/* Sync Condition */}
+            <View style={styles.settingBlock}>
+              <Text style={[styles.blockLabel, { color: colors.text }]}>Sync only on</Text>
+              <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
+                {settings.syncCondition === "any" && "Upload on any network connection"}
+                {settings.syncCondition === "wifi_any" && "Upload only when connected to Wi-Fi"}
+                {settings.syncCondition === "wifi_ssid" && "Upload only on a specific Wi-Fi network"}
+                {settings.syncCondition === "vpn" && "Upload only when VPN is active"}
+              </Text>
+              <ChipGroup
+                options={[
+                  { value: "any", label: "Any" },
+                  { value: "wifi_any", label: "Wi-Fi" },
+                  { value: "wifi_ssid", label: "SSID" },
+                  { value: "vpn", label: "VPN" }
+                ]}
+                selected={settings.syncCondition}
+                onSelect={(value) => {
+                  const next = {
+                    ...settings,
+                    syncCondition: value as SyncCondition,
+                    syncPreset: "custom" as const
+                  }
+                  onSettingsChange(next)
+                  onImmediateSave(next)
+                }}
+              />
+              {settings.syncCondition === "wifi_ssid" && (
+                <View style={styles.ssidRow}>
+                  <TextField
+                    accessibilityLabel="Wi-Fi SSID"
+                    testID="sync-ssid-input"
+                    style={styles.ssidField}
+                    mono
+                    value={settings.syncSsid}
+                    onChangeText={(text) => {
+                      const next = { ...settings, syncSsid: text }
+                      onSettingsChange(next)
+                      onDebouncedSave(next)
+                    }}
+                    placeholder="Enter Wi-Fi SSID"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {currentSsid !== "" && currentSsid.toLowerCase() !== settings.syncSsid.toLowerCase() && (
+                    <Pressable
+                      hitSlop={HIT_SLOP_MD}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.ssidFillButton,
+                        { backgroundColor: colors.primary + "15" },
+                        pressed && { opacity: colors.pressedOpacity }
                       ]}
-                      selected={isCustomSyncInterval ? "custom" : String(settings.syncInterval)}
-                      onSelect={(value) => {
-                        if (value === "custom") {
-                          // Seeding a value is what makes the mode custom; the field takes over.
-                          if (!isCustomSyncInterval) {
-                            const customValue = 1800
-                            setSyncIntervalInput(customValue.toString())
-                            handleGridSelect("syncInterval", customValue)
-                          }
-                          return
-                        }
-                        handleGridSelect("syncInterval", Number(value))
-                      }}
-                    />
-                  </View>
-
-                  {isCustomSyncInterval && (
-                    <View style={styles.customSyncInput}>
-                      <NumericInput
-                        label="Custom sync interval"
-                        value={syncIntervalInput}
-                        onChange={(val) => {
-                          setSyncIntervalInput(val)
-                          const num = Number(val)
-                          if (!isNaN(num) && num >= 1) {
-                            const next = { ...settings, syncInterval: num, syncPreset: "custom" as const }
-                            onDebouncedSave(next)
-                          }
-                        }}
-                        onBlur={() => {
-                          let val = Number(syncIntervalInput)
-                          if (isNaN(val) || val < 1) {
-                            val = 1
-                            setSyncIntervalInput("1")
-                            const next = { ...settings, syncInterval: val, syncPreset: "custom" as const }
-                            onSettingsChange(next)
-                            onImmediateSave(next)
-                          }
-                        }}
-                        unit="seconds"
-                        placeholder="1800"
-                        hint="Custom interval in seconds"
-                      />
-                    </View>
-                  )}
-
-                  {showOverlandBatchSize && (
-                    <View style={styles.customSyncInput}>
-                      <NumericInput
-                        label="Batch size"
-                        value={overlandBatchSizeInput}
-                        onChange={(val) => {
-                          setOverlandBatchSizeInput(val)
-                          const num = Number(val)
-                          if (!isNaN(num) && num >= OVERLAND_BATCH_MIN && num <= OVERLAND_BATCH_MAX) {
-                            const next = { ...settings, overlandBatchSize: num }
-                            onDebouncedSave(next)
-                          }
-                        }}
-                        onBlur={() => {
-                          let val = Number(overlandBatchSizeInput)
-                          if (isNaN(val) || val < OVERLAND_BATCH_MIN) val = OVERLAND_BATCH_MIN
-                          if (val > OVERLAND_BATCH_MAX) val = OVERLAND_BATCH_MAX
-                          if (val !== settings.overlandBatchSize || overlandBatchSizeInput !== val.toString()) {
-                            setOverlandBatchSizeInput(val.toString())
-                            const next = { ...settings, overlandBatchSize: val }
-                            onSettingsChange(next)
-                            onImmediateSave(next)
-                          }
-                        }}
-                        unit="points"
-                        placeholder="50"
-                        hint={`Points/upload (${OVERLAND_BATCH_MIN}-${OVERLAND_BATCH_MAX}). Larger = fewer requests, bigger payloads.`}
-                      />
-                    </View>
-                  )}
-
-                  {/* Sync Condition */}
-                  <View style={styles.settingBlock}>
-                    <Text style={[styles.blockLabel, { color: colors.text }]}>Sync only on</Text>
-                    <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
-                      {settings.syncCondition === "any" && "Upload on any network connection"}
-                      {settings.syncCondition === "wifi_any" && "Upload only when connected to Wi-Fi"}
-                      {settings.syncCondition === "wifi_ssid" && "Upload only on a specific Wi-Fi network"}
-                      {settings.syncCondition === "vpn" && "Upload only when VPN is active"}
-                    </Text>
-                    <ChipGroup
-                      options={[
-                        { value: "any", label: "Any" },
-                        { value: "wifi_any", label: "Wi-Fi" },
-                        { value: "wifi_ssid", label: "SSID" },
-                        { value: "vpn", label: "VPN" }
-                      ]}
-                      selected={settings.syncCondition}
-                      onSelect={(value) => {
-                        const next = {
-                          ...settings,
-                          syncCondition: value as SyncCondition,
-                          syncPreset: "custom" as const
-                        }
+                      onPress={() => {
+                        const next = { ...settings, syncSsid: currentSsid }
                         onSettingsChange(next)
                         onImmediateSave(next)
                       }}
-                    />
-                    {settings.syncCondition === "wifi_ssid" && (
-                      <View style={styles.ssidRow}>
-                        <TextField
-                          accessibilityLabel="Wi-Fi SSID"
-                          testID="sync-ssid-input"
-                          style={styles.ssidField}
-                          mono
-                          value={settings.syncSsid}
-                          onChangeText={(text) => {
-                            const next = { ...settings, syncSsid: text }
-                            onSettingsChange(next)
-                            onDebouncedSave(next)
-                          }}
-                          placeholder="Enter Wi-Fi SSID"
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                        />
-                        {currentSsid !== "" && currentSsid.toLowerCase() !== settings.syncSsid.toLowerCase() && (
-                          <Pressable
-                            hitSlop={HIT_SLOP_MD}
-                            accessibilityRole="button"
-                            style={({ pressed }) => [
-                              styles.ssidFillButton,
-                              { backgroundColor: colors.primary + "15" },
-                              pressed && { opacity: colors.pressedOpacity }
-                            ]}
-                            onPress={() => {
-                              const next = { ...settings, syncSsid: currentSsid }
-                              onSettingsChange(next)
-                              onImmediateSave(next)
-                            }}
-                          >
-                            <Text style={[styles.ssidFillText, { color: colors.primary }]}>Use current</Text>
-                          </Pressable>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                <Divider tight />
-              </>
-            )}
-
-            {/* Quality Parameters Group */}
-            <View style={styles.paramGroup}>
-              <SectionTitle>Quality filters</SectionTitle>
-
-              <SettingRow label="Filter inaccurate locations" hint="Reject fixes the GPS chip reports as imprecise">
-                <Toggle
-                  accessibilityLabel="Filter inaccurate locations"
-                  value={settings.filterInaccurateLocations}
-                  onValueChange={(value) =>
-                    onImmediateSave({
-                      ...settings,
-                      filterInaccurateLocations: value
-                    })
-                  }
-                />
-              </SettingRow>
-
-              {settings.filterInaccurateLocations && (
-                <View style={styles.nestedSetting}>
-                  <NumericInput
-                    label="Accuracy threshold"
-                    value={accuracyThresholdInput}
-                    onChange={(val) => handleNumericChange("accuracyThreshold", val, 1)}
-                    onBlur={() => handleNumericBlur("accuracyThreshold", 1)}
-                    unit={shortDistanceUnit()}
-                    placeholder="50"
-                    hint="Based on the chip's own estimate, which can be optimistic"
-                  />
+                    >
+                      <Text style={[styles.ssidFillText, { color: colors.primary }]}>Use current</Text>
+                    </Pressable>
+                  )}
                 </View>
               )}
             </View>
+          </Card>
+        </>
+      )}
+
+      <SectionTitle style={styles.groupTop}>Quality filters</SectionTitle>
+      <Card rows style={styles.cardTail}>
+        <SettingRow label="Filter inaccurate locations" hint="Reject fixes the GPS chip reports as imprecise">
+          <Toggle
+            accessibilityLabel="Filter inaccurate locations"
+            value={settings.filterInaccurateLocations}
+            onValueChange={(value) =>
+              onImmediateSave({
+                ...settings,
+                filterInaccurateLocations: value
+              })
+            }
+          />
+        </SettingRow>
+
+        {settings.filterInaccurateLocations && (
+          <View style={styles.nestedSetting}>
+            <NumericInput
+              label="Accuracy threshold"
+              value={accuracyThresholdInput}
+              onChange={(val) => handleNumericChange("accuracyThreshold", val, 1)}
+              onBlur={() => handleNumericBlur("accuracyThreshold", 1)}
+              unit={shortDistanceUnit()}
+              placeholder="50"
+              hint="Based on the chip's own estimate, which can be optimistic"
+            />
           </View>
         )}
       </Card>
@@ -445,28 +429,17 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: space.xl
   },
-  presetSpacer: {
-    height: 8
+  customParams: {
+    paddingLeft: size.iconColumn,
+    paddingBottom: space.lg,
+    gap: space.lg
   },
-  advancedPanel: {
-    marginTop: space.lg
+  groupTop: {
+    marginTop: space.xl
   },
-  customBanner: {
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 20
-  },
-  bannerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.sm
-  },
-  customBannerText: {
-    fontSize: fontSizes.description,
-    ...fonts.medium
-  },
-  paramGroup: {
-    marginBottom: space.xs
+  // The last child is a nested field, not a row, so the bottom inset comes back.
+  cardTail: {
+    paddingBottom: space.lg
   },
   settingBlock: {
     paddingTop: space.lg,
