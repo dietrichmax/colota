@@ -4,7 +4,6 @@
  */
 
 import React, { useEffect, useState, useCallback, useRef } from "react"
-import { radius } from "@colota/shared"
 import { StyleSheet, View, ScrollView, DeviceEventEmitter, Animated, AppState } from "react-native"
 import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
@@ -230,6 +229,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
           >
             <Button
               style={styles.controlButton}
+              shape="pill"
               variant={tracking ? "danger" : "primary"}
               icon={tracking ? Square : Play}
               onPress={tracking ? handleStop : handleStart}
@@ -300,7 +300,6 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   controlButton: {
-    borderRadius: radius.pill,
     elevation: 4,
     minWidth: 200
   },
