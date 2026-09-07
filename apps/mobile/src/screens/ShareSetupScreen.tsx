@@ -123,17 +123,10 @@ export function ShareSetupScreen() {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.content}>
-        <Card style={styles.headerCard}>
-          <View style={styles.headerRow}>
-            <Share2 size={28} color={colors.primary} />
-            <View style={styles.headerText}>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                Choose what to bundle into a setup link, then share it. The recipient opens it to apply the same
-                configuration.
-              </Text>
-            </View>
-          </View>
-        </Card>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>
+          Choose what to bundle into a setup link, then share it. The recipient opens it to apply the same
+          configuration.
+        </Text>
 
         <View style={styles.section}>
           <SectionTitle>Include</SectionTitle>
@@ -157,7 +150,7 @@ export function ShareSetupScreen() {
 
         {selection.credentials && hasCredentials && credentialFields.length > 0 && (
           <View style={styles.section}>
-            <Card style={[styles.warningCard, { borderColor: colors.error }]}>
+            <Card danger>
               <View style={styles.headerRow}>
                 <TriangleAlert size={size.icon.md} color={colors.error} />
                 <Text style={[styles.warningText, { color: colors.text }]}>
@@ -187,27 +180,19 @@ const styles = StyleSheet.create({
     padding: space.lg,
     paddingBottom: space.xxl
   },
-  headerCard: {
-    marginBottom: space.lg
-  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: space.md
   },
-  headerText: {
-    flex: 1
-  },
-  subtitle: {
-    fontSize: fontSizes.description,
+  intro: {
+    fontSize: fontSizes.body,
     ...fonts.regular,
-    marginTop: 2
+    lineHeight: lineHeights.body,
+    marginBottom: space.md
   },
   section: {
     marginTop: space.sm
-  },
-  warningCard: {
-    borderWidth: StyleSheet.hairlineWidth
   },
   warningText: {
     flex: 1,
