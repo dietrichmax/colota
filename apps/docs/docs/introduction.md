@@ -12,14 +12,14 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Self-Hosted** - Send location data to your own server. Works with Dawarich, GeoPulse, Home Assistant, OwnTracks, Overland, PhoneTrack, Reitti, Traccar or any custom backend.
 - **Privacy First** - No analytics, no telemetry, no third-party SDKs. Open source (AGPL-3.0).
 - **Works Offline** - Fully functional without a server. Export as CSV, GeoJSON, GPX, or KML.
-- **Offline Maps** - Download map areas to your device for use without an internet connection.
+- **Offline maps** - Download map areas to your device for use without an internet connection.
 - **Scheduled Export** - Automatic daily, weekly or monthly exports to a local directory with file retention management.
 - **Encrypted Backup** - Single password-encrypted archive of locations, settings, geofences and credentials.
 - **Location History** - View daily summaries, trip segmentation with manual merge and split, calendar with activity dots, per-trip export and per-point notes or deletion.
 - **Import Your History** - Bring in existing tracks from GeoJSON, Google Timeline, GPX, KML or CSV.
 - **Reliable Tracking** - Foreground service, auto-start on boot and exponential backoff retry.
 - **Geofencing** - Pause zones that stop recording locations. Optionally stop GPS entirely when on WiFi or when the device is motionless.
-- **Tracking Profiles** - Automatically adjust GPS interval, distance filter and sync settings based on conditions like charging, Android Auto, speed or stationary detection.
+- **Tracking profiles** - Automatically adjust GPS interval, distance filter and sync settings based on conditions like charging, Android Auto, speed or stationary detection.
 - **Flexible Sync** - Instant, batch, Wi-Fi only or offline modes.
 - **Display Settings** - Choose between metric and imperial units, 12h or 24h time format. Auto-detected from device locale on first use.
 - **App Shortcuts** - Long-press the app icon to start or stop tracking from the home screen. Compatible with automation apps like Tasker and Samsung Routines.
@@ -34,28 +34,28 @@ Colota has twenty-five screens, each focused on a specific task:
 | Screen | Purpose |
 | --- | --- |
 | **Dashboard** | Live map with current coordinates, today's track overlay, tracking controls, database stats, and geofence status |
-| **Settings** | Hub linking to Connection, Tracking and Sync, API Field Mapping, Tracking Profiles, Appearance and data/about screens |
+| **Settings** | Hub linking to Connection, Tracking and Sync, API config, Tracking profiles, Appearance and data/about screens |
 | **Connection** | Server endpoint URL, offline mode toggle and connection test |
-| **Tracking & Sync** | GPS polling interval, distance filter, accuracy threshold and sync strategy preset |
+| **Tracking & sync** | GPS polling interval, distance filter, accuracy threshold and sync strategy preset |
 | **Appearance** | Light/dark theme, unit system, time format and custom map tile URLs |
 | **API Config** | Endpoint field mapping with templates for Dawarich, GeoPulse, Overland, OwnTracks, PhoneTrack, Reitti, Traccar or custom backends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | **mTLS Settings** | Client certificate (mTLS) import or KeyChain selection and trusted server CA management |
 | **Geofences** | Create pause zones by tapping the map, view all zones with pause option indicators |
 | **Geofence Editor** | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
-| **Offline Maps** | Download map areas to the device for use without an internet connection |
-| **Tracking Profiles** | Create and manage condition-based profiles that automatically adjust tracking settings |
+| **Offline maps** | Download map areas to the device for use without an internet connection |
+| **Tracking profiles** | Create and manage condition-based profiles that automatically adjust tracking settings |
 | **Profile Editor** | Configure profile name, condition trigger, GPS interval, distance filter, sync interval, priority, and deactivation delay |
 | **Location History** | Browse recorded locations on a track map with calendar day picker and trip-colored segments, view segmented trips with per-trip stats; tap a point to add a note or delete it |
 | **Trip Detail** | Full trip view with dedicated map, stats grid (distance, duration, avg speed, elevation), speed and elevation profile charts, export, and delete |
 | **Location Summary** | Aggregated stats (total distance, trips, active days, avg distance) for selectable periods with daily breakdown and tap-to-inspect navigation |
-| **Export Locations** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
-| **Import Locations** | Import tracks from GeoJSON, Google Timeline, GPX, KML or CSV with a preview before committing |
-| **Auto-Export** | Configure scheduled exports: directory, format, frequency, time of day (with weekday or day-of-month for weekly/monthly), export range and file retention |
-| **Data Management** | Clear sent history, delete old data, vacuum the database |
-| **Backup & Restore** | Create or restore a single password-encrypted `.colota` archive of all data (locations, settings, geofences, credentials) |
+| **Export locations** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
+| **Import locations** | Import tracks from GeoJSON, Google Timeline, GPX, KML or CSV with a preview before committing |
+| **Auto-export** | Configure scheduled exports: directory, format, frequency, time of day (with weekday or day-of-month for weekly/monthly), export range and file retention |
+| **Data management** | Clear sent history, delete old data, vacuum the database |
+| **Backup & restore** | Create or restore a single password-encrypted `.colota` archive of all data (locations, settings, geofences, credentials) |
 | **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
-| **Share Setup** | Build a `colota://setup` link or QR code from selected settings to configure another device |
+| **Share setup** | Build a `colota://setup` link or QR code from selected settings to configure another device |
 | **Logging** | In-app activity log viewer (level filtering, search, export) plus opt-in persistent file logging |
 | **About** | App version, device info, links to repository and privacy policy |
 
@@ -63,7 +63,7 @@ Colota has twenty-five screens, each focused on a specific task:
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Dashboard.png", label: "Dashboard" }, { src: "/img/screenshots/Settings.png", label: "Settings" }, { src: "/img/screenshots/ApiFieldMapping.png", label: "API Config" }, { src: "/img/screenshots/Authentication.png", label: "Auth Settings" }, { src: "/img/screenshots/Geofences.png", label: "Geofences" }, { src: "/img/screenshots/GeofenceEditor.png", label: "Geofence Editor" }, { src: "/img/screenshots/OfflineMaps.png", label: "Offline Maps" }, { src: "/img/screenshots/TrackingProfiles.png", label: "Profile Editor" }, { src: "/img/screenshots/LocationHistory.png", label: "Location History" }, { src: "/img/screenshots/TripDetails.png", label: "Trip Detail" }, { src: "/img/screenshots/Trips.png", label: "Trips" }, { src: "/img/screenshots/ExportData.png", label: "Export" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-Export" }, { src: "/img/screenshots/DataManagement.png", label: "Data Management" }, { src: "/img/screenshots/DarkMode.png", label: "Dark Mode" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Dashboard.png", label: "Dashboard" }, { src: "/img/screenshots/Settings.png", label: "Settings" }, { src: "/img/screenshots/ApiFieldMapping.png", label: "API Config" }, { src: "/img/screenshots/Authentication.png", label: "Auth Settings" }, { src: "/img/screenshots/Geofences.png", label: "Geofences" }, { src: "/img/screenshots/GeofenceEditor.png", label: "Geofence Editor" }, { src: "/img/screenshots/OfflineMaps.png", label: "Offline maps" }, { src: "/img/screenshots/TrackingProfiles.png", label: "Profile Editor" }, { src: "/img/screenshots/LocationHistory.png", label: "Location History" }, { src: "/img/screenshots/TripDetails.png", label: "Trip Detail" }, { src: "/img/screenshots/Trips.png", label: "Trips" }, { src: "/img/screenshots/ExportData.png", label: "Export" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-export" }, { src: "/img/screenshots/DataManagement.png", label: "Data management" }, { src: "/img/screenshots/DarkMode.png", label: "Dark Mode" }, ]} />
 
 ## Architecture
 

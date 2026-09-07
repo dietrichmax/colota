@@ -6,7 +6,7 @@ sidebar_position: 6
 
 Authenticate to your server with a client certificate at the TLS handshake, in addition to (or instead of) HTTP-level auth like Bearer or Basic. Useful when your reverse proxy enforces mTLS (e.g. nginx `ssl_verify_client`, Traefik, Cloudflare Access). If your server just needs a Bearer token or Basic Auth, you don't need this.
 
-Configure in **Settings -> Connection -> Authentication & Headers -> Client Certificate (mTLS)**.
+Configure in **Settings -> Connection -> Authentication & headers -> Client Certificate (mTLS)**.
 
 ## Setup
 
@@ -16,7 +16,7 @@ Two ways to provide a client certificate.
 
 If your cert is already installed in Android's KeyChain (via Android Settings -> Encryption & credentials):
 
-1. Open Colota -> Settings -> Connection -> Authentication & Headers -> **Client Certificate (mTLS)**
+1. Open Colota -> Settings -> Connection -> Authentication & headers -> **Client Certificate (mTLS)**
 2. Tap **Pick from device certificates**
 3. Android's system dialog appears. Select your cert.
 4. The screen now shows the cert's subject, issuer and expiry date.
@@ -28,7 +28,7 @@ Colota only remembers which cert you picked - the cert itself stays where it alr
 If you have a PKCS12 file but the cert isn't installed at the OS level:
 
 1. Move the `.p12` to your phone (any reasonably-secure transport works - syncthing, USB, etc.)
-2. Open Colota -> Settings -> Connection -> Authentication & Headers -> **Client Certificate (mTLS)**
+2. Open Colota -> Settings -> Connection -> Authentication & headers -> **Client Certificate (mTLS)**
 3. Tap **Import .p12 / .pfx**
 4. Pick the file, enter the password (leave blank if none), tap **Save**
 5. The screen now shows the cert's subject, issuer and expiry date

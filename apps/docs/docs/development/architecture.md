@@ -307,19 +307,20 @@ For backups, two `internal` methods support the export/import flow without expos
 | Screen | Purpose |
 | --- | --- |
 | `DashboardScreen` | Live map with tracking controls, coordinates, database stats, geofence and profile status |
-| `SettingsScreen` | Hub with stats card and navigation to Connection, Tracking & Sync, API Field Mapping, Tracking Profiles, Appearance and data/about screens |
+| `SettingsScreen` | Hub whose rows carry live state - host and queue, both cadences, theme and units, recorded count, the overriding profile - and navigate to Connection, Tracking & sync, API field mapping, Tracking profiles, Appearance and the data, Colota and about screens |
 | `ConnectionScreen` | Server endpoint URL, offline mode toggle and connection test |
 | `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
 | `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |
 | `ApiSettingsScreen` | Endpoint URL, HTTP method, field mapping with backend templates |
 | `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers, with a link row to mTLS Settings |
 | `MtlsSettingsScreen` | Client certificate (PKCS12 import + Android Keystore storage) and Trusted Server CA management |
-| `GeofenceScreen` | Create, edit, and delete pause zones on an interactive map |
-| `GeofenceEditorScreen` | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
+| `GeofenceScreen` | Pause zones as rows over a map. Create geofence opens the editor on an empty draft; deletion happens there |
+| `GeofenceEditorScreen` | Every property of a zone: name, radius, location, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
+| `PlaceZoneScreen` | Picks a zone coordinate on a map with the radius drawn live, returning it to the editor with `popTo` and `merge` |
 | `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
 | `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
-| `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards, per-trip and multi-select export and multi-select delete |
-| `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, per-trip export, and per-trip delete |
+| `LocationHistoryScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip rows, per-trip and multi-select export and multi-select delete |
+| `TripDetailScreen` | Full trip view with dedicated map, stat ledger rows, speed and elevation profile charts, per-trip export, and per-trip delete |
 | `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
 | `ExportLocationsScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
 | `ImportLocationsScreen` | Import external location files (GeoJSON, Google Timeline legacy + new, GPX, KML, CSV) with auto format detection, dedup preview, and recovery vs migration (queue-for-sync) commit choice |
@@ -330,7 +331,8 @@ For backups, two `internal` methods support the export/import flow without expos
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
 | `ShareSetupScreen` | Bundles selected config categories into a `colota://setup` link to share; credentials opt-in |
 | `ActivityLogScreen` | In-app log viewer with level filtering, search, and export |
-| `AboutScreen` | App version, device info, links to repository and privacy policy |
+| `AboutScreen` | App version, and the build and device details under them |
+| `LegalScreen` | Privacy policy, licence, source link and map attribution |
 
 ### Services
 

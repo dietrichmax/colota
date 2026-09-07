@@ -7,13 +7,13 @@ sidebar_position: 3
 | Setting       | Description                            | Default         | Range       |
 | ------------- | -------------------------------------- | --------------- | ----------- |
 | Endpoint      | HTTP(S) URL of your server             | Empty (offline) | --          |
-| HTTP Method   | POST (JSON body) or GET (query params) | POST            | POST / GET  |
+| HTTP method   | POST (JSON body) or GET (query params) | POST            | POST / GET  |
 | Sync Interval | Batch mode interval                    | Instant (0)     | 0s - Custom |
 | Offline Mode  | Disable all network activity           | Disabled        | On/Off      |
 
 ## Endpoint URL
 
-Your server endpoint must accept HTTP or HTTPS requests (POST or GET depending on your HTTP Method setting). HTTPS is required for public endpoints. HTTP is restricted to private/local addresses at the network level - public HTTP endpoints will be blocked at request time.
+Your server endpoint must accept HTTP or HTTPS requests (POST or GET depending on your HTTP method setting). HTTPS is required for public endpoints. HTTP is restricted to private/local addresses at the network level - public HTTP endpoints will be blocked at request time.
 
 Self-signed and private-CA certificates are supported via three trust paths (system CAs, user-installed device CAs, or an in-app imported CA). Servers that require client-certificate authentication (mTLS) are also supported. See the [mTLS guide](./mtls) for setup.
 
@@ -68,7 +68,7 @@ The UI simplifies to remove sync-related elements that don't apply:
 **Hidden in offline mode:**
 
 - Server Endpoint and Test Connection
-- Authentication & Headers
+- Authentication & headers
 - API Field Mapping
 - Sync Interval, Sync Condition (Any / Wi-Fi / SSID / VPN)
 - Queue statistics (Queued / Sent counts)
@@ -101,6 +101,6 @@ Attempt 4: +300s delay (5 minutes)
 Attempt 5+: +900s delay (15 minutes)
 ```
 
-Failed uploads stay in the queue and are retried indefinitely until they succeed. No data is ever dropped due to failed sync attempts. You can clear the queue manually in Settings > Data Management if needed.
+Failed uploads stay in the queue and are retried indefinitely until they succeed. No data is ever dropped due to failed sync attempts. You can clear the queue manually in Settings > Data management if needed.
 
 The app also auto-syncs when network connectivity is restored.

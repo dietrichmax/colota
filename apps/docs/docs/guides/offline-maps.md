@@ -2,17 +2,17 @@
 sidebar_position: 5
 ---
 
-# Offline Maps
+# Offline maps
 
 Download map areas to your device so the map works without an internet connection. Useful when tracking in areas with poor cell coverage - remote trails, backcountry routes, etc.
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/OfflineMaps.png", label: "Offline Maps" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/OfflineMaps.png", label: "Offline maps" }, ]} />
 
 ## Downloading an Area
 
-1. Go to **Settings > Offline Maps**
+1. Go to **Settings > Offline maps**
 2. Pan and zoom the map to frame the area you want to download
 3. Tap the location button to center on your current position if needed
 4. Enter a **name** for the area
@@ -35,13 +35,13 @@ To avoid hitting the cap:
 
 ## Storage
 
-Downloaded areas are stored on the device by MapLibre's offline tile cache. They persist across app restarts. The **Offline Maps** screen shows the current size of each saved area.
+Downloaded areas are stored on the device by MapLibre's offline tile cache. They persist across app restarts. The **Offline maps** screen shows the current size of each saved area.
 
 To free up space, delete areas you no longer need. When the last area is deleted, the tile database is reset and the storage is reclaimed by the OS.
 
 ## Managing Areas
 
-From the **Offline Maps** screen you can:
+From the **Offline maps** screen you can:
 
 - See all downloaded areas with their size and status
 - Delete an area (removes all cached tiles for that area)

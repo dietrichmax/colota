@@ -8,7 +8,7 @@ Export your location history in multiple formats.
 
 :::tip[Looking for a full archive?]
 
-Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) of your location history. If you instead want a single password-encrypted archive of **everything** - locations, settings, geofences and credentials - for device migration or offsite storage, use [Backup & Restore](backup-restore.md).
+Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) of your location history. If you instead want a single password-encrypted archive of **everything** - locations, settings, geofences and credentials - for device migration or offsite storage, use [Backup & restore](backup-restore.md).
 
 :::
 
@@ -25,7 +25,7 @@ Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) 
 
 ### Bulk Export
 
-1. Go to **Settings → Export Locations**
+1. Go to **Settings → Export locations**
 2. Select a format
 3. Tap **Export** and share the file via Android's share menu
 
@@ -44,19 +44,19 @@ For a single trip you can also tap the card to open **Trip Detail**, then use th
 
 Trip exports include a `trip` column/property so each location is tagged with its trip number. Custom selections produce a single file containing only the chosen trips.
 
-To remove trips or single points instead of exporting them, see [Data Management](data-management.md#deleting-from-location-history).
+To remove trips or single points instead of exporting them, see [Data management](data-management.md#deleting-from-location-history).
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ExportData.png", label: "Export Data" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-Export" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ExportData.png", label: "Export Data" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-export" }, ]} />
 
-## Scheduled Export (Auto-Export)
+## Scheduled Export (Auto-export)
 
 Automatically export your location data on a schedule without opening the app.
 
 ### Setup
 
-1. Go to **Settings → Auto-Export**
+1. Go to **Settings → Auto-export**
 2. Select an export directory (files are saved there via Android's Storage Access Framework)
 3. Choose a format (CSV, GeoJSON, GPX, or KML)
 4. Set the frequency: **Daily**, **Weekly**, or **Monthly**
@@ -142,7 +142,7 @@ Other notes:
 - Templates longer than 100 characters are rejected, and `{device}` is shortened to 32 characters, so the result stays inside the filesystem's name limit.
 - If a file of the same name already exists, Android adds a counter (`… (1).gpx`). Colota still recognises those as its own.
 
-Manual **Export Locations** and trip exports are unaffected. Those go through the Android share sheet, where you name the file yourself.
+Manual **Export locations** and trip exports are unaffected. Those go through the Android share sheet, where you name the file yourself.
 
 ## Storage Reference
 

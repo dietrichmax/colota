@@ -16,11 +16,11 @@ Fill in the settings you want to configure. Only the fields you set will be incl
 
 ## Sharing From the App
 
-You can also generate a setup link straight from an existing installation, without the browser generator. Open **Settings → Share Setup**, tick which categories to include - Tracking, Sync, API, Geofences, Tracking profiles and Credentials - and tap **Share** to send the `colota://setup` link through any app.
+You can also generate a setup link straight from an existing installation, without the browser generator. Open **Settings → Share setup**, tick which categories to include - Tracking, Sync, API, Geofences, Tracking profiles and Credentials - and tap **Share** to send the `colota://setup` link through any app.
 
 Credentials are off by default. Enabling them puts your username, password, bearer token or custom headers into the link in plain text, so only share it over a trusted channel.
 
-Geofences and tracking profiles can also be shared on their own from the [Geofences](geofencing.md#sharing-zones) and Tracking Profiles screens.
+Geofences and tracking profiles can also be shared on their own from the [Geofences](geofencing.md#sharing-zones) and Tracking profiles screens.
 
 ## How It Works
 
@@ -63,7 +63,7 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 | `auth.bearerToken` | string | Token for Bearer Auth |
 | `customHeaders` | object | Custom HTTP headers (e.g. Cloudflare Access) |
 | `geofences` | array | Pause zone definitions (see [Geofences](#geofences)) |
-| `profiles` | array | Tracking profile definitions (see [Tracking Profiles](#tracking-profiles)) |
+| `profiles` | array | Tracking profile definitions (see [Tracking profiles](#tracking-profiles)) |
 
 ### Geofences
 
@@ -87,7 +87,7 @@ Imported geofences are appended by default. The import confirmation screen has a
 
 You can build links with geofences using the in-browser generator above, the Node.js or Python snippets below, or by sharing zones directly from the Geofences screen in the app (see the [Geofencing](geofencing.md#sharing-zones) guide).
 
-### Tracking Profiles
+### Tracking profiles
 
 Each entry in the `profiles` array describes one [tracking profile](tracking-profiles.md). `name`, `interval`, `distance`, `syncInterval` and `condition` are required. Other fields fall back to safe defaults. `id` and `createdAt` are ignored on import - the receiving device always creates fresh rows.
 
@@ -106,7 +106,7 @@ Each entry in the `profiles` array describes one [tracking profile](tracking-pro
 
 Imported profiles are appended by default. When both profiles and geofences are present the same "Replace ... with the same name" toggle on the import screen also deletes existing profiles whose names match before creating the incoming ones.
 
-You can build links with profiles using the in-browser generator above, the Node.js or Python snippets below, or by sharing profiles directly from the Tracking Profiles screen in the app.
+You can build links with profiles using the in-browser generator above, the Node.js or Python snippets below, or by sharing profiles directly from the Tracking profiles screen in the app.
 
 ## Generating Links Programmatically
 

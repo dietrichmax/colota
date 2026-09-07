@@ -2,13 +2,13 @@
 sidebar_position: 2
 ---
 
-# Tracking Profiles
+# Tracking profiles
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 Tracking profiles automatically adjust GPS interval, distance filter, and sync settings when conditions like charging, car mode, or speed thresholds are met.
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking Profiles" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking profiles" }, ]} />
 
 ## Use Cases
 
@@ -19,7 +19,7 @@ Tracking profiles automatically adjust GPS interval, distance filter, and sync s
 
 ## Setup
 
-1. Go to **Settings** → **Tracking Profiles**
+1. Go to **Settings** → **Tracking profiles**
 2. Tap **Create Profile**
 3. Enter a name and select a condition trigger
 4. Configure the GPS interval, distance filter, and sync interval

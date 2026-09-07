@@ -2,7 +2,7 @@
 sidebar_position: 3
 ---
 
-# Backup & Restore
+# Backup & restore
 
 Bundle your locations, settings and credentials into a single password-encrypted file you can store anywhere - cloud drive, USB stick, another device.
 
@@ -23,7 +23,7 @@ The auth credentials Colota uses to reach your tracking endpoint (Basic Auth, Be
 
 ## Creating a Backup
 
-1. Go to **Settings → Backup & Restore**
+1. Go to **Settings → Backup & restore**
 2. Enter a password (12 characters minimum) and confirm it
 3. Wait for the strength meter to reach at least **OK**
 4. Tap **Create backup**
@@ -54,7 +54,7 @@ Replaces all current data Restoring overwrites every location, setting, geofence
 
 :::
 
-1. Go to **Settings → Backup & Restore**
+1. Go to **Settings → Backup & restore**
 2. Tap **Choose backup file** and pick the `.colota` file
 3. Enter the backup password when prompted
 4. Confirm the replace warning
@@ -101,4 +101,4 @@ If a backup fails mid-encrypt, the app deletes the partial `.colota` file at the
 
 ## Storage Reference
 
-A backup is roughly the size of your SQLite database after deflate compression (typically 30-60% of the raw DB size). Use the [Data Management](data-management.md) screen to see the current database size before backing up.
+A backup is roughly the size of your SQLite database after deflate compression (typically 30-60% of the raw DB size). Use the [Data management](data-management.md) screen to see the current database size before backing up.

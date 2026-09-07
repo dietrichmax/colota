@@ -2,13 +2,13 @@
 sidebar_position: 3
 ---
 
-# Data Management
+# Data management
 
-Manage your location database from the Data Management screen.
+Manage your location database from the Data management screen.
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/DataManagement.png", label: "Data Management" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/DataManagement.png", label: "Data management" }, ]} />
 
 ## Actions
 
@@ -19,12 +19,12 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 | **Clear Queue**              | Remove unsent locations from the upload queue                              |
 | **Delete Older Than X Days** | Clean up old data past a specified age                                     |
 | **Vacuum Database**          | Reclaim disk space after deletions                                         |
-| **Export Locations**         | Export location history - see [Data Export](data-export.md)                |
-| **Import Locations**         | Merge external files into your history - see [Data Import](data-import.md) |
+| **Export locations**         | Export location history - see [Data Export](data-export.md)                |
+| **Import locations**         | Merge external files into your history - see [Data Import](data-import.md) |
 
 In [offline mode](/docs/configuration/server-settings#offline-mode), sync-related actions (Sync Now, Clear Sent History, Clear Queue) are hidden since no queue is used. A **Delete All Locations** action is available instead. Data export remains fully available - see [Data Export](data-export.md).
 
-For a full archive of locations, settings and credentials in a single password-encrypted file, use **Settings → Backup & Restore** - see [Backup & Restore](backup-restore.md).
+For a full archive of locations, settings and credentials in a single password-encrypted file, use **Settings → Backup & restore** - see [Backup & restore](backup-restore.md).
 
 ## Deleting from Location History
 

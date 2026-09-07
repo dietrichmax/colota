@@ -47,7 +47,7 @@ Colota starts a new trip after a 15-minute gap in fixes, so a long stop can brea
 2. Use the **Test Connection** button in settings
 3. Check server logs for incoming requests
 4. Verify network connectivity
-5. Check the queue count in **Data Management**
+5. Check the queue count in **Data management**
 
 **Common causes**: Wrong URL, HTTPS required for public endpoints, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed / private-CA server cert (see the [mTLS guide](/docs/configuration/mtls) for trust setup), **Sync Condition** restricting uploads to a specific network (Wi-Fi, SSID or VPN), missing local network permission on Android 16+.
 
@@ -136,7 +136,7 @@ To change: **Settings > Advanced Settings > Network Settings > Sync Only On**.
 
 ## Auto-export not working
 
-- Verify a directory is selected in **Settings > Auto-Export**
+- Verify a directory is selected in **Settings > Auto-export**
 - Check that the toggle is enabled
 - The first export fires at the configured time, not on enable. Tap **Export Now** to confirm the pipeline works without waiting
 - Doze mode can delay an alarm by up to ~15 minutes - if exports are running but a few minutes late, that's expected
