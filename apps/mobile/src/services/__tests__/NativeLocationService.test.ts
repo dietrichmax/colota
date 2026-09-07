@@ -89,7 +89,8 @@ jest.mock("react-native", () => ({
       NDK_VERSION: "25.1.8937393",
       VERSION_NAME: "1.0.0",
       VERSION_CODE: 1,
-      FLAVOR: "gms"
+      FLAVOR: "gms",
+      getSystemPalette: jest.fn().mockResolvedValue(null)
     }
   }
 }))
@@ -332,6 +333,58 @@ describe("NativeLocationService", () => {
           VERSION_NAME: "1.0.0"
         })
       )
+    })
+  })
+
+  describe("getSystemPalette", () => {
+    const palette = {
+      accent1_100: "#D6E3FF",
+      accent1_200: "#ABC7FF",
+      accent1_300: "#8AB4F8",
+      accent1_600: "#2B5CB8",
+      accent1_700: "#12459E",
+      accent1_800: "#002E6B",
+      accent1_900: "#001B3F",
+      neutral1_0: "#FFFFFF",
+      neutral1_50: "#F3F3F6",
+      neutral1_600: "#5B5C63",
+      neutral1_700: "#43444B",
+      neutral1_800: "#2C2D33",
+      neutral1_900: "#1A1B1F",
+      neutral2_100: "#E3E2E9",
+      neutral2_200: "#C7C6CE",
+      neutral2_300: "#ABAAB2",
+      neutral2_400: "#909097",
+      neutral2_500: "#76767D",
+      neutral2_600: "#5E5E65",
+      neutral2_700: "#46464D",
+      neutral2_800: "#2F2F35"
+    }
+
+    it("passes a complete palette through", async () => {
+      ;(NativeModules.BuildConfigModule.getSystemPalette as jest.Mock).mockResolvedValueOnce(palette)
+
+      await expect(NativeLocationService.getSystemPalette()).resolves.toEqual(palette)
+    })
+
+    it("returns null below API 31, where the native side has nothing to send", async () => {
+      ;(NativeModules.BuildConfigModule.getSystemPalette as jest.Mock).mockResolvedValueOnce(null)
+
+      await expect(NativeLocationService.getSystemPalette()).resolves.toBeNull()
+    })
+
+    it("drops a partial palette rather than letting undefined reach a style prop", async () => {
+      const incomplete: Record<string, string> = { ...palette }
+      delete incomplete.neutral2_500
+      ;(NativeModules.BuildConfigModule.getSystemPalette as jest.Mock).mockResolvedValueOnce(incomplete)
+
+      await expect(NativeLocationService.getSystemPalette()).resolves.toBeNull()
+    })
+
+    it("returns null when the bridge rejects, so a failed read is not a crash", async () => {
+      ;(NativeModules.BuildConfigModule.getSystemPalette as jest.Mock).mockRejectedValueOnce(new Error("no resource"))
+
+      await expect(NativeLocationService.getSystemPalette()).resolves.toBeNull()
     })
   })
 

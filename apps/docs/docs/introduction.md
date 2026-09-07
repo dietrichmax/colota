@@ -25,7 +25,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **App Shortcuts** - Long-press the app icon to start or stop tracking from the home screen. Compatible with automation apps like Tasker and Samsung Routines.
 - **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
 - **Authentication** - Basic Auth, Bearer Token or custom headers. Optional mutual TLS (mTLS) with a PKCS12 client certificate stored in Android Keystore.
-- **Dark Mode** - Full light and dark theme support.
+- **Dark Mode** - Full light and dark theme support, optionally coloured from the Android wallpaper.
 
 ## App Screens
 
@@ -37,7 +37,7 @@ Colota has twenty-eight screens, each focused on a specific task:
 | **Settings** | Hub linking to Connection, Tracking and Sync, Request format, Tracking profiles, Appearance and data/about screens |
 | **Connection** | Server endpoint URL, offline mode toggle and connection test |
 | **Tracking & sync** | GPS polling interval, distance filter, accuracy threshold and sync strategy preset |
-| **Appearance** | Light/dark theme, unit system, time format and custom map tile URLs |
+| **Appearance** | Light/dark theme, wallpaper colors, unit system, time format and custom map tile URLs |
 | **Request format** | How the request is shaped: the backend template, the HTTP method, the field names and any custom fields |
 | **Backend template** | Pick the backend Colota formats its payload for, each option describing what it sends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
