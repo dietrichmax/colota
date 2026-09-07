@@ -66,7 +66,7 @@ export function AppModal() {
       <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
         <View style={[styles.card, { backgroundColor: colors.card, borderRadius: radius.lg }]}>
           <View style={[styles.iconContainer, { backgroundColor: iconColor + "15" }]}>
-            <Icon size={28} color={iconColor} />
+            <Icon size={size.icon.lg} color={iconColor} />
           </View>
 
           <Text style={[styles.title, { color: colors.text }]}>{current.title}</Text>
@@ -143,8 +143,8 @@ const styles = StyleSheet.create({
     elevation: elevation.overlay
   },
   iconContainer: {
-    width: 56,
-    height: 56,
+    width: size.emptyIcon,
+    height: size.emptyIcon,
     borderRadius: radius.pill,
     justifyContent: "center",
     alignItems: "center",

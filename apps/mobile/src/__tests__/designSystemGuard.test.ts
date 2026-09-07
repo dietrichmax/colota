@@ -41,7 +41,9 @@ const RULES = [
   // here is a literal. 0 squares a corner off rather than setting one, and stays legal.
   { name: "radius", pattern: /borderRadius:\s*-?(?!0\b)\d/ },
   { name: "fontSize", pattern: /fontSize:\s*(?:10|11|12|13|14|15|16|18|20|24|28)\b/ },
-  { name: "iconSize", pattern: /size=\{(?:16|20|24)\}/ },
+  // Inverted with spacing and radius: size.icon names 16, 20 and 24, and a hero glyph is
+  // size.icon.lg in a size.emptyIcon disc, so there is no icon this scale does not cover.
+  { name: "iconSize", pattern: /size=\{\d/ },
   // These three ban a property outright rather than a value, because the scale covers every case:
   // elevation names its four levels, fonts names its four weights, and the type spec has no
   // letter spacing at all.
@@ -93,7 +95,7 @@ describe("design system guard", () => {
     expect(caught("<Icon size={size.icon.md} />")).toEqual([])
     // No constant names these, so they are not drift and rounding them would move the design.
     expect(caught("{ borderRadius: radius.md }")).toEqual([])
-    expect(caught("<Icon size={28} />")).toEqual([])
+    expect(caught("<Icon size={size.icon.lg} />")).toEqual([])
   })
 
   it("flags any spacing number, because space has a name for every step it uses", () => {
@@ -103,6 +105,9 @@ describe("design system guard", () => {
     expect(caught("{ marginTop: 20 }")).toEqual(["spacing"])
     expect(caught("{ borderRadius: 10 }")).toEqual(["radius"])
     expect(caught("{ borderRadius: 0 }")).toEqual([])
+    // 28 and 32 sat above the ladder, so the value list could not see either.
+    expect(caught("<Icon size={28} />")).toEqual(["iconSize"])
+    expect(caught("<Icon size={32} />")).toEqual(["iconSize"])
     expect(caught("{ gap: 3 }")).toEqual(["spacing"])
     expect(caught("{ paddingBottom: insets.bottom + 8 }")).toEqual(["spacingExpression"])
     // 0 cancels a spacing value rather than setting one, and a token composes freely.

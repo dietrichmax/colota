@@ -114,8 +114,8 @@ const styles = StyleSheet.create({
     elevation: elevation.overlay
   },
   iconContainer: {
-    width: 56,
-    height: 56,
+    width: size.emptyIcon,
+    height: size.emptyIcon,
     borderRadius: radius.pill,
     justifyContent: "center",
     alignItems: "center",

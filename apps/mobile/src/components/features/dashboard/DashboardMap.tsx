@@ -178,7 +178,7 @@ export function DashboardMap({
           style={[styles.stateContainer, styles.overlay, { backgroundColor: colors.card, borderRadius: radius.sm }]}
         >
           <View style={[styles.iconCircle, { backgroundColor: colors.warning + "20" }]}>
-            <TriangleAlert size={32} color={colors.warning} />
+            <TriangleAlert size={size.icon.lg} color={colors.warning} />
           </View>
           <Text style={[styles.stateTitle, { color: colors.warning }]}>Location services off</Text>
           <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
@@ -253,8 +253,8 @@ const styles = StyleSheet.create({
   },
   icon: { width: 64, height: 64 },
   iconCircle: {
-    width: 80,
-    height: 80,
+    width: size.emptyIcon,
+    height: size.emptyIcon,
     borderRadius: radius.pill,
     justifyContent: "center",
     alignItems: "center",
