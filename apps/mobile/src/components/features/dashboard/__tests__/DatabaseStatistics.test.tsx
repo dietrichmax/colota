@@ -46,13 +46,11 @@ jest.mock("../../../index", () => {
       })
     },
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children, variant }: any) => R.createElement(View, { testID: `card-${variant || "default"}` }, children)
+    Card: ({ children, variant }: any) => R.createElement(View, { testID: `card-${variant || "default"}` }, children),
+    StatRow: ({ label, value, children }: any) =>
+      R.createElement(View, null, R.createElement(Text, null, label), R.createElement(Text, null, value), children)
   }
 })
-
-jest.mock("../../../../utils/queueStatus", () => ({
-  getQueueColor: () => "#000"
-}))
 
 import { DatabaseStatistics } from "../DatabaseStatistics"
 
@@ -76,15 +74,13 @@ describe("DatabaseStatistics", () => {
   })
 
   describe("online mode (default)", () => {
-    it("shows Queued and Sent cards", () => {
+    it("reads Queued and Sent as ledger rows, not as cards holding one number each", () => {
       const { getByText } = render(<DatabaseStatistics stats={baseStats} />)
 
       expect(getByText("Queued")).toBeTruthy()
       expect(getByText("12")).toBeTruthy()
-      expect(getByText("pending")).toBeTruthy()
       expect(getByText("Sent")).toBeTruthy()
       expect(getByText("100")).toBeTruthy()
-      expect(getByText("synced")).toBeTruthy()
     })
 
     it("does not show Total locations card", () => {
@@ -98,10 +94,9 @@ describe("DatabaseStatistics", () => {
 
       expect(getByText("Today")).toBeTruthy()
       expect(getByText("8")).toBeTruthy()
-      expect(getByText("tracked")).toBeTruthy()
       expect(getByText("Storage")).toBeTruthy()
-      expect(getByText("2.5")).toBeTruthy()
-      expect(getByText("MB")).toBeTruthy()
+      // The unit belongs to the value, not to a caption under it.
+      expect(getByText("2.5 MB")).toBeTruthy()
     })
   })
 
@@ -113,9 +108,8 @@ describe("DatabaseStatistics", () => {
     it("shows Total locations card instead of Queued/Sent", () => {
       const { getByText } = render(<DatabaseStatistics stats={baseStats} />)
 
-      expect(getByText("Total")).toBeTruthy()
+      expect(getByText("Stored")).toBeTruthy()
       expect(getByText("500")).toBeTruthy()
-      expect(getByText("locations")).toBeTruthy()
     })
 
     it("hides Queued and Sent cards", () => {
@@ -141,5 +135,16 @@ describe("DatabaseStatistics", () => {
     const { getByText } = render(<DatabaseStatistics stats={largeStats} />)
 
     expect(getByText((1234567).toLocaleString())).toBeTruthy()
+  })
+
+  describe("queue backlog", () => {
+    it("marks a backed-up queue with a glyph, not by recolouring the number", () => {
+      const { queryByLabelText } = render(<DatabaseStatistics stats={{ ...baseStats, queued: 12 }} />)
+      expect(queryByLabelText("queue-backlog")).toBeNull()
+
+      const backed = render(<DatabaseStatistics stats={{ ...baseStats, queued: 100000 }} />)
+      // Colour alone says nothing to a screen reader and nothing to anyone who cannot see orange.
+      expect(backed.getByLabelText("queue-backlog")).toBeTruthy()
+    })
   })
 })
