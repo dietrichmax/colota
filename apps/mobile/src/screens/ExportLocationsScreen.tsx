@@ -79,7 +79,10 @@ export function ExportLocationsScreen({}: ScreenProps) {
 
   return (
     <Container>
-      <ScrollView contentContainerStyle={[styles.scrollContent, totalLocations === 0 && styles.scrollEmpty]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, totalLocations === 0 && styles.scrollEmpty]}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={[styles.intro, { color: colors.textSecondary }]}>
           {totalLocations.toLocaleString()} locations. Save them to a file, once
         </Text>
@@ -92,11 +95,10 @@ export function ExportLocationsScreen({}: ScreenProps) {
           />
         ) : (
           <>
-
             {/* Format Selection */}
             <View style={styles.section}>
               <SectionTitle>Select format</SectionTitle>
-              <Card>
+              <Card rows>
                 <FormatSelector selectedFormat={selectedFormat} onSelectFormat={setSelectedFormat} />
               </Card>
             </View>
@@ -132,8 +134,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: space.lg,
-    paddingTop: 20,
-    paddingBottom: 40
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   },
   // so an empty state has room to centre in
   scrollEmpty: { flexGrow: 1 },

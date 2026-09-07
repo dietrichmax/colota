@@ -20,7 +20,7 @@ export const FormatSelector = ({
     {(Object.entries(EXPORT_FORMATS) as [ExportFormat, (typeof EXPORT_FORMATS)[ExportFormat]][]).map(
       ([key, config], index) => (
         <React.Fragment key={key}>
-          {index > 0 && <Divider />}
+          {index > 0 && <Divider tight />}
           <FormatOption
             icon={config.icon}
             title={config.label}

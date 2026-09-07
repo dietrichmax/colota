@@ -441,7 +441,7 @@ export function AutoExportScreen(_props: ScreenProps) {
         {/* Format */}
         <View style={styles.section}>
           <SectionTitle>Format</SectionTitle>
-          <Card>
+          <Card rows>
             <FormatSelector selectedFormat={format} onSelectFormat={handleFormatChange} />
           </Card>
         </View>
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: space.lg,
-    paddingBottom: 40
+    paddingBottom: space.xxl
   },
   header: {
     marginTop: 20,

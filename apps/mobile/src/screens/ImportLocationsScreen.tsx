@@ -86,18 +86,10 @@ const FormatRow = ({ entry, colors }: { entry: (typeof SUPPORTED_FORMATS)[number
     <View style={styles.formatRow}>
       <Icon size={size.icon.md} color={colors.textLight} />
       <View style={styles.formatTextContent}>
-        <View style={styles.formatTitleRow}>
-          <Text style={[styles.formatTitle, { color: colors.text }]}>{entry.title}</Text>
-          <View
-            style={[
-              styles.extensionBadge,
-              { backgroundColor: colors.primary + "15" }
-            ]}
-          >
-            <Text style={[styles.extensionText, { color: colors.primaryDark }]}>{entry.extension}</Text>
-          </View>
-        </View>
-        <Text style={[styles.formatDescription, { color: colors.textLight }]}>{entry.description}</Text>
+        <Text style={[styles.formatTitle, { color: colors.text }]}>{entry.title}</Text>
+        <Text style={[styles.formatDescription, { color: colors.textLight }]}>
+          {entry.extension} · {entry.description}
+        </Text>
       </View>
     </View>
   )
@@ -219,10 +211,10 @@ export function ImportLocationsScreen({}: ScreenProps) {
         {/* Supported formats */}
         <View style={styles.section}>
           <SectionTitle>Supported formats</SectionTitle>
-          <Card>
+          <Card rows>
             {SUPPORTED_FORMATS.map((entry, i) => (
               <React.Fragment key={entry.title}>
-                {i > 0 && <Divider />}
+                {i > 0 && <Divider tight />}
                 <FormatRow entry={entry} colors={colors} />
               </React.Fragment>
             ))}
@@ -254,8 +246,8 @@ export function ImportLocationsScreen({}: ScreenProps) {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: space.lg,
-    paddingTop: 20,
-    paddingBottom: 40
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   },
   section: {
     marginBottom: space.xl
@@ -268,35 +260,19 @@ const styles = StyleSheet.create({
   formatRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    gap: space.lg
+    paddingVertical: space.md,
+    gap: space.md
   },
   formatTextContent: {
     flex: 1
   },
-  formatTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.sm,
-    marginBottom: space.xs,
-    flexWrap: "wrap"
-  },
   formatTitle: {
-    fontSize: fontSizes.input,
-    ...fonts.semiBold,
-    letterSpacing: -0.2
-  },
-  extensionBadge: {
-    paddingHorizontal: space.sm,
-    paddingVertical: 3,
-    borderRadius: 6
-  },
-  extensionText: {
-    fontSize: fontSizes.micro,
-    ...fonts.bold
+    fontSize: fontSizes.label,
+    ...fonts.semiBold
   },
   formatDescription: {
     fontSize: fontSizes.caption,
-    lineHeight: 16
+    lineHeight: 16,
+    marginTop: 2
   }
 })
