@@ -7,9 +7,20 @@ import React, { useState, useMemo } from "react"
 import { View, Text, ScrollView, StyleSheet } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Button, Card, Container, SectionTitle, Toggle } from "../components"
-import { fontSizes, fonts, type } from "../styles/typography"
-import { CircleAlert, CircleCheckBig, Import } from "lucide-react-native"
+import {
+  Button,
+  Card,
+  Container,
+  Divider,
+  EmptyState,
+  FieldMessage,
+  SectionTitle,
+  SettingRow,
+  StatRow,
+  Toggle
+} from "../components"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
+import { Check, CircleAlert } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
@@ -130,29 +141,24 @@ export function SetupImportScreen({ route, navigation }: any) {
         <SectionTitle>{title}</SectionTitle>
         <Card>
           {entries.map((entry, i) => (
-            <View
-              key={entry.label}
-              style={[
-                styles.settingRow,
-                i < entries.length - 1 && styles.settingRowBorder,
-                i < entries.length - 1 && { borderBottomColor: colors.border }
-              ]}
-            >
-              <Text style={[styles.settingLabel, { color: entry.rejected ? colors.error : colors.textSecondary }]}>
-                {entry.label}
-              </Text>
-              <Text
-                style={[styles.settingValue, { color: entry.rejected ? colors.error : colors.text }]}
-                numberOfLines={1}
-              >
-                {entry.value}
-              </Text>
-            </View>
+            <React.Fragment key={entry.label}>
+              {i > 0 && <Divider tight />}
+              {/* A rejected entry carries a reason where a value would be, so it gets both. */}
+              <StatRow label={entry.label} value={entry.rejected ? "Not applied" : entry.value} />
+              {entry.rejected && <FieldMessage variant="error">{entry.value}</FieldMessage>}
+            </React.Fragment>
           ))}
         </Card>
       </View>
     )
   }
+
+  const replaceLabel =
+    geofenceEntries.length > 0 && profileEntries.length > 0
+      ? "Replace zones and profiles with the same name"
+      : profileEntries.length > 0
+        ? "Replace profiles with the same name"
+        : "Replace zones with the same name"
 
   const handleCancel = () => {
     navigation.navigate("Dashboard")
@@ -163,15 +169,7 @@ export function SetupImportScreen({ route, navigation }: any) {
     return (
       <Container>
         <ScrollView contentContainerStyle={styles.content}>
-          <Card style={styles.headerCard}>
-            <View style={styles.headerRow}>
-              <CircleAlert size={28} color={colors.error} />
-              <View style={styles.headerText}>
-                <Text style={[styles.title, { color: colors.text }]}>Invalid configuration</Text>
-                <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{result.error}</Text>
-              </View>
-            </View>
-          </Card>
+          <EmptyState icon={CircleAlert} title="Invalid configuration" hint={result.error} />
           <Button title="Go back" onPress={handleCancel} variant="primary" />
         </ScrollView>
       </Container>
@@ -182,46 +180,27 @@ export function SetupImportScreen({ route, navigation }: any) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.content}>
-        <Card style={styles.headerCard}>
-          <View style={styles.headerRow}>
-            <Import size={28} color={colors.primary} />
-            <View style={styles.headerText}>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                A setup link wants to apply {result.entries.length} setting{result.entries.length !== 1 ? "s" : ""}
-              </Text>
-            </View>
-          </View>
-        </Card>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          A setup link wants to apply {result.entries.length} setting{result.entries.length !== 1 ? "s" : ""}
+        </Text>
 
-        {renderSection("TRACKING", trackingEntries)}
+        {renderSection("Tracking", trackingEntries)}
         {renderSection("API", apiEntries)}
-        {renderSection("AUTHENTICATION", authEntries)}
-        {renderSection("GEOFENCES", geofenceEntries)}
-        {renderSection("TRACKING PROFILES", profileEntries)}
+        {renderSection("Authentication", authEntries)}
+        {renderSection("Geofences", geofenceEntries)}
+        {renderSection("Tracking profiles", profileEntries)}
 
         {(geofenceEntries.length > 0 || profileEntries.length > 0) && (
           <View style={styles.section}>
-            <Card>
-              <View style={styles.toggleRow}>
-                <View style={styles.toggleText}>
-                  <Text style={[styles.toggleLabel, { color: colors.text }]}>
-                    {geofenceEntries.length > 0 && profileEntries.length > 0
-                      ? "Replace zones and profiles with the same name"
-                      : profileEntries.length > 0
-                        ? "Replace profiles with the same name"
-                        : "Replace zones with the same name"}
-                  </Text>
-                  <Text style={[styles.toggleHint, { color: colors.textSecondary }]}>
-                    Off: imports are added as new entries
-                  </Text>
-                </View>
+            <Card rows>
+              <SettingRow label={replaceLabel} hint="Off: imports are added as new entries">
                 <Toggle
-                  accessibilityLabel="Replace entries with the same name"
+                  accessibilityLabel={replaceLabel}
                   testID="replace-imports-switch"
                   value={replaceByName}
                   onValueChange={setReplaceByName}
                 />
-              </View>
+              </SettingRow>
             </Card>
           </View>
         )}
@@ -231,7 +210,7 @@ export function SetupImportScreen({ route, navigation }: any) {
             title="Apply configuration"
             onPress={handleApply}
             variant="primary"
-            icon={CircleCheckBig}
+            icon={Check}
             loading={applying}
             disabled={applying}
           />
@@ -244,67 +223,18 @@ export function SetupImportScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   content: {
-    padding: space.lg,
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
     paddingBottom: space.xxl
   },
-  headerCard: {
+  subtitle: {
+    fontSize: fontSizes.body,
+    ...fonts.regular,
+    lineHeight: lineHeights.body,
     marginBottom: space.lg
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.md
-  },
-  headerText: {
-    flex: 1
-  },
-  title: {
-    ...type.heading
-  },
-  subtitle: {
-    fontSize: fontSizes.description,
-    ...fonts.regular,
-    marginTop: space.xxs
-  },
   section: {
-    marginTop: space.sm
-  },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: space.md
-  },
-  settingRowBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth
-  },
-  settingLabel: {
-    fontSize: fontSizes.description,
-    ...fonts.semiBold
-  },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: space.sm,
-    gap: space.md
-  },
-  toggleText: {
-    flex: 1
-  },
-  toggleLabel: {
-    fontSize: fontSizes.description,
-    ...fonts.semiBold
-  },
-  toggleHint: {
-    fontSize: fontSizes.caption,
-    ...fonts.regular,
-    marginTop: space.xxs
-  },
-  settingValue: {
-    fontSize: fontSizes.description,
-    ...fonts.regular,
-    maxWidth: "60%",
-    textAlign: "right"
+    marginTop: space.xl
   },
   actions: {
     marginTop: space.xl

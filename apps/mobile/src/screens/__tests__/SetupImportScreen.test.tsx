@@ -80,6 +80,20 @@ jest.mock("../../components", () => {
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
+    Divider: () => R.createElement(View, null),
+    StatRow: ({ label, value }: any) =>
+      R.createElement(View, null, R.createElement(Text, null, label), R.createElement(Text, null, value)),
+    FieldMessage: ({ children }: any) => R.createElement(Text, null, children),
+    EmptyState: ({ title, hint }: any) =>
+      R.createElement(View, null, R.createElement(Text, null, title), hint ? R.createElement(Text, null, hint) : null),
+    SettingRow: ({ label, hint, children }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        hint ? R.createElement(Text, null, hint) : null,
+        children
+      ),
     Button: ({ title, onPress, disabled }: any) =>
       R.createElement(Pressable, { onPress, disabled, accessibilityRole: "button" }, R.createElement(Text, null, title))
   }
@@ -296,9 +310,9 @@ describe("SetupImportScreen", () => {
   describe("geofences", () => {
     const validGeofence = { name: "Home", lat: 52.5, lon: 13.4, radius: 100 }
 
-    it("parses a valid geofence and shows it under GEOFENCES", () => {
+    it("parses a valid geofence and shows it under Geofences", () => {
       const { getByText } = renderScreen(encode({ geofences: [validGeofence] }))
-      expect(getByText("GEOFENCES")).toBeTruthy()
+      expect(getByText("Geofences")).toBeTruthy()
       expect(getByText("Home")).toBeTruthy()
       expect(getByText("100m")).toBeTruthy()
     })
@@ -519,9 +533,9 @@ describe("SetupImportScreen", () => {
       mockCreateProfile.mockResolvedValue(1)
     })
 
-    it("parses a valid profile and shows it under TRACKING PROFILES", () => {
+    it("parses a valid profile and shows it under Tracking profiles", () => {
       const { getByText } = renderScreen(encode({ profiles: [validProfile] }))
-      expect(getByText("TRACKING PROFILES")).toBeTruthy()
+      expect(getByText("Tracking profiles")).toBeTruthy()
       expect(getByText("Driving")).toBeTruthy()
     })
 
@@ -733,6 +747,16 @@ describe("SetupImportScreen", () => {
       })
       expect(mockGetProfiles).not.toHaveBeenCalled()
       expect(mockDeleteProfile).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("rejected entries", () => {
+    it("says the setting was not applied and why, instead of only turning the row red", () => {
+      const { getByText } = renderScreen(encode({ endpoint: "notaurl", interval: 10 }))
+
+      // The value column carries a reason for a rejected entry, so it cannot double as the value.
+      expect(getByText("Not applied")).toBeTruthy()
+      expect(getByText("HTTP not allowed for public hosts")).toBeTruthy()
     })
   })
 })
