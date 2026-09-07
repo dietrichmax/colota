@@ -69,7 +69,7 @@ The UI simplifies to remove sync-related elements that don't apply:
 
 - Server Endpoint and Test Connection
 - Authentication & headers
-- API Field Mapping
+- Request format
 - Sync Interval, Sync Condition (Any network / Wi-Fi / Specific Wi-Fi network / VPN)
 - Queue statistics (Queued / Sent counts)
 - Queue actions (Sync Now, Clear Sent History, Clear Queue)

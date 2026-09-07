@@ -82,7 +82,7 @@ function getReferenceCustomFields(template: ApiTemplateName): CustomField[] {
  * Screen for configuring API field name mappings, backend templates,
  * and custom static fields.
  */
-export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"API Config">) {
+export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Request Format">) {
   const { settings, setSettings, restartTracking } = useTracking()
   const { colors } = useTheme()
 
@@ -696,7 +696,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"API Co
 
         {/* Example payload preview */}
         <View style={styles.exampleSection}>
-          <SectionTitle>{localHttpMethod === "GET" ? "EXAMPLE REQUEST" : "EXAMPLE PAYLOAD"}</SectionTitle>
+          <SectionTitle>{localHttpMethod === "GET" ? "Example request" : "Example payload"}</SectionTitle>
           <View
             style={[
               styles.exampleCard,

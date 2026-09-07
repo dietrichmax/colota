@@ -60,6 +60,6 @@ describe("BackendTemplateScreen", () => {
 
     fireEvent.press(getByTestId("template-dawarich"))
 
-    expect(mockPopTo).toHaveBeenCalledWith("API Config", { template: "dawarich" }, { merge: true })
+    expect(mockPopTo).toHaveBeenCalledWith("Request Format", { template: "dawarich" }, { merge: true })
   })
 })

@@ -182,9 +182,9 @@ export function SettingsScreen({ navigation }: Props) {
                 <ListItem
                   testID="nav-api-config"
                   icon={Braces}
-                  label="API field mapping"
+                  label="Request format"
                   sub={apiSummary}
-                  onPress={() => navigation.navigate("API Config")}
+                  onPress={() => navigation.navigate("Request Format")}
                 />
               </>
             )}

@@ -15,7 +15,7 @@ export type RootStackParamList = {
   Connection: undefined
   "Tracking & Sync": undefined
   Appearance: undefined
-  "API Config": { template?: ApiTemplateName } | undefined
+  "Request Format": { template?: ApiTemplateName } | undefined
   "Backend Template": { selected: ApiTemplateName }
   "Auth Settings": undefined
   "mTLS Settings": undefined

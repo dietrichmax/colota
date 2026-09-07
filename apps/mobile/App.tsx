@@ -70,9 +70,9 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     title: "Settings"
   },
   {
-    name: "API Config",
+    name: "Request Format",
     component: ApiSettingsScreen,
-    title: "API config"
+    title: "Request format"
   },
   {
     name: "Backend Template",

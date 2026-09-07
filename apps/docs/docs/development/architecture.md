@@ -298,11 +298,11 @@ For backups, two `internal` methods support the export/import flow without expos
 | Screen | Purpose |
 | --- | --- |
 | `DashboardScreen` | Live map with tracking controls, coordinates, database stats, geofence and profile status |
-| `SettingsScreen` | Hub navigating to Connection, Tracking & sync, API field mapping, Tracking profiles, Appearance and the data, Colota and about screens. Each row's sub line carries live state rather than a description |
+| `SettingsScreen` | Hub navigating to Connection, Tracking & sync, Request format, Tracking profiles, Appearance and the data, Colota and about screens. Each row's sub line carries live state rather than a description |
 | `ConnectionScreen` | Server endpoint URL, offline mode toggle and connection test |
 | `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
 | `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |
-| `ApiSettingsScreen` | Backend template as a row opening the picker, HTTP method and Dawarich mode as radio rows, and the field mapping |
+| `ApiSettingsScreen` | Route **Request Format**. Backend template as a row opening the picker, HTTP method and Dawarich mode as radio rows, and the field mapping |
 | `BackendTemplateScreen` | The eight backend templates as radio rows, each stating what it sends, returning the choice with `popTo` and `merge`. Eight options that each need a sentence do not fit inline on a form screen |
 | `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers, with a link row to mTLS Settings |
 | `MtlsSettingsScreen` | Client certificate (PKCS12 import + Android Keystore storage) and Trusted Server CA management |

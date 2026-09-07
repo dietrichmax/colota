@@ -31,7 +31,7 @@ export function BackendTemplateScreen({ navigation, route }: RootScreenProps<"Ba
 
   const choose = useCallback(
     (value: ApiTemplateName) => {
-      navigation.popTo("API Config", { template: value }, { merge: true })
+      navigation.popTo("Request Format", { template: value }, { merge: true })
     },
     [navigation]
   )
