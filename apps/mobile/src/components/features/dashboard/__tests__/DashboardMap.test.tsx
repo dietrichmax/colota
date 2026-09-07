@@ -1,5 +1,7 @@
 import React from "react"
 import { render } from "@testing-library/react-native"
+import { StyleSheet } from "react-native"
+import { size } from "../../../../constants"
 
 jest.mock("@maplibre/maplibre-react-native", () => {
   const R = require("react")
@@ -175,6 +177,20 @@ describe("DashboardMap info cards", () => {
     expect(queryByText("Charging")).toBeNull()
     // Full-screen overlay should NOT show because we have valid coords
     expect(queryByText("Location services off")).toBeNull()
+  })
+
+  it("gives the location-off bar a 48 target, because it is the one status bar you can press", () => {
+    const { getByRole } = render(<DashboardMap {...baseProps} activeProfileName="Charging" locationEnabled={false} />)
+
+    const style = StyleSheet.flatten(getByRole("button", { name: "Location off - tap to enable" }).props.style)
+    expect(style.minHeight).toBe(size.touch)
+  })
+
+  it("leaves the pause-zone bar at its text height, because it is a label and not a control", () => {
+    const { getByText } = render(<DashboardMap {...baseProps} activeZoneName="Home" />)
+
+    const style = StyleSheet.flatten(getByText(/Paused in Home/).parent?.props.style)
+    expect(style?.minHeight).toBeUndefined()
   })
 
   it("hides profile and pause-zone chips when location services are off", () => {
