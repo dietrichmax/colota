@@ -27,7 +27,6 @@ import { SAVE_SUCCESS_DISPLAY_MS, STATS_REFRESH_FAST, size, space } from "../con
 import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
-import { radius } from "@colota/shared"
 
 const BACKUP_TIP = "Tip: back up your data first (Settings -> Backup & Restore)."
 
@@ -253,20 +252,20 @@ export function DataManagementScreen({}: ScreenProps) {
             <SectionTitle>Database statistics</SectionTitle>
             <Card>
               {[
-                ["Total locations", stats.total.toLocaleString(), colors.text],
+                ["Total locations", stats.total.toLocaleString()],
                 ...(!isOfflineMode
                   ? [
-                      ["Sent", stats.sent.toLocaleString(), colors.success],
-                      ["Queued", stats.queued.toLocaleString(), colors.warning]
+                      ["Sent", stats.sent.toLocaleString()],
+                      ["Queued", stats.queued.toLocaleString()]
                     ]
                   : []),
-                ["Today", stats.today.toLocaleString(), colors.info],
-                ["Storage", `${stats.databaseSizeMB.toFixed(2)} MB`, colors.primary]
-              ].map(([label, value, color], i, arr) => (
+                ["Today", stats.today.toLocaleString()],
+                ["Storage", `${stats.databaseSizeMB.toFixed(2)} MB`]
+              ].map(([label, value], i, arr) => (
                 <React.Fragment key={i}>
                   <View style={styles.statRow}>
                     <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
-                    <Text style={[styles.statValue, { color }]}>{value}</Text>
+                    <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
                   </View>
                   {i < arr.length - 1 && <Divider />}
                 </React.Fragment>
@@ -299,8 +298,6 @@ export function DataManagementScreen({}: ScreenProps) {
                   <ActionRow
                     label="Clear sent history"
                     hint="Delete all successfully sent locations"
-                    color={colors.success}
-                    textColor={colors.textLight}
                     value={stats.sent.toLocaleString()}
                     onPress={handleClearSentHistory}
                     disabled={isProcessing || stats.sent === 0}
@@ -311,8 +308,6 @@ export function DataManagementScreen({}: ScreenProps) {
                   <ActionRow
                     label="Clear queue"
                     hint="Delete all pending locations"
-                    color={colors.warning}
-                    textColor={colors.textLight}
                     value={stats.queued.toLocaleString()}
                     onPress={handleClearQueue}
                     disabled={isProcessing || stats.queued === 0}
@@ -325,8 +320,6 @@ export function DataManagementScreen({}: ScreenProps) {
                   <ActionRow
                     label="Delete all locations"
                     hint="Remove all stored locations from the database"
-                    color={colors.error}
-                    textColor={colors.textLight}
                     value={stats.total.toLocaleString()}
                     onPress={handleDeleteAllLocations}
                     disabled={isProcessing || stats.total === 0}
@@ -353,7 +346,13 @@ export function DataManagementScreen({}: ScreenProps) {
                     placeholder="90"
                   />
                   <Text style={[styles.daysLabel, { color: colors.textSecondary }]}>days</Text>
-                  <Button onPress={handleDeleteOlderThan} disabled={isProcessing} title="Delete" />
+                  <Button
+                    testID="delete-older-btn"
+                    onPress={handleDeleteOlderThan}
+                    disabled={isProcessing}
+                    title="Delete"
+                    variant="danger"
+                  />
                 </View>
               </View>
               <Divider />
@@ -389,20 +388,15 @@ export function DataManagementScreen({}: ScreenProps) {
   )
 }
 
-// ActionRow Component
 const ActionRow = ({
   label,
   hint,
-  color,
-  textColor,
   value,
   onPress,
   disabled
 }: {
   label: string
   hint: string
-  color: string
-  textColor: string
   value: string
   onPress: () => void
   disabled: boolean
@@ -414,14 +408,17 @@ const ActionRow = ({
       style={({ pressed }) => [styles.actionRow, pressed && { opacity: colors.pressedOpacity }]}
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      accessibilityLabel={`${label}, ${value}. ${hint}`}
     >
       <View style={styles.actionInfo}>
-        <Text style={[styles.actionLabel, { color }]}>{label}</Text>
-        <Text style={[styles.actionHint, { color: textColor }]}>{hint}</Text>
+        <Text style={[styles.actionLabel, { color: disabled ? colors.textDisabled : colors.error }]}>{label}</Text>
+        <Text style={[styles.actionHint, { color: disabled ? colors.textDisabled : colors.textLight }]}>{hint}</Text>
       </View>
-      <View style={[styles.actionBadge, { backgroundColor: color + "20" }]}>
-        <Text style={[styles.actionBadgeText, { color }]}>{value}</Text>
-      </View>
+      <Text style={[styles.actionCount, { color: disabled ? colors.textDisabled : colors.textSecondary }]}>
+        {value}
+      </Text>
     </Pressable>
   )
 }
@@ -455,13 +452,13 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: fontSizes.label,
-    ...fonts.bold
+    ...fonts.bold,
+    fontVariant: ["tabular-nums"]
   },
   hint: {
     fontSize: fontSizes.caption,
     ...fonts.regular,
     textAlign: "center",
-    fontStyle: "italic",
     lineHeight: lineHeights.caption,
     marginTop: space.sm
   },
@@ -488,14 +485,10 @@ const styles = StyleSheet.create({
     lineHeight: lineHeights.caption,
     marginTop: 2
   },
-  actionBadge: {
-    paddingHorizontal: space.md,
-    paddingVertical: 6,
-    borderRadius: radius.lg
-  },
-  actionBadgeText: {
+  actionCount: {
     fontSize: fontSizes.description,
-    ...fonts.bold
+    ...fonts.medium,
+    fontVariant: ["tabular-nums"]
   },
   daysInputRow: {
     flexDirection: "row",
