@@ -10,6 +10,7 @@ import type { MapRef, CameraRef, ViewStateChangeEvent, LngLatBounds } from "@map
 import type { NativeSyntheticEvent } from "react-native"
 import { Compass, Info, X } from "lucide-react-native"
 import { useIsFocused } from "@react-navigation/native"
+import { radius } from "@colota/shared"
 import { useTheme } from "../../../hooks/useTheme"
 import {
   DEFAULT_MAP_ZOOM,
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
     // Clears the close control: space.xs inset plus space.xs padding either side of a 20 icon
     paddingEnd: space.xxl,
     paddingVertical: space.lg,
-    borderRadius: 10,
+    borderRadius: radius.md,
     gap: space.sm,
     elevation: elevation.overlay
   },

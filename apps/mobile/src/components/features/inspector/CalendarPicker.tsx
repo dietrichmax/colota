@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   todayBadge: {
     paddingHorizontal: space.sm,
     paddingVertical: space.xxs,
-    borderRadius: 6
+    borderRadius: radius.xs
   },
   todayBadgeText: {
     fontSize: fontSizes.micro,
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     marginTop: space.sm,
     paddingHorizontal: space.lg,
     paddingVertical: space.sm,
-    borderRadius: 14
+    borderRadius: radius.sm
   },
   todayText: {
     fontSize: fontSizes.caption,

@@ -37,7 +37,9 @@ const RULES = [
   { name: "spacing", pattern: /(?:padding|margin|gap|rowGap|columnGap)[A-Za-z]*:\s*-?(?!0\b)\d/ },
   // A literal hides just as well behind an operator: `insets.bottom + 8` is the same drift.
   { name: "spacingExpression", pattern: /(?:padding|margin|gap|rowGap|columnGap)[A-Za-z]*:[^,\n}]*[-+*/]\s*\d/ },
-  { name: "radius", pattern: /borderRadius:\s*(?:4|8|12|16)\b/ },
+  // Inverted like spacing: radius names every corner the app draws, pill included, so any number
+  // here is a literal. 0 squares a corner off rather than setting one, and stays legal.
+  { name: "radius", pattern: /borderRadius:\s*-?(?!0\b)\d/ },
   { name: "fontSize", pattern: /fontSize:\s*(?:10|11|12|13|14|15|16|18|20|24|28)\b/ },
   { name: "iconSize", pattern: /size=\{(?:16|20|24)\}/ },
   // These three ban a property outright rather than a value, because the scale covers every case:
@@ -90,7 +92,7 @@ describe("design system guard", () => {
     expect(caught("<Icon size={20} />")).toEqual(["iconSize"])
     expect(caught("<Icon size={size.icon.md} />")).toEqual([])
     // No constant names these, so they are not drift and rounding them would move the design.
-    expect(caught("{ borderRadius: 10 }")).toEqual([])
+    expect(caught("{ borderRadius: radius.md }")).toEqual([])
     expect(caught("<Icon size={28} />")).toEqual([])
   })
 
@@ -99,6 +101,8 @@ describe("design system guard", () => {
 
     // The three the value list could never see: between two steps, below the grid, and behind a plus.
     expect(caught("{ marginTop: 20 }")).toEqual(["spacing"])
+    expect(caught("{ borderRadius: 10 }")).toEqual(["radius"])
+    expect(caught("{ borderRadius: 0 }")).toEqual([])
     expect(caught("{ gap: 3 }")).toEqual(["spacing"])
     expect(caught("{ paddingBottom: insets.bottom + 8 }")).toEqual(["spacingExpression"])
     // 0 cancels a spacing value rather than setting one, and a token composes freely.

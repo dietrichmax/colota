@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
     marginEnd: space.md

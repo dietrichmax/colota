@@ -58,8 +58,7 @@ jest.mock("../../hooks/useTheme", () => ({
       error: "#ef4444",
       card: "#fff",
       textOnPrimary: "#fff",
-      textDisabled: "#d1d5db",
-      borderRadius: 12
+      textDisabled: "#d1d5db"
     }
   })
 }))

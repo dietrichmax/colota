@@ -65,8 +65,7 @@ jest.mock("../../hooks/useTheme", () => ({
       card: "#fff",
       surface: "#fff",
       backgroundElevated: "#f9fafb",
-      textOnPrimary: "#fff",
-      borderRadius: 8
+      textOnPrimary: "#fff"
     }
   })
 }))
