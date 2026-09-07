@@ -15,7 +15,7 @@ import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
 import type { UnitSystem, TimeFormat } from "../utils/geo"
-import { space } from "../constants"
+import { space, STATE_LAYER_ALPHA } from "../constants"
 
 export function AppearanceScreen({}: ScreenProps) {
   const { preference, setPreference, colors } = useTheme()
@@ -178,7 +178,7 @@ export function AppearanceScreen({}: ScreenProps) {
                   <Pressable
                     accessibilityRole="button"
                     onPress={resetMapStyle}
-                    style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+                    android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
                   >
                     <Text style={[styles.mapStyleHint, { color: colors.primary }]}>
                       {t("appearance.mapStyle.reset")}

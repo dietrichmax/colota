@@ -40,7 +40,7 @@ import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { logger } from "../utils/logger"
 import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
-import { size, space } from "../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../constants"
 
 type ExportInterval = "daily" | "weekly" | "monthly"
 type ExportMode = "all" | "incremental"
@@ -413,7 +413,8 @@ export function AutoExportScreen(_props: ScreenProps) {
           <Card>
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.directoryRow, pressed && { opacity: colors.pressedOpacity }]}
+              android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+              style={styles.directoryRow}
               onPress={handlePickDirectory}
             >
               <FolderOpen size={size.icon.md} color={colors.primary} />
@@ -647,7 +648,8 @@ export function AutoExportScreen(_props: ScreenProps) {
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`Share ${file.name}`}
-                      style={({ pressed }) => [styles.shareButton, pressed && { opacity: colors.pressedOpacity }]}
+                      android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA, borderless: true }}
+                      style={styles.shareButton}
                       onPress={() => handleShareFile(file)}
                     >
                       <Share2 size={size.icon.md} color={colors.primary} />

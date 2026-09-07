@@ -12,7 +12,7 @@ import { useTracking } from "../../../contexts/TrackingProvider"
 import { ServerStatus, ConnectionStatusProps } from "../../../types/global"
 import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { size, space } from "../../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { radius } from "@colota/shared"
 
 export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps) {
@@ -88,11 +88,8 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
     <Pressable
       accessibilityRole="button"
       onPress={() => navigation.navigate("Connection")}
-      style={({ pressed }) => [
-        styles.container,
-        { backgroundColor: colors.card },
-        pressed && { opacity: colors.pressedOpacity }
-      ]}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      style={[styles.container, { backgroundColor: colors.card }]}
     >
       <View style={[styles.dot, { backgroundColor: config.color }]} />
       <Text style={[styles.host, { color: colors.text }]} numberOfLines={1}>
@@ -106,6 +103,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
 
 const styles = StyleSheet.create({
   container: {
+    overflow: "hidden",
     flexDirection: "row",
     alignItems: "center",
     padding: space.lg,

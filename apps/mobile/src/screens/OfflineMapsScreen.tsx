@@ -23,7 +23,8 @@ import {
   WORLD_MAP_ZOOM,
   size,
   space,
-  elevation
+  elevation,
+  STATE_LAYER_ALPHA
 } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
@@ -157,11 +158,8 @@ const DownloadForm = memo(
                   onPress={onCancelDownload}
                   hitSlop={HIT_SLOP_MD}
                   accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.cancelBtn,
-                    { backgroundColor: colors.error + "15" },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
+                  android_ripple={{ color: colors.error + STATE_LAYER_ALPHA }}
+                  style={[styles.cancelBtn, { backgroundColor: colors.error + "15" }]}
                 >
                   <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel download</Text>
                 </Pressable>
@@ -693,7 +691,8 @@ export function OfflineMapsScreen({}: ScreenProps) {
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ disabled: item.isActive }}
-              style={({ pressed }) => [styles.info, pressed && { opacity: colors.pressedOpacity }]}
+              android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+              style={styles.info}
               onPress={() => fitToArea(item.name)}
               disabled={item.isActive}
             >
@@ -723,11 +722,8 @@ export function OfflineMapsScreen({}: ScreenProps) {
                 disabled={isCanceling}
                 hitSlop={HIT_SLOP_MD}
                 accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.cancelAreaBtn,
-                  { backgroundColor: colors.error + "15" },
-                  pressed && { opacity: colors.pressedOpacity }
-                ]}
+                android_ripple={{ color: colors.error + STATE_LAYER_ALPHA }}
+                style={[styles.cancelAreaBtn, { backgroundColor: colors.error + "15" }]}
               >
                 {isCanceling ? (
                   <ActivityIndicator size="small" color={colors.error} />
@@ -890,6 +886,7 @@ const styles = StyleSheet.create({
   progressFill: { height: "100%", borderRadius: 3 },
   progressSub: { fontSize: fontSizes.caption, ...fonts.regular },
   cancelBtn: {
+    overflow: "hidden",
     padding: space.md,
     borderRadius: radius.sm,
     alignItems: "center",
@@ -913,6 +910,7 @@ const styles = StyleSheet.create({
   },
   actionBtns: { flexDirection: "row", gap: space.sm, alignItems: "center" },
   cancelAreaBtn: {
+    overflow: "hidden",
     justifyContent: "center",
     minHeight: size.chip,
     paddingHorizontal: space.md,

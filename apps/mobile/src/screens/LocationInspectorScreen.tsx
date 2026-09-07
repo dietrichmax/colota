@@ -30,7 +30,7 @@ import {
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { showAlert, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
-import { size, space } from "../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../constants"
 
 type TabType = "map" | "trips" | "data"
 
@@ -89,7 +89,8 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         accessibilityRole="button"
         accessibilityLabel="Location summary"
         onPress={() => navigation.navigate("Location Summary")}
-        style={({ pressed }) => [styles.headerBtn, pressed && { opacity: colors.pressedOpacity }]}
+        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true }}
+        style={styles.headerBtn}
       >
         <ChartNoAxesColumn size={size.icon.md} color={colors.text} />
       </Pressable>

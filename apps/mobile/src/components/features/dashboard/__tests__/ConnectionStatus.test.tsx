@@ -12,8 +12,7 @@ jest.mock("../../../../hooks/useTheme", () => ({
       textLight: "#9ca3af",
       text: "#000",
       card: "#fff",
-      border: "#e5e7eb",
-      pressedOpacity: 0.6
+      border: "#e5e7eb"
     }
   })
 }))

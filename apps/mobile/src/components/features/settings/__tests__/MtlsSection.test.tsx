@@ -39,8 +39,7 @@ jest.mock("../../../../hooks/useTheme", () => ({
       placeholder: "#999",
       error: "#f00",
       warning: "#f80",
-      success: "#0a0",
-      pressedOpacity: 0.7
+      success: "#0a0"
     }
   })
 }))

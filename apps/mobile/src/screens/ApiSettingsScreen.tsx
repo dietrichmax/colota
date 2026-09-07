@@ -41,7 +41,7 @@ import {
   isTraccarJsonFormat,
   isOverlandFormat
 } from "../utils/apiPayload"
-import { HIT_SLOP_LG, space } from "../constants"
+import { HIT_SLOP_LG, space, STATE_LAYER_ALPHA } from "../constants"
 import { radius } from "@colota/shared"
 
 type LocalCustomField = CustomField & { id: number }
@@ -560,7 +560,8 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
                 onPress={handleResetAll}
                 hitSlop={HIT_SLOP_LG}
                 accessibilityRole="button"
-                style={({ pressed }) => [styles.resetAllButton, pressed && { opacity: colors.pressedOpacity }]}
+                android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
+                style={styles.resetAllButton}
               >
                 <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>Reset all</Text>
               </Pressable>
@@ -711,7 +712,8 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
               onPress={handleCopyPayload}
               hitSlop={HIT_SLOP_LG}
               accessibilityRole="button"
-              style={({ pressed }) => [styles.copyButton, pressed && { opacity: colors.pressedOpacity }]}
+              android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
+              style={styles.copyButton}
             >
               <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
                 {copied ? "Copied!" : "Copy"}

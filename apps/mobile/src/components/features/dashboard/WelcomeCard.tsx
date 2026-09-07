@@ -11,7 +11,7 @@ import { useTracking } from "../../../contexts/TrackingProvider"
 import { fontSizes, fonts, type } from "../../../styles/typography"
 import { Button } from "../../ui/Button"
 import { Card } from "../../ui/Card"
-import { size, space } from "../../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { radius } from "@colota/shared"
 
 interface WelcomeCardProps {
@@ -56,7 +56,7 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
       <Pressable
         accessibilityRole="button"
         onPress={onPress}
-        style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
       >
         {content}
       </Pressable>
@@ -104,7 +104,7 @@ export function WelcomeCard({
             <Pressable
               accessibilityRole="button"
               onPress={onNavigateToRequestFormat}
-              style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+              android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
             >
               <Text style={[styles.link, { color: colors.primaryDark }]}>Request format</Text>
             </Pressable>
@@ -112,7 +112,7 @@ export function WelcomeCard({
           <Pressable
             accessibilityRole="button"
             onPress={onNavigateToTrackingSync}
-            style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
           >
             <Text style={[styles.link, { color: colors.primaryDark }]}>Tracking presets</Text>
           </Pressable>

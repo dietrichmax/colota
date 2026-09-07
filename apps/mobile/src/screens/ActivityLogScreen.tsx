@@ -26,7 +26,7 @@ import { logger, LOG_LEVELS, DEFAULT_LOG_LEVELS, type LogLevel } from "../utils/
 import { getMergedLogs, exportLogs, MergedLogEntry } from "../utils/logExport"
 import NativeLocationService from "../services/NativeLocationService"
 import { ScreenProps } from "../types/global"
-import { HIT_SLOP_MD, size, space, elevation } from "../constants"
+import { HIT_SLOP_MD, size, space, elevation, STATE_LAYER_ALPHA } from "../constants"
 import { radius } from "@colota/shared"
 
 type FilterLevel = LogLevel
@@ -111,7 +111,8 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
           accessibilityState={{ disabled: exporting }}
           onPress={handleExport}
           disabled={exporting}
-          style={({ pressed }) => [styles.headerButton, pressed && { opacity: colors.pressedOpacity }]}
+          android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true }}
+          style={styles.headerButton}
         >
           {exporting ? (
             <ActivityIndicator size={size.icon.md} color={colors.primary} />

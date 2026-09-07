@@ -48,7 +48,6 @@ export interface ThemeColors {
 
   // Utility
   overlay: string
-  pressedOpacity: number
   borderRadius: number
   textOnPrimary: string
 }
@@ -91,7 +90,6 @@ export const lightColors: ThemeColors = {
   overlay: "rgba(0, 0, 0, 0.5)",
 
   // Special
-  pressedOpacity: 0.7,
   borderRadius: 8,
   textOnPrimary: "#FFFFFF"
 }
@@ -134,7 +132,6 @@ export const darkColors: ThemeColors = {
   overlay: "rgba(0, 0, 0, 0.7)",
 
   // Special
-  pressedOpacity: 0.7,
   borderRadius: 8,
   textOnPrimary: "#121212"
 }
