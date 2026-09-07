@@ -5,6 +5,7 @@
 
 import React from "react"
 import { MapPin } from "lucide-react-native"
+import { size } from "../../constants"
 import { useTheme } from "../../hooks/useTheme"
 import { registerDisclosureCallback } from "../../services/LocationServicePermission"
 import { DisclosureModal } from "./DisclosureModal"
@@ -18,7 +19,7 @@ export function LocationDisclosureModal() {
 
   return (
     <DisclosureModal
-      icon={<MapPin size={28} color={colors.primary} />}
+      icon={<MapPin size={size.icon.lg} color={colors.primary} />}
       title="Location data collection"
       paragraphs={[
         "Colota collects location data to enable GPS tracking and sending your position to your configured server, even when the app is closed or not in use.",
