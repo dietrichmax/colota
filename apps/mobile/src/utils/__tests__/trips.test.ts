@@ -439,22 +439,22 @@ describe("boundarySplits", () => {
 
 describe("formatDuration", () => {
   it("formats minutes only", () => {
-    expect(formatDuration(300)).toBe("5m")
-    expect(formatDuration(0)).toBe("0m")
-    expect(formatDuration(59)).toBe("0m")
-    expect(formatDuration(60)).toBe("1m")
+    expect(formatDuration(300)).toBe("5min")
+    expect(formatDuration(0)).toBe("0min")
+    expect(formatDuration(59)).toBe("0min")
+    expect(formatDuration(60)).toBe("1min")
   })
 
   it("formats hours and minutes", () => {
-    expect(formatDuration(3600)).toBe("1h 0m")
-    expect(formatDuration(3660)).toBe("1h 1m")
-    expect(formatDuration(7200)).toBe("2h 0m")
-    expect(formatDuration(5400)).toBe("1h 30m")
+    expect(formatDuration(3600)).toBe("1h 0min")
+    expect(formatDuration(3660)).toBe("1h 1min")
+    expect(formatDuration(7200)).toBe("2h 0min")
+    expect(formatDuration(5400)).toBe("1h 30min")
   })
 
   it("clamps negative values to 0", () => {
-    expect(formatDuration(-1)).toBe("0m")
-    expect(formatDuration(-3600)).toBe("0m")
+    expect(formatDuration(-1)).toBe("0min")
+    expect(formatDuration(-3600)).toBe("0min")
   })
 })
 

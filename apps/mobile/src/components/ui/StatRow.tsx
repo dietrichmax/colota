@@ -34,7 +34,9 @@ export function StatRow({ icon: Icon, label, value, children, testID }: StatRowP
         <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       </View>
       <View style={styles.trailing}>
-        <Text style={[styles.value, { color: colors.text }]}>{value}</Text>
+        <Text numberOfLines={1} style={[styles.value, { color: colors.text }]}>
+          {value}
+        </Text>
         {children}
       </View>
     </View>
@@ -60,11 +62,15 @@ const styles = StyleSheet.create({
   trailing: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm
+    gap: space.sm,
+    flexShrink: 1,
+    minWidth: 0
   },
   value: {
     fontSize: fontSizes.label,
     ...fonts.medium,
-    fontVariant: ["tabular-nums"]
+    fontVariant: ["tabular-nums"],
+    flexShrink: 1,
+    textAlign: "right"
   }
 })
