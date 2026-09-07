@@ -22,7 +22,7 @@ interface WelcomeCardProps {
   onStartTracking: () => void
   onNavigateToConnection: () => void
   onNavigateToTrackingSync: () => void
-  onNavigateToApiConfig: () => void
+  onNavigateToRequestFormat: () => void
 }
 
 interface ChecklistItemProps {
@@ -74,7 +74,7 @@ export function WelcomeCard({
   onStartTracking,
   onNavigateToConnection,
   onNavigateToTrackingSync,
-  onNavigateToApiConfig
+  onNavigateToRequestFormat
 }: WelcomeCardProps) {
   const {
     settings: { isOfflineMode }
@@ -103,10 +103,10 @@ export function WelcomeCard({
           {!isOfflineMode && (
             <Pressable
               accessibilityRole="button"
-              onPress={onNavigateToApiConfig}
+              onPress={onNavigateToRequestFormat}
               style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
             >
-              <Text style={[styles.link, { color: colors.primaryDark }]}>API field mapping</Text>
+              <Text style={[styles.link, { color: colors.primaryDark }]}>Request format</Text>
             </Pressable>
           )}
           <Pressable

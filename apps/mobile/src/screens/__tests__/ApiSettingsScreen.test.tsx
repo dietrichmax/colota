@@ -251,12 +251,14 @@ describe("ApiSettingsScreen", () => {
       expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
     })
 
-    it("example payload changes format for GET method", () => {
-      const { getByText } = renderScreen()
+    it("calls the example a request under GET, because a GET carries no payload", () => {
+      const { getByText, getByTestId } = renderScreen()
 
-      fireEvent.press(getByText(/^GET$/))
+      expect(getByText("Example payload")).toBeTruthy()
 
-      expect(getByText("EXAMPLE REQUEST")).toBeTruthy()
+      fireEvent.press(getByTestId("http-method-get"))
+
+      expect(getByText("Example request")).toBeTruthy()
     })
   })
 

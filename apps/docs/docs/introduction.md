@@ -34,11 +34,11 @@ Colota has twenty-eight screens, each focused on a specific task:
 | Screen | Purpose |
 | --- | --- |
 | **Dashboard** | Live map with current coordinates, today's track overlay, tracking controls, database stats, and geofence status |
-| **Settings** | Hub linking to Connection, Tracking and Sync, API config, Tracking profiles, Appearance and data/about screens |
+| **Settings** | Hub linking to Connection, Tracking and Sync, Request format, Tracking profiles, Appearance and data/about screens |
 | **Connection** | Server endpoint URL, offline mode toggle and connection test |
 | **Tracking & sync** | GPS polling interval, distance filter, accuracy threshold and sync strategy preset |
 | **Appearance** | Light/dark theme, unit system, time format and custom map tile URLs |
-| **API Config** | Endpoint field mapping with templates for Dawarich, GeoPulse, Overland, OwnTracks, PhoneTrack, Reitti, Traccar or custom backends |
+| **Request format** | How the request is shaped: the backend template, the HTTP method, the field names and any custom fields |
 | **Backend template** | Pick the backend Colota formats its payload for, each option describing what it sends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | **mTLS Settings** | Client certificate (mTLS) import or KeyChain selection and trusted server CA management |
@@ -66,7 +66,7 @@ Colota has twenty-eight screens, each focused on a specific task:
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Dashboard.png", label: "Dashboard" }, { src: "/img/screenshots/Settings.png", label: "Settings" }, { src: "/img/screenshots/ApiFieldMapping.png", label: "API Config" }, { src: "/img/screenshots/Authentication.png", label: "Auth Settings" }, { src: "/img/screenshots/Geofences.png", label: "Geofences" }, { src: "/img/screenshots/GeofenceEditor.png", label: "Geofence Editor" }, { src: "/img/screenshots/OfflineMaps.png", label: "Offline maps" }, { src: "/img/screenshots/TrackingProfiles.png", label: "Profile Editor" }, { src: "/img/screenshots/LocationHistory.png", label: "Location History" }, { src: "/img/screenshots/TripDetails.png", label: "Trip Detail" }, { src: "/img/screenshots/Trips.png", label: "Trips" }, { src: "/img/screenshots/ExportData.png", label: "Export" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-export" }, { src: "/img/screenshots/DataManagement.png", label: "Data management" }, { src: "/img/screenshots/DarkMode.png", label: "Dark Mode" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Dashboard.png", label: "Dashboard" }, { src: "/img/screenshots/Settings.png", label: "Settings" }, { src: "/img/screenshots/ApiFieldMapping.png", label: "Request format" }, { src: "/img/screenshots/Authentication.png", label: "Auth Settings" }, { src: "/img/screenshots/Geofences.png", label: "Geofences" }, { src: "/img/screenshots/GeofenceEditor.png", label: "Geofence Editor" }, { src: "/img/screenshots/OfflineMaps.png", label: "Offline maps" }, { src: "/img/screenshots/TrackingProfiles.png", label: "Profile Editor" }, { src: "/img/screenshots/LocationHistory.png", label: "Location History" }, { src: "/img/screenshots/TripDetails.png", label: "Trip Detail" }, { src: "/img/screenshots/Trips.png", label: "Trips" }, { src: "/img/screenshots/ExportData.png", label: "Export" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-export" }, { src: "/img/screenshots/DataManagement.png", label: "Data management" }, { src: "/img/screenshots/DarkMode.png", label: "Dark Mode" }, ]} />
 
 ## Architecture
 

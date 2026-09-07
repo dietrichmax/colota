@@ -52,7 +52,7 @@ const defaultProps = {
   onStartTracking: jest.fn(),
   onNavigateToConnection: jest.fn(),
   onNavigateToTrackingSync: jest.fn(),
-  onNavigateToApiConfig: jest.fn()
+  onNavigateToRequestFormat: jest.fn()
 }
 
 describe("WelcomeCard", () => {
@@ -81,10 +81,10 @@ describe("WelcomeCard", () => {
       expect(getByText("2. Configure your server endpoint")).toBeTruthy()
     })
 
-    it("shows API field mapping link", () => {
+    it("shows the request format link", () => {
       const { getByText } = render(<WelcomeCard {...defaultProps} />)
 
-      expect(getByText("API field mapping")).toBeTruthy()
+      expect(getByText("Request format")).toBeTruthy()
     })
 
     it("shows Tracking presets link", () => {
@@ -105,10 +105,10 @@ describe("WelcomeCard", () => {
       expect(queryByText("2. Configure your server endpoint")).toBeNull()
     })
 
-    it("hides API field mapping link", () => {
+    it("hides the request format link", () => {
       const { queryByText } = render(<WelcomeCard {...defaultProps} />)
 
-      expect(queryByText("API field mapping")).toBeNull()
+      expect(queryByText("Request format")).toBeNull()
     })
 
     it("still shows Tracking presets link", () => {
@@ -148,12 +148,12 @@ describe("WelcomeCard", () => {
     expect(defaultProps.onNavigateToConnection).toHaveBeenCalledTimes(1)
   })
 
-  it("calls onNavigateToApiConfig when API field mapping is pressed", () => {
+  it("calls onNavigateToRequestFormat when the request format link is pressed", () => {
     const { getByText } = render(<WelcomeCard {...defaultProps} />)
 
-    fireEvent.press(getByText("API field mapping"))
+    fireEvent.press(getByText("Request format"))
 
-    expect(defaultProps.onNavigateToApiConfig).toHaveBeenCalledTimes(1)
+    expect(defaultProps.onNavigateToRequestFormat).toHaveBeenCalledTimes(1)
   })
 
   it("marks Start tracking as completed when tracking is active", () => {
