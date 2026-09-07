@@ -71,7 +71,8 @@ jest.mock("../../../../styles/typography", () => ({
   fonts: { regular: {}, bold: {}, semiBold: {} },
   // The real scale, not stubs: these tests render styles that read a named size, and a
   // stubbed object would let a renamed key through.
-  fontSizes: jest.requireActual("@colota/shared").fontSizes
+  fontSizes: jest.requireActual("@colota/shared").fontSizes,
+  lineHeights: jest.requireActual("../../../../styles/typography").lineHeights
 }))
 
 jest.mock("../../../../utils/geo", () => ({
