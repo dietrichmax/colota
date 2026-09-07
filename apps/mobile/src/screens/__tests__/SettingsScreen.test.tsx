@@ -245,7 +245,7 @@ describe("SettingsScreen", () => {
 
     const { getByText } = render(<SettingsScreen {...mockProps} />)
 
-    expect(getByText("Every 30s · syncs every 5m")).toBeTruthy()
+    expect(getByText("Every 30s · syncs every 5min")).toBeTruthy()
   })
 
   it("says instantly rather than every 0s when nothing is batched", () => {
