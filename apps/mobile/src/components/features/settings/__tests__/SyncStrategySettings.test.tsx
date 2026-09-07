@@ -213,22 +213,21 @@ describe("SyncStrategySettings", () => {
     })
   })
 
-  describe("sync interval chips", () => {
-    it("renders all sync interval options inline", () => {
-      const { getByText, getAllByText } = renderComponent()
+  describe("sync interval", () => {
+    it("renders every option inline, Custom included", () => {
+      const { getByTestId } = renderComponent()
 
-      expect(getAllByText("Instant").length).toBeGreaterThan(0)
-      expect(getByText("1 min")).toBeTruthy()
-      expect(getByText("5 min")).toBeTruthy()
-      expect(getByText("15 min")).toBeTruthy()
-      // "Custom" labels both the preset row and this chip.
-      expect(getAllByText("Custom").length).toBeGreaterThan(0)
+      expect(getByTestId("sync-interval-0")).toBeTruthy()
+      expect(getByTestId("sync-interval-60")).toBeTruthy()
+      expect(getByTestId("sync-interval-300")).toBeTruthy()
+      expect(getByTestId("sync-interval-900")).toBeTruthy()
+      expect(getByTestId("sync-interval-custom")).toBeTruthy()
     })
 
     it("selecting a sync interval sets preset to custom", () => {
-      const { getByText } = renderComponent()
+      const { getByTestId } = renderComponent()
 
-      fireEvent.press(getByText("5 min"))
+      fireEvent.press(getByTestId("sync-interval-300"))
 
       expect(mockOnSettingsChange).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -242,6 +241,30 @@ describe("SyncStrategySettings", () => {
           syncPreset: "custom"
         })
       )
+    })
+
+    it("opening Custom saves nothing and keeps the interval you already had", () => {
+      const { getByTestId, getByDisplayValue } = renderComponent({ syncInterval: 300 })
+
+      fireEvent.press(getByTestId("sync-interval-custom"))
+
+      // The old code wrote a hardcoded 1800 here, discarding the interval and restarting tracking.
+      expect(mockOnSettingsChange).not.toHaveBeenCalled()
+      expect(mockOnDebouncedSave).not.toHaveBeenCalled()
+      expect(mockOnImmediateSave).not.toHaveBeenCalled()
+      expect(getByDisplayValue("300")).toBeTruthy()
+    })
+
+    it("leaves Custom when a preset is pressed, even though the value was never off-preset", () => {
+      const { getByTestId, queryByDisplayValue } = renderComponent({ syncInterval: 300 })
+
+      fireEvent.press(getByTestId("sync-interval-custom"))
+      expect(queryByDisplayValue("300")).toBeTruthy()
+
+      fireEvent.press(getByTestId("sync-interval-60"))
+
+      expect(queryByDisplayValue("300")).toBeNull()
+      expect(mockOnDebouncedSave).toHaveBeenCalledWith(expect.objectContaining({ syncInterval: 60 }))
     })
   })
 

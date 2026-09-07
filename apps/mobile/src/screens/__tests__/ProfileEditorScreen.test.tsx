@@ -126,6 +126,15 @@ jest.mock("../../components", () => {
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
+    NumericInput: ({ label, value, onChange, onBlur, unit, hint }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        hint ? R.createElement(Text, null, hint) : null,
+        R.createElement(require("react-native").TextInput, { value, onChangeText: onChange, onBlur }),
+        unit ? R.createElement(Text, null, unit) : null
+      ),
     Divider: () => R.createElement(View, null),
     SettingRow: ({ label, hint, children }: any) =>
       R.createElement(
@@ -514,6 +523,18 @@ describe("ProfileEditorScreen", () => {
       await waitFor(() => expect(mockShowConfirm).toHaveBeenCalled())
       expect(mockDeleteProfile).not.toHaveBeenCalled()
       expect(mockGoBack).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("custom sync interval", () => {
+    it("opens Custom on the interval the profile already has, not on an invented one", async () => {
+      const { getByText, getByDisplayValue } = renderEditProfile(1)
+
+      await waitFor(() => expect(getByDisplayValue("Existing Profile")).toBeTruthy())
+      fireEvent.press(getByText("Custom"))
+
+      // The old code seeded a hardcoded 1800 here, throwing away the profile's 60.
+      expect(getByDisplayValue("60")).toBeTruthy()
     })
   })
 })

@@ -210,7 +210,8 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   }, [profile, isEditing, profileId, navigation])
 
   const isSpeed = profile.condition.type === "speed_above" || profile.condition.type === "speed_below"
-  const isCustomSyncInterval = !SYNC_INTERVAL_PRESETS.includes(profile.syncInterval)
+  const [customSyncOpen, setCustomSyncOpen] = useState(false)
+  const isCustomSyncInterval = customSyncOpen || !SYNC_INTERVAL_PRESETS.includes(profile.syncInterval)
 
   return (
     <Container>
@@ -353,14 +354,11 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                 selected={isCustomSyncInterval ? "custom" : String(profile.syncInterval)}
                 onSelect={(value) => {
                   if (value === "custom") {
-                    // Seeding a value is what makes the mode custom; the field takes over from here.
-                    if (!isCustomSyncInterval) {
-                      const customValue = 1800
-                      setSyncIntervalStr(customValue.toString())
-                      setProfile((prev) => ({ ...prev, syncInterval: customValue }))
-                    }
+                    setSyncIntervalStr(profile.syncInterval.toString())
+                    setCustomSyncOpen(true)
                     return
                   }
+                  setCustomSyncOpen(false)
                   setProfile((prev) => ({ ...prev, syncInterval: Number(value) }))
                 }}
               />
@@ -385,7 +383,6 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                       }
                     }}
                     unit="seconds"
-                    placeholder="1800"
                     hint="Custom interval in seconds"
                   />
                 </View>
