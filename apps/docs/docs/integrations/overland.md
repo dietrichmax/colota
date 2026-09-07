@@ -49,7 +49,7 @@ Each upload is a single POST containing one or more locations as GeoJSON Feature
 
 ## Configuration
 
-**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & Sync > Advanced > Network Settings > Batch Size**. Larger bundles mean fewer round trips but bigger payloads on flaky networks.
+**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & sync > Advanced > Network Settings > Batch Size**. Larger bundles mean fewer round trips but bigger payloads on flaky networks.
 
 **HTTP method**: POST only. The Overland protocol does not support GET; the option is hidden when this template is selected.
 
@@ -57,7 +57,7 @@ Each upload is a single POST containing one or more locations as GeoJSON Feature
 
 ## Device Identifier
 
-Your server sees this device as the value of the `device_id` custom field, defaulting to `"colota"`. Edit it under **Settings > API Settings > Custom Fields** if you run multiple devices. If you previously set `tid` (OwnTracks) or `id` (Traccar) as a custom field, that value is reused so you don't have to reconfigure.
+Your server sees this device as the value of the `device_id` custom field, defaulting to `"colota"`. Edit it under **Settings > API Settings > Custom fields** if you run multiple devices. If you previously set `tid` (OwnTracks) or `id` (Traccar) as a custom field, that value is reused so you don't have to reconfigure.
 
 ## Dawarich Users
 

@@ -13,7 +13,7 @@ Colota includes built-in presets that configure tracking interval, movement thre
 | **Power Saver** | 60s      | 2m       | 15 minutes    | Long trips      |
 | **Custom**      | 1s-∞     | 0m-∞     | 0s-∞          | Advanced users  |
 
-Select a preset in **Settings → Tracking & Sync** or choose **Custom** to configure each parameter individually.
+Select a preset in **Settings → Tracking & sync** or choose **Custom** to configure each parameter individually.
 
 ## Sync Condition
 
@@ -32,8 +32,8 @@ This is useful for:
 - **Private backends** - Only sync when on your home network or VPN
 - **Roaming** - Prevent expensive data charges while traveling abroad
 
-Configure this in **Settings → Tracking & Sync → Advanced Settings → Network Settings → Sync Only On**.
+Configure this in **Settings → Tracking & sync → Network settings → Sync only on**.
 
 ## Offline Mode
 
-In [offline mode](/docs/configuration/server-settings#offline-mode), network settings (sync interval, retry behavior, sync condition) are hidden since no syncing occurs. Preset descriptions adjust to show only tracking parameters. For displaying the maps network requests are still made to maps.mxd.codes. See [Offline Maps](/docs/guides/offline-maps) for predownloading maps.
+In [offline mode](/docs/configuration/server-settings#offline-mode), network settings (sync interval, retry behavior, sync condition) are hidden since no syncing occurs. Preset descriptions adjust to show only tracking parameters. For displaying the maps network requests are still made to maps.mxd.codes. See [Offline maps](/docs/guides/offline-maps) for predownloading maps.

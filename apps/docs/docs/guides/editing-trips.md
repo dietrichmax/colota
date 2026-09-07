@@ -65,6 +65,6 @@ Colota normally discards trips that never travel more than 100 m, which keeps st
 
 ## Related
 
-- [Data Management](data-management.md) - deleting trips and individual points
-- [Backup & Restore](backup-restore.md) - what a backup includes
+- [Data management](data-management.md) - deleting trips and individual points
+- [Backup & restore](backup-restore.md) - what a backup includes
 - [Troubleshooting](troubleshooting.md) - other history and tracking issues

@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Tracking Settings
 
-Found under **Settings → Tracking & Sync → Tracking Configuration**.
+Found under **Settings → Tracking & sync → Tracking configuration**.
 
 ## Available Settings
 
@@ -55,5 +55,5 @@ Colota drops these automatically by comparing the chip's reported speed against 
 ## See also
 
 - [Sync Presets](sync-presets.md) - how often the queue is flushed to your server, and on which connections
-- [Tracking Profiles](/docs/guides/tracking-profiles) - switch interval and movement threshold automatically on charging, speed or a stationary phone
+- [Tracking profiles](/docs/guides/tracking-profiles) - switch interval and movement threshold automatically on charging, speed or a stationary phone
 - [Geofencing](/docs/guides/geofencing) - pause GPS entirely inside a zone

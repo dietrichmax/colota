@@ -15,7 +15,7 @@ HTTPS is enforced for all public server endpoints. HTTP is only allowed for priv
 Colota's HTTPS chain validation accepts two trust sources, either of which is sufficient:
 
 1. **System CAs** that ship with Android - the normal public web (Let's Encrypt, DigiCert, etc.)
-2. **In-app imported CA** added via Settings → Connection → Authentication & Headers → Client Certificate (mTLS) → Trusted Server CA. One slot, trusted only by Colota.
+2. **In-app imported CA** added via Settings → Connection → Authentication & headers → Client Certificate (mTLS) → Trusted Server CA. One slot, trusted only by Colota.
 
 User-installed device CAs (from Android Settings -> Encryption & credentials) are not honored, so malware or a coerced profile that plants a CA in the device store can't intercept Colota's sync. Self-hosted users running a private CA should import it via the in-app path.
 
@@ -37,7 +37,7 @@ The database is not accessible to other apps (standard Android sandboxing).
 
 ## Encrypted Backups
 
-Colota can produce a single password-encrypted archive of your full dataset (locations, settings, geofences, credentials) for off-device storage or device migration. See the [Backup & Restore guide](/docs/guides/backup-restore) for the user-facing flow. The relevant security properties:
+Colota can produce a single password-encrypted archive of your full dataset (locations, settings, geofences, credentials) for off-device storage or device migration. See the [Backup & restore guide](/docs/guides/backup-restore) for the user-facing flow. The relevant security properties:
 
 - **Cipher**: AES-256-GCM, chunked at 1 MiB of plaintext per chunk. Each chunk's GCM tag binds the file header as additional authenticated data, so any flip in the header (KDF parameters, salt, nonce prefix) invalidates the very first tag.
 - **Key derivation**: Argon2id with 64 MiB memory, 3 iterations and 1 lane on standard devices; 32 MiB on devices flagged as low-RAM by Android. The salt is 32 bytes from `SecureRandom`, fresh per backup.

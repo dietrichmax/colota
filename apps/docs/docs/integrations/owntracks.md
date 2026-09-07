@@ -13,7 +13,7 @@ sidebar_position: 3
    - Go to **Settings > API Settings**
    - Select the **OwnTracks** template
    - Set your endpoint URL, e.g. `https://owntracks.yourdomain.com/pub`
-   - If your Recorder uses HTTP Basic Auth, configure it in **Settings > Authentication & Headers**
+   - If your Recorder uses HTTP Basic Auth, configure it in **Settings > Authentication & headers**
 
 ## Payload Format
 

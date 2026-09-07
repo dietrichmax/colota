@@ -10,7 +10,7 @@ Reference for the HTTP requests Colota sends to your server.
 
 **Method:** `POST` (default) or `GET`
 
-Configure the HTTP method in **Settings → API Field Mapping → HTTP Method**.
+Configure the HTTP method in **Settings → API field mapping → HTTP method**.
 
 ### POST (default)
 
@@ -86,7 +86,7 @@ A zone [heartbeat](/docs/guides/geofencing) produces the same kind of synthetic 
 still inside the zone: the zone centre, `acc` 0, timestamped when the heartbeat fired. Filter on both
 if you want to tell app-generated points from real fixes.
 
-### Custom Fields
+### Custom fields
 
 Custom static fields (configured in API Settings) are added to the payload first, then location fields are added. If a custom field has the same name as a location field, the location field overwrites it.
 
@@ -150,7 +150,7 @@ Your server only needs to return a 2xx status code. The response body is not rea
 There is no distinction between 4xx and 5xx in retry behavior - all failures are retried indefinitely,
 and failed items stay in the queue until they succeed.
 
-Clearing the queue in **Settings > Data Management** deletes those locations outright, not just their
+Clearing the queue in **Settings > Data management** deletes those locations outright, not just their
 place in the queue, so anything not yet sent is lost.
 
 ## Retry Strategy
@@ -165,7 +165,7 @@ Attempt 4: +300s delay (5 minutes)
 Attempt 5+: +900s delay (15 minutes)
 ```
 
-Failed items stay in the queue indefinitely until they succeed. The queue can be cleared manually in Settings > Data Management if needed.
+Failed items stay in the queue indefinitely until they succeed. The queue can be cleared manually in Settings > Data management if needed.
 
 ## Network Requirements
 
