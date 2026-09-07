@@ -22,7 +22,15 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
-import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, size, space, elevation } from "../../../constants"
+import {
+  DEFAULT_MAP_ZOOM,
+  HIT_SLOP_MD,
+  MAP_ANIMATION_DURATION_MS,
+  size,
+  space,
+  elevation,
+  STATE_LAYER_ALPHA
+} from "../../../constants"
 import { radius } from "@colota/shared"
 
 const HAS_NOTE = ["!=", ["get", "note"], ""]
@@ -314,7 +322,7 @@ export function TrackMap({
                   testID="popup-split-point"
                   onPress={() => onPointSplit(popup.id)}
                   hitSlop={HIT_SLOP_MD}
-                  style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+                  android_ripple={{ color: colors.textSecondary + STATE_LAYER_ALPHA, borderless: true }}
                   accessibilityRole="button"
                   accessibilityLabel="Start a new trip at this point"
                 >
@@ -326,7 +334,7 @@ export function TrackMap({
                   testID="popup-delete-point"
                   onPress={() => onPointDelete(popup.id)}
                   hitSlop={HIT_SLOP_MD}
-                  style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+                  android_ripple={{ color: colors.textSecondary + STATE_LAYER_ALPHA, borderless: true }}
                   accessibilityRole="button"
                   accessibilityLabel="Delete this point"
                 >
@@ -341,7 +349,7 @@ export function TrackMap({
                   setSelectedPoint(null)
                 }}
                 hitSlop={HIT_SLOP_MD}
-                style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+                android_ripple={{ color: colors.textSecondary + STATE_LAYER_ALPHA, borderless: true }}
               >
                 <X size={size.icon.sm} color={colors.textSecondary} />
               </Pressable>
@@ -385,7 +393,8 @@ export function TrackMap({
                       accessibilityLabel="Save note"
                       onPress={handleSaveNote}
                       hitSlop={HIT_SLOP_MD}
-                      style={({ pressed }) => [styles.noteSaveBtn, pressed && { opacity: colors.pressedOpacity }]}
+                      android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA, borderless: true }}
+                      style={styles.noteSaveBtn}
                     >
                       <Check size={size.icon.md} color={colors.primary} />
                     </Pressable>

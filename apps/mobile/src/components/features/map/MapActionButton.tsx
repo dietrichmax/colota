@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { elevation } from "../../../constants"
+import { elevation, STATE_LAYER_ALPHA } from "../../../constants"
 import React from "react"
 import { Pressable, StyleSheet, ViewStyle, StyleProp, PressableProps } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
@@ -23,12 +23,8 @@ export function MapActionButton({ onPress, style, children, hitSlop, accessibili
 
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.button,
-        { backgroundColor: colors.card },
-        style,
-        pressed && { opacity: colors.pressedOpacity }
-      ]}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      style={[styles.button, { backgroundColor: colors.card }, style]}
       onPress={onPress}
       hitSlop={hitSlop}
       accessibilityLabel={accessibilityLabel}
@@ -41,6 +37,8 @@ export function MapActionButton({ onPress, style, children, hitSlop, accessibili
 
 const styles = StyleSheet.create({
   button: {
+    // Bounded ripple, so the disc has to clip it to its own corner.
+    overflow: "hidden",
     position: "absolute",
     bottom: 30,
     width: 40,

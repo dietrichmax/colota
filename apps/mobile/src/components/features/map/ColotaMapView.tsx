@@ -11,7 +11,15 @@ import type { NativeSyntheticEvent } from "react-native"
 import { Compass, Info, X } from "lucide-react-native"
 import { useIsFocused } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
-import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_DARK, MAP_STYLE_URL_LIGHT, size, space, elevation } from "../../../constants"
+import {
+  DEFAULT_MAP_ZOOM,
+  MAP_STYLE_URL_DARK,
+  MAP_STYLE_URL_LIGHT,
+  size,
+  space,
+  elevation,
+  STATE_LAYER_ALPHA
+} from "../../../constants"
 import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
@@ -235,7 +243,8 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
                   hitSlop={8}
                   accessibilityRole="button"
                   accessibilityLabel="Close"
-                  style={({ pressed }) => [styles.attributionClose, pressed && { opacity: colors.pressedOpacity }]}
+                  android_ripple={{ color: colors.textLight + STATE_LAYER_ALPHA, borderless: true }}
+                  style={styles.attributionClose}
                 >
                   <X size={size.icon.md} color={colors.textLight} />
                 </Pressable>
@@ -244,7 +253,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
                     key={link.url}
                     accessibilityRole="link"
                     onPress={() => Linking.openURL(link.url)}
-                    style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+                    android_ripple={{ color: colors.link + STATE_LAYER_ALPHA, borderless: true }}
                   >
                     <Text style={[styles.attributionPopupText, { color: colors.link }, fonts.regular]}>
                       {link.label}

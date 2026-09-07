@@ -237,7 +237,8 @@ export function CalendarPicker({
           accessibilityLabel="Previous day"
           onPress={goBack}
           hitSlop={HIT_SLOP_LG}
-          style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
+          android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA, borderless: true }}
+          style={styles.navBtn}
         >
           <ChevronLeft size={size.icon.md} color={colors.primary} />
         </Pressable>
@@ -247,7 +248,8 @@ export function CalendarPicker({
           onPress={toggleExpanded}
           accessibilityRole="button"
           accessibilityState={{ expanded: isExpanded }}
-          style={({ pressed }) => [styles.dateContainer, pressed && { opacity: colors.pressedOpacity }]}
+          android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true }}
+          style={styles.dateContainer}
         >
           <View style={styles.dateLabelRow}>
             <Text style={[styles.dateText, { color: colors.text }]}>{formatted}</Text>
@@ -270,7 +272,8 @@ export function CalendarPicker({
           accessibilityState={{ disabled: isToday }}
           onPress={goForward}
           hitSlop={HIT_SLOP_LG}
-          style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
+          android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA, borderless: true }}
+          style={styles.navBtn}
           disabled={isToday}
         >
           <ChevronRight size={size.icon.md} color={isToday ? colors.textDisabled : colors.primary} />
@@ -282,11 +285,8 @@ export function CalendarPicker({
           accessibilityRole="button"
           onPress={goToToday}
           hitSlop={HIT_SLOP_LG}
-          style={({ pressed }) => [
-            styles.todayBtn,
-            { backgroundColor: colors.primary + "15" },
-            pressed && { opacity: colors.pressedOpacity }
-          ]}
+          android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA }}
+          style={[styles.todayBtn, { backgroundColor: colors.primary + "15" }]}
         >
           <Text style={[styles.todayText, { color: colors.primary }]}>Today</Text>
         </Pressable>
@@ -304,7 +304,8 @@ export function CalendarPicker({
                 hitSlop={HIT_SLOP_LG}
                 accessibilityRole="button"
                 accessibilityLabel="Previous month"
-                style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
+                android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA, borderless: true }}
+                style={styles.monthNav}
               >
                 <ChevronLeft size={size.icon.md} color={colors.primary} />
               </Pressable>
@@ -334,7 +335,8 @@ export function CalendarPicker({
                 hitSlop={HIT_SLOP_LG}
                 accessibilityRole="button"
                 accessibilityLabel="Next month"
-                style={({ pressed }) => [styles.monthNav, pressed && { opacity: colors.pressedOpacity }]}
+                android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA, borderless: true }}
+                style={styles.monthNav}
                 disabled={isFutureMonth}
               >
                 <ChevronRight size={size.icon.md} color={isFutureMonth ? colors.textDisabled : colors.primary} />
@@ -521,6 +523,8 @@ const styles = StyleSheet.create({
     marginTop: space.xxs
   },
   todayBtn: {
+    // A bounded ripple squares off the corner unless the control clips it.
+    overflow: "hidden",
     alignSelf: "center",
     marginTop: space.sm,
     paddingHorizontal: space.lg,
