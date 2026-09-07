@@ -4,36 +4,29 @@
  */
 
 import React, { useMemo, useState, useCallback, useLayoutEffect, useEffect, useRef } from "react"
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native"
-import {
-  Route,
-  Clock,
-  Gauge,
-  TrendingUp,
-  TrendingDown,
-  MapPin,
-  Share,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  type LucideIcon
-} from "lucide-react-native"
+import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions } from "react-native"
+import { Share, Trash2, ChevronLeft, ChevronRight, Route, Clock, Gauge, MapPin, TrendingUp, TrendingDown } from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
 import { fontSizes, fonts, type } from "../styles/typography"
+// Deep paths on purpose: the components barrel re-exports DashboardMap, which reaches
+// TrackingProvider and builds a NativeEventEmitter at module scope. This screen needs none of it.
 import { Button } from "../components/ui/Button"
 import { Card } from "../components/ui/Card"
 import { Container } from "../components/ui/Container"
+import { SectionTitle } from "../components/ui/SectionTitle"
+import { Divider } from "../components/ui/Divider"
+import { StatRow } from "../components/ui/StatRow"
 import { TrackMap } from "../components/features/inspector/TrackMap"
 import { InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
 import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
-import { HIT_SLOP_LG, HIT_SLOP_MD, size, space } from "../constants"
+import { HIT_SLOP_LG, HIT_SLOP_MD, size, space, STATE_LAYER_ALPHA } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
 import { BOUNDARY_ACTION_SPLIT } from "../types/global"
-import type { Trip, ThemeColors, BoundaryAction } from "../types/global"
+import type { Trip, BoundaryAction } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
 import { radius } from "@colota/shared"
 
@@ -54,8 +47,12 @@ function downsample(values: number[], maxBars: number): number[] {
   return result
 }
 
+const MAP_VIEWPORT_SHARE = 0.45
+
 export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip Detail">) {
   const { colors } = useTheme()
+  const { height: viewportHeight } = useWindowDimensions()
+  const mapHeight = Math.round(viewportHeight * MAP_VIEWPORT_SHARE)
   const trip: Trip = route.params.trip
   const trips: Trip[] = route.params.trips
   const tripColor = getTripColor(trip.index)
@@ -120,6 +117,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   }, [])
 
   const splittingRef = useRef(false)
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null)
   const handlePointSplit = useCallback(
     async (id: number) => {
       if (splittingRef.current) return
@@ -255,7 +253,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
   return (
     <Container>
-      <View style={styles.mapContainer}>
+      <View style={{ height: mapHeight }}>
         <TrackMap
           locations={trip.locations}
           colors={colors}
@@ -266,7 +264,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
           onPointSplit={handlePointSplit}
         />
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.section}>
           <View style={styles.headerTitleRow}>
@@ -304,47 +302,52 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
           </View>
         </View>
 
-        {/* Stats grid */}
-        <View style={[styles.statsGrid, styles.section]}>
-          <StatCard icon={Route} label="Distance" value={formatDistance(trip.distance)} colors={colors} />
-          <StatCard icon={Clock} label="Duration" value={formatDuration(duration)} colors={colors} />
-          <StatCard icon={Gauge} label="Avg speed" value={formatSpeed(stats.avgSpeed)} colors={colors} />
-          <StatCard icon={MapPin} label="Points" value={String(trip.locationCount)} colors={colors} />
-          {stats.elevationGain > 0 && (
-            <StatCard
-              icon={TrendingUp}
-              label="Elev. Gain"
-              value={`${Math.round(stats.elevationGain)}m`}
-              colors={colors}
-            />
-          )}
-          {stats.elevationLoss > 0 && (
-            <StatCard
-              icon={TrendingDown}
-              label="Elev. Loss"
-              value={`${Math.round(stats.elevationLoss)}m`}
-              colors={colors}
-            />
-          )}
+        <View style={styles.section}>
+          <Card rows>
+            <StatRow icon={Route} label="Distance" value={formatDistance(trip.distance)} />
+            <Divider tight />
+            <StatRow icon={Clock} label="Duration" value={formatDuration(duration)} />
+            <Divider tight />
+            <StatRow icon={Gauge} label="Avg speed" value={formatSpeed(stats.avgSpeed)} />
+            <Divider tight />
+            <StatRow icon={MapPin} label="Points" value={String(trip.locationCount)} />
+            {stats.elevationGain > 0 && (
+              <>
+                <Divider tight />
+                <StatRow icon={TrendingUp} label="Elev. gain" value={`${Math.round(stats.elevationGain)}m`} />
+              </>
+            )}
+            {stats.elevationLoss > 0 && (
+              <>
+                <Divider tight />
+                <StatRow icon={TrendingDown} label="Elev. loss" value={`${Math.round(stats.elevationLoss)}m`} />
+              </>
+            )}
+          </Card>
         </View>
 
         {/* Speed profile */}
         {speedProfile.length > 2 && (
           <View style={styles.section}>
+            <View style={styles.chartTitleRow}>
+              <SectionTitle>Speed</SectionTitle>
+              <Text style={[styles.chartRange, { color: colors.textSecondary }]}>max {formatSpeed(maxSpeed)}</Text>
+            </View>
             <Card style={styles.chartCard}>
-              <View style={styles.chartTitleRow}>
-                <Text style={[styles.chartTitle, { color: colors.text }]}>Speed</Text>
-                <Text style={[styles.chartRange, { color: colors.textSecondary }]}>max {formatSpeed(maxSpeed)}</Text>
+              <View
+                accessibilityRole="image"
+                accessibilityLabel={`Speed over the trip, average ${formatSpeed(stats.avgSpeed)}, maximum ${formatSpeed(maxSpeed)}`}
+              >
+                <InteractiveLineChart
+                  data={speedProfile}
+                  color={colors.primary}
+                  textColor={colors.text}
+                  backgroundColor={colors.card}
+                  formatValue={(v) => formatSpeed(v).replace(/\.\d+/, "")}
+                  activeIndex={chartActiveIndex}
+                  onActiveIndexChange={setChartActiveIndex}
+                />
               </View>
-              <InteractiveLineChart
-                data={speedProfile}
-                color={colors.info}
-                textColor={colors.text}
-                backgroundColor={colors.card}
-                formatValue={(v) => formatSpeed(v).replace(/\.\d+/, "")}
-                activeIndex={chartActiveIndex}
-                onActiveIndexChange={setChartActiveIndex}
-              />
               <View style={styles.chartLabels}>
                 {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
                   <Text key={frac} style={[styles.chartLabel, { color: colors.textSecondary }]}>
@@ -359,13 +362,13 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         {/* Elevation profile */}
         {elevationProfile.length > 2 && elevationRange > 0 && (
           <View style={styles.section}>
+            <View style={styles.chartTitleRow}>
+              <SectionTitle>Elevation</SectionTitle>
+              <Text style={[styles.chartRange, { color: colors.textSecondary }]}>
+                {Math.round(minElevation)}m - {Math.round(maxElevation)}m
+              </Text>
+            </View>
             <Card style={styles.chartCard}>
-              <View style={styles.chartTitleRow}>
-                <Text style={[styles.chartTitle, { color: colors.text }]}>Elevation</Text>
-                <Text style={[styles.chartRange, { color: colors.textSecondary }]}>
-                  {Math.round(minElevation)}m - {Math.round(maxElevation)}m
-                </Text>
-              </View>
               <InteractiveLineChart
                 data={elevationProfile}
                 color={colors.primary}
@@ -392,7 +395,12 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
             title="Export trip"
             icon={Share}
             expanded={showExport}
-            onPress={() => setShowExport((prev) => !prev)}
+            onPress={() => {
+              const opening = !showExport
+              setShowExport(opening)
+              // The button ends the scroll, so the formats would open below the fold.
+              if (opening) requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }))
+            }}
           />
 
           {showExport && (
@@ -404,13 +412,12 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
                   accessibilityLabel={`Export as ${fmt.toUpperCase()}`}
                   onPress={() => handleExport(fmt)}
                   hitSlop={HIT_SLOP_MD}
-                  style={({ pressed }) => [
-                    styles.exportChip,
-                    { backgroundColor: colors.primary + "12" },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
+                  android_ripple={{ color: colors.onPrimaryContainer + STATE_LAYER_ALPHA }}
+                  style={[styles.exportChip, { backgroundColor: colors.primaryContainer }]}
                 >
-                  <Text style={[styles.exportChipText, { color: colors.primary }]}>{EXPORT_FORMATS[fmt].label}</Text>
+                  <Text style={[styles.exportChipText, { color: colors.onPrimaryContainer }]}>
+                    {EXPORT_FORMATS[fmt].label}
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -421,25 +428,6 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   )
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  colors
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  colors: ThemeColors
-}) {
-  return (
-    <Card style={styles.statCard}>
-      <Icon size={size.icon.sm} color={colors.primary} />
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
-    </Card>
-  )
-}
 
 const styles = StyleSheet.create({
   content: {
@@ -449,9 +437,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     marginTop: space.md
   },
-  mapContainer: {
-    height: 480
-  },
+
   headerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -465,7 +451,7 @@ const styles = StyleSheet.create({
   headerTitleLine: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10
+    gap: space.sm
   },
   navBtn: {
     padding: space.xs
@@ -483,27 +469,6 @@ const styles = StyleSheet.create({
     ...fonts.regular,
     textAlign: "center"
   },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: space.sm
-  },
-  statCard: {
-    alignItems: "center",
-    gap: space.xs,
-    paddingVertical: space.md,
-    paddingHorizontal: space.sm,
-    minWidth: "30%",
-    flex: 1
-  },
-  statValue: {
-    fontSize: fontSizes.label,
-    ...fonts.bold
-  },
-  statLabel: {
-    fontSize: fontSizes.small,
-    ...fonts.regular
-  },
   chartCard: {
     padding: space.md
   },
@@ -513,10 +478,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: space.sm
   },
-  chartTitle: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold
-  },
   chartRange: {
     fontSize: fontSizes.small,
     ...fonts.regular
@@ -525,7 +486,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: space.xs,
-    paddingStart: 40
+    paddingStart: size.iconColumn
   },
   chartLabel: {
     fontSize: fontSizes.micro,
@@ -533,7 +494,7 @@ const styles = StyleSheet.create({
   },
   exportRow: {
     flexDirection: "row",
-    justifyContent: "center",
+    flexWrap: "wrap",
     gap: space.sm,
     marginTop: space.md
   },

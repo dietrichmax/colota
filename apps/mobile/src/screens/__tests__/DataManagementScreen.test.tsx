@@ -71,6 +71,8 @@ jest.mock("../../components", () => {
   const R = require("react")
   const RN = require("react-native")
   return {
+    StatRow: ({ label, value }: any) =>
+      R.createElement(RN.View, null, R.createElement(RN.Text, null, label), R.createElement(RN.Text, null, value)),
     TextField: require("../../testing/componentStubs").TextFieldStub,
     Toggle: function (props: any) {
       return require("react").createElement(require("react-native").Switch, {

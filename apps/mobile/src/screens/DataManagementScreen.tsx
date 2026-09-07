@@ -22,7 +22,7 @@ import { useTheme } from "../hooks/useTheme"
 import { fonts, fontSizes, lineHeights } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator, TextField } from "../components"
+import { Button, Card, Container, Divider, FloatingSaveIndicator, SectionTitle, StatRow, TextField } from "../components"
 import { SAVE_SUCCESS_DISPLAY_MS, STATS_REFRESH_FAST, size, space } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"
@@ -263,10 +263,7 @@ export function DataManagementScreen({}: ScreenProps) {
                 ["Storage", `${stats.databaseSizeMB.toFixed(2)} MB`]
               ].map(([label, value], i, arr) => (
                 <React.Fragment key={i}>
-                  <View style={styles.statRow}>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
-                    <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-                  </View>
+                  <StatRow label={label} value={value} />
                   {i < arr.length - 1 && <Divider />}
                 </React.Fragment>
               ))}
@@ -438,21 +435,6 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: space.xl
-  },
-  statRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: space.sm
-  },
-  statLabel: {
-    fontSize: fontSizes.body,
-    ...fonts.medium
-  },
-  statValue: {
-    fontSize: fontSizes.label,
-    ...fonts.bold,
-    fontVariant: ["tabular-nums"]
   },
   hint: {
     fontSize: fontSizes.caption,
