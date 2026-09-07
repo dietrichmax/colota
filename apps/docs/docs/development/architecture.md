@@ -307,7 +307,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | Screen | Purpose |
 | --- | --- |
 | `DashboardScreen` | Live map with tracking controls, coordinates, database stats, geofence and profile status |
-| `SettingsScreen` | Hub whose rows carry live state - host and queue, both cadences, theme and units, recorded count, the overriding profile - and navigate to Connection, Tracking & sync, API field mapping, Tracking profiles, Appearance and the data, Colota and about screens |
+| `SettingsScreen` | Hub navigating to Connection, Tracking & sync, API field mapping, Tracking profiles, Appearance and the data, Colota and about screens. Each row's sub line carries live state rather than a description |
 | `ConnectionScreen` | Server endpoint URL, offline mode toggle and connection test |
 | `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
 | `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |
