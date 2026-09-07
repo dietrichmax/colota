@@ -39,6 +39,13 @@ jest.mock("../../../index", () => {
         accessibilityLabel: props.accessibilityLabel
       })
     },
+    RadioRow: ({ testID, label, sub, selected, onPress }: any) =>
+      R.createElement(
+        require("react-native").Pressable,
+        { testID, onPress, accessibilityRole: "radio", accessibilityState: { checked: selected } },
+        R.createElement(Text, null, label, selected ? " (selected)" : ""),
+        sub ? R.createElement(Text, null, sub) : null
+      ),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
@@ -72,18 +79,6 @@ jest.mock("../../../../utils/geo", () => ({
   shortDistanceUnit: () => "m",
   inputToMeters: (value: number) => value,
   metersToInput: (meters: number) => meters
-}))
-
-jest.mock("../PresetOption", () => ({
-  PresetOption: ({ preset, isSelected, onSelect }: any) => {
-    const R = require("react")
-    const { Pressable, Text } = require("react-native")
-    return R.createElement(
-      Pressable,
-      { testID: `preset-${preset}`, onPress: () => onSelect(preset) },
-      R.createElement(Text, null, preset, isSelected ? " (selected)" : "")
-    )
-  }
 }))
 
 const mockColors = {
@@ -178,44 +173,43 @@ describe("SyncStrategySettings", () => {
     })
   })
 
-  describe("advanced toggle", () => {
-    it("shows advanced settings when toggle is pressed", () => {
-      const { getByText, queryByText } = renderComponent()
+  describe("the settings that apply to every preset", () => {
+    it("shows the network and quality groups without a disclosure", () => {
+      const { getByText } = renderComponent()
 
-      expect(queryByText("Tracking parameters")).toBeNull()
-
-      fireEvent.press(getByText("Advanced settings"))
-
-      expect(getByText("Tracking parameters")).toBeTruthy()
       expect(getByText("Network settings")).toBeTruthy()
-    })
-
-    it("hides advanced settings when toggle is pressed again", () => {
-      const { getByText, queryByText } = renderComponent()
-
-      fireEvent.press(getByText("Advanced settings"))
-      expect(getByText("Tracking parameters")).toBeTruthy()
-
-      fireEvent.press(getByText("Advanced settings"))
-      expect(queryByText("Tracking parameters")).toBeNull()
+      expect(getByText("Quality filters")).toBeTruthy()
     })
   })
 
-  describe("custom banner", () => {
-    it("shows custom configuration banner when preset is custom", () => {
-      const { getByText } = renderComponent({ syncPreset: "custom" })
+  describe("custom", () => {
+    it("is a row in the same list, so the state is where the choice is", () => {
+      const { getByTestId } = renderComponent({ syncPreset: "custom" })
 
-      fireEvent.press(getByText("Advanced settings"))
-
-      expect(getByText("Using custom configuration")).toBeTruthy()
+      expect(getByTestId("preset-custom").props.accessibilityState).toMatchObject({ checked: true })
     })
 
-    it("does not show custom banner when a named preset is selected", () => {
-      const { getByText, queryByText } = renderComponent({ syncPreset: "instant" })
+    it("opens the parameters it owns, and a named preset does not", () => {
+      const custom = renderComponent({ syncPreset: "custom" })
+      expect(custom.getByText("Tracking interval")).toBeTruthy()
 
-      fireEvent.press(getByText("Advanced settings"))
+      const named = renderComponent({ syncPreset: "balanced" })
+      expect(named.queryByText("Tracking interval")).toBeNull()
+    })
 
-      expect(queryByText("Using custom configuration")).toBeNull()
+    it("says what it holds, which is what the banner used to say", () => {
+      const { getByText } = renderComponent({ syncPreset: "custom", interval: 45, syncInterval: 600 })
+
+      expect(getByText("Track every 45s • Batch 10 min")).toBeTruthy()
+    })
+  })
+
+  describe("preset captions", () => {
+    it("carries the battery cost and the recommendation as words, not as filled badges", () => {
+      const { getByText } = renderComponent()
+
+      expect(getByText("Track every 5s • Send instantly • high battery")).toBeTruthy()
+      expect(getByText("Track every 30s • Batch 5 min • recommended")).toBeTruthy()
     })
   })
 
@@ -223,19 +217,17 @@ describe("SyncStrategySettings", () => {
     it("renders all sync interval options inline", () => {
       const { getByText, getAllByText } = renderComponent()
 
-      fireEvent.press(getByText("Advanced settings"))
-
       expect(getAllByText("Instant").length).toBeGreaterThan(0)
       expect(getByText("1 min")).toBeTruthy()
       expect(getByText("5 min")).toBeTruthy()
       expect(getByText("15 min")).toBeTruthy()
-      expect(getByText("Custom")).toBeTruthy()
+      // "Custom" labels both the preset row and this chip.
+      expect(getAllByText("Custom").length).toBeGreaterThan(0)
     })
 
     it("selecting a sync interval sets preset to custom", () => {
       const { getByText } = renderComponent()
 
-      fireEvent.press(getByText("Advanced settings"))
       fireEvent.press(getByText("5 min"))
 
       expect(mockOnSettingsChange).toHaveBeenCalledWith(
@@ -257,15 +249,11 @@ describe("SyncStrategySettings", () => {
     it("shows accuracy threshold input when filter is enabled", () => {
       const { getByText } = renderComponent({ filterInaccurateLocations: true })
 
-      fireEvent.press(getByText("Advanced settings"))
-
       expect(getByText("Accuracy threshold")).toBeTruthy()
     })
 
     it("hides accuracy threshold input when filter is disabled", () => {
-      const { getByText, queryByText } = renderComponent({ filterInaccurateLocations: false })
-
-      fireEvent.press(getByText("Advanced settings"))
+      const { queryByText } = renderComponent({ filterInaccurateLocations: false })
 
       expect(queryByText("Accuracy threshold")).toBeNull()
     })
@@ -273,12 +261,10 @@ describe("SyncStrategySettings", () => {
 
   describe("numeric input blur behavior", () => {
     it("clamps interval to min 1 on blur when value is 0", () => {
-      const { getByText, getByDisplayValue } = renderComponent({
+      const { getByDisplayValue } = renderComponent({
         interval: 5,
         syncPreset: "custom"
       })
-
-      fireEvent.press(getByText("Advanced settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "0")
@@ -290,12 +276,10 @@ describe("SyncStrategySettings", () => {
     })
 
     it("clamps interval to min 1 on blur when value is negative", () => {
-      const { getByText, getByDisplayValue } = renderComponent({
+      const { getByDisplayValue } = renderComponent({
         interval: 5,
         syncPreset: "custom"
       })
-
-      fireEvent.press(getByText("Advanced settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "-3")
@@ -306,12 +290,10 @@ describe("SyncStrategySettings", () => {
     })
 
     it("clamps interval to min 1 on blur when value is NaN", () => {
-      const { getByText, getByDisplayValue } = renderComponent({
+      const { getByDisplayValue } = renderComponent({
         interval: 5,
         syncPreset: "custom"
       })
-
-      fireEvent.press(getByText("Advanced settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "abc")
@@ -322,12 +304,10 @@ describe("SyncStrategySettings", () => {
     })
 
     it("does not clamp interval on blur when value is valid", () => {
-      const { getByText, getByDisplayValue } = renderComponent({
+      const { getByDisplayValue } = renderComponent({
         interval: 5,
         syncPreset: "custom"
       })
-
-      fireEvent.press(getByText("Advanced settings"))
 
       const intervalInput = getByDisplayValue("5")
       fireEvent.changeText(intervalInput, "10")
@@ -339,13 +319,11 @@ describe("SyncStrategySettings", () => {
     })
 
     it("clamps distance to min 0 on blur when value is negative", () => {
-      const { getByText, getByDisplayValue } = renderComponent({
+      const { getByDisplayValue } = renderComponent({
         interval: 5,
         distance: 10,
         syncPreset: "custom"
       })
-
-      fireEvent.press(getByText("Advanced settings"))
 
       const distanceInput = getByDisplayValue("10")
       fireEvent.changeText(distanceInput, "-5")
@@ -356,13 +334,11 @@ describe("SyncStrategySettings", () => {
     })
 
     it("clamps distance to min 0 on blur when value is NaN", () => {
-      const { getByText, getByDisplayValue } = renderComponent({
+      const { getByDisplayValue } = renderComponent({
         interval: 5,
         distance: 10,
         syncPreset: "custom"
       })
-
-      fireEvent.press(getByText("Advanced settings"))
 
       const distanceInput = getByDisplayValue("10")
       fireEvent.changeText(distanceInput, "abc")
@@ -373,14 +349,12 @@ describe("SyncStrategySettings", () => {
     })
 
     it("clamps accuracy threshold to min 1 on blur when value is below", () => {
-      const { getByText, getByDisplayValue } = renderComponent({
+      const { getByDisplayValue } = renderComponent({
         interval: 5,
         filterInaccurateLocations: true,
         accuracyThreshold: 100,
         syncPreset: "custom"
       })
-
-      fireEvent.press(getByText("Advanced settings"))
 
       const thresholdInput = getByDisplayValue("100")
       fireEvent.changeText(thresholdInput, "0")
@@ -391,14 +365,12 @@ describe("SyncStrategySettings", () => {
     })
 
     it("does not clamp accuracy threshold on blur when value is valid", () => {
-      const { getByText, getByDisplayValue } = renderComponent({
+      const { getByDisplayValue } = renderComponent({
         interval: 5,
         filterInaccurateLocations: true,
         accuracyThreshold: 100,
         syncPreset: "custom"
       })
-
-      fireEvent.press(getByText("Advanced settings"))
 
       const thresholdInput = getByDisplayValue("100")
       fireEvent.changeText(thresholdInput, "200")
