@@ -9,7 +9,17 @@ import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { fontSizes, fonts, lineHeights } from "../styles/typography"
-import { Button, Card, Container, FieldMessage, SectionTitle, SettingRow, Toggle, TextField } from "../components"
+import {
+  Button,
+  Card,
+  Container,
+  FieldMessage,
+  ListItem,
+  SectionTitle,
+  SettingRow,
+  Toggle,
+  TextField
+} from "../components"
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
@@ -36,6 +46,12 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
   const [heartbeatEnabled, setHeartbeatEnabled] = useState(false)
   const [heartbeatIntervalStr, setHeartbeatIntervalStr] = useState("15")
   const [saving, setSaving] = useState(false)
+  const placedOnEntry = useRef(route?.params?.lat != null)
+  const [coord, setCoord] = useState<{ lat: number; lon: number } | null>(
+    route?.params?.lat != null && route?.params?.lon != null
+      ? { lat: route.params.lat, lon: route.params.lon }
+      : null
+  )
 
   const savedState = useRef({
     name: route?.params?.name ?? ("" as string),
@@ -45,13 +61,16 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     pauseOnMotionless: false,
     motionlessTimeoutStr: "1",
     heartbeatEnabled: false,
-    heartbeatIntervalStr: "15"
+    heartbeatIntervalStr: "15",
+    coord: null as { lat: number; lon: number } | null
   })
 
   const hasChanges = useMemo(() => {
     const s = savedState.current
     return (
       name !== s.name ||
+      coord?.lat !== s.coord?.lat ||
+      coord?.lon !== s.coord?.lon ||
       radius !== s.radius ||
       pauseTracking !== s.pauseTracking ||
       pauseOnWifi !== s.pauseOnWifi ||
@@ -62,6 +81,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     )
   }, [
     name,
+    coord,
     radius,
     pauseTracking,
     pauseOnWifi,
@@ -85,6 +105,8 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
             setName(existing.name)
             setRadiusStr(String(metersToInput(existing.radius)))
             setRadius(existing.radius)
+            // A coordinate carried in is newer than the stored one, so the load must not undo it.
+            if (!placedOnEntry.current) setCoord({ lat: existing.lat, lon: existing.lon })
             setPauseTracking(existing.pauseTracking)
             setPauseOnWifi(existing.pauseOnWifi)
             setPauseOnMotionless(existing.pauseOnMotionless)
@@ -99,7 +121,8 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
               pauseOnMotionless: existing.pauseOnMotionless,
               motionlessTimeoutStr: String(existing.motionlessTimeoutMinutes),
               heartbeatEnabled: existing.heartbeatEnabled ?? false,
-              heartbeatIntervalStr: String(existing.heartbeatIntervalMinutes ?? 15)
+              heartbeatIntervalStr: String(existing.heartbeatIntervalMinutes ?? 15),
+              coord: { lat: existing.lat, lon: existing.lon }
             }
           }
         })
@@ -116,6 +139,11 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
       cancelIdleCallback(handle)
     }
   }, [geofenceId, navigation])
+
+  useEffect(() => {
+    const { lat, lon } = route?.params ?? {}
+    if (lat != null && lon != null) setCoord({ lat, lon })
+  }, [route?.params])
 
   const handleRadiusChange = useCallback((val: string) => {
     setRadiusStr(val)
@@ -141,6 +169,8 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         await NativeLocationService.updateGeofence({
           id: geofenceId,
           name: name.trim(),
+          lat: coord?.lat,
+          lon: coord?.lon,
           radius,
           pauseTracking,
           pauseOnWifi,
@@ -150,12 +180,15 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           heartbeatIntervalMinutes: effectiveHeartbeat
         })
       } else {
-        const lat = route?.params?.lat as number
-        const lon = route?.params?.lon as number
+        if (!coord) {
+          showAlert("No location", "Place the zone on the map first.", "warning")
+          setSaving(false)
+          return
+        }
         await NativeLocationService.createGeofence({
           name: name.trim(),
-          lat,
-          lon,
+          lat: coord.lat,
+          lon: coord.lon,
           radius,
           enabled: true,
           pauseTracking,
@@ -176,6 +209,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     }
   }, [
     name,
+    coord,
     radius,
     pauseTracking,
     pauseOnWifi,
@@ -185,8 +219,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     heartbeatIntervalStr,
     isEditing,
     geofenceId,
-    navigation,
-    route
+    navigation
   ])
 
   const handleDelete = useCallback(async () => {
@@ -235,6 +268,19 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
               keyboardType="numeric"
             />
           </SettingRow>
+          <ListItem
+            testID="place-zone-row"
+            label="Location"
+            sub={coord ? `${coord.lat.toFixed(5)}, ${coord.lon.toFixed(5)}` : "Not placed yet"}
+            onPress={() =>
+              navigation.navigate("Place Zone", {
+                name: name.trim() || "New zone",
+                radius,
+                lat: coord?.lat,
+                lon: coord?.lon
+              })
+            }
+          />
         </Card>
 
         <SectionTitle>GPS pause options</SectionTitle>

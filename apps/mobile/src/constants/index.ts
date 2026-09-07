@@ -46,7 +46,7 @@ export const HIT_SLOP_MD = { top: 8, right: 8, bottom: 8, left: 8 } as const
 export const HIT_SLOP_LG = { top: 12, right: 12, bottom: 12, left: 12 } as const
 
 // Map
-export const DEFAULT_MAP_ZOOM = 17
+export const DEFAULT_MAP_ZOOM = 15
 export const WORLD_MAP_ZOOM = 2
 export const MAX_MAP_ZOOM = 18
 export const GEOFENCE_ZOOM_PADDING = [80, 80, 80, 80] as const

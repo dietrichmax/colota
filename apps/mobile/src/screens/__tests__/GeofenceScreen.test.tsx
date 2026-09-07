@@ -88,9 +88,18 @@ jest.mock("../../services/modalService", () => ({
 jest.mock("../../components/features/map/ColotaMapView", () => {
   const R = require("react")
   const { View } = require("react-native")
+  const { Pressable } = require("react-native")
   return {
-    ColotaMapView: R.forwardRef(({ children }: any, _ref: any) =>
-      R.createElement(View, { testID: "colota-map" }, children)
+    ColotaMapView: R.forwardRef(({ children, onPress }: any, _ref: any) =>
+      R.createElement(
+        View,
+        { testID: "colota-map" },
+        R.createElement(Pressable, {
+          testID: "map-press",
+          onPress: () => onPress?.({ latitude: 52.5, longitude: 13.4 })
+        }),
+        children
+      )
     )
   }
 })
@@ -125,9 +134,10 @@ jest.mock("../../components/features/map/mapUtils", () => ({
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text } = require("react-native")
+  const { View, Text, Pressable } = require("react-native")
   return {
     EmptyState: require("../../testing/componentStubs").EmptyStateStub,
+    IconButton: require("../../testing/componentStubs").IconButtonStub,
     TextField: require("../../testing/componentStubs").TextFieldStub,
     Button: function (props: any) {
       return require("react").createElement(
@@ -147,7 +157,15 @@ jest.mock("../../components", () => {
     },
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children, style }: any) => R.createElement(View, { style }, children)
+    Card: ({ children, style }: any) => R.createElement(View, { style }, children),
+    Divider: () => R.createElement(View, null),
+    ListItem: ({ label, sub, onPress, testID }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress, accessibilityRole: "button" },
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, sub)
+      )
   }
 })
 
@@ -161,7 +179,9 @@ jest.mock("lucide-react-native", () => {
     Wifi: (props: any) => R.createElement(Text, props, "Wifi"),
     PersonStanding: (props: any) => R.createElement(Text, props, "PersonStanding"),
     MapPinHouse: (props: any) => R.createElement(Text, props, "MapPinHouse"),
-    Share2: (props: any) => R.createElement(Text, props, "Share2")
+    Share2: (props: any) => R.createElement(Text, props, "Share2"),
+    Plus: (props: any) => R.createElement(Text, props, "Plus"),
+    X: (props: any) => R.createElement(Text, props, "X")
   }
 })
 
@@ -219,7 +239,7 @@ describe("GeofenceScreen", () => {
   })
 
   function renderScreen() {
-    return render(<GeofenceScreen navigation={{} as any} />)
+    return render(<GeofenceScreen navigation={{ setOptions: jest.fn() } as any} />)
   }
 
   it("shows empty state when no geofences exist", async () => {
@@ -243,58 +263,26 @@ describe("GeofenceScreen", () => {
     })
   })
 
-  it("shows validation alert when name is empty", async () => {
-    const { getByText } = renderScreen()
+  it("creates through the editor, so a zone is configured before it exists", async () => {
+    const navigate = jest.fn()
+    const { getByTestId } = render(<GeofenceScreen navigation={{ navigate, setOptions: jest.fn() } as any} />)
 
-    await waitFor(() => {
-      expect(getByText("Place geofence")).toBeTruthy()
-    })
+    await waitFor(() => expect(getByTestId("add-geofence-btn")).toBeTruthy())
+    fireEvent.press(getByTestId("add-geofence-btn"))
 
-    fireEvent.press(getByText("Place geofence"))
-
-    expect(mockShowAlert).toHaveBeenCalledWith("Missing Name", "Please enter a name.", "warning")
+    expect(navigate).toHaveBeenCalledWith("Geofence Editor", {})
+    expect(mockCreateGeofence).not.toHaveBeenCalled()
   })
 
-  it("shows validation alert when radius is invalid (0 or negative)", async () => {
-    const { getByText, getByPlaceholderText, getByDisplayValue } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Place geofence")).toBeTruthy()
-    })
-
-    fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
-    fireEvent.changeText(getByDisplayValue("50"), "0")
-    fireEvent.press(getByText("Place geofence"))
-
-    expect(mockShowAlert).toHaveBeenCalledWith("Invalid Radius", "Please enter a valid radius.", "warning")
-  })
-
-  it("enters placing mode on valid name and radius", async () => {
-    const { getByText, getByPlaceholderText, getByDisplayValue } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Place geofence")).toBeTruthy()
-    })
-
-    fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
-    fireEvent.changeText(getByDisplayValue("50"), "100")
-    fireEvent.press(getByText("Place geofence"))
-
-    expect(mockShowAlert).not.toHaveBeenCalled()
-    expect(getByText("Tap Map to Place...")).toBeTruthy()
-  })
-
-  it("tapping ChevronRight navigates to editor with geofence id", async () => {
+  it("opens the editor from the zone row", async () => {
     mockGetGeofences.mockResolvedValue(mockGeofences)
     const mockNavigate = jest.fn()
 
-    const { getAllByText } = render(<GeofenceScreen navigation={{ navigate: mockNavigate } as any} />)
+    const { getByTestId } = render(<GeofenceScreen navigation={{ navigate: mockNavigate, setOptions: jest.fn() } as any} />)
 
-    await waitFor(() => {
-      expect(getAllByText("ChevronRight").length).toBeGreaterThanOrEqual(1)
-    })
+    await waitFor(() => expect(getByTestId("edit-geofence-1")).toBeTruthy())
 
-    fireEvent.press(getAllByText("ChevronRight")[0])
+    fireEvent.press(getByTestId("edit-geofence-1"))
 
     expect(mockNavigate).toHaveBeenCalledWith("Geofence Editor", { geofenceId: 1 })
   })

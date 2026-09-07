@@ -4,23 +4,18 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { View, Text, StyleSheet, Pressable, FlatList, DeviceEventEmitter, Share } from "react-native"
+import { View, StyleSheet, FlatList, DeviceEventEmitter, Share, useWindowDimensions } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
-import { fontSizes, fonts, lineHeights } from "../styles/typography"
-import { ChevronRight, Wifi, PersonStanding, MapPinHouse, Share2 } from "lucide-react-native"
-import { Button, Card, Container, EmptyState, SectionTitle, TextField } from "../components"
+import { MapPinHouse, Share2, Plus } from "lucide-react-native"
+import { Button, Card, Container, Divider, EmptyState, IconButton, ListItem, SectionTitle } from "../components"
 import {
   DEFAULT_MAP_ZOOM,
-  GEOFENCE_ZOOM_PADDING,
-  HIT_SLOP_MD,
   MAP_ANIMATION_DURATION_MS,
-  MAX_MAP_ZOOM,
   WORLD_MAP_ZOOM,
-  size,
   space
 } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
@@ -29,21 +24,19 @@ import { buildGeofencesGeoJSON } from "../components/features/map/mapUtils"
 import { GeofenceLayers } from "../components/features/map/GeofenceLayers"
 import { UserLocationOverlay } from "../components/features/map/UserLocationOverlay"
 import { logger } from "../utils/logger"
-import { formatShortDistance, shortDistanceUnit, inputToMeters } from "../utils/geo"
+import { formatShortDistance } from "../utils/geo"
 import { buildGeofencesLink } from "../utils/setupLink"
+
+const ZoneSeparator = () => <Divider tight />
 
 const GeofenceMap = React.memo(function GeofenceMapView({
   tracking,
   geofenceData,
-  currentPauseZone,
-  onMapPress,
-  focusRequest
+  currentPauseZone
 }: {
   tracking: boolean
   geofenceData: ReturnType<typeof buildGeofencesGeoJSON>
   currentPauseZone: string | null
-  onMapPress: (coords: { latitude: number; longitude: number }) => void
-  focusRequest: { geofence: Geofence; key: number } | null
 }) {
   const coords = useCoords()
   const { colors } = useTheme()
@@ -78,30 +71,12 @@ const GeofenceMap = React.memo(function GeofenceMapView({
     })
   }, [coords, tracking])
 
-  useEffect(() => {
-    if (!focusRequest || !mapRef.current?.camera) return
-    const { geofence } = focusRequest
-    const latDelta = (geofence.radius / 111320) * 1.5
-    const lonDelta = (geofence.radius / (111320 * Math.cos((geofence.lat * Math.PI) / 180))) * 1.5
-    mapRef.current.camera.fitBounds(
-      [geofence.lon - lonDelta, geofence.lat - latDelta, geofence.lon + lonDelta, geofence.lat + latDelta],
-      {
-        padding: {
-          top: GEOFENCE_ZOOM_PADDING[0],
-          right: GEOFENCE_ZOOM_PADDING[1],
-          bottom: GEOFENCE_ZOOM_PADDING[2],
-          left: GEOFENCE_ZOOM_PADDING[3]
-        },
-        duration: 600
-      }
-    )
-  }, [focusRequest])
 
   const handleCenterMe = useCallback(() => {
     if (coords && mapRef.current?.camera) {
       mapRef.current.camera.flyTo({
         center: [coords.longitude, coords.latitude],
-        zoom: MAX_MAP_ZOOM,
+        zoom: DEFAULT_MAP_ZOOM,
         duration: MAP_ANIMATION_DURATION_MS
       })
       isCenteredRef.current = true
@@ -127,7 +102,6 @@ const GeofenceMap = React.memo(function GeofenceMapView({
           ref={mapRef}
           initialCenter={[initialCenter.current.longitude, initialCenter.current.latitude]}
           initialZoom={initialZoom}
-          onPress={onMapPress}
           onRegionDidChange={handleRegionChange}
         >
           <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
@@ -139,17 +113,17 @@ const GeofenceMap = React.memo(function GeofenceMapView({
   )
 })
 
+const MAP_VIEWPORT_SHARE = 0.4
+
 export function GeofenceScreen({ navigation }: ScreenProps) {
+  const { height: viewportHeight } = useWindowDimensions()
+  const mapHeight = Math.round(viewportHeight * MAP_VIEWPORT_SHARE)
   const { tracking } = useTracking()
   const { colors } = useTheme()
 
   const [geofences, setGeofences] = useState<Geofence[]>([])
-  const [newName, setNewName] = useState("")
-  const [newRadius, setNewRadius] = useState("50")
-  const [placingGeofence, setPlacingGeofence] = useState(false)
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
 
-  const [focusRequest, setFocusRequest] = useState<{ geofence: Geofence; key: number } | null>(null)
 
   const loadGeofences = useCallback(async () => {
     try {
@@ -182,55 +156,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
     return () => listener.remove()
   }, [loadGeofences])
 
-  const handleMapPress = useCallback(
-    async (pressCoords: { latitude: number; longitude: number }) => {
-      if (!placingGeofence) return
-      setPlacingGeofence(false)
-      try {
-        await NativeLocationService.createGeofence({
-          name: newName.trim(),
-          lat: pressCoords.latitude,
-          lon: pressCoords.longitude,
-          radius: inputToMeters(Number(newRadius)),
-          enabled: true,
-          pauseTracking: true,
-          pauseOnWifi: false,
-          pauseOnMotionless: false,
-          motionlessTimeoutMinutes: 1,
-          heartbeatEnabled: false,
-          heartbeatIntervalMinutes: 15
-        })
-        await loadGeofences()
-        DeviceEventEmitter.emit("geofenceUpdated")
-      } catch (err) {
-        logger.error("[GeofenceScreen] Failed to create geofence:", err)
-        showAlert("Error", "Failed to create geofence.", "error")
-      }
-      setNewName("")
-      setNewRadius("50")
-    },
-    [placingGeofence, newName, newRadius, loadGeofences]
-  )
 
-  const startPlacingGeofence = useCallback(() => {
-    if (!newName.trim()) {
-      showAlert("Missing Name", "Please enter a name.", "warning")
-      return
-    }
-
-    const radius = Number(newRadius)
-    if (!radius || radius <= 0) {
-      showAlert("Invalid Radius", "Please enter a valid radius.", "warning")
-      return
-    }
-
-    setPlacingGeofence(true)
-  }, [newName, newRadius])
-
-  const focusKeyRef = useRef(0)
-  const handleZoomToGeofence = useCallback((item: Geofence) => {
-    setFocusRequest({ geofence: item, key: ++focusKeyRef.current })
-  }, [])
 
   const handleShareGeofences = useCallback(async () => {
     if (geofences.length === 0) return
@@ -245,160 +171,77 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
   const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences, colors), [geofences, colors])
 
   const renderItem = useCallback(
-    ({ item }: { item: Geofence }) => (
-      <Card style={styles.card}>
-        <View style={styles.row}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Show ${item.name} on the map`}
-            onPress={() => handleZoomToGeofence(item)}
-            hitSlop={HIT_SLOP_MD}
-            style={({ pressed }) => [styles.zoomBtn, pressed && { opacity: colors.pressedOpacity }]}
-          >
-            <MapPinHouse size={size.icon.md} color={colors.textSecondary} />
-          </Pressable>
-          <Pressable
-            testID={`edit-geofence-${item.id}`}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.editBtn, pressed && { opacity: colors.pressedOpacity }]}
-            onPress={() => navigation.navigate("Geofence Editor", { geofenceId: item.id })}
-          >
-            <View style={styles.info}>
-              <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
-              <View style={styles.radiusRow}>
-                <Text style={[styles.radius, { color: colors.textSecondary }]}>
-                  {formatShortDistance(item.radius)} radius
-                </Text>
-                {item.pauseOnWifi && <Wifi size={size.icon.sm} color={colors.textSecondary} />}
-                {item.pauseOnMotionless && <PersonStanding size={size.icon.sm} color={colors.textSecondary} />}
-              </View>
-            </View>
-            <ChevronRight size={size.icon.md} color={colors.textSecondary} />
-          </Pressable>
-        </View>
-      </Card>
-    ),
-    [colors, handleZoomToGeofence, navigation]
+    ({ item }: { item: Geofence }) => {
+      const modes = [item.pauseOnWifi && "WiFi pause", item.pauseOnMotionless && "motionless pause"].filter(Boolean)
+      return (
+        <ListItem
+          testID={`edit-geofence-${item.id}`}
+          icon={MapPinHouse}
+          label={item.name}
+          sub={[`${formatShortDistance(item.radius)} radius`, ...modes].join(" · ")}
+          onPress={() => navigation.navigate("Geofence Editor", { geofenceId: item.id })}
+        />
+      )
+    },
+    [navigation]
   )
 
   return (
     <Container>
-      <GeofenceMap
-        tracking={tracking}
-        geofenceData={geofenceData}
-        currentPauseZone={currentPauseZone}
-        onMapPress={handleMapPress}
-        focusRequest={focusRequest}
-      />
+      <View style={{ height: mapHeight }}>
+        <GeofenceMap
+          tracking={tracking}
+          geofenceData={geofenceData}
+          currentPauseZone={currentPauseZone}
+        />
+      </View>
 
-      <FlatList
-        data={geofences}
-        keyExtractor={(item) => item.id!.toString()}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <>
-            <View style={styles.section}>
-              <SectionTitle>Create geofence</SectionTitle>
-              <Card>
-                <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                  Enter a name and radius, then tap the map to place
-                </Text>
+      <View style={styles.listWrap}>
+        <Button
+          title="Create geofence"
+          icon={Plus}
+          testID="add-geofence-btn"
+          onPress={() => navigation.navigate("Geofence Editor", {})}
+        />
 
-                <View style={styles.inputRow}>
-                  <View style={[styles.inputGroup, styles.inputGroupName]}>
-                    <TextField
-                      testID="geofence-name-input"
-                      label="Name"
-                      placeholder="Home, Work..."
-                      value={newName}
-                      onChangeText={setNewName}
-                    />
-                  </View>
-
-                  <View style={[styles.inputGroup, styles.inputGroupRadius]}>
-                    <TextField
-                      testID="geofence-radius-input"
-                      label={`Radius (${shortDistanceUnit()})`}
-                      figure
-                      placeholder="50"
-                      value={newRadius}
-                      keyboardType="numeric"
-                      onChangeText={setNewRadius}
-                    />
-                  </View>
-                </View>
-
-                <Button
-                  title={placingGeofence ? "Tap Map to Place..." : "Place geofence"}
-                  disabled={placingGeofence}
-                  onPress={startPlacingGeofence}
-                />
-              </Card>
-            </View>
-
-            {geofences.length > 0 && (
-              <View style={styles.activeHeader}>
-                <SectionTitle>Active Geofences ({geofences.length})</SectionTitle>
-                <Pressable
-                  testID="share-geofences-btn"
-                  accessibilityRole="button"
-                  accessibilityLabel="Share all zones"
-                  onPress={handleShareGeofences}
-                  hitSlop={HIT_SLOP_MD}
-                  style={({ pressed }) => [styles.shareBtn, pressed && { opacity: colors.pressedOpacity }]}
-                >
-                  <Share2 size={size.icon.md} color={colors.textSecondary} />
-                </Pressable>
-              </View>
-            )}
-          </>
-        }
-        ListEmptyComponent={
-          geofences.length === 0 ? (
-            <EmptyState
-              title="No geofences yet"
-              hint="Create a geofence to stop recording locations in specific areas"
+        {geofences.length > 0 && (
+          <View style={styles.activeHeader}>
+            <SectionTitle>Active geofences ({geofences.length})</SectionTitle>
+            <IconButton
+              icon={Share2}
+              testID="share-geofences-btn"
+              accessibilityLabel="Share all zones"
+              onPress={handleShareGeofences}
             />
-          ) : undefined
-        }
-        renderItem={renderItem}
-      />
+          </View>
+        )}
+        <Card rows style={styles.listCard}>
+          <FlatList
+            data={geofences}
+            keyExtractor={(item) => item.id!.toString()}
+            contentContainerStyle={styles.listContent}
+            ItemSeparatorComponent={ZoneSeparator}
+            showsVerticalScrollIndicator={false}
+            renderItem={renderItem}
+          />
+        </Card>
+        {geofences.length === 0 && (
+          <EmptyState
+            title="No geofences yet"
+            hint="Create a geofence to stop recording locations in specific areas"
+          />
+        )}
+      </View>
     </Container>
   )
 }
 
 const styles = StyleSheet.create({
-  map: { height: 450, overflow: "hidden" },
-  list: { padding: space.lg, paddingBottom: space.xxl },
-  section: { marginBottom: space.lg },
-  hint: {
-    fontSize: fontSizes.description,
-    ...fonts.regular,
-    lineHeight: lineHeights.description,
-    marginBottom: space.lg
-  },
-  inputRow: { flexDirection: "row", gap: space.md, marginBottom: space.lg },
-  inputGroup: { flex: 1 },
-  inputGroupName: {
-    flex: 2
-  },
-  inputGroupRadius: {
-    flex: 0,
-    minWidth: 90
-  },
-  card: { marginBottom: space.md },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  zoomBtn: { padding: space.xs, marginEnd: space.lg },
-  activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  shareBtn: { padding: space.xs, marginBottom: space.md },
-  editBtn: { flex: 1, flexDirection: "row", alignItems: "center" },
-  info: { flex: 1, marginEnd: space.md },
-  name: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 2 },
-  radiusRow: { flexDirection: "row", alignItems: "center", gap: space.xs },
-  radius: { fontSize: fontSizes.caption }
+  map: { flex: 1, overflow: "hidden" },
+  listWrap: { flex: 1, padding: space.lg },
+  // ListItem cancels the padding of whatever contains it, and inside a list that is the content
+  // container rather than the card. Moving this back onto the card clips the leading icon.
+  listCard: { flex: 1, paddingHorizontal: 0 },
+  listContent: { paddingHorizontal: space.lg },
+  activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }
 })
