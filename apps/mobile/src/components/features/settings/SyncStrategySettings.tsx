@@ -401,11 +401,7 @@ export function SyncStrategySettings({
             <View style={styles.paramGroup}>
               <SectionTitle>Quality filters</SectionTitle>
 
-              <SettingRow
-                style={styles.firstInGroup}
-                label="Filter inaccurate locations"
-                hint="Reject fixes the GPS chip reports as imprecise"
-              >
+              <SettingRow label="Filter inaccurate locations" hint="Reject fixes the GPS chip reports as imprecise">
                 <Toggle
                   accessibilityLabel="Filter inaccurate locations"
                   value={settings.filterInaccurateLocations}
@@ -472,15 +468,9 @@ const styles = StyleSheet.create({
   paramGroup: {
     marginBottom: space.xs
   },
-  // A block is a row whose control wraps below the label rather than sitting beside it. It
-  // pays nothing on top: the heading's own margin is the whole gap, so every group under a
-  // heading starts at the same distance whatever its first element is.
   settingBlock: {
+    paddingTop: space.lg,
     paddingBottom: space.lg
-  },
-  // SettingRow pads itself, which would double the gap when it is the first thing in a group.
-  firstInGroup: {
-    paddingTop: 0
   },
   blockLabel: {
     fontSize: fontSizes.label,
@@ -493,8 +483,6 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
     lineHeight: 18
   },
-  // A dependent control lines up with its parent's text; position carries the relationship,
-  // so there is no rule to draw.
   nestedSetting: {
     marginTop: space.md,
     marginStart: space.lg
