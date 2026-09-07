@@ -195,7 +195,6 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   }
 ]
 
-
 function AppNavigator() {
   const { colors, isDark } = useTheme()
   const [currentRoute, setCurrentRoute] = useState<string | undefined>("Dashboard")
@@ -276,7 +275,12 @@ function AppNavigator() {
       {/* One provider so a 16 badge and a 24 tab glyph carry the same painted weight. */}
       <LucideProvider strokeWidth={1.5} absoluteStrokeWidth>
         <StatusBar {...statusBarConfig} />
-        <NavigationContainer theme={navigationTheme} linking={linking} ref={navigationRef} onStateChange={handleStateChange}>
+        <NavigationContainer
+          theme={navigationTheme}
+          linking={linking}
+          ref={navigationRef}
+          onStateChange={handleStateChange}
+        >
           <View style={styles.flex}>
             <Stack.Navigator initialRouteName="Dashboard" screenOptions={screenOptions}>
               {SCREEN_CONFIG.map((screen) => (

@@ -58,7 +58,10 @@ export function ListItem({
       <View style={styles.content}>
         <Text style={[styles.label, { color: disabled ? colors.textDisabled : colors.text }]}>{label}</Text>
         {sub ? (
-          <Text style={[styles.sub, { color: disabled ? colors.textDisabled : colors.textSecondary }]} numberOfLines={1}>
+          <Text
+            style={[styles.sub, { color: disabled ? colors.textDisabled : colors.textSecondary }]}
+            numberOfLines={1}
+          >
             {sub}
           </Text>
         ) : null}

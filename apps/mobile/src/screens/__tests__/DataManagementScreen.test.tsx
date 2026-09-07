@@ -271,8 +271,6 @@ describe("DataManagementScreen", () => {
     })
   })
 
-
-
   it("Clear Sent History shows confirmation dialog", async () => {
     const { getByText, getAllByText } = renderScreen()
 

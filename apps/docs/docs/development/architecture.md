@@ -155,18 +155,9 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Stationary detection - slows GPS to the profile's interval after 60s of fixes without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). It keeps working inside a pause zone and during an entry delay, since fixes reach `ProfileManager` before the in-zone drop; only a hold that stops the stream can prevent a verdict.
 - Queuing data for server sync
 
-**Alarms go through a receiver, not the service.** Each scheduler targets a `BroadcastReceiver`
-that then starts the service. That keeps the PendingIntent a plain explicit broadcast, and the
-foreground-service start runs inside the alarm's temporary allowlist window.
+**Alarms go through a receiver, not the service.** Each scheduler targets a `BroadcastReceiver` that then starts the service. That keeps the PendingIntent a plain explicit broadcast, and the foreground-service start runs inside the alarm's temporary allowlist window.
 
-**Intent vs liveness.** The `tracking_enabled` setting records that the user wants tracking and
-deliberately survives process death and reboot. Whether a service exists right now is
-`LocationForegroundService.isRunning`. Anything asking "is tracking alive" must read `isRunning`,
-because a service the system killed leaves the flag true. Recovery is layered: the app reconciles
-the two whenever it reaches the foreground, and `TrackingWatchdogScheduler` covers the window while
-the app stays closed. Reconciling can also drop the intent rather than honour it: a revoked location
-permission means no service can be started again, so the foreground reconciler clears the flag and
-the watchdog stops re-arming itself.
+**Intent vs liveness.** The `tracking_enabled` setting records that the user wants tracking and deliberately survives process death and reboot. Whether a service exists right now is `LocationForegroundService.isRunning`. Anything asking "is tracking alive" must read `isRunning`, because a service the system killed leaves the flag true. Recovery is layered: the app reconciles the two whenever it reaches the foreground, and `TrackingWatchdogScheduler` covers the window while the app stays closed. Reconciling can also drop the intent rather than honour it: a revoked location permission means no service can be started again, so the foreground reconciler clears the flag and the watchdog stops re-arming itself.
 
 ### NotificationHelper
 
@@ -398,12 +389,12 @@ Supporting utilities in `mapUtils.ts`:
 
 ### Hooks
 
-| Hook                  | Purpose                                                                                  |
-| --------------------- | ---------------------------------------------------------------------------------------- |
+| Hook | Purpose |
+| --- | --- |
 | `useLocationTracking` | Manages the foreground service lifecycle, native event subscriptions, and location state. On app foreground it reconciles the user's intent against real service liveness and restarts a service that died |
-| `useTheme`            | Provides theme colors, mode, and toggle from ThemeProvider context                       |
-| `useAutoSave`         | Debounced auto-save pattern for settings screens                                         |
-| `useTimeout`          | Managed timeout with automatic cleanup on unmount                                        |
+| `useTheme` | Provides theme colors, mode, and toggle from ThemeProvider context |
+| `useAutoSave` | Debounced auto-save pattern for settings screens |
+| `useTimeout` | Managed timeout with automatic cleanup on unmount |
 
 ### State Management
 

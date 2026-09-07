@@ -251,9 +251,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
             />
           }
           ListHeaderComponent={summaryHeader}
-          ListEmptyComponent={
-            <EmptyState style={styles.emptyInset} title="No data for this period" />
-          }
+          ListEmptyComponent={<EmptyState style={styles.emptyInset} title="No data for this period" />}
         />
       )}
     </Container>
@@ -329,5 +327,5 @@ const styles = StyleSheet.create({
   dayStat: {
     fontSize: fontSizes.caption,
     ...fonts.regular
-  },
+  }
 })

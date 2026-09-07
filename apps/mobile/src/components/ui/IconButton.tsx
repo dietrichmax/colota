@@ -59,11 +59,7 @@ export function IconButton({
       }
       style={[styles.button, { backgroundColor: fill }, style]}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={content} />
-      ) : (
-        <Icon size={size.icon.sm} color={content} />
-      )}
+      {loading ? <ActivityIndicator size="small" color={content} /> : <Icon size={size.icon.sm} color={content} />}
     </Pressable>
   )
 }

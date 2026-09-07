@@ -12,12 +12,7 @@ import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { MapPinHouse, Share2, Plus } from "lucide-react-native"
 import { Button, Card, Container, Divider, EmptyState, IconButton, ListItem, SectionTitle } from "../components"
-import {
-  DEFAULT_MAP_ZOOM,
-  MAP_ANIMATION_DURATION_MS,
-  WORLD_MAP_ZOOM,
-  space
-} from "../constants"
+import { DEFAULT_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, WORLD_MAP_ZOOM, space } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
 import { buildGeofencesGeoJSON } from "../components/features/map/mapUtils"
@@ -71,7 +66,6 @@ const GeofenceMap = React.memo(function GeofenceMapView({
     })
   }, [coords, tracking])
 
-
   const handleCenterMe = useCallback(() => {
     if (coords && mapRef.current?.camera) {
       mapRef.current.camera.flyTo({
@@ -124,7 +118,6 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
   const [geofences, setGeofences] = useState<Geofence[]>([])
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
 
-
   const loadGeofences = useCallback(async () => {
     try {
       const data = await NativeLocationService.getGeofences()
@@ -155,8 +148,6 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
     })
     return () => listener.remove()
   }, [loadGeofences])
-
-
 
   const handleShareGeofences = useCallback(async () => {
     if (geofences.length === 0) return
@@ -189,11 +180,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
   return (
     <Container>
       <View style={{ height: mapHeight }}>
-        <GeofenceMap
-          tracking={tracking}
-          geofenceData={geofenceData}
-          currentPauseZone={currentPauseZone}
-        />
+        <GeofenceMap tracking={tracking} geofenceData={geofenceData} currentPauseZone={currentPauseZone} />
       </View>
 
       <View style={styles.listWrap}>
@@ -226,10 +213,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
           />
         </Card>
         {geofences.length === 0 && (
-          <EmptyState
-            title="No geofences yet"
-            hint="Create a geofence to stop recording locations in specific areas"
-          />
+          <EmptyState title="No geofences yet" hint="Create a geofence to stop recording locations in specific areas" />
         )}
       </View>
     </Container>

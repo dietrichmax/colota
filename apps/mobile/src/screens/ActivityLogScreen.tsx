@@ -246,7 +246,13 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
                   }
                 ]}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive, { color: active ? colors.textOnPrimary : colors.textLight }]}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    active && styles.chipTextActive,
+                    { color: active ? colors.textOnPrimary : colors.textLight }
+                  ]}
+                >
                   {level}
                   {count > 0 ? ` ${count}` : ""}
                 </Text>

@@ -278,7 +278,9 @@ describe("GeofenceScreen", () => {
     mockGetGeofences.mockResolvedValue(mockGeofences)
     const mockNavigate = jest.fn()
 
-    const { getByTestId } = render(<GeofenceScreen navigation={{ navigate: mockNavigate, setOptions: jest.fn() } as any} />)
+    const { getByTestId } = render(
+      <GeofenceScreen navigation={{ navigate: mockNavigate, setOptions: jest.fn() } as any} />
+    )
 
     await waitFor(() => expect(getByTestId("edit-geofence-1")).toBeTruthy())
 
