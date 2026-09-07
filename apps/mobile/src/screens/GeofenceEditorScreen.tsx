@@ -208,7 +208,6 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     }
   }, [geofenceId, name, navigation])
 
-
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -240,7 +239,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 
         <SectionTitle>GPS pause options</SectionTitle>
         <Card rows style={[styles.card, styles.cardTail]}>
-          <SettingRow label="Don't record in zone" hint="Pause saving and syncing" style={styles.toggleRow}>
+          <SettingRow label="Don't record in zone" hint="Pause saving and syncing">
             <Toggle
               accessibilityLabel="Don't record in zone"
               testID="pause-tracking-toggle"
@@ -249,12 +248,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
             />
           </SettingRow>
 
-          <SettingRow
-            label="WiFi/Ethernet pause"
-            hint="Stop GPS on unmetered networks"
-            style={styles.toggleRow}
-            disabled={!pauseTracking}
-          >
+          <SettingRow label="WiFi/Ethernet pause" hint="Stop GPS on unmetered networks" disabled={!pauseTracking}>
             <Toggle
               accessibilityLabel="WiFi/Ethernet pause"
               testID="pause-wifi-toggle"
@@ -264,12 +258,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
             />
           </SettingRow>
 
-          <SettingRow
-            label="Motionless pause"
-            hint="Stop GPS after no motion for a set time"
-            style={styles.toggleRow}
-            disabled={!pauseTracking}
-          >
+          <SettingRow label="Motionless pause" hint="Stop GPS after no motion for a set time" disabled={!pauseTracking}>
             <Toggle
               accessibilityLabel="Motionless pause"
               testID="pause-motionless-toggle"
@@ -302,7 +291,6 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           <SettingRow
             label="Stationary heartbeat"
             hint="Periodic point at the zone center while paused"
-            style={styles.toggleRow}
             disabled={!pauseTracking}
           >
             <Toggle
@@ -362,15 +350,11 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 }
 
 const styles = StyleSheet.create({
-  // rows drops the card\'s vertical padding for the first row; the last child
-  // here is not a row, so it takes the bottom inset back.
   cardTail: { paddingBottom: space.lg },
   content: { padding: 20, paddingBottom: 40 },
   card: { marginBottom: space.lg },
   nameInput: { flex: 1 },
   numInput: { width: size.numericField },
-  toggleRow: { paddingVertical: 10 },
-  // See SyncStrategySettings: a dependent control indents, it does not get a rule.
   nestedSetting: {
     marginTop: space.md,
     marginStart: space.lg
