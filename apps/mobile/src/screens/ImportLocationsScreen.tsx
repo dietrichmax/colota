@@ -27,7 +27,13 @@ const SYNC_WARN_THRESHOLD = 10_000
 
 const SUPPORTED_FORMATS = IMPORT_FORMAT_ORDER.map((key) => {
   const f = FILE_FORMATS[key]
-  return { icon: f.icon, title: f.label, extension: f.extension, description: importDescription(f) }
+  return {
+    icon: f.icon,
+    title: f.label,
+    subtitle: f.subtitle,
+    extension: f.extension,
+    description: importDescription(f)
+  }
 })
 
 function formatDate(unixSeconds: number | null): string {
@@ -87,9 +93,10 @@ const FormatRow = ({ entry, colors }: { entry: (typeof SUPPORTED_FORMATS)[number
       <Icon size={size.icon.md} color={colors.textLight} />
       <View style={styles.formatTextContent}>
         <Text style={[styles.formatTitle, { color: colors.text }]}>{entry.title}</Text>
-        <Text style={[styles.formatDescription, { color: colors.textLight }]}>
-          {entry.extension} · {entry.description}
+        <Text style={[styles.formatSubtitle, { color: colors.textSecondary }]}>
+          {entry.subtitle} · {entry.extension}
         </Text>
+        <Text style={[styles.formatDescription, { color: colors.textLight }]}>{entry.description}</Text>
       </View>
     </View>
   )
@@ -269,6 +276,10 @@ const styles = StyleSheet.create({
   formatTitle: {
     fontSize: fontSizes.label,
     ...fonts.semiBold
+  },
+  formatSubtitle: {
+    fontSize: fontSizes.description,
+    marginTop: 2
   },
   formatDescription: {
     fontSize: fontSizes.caption,

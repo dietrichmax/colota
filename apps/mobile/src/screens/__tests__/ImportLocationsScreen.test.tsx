@@ -1,5 +1,6 @@
 import React from "react"
 import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { FILE_FORMATS, IMPORT_FORMAT_ORDER, importDescription } from "../../utils/fileFormats"
 
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
@@ -111,6 +112,17 @@ describe("ImportLocationsScreen", () => {
     jest.clearAllMocks()
     mockGetStats.mockResolvedValue({ total: 100 })
     mockCancelImport.mockResolvedValue(undefined)
+  })
+
+  it("gives every listed format the same three lines the export picker shows", () => {
+    const { getByText } = renderScreen()
+
+    for (const key of IMPORT_FORMAT_ORDER) {
+      const format = FILE_FORMATS[key]
+      expect(getByText(format.label)).toBeTruthy()
+      expect(getByText(`${format.subtitle} · ${format.extension}`)).toBeTruthy()
+      expect(getByText(importDescription(format))).toBeTruthy()
+    }
   })
 
   it("does nothing when the picker is dismissed, so no staged import is left behind", async () => {
