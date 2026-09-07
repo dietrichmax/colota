@@ -20,6 +20,7 @@ interface SyncStrategySettingsProps {
   onSettingsChange: (newSettings: Settings) => void
   onDebouncedSave: (newSettings: Settings) => void
   onImmediateSave: (newSettings: Settings) => void
+  activeProfileName?: string | null
   colors: ThemeColors
 }
 
@@ -43,6 +44,7 @@ export function SyncStrategySettings({
   onSettingsChange,
   onDebouncedSave,
   onImmediateSave,
+  activeProfileName,
   colors
 }: SyncStrategySettingsProps) {
   const [intervalInput, setIntervalInput] = useState(settings.interval.toString())
@@ -170,6 +172,11 @@ export function SyncStrategySettings({
       <Text style={[styles.intro, { color: colors.textSecondary }]}>
         How often a fix is recorded, and when it uploads
       </Text>
+      {activeProfileName ? (
+        <Text testID="profile-override-notice" style={[styles.override, { color: colors.warning }]}>
+          {activeProfileName} is active and is overriding these values while its condition holds.
+        </Text>
+      ) : null}
       <SectionTitle>Tracking configuration</SectionTitle>
       <Card rows>
         <View accessibilityRole="radiogroup">
@@ -370,6 +377,13 @@ const styles = StyleSheet.create({
     lineHeight: lineHeights.body,
     marginBottom: space.lg
   },
+  override: {
+    fontSize: fontSizes.description,
+    ...fonts.medium,
+    lineHeight: lineHeights.description,
+    marginTop: -space.sm,
+    marginBottom: space.lg
+  },
   section: {
     marginBottom: space.xl
   },
@@ -381,7 +395,6 @@ const styles = StyleSheet.create({
   groupTop: {
     marginTop: space.xl
   },
-  // The last child is a nested field, not a row, so the bottom inset comes back.
   cardTail: {
     paddingBottom: space.lg
   },

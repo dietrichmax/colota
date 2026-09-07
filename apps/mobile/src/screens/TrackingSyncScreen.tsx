@@ -15,7 +15,7 @@ import { SyncStrategySettings } from "../components/features/settings/SyncStrate
 import { space } from "../constants"
 
 export function TrackingSyncScreen({}: ScreenProps) {
-  const { settings, setSettings, updateSettingsLocal, restartTracking } = useTracking()
+  const { settings, setSettings, updateSettingsLocal, restartTracking, activeProfileName } = useTracking()
   const { colors } = useTheme()
   const {
     saving,
@@ -57,6 +57,7 @@ export function TrackingSyncScreen({}: ScreenProps) {
           onSettingsChange={updateSettingsLocal}
           onDebouncedSave={handleDebouncedSave}
           onImmediateSave={handleImmediateSave}
+          activeProfileName={activeProfileName}
           colors={colors}
         />
       </ScrollView>
