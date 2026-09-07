@@ -55,4 +55,12 @@ describe("ChipGroup", () => {
     expect(style.minHeight).toBe(size.chip)
     expect(style.minHeight + slop.top + slop.bottom).toBeGreaterThanOrEqual(size.touch)
   })
+
+  it("binds the chips into a group, because a loose radio has nothing to belong to", () => {
+    const { getByLabelText } = render(
+      <ChipGroup options={OPTIONS} selected="b" onSelect={jest.fn()} accessibilityLabel="Period" />
+    )
+
+    expect(getByLabelText("Period").props.accessibilityRole).toBe("radiogroup")
+  })
 })
