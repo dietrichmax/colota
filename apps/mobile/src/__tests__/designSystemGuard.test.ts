@@ -31,7 +31,13 @@ const RULES = [
   { name: "spacing", pattern: /(?:padding|margin|gap|rowGap|columnGap)[A-Za-z]*:\s*(?:4|8|12|16|24|32)\b/ },
   { name: "radius", pattern: /borderRadius:\s*(?:4|8|12|16)\b/ },
   { name: "fontSize", pattern: /fontSize:\s*(?:10|11|12|13|14|15|16|18|20|24|28)\b/ },
-  { name: "iconSize", pattern: /size=\{(?:16|20|24)\}/ }
+  { name: "iconSize", pattern: /size=\{(?:16|20|24)\}/ },
+  // These three ban a property outright rather than a value, because the scale covers every case:
+  // elevation names its four levels, fonts names its four weights, and the type spec has no
+  // letter spacing at all.
+  { name: "elevation", pattern: /elevation:\s*\d/ },
+  { name: "fontWeight", pattern: /fontWeight:\s*"?\d/ },
+  { name: "letterSpacing", pattern: /letterSpacing:/ }
 ] as const
 
 function sourceFiles(): string[] {

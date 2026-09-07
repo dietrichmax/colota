@@ -15,15 +15,7 @@ import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { X, CircleCheckBig, RefreshCw, TriangleAlert } from "lucide-react-native"
 import { Button, Card, Container, EmptyState, IconButton, SectionTitle, TextField } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
-import {
-  DEFAULT_MAP_ZOOM,
-  HIT_SLOP_MD,
-  MAP_ANIMATION_DURATION_MS,
-  MAP_STYLE_URL_LIGHT,
-  WORLD_MAP_ZOOM,
-  size,
-  space
-} from "../constants"
+import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, MAP_STYLE_URL_LIGHT, WORLD_MAP_ZOOM, size, space, elevation } from "../constants"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
 import { logger } from "../utils/logger"
@@ -926,7 +918,7 @@ const styles = StyleSheet.create({
     right: 14,
     padding: space.md,
     borderRadius: radius.md,
-    elevation: 8,
+    elevation: elevation.overlay,
     zIndex: 5,
     alignItems: "center"
   },

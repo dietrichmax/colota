@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
     ...fonts.regular
   },
   dayDist: {
-    fontSize: 9,
+    fontSize: fontSizes.micro,
     ...fonts.medium,
     marginTop: 1
   },

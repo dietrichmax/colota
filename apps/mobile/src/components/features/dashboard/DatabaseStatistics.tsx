@@ -91,7 +91,6 @@ const styles = StyleSheet.create({
   },
   statValue: {
     ...type.figure,
-    letterSpacing: -0.5,
     marginBottom: 2
   }
 })

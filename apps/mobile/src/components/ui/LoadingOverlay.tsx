@@ -6,7 +6,7 @@
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
-import { space } from "../../constants"
+import { space, elevation } from "../../constants"
 import { radius } from "@colota/shared"
 
 type Props = {
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     padding: space.xxl,
     borderRadius: radius.lg,
     alignItems: "center",
-    elevation: 8,
+    elevation: elevation.overlay,
     minWidth: 240
   },
   title: {

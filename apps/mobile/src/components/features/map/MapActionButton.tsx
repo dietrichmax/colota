@@ -3,6 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import { elevation } from "../../../constants"
 import React from "react"
 import { Pressable, StyleSheet, ViewStyle, StyleProp, PressableProps } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
@@ -47,7 +48,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 5,
+    elevation: elevation.floating,
     zIndex: 10
   },
   right: { right: 16 },

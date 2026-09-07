@@ -10,7 +10,7 @@ import type { NativeSyntheticEvent } from "react-native"
 import { MapPinOff, X, Check, Trash2, Split } from "lucide-react-native"
 import { ThemeColors, Trip } from "../../../types/global"
 import { getTripColor } from "../../../utils/trips"
-import { fontSizes } from "../../../styles/typography"
+import { fontSizes, fonts } from "../../../styles/typography"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
 import { EmptyState } from "../../ui/EmptyState"
@@ -22,7 +22,7 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { getSpeedUnit } from "../../../utils/geo"
-import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, size, space } from "../../../constants"
+import { DEFAULT_MAP_ZOOM, HIT_SLOP_MD, MAP_ANIMATION_DURATION_MS, size, space, elevation } from "../../../constants"
 import { radius } from "@colota/shared"
 
 const HAS_NOTE = ["!=", ["get", "note"], ""]
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
     right: 10,
     padding: space.md,
     borderRadius: radius.md,
-    elevation: 6,
+    elevation: elevation.overlay,
     zIndex: 10
   },
   popupHeader: {
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     gap: 20
   },
   popupTime: {
-    fontWeight: "600",
+    ...fonts.semiBold,
     fontSize: fontSizes.description
   },
   popupRow: {
@@ -463,10 +463,10 @@ const styles = StyleSheet.create({
   },
   popupLabel: {
     fontSize: fontSizes.small,
-    fontWeight: "600"
+    ...fonts.semiBold
   },
   popupValue: {
-    fontWeight: "500",
+    ...fonts.medium,
     fontSize: fontSizes.caption
   },
   noteSection: {
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: space.sm,
     gap: space.xs,
-    elevation: 4,
+    elevation: elevation.floating,
     zIndex: 10
   },
   legendItem: {
@@ -514,6 +514,6 @@ const styles = StyleSheet.create({
   },
   legendLabel: {
     fontSize: fontSizes.small,
-    fontWeight: "500"
+    ...fonts.medium
   }
 })

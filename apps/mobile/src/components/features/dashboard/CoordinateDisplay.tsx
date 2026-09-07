@@ -71,8 +71,7 @@ const styles = StyleSheet.create({
   },
   coordValue: {
     fontSize: fontSizes.input,
-    ...fonts.bold,
-    letterSpacing: -0.3
+    ...fonts.bold
   },
   coordUnit: {
     fontSize: fontSizes.caption,

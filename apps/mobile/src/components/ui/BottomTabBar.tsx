@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Settings, House, CircleDot, Route } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
-import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { size, space, STATE_LAYER_ALPHA, elevation } from "../../constants"
 import type { RootStackRoute } from "../../types/navigation"
 
 type TabIcon = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingTop: space.sm,
     paddingBottom: 6,
-    elevation: 0
+    elevation: elevation.flat
   },
   tab: {
     flex: 1,

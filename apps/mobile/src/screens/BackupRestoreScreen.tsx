@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   strengthLabel: {
     fontSize: fontSizes.caption,
-    fontWeight: "600",
+    ...fonts.semiBold,
     minWidth: 60,
     textAlign: "right"
   },

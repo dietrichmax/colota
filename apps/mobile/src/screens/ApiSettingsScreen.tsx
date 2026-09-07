@@ -790,8 +790,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: fontSizes.description,
-    ...fonts.bold,
-    letterSpacing: 0.5
+    ...fonts.bold
   },
   modifiedBadge: {
     paddingHorizontal: 6,
@@ -799,9 +798,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.xs
   },
   modifiedText: {
-    fontSize: 9,
-    ...fonts.bold,
-    letterSpacing: 0.3
+    fontSize: fontSizes.micro,
+    ...fonts.bold
   },
   fieldDescription: {
     fontSize: fontSizes.small,

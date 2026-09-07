@@ -9,7 +9,7 @@ import { View, Text, StyleSheet, Animated } from "react-native"
 import { Check } from "lucide-react-native"
 import { SpinningLoader } from "./SpinningLoader"
 import { fontSizes, fonts } from "../../styles/typography"
-import { size, space } from "../../constants"
+import { size, space, elevation } from "../../constants"
 
 interface Props {
   saving: boolean
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: space.md,
     borderRadius: radius.pill,
-    elevation: 8
+    elevation: elevation.overlay
   },
   text: { fontSize: fontSizes.body, ...fonts.semiBold }
 })

@@ -20,7 +20,7 @@ import {
   DatabaseStatistics,
   WelcomeCard
 } from "../components"
-import { MIN_STATS_INTERVAL_MS, STATS_REFRESH_IDLE, space } from "../constants"
+import { MIN_STATS_INTERVAL_MS, STATS_REFRESH_IDLE, space, elevation } from "../constants"
 import { Square, Play } from "lucide-react-native"
 import { logger } from "../utils/logger"
 
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   controlButton: {
-    elevation: 4,
+    elevation: elevation.floating,
     minWidth: 200
   },
   content: {
