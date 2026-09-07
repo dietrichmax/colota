@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: space.md,
     marginBottom: space.lg
   },
   summaryCard: {

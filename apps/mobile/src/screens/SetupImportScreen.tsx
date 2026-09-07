@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10
+    paddingVertical: space.md
   },
   settingRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: space.sm,
     gap: space.md
   },
   toggleText: {

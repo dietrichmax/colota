@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   },
   fieldRow: {
     flexDirection: "row",
-    paddingVertical: 10,
+    paddingVertical: space.md,
     gap: space.md
   },
   keyColumn: {
@@ -785,7 +785,7 @@ const styles = StyleSheet.create({
   keyHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: space.sm,
     marginBottom: 2
   },
   fieldLabel: {
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
     ...fonts.bold
   },
   modifiedBadge: {
-    paddingHorizontal: 6,
+    paddingHorizontal: space.sm,
     paddingVertical: 2,
     borderRadius: radius.xs
   },
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6
+    gap: space.sm
   },
   fieldInput: {
     flex: 1
@@ -855,7 +855,7 @@ const styles = StyleSheet.create({
     ...fonts.semiBold
   },
   exampleCard: {
-    padding: 14,
+    padding: space.lg,
     borderRadius: radius.sm
   },
   exampleCode: {

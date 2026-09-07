@@ -8,7 +8,7 @@ import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-nat
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts, lineHeights, type } from "../../styles/typography"
 import { radius } from "@colota/shared"
-import { space, STATE_LAYER_ALPHA, elevation } from "../../constants"
+import { size, space, STATE_LAYER_ALPHA, elevation } from "../../constants"
 
 interface DisclosureModalProps {
   icon: React.ReactNode
@@ -142,10 +142,13 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
+    // 14 was holding the 48 target by itself: on the scale that only works with the minimum stated
+    minHeight: size.touch,
+    paddingVertical: space.md,
     borderRadius: radius.sm,
     overflow: "hidden",
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "center"
   },
   buttonText: {
     fontSize: fontSizes.label,

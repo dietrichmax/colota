@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: fontSizes.caption,
-    marginTop: 10,
+    marginTop: space.md,
     textAlign: "center"
   },
   warningBanner: {

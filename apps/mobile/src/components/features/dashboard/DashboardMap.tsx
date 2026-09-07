@@ -12,7 +12,7 @@ import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
 import { fontSizes, fonts, lineHeights, type } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { DEFAULT_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, space } from "../../../constants"
+import { DEFAULT_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, STATE_LAYER_ALPHA, size, space } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { TrackToggleButton } from "../map/TrackToggleButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
@@ -227,7 +227,8 @@ export function DashboardMap({
         <Pressable
           accessibilityRole="button"
           onPress={() => NativeLocationService.openLocationSettings()}
-          style={[styles.statusBar, { backgroundColor: colors.error + "DD" }]}
+          android_ripple={{ color: "#fff" + STATE_LAYER_ALPHA }}
+          style={[styles.statusBar, styles.statusBarTappable, { backgroundColor: colors.error + "DD" }]}
         >
           <Text style={styles.barText}>Location off - tap to enable</Text>
         </Pressable>
@@ -284,9 +285,15 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    paddingVertical: 6,
+    paddingVertical: space.sm,
     alignItems: "center",
     zIndex: 5
+  },
+  // Only the location-off bar is pressable; the zone and profile bars are labels and stay at their text height
+  statusBarTappable: {
+    minHeight: size.touch,
+    justifyContent: "center",
+    overflow: "hidden"
   },
   barText: { fontSize: fontSizes.description, ...fonts.semiBold, color: "#fff" }
 })
