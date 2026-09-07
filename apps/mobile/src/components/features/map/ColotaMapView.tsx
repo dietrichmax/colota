@@ -6,9 +6,15 @@
 import React, { useRef, useImperativeHandle, forwardRef, useState, useEffect, useCallback } from "react"
 import { StyleProp, ViewStyle, View, Text, StyleSheet, Linking, Pressable, Modal } from "react-native"
 import { Map, Camera } from "@maplibre/maplibre-react-native"
-import type { MapRef, CameraRef, ViewStateChangeEvent, LngLatBounds } from "@maplibre/maplibre-react-native"
+import type {
+  MapRef,
+  CameraRef,
+  ViewStateChangeEvent,
+  LngLatBounds,
+  ViewPadding
+} from "@maplibre/maplibre-react-native"
 import type { NativeSyntheticEvent } from "react-native"
-import { Compass, Info, X } from "lucide-react-native"
+import { Compass, Info } from "lucide-react-native"
 import { useIsFocused } from "@react-navigation/native"
 import { radius } from "@colota/shared"
 import { useTheme } from "../../../hooks/useTheme"
@@ -21,9 +27,10 @@ import {
   elevation,
   STATE_LAYER_ALPHA
 } from "../../../constants"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fontSizes, fonts, lineHeights, type } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
+import { Button } from "../../ui/Button"
 
 interface AttributionLink {
   url: string
@@ -75,12 +82,26 @@ interface Props {
   onPress?: (coords: { latitude: number; longitude: number }) => void
   onRegionDidChange?: (payload: RegionChangePayload) => void
   onMapReady?: () => void
+  cameraPadding?: ViewPadding
+  controlsBottom?: number
+  controlsEnd?: number
   style?: StyleProp<ViewStyle>
   children?: React.ReactNode
 }
 
 export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapViewInner(
-  { initialCenter, initialZoom = DEFAULT_MAP_ZOOM, onPress, onRegionDidChange, onMapReady, style, children },
+  {
+    initialCenter,
+    initialZoom = DEFAULT_MAP_ZOOM,
+    onPress,
+    onRegionDidChange,
+    onMapReady,
+    cameraPadding,
+    controlsBottom,
+    controlsEnd,
+    style,
+    children
+  },
   ref
 ) {
   const cameraRef = useRef<CameraRef>(null)
@@ -143,6 +164,13 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
     return () => controller.abort()
   }, [mapStyle])
 
+  const hasPadding = cameraPadding !== undefined
+  const { top, right, bottom, left } = cameraPadding ?? {}
+  useEffect(() => {
+    if (!hasPadding) return
+    cameraRef.current?.setStop({ padding: { top, right, bottom, left }, duration: 0 })
+  }, [hasPadding, top, right, bottom, left])
+
   const handleRegionDidChange = useCallback(
     (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
       const { bearing, userInteraction, bounds } = event.nativeEvent
@@ -175,6 +203,19 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
   )
 
   const showCompass = Math.abs(heading) > 3
+  const columnEnd = controlsEnd !== undefined && { right: controlsEnd }
+  const attributionStyle = [
+    mapActionStyles.right,
+    controlsBottom !== undefined && { bottom: controlsBottom },
+    columnEnd
+  ]
+  const compassStyle = [
+    mapActionStyles.right,
+    controlsBottom === undefined
+      ? styles.compassPosition
+      : { bottom: controlsBottom + 2 * (size.iconColumn + space.lg) },
+    columnEnd
+  ]
 
   return (
     <View style={[styles.container, style]}>
@@ -194,7 +235,8 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
           ref={cameraRef}
           initialViewState={{
             center: initialCenter,
-            zoom: initialZoom
+            zoom: initialZoom,
+            ...(cameraPadding && { padding: cameraPadding })
           }}
         />
 
@@ -203,7 +245,12 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
 
       {/* Custom compass button */}
       {showCompass && (
-        <MapActionButton onPress={handleCompassPress} style={[mapActionStyles.right, styles.compassPosition]}>
+        <MapActionButton
+          onPress={handleCompassPress}
+          style={compassStyle}
+          accessibilityRole="button"
+          accessibilityLabel="Reset map to north"
+        >
           <View style={{ transform: [{ rotate: `${-heading}deg` }] }}>
             <Compass size={size.icon.md} color={colors.textLight} />
           </View>
@@ -214,8 +261,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
         <>
           <MapActionButton
             onPress={() => setAttributionOpen(true)}
-            style={mapActionStyles.right}
-            hitSlop={8}
+            style={attributionStyle}
             accessibilityRole="button"
             accessibilityLabel="Show map attribution"
           >
@@ -231,7 +277,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
           >
             <Pressable
               accessibilityRole="none"
-              style={styles.attributionBackdrop}
+              style={[styles.attributionBackdrop, { backgroundColor: colors.overlay }]}
               onPress={() => setAttributionOpen(false)}
             >
               <Pressable
@@ -239,28 +285,22 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
                 onPress={() => {}}
                 style={[styles.attributionPopup, { backgroundColor: colors.card }]}
               >
-                <Pressable
-                  onPress={() => setAttributionOpen(false)}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Close"
-                  android_ripple={{ color: colors.textLight + STATE_LAYER_ALPHA, borderless: true }}
-                  style={styles.attributionClose}
-                >
-                  <X size={size.icon.md} color={colors.textLight} />
-                </Pressable>
-                {attributionLinks.map((link) => (
-                  <Pressable
-                    key={link.url}
-                    accessibilityRole="link"
-                    onPress={() => Linking.openURL(link.url)}
-                    android_ripple={{ color: colors.link + STATE_LAYER_ALPHA, borderless: true }}
-                  >
-                    <Text style={[styles.attributionPopupText, { color: colors.link }, fonts.regular]}>
-                      {link.label}
-                    </Text>
-                  </Pressable>
-                ))}
+                <Text style={[styles.attributionTitle, { color: colors.text }]}>Map data</Text>
+                <View style={styles.attributionLinks}>
+                  {attributionLinks.map((link) => (
+                    <Pressable
+                      key={link.url}
+                      accessibilityRole="link"
+                      onPress={() => Linking.openURL(link.url)}
+                      android_ripple={{ color: colors.link + STATE_LAYER_ALPHA, borderless: true }}
+                    >
+                      <Text style={[styles.attributionLink, { color: colors.link }]}>{link.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <View style={styles.attributionButtons}>
+                  <Button title="Close" variant="ghost" onPress={() => setAttributionOpen(false)} />
+                </View>
               </Pressable>
             </Pressable>
           </Modal>
@@ -273,32 +313,34 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
-  compassPosition: { bottom: 126 },
+  compassPosition: { bottom: space.xxl + 2 * (size.iconColumn + space.lg) },
   attributionBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: space.xxl
   },
   attributionPopup: {
-    maxWidth: 320,
     width: "100%",
-    paddingStart: space.lg,
-    // Clears the close control: space.xs inset plus space.xs padding either side of a 20 icon
-    paddingEnd: space.xxl,
-    paddingVertical: space.lg,
-    borderRadius: radius.md,
-    gap: space.sm,
+    padding: space.xl,
+    borderRadius: radius.lg,
     elevation: elevation.overlay
   },
-  attributionPopupText: {
-    fontSize: fontSizes.description
+  attributionTitle: {
+    ...type.title,
+    marginBottom: space.md
   },
-  attributionClose: {
-    position: "absolute",
-    top: space.xs,
-    right: space.xs,
-    padding: space.xs
+  attributionLinks: {
+    gap: space.sm
+  },
+  attributionLink: {
+    fontSize: fontSizes.body,
+    lineHeight: lineHeights.body,
+    ...fonts.regular
+  },
+  attributionButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: space.lg
   }
 })

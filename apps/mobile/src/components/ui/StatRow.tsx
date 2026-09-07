@@ -30,7 +30,11 @@ export function StatRow({ icon: Icon, label, value, children, testID }: StatRowP
   return (
     <View style={styles.row} testID={testID} accessibilityRole="text" accessibilityLabel={`${label}, ${value}`}>
       <View style={styles.leading}>
-        {Icon && <Icon size={size.icon.sm} color={colors.textLight} />}
+        {Icon && (
+          <View style={styles.icon}>
+            <Icon size={size.icon.sm} color={colors.textLight} />
+          </View>
+        )}
         <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       </View>
       <View style={styles.trailing}>
@@ -53,7 +57,11 @@ const styles = StyleSheet.create({
   leading: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm
+    gap: space.lg
+  },
+  icon: {
+    width: size.icon.md,
+    alignItems: "center"
   },
   label: {
     fontSize: fontSizes.body,

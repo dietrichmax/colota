@@ -8,7 +8,6 @@ import { Zap, Car, ArrowUp, ArrowDown, Pause } from "lucide-react-native"
 
 // Timing
 export const AUTOSAVE_DEBOUNCE_MS = 1500
-export const STATS_REFRESH_IDLE = 30_000
 export const STATS_REFRESH_FAST = 3_000
 export const SAVE_SUCCESS_DISPLAY_MS = 2000
 export const TEST_RESULT_DISPLAY_MS = 5_000
@@ -67,7 +66,6 @@ export const WORLD_MAP_ZOOM = 2
 export const MAX_MAP_ZOOM = 18
 export const GEOFENCE_ZOOM_PADDING = [80, 80, 80, 80] as const
 export const MAP_ANIMATION_DURATION_MS = 400
-export const MIN_STATS_INTERVAL_MS = 2000
 
 // Profiles
 export const MS_TO_KMH = 3.6

@@ -90,6 +90,12 @@ jest.mock("../../components/ui/Card", () => {
   return { Card: ({ children }: any) => R.createElement(View, null, children) }
 })
 
+jest.mock("../../components/ui/Divider", () => {
+  const R = require("react")
+  const { View } = require("react-native")
+  return { Divider: (props: any) => R.createElement(View, { testID: "divider", ...props }) }
+})
+
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
     colors: {
@@ -262,5 +268,18 @@ describe("TripDetailScreen - notes saved on the map", () => {
 
     await waitFor(() => expect(NativeLocationService.updateLocationNote).toHaveBeenCalledWith(1, "lunch"))
     await waitFor(() => expect(getByTestId("TrackMap-overrides").props.children).toContain("lunch"))
+  })
+})
+
+describe("TripDetailScreen - figures card", () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it("starts every seam between the figure rows at the text column, so it meets the label like the dock's do", async () => {
+    const { getAllByTestId } = render(<TripDetailScreen {...makeProps(makeTrip(4))} />)
+    await act(async () => {})
+
+    const seams = getAllByTestId("divider")
+    expect(seams).toHaveLength(3)
+    for (const seam of seams) expect(seam.props).toMatchObject({ tight: true, inset: true })
   })
 })

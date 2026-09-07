@@ -320,21 +320,21 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         <View style={styles.section}>
           <Card rows>
             <StatRow icon={Route} label="Distance" value={formatDistance(trip.distance)} />
-            <Divider tight />
+            <Divider tight inset />
             <StatRow icon={Clock} label="Duration" value={formatDuration(duration)} />
-            <Divider tight />
+            <Divider tight inset />
             <StatRow icon={Gauge} label="Avg speed" value={formatSpeed(stats.avgSpeed)} />
-            <Divider tight />
+            <Divider tight inset />
             <StatRow icon={MapPin} label="Points" value={String(trip.locationCount)} />
             {stats.elevationGain > 0 && (
               <>
-                <Divider tight />
+                <Divider tight inset />
                 <StatRow icon={TrendingUp} label="Elev. gain" value={`${Math.round(stats.elevationGain)}m`} />
               </>
             )}
             {stats.elevationLoss > 0 && (
               <>
-                <Divider tight />
+                <Divider tight inset />
                 <StatRow icon={TrendingDown} label="Elev. loss" value={`${Math.round(stats.elevationLoss)}m`} />
               </>
             )}

@@ -297,7 +297,7 @@ For backups, two `internal` methods support the export/import flow without expos
 
 | Screen | Purpose |
 | --- | --- |
-| `DashboardScreen` | Live map with tracking controls, coordinates, database stats, geofence and profile status |
+| `DashboardScreen` | Full-bleed map with no header. One banner slot under the status inset for a missing permission, location services off or a critical battery, and a docked card over the bottom edge: the tracking state line, the interval row (fix cadence and sync cadence, from the active profile or from settings; a zero sync interval reads as instant) and the server row. The Start/Stop pill and the Route toggle float above the dock. Nothing polls: it reads on focus and takes the rest from events |
 | `SettingsScreen` | Hub navigating to Connection, Tracking & sync, Request format, Tracking profiles, Appearance and the data, Colota and about screens. Each row's sub line carries live state rather than a description |
 | `ConnectionScreen` | Server endpoint URL, offline mode toggle and connection test |
 | `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
@@ -345,7 +345,7 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 | Component | Purpose |
 | --- | --- |
 | `ColotaMapView` | Shared base map component wrapping MapLibre's `MapView` with OpenFreeMap vector tiles, dark mode style transformation, custom compass, and attribution |
-| `DashboardMap` | Live tracking map with user marker, accuracy circle, today's track overlay with toggle button, geofence polygons with labels, auto-center, and center button |
+| `DashboardMap` | Live tracking map with user marker, accuracy circle, today's track (its visibility is the screen's Route toggle, the map only draws it), geofence polygons with labels, follow-me until the user pans, then a centre button in the disc column. Frames the last known fix, or the zones when there is none |
 | `TrackMap` | Location history map with trip-colored track segments, tappable point markers with detail popups, fit-to-track bounds, and trip legend |
 | `CalendarPicker` | Day picker with month navigation, dot indicators for days with data, and daily distance/count display |
 | `TripList` | Segmented trip cards with distance, duration, avg speed, elevation gain/loss. Per-trip share icon plus a long-press contextual action bar for multi-select export and delete |
@@ -385,7 +385,7 @@ Supporting utilities in `mapUtils.ts`:
 | `geo` | Haversine distance, speed/distance/duration/time formatting with configurable unit system (metric/imperial) and time format (12h/24h), auto-detected from locale on first use |
 | `exportConverters` | Export-format metadata (labels, icons, extensions, MIME types) for the export UI. Serialization itself is native - see `ExportConverters.kt` |
 | `trips` | Trip segmentation via time-gap detection (15-min threshold), dropping segments whose bounding box spans under 100 m so stationary heartbeat runs do not become trips, plus distance computation, trip stats (avg speed, elevation gain/loss), and trip color assignment. Elevation is smoothed over a time window before accumulating, since raw altitude swings between fixes overstate the climb. Manual `trip_boundary_overrides` take priority over the gap threshold, and a segment abutting a forced split is exempt from the 100 m filter so an explicit edit is never silently dropped. `getDailyStats` in `DatabaseHelper.kt` mirrors all of this for the calendar and summary |
-| `queueStatus` | Maps sync queue size to color indicators for the dashboard |
+| `dashboardState` | Pure functions behind the Dashboard: `pickBannerCondition` ranks the one banner slot (location grant, background grant while tracking, location services, battery), `describeState` turns tracking, pause and fix state into the dock's state line, `intervalText` and `formatLastFix` |
 | `settingsValidation` | URL validation and security checks for endpoint configuration |
 
 ### Hooks
@@ -402,7 +402,7 @@ Supporting utilities in `mapUtils.ts`:
 The app uses React Context for global state:
 
 - **ThemeProvider** - Light/dark theme with system preference sync
-- **TrackingProvider** - Single source of truth for tracking state, coordinates, settings, and active profile name. Hydrates from SQLite on mount, restores the active profile from the running service on reconnect, and persists changes back through `SettingsService`.
+- **TrackingProvider** - Single source of truth for tracking state, coordinates, settings and the active profile's name and id. Hydrates from SQLite on mount, restores the active profile's name and id from the running service on reconnect, and persists changes back through `SettingsService`.
 
 ### Data Flow
 

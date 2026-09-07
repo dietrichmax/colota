@@ -82,52 +82,49 @@ export function WelcomeCard({
   const hasEndpoint = settings.endpoint.trim().length > 0
 
   return (
-    <View style={styles.container}>
-      <Card variant="outlined" style={{ borderColor: colors.primary }}>
-        <Text style={[styles.title, { color: colors.text }]}>Welcome to Colota</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Get started by completing these steps:</Text>
+    <Card variant="elevated">
+      <Text style={[styles.title, { color: colors.text }]}>Welcome to Colota</Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Get started by completing these steps:</Text>
 
-        <View style={styles.checklist}>
-          <ChecklistItem label="1. Start tracking" completed={tracking} colors={colors} onPress={onStartTracking} />
-          {!isOfflineMode && (
-            <ChecklistItem
-              label="2. Configure your server endpoint"
-              completed={hasEndpoint}
-              colors={colors}
-              onPress={onNavigateToConnection}
-            />
-          )}
-        </View>
+      <View style={styles.checklist}>
+        <ChecklistItem label="1. Start tracking" completed={tracking} colors={colors} onPress={onStartTracking} />
+        {!isOfflineMode && (
+          <ChecklistItem
+            label="2. Configure your server endpoint"
+            completed={hasEndpoint}
+            colors={colors}
+            onPress={onNavigateToConnection}
+          />
+        )}
+      </View>
 
-        <View style={styles.linkRow}>
-          {!isOfflineMode && (
-            <Pressable
-              accessibilityRole="button"
-              onPress={onNavigateToRequestFormat}
-              android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
-            >
-              <Text style={[styles.link, { color: colors.primaryDark }]}>Request format</Text>
-            </Pressable>
-          )}
+      <View style={styles.linkRow}>
+        {!isOfflineMode && (
           <Pressable
             accessibilityRole="button"
-            onPress={onNavigateToTrackingSync}
+            onPress={onNavigateToRequestFormat}
             android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+            style={styles.linkTarget}
           >
-            <Text style={[styles.link, { color: colors.primaryDark }]}>Tracking presets</Text>
+            <Text style={[styles.link, { color: colors.link }]}>Request format</Text>
           </Pressable>
-        </View>
+        )}
+        <Pressable
+          accessibilityRole="button"
+          onPress={onNavigateToTrackingSync}
+          android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+          style={styles.linkTarget}
+        >
+          <Text style={[styles.link, { color: colors.link }]}>Tracking presets</Text>
+        </Pressable>
+      </View>
 
-        <Button title="Got it" variant="secondary" onPress={onDismiss} />
-      </Card>
-    </View>
+      <Button title="Got it" variant="secondary" onPress={onDismiss} />
+    </Card>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: space.lg
-  },
   title: {
     ...type.title,
     marginBottom: space.xs
@@ -143,7 +140,8 @@ const styles = StyleSheet.create({
   },
   checklistItem: {
     flexDirection: "row",
-    alignItems: "center"
+    alignItems: "center",
+    minHeight: size.touch
   },
   checkCircle: {
     width: 24,
@@ -166,6 +164,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: space.lg,
     marginBottom: space.lg
+  },
+  linkTarget: {
+    minHeight: size.touch,
+    justifyContent: "center"
   },
   link: {
     fontSize: fontSizes.body,

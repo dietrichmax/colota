@@ -25,6 +25,7 @@ type TrackingContextType = {
   settingsHydrated: boolean
   error: Error | null
   activeProfileName: string | null
+  activeProfileId: number | null
   startTracking: () => Promise<void>
   stopTracking: () => void
   restartTracking: (newSettings?: Settings) => Promise<boolean>
@@ -103,6 +104,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [activeProfileName, setActiveProfileName] = useState<string | null>(null)
+  const [activeProfileId, setActiveProfileId] = useState<number | null>(null)
 
   // Ref to track if component is mounted (prevents state updates after unmount)
   const isMountedRef = useRef(true)
@@ -203,11 +205,12 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
           // the next render, and a restart from here would start the service configured wrong.
           internalReconnect(mergedSettings)
 
-          // Restore active profile name from the running service
-          const profileName = await NativeLocationService.getActiveProfileName()
-          logger.debug(`[TrackingContext] Active profile on reconnect: ${profileName ?? "(default)"}`)
+          // Restore the active profile from the running service
+          const profile = await NativeLocationService.getActiveProfile()
+          logger.debug(`[TrackingContext] Active profile on reconnect: ${profile?.name ?? "(default)"}`)
           if (isMountedRef.current) {
-            setActiveProfileName(profileName)
+            setActiveProfileName(profile?.name ?? null)
+            setActiveProfileId(profile?.id ?? null)
           }
         }
       } catch (err) {
@@ -246,6 +249,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     const listener = DeviceEventEmitter.addListener("onProfileSwitch", (event) => {
       if (isMountedRef.current) {
         setActiveProfileName(event?.profileName ?? null)
+        setActiveProfileId(event?.profileId ?? null)
       }
     })
     return () => listener.remove()
@@ -282,6 +286,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
       internalStop()
       if (isMountedRef.current) {
         setActiveProfileName(null)
+        setActiveProfileId(null)
         setError(null)
       }
     } catch (err) {
@@ -325,6 +330,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
       settingsHydrated: hydrated,
       error,
       activeProfileName,
+      activeProfileId,
       startTracking,
       stopTracking,
       restartTracking
@@ -336,6 +342,7 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
       hydrated,
       error,
       activeProfileName,
+      activeProfileId,
       setSettings,
       startTracking,
       stopTracking,

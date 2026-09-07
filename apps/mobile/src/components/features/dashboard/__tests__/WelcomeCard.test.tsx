@@ -1,6 +1,8 @@
 import React from "react"
-import { render, fireEvent } from "@testing-library/react-native"
+import { StyleSheet, View as RNView } from "react-native"
+import { render, fireEvent, within } from "@testing-library/react-native"
 import { DEFAULT_SETTINGS } from "../../../../types/global"
+import { size } from "../../../../constants"
 
 let mockSettings = { isOfflineMode: false }
 
@@ -19,7 +21,8 @@ jest.mock("../../../ui/Card", () => {
   const R = require("react")
   const { View } = require("react-native")
   return {
-    Card: ({ children }: any) => R.createElement(View, null, children)
+    Card: ({ children, variant, style }: any) =>
+      R.createElement(View, { testID: "welcome-card", variant, style }, children)
   }
 })
 
@@ -41,6 +44,7 @@ const mockColors = {
   textSecondary: "#6b7280",
   textLight: "#9ca3af",
   success: "#22c55e",
+  link: "#0d9488",
   border: "#e5e7eb"
 } as any
 
@@ -59,6 +63,30 @@ describe("WelcomeCard", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockSettings = { isOfflineMode: false }
+  })
+
+  it("sits over map tiles as an elevated surface with no border of its own", () => {
+    const { getByTestId } = render(<WelcomeCard {...defaultProps} />)
+
+    const card = getByTestId("welcome-card")
+    expect(card.props.variant).toBe("elevated")
+    expect(StyleSheet.flatten(card.props.style)?.borderColor).toBeUndefined()
+  })
+
+  it("colours its links with the link token, because primaryDark fails 4.5 on the elevated surface in dark mode", () => {
+    const { getByText } = render(<WelcomeCard {...defaultProps} />)
+
+    expect(StyleSheet.flatten(getByText("Request format").props.style).color).toBe(mockColors.link)
+    expect(StyleSheet.flatten(getByText("Tracking presets").props.style).color).toBe(mockColors.link)
+  })
+
+  it("gives every checklist row and text link the 48 touch height, since a bare text line is too short to hit", () => {
+    const { getByRole } = render(<WelcomeCard {...defaultProps} />)
+
+    const row = getByRole("button", { name: "2. Configure your server endpoint" })
+    expect(StyleSheet.flatten(within(row).UNSAFE_getAllByType(RNView)[0].props.style).minHeight).toBe(size.touch)
+    expect(StyleSheet.flatten(getByRole("button", { name: "Request format" }).props.style).minHeight).toBe(size.touch)
+    expect(StyleSheet.flatten(getByRole("button", { name: "Tracking presets" }).props.style).minHeight).toBe(size.touch)
   })
 
   it("renders welcome title and subtitle", () => {

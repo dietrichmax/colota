@@ -2,6 +2,7 @@ import React from "react"
 import { render } from "@testing-library/react-native"
 import { StyleSheet, Text } from "react-native"
 import { lightColors, radius } from "@colota/shared"
+import { elevation } from "../../../constants"
 
 jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
@@ -79,5 +80,19 @@ describe("Button variants", () => {
 
     rerender(<Button title="Export trip" onPress={jest.fn()} expanded testID="export-btn" />)
     expect(getByTestId("export-btn").props.accessibilityState.expanded).toBe(true)
+  })
+
+  it("lifts the painted node when floating, because Android draws no shadow on an unfilled wrapper", () => {
+    const { getByTestId } = render(<Button title="Start tracking" onPress={jest.fn()} floating testID="start-btn" />)
+
+    const style = flat(getByTestId("start-btn"))
+    expect(style.backgroundColor).toBe(lightColors.primary)
+    expect(style.elevation).toBe(elevation.floating)
+  })
+
+  it("sits flat on its ground unless asked to float", () => {
+    const { getByTestId } = render(<Button title="Save" onPress={jest.fn()} testID="save-btn" />)
+
+    expect(flat(getByTestId("save-btn")).elevation).toBeUndefined()
   })
 })
