@@ -86,6 +86,8 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   const headerRight = useCallback(
     () => (
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Location summary"
         onPress={() => navigation.navigate("Location Summary")}
         style={({ pressed }) => [styles.headerBtn, pressed && { opacity: colors.pressedOpacity }]}
       >

@@ -177,6 +177,7 @@ export function DashboardMap({
 
       {waitingForFix && locationOff && (
         <Pressable
+          accessibilityRole="button"
           onPress={() => NativeLocationService.openLocationSettings()}
           style={[
             styles.stateContainer,
@@ -224,6 +225,7 @@ export function DashboardMap({
 
       {showMap && locationOff && (
         <Pressable
+          accessibilityRole="button"
           onPress={() => NativeLocationService.openLocationSettings()}
           style={[styles.statusBar, { backgroundColor: colors.error + "DD" }]}
         >

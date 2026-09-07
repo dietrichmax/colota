@@ -214,6 +214,9 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   const headerRight = useCallback(
     () => (
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Delete trip"
+        accessibilityState={{ disabled: deleting }}
         onPress={handleDelete}
         disabled={deleting}
         hitSlop={HIT_SLOP_MD}
@@ -268,6 +271,9 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         <View style={styles.section}>
           <View style={styles.headerTitleRow}>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Previous trip"
+              accessibilityState={{ disabled: !prevTrip }}
               onPress={() => goToTrip(prevTrip)}
               disabled={!prevTrip}
               hitSlop={HIT_SLOP_LG}
@@ -285,6 +291,9 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               </Text>
             </View>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Next trip"
+              accessibilityState={{ disabled: !nextTrip }}
               onPress={() => goToTrip(nextTrip)}
               disabled={!nextTrip}
               hitSlop={HIT_SLOP_LG}
@@ -391,6 +400,8 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               {EXPORT_FORMAT_KEYS.map((fmt) => (
                 <Pressable
                   key={fmt}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Export as ${fmt.toUpperCase()}`}
                   onPress={() => handleExport(fmt)}
                   hitSlop={HIT_SLOP_MD}
                   style={({ pressed }) => [

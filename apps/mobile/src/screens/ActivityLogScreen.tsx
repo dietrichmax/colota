@@ -106,6 +106,9 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
     () => (
       <View style={styles.headerButtons}>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Export log"
+          accessibilityState={{ disabled: exporting }}
           onPress={handleExport}
           disabled={exporting}
           style={({ pressed }) => [styles.headerButton, pressed && { opacity: colors.pressedOpacity }]}
@@ -217,7 +220,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery("")}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setSearchQuery("")}>
               <X size={size.icon.sm} color={colors.textLight} />
             </Pressable>
           )}
@@ -231,6 +234,9 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
             return (
               <Pressable
                 key={level}
+                accessibilityRole="button"
+                accessibilityLabel={`${level}, ${count}`}
+                accessibilityState={{ selected: active }}
                 onPress={() => toggleLevel(level)}
                 hitSlop={HIT_SLOP_MD}
                 style={[
@@ -294,6 +300,8 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
 
       {showScrollEnd ? (
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Scroll to newest"
           onPress={scrollToEnd}
           style={[styles.scrollEndButton, { backgroundColor: colors.primary, bottom: insets.bottom + 24 }]}
         >
