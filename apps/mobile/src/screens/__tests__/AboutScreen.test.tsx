@@ -80,6 +80,8 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text } = require("react-native")
   return {
+    StatRow: ({ label, value }: any) =>
+      R.createElement(View, null, R.createElement(Text, null, label), R.createElement(Text, null, value)),
     ListItem: require("../../testing/componentStubs").ListItemStub,
     Button: function (props: any) {
       return require("react").createElement(

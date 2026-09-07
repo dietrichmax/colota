@@ -36,7 +36,7 @@ export const DatabaseStatistics = React.memo(function DatabaseStatisticsView({ s
             </Card>
             <Card variant="elevated" style={styles.statCard}>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sent</Text>
-              <Text style={[styles.statValue, { color: colors.success }]}>{stats.sent.toLocaleString()}</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>{stats.sent.toLocaleString()}</Text>
               <Text style={[styles.statUnit, { color: colors.textLight }]}>synced</Text>
             </Card>
           </View>
@@ -52,12 +52,12 @@ export const DatabaseStatistics = React.memo(function DatabaseStatisticsView({ s
         <View style={[styles.statsGrid, styles.statsGridSpaced]}>
           <Card variant="elevated" style={styles.statCard}>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Today</Text>
-            <Text style={[styles.statValue, { color: colors.info }]}>{stats.today.toLocaleString()}</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{stats.today.toLocaleString()}</Text>
             <Text style={[styles.statUnit, { color: colors.textLight }]}>tracked</Text>
           </Card>
           <Card variant="elevated" style={styles.statCard}>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Storage</Text>
-            <Text style={[styles.statValue, { color: colors.primaryDark }]}>{stats.databaseSizeMB.toFixed(1)}</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{stats.databaseSizeMB.toFixed(1)}</Text>
             <Text style={[styles.statUnit, { color: colors.textLight }]}>MB</Text>
           </Card>
         </View>

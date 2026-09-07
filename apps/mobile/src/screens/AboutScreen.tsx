@@ -9,7 +9,7 @@ import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { Copy, Check } from "lucide-react-native"
 import { fontSizes, fonts, lineHeights, type } from "../styles/typography"
-import { Button, Card, Container, Divider, SectionTitle, Footer } from "../components"
+import { Button, Card, Container, Divider, Footer, SectionTitle, StatRow } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
@@ -49,15 +49,11 @@ function getVariantLabel(flavor: string): string {
 }
 
 function InfoCard({ rows }: { rows: { label: string; value: string }[] }) {
-  const { colors } = useTheme()
   return (
     <Card>
       {rows.map((row, i) => (
         <React.Fragment key={row.label}>
-          <View style={styles.techRow}>
-            <Text style={[styles.techLabel, { color: colors.textSecondary }]}>{row.label}</Text>
-            <Text style={[styles.techValue, { color: colors.text }]}>{row.value}</Text>
-          </View>
+          <StatRow label={row.label} value={row.value} />
           {i < rows.length - 1 && <Divider />}
         </React.Fragment>
       ))}
@@ -250,20 +246,6 @@ const styles = StyleSheet.create({
   version: {
     fontSize: fontSizes.description,
     ...fonts.regular
-  },
-  techRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: space.sm
-  },
-  techLabel: {
-    fontSize: fontSizes.body,
-    ...fonts.medium
-  },
-  techValue: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold
   },
   section: {
     marginTop: space.xl

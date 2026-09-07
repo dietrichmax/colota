@@ -8,12 +8,13 @@ import { View, Text, FlatList, Pressable, StyleSheet, BackHandler } from "react-
 import { Check, Route, Share, Trash2, X, Merge } from "lucide-react-native"
 import { Card } from "../../ui/Card"
 import { EmptyState } from "../../ui/EmptyState"
+import { IconButton } from "../../ui/IconButton"
 import { fontSizes, fonts } from "../../../styles/typography"
 import { formatDistance, formatDuration, formatSpeed, formatTime } from "../../../utils/geo"
 import type { Trip, ThemeColors } from "../../../types/global"
 import { getTripColor, computeTripStats, type TripStats } from "../../../utils/trips"
 import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../../../utils/exportConverters"
-import { HIT_SLOP_MD, HIT_SLOP_SM, size, space } from "../../../constants"
+import { HIT_SLOP_MD, HIT_SLOP_SM, size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { radius } from "@colota/shared"
 
 interface TripListProps {
@@ -226,17 +227,9 @@ export function TripList({ trips, colors, onTripSelect, onExport, onDelete, onMe
   return (
     <View style={styles.container}>
       {selectionMode ? (
-        <View style={[styles.headerRow, { backgroundColor: colors.primary + "12" }]}>
+        <View style={[styles.headerRow, { backgroundColor: colors.well }]}>
           <View style={styles.cabLeft}>
-            <Pressable
-              onPress={handleCancelSelection}
-              hitSlop={HIT_SLOP_SM}
-              style={({ pressed }) => [styles.cabIconBtn, pressed && { opacity: colors.pressedOpacity }]}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel selection"
-            >
-              <X size={size.icon.md} color={colors.text} />
-            </Pressable>
+            <IconButton icon={X} accessibilityLabel="Cancel selection" onPress={handleCancelSelection} />
             <Text style={[styles.cabSummary, { color: colors.text }]}>{selected.size} selected</Text>
           </View>
           <View style={styles.cabActions}>
@@ -252,41 +245,28 @@ export function TripList({ trips, colors, onTripSelect, onExport, onDelete, onMe
               </Text>
             </Pressable>
             {onExport && (
-              <Pressable
-                onPress={() => setShowExport((prev) => !prev)}
-                hitSlop={HIT_SLOP_SM}
-                style={({ pressed }) => [styles.cabIconBtn, pressed && { opacity: colors.pressedOpacity }]}
-                accessibilityRole="button"
+              <IconButton
+                icon={Share}
+                tone={showExport ? "primary" : "neutral"}
                 accessibilityLabel="Export selected trips"
-                accessibilityState={{ expanded: showExport }}
-              >
-                <Share size={size.icon.md} color={showExport ? colors.primary : colors.text} />
-              </Pressable>
+                onPress={() => setShowExport((prev) => !prev)}
+              />
             )}
             {onMerge && trips.length >= 2 && (
-              <Pressable
-                onPress={handleMergeSelected}
+              <IconButton
+                icon={Merge}
                 disabled={!isAdjacentSelection}
-                hitSlop={HIT_SLOP_SM}
-                style={({ pressed }) => [styles.cabIconBtn, pressed && { opacity: colors.pressedOpacity }]}
-                accessibilityRole="button"
                 accessibilityLabel="Merge selected trips"
-                accessibilityHint={isAdjacentSelection ? undefined : "Select two or more adjacent trips to merge them"}
-                accessibilityState={{ disabled: !isAdjacentSelection }}
-              >
-                <Merge size={size.icon.md} color={isAdjacentSelection ? colors.text : colors.textDisabled} />
-              </Pressable>
+                onPress={handleMergeSelected}
+              />
             )}
             {onDelete && (
-              <Pressable
-                onPress={handleDeleteSelected}
-                hitSlop={HIT_SLOP_SM}
-                style={({ pressed }) => [styles.cabIconBtn, pressed && { opacity: colors.pressedOpacity }]}
-                accessibilityRole="button"
+              <IconButton
+                icon={Trash2}
+                tone="danger"
                 accessibilityLabel="Delete selected trips"
-              >
-                <Trash2 size={size.icon.md} color={colors.error} />
-              </Pressable>
+                onPress={handleDeleteSelected}
+              />
             )}
           </View>
         </View>
@@ -322,11 +302,8 @@ export function TripList({ trips, colors, onTripSelect, onExport, onDelete, onMe
                 if (selectionMode) setSelected(new Set())
               }}
               hitSlop={HIT_SLOP_MD}
-              style={({ pressed }) => [
-                styles.exportChip,
-                { backgroundColor: colors.primary + "12" },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
+              android_ripple={{ color: colors.onPrimaryContainer + STATE_LAYER_ALPHA }}
+              style={[styles.exportChip, { backgroundColor: colors.primaryContainer }]}
               accessibilityRole="button"
               accessibilityLabel={
                 selectionMode
@@ -334,7 +311,9 @@ export function TripList({ trips, colors, onTripSelect, onExport, onDelete, onMe
                   : `Export all trips as ${EXPORT_FORMATS[fmt].label}`
               }
             >
-              <Text style={[styles.exportChipText, { color: colors.primary }]}>{EXPORT_FORMATS[fmt].label}</Text>
+              <Text style={[styles.exportChipText, { color: colors.onPrimaryContainer }]}>
+                {EXPORT_FORMATS[fmt].label}
+              </Text>
             </Pressable>
           ))}
         </View>
@@ -359,9 +338,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: space.lg,
-    paddingTop: 10,
-    paddingBottom: 14,
-    minHeight: 54
+    paddingTop: space.sm,
+    paddingBottom: space.md,
+    minHeight: size.row
   },
   cabLeft: {
     flexDirection: "row",
@@ -378,15 +357,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: space.xs
   },
-  cabIconBtn: {
-    minWidth: 48,
-    minHeight: 48,
-    alignItems: "center",
-    justifyContent: "center"
-  },
   cabTextBtn: {
-    minHeight: 48,
-    paddingHorizontal: 10,
+    minHeight: size.touch,
+    paddingHorizontal: space.md,
     alignItems: "center",
     justifyContent: "center"
   },
@@ -403,7 +376,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: space.xs,
     paddingHorizontal: space.md,
-    minHeight: 48
+    minHeight: size.touch
   },
   exportAllLabel: {
     fontSize: fontSizes.small,
@@ -411,9 +384,10 @@ const styles = StyleSheet.create({
   },
   exportRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: space.sm,
     paddingHorizontal: space.lg,
-    paddingTop: 10,
+    paddingTop: space.sm,
     paddingBottom: space.md
   },
   exportChip: {
