@@ -5,3 +5,4 @@
 - Headings and labels read as sentences instead of shouting in capitals, and the smallest icons are easier to see
 - About now links to the release notes, feedback and the Play listing, with the legal detail on its own screen
 - Tapping the month in Location History picks a year and a month, instead of one chevron tap per month
+- Appearance can take the app colors from your Android wallpaper

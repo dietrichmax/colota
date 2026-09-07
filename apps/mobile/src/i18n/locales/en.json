@@ -3,6 +3,8 @@
   "appearance.theme.system": "System",
   "appearance.theme.light": "Light",
   "appearance.theme.dark": "Dark",
+  "appearance.wallpaperColors": "Wallpaper colors",
+  "appearance.wallpaperColors.hint": "Take the palette from the Android wallpaper",
   "appearance.units": "Units",
   "appearance.units.metric": "Metric",
   "appearance.units.imperial": "Imperial",

@@ -20,6 +20,7 @@ import {
   TripBoundaryOverride
 } from "../types/global"
 import { logger } from "../utils/logger"
+import { parseSystemPalette, type SystemPalette } from "../styles/dynamicColors"
 import { SETTINGS_READ_ATTEMPTS, SETTINGS_READ_RETRY_DELAY_MS } from "../constants"
 
 const { LocationServiceModule, MtlsBridgeModule, BuildConfigModule } = NativeModules
@@ -723,6 +724,19 @@ class NativeLocationService {
       return null
     }
     return BuildConfigModule
+  }
+
+  /**
+   * The wallpaper-derived tonal steps, or null below API 31 and whenever the map is not the
+   * complete set the theme reads.
+   */
+  static async getSystemPalette(): Promise<SystemPalette | null> {
+    if (!BuildConfigModule) return null
+    return this.safeExecute(
+      async () => parseSystemPalette(await BuildConfigModule.getSystemPalette()),
+      null,
+      "Failed to read the system palette"
+    )
   }
 
   // ============================================================================

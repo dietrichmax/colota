@@ -4,24 +4,18 @@ import { render, fireEvent, waitFor } from "@testing-library/react-native"
 // --- Mocks ---
 
 const mockSetPreference = jest.fn()
+const mockSetWallpaperColors = jest.fn()
+const theme = { wallpaperColors: false, wallpaperColorsAvailable: true }
 
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
     mode: "light",
     preference: "system",
     setPreference: mockSetPreference,
-    colors: {
-      primary: "#0d9488",
-      primaryDark: "#115E59",
-      border: "#e5e7eb",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textLight: "#9ca3af",
-      background: "#fff",
-      card: "#fff",
-      backgroundElevated: "#f9fafb",
-      placeholder: "#9ca3af"
-    }
+    wallpaperColors: theme.wallpaperColors,
+    setWallpaperColors: mockSetWallpaperColors,
+    wallpaperColorsAvailable: theme.wallpaperColorsAvailable,
+    colors: require("@colota/shared").lightColors
   })
 }))
 
@@ -70,18 +64,24 @@ jest.mock("../../components", () => {
       )
     },
     Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
+      return require("react").createElement(require("react-native").Pressable, {
         testID: props.testID,
-        value: props.value,
-        onValueChange: props.onValueChange,
+        accessibilityLabel: props.accessibilityLabel,
         disabled: props.disabled,
-        accessibilityLabel: props.accessibilityLabel
+        onPress: () => props.onValueChange(!props.value)
       })
     },
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
-    SettingRow: ({ label, children }: any) => R.createElement(View, null, R.createElement(Text, null, label), children)
+    SettingRow: ({ label, hint, children }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        hint ? R.createElement(Text, null, hint) : null,
+        children
+      )
   }
 })
 
@@ -92,6 +92,8 @@ const mockNavigation = { navigate: jest.fn() } as any
 describe("AppearanceScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    theme.wallpaperColors = false
+    theme.wallpaperColorsAvailable = true
   })
 
   it("renders theme, units and time format rows", () => {
@@ -151,6 +153,29 @@ describe("AppearanceScreen", () => {
     fireEvent.press(getByTestId("theme-dark"))
 
     expect(mockSetPreference).toHaveBeenCalledWith("dark")
+  })
+
+  it("keeps the wallpaper palette out of the mode chips, which answer a different question", () => {
+    const { getByTestId, queryByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+
+    expect(getByTestId("wallpaper-colors-toggle")).toBeTruthy()
+    expect(queryByTestId("theme-wallpaper")).toBeNull()
+  })
+
+  it("hides the wallpaper row where the platform has no palette, rather than disabling it", () => {
+    theme.wallpaperColorsAvailable = false
+
+    const { queryByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+
+    expect(queryByTestId("wallpaper-colors-toggle")).toBeNull()
+  })
+
+  it("hands the wallpaper choice to the theme, which owns the palette", () => {
+    const { getByTestId } = render(<AppearanceScreen navigation={mockNavigation} />)
+
+    fireEvent.press(getByTestId("wallpaper-colors-toggle"))
+
+    expect(mockSetWallpaperColors).toHaveBeenCalledWith(true)
   })
 
   it("toggles the map tile server panel when pressed", () => {

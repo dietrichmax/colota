@@ -10,7 +10,7 @@ import { useTheme, type ThemePreference } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts } from "../styles/typography"
-import { Card, ChipGroup, Container, Divider, SettingRow, TextField, ListItem } from "../components"
+import { Card, ChipGroup, Container, Divider, SettingRow, TextField, ListItem, Toggle } from "../components"
 import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
@@ -18,7 +18,8 @@ import type { UnitSystem, TimeFormat } from "../utils/geo"
 import { space, STATE_LAYER_ALPHA } from "../constants"
 
 export function AppearanceScreen({}: ScreenProps) {
-  const { preference, setPreference, colors } = useTheme()
+  const { preference, setPreference, colors, wallpaperColors, setWallpaperColors, wallpaperColorsAvailable } =
+    useTheme()
   const { t } = useTranslation()
 
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(getUnitSystem)
@@ -104,6 +105,21 @@ export function AppearanceScreen({}: ScreenProps) {
               onSelect={(value) => setPreference(value as ThemePreference)}
             />
           </SettingRow>
+
+          {wallpaperColorsAvailable && (
+            <>
+              <Divider tight />
+
+              <SettingRow label={t("appearance.wallpaperColors")} hint={t("appearance.wallpaperColors.hint")}>
+                <Toggle
+                  testID="wallpaper-colors-toggle"
+                  value={wallpaperColors}
+                  onValueChange={setWallpaperColors}
+                  accessibilityLabel={t("appearance.wallpaperColors")}
+                />
+              </SettingRow>
+            </>
+          )}
 
           <Divider tight />
 
