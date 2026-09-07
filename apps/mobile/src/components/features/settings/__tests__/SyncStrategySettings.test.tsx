@@ -403,6 +403,30 @@ describe("SyncStrategySettings", () => {
     })
   })
 
+  describe("profile override", () => {
+    it("says a profile is overriding these values, because the screen otherwise reads as authoritative", () => {
+      const { getByTestId, getByText } = render(
+        <SyncStrategySettings
+          settings={baseSettings}
+          onSettingsChange={mockOnSettingsChange}
+          onDebouncedSave={mockOnDebouncedSave}
+          onImmediateSave={mockOnImmediateSave}
+          activeProfileName="Charging"
+          colors={mockColors}
+        />
+      )
+
+      expect(getByTestId("profile-override-notice")).toBeTruthy()
+      expect(getByText(/Charging is active/)).toBeTruthy()
+    })
+
+    it("stays quiet when no profile is active, so the notice means something when it appears", () => {
+      const { queryByTestId } = renderComponent()
+
+      expect(queryByTestId("profile-override-notice")).toBeNull()
+    })
+  })
+
   describe("sync condition", () => {
     it("states what every option does without one being chosen, which the chips could not", () => {
       const { getByText } = renderComponent({ syncCondition: "any" })
