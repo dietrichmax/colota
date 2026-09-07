@@ -690,6 +690,8 @@ export function OfflineMapsScreen({}: ScreenProps) {
         <Card style={styles.card}>
           <View style={styles.row}>
             <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: item.isActive }}
               style={({ pressed }) => [styles.info, pressed && { opacity: colors.pressedOpacity }]}
               onPress={() => fitToArea(item.name)}
               disabled={item.isActive}

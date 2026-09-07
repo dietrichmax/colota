@@ -152,6 +152,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
   const renderDailyStat = useCallback(
     ({ item }: { item: DailyStat }) => (
       <Pressable
+        accessibilityRole="button"
         onPress={() => handleDayPress(item.day)}
         style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
       >

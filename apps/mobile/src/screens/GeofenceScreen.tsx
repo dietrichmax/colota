@@ -249,6 +249,8 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
       <Card style={styles.card}>
         <View style={styles.row}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Show ${item.name} on the map`}
             onPress={() => handleZoomToGeofence(item)}
             hitSlop={HIT_SLOP_MD}
             style={({ pressed }) => [styles.zoomBtn, pressed && { opacity: colors.pressedOpacity }]}
@@ -257,6 +259,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
           </Pressable>
           <Pressable
             testID={`edit-geofence-${item.id}`}
+            accessibilityRole="button"
             style={({ pressed }) => [styles.editBtn, pressed && { opacity: colors.pressedOpacity }]}
             onPress={() => navigation.navigate("Geofence Editor", { geofenceId: item.id })}
           >
@@ -339,6 +342,8 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
                 <SectionTitle>Active Geofences ({geofences.length})</SectionTitle>
                 <Pressable
                   testID="share-geofences-btn"
+                  accessibilityRole="button"
+                  accessibilityLabel="Share all zones"
                   onPress={handleShareGeofences}
                   hitSlop={HIT_SLOP_MD}
                   style={({ pressed }) => [styles.shareBtn, pressed && { opacity: colors.pressedOpacity }]}

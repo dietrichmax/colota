@@ -334,6 +334,8 @@ export function TrackMap({
                 </Pressable>
               )}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close point details"
                 onPress={() => {
                   setPopup(null)
                   setSelectedPoint(null)
@@ -379,6 +381,8 @@ export function TrackMap({
                   {noteDraft.trim() !== popup.note && (
                     <Pressable
                       testID="popup-note-save"
+                      accessibilityRole="button"
+                      accessibilityLabel="Save note"
                       onPress={handleSaveNote}
                       hitSlop={HIT_SLOP_MD}
                       style={({ pressed }) => [styles.noteSaveBtn, pressed && { opacity: colors.pressedOpacity }]}

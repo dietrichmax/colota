@@ -176,6 +176,7 @@ export function AppearanceScreen({}: ScreenProps) {
                 </Text>
                 {mapStyleUrlLight.trim() || mapStyleUrlDark.trim() ? (
                   <Pressable
+                    accessibilityRole="button"
                     onPress={resetMapStyle}
                     style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
                   >

@@ -233,6 +233,8 @@ export function CalendarPicker({
       {/* Compact header row */}
       <View style={styles.row}>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Previous day"
           onPress={goBack}
           hitSlop={HIT_SLOP_LG}
           style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
@@ -263,6 +265,9 @@ export function CalendarPicker({
         </Pressable>
 
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Next day"
+          accessibilityState={{ disabled: isToday }}
           onPress={goForward}
           hitSlop={HIT_SLOP_LG}
           style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
@@ -274,6 +279,7 @@ export function CalendarPicker({
 
       {!isToday && !isExpanded && (
         <Pressable
+          accessibilityRole="button"
           onPress={goToToday}
           hitSlop={HIT_SLOP_LG}
           style={({ pressed }) => [
@@ -427,6 +433,8 @@ export function CalendarPicker({
                   return (
                     <Pressable
                       key={cell.key}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected, disabled: isFuture }}
                       style={styles.dayCell}
                       onPress={() => selectDay(cell.day!)}
                       disabled={isFuture}

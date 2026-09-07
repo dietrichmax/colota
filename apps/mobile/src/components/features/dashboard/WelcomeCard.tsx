@@ -55,7 +55,11 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
 
   if (onPress && !completed) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+      >
         {content}
       </Pressable>
     )
@@ -100,6 +104,7 @@ export function WelcomeCard({
         <View style={styles.linkRow}>
           {!isOfflineMode && (
             <Pressable
+              accessibilityRole="button"
               onPress={onNavigateToApiConfig}
               style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
             >
@@ -107,6 +112,7 @@ export function WelcomeCard({
             </Pressable>
           )}
           <Pressable
+            accessibilityRole="button"
             onPress={onNavigateToTrackingSync}
             style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
           >

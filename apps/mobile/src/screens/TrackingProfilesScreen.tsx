@@ -115,6 +115,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
       return (
         <Card style={[styles.card, isActive && { backgroundColor: colors.primaryContainer }]}>
           <Pressable
+            accessibilityRole="button"
             style={({ pressed }) => [styles.row, pressed && { opacity: colors.pressedOpacity }]}
             onPress={() => navigation.navigate("Profile Editor", { profileId: item.id })}
           >
@@ -186,6 +187,8 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
                 <SectionTitle>Profiles ({profiles.length})</SectionTitle>
                 <Pressable
                   testID="share-profiles-btn"
+                  accessibilityRole="button"
+                  accessibilityLabel="Share all profiles"
                   onPress={handleShareProfiles}
                   hitSlop={HIT_SLOP_MD}
                   style={({ pressed }) => [styles.shareBtn, pressed && { opacity: colors.pressedOpacity }]}

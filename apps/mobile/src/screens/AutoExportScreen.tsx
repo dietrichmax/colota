@@ -419,6 +419,7 @@ export function AutoExportScreen(_props: ScreenProps) {
           <SectionTitle>Export directory</SectionTitle>
           <Card>
             <Pressable
+              accessibilityRole="button"
               style={({ pressed }) => [styles.directoryRow, pressed && { opacity: colors.pressedOpacity }]}
               onPress={handlePickDirectory}
             >
@@ -652,6 +653,8 @@ export function AutoExportScreen(_props: ScreenProps) {
                       </Text>
                     </View>
                     <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Share ${file.name}`}
                       style={({ pressed }) => [styles.shareButton, pressed && { opacity: colors.pressedOpacity }]}
                       onPress={() => handleShareFile(file)}
                     >

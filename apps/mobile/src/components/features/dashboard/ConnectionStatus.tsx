@@ -86,6 +86,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
 
   return (
     <Pressable
+      accessibilityRole="button"
       onPress={() => navigation.navigate("Connection")}
       style={({ pressed }) => [
         styles.container,

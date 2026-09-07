@@ -220,8 +220,13 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
             animationType="fade"
             onRequestClose={() => setAttributionOpen(false)}
           >
-            <Pressable style={styles.attributionBackdrop} onPress={() => setAttributionOpen(false)}>
+            <Pressable
+              accessibilityRole="none"
+              style={styles.attributionBackdrop}
+              onPress={() => setAttributionOpen(false)}
+            >
               <Pressable
+                accessibilityRole="none"
                 onPress={() => {}}
                 style={[styles.attributionPopup, { backgroundColor: colors.card }]}
               >
@@ -237,6 +242,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
                 {attributionLinks.map((link) => (
                   <Pressable
                     key={link.url}
+                    accessibilityRole="link"
                     onPress={() => Linking.openURL(link.url)}
                     style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
                   >
