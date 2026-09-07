@@ -10,7 +10,6 @@ import { fontSizes, fonts } from "../../styles/typography"
 import { useTheme } from "../../hooks/useTheme"
 import { RadioDot } from "./RadioDot"
 import { size, space, STATE_LAYER_ALPHA } from "../../constants"
-import { radius } from "@colota/shared"
 
 export const FormatOption = ({
   icon: Icon,
@@ -38,37 +37,16 @@ export const FormatOption = ({
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
+      accessibilityLabel={`${title}, ${extension}, ${subtitle}`}
     >
-      <View style={styles.formatContent}>
-        <View style={styles.leftContent}>
-          <Icon size={size.icon.md} color={colors.textLight} />
-          <View style={styles.textContent}>
-            <View style={styles.titleRow}>
-              <Text
-                style={[
-                  styles.formatTitle,
-                  selected ? { color: colors.primaryDark, ...fonts.bold } : { color: colors.text }
-                ]}
-              >
-                {title}
-              </Text>
-              <View
-                style={[
-                  styles.extensionBadge,
-                  {
-                    backgroundColor: selected ? colors.primary + "20" : colors.primary + "15"
-                  }
-                ]}
-              >
-                <Text style={[styles.extensionText, { color: colors.primaryDark }]}>{extension}</Text>
-              </View>
-            </View>
-            <Text style={[styles.formatSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
-            <Text style={[styles.formatDescription, { color: colors.textLight }]}>{description}</Text>
-          </View>
-        </View>
-
-        <RadioDot selected={selected} />
+      <RadioDot selected={selected} />
+      <Icon size={size.icon.md} color={colors.textLight} />
+      <View style={styles.textContent}>
+        <Text style={[styles.formatTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.formatSubtitle, { color: colors.textSecondary }]}>
+          {subtitle} · {extension}
+        </Text>
+        <Text style={[styles.formatDescription, { color: colors.textLight }]}>{description}</Text>
       </View>
     </Pressable>
   )
@@ -76,50 +54,27 @@ export const FormatOption = ({
 
 const styles = StyleSheet.create({
   formatOption: {
-    paddingVertical: space.sm,
-    borderRadius: radius.sm,
-    overflow: "hidden"
-  },
-  formatContent: {
-    flexDirection: "row",
-    alignItems: "center"
-  },
-  leftContent: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: space.lg
+    gap: space.md,
+    paddingVertical: space.md,
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg
   },
   textContent: {
     flex: 1
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.sm,
-    marginBottom: 2
-  },
   formatTitle: {
     fontSize: fontSizes.label,
-    ...fonts.semiBold,
-    letterSpacing: -0.2
-  },
-  extensionBadge: {
-    paddingHorizontal: space.sm,
-    paddingVertical: 3,
-    borderRadius: 6
-  },
-  extensionText: {
-    fontSize: fontSizes.micro,
-    ...fonts.bold,
-    letterSpacing: 0.3
+    ...fonts.semiBold
   },
   formatSubtitle: {
     fontSize: fontSizes.description,
-    marginBottom: 2
+    marginTop: 2
   },
   formatDescription: {
     fontSize: fontSizes.caption,
-    lineHeight: 16
+    lineHeight: 16,
+    marginTop: 2
   }
 })
