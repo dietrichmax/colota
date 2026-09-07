@@ -211,19 +211,20 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
    * Includes delay for Android to release foreground service resources
    * @param newSettings Settings for the new service instance
    */
+  /** False when nothing was cycled: tracking was off, or a restart was already in flight. */
   const restartTracking = useCallback(
-    async (newSettings?: Settings) => {
+    async (newSettings?: Settings): Promise<boolean> => {
       // Only restart if tracking is active — settings are persisted separately,
       // so they'll be picked up when the user starts tracking later.
       if (!isTrackingRef.current) {
         logger.debug("[useLocationTracking] Not tracking, skip restart (settings saved separately)")
-        return
+        return false
       }
 
       if (restartingRef.current) {
         logger.debug("[useLocationTracking] Restart already in progress, queuing")
         restartQueuedRef.current = true
-        return
+        return false
       }
 
       logger.debug("[useLocationTracking] Restarting service")
@@ -237,6 +238,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
         await new Promise<void>((resolve) => setTimeout(resolve, SERVICE_RESTART_DELAY_MS))
 
         await startTracking(newSettings ?? settingsRef.current)
+        return true
       } finally {
         restartingRef.current = false
         setIsRestarting(false)

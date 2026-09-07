@@ -46,7 +46,13 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
 
   const [config, setConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG)
   const [loading, setLoading] = useState(true)
-  const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
+  const {
+    saving,
+    message: saveMessage,
+    isError: saveIsError,
+    debouncedSaveAndRestart,
+    immediateSaveAndRestart
+  } = useAutoSave()
 
   const nextIdRef = useRef(0)
   const assignId = () => nextIdRef.current++
@@ -319,7 +325,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         </View>
       </ScrollView>
 
-      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
+      <FloatingSaveIndicator saving={saving} message={saveMessage} isError={saveIsError} colors={colors} />
     </Container>
   )
 }

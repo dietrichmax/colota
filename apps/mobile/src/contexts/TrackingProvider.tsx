@@ -27,7 +27,7 @@ type TrackingContextType = {
   activeProfileName: string | null
   startTracking: () => Promise<void>
   stopTracking: () => void
-  restartTracking: (newSettings?: Settings) => Promise<void>
+  restartTracking: (newSettings?: Settings) => Promise<boolean>
 }
 
 const TrackingContext = createContext<TrackingContextType | null>(null)
@@ -295,10 +295,11 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
   const restartTracking = useCallback(
     async (newSettings?: Settings) => {
       try {
-        await internalRestart(newSettings || settings)
+        const restarted = await internalRestart(newSettings || settings)
         if (isMountedRef.current) {
           setError(null)
         }
+        return restarted
       } catch (err) {
         logger.error("[TrackingContext] Failed to restart tracking:", err)
         if (isMountedRef.current) {

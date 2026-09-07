@@ -24,7 +24,7 @@ import {
   TextField
 } from "../components"
 import { useTheme } from "../hooks/useTheme"
-import { useTimeout } from "../hooks/useTimeout"
+
 import { ScreenProps } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import {
@@ -40,7 +40,7 @@ import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { logger } from "../utils/logger"
 import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
-import { SAVE_SUCCESS_DISPLAY_MS, size, space } from "../constants"
+import { size, space } from "../constants"
 
 type ExportInterval = "daily" | "weekly" | "monthly"
 type ExportMode = "all" | "incremental"
@@ -101,8 +101,6 @@ export function AutoExportScreen(_props: ScreenProps) {
   const [exporting, setExporting] = useState(false)
   const [exportRunning, setExportRunning] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState(false)
-  const successTimeout = useTimeout()
 
   const loadStatus = useCallback(async () => {
     try {
@@ -187,22 +185,17 @@ export function AutoExportScreen(_props: ScreenProps) {
     return () => listener.remove()
   }, [loadStatus, loadExportFiles])
 
-  const saveSetting = useCallback(
-    async (key: string, value: string) => {
-      setSaving(true)
-      try {
-        await NativeLocationService.saveSetting(key, value)
-        setSaving(false)
-        setSaveSuccess(true)
-        successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
-      } catch (error) {
-        setSaving(false)
-        logger.error("[AutoExportScreen] Save failed:", error)
-        showAlert("Error", "Failed to save setting. Please try again.", "error")
-      }
-    },
-    [successTimeout]
-  )
+  const saveSetting = useCallback(async (key: string, value: string) => {
+    setSaving(true)
+    try {
+      await NativeLocationService.saveSetting(key, value)
+      setSaving(false)
+    } catch (error) {
+      setSaving(false)
+      logger.error("[AutoExportScreen] Save failed:", error)
+      showAlert("Error", "Failed to save setting. Please try again.", "error")
+    }
+  }, [])
 
   const handleToggle = useCallback(
     async (value: boolean) => {
@@ -667,7 +660,7 @@ export function AutoExportScreen(_props: ScreenProps) {
           </View>
         )}
       </ScrollView>
-      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
+      <FloatingSaveIndicator saving={saving} colors={colors} />
     </Container>
   )
 }

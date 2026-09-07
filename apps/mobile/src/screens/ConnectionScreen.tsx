@@ -17,7 +17,7 @@ import { space } from "../constants"
 export function ConnectionScreen({ navigation }: ScreenProps) {
   const { settings, setSettings, restartTracking } = useTracking()
   const { colors } = useTheme()
-  const { saving, saveSuccess, immediateSaveAndRestart } = useAutoSave()
+  const { saving, message: saveMessage, isError: saveIsError, immediateSaveAndRestart } = useAutoSave()
 
   const [endpointInput, setEndpointInput] = useState(settings.endpoint || "")
 
@@ -52,7 +52,7 @@ export function ConnectionScreen({ navigation }: ScreenProps) {
         />
       </ScrollView>
 
-      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
+      <FloatingSaveIndicator saving={saving} message={saveMessage} isError={saveIsError} colors={colors} />
     </Container>
   )
 }
