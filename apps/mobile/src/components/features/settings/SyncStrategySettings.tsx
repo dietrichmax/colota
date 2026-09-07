@@ -30,6 +30,13 @@ interface SyncStrategySettingsProps {
   colors: ThemeColors
 }
 
+const SYNC_CONDITION_OPTIONS: { value: SyncCondition; label: string; sub: string }[] = [
+  { value: "any", label: "Any network", sub: "Uploads over mobile data as well as Wi-Fi" },
+  { value: "wifi_any", label: "Wi-Fi", sub: "Uploads only while connected to any Wi-Fi" },
+  { value: "wifi_ssid", label: "Specific Wi-Fi network", sub: "Uploads only on one network you choose" },
+  { value: "vpn", label: "VPN", sub: "Uploads only while a VPN is active" }
+]
+
 function presetSummary(preset: SelectablePreset, isOfflineMode: boolean): string {
   const config = TRACKING_PRESETS[preset]
   const base = isOfflineMode ? config.description.split(" • ")[0] : config.description
@@ -320,67 +327,61 @@ export function SyncStrategySettings({
             {/* Sync Condition */}
             <View style={styles.settingBlock}>
               <Text style={[styles.blockLabel, { color: colors.text }]}>Sync only on</Text>
-              <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
-                {settings.syncCondition === "any" && "Upload on any network connection"}
-                {settings.syncCondition === "wifi_any" && "Upload only when connected to Wi-Fi"}
-                {settings.syncCondition === "wifi_ssid" && "Upload only on a specific Wi-Fi network"}
-                {settings.syncCondition === "vpn" && "Upload only when VPN is active"}
-              </Text>
-              <ChipGroup
-                options={[
-                  { value: "any", label: "Any" },
-                  { value: "wifi_any", label: "Wi-Fi" },
-                  { value: "wifi_ssid", label: "SSID" },
-                  { value: "vpn", label: "VPN" }
-                ]}
-                selected={settings.syncCondition}
-                onSelect={(value) => {
-                  const next = {
-                    ...settings,
-                    syncCondition: value as SyncCondition,
-                    syncPreset: "custom" as const
-                  }
-                  onSettingsChange(next)
-                  onImmediateSave(next)
-                }}
-              />
-              {settings.syncCondition === "wifi_ssid" && (
-                <View style={styles.ssidRow}>
-                  <TextField
-                    accessibilityLabel="Wi-Fi SSID"
-                    testID="sync-ssid-input"
-                    style={styles.ssidField}
-                    mono
-                    value={settings.syncSsid}
-                    onChangeText={(text) => {
-                      const next = { ...settings, syncSsid: text }
-                      onSettingsChange(next)
-                      onDebouncedSave(next)
-                    }}
-                    placeholder="Enter Wi-Fi SSID"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  {currentSsid !== "" && currentSsid.toLowerCase() !== settings.syncSsid.toLowerCase() && (
-                    <Pressable
-                      hitSlop={HIT_SLOP_MD}
-                      accessibilityRole="button"
-                      style={({ pressed }) => [
-                        styles.ssidFillButton,
-                        { backgroundColor: colors.primary + "15" },
-                        pressed && { opacity: colors.pressedOpacity }
-                      ]}
+              <View accessibilityRole="radiogroup">
+                {SYNC_CONDITION_OPTIONS.map(({ value, label, sub }) => (
+                  <React.Fragment key={value}>
+                    <RadioRow
+                      testID={`sync-condition-${value}`}
+                      label={label}
+                      sub={sub}
+                      selected={settings.syncCondition === value}
                       onPress={() => {
-                        const next = { ...settings, syncSsid: currentSsid }
+                        const next = { ...settings, syncCondition: value, syncPreset: "custom" as const }
                         onSettingsChange(next)
                         onImmediateSave(next)
                       }}
-                    >
-                      <Text style={[styles.ssidFillText, { color: colors.primary }]}>Use current</Text>
-                    </Pressable>
-                  )}
-                </View>
-              )}
+                    />
+                    {/* Belongs to its own row, not to the end of the group: VPN sits below it. */}
+                    {value === "wifi_ssid" && settings.syncCondition === "wifi_ssid" && (
+                      <View style={styles.ssidRow}>
+                        <TextField
+                          accessibilityLabel="Wi-Fi SSID"
+                          testID="sync-ssid-input"
+                          style={styles.ssidField}
+                          mono
+                          value={settings.syncSsid}
+                          onChangeText={(text) => {
+                            const next = { ...settings, syncSsid: text }
+                            onSettingsChange(next)
+                            onDebouncedSave(next)
+                          }}
+                          placeholder="Enter Wi-Fi SSID"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                        />
+                        {currentSsid !== "" && currentSsid.toLowerCase() !== settings.syncSsid.toLowerCase() && (
+                          <Pressable
+                            hitSlop={HIT_SLOP_MD}
+                            accessibilityRole="button"
+                            style={({ pressed }) => [
+                              styles.ssidFillButton,
+                              { backgroundColor: colors.primary + "15" },
+                              pressed && { opacity: colors.pressedOpacity }
+                            ]}
+                            onPress={() => {
+                              const next = { ...settings, syncSsid: currentSsid }
+                              onSettingsChange(next)
+                              onImmediateSave(next)
+                            }}
+                          >
+                            <Text style={[styles.ssidFillText, { color: colors.primary }]}>Use current</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    )}
+                  </React.Fragment>
+                ))}
+              </View>
             </View>
           </Card>
         </>
@@ -463,10 +464,14 @@ const styles = StyleSheet.create({
   customSyncInput: {
     marginTop: space.md
   },
+  // Indents and spaces itself the way the custom preset parameters do. The row above already pays
+  // space.lg below it, so a top margin here would push the field nearer VPN than its own option.
   ssidRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: space.sm,
+    paddingLeft: size.iconColumn,
+    marginTop: -space.xs,
+    paddingBottom: space.lg,
     gap: space.sm
   },
   ssidField: {

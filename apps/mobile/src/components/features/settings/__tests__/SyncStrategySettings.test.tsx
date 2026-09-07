@@ -379,4 +379,49 @@ describe("SyncStrategySettings", () => {
       expect(mockOnImmediateSave).not.toHaveBeenCalled()
     })
   })
+
+  describe("sync condition", () => {
+    it("states what every option does without one being chosen, which the chips could not", () => {
+      const { getByText } = renderComponent({ syncCondition: "any" })
+
+      expect(getByText("Uploads over mobile data as well as Wi-Fi")).toBeTruthy()
+      expect(getByText("Uploads only while connected to any Wi-Fi")).toBeTruthy()
+      expect(getByText("Uploads only on one network you choose")).toBeTruthy()
+      expect(getByText("Uploads only while a VPN is active")).toBeTruthy()
+    })
+
+    it("saves the choice and drops the preset to custom, because a preset does not carry it", () => {
+      const { getByTestId } = renderComponent({ syncCondition: "any", syncPreset: "balanced" })
+
+      fireEvent.press(getByTestId("sync-condition-vpn"))
+
+      expect(mockOnImmediateSave).toHaveBeenCalledWith(
+        expect.objectContaining({ syncCondition: "vpn", syncPreset: "custom" })
+      )
+    })
+
+    it("puts the SSID field under its own row, not at the end of the group below VPN", () => {
+      const { toJSON } = renderComponent({ syncCondition: "wifi_ssid" })
+
+      const ids: string[] = []
+      const walk = (node: any) => {
+        if (!node || typeof node !== "object") return
+        if (Array.isArray(node)) return node.forEach(walk)
+        if (node.props?.testID) ids.push(node.props.testID)
+        ;(node.children ?? []).forEach(walk)
+      }
+      walk(toJSON())
+
+      expect(ids.indexOf("sync-ssid-input")).toBeGreaterThan(ids.indexOf("sync-condition-wifi_ssid"))
+      expect(ids.indexOf("sync-ssid-input")).toBeLessThan(ids.indexOf("sync-condition-vpn"))
+    })
+
+    it("reveals the SSID field only for the one option that needs a network name", () => {
+      const { queryByTestId } = renderComponent({ syncCondition: "wifi_any" })
+      expect(queryByTestId("sync-ssid-input")).toBeNull()
+
+      const named = renderComponent({ syncCondition: "wifi_ssid" })
+      expect(named.queryByTestId("sync-ssid-input")).toBeTruthy()
+    })
+  })
 })

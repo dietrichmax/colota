@@ -19,12 +19,12 @@ Select a preset in **Settings → Tracking & sync** or choose **Custom** to conf
 
 Controls when Colota uploads locations. Locations are always recorded and queued locally regardless of this setting.
 
-| Option            | Behavior                                               |
-| ----------------- | ------------------------------------------------------ |
-| **Any Network**   | Upload on any connection (default)                     |
-| **Wi-Fi Only**    | Upload only on unmetered networks (Wi-Fi, Ethernet)    |
-| **Specific SSID** | Upload only when connected to a specific Wi-Fi network |
-| **VPN**           | Upload only when a VPN connection is active            |
+| Option                     | Behavior                                             |
+| -------------------------- | ---------------------------------------------------- |
+| **Any network**            | Uploads over mobile data as well as Wi-Fi (default)  |
+| **Wi-Fi**                  | Uploads only on unmetered networks (Wi-Fi, Ethernet) |
+| **Specific Wi-Fi network** | Uploads only on one network you choose               |
+| **VPN**                    | Uploads only while a VPN is active                   |
 
 This is useful for:
 
