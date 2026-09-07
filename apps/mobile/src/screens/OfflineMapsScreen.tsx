@@ -900,14 +900,14 @@ const styles = StyleSheet.create({
   card: { marginBottom: space.md },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   info: { flex: 1, marginEnd: space.md },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm, marginBottom: 2 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm, marginBottom: space.xxs },
   areaName: { fontSize: fontSizes.input, ...fonts.semiBold },
   areaSub: { fontSize: fontSizes.caption },
-  areaSubDate: { fontSize: fontSizes.small, ...fonts.regular, marginTop: 2, opacity: 0.7 },
+  areaSubDate: { fontSize: fontSizes.small, ...fonts.regular, marginTop: space.xxs, opacity: 0.7 },
   savedAreasMeta: {
     fontSize: fontSizes.caption,
     ...fonts.regular,
-    marginTop: 2,
+    marginTop: space.xxs,
     marginBottom: space.md,
     paddingHorizontal: space.xs
   },

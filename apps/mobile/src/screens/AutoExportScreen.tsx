@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: 2
+    marginBottom: space.xxs
   },
   settingDescription: {
     fontSize: fontSizes.description,
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
   fileName: {
     fontSize: fontSizes.description,
     ...fonts.semiBold,
-    marginBottom: 2
+    marginBottom: space.xxs
   },
   fileMeta: {
     fontSize: fontSizes.caption,

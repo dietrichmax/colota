@@ -786,7 +786,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: space.sm,
-    marginBottom: 2
+    marginBottom: space.xxs
   },
   fieldLabel: {
     fontSize: fontSizes.description,
@@ -794,7 +794,7 @@ const styles = StyleSheet.create({
   },
   modifiedBadge: {
     paddingHorizontal: space.sm,
-    paddingVertical: 2,
+    paddingVertical: space.xxs,
     borderRadius: radius.xs
   },
   modifiedText: {

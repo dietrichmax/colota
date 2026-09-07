@@ -479,11 +479,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 }
 
 const styles = StyleSheet.create({
-  // rows drops the card's vertical padding for the row at its bottom; the first
-  // child here is not a row, so it takes the top inset back.
   cardTop: { paddingTop: space.lg },
-  // rows drops the card\'s vertical padding for the first row; the last child
-  // here is not a row, so it takes the bottom inset back.
   cardTail: { paddingBottom: space.lg },
   scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.xxl },
   inputGroup: { marginBottom: space.xs },
@@ -491,7 +487,7 @@ const styles = StyleSheet.create({
   inputWithUnit: { flexDirection: "row", alignItems: "center", gap: space.sm },
   unit: { fontSize: fontSizes.body, ...fonts.medium, minWidth: 28 },
   syncLabelRow: { marginBottom: space.sm },
-  settingLabel: { fontSize: fontSizes.label, ...fonts.semiBold, marginBottom: 2 },
+  settingLabel: { fontSize: fontSizes.label, ...fonts.semiBold, marginBottom: space.xxs },
   settingHint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: lineHeights.description }, // ~3 per row with gap
   customSyncInput: { marginTop: space.md },
   sectionGap: { marginTop: space.xl }

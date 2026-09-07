@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   cell: {
     fontSize: fontSizes.caption,
     ...fonts.regular,
-    paddingHorizontal: 2
+    paddingHorizontal: space.xxs
   },
   cellTime: {
     width: 80

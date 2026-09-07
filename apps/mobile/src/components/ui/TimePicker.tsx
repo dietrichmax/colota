@@ -106,6 +106,6 @@ const styles = StyleSheet.create({
   separator: {
     fontSize: fontSizes.input,
     ...fonts.semiBold,
-    paddingHorizontal: 2
+    paddingHorizontal: space.xxs
   }
 })

@@ -16,19 +16,27 @@ const path: {
  * A screen writing a number a constant already names forks the system quietly: it renders,
  * nothing fails, and the next change to that constant misses it.
  *
- * Every rule here fires only on a value that HAS a constant. A radius of 10 or an icon at 28
- * is not a violation, because nothing names those; they are numbers with no home, and rounding
- * them onto a scale would move the design rather than tidy it. That is why this file needs no
- * allowlist: the rules describe what the constants cover, so anything they flag is genuinely a
- * literal written in place of a name.
+ * Most rules here fire only on a value that HAS a constant. A radius of 10 or an icon at 28 is not
+ * a violation, because nothing names those; they are numbers with no home, and rounding them onto a
+ * scale would move the design rather than tidy it. That is why this file needs no allowlist: the
+ * rules describe what the constants cover, so anything they flag is genuinely a literal written in
+ * place of a name.
+ *
+ * Spacing is the exception, and it is the stronger form. `space` now names every step it uses, so
+ * the rule is inverted there: any number at all is drift. That closes the gap the value-list rules
+ * cannot see, which is where every guard added after this one found its defect.
  *
  * Widening a scale means widening the matching rule here, or the new step goes unenforced.
  */
 const SRC = path.join(__dirname, "..")
-const ROOTS = ["screens", "components/features", "utils"]
+const ROOTS = ["screens", "components/features", "components/ui", "utils"]
 
 const RULES = [
-  { name: "spacing", pattern: /(?:padding|margin|gap|rowGap|columnGap)[A-Za-z]*:\s*(?:4|8|12|16|24|32)\b/ },
+  // Spacing is the one scale with no holes: every step from 2 to 32 has a name, so any number
+  // here is a literal. 0 is not a spacing value, it cancels one, and stays legal.
+  { name: "spacing", pattern: /(?:padding|margin|gap|rowGap|columnGap)[A-Za-z]*:\s*-?(?!0\b)\d/ },
+  // A literal hides just as well behind an operator: `insets.bottom + 8` is the same drift.
+  { name: "spacingExpression", pattern: /(?:padding|margin|gap|rowGap|columnGap)[A-Za-z]*:[^,\n}]*[-+*/]\s*\d/ },
   { name: "radius", pattern: /borderRadius:\s*(?:4|8|12|16)\b/ },
   { name: "fontSize", pattern: /fontSize:\s*(?:10|11|12|13|14|15|16|18|20|24|28)\b/ },
   { name: "iconSize", pattern: /size=\{(?:16|20|24)\}/ },
@@ -79,8 +87,21 @@ describe("design system guard", () => {
     expect(caught("<Icon size={20} />")).toEqual(["iconSize"])
     expect(caught("<Icon size={size.icon.md} />")).toEqual([])
     // No constant names these, so they are not drift and rounding them would move the design.
-    expect(caught("{ padding: 10, marginTop: 20, borderRadius: 10 }")).toEqual([])
+    expect(caught("{ borderRadius: 10 }")).toEqual([])
     expect(caught("<Icon size={28} />")).toEqual([])
+  })
+
+  it("flags any spacing number, because space has a name for every step it uses", () => {
+    const caught = (source: string) => RULES.filter((rule) => rule.pattern.test(source)).map((rule) => rule.name)
+
+    // The three the value list could never see: between two steps, below the grid, and behind a plus.
+    expect(caught("{ marginTop: 20 }")).toEqual(["spacing"])
+    expect(caught("{ gap: 3 }")).toEqual(["spacing"])
+    expect(caught("{ paddingBottom: insets.bottom + 8 }")).toEqual(["spacingExpression"])
+    // 0 cancels a spacing value rather than setting one, and a token composes freely.
+    expect(caught("{ paddingHorizontal: 0 }")).toEqual([])
+    expect(caught("{ marginHorizontal: -space.lg }")).toEqual([])
+    expect(caught("{ paddingHorizontal: FIELD_INSET - borderWidth }")).toEqual([])
   })
 
   it("keeps screens out of the styling business", () => {
