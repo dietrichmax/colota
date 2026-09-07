@@ -128,12 +128,12 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
               <View style={styles.nameRow}>
                 <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
                 {isActive && (
-                  <View style={[styles.activeBadge, { backgroundColor: colors.border }]}>
+                  <View style={[styles.activeBadge, { backgroundColor: colors.well }]}>
                     <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
                     <Text style={[styles.activeBadgeText, { color: colors.textSecondary }]}>Active</Text>
                   </View>
                 )}
-                <View style={[styles.priorityBadge, { backgroundColor: colors.border }]}>
+                <View style={[styles.priorityBadge, { backgroundColor: colors.well }]}>
                   <Text style={[styles.priorityText, { color: colors.textSecondary }]}>P{item.priority}</Text>
                 </View>
               </View>

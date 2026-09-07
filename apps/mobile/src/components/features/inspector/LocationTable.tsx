@@ -45,7 +45,7 @@ const LocationRow = React.memo(
     speedUnit: { factor: number; unit: string }
     colors: ThemeColors
   }) => (
-    <View style={[styles.row, { borderBottomColor: colors.border }]}>
+    <View style={[styles.row, { borderBottomColor: colors.divider }]}>
       <Text style={[styles.cell, styles.cellTime, { color: colors.text }]} numberOfLines={1}>
         {item.timestamp ? formatTime(item.timestamp, true) : "-"}
       </Text>
@@ -123,7 +123,7 @@ export function LocationTable({ locations, colors }: Props) {
       <View style={styles.tableWrapper}>
         {/* Header */}
         <View
-          style={[styles.row, styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}
+          style={[styles.row, styles.header, { borderBottomColor: colors.divider, backgroundColor: colors.surface }]}
         >
           <Text style={[styles.cell, styles.cellTime, styles.headerText, { color: colors.textSecondary }]}>Time</Text>
           <Text style={[styles.cell, styles.cellNum, styles.headerText, { color: colors.textSecondary }]}>Δs</Text>

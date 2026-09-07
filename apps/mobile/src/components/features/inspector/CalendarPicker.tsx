@@ -229,7 +229,7 @@ export function CalendarPicker({
     pane === "days" ? "Opens the year picker" : pane === "years" ? "Closes the year picker" : "Back to the year picker"
 
   return (
-    <View style={[styles.container, { borderBottomColor: colors.border }]}>
+    <View style={[styles.container, { borderBottomColor: colors.divider }]}>
       {/* Compact header row */}
       <View style={styles.row}>
         <Pressable

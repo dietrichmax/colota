@@ -144,7 +144,7 @@ const DownloadForm = memo(
                   <ActivityIndicator size="small" color={colors.primary} />
                   <Text style={[styles.progressLabel, { color: colors.text }]}>Downloading {progressLabel}</Text>
                 </View>
-                <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
+                <View style={[styles.progressTrack, { backgroundColor: colors.well }]}>
                   <View style={[styles.progressFill, { backgroundColor: colors.primary, width: `${progressPct}%` }]} />
                 </View>
                 {downloadProgress && (
