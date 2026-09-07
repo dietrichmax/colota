@@ -46,6 +46,21 @@ export const HIT_SLOP_MD = { top: 8, right: 8, bottom: 8, left: 8 } as const
 export const HIT_SLOP_LG = { top: 12, right: 12, bottom: 12, left: 12 } as const
 
 // Map
+/**
+ * Material's elevation levels, named for the job rather than the number: 0, 1, 3 and 6 are levels
+ * 0 to 3. The app had 0, 1, 4, 5, 6 and 8, and 4 and 5 are not levels at all.
+ */
+export const elevation = {
+  /** Sits on the ground: the tab bar. */
+  flat: 0,
+  /** An elevated card, lifted off the ground but not over anything. */
+  raised: 1,
+  /** A control or badge floating over content, usually the map. */
+  floating: 3,
+  /** A dialog, a popup or a toast, over everything. */
+  overlay: 6
+} as const
+
 export const DEFAULT_MAP_ZOOM = 15
 export const WORLD_MAP_ZOOM = 2
 export const MAX_MAP_ZOOM = 18

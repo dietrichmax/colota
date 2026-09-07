@@ -11,7 +11,7 @@ import type { NativeSyntheticEvent } from "react-native"
 import { Compass, Info, X } from "lucide-react-native"
 import { useIsFocused } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
-import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_DARK, MAP_STYLE_URL_LIGHT, size, space } from "../../../constants"
+import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_DARK, MAP_STYLE_URL_LIGHT, size, space, elevation } from "../../../constants"
 import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     gap: space.sm,
-    elevation: 8
+    elevation: elevation.overlay
   },
   attributionPopupText: {
     fontSize: fontSizes.description

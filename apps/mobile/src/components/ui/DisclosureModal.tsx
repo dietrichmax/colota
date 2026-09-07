@@ -8,7 +8,7 @@ import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-nat
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts, lineHeights, type } from "../../styles/typography"
 import { radius } from "@colota/shared"
-import { space, STATE_LAYER_ALPHA } from "../../constants"
+import { space, STATE_LAYER_ALPHA, elevation } from "../../constants"
 
 interface DisclosureModalProps {
   icon: React.ReactNode
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     padding: space.xl,
-    elevation: 8
+    elevation: elevation.overlay
   },
   iconContainer: {
     width: 56,

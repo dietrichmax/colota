@@ -26,7 +26,7 @@ import { logger, LOG_LEVELS, DEFAULT_LOG_LEVELS, type LogLevel } from "../utils/
 import { getMergedLogs, exportLogs, MergedLogEntry } from "../utils/logExport"
 import NativeLocationService from "../services/NativeLocationService"
 import { ScreenProps } from "../types/global"
-import { HIT_SLOP_MD, size, space } from "../constants"
+import { HIT_SLOP_MD, size, space, elevation } from "../constants"
 import { radius } from "@colota/shared"
 
 type FilterLevel = LogLevel
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 4
+    elevation: elevation.floating
   },
   followingBadge: {
     position: "absolute",

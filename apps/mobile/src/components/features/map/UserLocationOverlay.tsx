@@ -3,6 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import { elevation } from "../../../constants"
 import React, { useMemo } from "react"
 import { View, StyleSheet } from "react-native"
 import { GeoJSONSource, Layer, Marker } from "@maplibre/maplibre-react-native"
@@ -87,6 +88,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 3,
     borderColor: "white",
-    elevation: 4
+    elevation: elevation.floating
   }
 })

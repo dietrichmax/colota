@@ -6,7 +6,7 @@
 import React from "react"
 import { View, Pressable, StyleSheet, ViewStyle, StyleProp, AccessibilityRole, AccessibilityState } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { space, STATE_LAYER_ALPHA } from "../../constants"
+import { space, STATE_LAYER_ALPHA, elevation } from "../../constants"
 import { radius } from "@colota/shared"
 
 type CardVariant = "default" | "elevated" | "outlined" | "interactive"
@@ -63,7 +63,7 @@ export function Card({
           backgroundColor: colors.cardElevated,
           borderColor: "transparent",
           borderWidth: 0,
-          elevation: 1
+          elevation: elevation.raised
         }
       case "outlined":
         return {
