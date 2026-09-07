@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
   dayCircle: {
     width: 32,
     height: 32,
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center"
   },
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   dataDot: {
     width: 4,
     height: 4,
-    borderRadius: 2,
+    borderRadius: radius.pill,
     marginTop: 2
   },
   noteDot: {
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
     right: 1,
     width: 7,
     height: 7,
-    borderRadius: 3.5,
+    borderRadius: radius.pill,
     borderWidth: 1
   }
 })

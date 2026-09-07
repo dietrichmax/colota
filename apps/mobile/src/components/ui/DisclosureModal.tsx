@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radius.pill,
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",

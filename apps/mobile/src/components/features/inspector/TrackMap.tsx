@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   legendDot: {
     width: 10,
     height: 10,
-    borderRadius: 5
+    borderRadius: radius.pill
   },
   legendLabel: {
     fontSize: fontSizes.small,

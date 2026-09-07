@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   tripDot: {
     width: 8,
     height: 8,
-    borderRadius: radius.xs
+    borderRadius: radius.pill
   },
   tripTitle: {
     fontSize: fontSizes.input,

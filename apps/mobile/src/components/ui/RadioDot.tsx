@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
   radio: {
     width: 24,
     height: 24,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center"
@@ -33,6 +33,6 @@ const styles = StyleSheet.create({
   inner: {
     width: 12,
     height: 12,
-    borderRadius: 6
+    borderRadius: radius.pill
   }
 })

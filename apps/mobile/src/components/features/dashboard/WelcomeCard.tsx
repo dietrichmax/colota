@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   checkCircle: {
     width: 24,
     height: 24,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
