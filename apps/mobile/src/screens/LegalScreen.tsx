@@ -11,7 +11,7 @@ import { useTheme } from "../hooks/useTheme"
 import { Card, Container, Divider, ListItem, SectionTitle } from "../components"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { space, OSM_COPYRIGHT_URL, PRIVACY_POLICY_URL, REPO_URL, TILE_SERVER_DOCS_URL } from "../constants"
 
 export function LegalScreen({}: ScreenProps) {
@@ -59,7 +59,7 @@ export function LegalScreen({}: ScreenProps) {
 
         <View style={styles.section}>
           <SectionTitle>Map data</SectionTitle>
-    <Card rows>
+          <Card rows>
             <ListItem
               label="OpenStreetMap"
               sub="Map data by OpenStreetMap contributors, ODbL"
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   copyright: {
     fontSize: fontSizes.caption,
     ...fonts.regular,
-    lineHeight: 17,
+    lineHeight: lineHeights.caption,
     marginTop: space.xxl
   }
 })

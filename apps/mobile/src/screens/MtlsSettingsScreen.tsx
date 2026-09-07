@@ -7,7 +7,7 @@ import React from "react"
 import { Text, StyleSheet, View, ScrollView } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { Container } from "../components"
 import { MtlsSection } from "../components/features/settings/MtlsSection"
 import { space } from "../constants"
@@ -46,6 +46,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: fontSizes.body,
     ...fonts.regular,
-    lineHeight: 20
+    lineHeight: lineHeights.body
   }
 })

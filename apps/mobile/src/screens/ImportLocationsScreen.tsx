@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { Download } from "lucide-react-native"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { Button, Card, Container, Divider, LoadingOverlay, SectionTitle } from "../components"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   intro: {
     marginBottom: space.md,
     fontSize: fontSizes.body,
-    lineHeight: 20
+    lineHeight: lineHeights.body
   },
   formatRow: {
     flexDirection: "row",
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   formatDescription: {
     fontSize: fontSizes.caption,
-    lineHeight: 16,
+    lineHeight: lineHeights.caption,
     marginTop: 2
   }
 })

@@ -6,7 +6,7 @@
 import React from "react"
 import { Text, StyleSheet, View, Pressable } from "react-native"
 import type { LucideIcon } from "lucide-react-native"
-import { fontSizes, fonts } from "../../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../../styles/typography"
 import { useTheme } from "../../hooks/useTheme"
 import { RadioDot } from "./RadioDot"
 import { size, space, STATE_LAYER_ALPHA } from "../../constants"
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   },
   formatDescription: {
     fontSize: fontSizes.caption,
-    lineHeight: 16,
+    lineHeight: lineHeights.caption,
     marginTop: 2
   }
 })

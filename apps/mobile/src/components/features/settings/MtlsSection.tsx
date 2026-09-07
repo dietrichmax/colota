@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useEffect } from "react"
 import { Text, StyleSheet, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
-import { fonts, fontSizes } from "../../../styles/typography"
+import { fonts, fontSizes, lineHeights } from "../../../styles/typography"
 import { SectionTitle, Card, Divider, Button, FieldMessage, TextField } from "../../index"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { ClientCertInfoResult } from "../../../types/global"
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   muted: {
     fontSize: fontSizes.description,
     ...fonts.regular,
-    lineHeight: 18
+    lineHeight: lineHeights.description
   },
   importButton: {
     marginTop: space.md

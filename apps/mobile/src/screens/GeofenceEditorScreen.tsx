@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, ScrollView, DeviceEventEmitter } from "react-na
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert, showConfirm } from "../services/modalService"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { Button, Card, Container, FieldMessage, SectionTitle, SettingRow, Toggle, TextField } from "../components"
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   combinedNoteText: {
     fontSize: fontSizes.caption,
     ...fonts.regular,
-    lineHeight: 17,
+    lineHeight: lineHeights.caption,
     fontStyle: "italic"
   }
 })

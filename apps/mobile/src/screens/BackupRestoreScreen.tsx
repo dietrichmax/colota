@@ -15,7 +15,7 @@ import BackupService, {
 } from "../services/BackupService"
 import { showAlert, showConfirm, showChoice } from "../services/modalService"
 import { logger } from "../utils/logger"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { radius } from "@colota/shared"
 import type { ThemeColors } from "../types/global"
 import { space } from "../constants"
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   intro: {
     marginBottom: space.md,
     fontSize: fontSizes.body,
-    lineHeight: 20
+    lineHeight: lineHeights.body
   },
   fieldGroup: {
     gap: space.lg,
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: fontSizes.caption,
-    lineHeight: 18,
+    lineHeight: lineHeights.caption,
     marginTop: space.sm,
     marginBottom: space.lg
   },

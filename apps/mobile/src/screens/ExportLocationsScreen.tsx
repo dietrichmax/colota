@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Text, StyleSheet, View, ScrollView } from "react-native"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { MapPinOff, Upload } from "lucide-react-native"
 import { Button, Card, Container, EmptyState, FormatSelector, LoadingOverlay, SectionTitle } from "../components"
 import { useTheme } from "../hooks/useTheme"
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   intro: {
     fontSize: fontSizes.body,
     ...fonts.regular,
-    lineHeight: 20,
+    lineHeight: lineHeights.body,
     marginBottom: space.lg
   },
   scrollContent: {

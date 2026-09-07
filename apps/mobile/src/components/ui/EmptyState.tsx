@@ -7,7 +7,7 @@ import React from "react"
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native"
 import { type LucideIcon } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fontSizes, fonts } from "../../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../../styles/typography"
 import { size, space } from "../../constants"
 
 type EmptyStateProps = {
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: fontSizes.description,
     ...fonts.regular,
-    lineHeight: 20,
+    lineHeight: lineHeights.description,
     marginTop: space.xs
   }
 })

@@ -21,7 +21,7 @@ import { useAutoSave } from "../hooks/useAutoSave"
 import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
-import { fontSizes, fonts, type } from "../styles/typography"
+import { fontSizes, fonts, lineHeights, type } from "../styles/typography"
 import {
   SectionTitle,
   FloatingSaveIndicator,
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: fontSizes.body,
-    lineHeight: 20
+    lineHeight: lineHeights.body
   },
   section: {
     marginBottom: space.xl
@@ -799,7 +799,7 @@ const styles = StyleSheet.create({
   },
   fieldDescription: {
     fontSize: fontSizes.small,
-    lineHeight: 15
+    lineHeight: lineHeights.small
   },
   valueColumn: {
     flex: 1,
@@ -835,7 +835,7 @@ const styles = StyleSheet.create({
   },
   warningText: {
     fontSize: fontSizes.caption,
-    lineHeight: 18
+    lineHeight: lineHeights.caption
   },
   exampleSection: {
     marginBottom: 20

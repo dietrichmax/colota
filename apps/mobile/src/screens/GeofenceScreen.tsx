@@ -10,7 +10,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { ChevronRight, Wifi, PersonStanding, MapPinHouse, Share2 } from "lucide-react-native"
 import { Button, Card, Container, EmptyState, SectionTitle, TextField } from "../components"
 import {
@@ -367,7 +367,12 @@ const styles = StyleSheet.create({
   map: { height: 450, overflow: "hidden" },
   list: { padding: 20, paddingBottom: 40 },
   section: { marginBottom: space.lg },
-  hint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18, marginBottom: space.lg },
+  hint: {
+    fontSize: fontSizes.description,
+    ...fonts.regular,
+    lineHeight: lineHeights.description,
+    marginBottom: space.lg
+  },
   inputRow: { flexDirection: "row", gap: space.md, marginBottom: space.lg },
   inputGroup: { flex: 1 },
   inputGroupName: {
@@ -390,5 +395,5 @@ const styles = StyleSheet.create({
   info: { flex: 1, marginEnd: space.md },
   name: { fontSize: fontSizes.input, ...fonts.semiBold, marginBottom: 2 },
   radiusRow: { flexDirection: "row", alignItems: "center", gap: space.xs },
-  radius: { fontSize: fontSizes.caption },
+  radius: { fontSize: fontSizes.caption }
 })

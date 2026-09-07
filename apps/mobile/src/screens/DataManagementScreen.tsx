@@ -19,7 +19,7 @@ import { Lightbulb } from "lucide-react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
-import { fonts, fontSizes } from "../styles/typography"
+import { fonts, fontSizes, lineHeights } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Button, SectionTitle, Card, Container, Divider, FloatingSaveIndicator, TextField } from "../components"
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
   intro: {
     fontSize: fontSizes.body,
     ...fonts.regular,
-    lineHeight: 20,
+    lineHeight: lineHeights.body,
     marginBottom: space.lg
   },
   keyboardAvoid: {
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     ...fonts.regular,
     textAlign: "center",
     fontStyle: "italic",
-    lineHeight: 16,
+    lineHeight: lineHeights.caption,
     marginTop: space.sm
   },
   actionRow: {
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   actionHint: {
     fontSize: fontSizes.caption,
     ...fonts.regular,
-    lineHeight: 16,
+    lineHeight: lineHeights.caption,
     marginTop: 2
   },
   actionBadge: {
