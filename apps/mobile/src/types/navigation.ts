@@ -1,3 +1,4 @@
+import type { ApiTemplateName } from "./global"
 /**
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
@@ -14,7 +15,8 @@ export type RootStackParamList = {
   Connection: undefined
   "Tracking & Sync": undefined
   Appearance: undefined
-  "API Config": undefined
+  "API Config": { template?: ApiTemplateName } | undefined
+  "Backend Template": { selected: ApiTemplateName }
   "Auth Settings": undefined
   "mTLS Settings": undefined
   Geofences: undefined

@@ -29,7 +29,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 
 ## App Screens
 
-Colota has twenty-five screens, each focused on a specific task:
+Colota has twenty-eight screens, each focused on a specific task:
 
 | Screen | Purpose |
 | --- | --- |
@@ -39,10 +39,12 @@ Colota has twenty-five screens, each focused on a specific task:
 | **Tracking & sync** | GPS polling interval, distance filter, accuracy threshold and sync strategy preset |
 | **Appearance** | Light/dark theme, unit system, time format and custom map tile URLs |
 | **API Config** | Endpoint field mapping with templates for Dawarich, GeoPulse, Overland, OwnTracks, PhoneTrack, Reitti, Traccar or custom backends |
+| **Backend template** | Pick the backend Colota formats its payload for, each option describing what it sends |
 | **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
 | **mTLS Settings** | Client certificate (mTLS) import or KeyChain selection and trusted server CA management |
 | **Geofences** | Create pause zones by tapping the map, view all zones with pause option indicators |
 | **Geofence Editor** | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
+| **Place zone** | Pick a zone's centre on a map with its radius drawn live, handing it back to the editor |
 | **Offline maps** | Download map areas to the device for use without an internet connection |
 | **Tracking profiles** | Create and manage condition-based profiles that automatically adjust tracking settings |
 | **Profile Editor** | Configure profile name, condition trigger, GPS interval, distance filter, sync interval, priority, and deactivation delay |
@@ -58,6 +60,7 @@ Colota has twenty-five screens, each focused on a specific task:
 | **Share setup** | Build a `colota://setup` link or QR code from selected settings to configure another device |
 | **Logging** | In-app activity log viewer (level filtering, search, export) plus opt-in persistent file logging |
 | **About** | App version, device info, links to repository and privacy policy |
+| **Legal** | Privacy policy, licence, source link and map attribution |
 
 ## Screenshots
 
