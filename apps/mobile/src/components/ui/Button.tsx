@@ -18,8 +18,10 @@ import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { type LucideIcon } from "lucide-react-native"
 import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { radius } from "@colota/shared"
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
+type ButtonShape = "rounded" | "pill"
 
 type Props = {
   title: string
@@ -28,6 +30,8 @@ type Props = {
   style?: StyleProp<ViewStyle>
   color?: string
   variant?: ButtonVariant
+  /** The corner is painted inside, so a caller cannot set it through `style`. */
+  shape?: ButtonShape
   icon?: LucideIcon
   loading?: boolean
   expanded?: boolean
@@ -41,6 +45,7 @@ export function Button({
   style,
   color,
   variant = "primary",
+  shape = "rounded",
   icon: Icon,
   loading = false,
   expanded,
@@ -74,7 +79,7 @@ export function Button({
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading, expanded }}
         android_ripple={disabled || loading ? undefined : { color: v.text + STATE_LAYER_ALPHA }}
-        style={[styles.button, { backgroundColor: v.bg, borderRadius: colors.borderRadius }]}
+        style={[styles.button, { backgroundColor: v.bg, borderRadius: shape === "pill" ? radius.pill : radius.sm }]}
         onPress={onPress}
         disabled={disabled || loading}
       >

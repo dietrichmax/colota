@@ -1,7 +1,7 @@
 import React from "react"
 import { render } from "@testing-library/react-native"
 import { StyleSheet, Text } from "react-native"
-import { lightColors } from "@colota/shared"
+import { lightColors, radius } from "@colota/shared"
 
 jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
@@ -49,6 +49,20 @@ describe("Button variants", () => {
     rerender(<Button title="Reset all" onPress={jest.fn()} variant="ghost" disabled testID="reset-btn" />)
     expect(StyleSheet.flatten(label()).color).toBe(lightColors.textDisabled)
     expect(flat(getByTestId("reset-btn")).backgroundColor).toBe("transparent")
+  })
+
+  it("paints the corner itself, because a caller's style lands on the outer view", () => {
+    const { getByTestId } = render(
+      <Button title="Start tracking" onPress={jest.fn()} shape="pill" testID="start-btn" />
+    )
+
+    expect(flat(getByTestId("start-btn")).borderRadius).toBe(radius.pill)
+  })
+
+  it("keeps a plain button on the shape scale rather than the retired alias", () => {
+    const { getByTestId } = render(<Button title="Save" onPress={jest.fn()} testID="save-btn" />)
+
+    expect(flat(getByTestId("save-btn")).borderRadius).toBe(radius.sm)
   })
 
   it("keeps the touch target at the Android minimum", () => {
