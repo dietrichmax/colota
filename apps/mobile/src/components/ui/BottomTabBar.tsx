@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     paddingTop: space.sm,
-    paddingBottom: 6,
+    paddingBottom: space.sm,
     elevation: elevation.flat
   },
   tab: {

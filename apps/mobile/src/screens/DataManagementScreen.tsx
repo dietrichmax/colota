@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   hintRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: space.sm,
     marginTop: 2
   },
   daysLabel: {

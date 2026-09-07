@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     paddingStart: space.lg,
     // Clears the close control: space.xs inset plus space.xs padding either side of a 20 icon
     paddingEnd: space.xxl,
-    paddingVertical: 14,
+    paddingVertical: space.lg,
     borderRadius: 10,
     gap: space.sm,
     elevation: elevation.overlay

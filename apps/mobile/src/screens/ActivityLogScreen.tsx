@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: radius.sm,
-    paddingHorizontal: 10,
+    paddingHorizontal: space.md,
     height: 40,
     gap: space.sm
   },
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   },
   levelChips: {
     flexDirection: "row",
-    gap: 6
+    gap: space.sm
   },
   chip: {
     minHeight: size.chip,
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     right: 24,
     paddingHorizontal: space.md,
-    paddingVertical: 6,
+    paddingVertical: space.sm,
     borderRadius: radius.lg
   },
   followingText: {

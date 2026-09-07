@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     ...type.display,
-    marginBottom: 10
+    marginBottom: space.md
   },
   errorMessage: {
     fontSize: fontSizes.label,

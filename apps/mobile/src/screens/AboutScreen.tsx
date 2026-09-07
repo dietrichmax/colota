@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     marginTop: space.xl
   },
   debugActions: {
-    gap: 10,
+    gap: space.md,
     marginTop: space.lg
   },
   logHint: {

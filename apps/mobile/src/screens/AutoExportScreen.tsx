@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: space.sm,
-    paddingVertical: 6
+    paddingVertical: space.sm
   },
   errorText: {
     fontSize: fontSizes.description,

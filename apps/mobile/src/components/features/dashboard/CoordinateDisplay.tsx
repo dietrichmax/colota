@@ -58,11 +58,11 @@ export function CoordinateDisplay() {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 10
+    gap: space.md
   },
   row: {
     flexDirection: "row",
-    gap: 10
+    gap: space.md
   },
   coordLabel: {
     fontSize: fontSizes.micro,

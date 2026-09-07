@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.xxl },
   inputGroup: { marginBottom: space.xs },
   numInput: { width: size.numericField },
-  inputWithUnit: { flexDirection: "row", alignItems: "center", gap: 6 },
+  inputWithUnit: { flexDirection: "row", alignItems: "center", gap: space.sm },
   unit: { fontSize: fontSizes.body, ...fonts.medium, minWidth: 28 },
   syncLabelRow: { marginBottom: space.sm },
   settingLabel: { fontSize: fontSizes.label, ...fonts.semiBold, marginBottom: 2 },

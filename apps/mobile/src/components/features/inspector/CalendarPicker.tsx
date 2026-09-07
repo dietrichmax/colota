@@ -482,7 +482,7 @@ export function CalendarPicker({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: space.md,
-    paddingVertical: 10,
+    paddingVertical: space.md,
     borderBottomWidth: StyleSheet.hairlineWidth
   },
   row: {
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
   dateLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6
+    gap: space.sm
   },
   calendarIcon: {
     marginTop: 1
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     ...fonts.bold
   },
   todayBadge: {
-    paddingHorizontal: 6,
+    paddingHorizontal: space.sm,
     paddingVertical: 2,
     borderRadius: 6
   },
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginTop: space.sm,
     paddingHorizontal: space.lg,
-    paddingVertical: 6,
+    paddingVertical: space.sm,
     borderRadius: 14
   },
   todayText: {
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   monthLabelBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: space.sm,
     paddingHorizontal: space.sm,
     paddingVertical: space.xs
   },

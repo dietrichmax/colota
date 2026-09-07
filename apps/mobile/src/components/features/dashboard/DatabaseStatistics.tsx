@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: fontSizes.micro,
     ...fonts.semiBold,
-    marginBottom: 6
+    marginBottom: space.sm
   },
   statValue: {
     ...type.figure,

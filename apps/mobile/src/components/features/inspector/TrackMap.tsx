@@ -470,27 +470,27 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.caption
   },
   noteSection: {
-    marginTop: 6,
-    paddingTop: 6,
+    marginTop: space.sm,
+    paddingTop: space.sm,
     borderTopWidth: StyleSheet.hairlineWidth
   },
   noteRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 6,
+    gap: space.sm,
     marginTop: space.xs
   },
   noteInput: {
     flex: 1,
     fontSize: fontSizes.description,
     paddingVertical: 2,
-    paddingHorizontal: 6,
+    paddingHorizontal: space.sm,
     borderRadius: 6,
     minHeight: 32,
     maxHeight: 80
   },
   noteSaveBtn: {
-    padding: 6
+    padding: space.sm
   },
   legend: {
     position: "absolute",
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6
+    gap: space.sm
   },
   legendDot: {
     width: 10,

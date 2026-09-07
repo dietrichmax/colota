@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   detailRow: {
-    paddingVertical: 10
+    paddingVertical: space.md
   },
   detailLabel: {
     fontSize: fontSizes.caption,
