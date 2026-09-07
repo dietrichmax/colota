@@ -16,7 +16,7 @@ import {
   size,
   space
 } from "../../../constants"
-import { Card, ChipGroup, NumericInput, RadioRow, SectionTitle, SettingRow, TextField, Toggle } from "../../index"
+import { Card, NumericInput, RadioRow, SectionTitle, SettingRow, TextField, Toggle } from "../../index"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 import { isOverlandFormat } from "../../../utils/apiPayload"
 import NativeLocationService from "../../../services/NativeLocationService"
@@ -77,7 +77,10 @@ export function SyncStrategySettings({
     return () => sub.remove()
   }, [settings.syncCondition])
 
-  const isCustomSyncInterval = !SYNC_INTERVAL_PRESETS.includes(settings.syncInterval)
+  // Custom mode cannot be derived from the value alone: every number the user might pick first is
+  // also a preset, so deriving it forced the old code to invent one and save it on the spot.
+  const [customSyncOpen, setCustomSyncOpen] = useState(false)
+  const isCustomSyncInterval = customSyncOpen || !SYNC_INTERVAL_PRESETS.includes(settings.syncInterval)
 
   // Sync inputs with settings changes (e.g. preset selection)
   useEffect(() => {
@@ -239,59 +242,61 @@ export function SyncStrategySettings({
                 How often to upload data to server
               </Text>
 
-              <ChipGroup
-                options={[
-                  ...SYNC_INTERVAL_PRESETS.map((sec) => ({
-                    value: String(sec),
-                    label: SYNC_INTERVAL_LABELS[sec]
-                  })),
-                  { value: "custom", label: "Custom" }
-                ]}
-                selected={isCustomSyncInterval ? "custom" : String(settings.syncInterval)}
-                onSelect={(value) => {
-                  if (value === "custom") {
-                    // Seeding a value is what makes the mode custom; the field takes over.
-                    if (!isCustomSyncInterval) {
-                      const customValue = 1800
-                      setSyncIntervalInput(customValue.toString())
-                      handleGridSelect("syncInterval", customValue)
-                    }
-                    return
-                  }
-                  handleGridSelect("syncInterval", Number(value))
-                }}
-              />
-            </View>
-
-            {isCustomSyncInterval && (
-              <View style={styles.customSyncInput}>
-                <NumericInput
-                  label="Custom sync interval"
-                  value={syncIntervalInput}
-                  onChange={(val) => {
-                    setSyncIntervalInput(val)
-                    const num = Number(val)
-                    if (!isNaN(num) && num >= 1) {
-                      const next = { ...settings, syncInterval: num, syncPreset: "custom" as const }
-                      onDebouncedSave(next)
-                    }
+              <View accessibilityRole="radiogroup">
+                {SYNC_INTERVAL_PRESETS.map((seconds) => (
+                  <RadioRow
+                    key={seconds}
+                    testID={`sync-interval-${seconds}`}
+                    label={SYNC_INTERVAL_LABELS[seconds]}
+                    sub={seconds === 0 ? "Uploads each fix as soon as it is recorded" : undefined}
+                    selected={!isCustomSyncInterval && settings.syncInterval === seconds}
+                    onPress={() => {
+                      setCustomSyncOpen(false)
+                      handleGridSelect("syncInterval", seconds)
+                    }}
+                  />
+                ))}
+                <RadioRow
+                  testID="sync-interval-custom"
+                  label="Custom"
+                  sub={isCustomSyncInterval ? `Every ${settings.syncInterval} seconds` : "Set your own interval"}
+                  selected={isCustomSyncInterval}
+                  onPress={() => {
+                    setSyncIntervalInput(settings.syncInterval.toString())
+                    setCustomSyncOpen(true)
                   }}
-                  onBlur={() => {
-                    let val = Number(syncIntervalInput)
-                    if (isNaN(val) || val < 1) {
-                      val = 1
-                      setSyncIntervalInput("1")
-                      const next = { ...settings, syncInterval: val, syncPreset: "custom" as const }
-                      onSettingsChange(next)
-                      onImmediateSave(next)
-                    }
-                  }}
-                  unit="seconds"
-                  placeholder="1800"
-                  hint="Custom interval in seconds"
                 />
+
+                {isCustomSyncInterval && (
+                  <View style={styles.customSyncInput}>
+                    <NumericInput
+                      label="Custom sync interval"
+                      value={syncIntervalInput}
+                      onChange={(val) => {
+                        setSyncIntervalInput(val)
+                        const num = Number(val)
+                        if (!isNaN(num) && num >= 1) {
+                          const next = { ...settings, syncInterval: num, syncPreset: "custom" as const }
+                          onDebouncedSave(next)
+                        }
+                      }}
+                      onBlur={() => {
+                        let val = Number(syncIntervalInput)
+                        if (isNaN(val) || val < 1) {
+                          val = 1
+                          setSyncIntervalInput("1")
+                          const next = { ...settings, syncInterval: val, syncPreset: "custom" as const }
+                          onSettingsChange(next)
+                          onImmediateSave(next)
+                        }
+                      }}
+                      unit="seconds"
+                      hint="Custom interval in seconds"
+                    />
+                  </View>
+                )}
               </View>
-            )}
+            </View>
 
             {showOverlandBatchSize && (
               <View style={styles.customSyncInput}>
