@@ -15,7 +15,7 @@ import { Button, Card, Container, EmptyState, IconButton, SectionTitle, Toggle }
 import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { buildProfilesLink } from "../utils/setupLink"
-import { HIT_SLOP_MD, MS_TO_KMH, PROFILE_CONDITIONS, size, space } from "../constants"
+import { HIT_SLOP_MD, MS_TO_KMH, PROFILE_CONDITIONS, size, space, STATE_LAYER_ALPHA } from "../constants"
 import { radius } from "@colota/shared"
 
 function formatCondition(profile: SavedTrackingProfile): string {
@@ -116,7 +116,8 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         <Card style={[styles.card, isActive && { backgroundColor: colors.primaryContainer }]}>
           <Pressable
             accessibilityRole="button"
-            style={({ pressed }) => [styles.row, pressed && { opacity: colors.pressedOpacity }]}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+            style={styles.row}
             onPress={() => navigation.navigate("Profile Editor", { profileId: item.id })}
           >
             <View style={[styles.iconWrap, { backgroundColor: colors.primary + "15" }]}>
@@ -191,7 +192,8 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
                   accessibilityLabel="Share all profiles"
                   onPress={handleShareProfiles}
                   hitSlop={HIT_SLOP_MD}
-                  style={({ pressed }) => [styles.shareBtn, pressed && { opacity: colors.pressedOpacity }]}
+                  android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA, borderless: true }}
+                  style={styles.shareBtn}
                 >
                   <Share2 size={size.icon.md} color={colors.textSecondary} />
                 </Pressable>

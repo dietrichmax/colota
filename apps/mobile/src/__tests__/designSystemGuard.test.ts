@@ -45,7 +45,10 @@ const RULES = [
   // letter spacing at all.
   { name: "elevation", pattern: /elevation:\s*\d/ },
   { name: "fontWeight", pattern: /fontWeight:\s*"?\d/ },
-  { name: "letterSpacing", pattern: /letterSpacing:/ }
+  { name: "letterSpacing", pattern: /letterSpacing:/ },
+  // Touch feedback is a ripple. A fade is the iOS idiom and dims the label with the surface,
+  // so it is banned outright rather than by value; the pressedOpacity token is gone with it.
+  { name: "pressOpacity", pattern: /pressed[^)]*&&[^}]*opacity/ }
 ] as const
 
 function sourceFiles(): string[] {
@@ -102,6 +105,13 @@ describe("design system guard", () => {
     expect(caught("{ paddingHorizontal: 0 }")).toEqual([])
     expect(caught("{ marginHorizontal: -space.lg }")).toEqual([])
     expect(caught("{ paddingHorizontal: FIELD_INSET - borderWidth }")).toEqual([])
+  })
+
+  it("flags a press that fades instead of rippling", () => {
+    const caught = (source: string) => RULES.filter((rule) => rule.pattern.test(source)).map((rule) => rule.name)
+
+    expect(caught("style={({ pressed }) => [s.btn, pressed && { opacity: 0.7 }]}")).toEqual(["pressOpacity"])
+    expect(caught("android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}")).toEqual([])
   })
 
   it("keeps screens out of the styling business", () => {

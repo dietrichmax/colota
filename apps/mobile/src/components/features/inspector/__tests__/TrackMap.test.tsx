@@ -89,8 +89,7 @@ const colors = {
   border: "#ccc",
   text: "#000",
   textSecondary: "#666",
-  borderRadius: 8,
-  pressedOpacity: 0.6
+  borderRadius: 8
 } as any
 
 const loc = (lat: number, lon: number) => ({

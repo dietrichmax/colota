@@ -10,7 +10,6 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
-  Pressable,
   Animated,
   RefreshControl,
   StyleProp,
@@ -151,30 +150,29 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
 
   const renderDailyStat = useCallback(
     ({ item }: { item: DailyStat }) => (
-      <Pressable
+      <Card
+        variant="interactive"
         accessibilityRole="button"
         onPress={() => handleDayPress(item.day)}
-        style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+        style={styles.dayCard}
       >
-        <Card style={styles.dayCard}>
-          <View style={styles.dayHeader}>
-            <Text style={[styles.dayLabel, { color: colors.text }]}>{formatDayLabel(item.day)}</Text>
-            <View style={styles.dayHeaderRight}>
-              <Text style={[styles.dayDistance, { color: colors.primary }]}>{formatDistance(item.distanceMeters)}</Text>
-              <ChevronRight size={size.icon.sm} color={colors.textDisabled} />
-            </View>
+        <View style={styles.dayHeader}>
+          <Text style={[styles.dayLabel, { color: colors.text }]}>{formatDayLabel(item.day)}</Text>
+          <View style={styles.dayHeaderRight}>
+            <Text style={[styles.dayDistance, { color: colors.primary }]}>{formatDistance(item.distanceMeters)}</Text>
+            <ChevronRight size={size.icon.sm} color={colors.textDisabled} />
           </View>
-          <View style={styles.dayStats}>
-            <Text style={[styles.dayStat, { color: colors.textSecondary }]}>
-              {item.tripCount} {item.tripCount === 1 ? "trip" : "trips"}
-            </Text>
-            <Text style={[styles.dayStat, { color: colors.textSecondary }]}>{item.count} points</Text>
-            <Text style={[styles.dayStat, { color: colors.textSecondary }]}>
-              {formatDuration(item.endTime - item.startTime)}
-            </Text>
-          </View>
-        </Card>
-      </Pressable>
+        </View>
+        <View style={styles.dayStats}>
+          <Text style={[styles.dayStat, { color: colors.textSecondary }]}>
+            {item.tripCount} {item.tripCount === 1 ? "trip" : "trips"}
+          </Text>
+          <Text style={[styles.dayStat, { color: colors.textSecondary }]}>{item.count} points</Text>
+          <Text style={[styles.dayStat, { color: colors.textSecondary }]}>
+            {formatDuration(item.endTime - item.startTime)}
+          </Text>
+        </View>
+      </Card>
     ),
     [colors, formatDayLabel, handleDayPress]
   )

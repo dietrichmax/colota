@@ -7,7 +7,7 @@ import React, { useState, useCallback, useEffect, useMemo } from "react"
 import { Text, StyleSheet, View, Pressable, AppState } from "react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes, lineHeights } from "../../../styles/typography"
-import { HIT_SLOP_MD, OVERLAND_BATCH_MAX, OVERLAND_BATCH_MIN, size, space } from "../../../constants"
+import { HIT_SLOP_MD, OVERLAND_BATCH_MAX, OVERLAND_BATCH_MIN, size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { Card, NumericInput, RadioRow, SectionTitle, SettingRow, TextField, Toggle } from "../../index"
 import { SyncIntervalPicker } from "./SyncIntervalPicker"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
@@ -313,11 +313,8 @@ export function SyncStrategySettings({
                           <Pressable
                             hitSlop={HIT_SLOP_MD}
                             accessibilityRole="button"
-                            style={({ pressed }) => [
-                              styles.ssidFillButton,
-                              { backgroundColor: colors.primary + "15" },
-                              pressed && { opacity: colors.pressedOpacity }
-                            ]}
+                            android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA }}
+                            style={[styles.ssidFillButton, { backgroundColor: colors.primary + "15" }]}
                             onPress={() => {
                               const next = { ...settings, syncSsid: currentSsid }
                               onSettingsChange(next)
@@ -434,6 +431,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   ssidFillButton: {
+    overflow: "hidden",
     alignSelf: "flex-start",
     justifyContent: "center",
     minHeight: size.chip,

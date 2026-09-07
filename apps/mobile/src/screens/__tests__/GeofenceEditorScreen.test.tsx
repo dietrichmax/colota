@@ -49,8 +49,7 @@ jest.mock("../../hooks/useTheme", () => ({
       warning: "#f59e0b",
       success: "#22c55e",
       placeholder: "#9ca3af",
-      borderRadius: 12,
-      pressedOpacity: 0.7
+      borderRadius: 12
     }
   })
 }))

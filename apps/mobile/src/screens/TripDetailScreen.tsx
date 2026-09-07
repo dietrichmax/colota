@@ -229,12 +229,14 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         onPress={handleDelete}
         disabled={deleting}
         hitSlop={HIT_SLOP_MD}
-        style={({ pressed }) => [styles.headerBtn, (pressed || deleting) && { opacity: colors.pressedOpacity }]}
+        android_ripple={deleting ? undefined : { color: colors.error + STATE_LAYER_ALPHA, borderless: true }}
+        style={styles.headerBtn}
       >
-        <Trash2 size={size.icon.md} color={colors.error} />
+        {/* Busy recedes to textDisabled the way every other disabled control does, rather than fading. */}
+        <Trash2 size={size.icon.md} color={deleting ? colors.textDisabled : colors.error} />
       </Pressable>
     ),
-    [handleDelete, deleting, colors.error, colors.pressedOpacity]
+    [handleDelete, deleting, colors.error, colors.textDisabled]
   )
 
   useLayoutEffect(() => {
@@ -286,7 +288,8 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               onPress={() => goToTrip(prevTrip)}
               disabled={!prevTrip}
               hitSlop={HIT_SLOP_LG}
-              style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
+              android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
+              style={styles.navBtn}
             >
               <ChevronLeft size={size.icon.lg} color={prevTrip ? colors.primary : colors.textDisabled} />
             </Pressable>
@@ -306,7 +309,8 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
               onPress={() => goToTrip(nextTrip)}
               disabled={!nextTrip}
               hitSlop={HIT_SLOP_LG}
-              style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
+              android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
+              style={styles.navBtn}
             >
               <ChevronRight size={size.icon.lg} color={nextTrip ? colors.primary : colors.textDisabled} />
             </Pressable>

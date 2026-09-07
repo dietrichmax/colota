@@ -32,7 +32,7 @@ import {
   StatRow,
   TextField
 } from "../components"
-import { SAVE_SUCCESS_DISPLAY_MS, STATS_REFRESH_FAST, size, space } from "../constants"
+import { SAVE_SUCCESS_DISPLAY_MS, STATS_REFRESH_FAST, size, space, STATE_LAYER_ALPHA } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
@@ -410,7 +410,8 @@ const ActionRow = ({
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.actionRow, pressed && { opacity: colors.pressedOpacity }]}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      style={styles.actionRow}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
