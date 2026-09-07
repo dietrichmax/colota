@@ -10,6 +10,13 @@ on:
       - 'packages/shared/**'
       - '.nvmrc'
       - '.github/workflows/docs-check.yml'
+  push:
+    branches: [feat/design-system]
+    paths:
+      - 'apps/docs/**'
+      - 'packages/shared/**'
+      - '.nvmrc'
+      - '.github/workflows/docs-check.yml'
   workflow_dispatch:
 
 jobs:
