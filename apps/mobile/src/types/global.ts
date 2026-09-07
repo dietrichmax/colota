@@ -60,7 +60,7 @@ export interface LocationTrackingResult {
   tracking: boolean
   startTracking: (overrideSettings?: Settings) => Promise<void>
   stopTracking: () => void
-  restartTracking: (newSettings?: Settings) => Promise<void>
+  restartTracking: (newSettings?: Settings) => Promise<boolean>
   reconnect: (settings?: Settings) => Promise<void>
   settings: Settings
 }

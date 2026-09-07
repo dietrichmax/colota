@@ -113,7 +113,13 @@ export function ApiSettingsScreen({}: ScreenProps) {
   const showDawarichChip = localTemplate === "dawarich"
   const batchDisabled = isInstantSync || isGetMethod
   const copiedTimeout = useTimeout()
-  const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
+  const {
+    saving,
+    message: saveMessage,
+    isError: saveIsError,
+    debouncedSaveAndRestart,
+    immediateSaveAndRestart
+  } = useAutoSave()
 
   const referenceFieldMap = getReferenceFieldMap(localTemplate)
 
@@ -722,7 +728,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
       </ScrollView>
 
       {/* Floating Save Indicator */}
-      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
+      <FloatingSaveIndicator saving={saving} message={saveMessage} isError={saveIsError} colors={colors} />
     </Container>
   )
 }

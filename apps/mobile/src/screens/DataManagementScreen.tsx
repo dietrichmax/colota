@@ -378,7 +378,6 @@ export function DataManagementScreen({}: ScreenProps) {
         {/* Floating Feedback */}
         <FloatingSaveIndicator
           saving={isProcessing}
-          success={false}
           message={feedback}
           isError={feedback?.toLowerCase().includes("failed") ?? false}
           colors={colors}

@@ -13,8 +13,7 @@ import { size, space } from "../../constants"
 
 interface Props {
   saving: boolean
-  success: boolean
-  /** Optional custom message. When provided, controls visibility instead of saving/success. */
+  /** Shown once the work is done; absent when there is nothing to report. */
   message?: string | null
   isError?: boolean
   colors: {
@@ -25,9 +24,9 @@ interface Props {
   }
 }
 
-export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, message, isError, colors }) => {
+export const FloatingSaveIndicator: React.FC<Props> = ({ saving, message, isError, colors }) => {
   const hasMessage = message != null
-  const visible = hasMessage || saving || success
+  const visible = hasMessage || saving
 
   const translateY = useRef(new Animated.Value(60)).current
   const opacity = useRef(new Animated.Value(0)).current
@@ -46,7 +45,7 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
     }
   }, [visible, translateY, opacity])
 
-  const displayText = hasMessage ? message : saving ? "Saving & restarting..." : "Saved"
+  const displayText = hasMessage ? message : "Saving..."
 
   return (
     <Animated.View style={[styles.container, { opacity, transform: [{ translateY }] }]} pointerEvents="none">
@@ -60,9 +59,9 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
       >
         {saving ? (
           <SpinningLoader size={size.icon.sm} color={colors.text} />
-        ) : !hasMessage ? (
+        ) : isError ? null : (
           <Check size={size.icon.sm} color={colors.text} />
-        ) : null}
+        )}
         <Text style={[styles.text, { color: colors.text }]}>{displayText}</Text>
       </View>
     </Animated.View>

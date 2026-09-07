@@ -14,18 +14,18 @@ afterEach(() => {
 
 describe("useAutoSave", () => {
   describe("initial state", () => {
-    it("starts with saving=false and saveSuccess=false", () => {
+    it("starts with saving=false and nothing to say", () => {
       const { result } = renderHook(() => useAutoSave())
 
       expect(result.current.saving).toBe(false)
-      expect(result.current.saveSuccess).toBe(false)
+      expect(result.current.message).toBeNull()
     })
   })
 
   describe("debouncedSaveAndRestart", () => {
     it("does not call saveFn immediately", () => {
       const saveFn = jest.fn().mockResolvedValue(undefined)
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       act(() => {
@@ -37,7 +37,7 @@ describe("useAutoSave", () => {
 
     it("calls saveFn after debounce delay", async () => {
       const saveFn = jest.fn().mockResolvedValue(undefined)
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       act(() => {
@@ -54,7 +54,7 @@ describe("useAutoSave", () => {
     it("cancels previous debounce when called again", async () => {
       const saveFn1 = jest.fn().mockResolvedValue(undefined)
       const saveFn2 = jest.fn().mockResolvedValue(undefined)
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       act(() => {
@@ -75,7 +75,7 @@ describe("useAutoSave", () => {
 
     it("sets saving=true during save, then restarts immediately", async () => {
       const saveFn = jest.fn().mockResolvedValue(undefined)
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       act(() => {
@@ -91,9 +91,9 @@ describe("useAutoSave", () => {
       expect(restartFn).toHaveBeenCalledTimes(1)
     })
 
-    it("sets saveSuccess=true after restart completes, then clears it", async () => {
+    it("says the service was restarted, because nothing on screen shows that it was", async () => {
       const saveFn = jest.fn().mockResolvedValue(undefined)
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       act(() => {
@@ -105,19 +105,35 @@ describe("useAutoSave", () => {
         jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
       })
 
-      expect(result.current.saveSuccess).toBe(true)
+      expect(result.current.message).toBe("Tracking restarted")
+      expect(result.current.isError).toBe(false)
 
-      // Success display clears
       await act(async () => {
         jest.advanceTimersByTime(SAVE_SUCCESS_DISPLAY_MS)
       })
 
-      expect(result.current.saveSuccess).toBe(false)
+      expect(result.current.message).toBeNull()
     })
 
-    it("handles save failure gracefully", async () => {
+    it("stays quiet when the service was not running, since a plain write needs no confirming", async () => {
+      const saveFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(false)
+      const { result } = renderHook(() => useAutoSave())
+
+      act(() => {
+        result.current.debouncedSaveAndRestart(saveFn, restartFn)
+      })
+
+      await act(async () => {
+        jest.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS)
+      })
+
+      expect(result.current.message).toBeNull()
+    })
+
+    it("says a failed save failed, rather than looking exactly like a success", async () => {
       const saveFn = jest.fn().mockRejectedValue(new Error("save failed"))
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       act(() => {
@@ -129,10 +145,12 @@ describe("useAutoSave", () => {
       })
 
       expect(result.current.saving).toBe(false)
+      expect(result.current.message).toBe("Could not save")
+      expect(result.current.isError).toBe(true)
       expect(restartFn).not.toHaveBeenCalled()
     })
 
-    it("handles restart failure gracefully", async () => {
+    it("says a failed restart failed, which was silent before", async () => {
       const saveFn = jest.fn().mockResolvedValue(undefined)
       const restartFn = jest.fn().mockRejectedValue(new Error("restart failed"))
       const { result } = renderHook(() => useAutoSave())
@@ -147,14 +165,15 @@ describe("useAutoSave", () => {
       })
 
       expect(result.current.saving).toBe(false)
-      expect(result.current.saveSuccess).toBe(false)
+      expect(result.current.message).toBe("Could not restart tracking")
+      expect(result.current.isError).toBe(true)
     })
   })
 
   describe("immediateSaveAndRestart", () => {
     it("calls saveFn immediately", async () => {
       const saveFn = jest.fn().mockResolvedValue(undefined)
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       await act(async () => {
@@ -166,7 +185,7 @@ describe("useAutoSave", () => {
 
     it("sets saving=true immediately", () => {
       const saveFn = jest.fn().mockReturnValue(new Promise(() => {})) // never resolves
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       act(() => {
@@ -179,7 +198,7 @@ describe("useAutoSave", () => {
     it("cancels any pending debounced save", async () => {
       const debouncedSave = jest.fn().mockResolvedValue(undefined)
       const immediateSave = jest.fn().mockResolvedValue(undefined)
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       // Start a debounced save
@@ -202,7 +221,7 @@ describe("useAutoSave", () => {
 
     it("schedules debounced restart after save", async () => {
       const saveFn = jest.fn().mockResolvedValue(undefined)
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       await act(async () => {
@@ -221,7 +240,7 @@ describe("useAutoSave", () => {
 
     it("handles save failure gracefully", async () => {
       const saveFn = jest.fn().mockRejectedValue(new Error("save failed"))
-      const restartFn = jest.fn().mockResolvedValue(undefined)
+      const restartFn = jest.fn().mockResolvedValue(true)
       const { result } = renderHook(() => useAutoSave())
 
       await act(async () => {
