@@ -275,7 +275,8 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     width: "100%",
     paddingStart: space.lg,
-    paddingEnd: 36,
+    // Clears the close control: space.xs inset plus space.xs padding either side of a 20 icon
+    paddingEnd: space.xxl,
     paddingVertical: 14,
     borderRadius: 10,
     gap: space.sm,
@@ -286,8 +287,8 @@ const styles = StyleSheet.create({
   },
   attributionClose: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: space.xs,
+    right: space.xs,
     padding: space.xs
   }
 })

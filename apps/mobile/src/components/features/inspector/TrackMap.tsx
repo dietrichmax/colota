@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     // Both icons carry HIT_SLOP_MD, so a smaller gap overlaps delete with close
-    gap: 20
+    gap: space.xl
   },
   popupTime: {
     ...fonts.semiBold,

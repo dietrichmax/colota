@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: space.md,
-    paddingBottom: 20
+    paddingBottom: space.xxl
   },
   summaryGrid: {
     flexDirection: "row",

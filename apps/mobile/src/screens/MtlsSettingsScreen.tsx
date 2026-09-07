@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     paddingBottom: space.xxl
   },
   header: {
-    marginBottom: 20
+    marginBottom: space.xl
   },
   subtitle: {
     fontSize: fontSizes.body,

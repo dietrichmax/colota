@@ -305,11 +305,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingTop: 20,
+    paddingTop: space.lg,
     paddingHorizontal: space.lg,
     paddingBottom: space.sm
   },
   metricsSection: {
-    marginBottom: 20
+    marginBottom: space.lg
   }
 })

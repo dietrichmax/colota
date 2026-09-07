@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   errorMessage: {
     fontSize: fontSizes.label,
     textAlign: "center",
-    marginBottom: 20,
-    paddingHorizontal: 20
+    marginBottom: space.lg,
+    paddingHorizontal: space.lg
   }
 })

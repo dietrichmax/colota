@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: space.sm,
-    paddingHorizontal: 20,
+    paddingHorizontal: space.xl,
     paddingVertical: space.md,
     borderRadius: radius.pill,
     elevation: elevation.overlay
