@@ -91,6 +91,6 @@ const styles = StyleSheet.create({
   },
   statValue: {
     ...type.figure,
-    marginBottom: 2
+    marginBottom: space.xxs
   }
 })

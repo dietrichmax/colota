@@ -77,8 +77,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minHeight: size.row,
     paddingVertical: space.lg,
-    // The card pads its content, so the row cancels that inset and reapplies it: the content
-    // lands where the card put it while the ripple still reaches the card's own edge.
     marginHorizontal: -space.lg,
     paddingHorizontal: space.lg
   },
@@ -92,7 +90,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: 2
+    marginBottom: space.xxs
   },
   sub: {
     fontSize: fontSizes.description,

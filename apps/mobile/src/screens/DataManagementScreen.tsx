@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.caption,
     ...fonts.regular,
     lineHeight: lineHeights.caption,
-    marginTop: 2
+    marginTop: space.xxs
   },
   actionCount: {
     fontSize: fontSizes.description,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: space.sm,
-    marginTop: 2
+    marginTop: space.xxs
   },
   daysLabel: {
     fontSize: fontSizes.input,

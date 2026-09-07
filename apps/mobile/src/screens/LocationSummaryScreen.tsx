@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     alignItems: "center",
     padding: space.md,
-    gap: 2
+    gap: space.xxs
   },
   summaryValue: {
     ...type.heading

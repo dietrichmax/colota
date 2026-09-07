@@ -17,9 +17,10 @@ export const RESTART_DEBOUNCE_MS = 100
 export const SETTINGS_READ_ATTEMPTS = 3
 export const SETTINGS_READ_RETRY_DELAY_MS = 150
 
-// Touch targets
-// Spacing scale. Every padding, margin and gap that sits on the scale reads from here.
-export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const
+// Spacing scale. Every padding, margin and gap reads from here; designSystemGuard fails a literal.
+// The grid is 4dp from xs up. xxs is the one sub-grid step and has one job: the gap between a
+// label and its own caption, which is type pairing rather than layout.
+export const space = { xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const
 
 // Sizes are not spacing: these are the painted or touchable extents of a control.
 export const size = {

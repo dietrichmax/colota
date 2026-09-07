@@ -70,11 +70,11 @@ const styles = StyleSheet.create({
   },
   formatSubtitle: {
     fontSize: fontSizes.description,
-    marginTop: 2
+    marginTop: space.xxs
   },
   formatDescription: {
     fontSize: fontSizes.caption,
     lineHeight: lineHeights.caption,
-    marginTop: 2
+    marginTop: space.xxs
   }
 })

@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: fontSizes.description,
     ...fonts.regular,
-    marginTop: 2
+    marginTop: space.xxs
   },
   section: {
     marginTop: space.sm
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   toggleHint: {
     fontSize: fontSizes.caption,
     ...fonts.regular,
-    marginTop: 2
+    marginTop: space.xxs
   },
   settingValue: {
     fontSize: fontSizes.description,

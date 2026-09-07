@@ -68,6 +68,6 @@ const styles = StyleSheet.create({
   sub: {
     fontSize: fontSizes.description,
     ...fonts.regular,
-    marginTop: 2
+    marginTop: space.xxs
   }
 })

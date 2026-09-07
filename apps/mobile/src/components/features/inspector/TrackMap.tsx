@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   noteInput: {
     flex: 1,
     fontSize: fontSizes.description,
-    paddingVertical: 2,
+    paddingVertical: space.xxs,
     paddingHorizontal: space.sm,
     borderRadius: 6,
     minHeight: 32,

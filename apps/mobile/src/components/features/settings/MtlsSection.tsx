@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: fontSizes.caption,
     ...fonts.medium,
-    marginBottom: 2
+    marginBottom: space.xxs
   },
   detailValue: {
     fontSize: fontSizes.body,

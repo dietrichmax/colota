@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: 2
+    marginBottom: space.xxs
   },
   settingHint: {
     fontSize: fontSizes.description,

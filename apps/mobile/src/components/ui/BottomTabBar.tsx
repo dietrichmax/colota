@@ -51,7 +51,7 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
         styles.container,
         {
           backgroundColor: colors.background,
-          paddingBottom: insets.bottom + 8
+          paddingBottom: insets.bottom + space.sm
         }
       ]}
     >
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     minHeight: size.row,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3
+    gap: space.xs
   },
   label: {
     fontSize: fontSizes.small,

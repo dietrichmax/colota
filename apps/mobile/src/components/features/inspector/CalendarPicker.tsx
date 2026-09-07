@@ -256,7 +256,7 @@ export function CalendarPicker({
                 <Text style={[styles.todayBadgeText, { color: colors.primary }]}>Today</Text>
               </View>
             )}
-            <Calendar size={size.icon.sm} color={colors.textSecondary} style={styles.calendarIcon} />
+            <Calendar size={size.icon.sm} color={colors.textSecondary} />
           </View>
           <Text style={[styles.countText, { color: colors.textSecondary }]}>
             {locationCount} {locationCount === 1 ? "location" : "locations"}
@@ -502,16 +502,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: space.sm
   },
-  calendarIcon: {
-    marginTop: 1
-  },
   dateText: {
     fontSize: fontSizes.input,
     ...fonts.bold
   },
   todayBadge: {
     paddingHorizontal: space.sm,
-    paddingVertical: 2,
+    paddingVertical: space.xxs,
     borderRadius: 6
   },
   todayBadgeText: {
@@ -521,7 +518,7 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: fontSizes.caption,
     ...fonts.regular,
-    marginTop: 2
+    marginTop: space.xxs
   },
   todayBtn: {
     alignSelf: "center",
@@ -617,13 +614,13 @@ const styles = StyleSheet.create({
   dayDist: {
     fontSize: fontSizes.micro,
     ...fonts.medium,
-    marginTop: 1
+    marginTop: space.xxs
   },
   dataDot: {
     width: 4,
     height: 4,
     borderRadius: radius.pill,
-    marginTop: 2
+    marginTop: space.xxs
   },
   noteDot: {
     position: "absolute",
