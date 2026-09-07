@@ -20,6 +20,7 @@ import {
   DashboardScreen,
   SettingsScreen,
   ApiSettingsScreen,
+  BackendTemplateScreen,
   AuthSettingsScreen,
   MtlsSettingsScreen,
   AutoExportScreen,
@@ -72,6 +73,11 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     name: "API Config",
     component: ApiSettingsScreen,
     title: "API config"
+  },
+  {
+    name: "Backend Template",
+    component: BackendTemplateScreen,
+    title: "Backend template"
   },
   {
     name: "Auth Settings",

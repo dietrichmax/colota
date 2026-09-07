@@ -3,13 +3,12 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { useState, useCallback, useMemo, useRef } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
 import { RotateCcw, X } from "lucide-react-native"
 import {
   FieldMap,
   DEFAULT_FIELD_MAP,
-  ScreenProps,
   CustomField,
   ApiTemplateName,
   API_TEMPLATES,
@@ -22,12 +21,14 @@ import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
 import { fontSizes, fonts, lineHeights, type } from "../styles/typography"
+import type { RootScreenProps } from "../types/navigation"
 import {
   SectionTitle,
   FloatingSaveIndicator,
   Container,
   Divider,
-  ChipGroup,
+  Card,
+  ListItem,
   RadioRow,
   Button,
   TextField,
@@ -58,17 +59,9 @@ const FIELD_DESCRIPTIONS: Record<keyof FieldMap, string> = {
   bear: "Direction of travel (0-360°)"
 }
 
-const TEMPLATE_OPTIONS: { value: ApiTemplateName; label: string }[] = [
-  { value: "custom", label: "Custom" },
-  ...Object.entries(API_TEMPLATES).map(([key, tmpl]) => ({
-    value: key as ApiTemplateName,
-    label: tmpl.label
-  }))
-]
-
-const HTTP_METHOD_OPTIONS: { value: HttpMethod; label: string }[] = [
-  { value: "POST", label: "POST" },
-  { value: "GET", label: "GET" }
+const HTTP_METHOD_OPTIONS: { value: HttpMethod; label: string; sub: string }[] = [
+  { value: "POST", label: "POST", sub: "Sends the fields as a JSON body" },
+  { value: "GET", label: "GET", sub: "Sends the fields as URL query parameters" }
 ]
 
 /**
@@ -89,7 +82,7 @@ function getReferenceCustomFields(template: ApiTemplateName): CustomField[] {
  * Screen for configuring API field name mappings, backend templates,
  * and custom static fields.
  */
-export function ApiSettingsScreen({}: ScreenProps) {
+export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"API Config">) {
   const { settings, setSettings, restartTracking } = useTracking()
   const { colors } = useTheme()
 
@@ -345,6 +338,15 @@ export function ApiSettingsScreen({}: ScreenProps) {
     [localFieldMap, localCustomFields, localHttpMethod, localDawarichMode, saveImmediately]
   )
 
+  // The picker hands its choice back through the route. Clearing the param afterwards stops the
+  // effect re-applying it on every later render of this screen.
+  const incomingTemplate = route.params?.template
+  useEffect(() => {
+    if (!incomingTemplate) return
+    if (incomingTemplate !== localTemplate) handleTemplateChange(incomingTemplate)
+    navigation.setParams({ template: undefined })
+  }, [incomingTemplate, localTemplate, handleTemplateChange, navigation])
+
   /**
    * Handles field value changes with auto-save.
    * Switching to "custom" template if a known template was selected.
@@ -486,17 +488,18 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Template Selector */}
         <View style={styles.section}>
           <SectionTitle>Backend template</SectionTitle>
-          <ChipGroup
-            options={TEMPLATE_OPTIONS}
-            selected={localTemplate}
-            onSelect={handleTemplateChange}
-            colors={colors}
-          />
-          {localTemplate !== "custom" && (
-            <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-              {API_TEMPLATES[localTemplate].description}
-            </Text>
-          )}
+          <Card rows>
+            <ListItem
+              testID="nav-backend-template"
+              label={localTemplate === "custom" ? "Custom" : API_TEMPLATES[localTemplate].label}
+              sub={
+                localTemplate === "custom"
+                  ? "Your own field names, mapped by hand"
+                  : API_TEMPLATES[localTemplate].description
+              }
+              onPress={() => navigation.navigate("Backend Template", { selected: localTemplate })}
+            />
+          </Card>
         </View>
 
         {/* HTTP Method Selector */}
@@ -504,17 +507,18 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {localTemplate !== "overland" && (
           <View style={styles.section}>
             <SectionTitle>HTTP method</SectionTitle>
-            <ChipGroup
-              options={HTTP_METHOD_OPTIONS}
-              selected={localHttpMethod}
-              onSelect={handleHttpMethodChange}
-              colors={colors}
-            />
-            {localHttpMethod === "GET" && (
-              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-                Fields sent as URL query parameters instead of JSON body
-              </Text>
-            )}
+            <View accessibilityRole="radiogroup" style={styles.radioGroup}>
+              {HTTP_METHOD_OPTIONS.map(({ value, label, sub }) => (
+                <RadioRow
+                  key={value}
+                  testID={`http-method-${value.toLowerCase()}`}
+                  label={label}
+                  sub={sub}
+                  selected={localHttpMethod === value}
+                  onPress={() => handleHttpMethodChange(value)}
+                />
+              ))}
+            </View>
           </View>
         )}
 

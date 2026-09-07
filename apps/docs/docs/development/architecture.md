@@ -302,7 +302,8 @@ For backups, two `internal` methods support the export/import flow without expos
 | `ConnectionScreen` | Server endpoint URL, offline mode toggle and connection test |
 | `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
 | `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |
-| `ApiSettingsScreen` | Endpoint URL, HTTP method, field mapping with backend templates |
+| `ApiSettingsScreen` | Backend template as a row opening the picker, HTTP method and Dawarich mode as radio rows, and the field mapping |
+| `BackendTemplateScreen` | The eight backend templates as radio rows, each stating what it sends, returning the choice with `popTo` and `merge`. Eight options that each need a sentence do not fit inline on a form screen |
 | `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers, with a link row to mTLS Settings |
 | `MtlsSettingsScreen` | Client certificate (PKCS12 import + Android Keystore storage) and Trusted Server CA management |
 | `GeofenceScreen` | Pause zones as rows over a map. Create geofence opens the editor on an empty draft; deletion happens there |
