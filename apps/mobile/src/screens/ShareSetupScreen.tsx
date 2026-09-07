@@ -8,7 +8,7 @@ import { View, Text, ScrollView, StyleSheet, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import { Button, Card, Container, Divider, SectionTitle, SettingRow, Toggle } from "../components"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { Share2, TriangleAlert } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fontSizes.caption,
     ...fonts.regular,
-    lineHeight: 17
+    lineHeight: lineHeights.caption
   },
   actions: {
     marginTop: space.xl

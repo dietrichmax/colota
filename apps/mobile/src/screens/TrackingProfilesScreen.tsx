@@ -10,7 +10,7 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { SavedTrackingProfile, ScreenProps } from "../types/global"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { Button, Card, Container, EmptyState, IconButton, SectionTitle, Toggle } from "../components"
 import { Plus, X, Zap, Share2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
@@ -211,7 +211,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
 const styles = StyleSheet.create({
   list: { padding: space.lg, paddingBottom: 40 },
   header: { marginBottom: 20 },
-  subtitle: { fontSize: fontSizes.body, ...fonts.regular, lineHeight: 20 },
+  subtitle: { fontSize: fontSizes.body, ...fonts.regular, lineHeight: lineHeights.body },
   card: { marginBottom: space.md },
   row: { flexDirection: "row", alignItems: "center" },
   iconWrap: {

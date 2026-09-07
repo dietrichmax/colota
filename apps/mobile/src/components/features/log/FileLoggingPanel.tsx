@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-nat
 import { Card, Divider, SectionTitle } from "../../index"
 import { Button } from "../../ui/Button"
 import { useTheme } from "../../../hooks/useTheme"
-import { fonts, fontSizes } from "../../../styles/typography"
+import { fonts, fontSizes, lineHeights } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { logger } from "../../../utils/logger"
 import { showAlert, showChoice } from "../../../services/modalService"
@@ -134,11 +134,7 @@ export function FileLoggingPanel() {
           <View style={styles.toggleLabel}>
             <Text style={[styles.label, { color: colors.text }]}>Persistent file logging</Text>
           </View>
-          <Toggle
-            accessibilityLabel="Persistent file logging"
-            value={enabled}
-            onValueChange={handleToggle}
-          />
+          <Toggle accessibilityLabel="Persistent file logging" value={enabled} onValueChange={handleToggle} />
         </View>
 
         <Divider />
@@ -176,7 +172,7 @@ const styles = StyleSheet.create({
   intro: {
     marginBottom: space.md,
     fontSize: fontSizes.body,
-    lineHeight: 20
+    lineHeight: lineHeights.body
   },
   toggleRow: {
     flexDirection: "row",
@@ -198,7 +194,7 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: fontSizes.description,
     ...fonts.regular,
-    lineHeight: 18,
+    lineHeight: lineHeights.description,
     marginBottom: space.md
   },
   sizeRow: {

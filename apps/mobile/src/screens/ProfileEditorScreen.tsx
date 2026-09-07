@@ -10,7 +10,7 @@ import { useTracking } from "../contexts/TrackingProvider"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import {
   Button,
   Card,
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   unit: { fontSize: fontSizes.body, ...fonts.medium, minWidth: 28 },
   syncLabelRow: { marginBottom: space.sm },
   settingLabel: { fontSize: fontSizes.label, ...fonts.semiBold, marginBottom: 2 },
-  settingHint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18 }, // ~3 per row with gap
+  settingHint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: lineHeights.description }, // ~3 per row with gap
   customSyncInput: { marginTop: space.md },
   sectionGap: { marginTop: space.xl }
 })

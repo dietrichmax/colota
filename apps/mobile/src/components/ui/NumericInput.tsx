@@ -6,7 +6,7 @@
 import React from "react"
 import { View, Text, StyleSheet } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fontSizes, fonts } from "../../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../../styles/typography"
 import { space } from "../../constants"
 import { TextField } from "./TextField"
 
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.description,
     ...fonts.regular,
     marginBottom: space.md,
-    lineHeight: 18
+    lineHeight: lineHeights.description
   },
   inputRow: {
     flexDirection: "row",

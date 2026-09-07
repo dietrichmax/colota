@@ -11,7 +11,7 @@ import { useTheme } from "../hooks/useTheme"
 import { showAlert, showConfirm } from "../services/modalService"
 import { ScreenProps } from "../types/global"
 import { useCoords } from "../contexts/TrackingProvider"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { X, CircleCheckBig, RefreshCw, TriangleAlert } from "lucide-react-native"
 import { Button, Card, Container, EmptyState, IconButton, SectionTitle, TextField } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
@@ -880,7 +880,12 @@ const styles = StyleSheet.create({
   map: { height: 450, overflow: "hidden", borderWidth: 2, borderColor: "transparent" },
   list: { padding: 20, paddingBottom: 40 },
   section: { marginBottom: space.lg },
-  hint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: 18, marginBottom: space.lg },
+  hint: {
+    fontSize: fontSizes.description,
+    ...fonts.regular,
+    lineHeight: lineHeights.description,
+    marginBottom: space.lg
+  },
   inputGroup: { marginBottom: space.lg },
   sizeEstimate: { fontSize: fontSizes.caption, ...fonts.regular, marginBottom: space.md },
   progressContainer: { gap: 10 },

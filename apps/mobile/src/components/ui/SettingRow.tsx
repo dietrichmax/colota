@@ -5,7 +5,7 @@
 
 import React from "react"
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native"
-import { fontSizes, fonts } from "../../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../../styles/typography"
 import { useTheme } from "../../hooks/useTheme"
 import { space, size } from "../../constants"
 
@@ -57,6 +57,6 @@ const styles = StyleSheet.create({
   settingHint: {
     fontSize: fontSizes.description,
     ...fonts.regular,
-    lineHeight: 18
+    lineHeight: lineHeights.description
   }
 })

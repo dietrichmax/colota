@@ -6,7 +6,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react"
 import { Text, StyleSheet, View, Pressable, AppState } from "react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
-import { fonts, fontSizes } from "../../../styles/typography"
+import { fonts, fontSizes, lineHeights } from "../../../styles/typography"
 import {
   HIT_SLOP_MD,
   OVERLAND_BATCH_MAX,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   intro: {
     fontSize: fontSizes.body,
     ...fonts.regular,
-    lineHeight: 20,
+    lineHeight: lineHeights.body,
     marginBottom: space.lg
   },
   section: {
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.description,
     ...fonts.regular,
     marginBottom: space.md,
-    lineHeight: 18
+    lineHeight: lineHeights.description
   },
   nestedSetting: {
     marginTop: space.md,

@@ -10,7 +10,7 @@ import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
-import { fonts, fontSizes } from "../styles/typography"
+import { fonts, fontSizes, lineHeights } from "../styles/typography"
 import {
   SectionTitle,
   FloatingSaveIndicator,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: fontSizes.body,
     ...fonts.regular,
-    lineHeight: 20
+    lineHeight: lineHeights.body
   },
   section: {
     marginBottom: space.xl
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   },
   warningText: {
     fontSize: fontSizes.caption,
-    lineHeight: 18
+    lineHeight: lineHeights.caption
   },
   footer: {
     paddingVertical: space.lg,

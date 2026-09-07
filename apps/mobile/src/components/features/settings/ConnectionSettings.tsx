@@ -11,7 +11,7 @@ import NativeLocationService from "../../../services/NativeLocationService"
 import { isEndpointAllowed } from "../../../utils/settingsValidation"
 import { isTraccarJsonFormat, isOverlandFormat } from "../../../utils/apiPayload"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
-import { fontSizes, fonts } from "../../../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../../../styles/typography"
 import { SettingRow } from "../../ui/SettingRow"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { TEST_RESULT_DISPLAY_MS, size, space } from "../../../constants"
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   intro: {
     fontSize: fontSizes.body,
     ...fonts.regular,
-    lineHeight: 20,
+    lineHeight: lineHeights.body,
     marginBottom: space.lg
   },
   section: {
@@ -284,5 +284,5 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.description,
     textAlign: "center",
     ...fonts.regular
-  },
+  }
 })

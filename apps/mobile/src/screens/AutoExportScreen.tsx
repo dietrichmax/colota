@@ -36,7 +36,7 @@ import {
   isValidFilenameTemplate,
   renderFilenamePreview
 } from "../utils/exportConverters"
-import { fontSizes, fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { logger } from "../utils/logger"
 import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: fontSizes.body,
-    lineHeight: 20
+    lineHeight: lineHeights.body
   },
   section: {
     marginTop: space.xl

@@ -6,7 +6,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fontSizes, fonts, type } from "../../styles/typography"
+import { fontSizes, fonts, lineHeights, type } from "../../styles/typography"
 import { radius } from "@colota/shared"
 import { space, STATE_LAYER_ALPHA } from "../../constants"
 
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   body: {
     fontSize: fontSizes.body,
     ...fonts.regular,
-    lineHeight: 20
+    lineHeight: lineHeights.body
   },
   bodySpaced: {
     marginTop: space.sm

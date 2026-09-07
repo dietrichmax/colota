@@ -8,7 +8,7 @@ import { Text, StyleSheet, View, ScrollView, Image } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { Copy, Check } from "lucide-react-native"
-import { fontSizes, fonts, type } from "../styles/typography"
+import { fontSizes, fonts, lineHeights, type } from "../styles/typography"
 import { Button, Card, Container, Divider, SectionTitle, Footer } from "../components"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
@@ -102,9 +102,6 @@ export function AboutScreen({}: ScreenProps) {
 
   // Reset tap count after 2 seconds
 
-
-
-
   const handleCopyDebugInfo = useCallback(async () => {
     if (!buildConfig) return
 
@@ -185,38 +182,36 @@ export function AboutScreen({}: ScreenProps) {
             <Image source={icon} style={styles.appIcon} resizeMode="contain" />
           </View>
           <Text style={[styles.title, { color: colors.text }]}>Colota</Text>
-          <Text style={[styles.version, { color: colors.textSecondary }]}>
-            Version {buildConfig.VERSION_NAME}
-          </Text>
+          <Text style={[styles.version, { color: colors.textSecondary }]}>Version {buildConfig.VERSION_NAME}</Text>
         </View>
 
         <>
+          <View style={styles.section}>
+            <SectionTitle>Build</SectionTitle>
+            <InfoCard rows={debugRows} />
+          </View>
+
+          {deviceRows.length > 0 && (
             <View style={styles.section}>
-              <SectionTitle>Build</SectionTitle>
-              <InfoCard rows={debugRows} />
+              <SectionTitle>Device</SectionTitle>
+              <InfoCard rows={deviceRows} />
             </View>
+          )}
 
-            {deviceRows.length > 0 && (
-              <View style={styles.section}>
-                <SectionTitle>Device</SectionTitle>
-                <InfoCard rows={deviceRows} />
-              </View>
-            )}
+          <View style={styles.debugActions}>
+            <Button
+              variant="secondary"
+              icon={copied ? Check : Copy}
+              title={copied ? "Copied!" : "Copy debug info"}
+              testID="copy-debug-info-btn"
+              onPress={handleCopyDebugInfo}
+            />
 
-            <View style={styles.debugActions}>
-              <Button
-                variant="secondary"
-                icon={copied ? Check : Copy}
-                title={copied ? "Copied!" : "Copy debug info"}
-                testID="copy-debug-info-btn"
-                onPress={handleCopyDebugInfo}
-              />
-
-              <Text style={[styles.logHint, { color: colors.textLight }]}>
-                View and export logs from Settings &gt; Logging.
-              </Text>
-            </View>
-          </>
+            <Text style={[styles.logHint, { color: colors.textLight }]}>
+              View and export logs from Settings &gt; Logging.
+            </Text>
+          </View>
+        </>
 
         <Footer />
       </ScrollView>
@@ -281,6 +276,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.caption,
     textAlign: "center",
     fontStyle: "italic",
-    lineHeight: 16
+    lineHeight: lineHeights.caption
   }
 })

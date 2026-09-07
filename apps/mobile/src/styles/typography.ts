@@ -11,6 +11,18 @@ import { fontFamily, fontSizes } from "@colota/shared"
 
 export { fontSizes }
 
+/**
+ * Keys are `fontSizes` names, minus the seven sizes that set no line height and run on the platform
+ * default. `mono` is the exception: it sits at caption size and takes more leading.
+ */
+export const lineHeights = {
+  body: 20,
+  description: 18,
+  caption: 16,
+  small: 16,
+  mono: 18
+} as const
+
 export const fonts: Record<string, Pick<TextStyle, "fontFamily">> = {
   regular: { fontFamily: `${fontFamily}-Regular` },
   medium: { fontFamily: `${fontFamily}-Medium` },
@@ -34,5 +46,5 @@ export const type = {
   /** A heading inside a screen, above a block rather than a group of rows. */
   heading: { fontSize: fontSizes.heading, ...fonts.bold },
   /** A block of code, a log line or a payload: the platform monospace, never Inter. */
-  mono: { fontSize: fontSizes.caption, fontFamily: "monospace", lineHeight: 18 }
+  mono: { fontSize: fontSizes.caption, fontFamily: "monospace", lineHeight: lineHeights.mono }
 } as const satisfies Record<string, TextStyle>
