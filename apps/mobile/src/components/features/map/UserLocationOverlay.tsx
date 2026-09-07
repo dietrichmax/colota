@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   markerDot: {
     width: 24,
     height: 24,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     borderWidth: 3,
     borderColor: "white",
     elevation: 4

@@ -4,6 +4,7 @@
  */
 
 import React, { useRef, useEffect, useMemo, useCallback, useState } from "react"
+import { radius } from "@colota/shared"
 import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image, Pressable } from "react-native"
 import { TriangleAlert } from "lucide-react-native"
 import { LocationCoords } from "../../../types/global"
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: radius.pill,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: space.lg

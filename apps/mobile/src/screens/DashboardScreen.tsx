@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState, useCallback, useRef } from "react"
+import { radius } from "@colota/shared"
 import { StyleSheet, View, ScrollView, DeviceEventEmitter, Animated, AppState } from "react-native"
 import { ScreenProps, DatabaseStats } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   controlButton: {
-    borderRadius: 28,
+    borderRadius: radius.pill,
     elevation: 4,
     minWidth: 200
   },

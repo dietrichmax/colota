@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     right: 24,
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
     elevation: 4

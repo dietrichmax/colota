@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   dot: {
     width: 12,
     height: 12,
-    borderRadius: 6
+    borderRadius: radius.pill
   },
   title: {
     ...type.title

@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   dot: {
     width: 8,
     height: 8,
-    borderRadius: radius.xs,
+    borderRadius: radius.pill,
     marginEnd: space.md
   },
   host: {

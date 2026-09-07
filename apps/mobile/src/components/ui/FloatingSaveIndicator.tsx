@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useRef } from "react"
+import { radius } from "@colota/shared"
 import { View, Text, StyleSheet, Animated } from "react-native"
 import { Check } from "lucide-react-native"
 import { SpinningLoader } from "./SpinningLoader"
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
     gap: space.sm,
     paddingHorizontal: 20,
     paddingVertical: space.md,
-    borderRadius: 24,
+    borderRadius: radius.pill,
     elevation: 8
   },
   text: { fontSize: fontSizes.body, ...fonts.semiBold }

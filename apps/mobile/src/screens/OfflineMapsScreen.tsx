@@ -920,7 +920,7 @@ const styles = StyleSheet.create({
   actionBtn: {
     width: 32,
     height: 32,
-    borderRadius: radius.lg,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center"
   },

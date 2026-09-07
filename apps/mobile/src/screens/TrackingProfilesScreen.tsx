@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: radius.xs
   },
-  activeDot: { width: 6, height: 6, borderRadius: 3 },
+  activeDot: { width: 6, height: 6, borderRadius: radius.pill },
   activeBadgeText: { fontSize: fontSizes.micro, ...fonts.semiBold },
   priorityBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.xs },
   priorityText: { fontSize: fontSizes.micro, ...fonts.semiBold },
