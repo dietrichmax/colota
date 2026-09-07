@@ -17,15 +17,23 @@ interface ChipGroupProps<T extends string> {
   selected: T
   onSelect: (value: T) => void
   disabled?: ReadonlySet<T>
-  /** Ignored: the group reads the theme itself. Kept so existing callers still compile. */
+  accessibilityLabel?: string
   colors?: ThemeColors
 }
 
-export function ChipGroup<T extends string>({ options, selected, onSelect, disabled }: ChipGroupProps<T>) {
+export function ChipGroup<T extends string>({
+  options,
+  selected,
+  onSelect,
+  disabled,
+  accessibilityLabel
+}: ChipGroupProps<T>) {
   const { colors } = useTheme()
 
   return (
-    <View style={styles.row}>
+    // The chips carry the radio role, so the row has to be the group or a screen reader reads
+    // loose radios with nothing binding them.
+    <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel={accessibilityLabel}>
       {options.map(({ value, label, testID }) => {
         const isSelected = selected === value
         const isDisabled = disabled?.has(value) ?? false

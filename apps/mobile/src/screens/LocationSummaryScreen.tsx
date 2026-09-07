@@ -4,25 +4,15 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  ActivityIndicator,
-  Animated,
-  RefreshControl,
-  StyleProp,
-  TextStyle
-} from "react-native"
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Animated, RefreshControl } from "react-native"
 import { Route, Calendar, MapPin, TrendingUp, ChevronRight } from "lucide-react-native"
-import { Card, Container, EmptyState } from "../components"
+import { Card, Container, EmptyState, StatRow } from "../components"
 import { ChipGroup } from "../components/ui/ChipGroup"
 import { useTheme } from "../hooks/useTheme"
 import { DailyStat } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { formatDistance, formatDuration, startOfDaySec } from "../utils/geo"
-import { fontSizes, fonts, type } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 import { logger } from "../utils/logger"
 import { size, space } from "../constants"
 
@@ -31,7 +21,7 @@ type Period = "week" | "month" | "30days"
 const PERIOD_OPTIONS = [
   { value: "week" as const, label: "This week" },
   { value: "month" as const, label: "This month" },
-  { value: "30days" as const, label: "Last 30 Days" }
+  { value: "30days" as const, label: "Last 30 days" }
 ]
 const COUNT_UP_DURATION = 600 // ms
 
@@ -55,16 +45,8 @@ function getDateRange(period: Period): { start: number; end: number } {
   return { start: startOfDaySec(startDate), end: endTs }
 }
 
-/** Animated number that counts up from 0 to target */
-function AnimatedNumber({
-  value,
-  format,
-  style
-}: {
-  value: number
-  format: (n: number) => string
-  style: StyleProp<TextStyle>
-}) {
+/** Counts a figure up from zero and returns it formatted. StatRow draws it tabular, so it cannot jitter. */
+function useCountUp(value: number, format: (n: number) => string): string {
   const animRef = useRef(new Animated.Value(0)).current
   const [display, setDisplay] = useState(format(0))
   const mountedRef = useRef(true)
@@ -88,7 +70,7 @@ function AnimatedNumber({
     }
   }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <Text style={style}>{display}</Text>
+  return display
 }
 
 export function LocationSummaryScreen({ navigation }: { navigation: any }) {
@@ -163,71 +145,44 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
             <ChevronRight size={size.icon.sm} color={colors.textDisabled} />
           </View>
         </View>
-        <View style={styles.dayStats}>
-          <Text style={[styles.dayStat, { color: colors.textSecondary }]}>
-            {item.tripCount} {item.tripCount === 1 ? "trip" : "trips"}
-          </Text>
-          <Text style={[styles.dayStat, { color: colors.textSecondary }]}>{item.count} points</Text>
-          <Text style={[styles.dayStat, { color: colors.textSecondary }]}>
-            {formatDuration(item.endTime - item.startTime)}
-          </Text>
-        </View>
+        <Text style={[styles.dayStat, { color: colors.textSecondary }]}>
+          {item.tripCount} {item.tripCount === 1 ? "trip" : "trips"} · {item.count} points ·{" "}
+          {formatDuration(item.endTime - item.startTime)}
+        </Text>
       </Card>
     ),
     [colors, formatDayLabel, handleDayPress]
   )
 
+  // Four cards each holding one number is the shape #791 retired: a card holds a subject, not a
+  // figure. One card of ledger rows, the way Trip Detail reads.
+  const totalDistance = useCountUp(summary.totalDistance, formatDistance)
+  const totalTrips = useCountUp(summary.totalTrips, String)
+  const activeDays = useCountUp(summary.activeDays, String)
+  const avgDistance = useCountUp(summary.avgDistance, formatDistance)
+
   const summaryHeader = useMemo(
     () => (
-      <View style={styles.summaryGrid}>
-        <Card style={styles.summaryCard}>
-          <Route size={size.icon.sm} color={colors.primary} />
-          <AnimatedNumber
-            value={summary.totalDistance}
-            format={(n) => formatDistance(n)}
-            style={[styles.summaryValue, { color: colors.text }]}
-          />
-          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Distance</Text>
-        </Card>
-
-        <Card style={styles.summaryCard}>
-          <MapPin size={size.icon.sm} color={colors.primary} />
-          <AnimatedNumber
-            value={summary.totalTrips}
-            format={(n) => String(n)}
-            style={[styles.summaryValue, { color: colors.text }]}
-          />
-          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Trips</Text>
-        </Card>
-
-        <Card style={styles.summaryCard}>
-          <Calendar size={size.icon.sm} color={colors.primary} />
-          <AnimatedNumber
-            value={summary.activeDays}
-            format={(n) => String(n)}
-            style={[styles.summaryValue, { color: colors.text }]}
-          />
-          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Active days</Text>
-        </Card>
-
-        <Card style={styles.summaryCard}>
-          <TrendingUp size={size.icon.sm} color={colors.primary} />
-          <AnimatedNumber
-            value={summary.avgDistance}
-            format={(n) => formatDistance(n)}
-            style={[styles.summaryValue, { color: colors.text }]}
-          />
-          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Avg / Day</Text>
-        </Card>
-      </View>
+      <Card rows style={styles.summaryCard}>
+        <StatRow icon={Route} label="Distance" value={totalDistance} />
+        <StatRow icon={MapPin} label="Trips" value={totalTrips} />
+        <StatRow icon={Calendar} label="Active days" value={activeDays} />
+        <StatRow icon={TrendingUp} label="Avg / day" value={avgDistance} />
+      </Card>
     ),
-    [summary, colors]
+    [totalDistance, totalTrips, activeDays, avgDistance]
   )
 
   return (
     <Container>
       <View style={styles.header}>
-        <ChipGroup options={PERIOD_OPTIONS} selected={period} onSelect={setPeriod} colors={colors} />
+        <ChipGroup
+          accessibilityLabel="Period"
+          options={PERIOD_OPTIONS}
+          selected={period}
+          onSelect={setPeriod}
+          colors={colors}
+        />
       </View>
 
       {loading && !refreshing ? (
@@ -271,29 +226,11 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   listContent: {
-    paddingHorizontal: space.md,
+    paddingHorizontal: space.lg,
     paddingBottom: space.xxl
   },
-  summaryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: space.md,
-    marginBottom: space.lg
-  },
   summaryCard: {
-    flexBasis: "45%",
-    flexGrow: 1,
-    flexShrink: 0,
-    alignItems: "center",
-    padding: space.md,
-    gap: space.xxs
-  },
-  summaryValue: {
-    ...type.heading
-  },
-  summaryLabel: {
-    fontSize: fontSizes.micro,
-    ...fonts.semiBold
+    marginBottom: space.lg
   },
   dayCard: {
     marginBottom: space.sm,
@@ -303,7 +240,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: space.xs
+    marginBottom: space.xxs
   },
   dayHeaderRight: {
     flexDirection: "row",
@@ -312,15 +249,14 @@ const styles = StyleSheet.create({
   },
   dayLabel: {
     fontSize: fontSizes.body,
-    ...fonts.bold
+    ...fonts.semiBold
   },
+  // The label is the name and the distance is the datum: one weight step apart, not two bolds
+  // competing across the row.
   dayDistance: {
     fontSize: fontSizes.body,
-    ...fonts.bold
-  },
-  dayStats: {
-    flexDirection: "row",
-    gap: space.lg
+    ...fonts.medium,
+    fontVariant: ["tabular-nums"]
   },
   dayStat: {
     fontSize: fontSizes.caption,
