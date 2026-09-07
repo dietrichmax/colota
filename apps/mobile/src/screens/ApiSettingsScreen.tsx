@@ -730,7 +730,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: space.lg,
-    paddingBottom: 40
+    paddingBottom: space.xxl
   },
   header: {
     marginTop: 20,

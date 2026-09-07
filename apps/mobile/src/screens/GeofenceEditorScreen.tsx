@@ -351,7 +351,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 
 const styles = StyleSheet.create({
   cardTail: { paddingBottom: space.lg },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: space.lg, paddingBottom: space.xxl },
   card: { marginBottom: space.lg },
   nameInput: { flex: 1 },
   numInput: { width: size.numericField },
