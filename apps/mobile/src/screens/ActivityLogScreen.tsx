@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: space.lg,
-    paddingBottom: 40
+    paddingBottom: space.xxl
   },
   headerButtons: {
     flexDirection: "row",

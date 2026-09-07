@@ -159,7 +159,7 @@ export function FileLoggingPanel() {
 const styles = StyleSheet.create({
   scroll: {
     padding: space.lg,
-    paddingBottom: 40
+    paddingBottom: space.xxl
   },
   card: {
     marginBottom: space.md

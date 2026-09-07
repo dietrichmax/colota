@@ -745,22 +745,14 @@ export function OfflineMapsScreen({}: ScreenProps) {
                     onPress={() => handleRefresh(item)}
                   />
                 )}
-                <Pressable
+                <IconButton
+                  icon={X}
+                  tone="danger"
                   testID={`delete-btn-${item.name}`}
+                  accessibilityLabel={`Delete ${item.name}`}
+                  loading={isDeleting}
                   onPress={() => handleDelete(item)}
-                  disabled={isDeleting}
-                  style={({ pressed }) => [
-                    styles.actionBtn,
-                    { backgroundColor: colors.error + "15" },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
-                >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color={colors.error} />
-                  ) : (
-                    <X size={size.icon.sm} color={colors.error} />
-                  )}
-                </Pressable>
+                />
               </View>
             )}
           </View>
@@ -878,7 +870,7 @@ const styles = StyleSheet.create({
   // The border is always drawn and only changes colour: a width that comes and goes on a
   // view that clips leaves its children unpainted on Android.
   map: { height: 450, overflow: "hidden", borderWidth: 2, borderColor: "transparent" },
-  list: { padding: 20, paddingBottom: 40 },
+  list: { padding: space.lg, paddingBottom: space.xxl },
   section: { marginBottom: space.lg },
   hint: {
     fontSize: fontSizes.description,
@@ -916,14 +908,7 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
     paddingHorizontal: space.xs
   },
-  actionBtns: { flexDirection: "row", gap: 6, alignItems: "center" },
-  actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.pill,
-    alignItems: "center",
-    justifyContent: "center"
-  },
+  actionBtns: { flexDirection: "row", gap: space.sm, alignItems: "center" },
   cancelAreaBtn: {
     justifyContent: "center",
     minHeight: size.chip,

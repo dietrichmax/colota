@@ -348,7 +348,7 @@ export function BackupRestoreScreen({}: Props) {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: space.lg,
-    paddingBottom: 40
+    paddingBottom: space.xxl
   },
   section: {
     marginTop: space.xl

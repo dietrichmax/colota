@@ -245,7 +245,7 @@ export function SetupImportScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   content: {
     padding: space.lg,
-    paddingBottom: 40
+    paddingBottom: space.xxl
   },
   headerCard: {
     marginBottom: space.lg

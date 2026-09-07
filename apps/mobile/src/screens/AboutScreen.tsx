@@ -222,7 +222,7 @@ export function AboutScreen({}: ScreenProps) {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: space.lg,
-    paddingBottom: 40,
+    paddingBottom: space.xxl,
     paddingTop: space.sm
   },
   header: {

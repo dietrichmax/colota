@@ -209,7 +209,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  list: { padding: space.lg, paddingBottom: 40 },
+  list: { padding: space.lg, paddingBottom: space.xxl },
   header: { marginBottom: 20 },
   subtitle: { fontSize: fontSizes.body, ...fonts.regular, lineHeight: lineHeights.body },
   card: { marginBottom: space.md },

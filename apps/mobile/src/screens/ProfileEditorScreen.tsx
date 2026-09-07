@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   // rows drops the card\'s vertical padding for the first row; the last child
   // here is not a row, so it takes the bottom inset back.
   cardTail: { paddingBottom: space.lg },
-  scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: 40 },
+  scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.xxl },
   inputGroup: { marginBottom: space.xs },
   numInput: { width: size.numericField },
   inputWithUnit: { flexDirection: "row", alignItems: "center", gap: 6 },

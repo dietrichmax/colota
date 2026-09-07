@@ -365,7 +365,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
 
 const styles = StyleSheet.create({
   map: { height: 450, overflow: "hidden" },
-  list: { padding: 20, paddingBottom: 40 },
+  list: { padding: space.lg, paddingBottom: space.xxl },
   section: { marginBottom: space.lg },
   hint: {
     fontSize: fontSizes.description,

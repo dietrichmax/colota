@@ -8,6 +8,7 @@ import { ThemeColors } from "../../types/global"
 import { useTheme } from "../../hooks/useTheme"
 import { logger } from "../../utils/logger"
 import { fontSizes, type } from "../../styles/typography"
+import { space } from "../../constants"
 
 import { Button } from "./Button"
 
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20
+    padding: space.lg
   },
   errorTitle: {
     ...type.display,
