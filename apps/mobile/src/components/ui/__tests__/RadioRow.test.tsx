@@ -33,4 +33,24 @@ describe("RadioRow", () => {
 
     expect(getByTestId("r").props.accessibilityLabel).toBe("Stationary")
   })
+
+  it("keeps a disabled option on screen with its sub, so it can say why it is unavailable", () => {
+    const onPress = jest.fn()
+    const { getByTestId, getByText } = render(
+      <RadioRow
+        testID="r"
+        label="Batch"
+        sub="Needs the POST method, not GET"
+        selected={false}
+        disabled
+        onPress={onPress}
+      />
+    )
+
+    fireEvent.press(getByTestId("r"))
+
+    expect(onPress).not.toHaveBeenCalled()
+    expect(getByTestId("r").props.accessibilityState).toEqual({ checked: false, disabled: true })
+    expect(getByText("Needs the POST method, not GET")).toBeTruthy()
+  })
 })

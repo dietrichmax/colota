@@ -28,6 +28,7 @@ import {
   Container,
   Divider,
   ChipGroup,
+  RadioRow,
   Button,
   TextField,
   IconButton
@@ -70,11 +71,6 @@ const HTTP_METHOD_OPTIONS: { value: HttpMethod; label: string }[] = [
   { value: "GET", label: "GET" }
 ]
 
-const DAWARICH_MODE_OPTIONS: { value: DawarichMode; label: string }[] = [
-  { value: "single", label: "Single point" },
-  { value: "batch", label: "Batch" }
-]
-
 /**
  * Returns the reference field map for the current template.
  * Used for "Modified" badge comparison and "Reset" actions.
@@ -112,6 +108,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
   const isGetMethod = localHttpMethod === "GET"
   const showDawarichChip = localTemplate === "dawarich"
   const batchDisabled = isInstantSync || isGetMethod
+  const batchDisabledReason = isInstantSync ? "Needs a sync interval above Instant" : "Needs the POST method, not GET"
   const copiedTimeout = useTimeout()
   const {
     saving,
@@ -525,28 +522,28 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {showDawarichChip && (
           <View style={styles.section}>
             <SectionTitle>Dawarich mode</SectionTitle>
-            <ChipGroup
-              options={DAWARICH_MODE_OPTIONS}
-              selected={localDawarichMode}
-              onSelect={handleDawarichModeChange}
-              colors={colors}
-              disabled={batchDisabled ? new Set<DawarichMode>(["batch"]) : undefined}
-            />
+            <View accessibilityRole="radiogroup" style={styles.radioGroup}>
+              <RadioRow
+                testID="dawarich-mode-single"
+                label="Single point"
+                sub="Sends one request per location"
+                selected={localDawarichMode === "single"}
+                onPress={() => handleDawarichModeChange("single")}
+              />
+              <RadioRow
+                testID="dawarich-mode-batch"
+                label="Batch"
+                sub={batchDisabled ? batchDisabledReason : "Sends queued locations in one request"}
+                disabled={batchDisabled}
+                selected={localDawarichMode === "batch"}
+                onPress={() => handleDawarichModeChange("batch")}
+              />
+            </View>
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
               {localDawarichMode === "batch"
                 ? "Endpoint: /api/v1/overland/batches?api_key=YOUR_API_KEY"
                 : "Endpoint: /api/v1/owntracks/points?api_key=YOUR_API_KEY"}
             </Text>
-            {isInstantSync && (
-              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-                Batch mode requires a non-zero sync interval. Switch to a batched preset to enable it.
-              </Text>
-            )}
-            {isGetMethod && !isInstantSync && (
-              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-                Batch mode requires POST. Switch HTTP method to POST to enable batch.
-              </Text>
-            )}
           </View>
         )}
 
@@ -748,6 +745,12 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: space.xl
+  },
+  // Every control pays its own top padding, so the gap under a SectionTitle has to be measured to the
+  // text rather than to the box. A chip pays space.sm and lands at 20; a row pays space.lg and would
+  // land at 28. Pulling up space.sm puts the row text at 20 too, with the ripple still clear of the title.
+  radioGroup: {
+    marginTop: -space.sm
   },
   templateHint: {
     fontSize: fontSizes.caption,
