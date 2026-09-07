@@ -40,7 +40,7 @@ export function NumericInput({
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       {hint && <Text style={[styles.hint, { color: colors.textSecondary }]}>{hint}</Text>}
 
       <View style={styles.inputRow}>
@@ -66,8 +66,8 @@ const styles = StyleSheet.create({
     marginBottom: space.lg
   },
   label: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold,
+    fontSize: fontSizes.description,
+    ...fonts.medium,
     marginBottom: space.sm
   },
   hint: {
