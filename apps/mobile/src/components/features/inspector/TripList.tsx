@@ -236,7 +236,8 @@ export function TripList({ trips, colors, onTripSelect, onExport, onDelete, onMe
             <Pressable
               onPress={handleSelectAllToggle}
               hitSlop={HIT_SLOP_SM}
-              style={({ pressed }) => [styles.cabTextBtn, pressed && { opacity: colors.pressedOpacity }]}
+              android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true }}
+              style={styles.cabTextBtn}
               accessibilityRole="button"
               accessibilityLabel={allSelected ? "Clear selection" : "Select all trips"}
             >
@@ -278,7 +279,8 @@ export function TripList({ trips, colors, onTripSelect, onExport, onDelete, onMe
           {onExport && (
             <Pressable
               onPress={() => setShowExport((prev) => !prev)}
-              style={({ pressed }) => [styles.exportAllBtn, pressed && { opacity: colors.pressedOpacity }]}
+              android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
+              style={styles.exportAllBtn}
               accessibilityRole="button"
               accessibilityLabel="Export all trips"
               accessibilityState={{ expanded: showExport }}
