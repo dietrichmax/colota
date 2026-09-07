@@ -413,24 +413,24 @@ describe("NativeLocationService", () => {
     })
   })
 
-  describe("getActiveProfileName", () => {
-    it("returns profile name when a profile is active", async () => {
-      nativeMock.getActiveProfile.mockResolvedValueOnce("Charging")
-      const name = await NativeLocationService.getActiveProfileName()
-      expect(name).toBe("Charging")
+  describe("getActiveProfile", () => {
+    it("returns the name and id when a profile is active, so a reconnecting UI can resolve its interval", async () => {
+      nativeMock.getActiveProfile.mockResolvedValueOnce({ name: "Charging", id: 3 })
+      const profile = await NativeLocationService.getActiveProfile()
+      expect(profile).toEqual({ name: "Charging", id: 3 })
       expect(nativeMock.getActiveProfile).toHaveBeenCalled()
     })
 
     it("returns null when no profile is active", async () => {
       nativeMock.getActiveProfile.mockResolvedValueOnce(null)
-      const name = await NativeLocationService.getActiveProfileName()
-      expect(name).toBeNull()
+      const profile = await NativeLocationService.getActiveProfile()
+      expect(profile).toBeNull()
     })
 
     it("returns null on error", async () => {
       nativeMock.getActiveProfile.mockRejectedValueOnce(new Error("Native error"))
-      const name = await NativeLocationService.getActiveProfileName()
-      expect(name).toBeNull()
+      const profile = await NativeLocationService.getActiveProfile()
+      expect(profile).toBeNull()
     })
   })
 

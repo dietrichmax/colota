@@ -523,7 +523,7 @@ describe("useLocationTracking", () => {
       expect(mockAddListener).toHaveBeenCalledWith("onLocationUpdate", expect.any(Function))
     })
 
-    it("updates coords when location event fires", async () => {
+    it("stores a live fix's millisecond timestamp in seconds, the unit the database rows and formatTime use", async () => {
       let eventCallback: (event: any) => void
       mockAddListener.mockImplementation((_event: string, cb: (event: any) => void) => {
         eventCallback = cb
@@ -544,7 +544,7 @@ describe("useLocationTracking", () => {
           altitude: 500,
           speed: 1.2,
           bearing: 90,
-          timestamp: 1700000000,
+          timestamp: 1700000000456,
           battery: 85,
           batteryStatus: 2
         })

@@ -21,6 +21,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
   const isOffline = settings.isOfflineMode
 
   const [serverStatus, setServerStatus] = useState<ServerStatus | "offline" | "deviceOffline" | null>(null)
+  const [queued, setQueued] = useState(0)
 
   useFocusEffect(
     useCallback(() => {
@@ -48,6 +49,7 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
         try {
           const stats = await NativeLocationService.getStats()
           if (cancelled) return
+          setQueued(stats.queued)
           // Empty queue plus a prior successful send (sent = retained synced rows) means caught up.
           if (stats.queued === 0 && stats.sent > 0) {
             setServerStatus("connected")
@@ -58,10 +60,15 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
       }
 
       refresh()
-      const sub = DeviceEventEmitter.addListener("onSyncError", () => setServerStatus("error"))
+      // The queue grows on a fix and drains on a sync, so those two events are exactly when the row changes.
+      const subs = [
+        DeviceEventEmitter.addListener("onSyncError", () => setServerStatus("error")),
+        DeviceEventEmitter.addListener("onSyncProgress", refresh),
+        DeviceEventEmitter.addListener("onLocationUpdate", refresh)
+      ]
       return () => {
         cancelled = true
-        sub.remove()
+        subs.forEach((sub) => sub.remove())
       }
     }, [endpoint, isOffline])
   )
@@ -84,46 +91,65 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
     return statusMap[serverStatus as ServerStatus] || statusMap.error
   }, [serverStatus, colors, isOffline])
 
+  const hostLabel = isOffline ? "Offline mode" : displayUrl || "Server"
+  const queueLabel = queued > 0 ? `${queued.toLocaleString()} queued` : ""
+  const spokenStatus = [config.label, queueLabel].filter(Boolean).join(" · ")
+  // A healthy server says nothing; the word is for a screen reader, which cannot see the dot.
+  const statusLabel = serverStatus === "connected" ? queueLabel : spokenStatus
+
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={isOffline ? hostLabel : `${hostLabel}, ${spokenStatus}`}
       onPress={() => navigation.navigate("Connection")}
       android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
-      style={[styles.container, { backgroundColor: colors.card }]}
+      style={styles.row}
     >
-      <View style={[styles.dot, { backgroundColor: config.color }]} />
+      <View style={styles.glyph}>
+        <View style={[styles.dot, { backgroundColor: config.color }]} />
+      </View>
       <Text style={[styles.host, { color: colors.text }]} numberOfLines={1}>
-        {isOffline ? "Offline mode" : displayUrl || "Server"}
+        {hostLabel}
       </Text>
-      {!isOffline && <Text style={[styles.status, { color: config.color }]}>{config.label}</Text>}
+      {/* The endpoint can answer while the backlog grows, held by the sync condition or a 429, so the queue shows on its own. */}
+      {!isOffline && statusLabel !== "" && (
+        <Text style={[styles.status, { color: colors.textSecondary }]} numberOfLines={1}>
+          {statusLabel}
+        </Text>
+      )}
       <ChevronRight size={size.icon.sm} color={colors.textLight} />
     </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    overflow: "hidden",
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    padding: space.lg,
-    borderRadius: radius.md,
-    marginBottom: space.xl
+    gap: space.lg,
+    minHeight: size.row,
+    paddingVertical: space.md,
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg
+  },
+  glyph: {
+    width: size.icon.md,
+    alignItems: "center"
   },
   dot: {
     width: 8,
     height: 8,
-    borderRadius: radius.pill,
-    marginEnd: space.md
+    borderRadius: radius.pill
   },
   host: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
     fontSize: fontSizes.body,
     ...fonts.medium
   },
   status: {
+    flexShrink: 1,
     fontSize: fontSizes.caption,
-    ...fonts.medium,
-    marginEnd: space.sm
+    ...fonts.medium
   }
 })

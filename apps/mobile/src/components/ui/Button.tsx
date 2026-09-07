@@ -17,7 +17,7 @@ import {
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { type LucideIcon } from "lucide-react-native"
-import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { elevation, size, space, STATE_LAYER_ALPHA } from "../../constants"
 import { radius } from "@colota/shared"
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
@@ -35,6 +35,8 @@ type Props = {
   icon?: LucideIcon
   loading?: boolean
   expanded?: boolean
+  /** Lifts the painted Pressable; a shadow on the wrapper draws nothing because it has no fill. */
+  floating?: boolean
   testID?: string
 }
 
@@ -49,6 +51,7 @@ export function Button({
   icon: Icon,
   loading = false,
   expanded,
+  floating = false,
   testID
 }: Props) {
   const { colors } = useTheme()
@@ -79,7 +82,11 @@ export function Button({
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading, expanded }}
         android_ripple={disabled || loading ? undefined : { color: v.text + STATE_LAYER_ALPHA }}
-        style={[styles.button, { backgroundColor: v.bg, borderRadius: shape === "pill" ? radius.pill : radius.sm }]}
+        style={[
+          styles.button,
+          { backgroundColor: v.bg, borderRadius: shape === "pill" ? radius.pill : radius.sm },
+          floating && { elevation: elevation.floating }
+        ]}
         onPress={onPress}
         disabled={disabled || loading}
       >

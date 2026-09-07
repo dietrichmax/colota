@@ -45,10 +45,11 @@ export { BottomTabBar, TAB_ROUTES } from "./ui/BottomTabBar"
 // Feature Components - Dashboard
 // ============================================================================
 export { DashboardMap } from "./features/dashboard/DashboardMap"
-export { CoordinateDisplay } from "./features/dashboard/CoordinateDisplay"
 export { ConnectionStatus } from "./features/dashboard/ConnectionStatus"
 export { WelcomeCard } from "./features/dashboard/WelcomeCard"
-export { DatabaseStatistics } from "./features/dashboard/DatabaseStatistics"
+export { StateLine } from "./features/dashboard/StateLine"
+export { DashboardBanner } from "./features/dashboard/DashboardBanner"
+export { DashboardDock } from "./features/dashboard/DashboardDock"
 
 // ============================================================================
 // Feature Components - Map

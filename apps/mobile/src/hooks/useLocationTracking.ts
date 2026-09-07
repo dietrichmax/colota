@@ -70,7 +70,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
               altitude: latest.altitude ?? 0,
               speed: latest.speed ?? 0,
               bearing: latest.bearing ?? 0,
-              timestamp: latest.timestamp ?? Date.now(),
+              timestamp: latest.timestamp ?? Math.floor(Date.now() / 1000),
               battery: latest.battery,
               battery_status: latest.batteryStatus
             })
@@ -98,7 +98,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
           altitude: event.altitude,
           speed: event.speed,
           bearing: event.bearing,
-          timestamp: event.timestamp,
+          timestamp: Math.floor(event.timestamp / 1000),
           battery: event.battery,
           battery_status: event.batteryStatus
         })
@@ -214,7 +214,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
   /** False when nothing was cycled: tracking was off, or a restart was already in flight. */
   const restartTracking = useCallback(
     async (newSettings?: Settings): Promise<boolean> => {
-      // Only restart if tracking is active — settings are persisted separately,
+      // Only restart if tracking is active - settings are persisted separately,
       // so they'll be picked up when the user starts tracking later.
       if (!isTrackingRef.current) {
         logger.debug("[useLocationTracking] Not tracking, skip restart (settings saved separately)")
@@ -319,7 +319,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
             altitude: latest.altitude ?? 0,
             speed: latest.speed ?? 0,
             bearing: latest.bearing ?? 0,
-            timestamp: latest.timestamp ?? Date.now(),
+            timestamp: latest.timestamp ?? Math.floor(Date.now() / 1000),
             battery: latest.battery,
             battery_status: latest.batteryStatus
           })
@@ -373,7 +373,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
                 altitude: latest.altitude ?? 0,
                 speed: latest.speed ?? 0,
                 bearing: latest.bearing ?? 0,
-                timestamp: latest.timestamp ?? Date.now(),
+                timestamp: latest.timestamp ?? Math.floor(Date.now() / 1000),
                 battery: latest.battery,
                 battery_status: latest.batteryStatus
               })

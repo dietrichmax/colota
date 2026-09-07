@@ -131,6 +131,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         @Volatile
         private var activeProfileName: String? = null
 
+        @Volatile
+        private var activeProfileId: Int? = null
+
         private inline fun emit(event: String, build: WritableMap.() -> Unit): Boolean {
             val context = reactContextRef.get() ?: return false
             if (!context.hasActiveCatalystInstance()) return false
@@ -183,6 +186,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         @JvmStatic
         fun sendProfileSwitchEvent(profileName: String?, profileId: Int?): Boolean {
             activeProfileName = profileName
+            activeProfileId = profileId
             return emit("onProfileSwitch") {
                 if (profileName != null) putString("profileName", profileName) else putNull("profileName")
                 if (profileId != null) putInt("profileId", profileId) else putNull("profileId")
@@ -685,7 +689,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getActiveProfile(promise: Promise) {
-        promise.resolve(activeProfileName)
+        val name = activeProfileName
+        if (name == null) {
+            promise.resolve(null)
+            return
+        }
+        promise.resolve(Arguments.createMap().apply {
+            putString("name", name)
+            activeProfileId?.let { putInt("id", it) } ?: putNull("id")
+        })
     }
 
     @ReactMethod

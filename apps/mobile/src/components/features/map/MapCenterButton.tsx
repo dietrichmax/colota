@@ -8,7 +8,7 @@ import { ViewStyle, StyleProp, StyleSheet } from "react-native"
 import { LocateFixed } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
-import { size } from "../../../constants"
+import { size, space } from "../../../constants"
 
 interface Props {
   onPress: () => void
@@ -22,12 +22,17 @@ export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) =>
   if (!visible) return null
 
   return (
-    <MapActionButton onPress={onPress} style={[mapActionStyles.right, styles.position, style]}>
+    <MapActionButton
+      onPress={onPress}
+      style={[mapActionStyles.right, styles.position, style]}
+      accessibilityRole="button"
+      accessibilityLabel="Centre map on my position"
+    >
       <LocateFixed size={size.icon.md} color={colors.textLight} />
     </MapActionButton>
   )
 }
 
 const styles = StyleSheet.create({
-  position: { bottom: 78 }
+  position: { bottom: space.xxl + size.iconColumn + space.lg }
 })

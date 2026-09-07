@@ -68,6 +68,7 @@ class LocationServiceModuleTest {
         setCompanionField("reactContextRef", WeakReference(mockContext))
         setCompanionField("isAppInForeground", true)
         setCompanionField("activeProfileName", null)
+        setCompanionField("activeProfileId", null)
     }
 
     @After
@@ -80,6 +81,7 @@ class LocationServiceModuleTest {
         setCompanionField("reactContextRef", WeakReference<ReactApplicationContext>(null))
         setCompanionField("isAppInForeground", true)
         setCompanionField("activeProfileName", null)
+        setCompanionField("activeProfileId", null)
     }
 
     // ========================================================================
@@ -162,16 +164,19 @@ class LocationServiceModuleTest {
     // ========================================================================
 
     @Test
-    fun `sendProfileSwitchEvent updates activeProfileName`() {
+    fun `sendProfileSwitchEvent keeps the active name and id for a reconnecting UI`() {
         LocationServiceModule.sendProfileSwitchEvent("Charging", 1)
         assertEquals("Charging", getCompanionField("activeProfileName"))
+        assertEquals(1, getCompanionField("activeProfileId"))
     }
 
     @Test
-    fun `sendProfileSwitchEvent clears activeProfileName on deactivation`() {
+    fun `sendProfileSwitchEvent clears the name and id on deactivation`() {
         setCompanionField("activeProfileName", "Charging")
+        setCompanionField("activeProfileId", 1)
         LocationServiceModule.sendProfileSwitchEvent(null, null)
         assertNull(getCompanionField("activeProfileName"))
+        assertNull(getCompanionField("activeProfileId"))
     }
 
     @Test
@@ -586,7 +591,7 @@ class LocationServiceModuleTest {
     }
 
     // ========================================================================
-    // getActiveProfile reads companion activeProfileName
+    // getActiveProfile reads the companion's active name and id
     // ========================================================================
 
     @Test
@@ -598,11 +603,15 @@ class LocationServiceModuleTest {
     }
 
     @Test
-    fun `getActiveProfile resolves profile name when active`() {
+    fun `getActiveProfile resolves the name and id when active, so the UI can show the profile's interval after a restart`() {
         setCompanionField("activeProfileName", "Charging")
+        setCompanionField("activeProfileId", 3)
         val promise = mockk<com.facebook.react.bridge.Promise>(relaxed = true)
         createModule().getActiveProfile(promise)
-        verify { promise.resolve("Charging") }
+        val map = slot<JavaOnlyMap>()
+        verify { promise.resolve(capture(map)) }
+        assertEquals("Charging", map.captured.getString("name"))
+        assertEquals(3, map.captured.getInt("id"))
     }
 
     // ========================================================================

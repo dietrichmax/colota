@@ -544,9 +544,9 @@ class NativeLocationService {
   }
 
   /**
-   * Returns the name of the currently active tracking profile, or null if using defaults
+   * Returns the name and id of the currently active tracking profile, or null if using defaults
    */
-  static async getActiveProfileName(): Promise<string | null> {
+  static async getActiveProfile(): Promise<{ name: string; id: number | null } | null> {
     this.ensureModule()
     return this.safeExecute(() => LocationServiceModule.getActiveProfile(), null, "getActiveProfile failed")
   }
