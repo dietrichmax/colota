@@ -79,7 +79,7 @@ export const lightColors: ThemeColors = {
   textDisabled: "#9AA0A6",
 
   // Border & divider
-  border: "#e5e7eb",
+  border: "#7e889c",
   borderLight: "#f3f4f6",
   divider: "#e5e7eb",
 
@@ -120,7 +120,7 @@ export const darkColors: ThemeColors = {
   textDisabled: "#666666",
 
   // Border & divider
-  border: "#424242",
+  border: "#767676",
   borderLight: "#333333",
   divider: "#333333",
 

@@ -45,10 +45,11 @@ const PAIRS: Pair[] = [
   ["warning", "card", TEXT],
   ["info", "background", TEXT],
   ["info", "card", TEXT],
-  // success only ever paints a dot or an icon, never a word, so it answers to the UI floor.
+  ["border", "background", UI],
+  ["border", "card", UI],
+  ["border", "well", UI],
   ["success", "background", UI],
   ["success", "card", UI],
-  // The focus ring on an unselected chip.
   ["primary", "well", UI]
 ]
 

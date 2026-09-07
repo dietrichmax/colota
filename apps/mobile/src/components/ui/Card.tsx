@@ -69,7 +69,9 @@ export function Card({
         return {
           backgroundColor: "transparent",
           borderColor: colors.border,
-          borderWidth: 1.5
+          // Material's outlined card is 1dp. It was 1.5 only to stay visible while border sat at
+          // 1.18:1; the token clears the outline floor now, so the weight goes back to the spec.
+          borderWidth: 1
         }
       case "interactive":
         return {
