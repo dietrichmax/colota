@@ -59,6 +59,33 @@ jest.mock("../../contexts/TrackingProvider", () => ({
   })
 }))
 
+jest.mock("../../components/features/settings/SyncIntervalPicker", () => {
+  const R = require("react")
+  const { View, Text, Pressable } = require("react-native")
+  const { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } = require("../../constants")
+  return {
+    SyncIntervalPicker: ({ label, hint, value, onSelect }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, hint),
+        SYNC_INTERVAL_PRESETS.map((seconds: number) =>
+          R.createElement(
+            Pressable,
+            {
+              key: seconds,
+              testID: `sync-interval-${seconds}`,
+              onPress: () => onSelect(seconds),
+              accessibilityState: { checked: value === seconds }
+            },
+            R.createElement(Text, null, SYNC_INTERVAL_LABELS[seconds])
+          )
+        )
+      )
+  }
+})
+
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
     colors: {
@@ -194,13 +221,13 @@ describe("ProfileEditorScreen", () => {
     expect(getByText("Speed Below")).toBeTruthy()
   })
 
-  it("shows all sync interval options inline", () => {
-    const { getByText, getAllByText } = renderNewProfile()
+  it("hands the sync interval to the shared picker rather than drawing its own", () => {
+    const { getByTestId } = renderNewProfile()
 
-    expect(getAllByText("Instant").length).toBeGreaterThan(0)
-    expect(getByText("1 min")).toBeTruthy()
-    expect(getByText("5 min")).toBeTruthy()
-    expect(getByText("15 min")).toBeTruthy()
+    expect(getByTestId("sync-interval-0")).toBeTruthy()
+    expect(getByTestId("sync-interval-60")).toBeTruthy()
+    expect(getByTestId("sync-interval-300")).toBeTruthy()
+    expect(getByTestId("sync-interval-900")).toBeTruthy()
   })
 
   it("pre-fills fields with main settings values", () => {
@@ -523,18 +550,6 @@ describe("ProfileEditorScreen", () => {
       await waitFor(() => expect(mockShowConfirm).toHaveBeenCalled())
       expect(mockDeleteProfile).not.toHaveBeenCalled()
       expect(mockGoBack).not.toHaveBeenCalled()
-    })
-  })
-
-  describe("custom sync interval", () => {
-    it("opens Custom on the interval the profile already has, not on an invented one", async () => {
-      const { getByText, getByDisplayValue } = renderEditProfile(1)
-
-      await waitFor(() => expect(getByDisplayValue("Existing Profile")).toBeTruthy())
-      fireEvent.press(getByText("Custom"))
-
-      // The old code seeded a hardcoded 1800 here, throwing away the profile's 60.
-      expect(getByDisplayValue("60")).toBeTruthy()
     })
   })
 })

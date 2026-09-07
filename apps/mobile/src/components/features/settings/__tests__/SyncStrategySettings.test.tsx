@@ -75,6 +75,33 @@ jest.mock("../../../index", () => {
   }
 })
 
+jest.mock("../SyncIntervalPicker", () => {
+  const R = require("react")
+  const { View, Text, Pressable } = require("react-native")
+  const { SYNC_INTERVAL_PRESETS } = require("../../../../constants")
+  return {
+    SyncIntervalPicker: ({ label, hint, value, onSelect }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, hint),
+        SYNC_INTERVAL_PRESETS.map((seconds: number) =>
+          R.createElement(
+            Pressable,
+            {
+              key: seconds,
+              testID: `sync-interval-${seconds}`,
+              onPress: () => onSelect(seconds),
+              accessibilityState: { checked: value === seconds }
+            },
+            R.createElement(Text, null, String(seconds))
+          )
+        )
+      )
+  }
+})
+
 jest.mock("../../../../utils/geo", () => ({
   shortDistanceUnit: () => "m",
   inputToMeters: (value: number) => value,
@@ -214,14 +241,11 @@ describe("SyncStrategySettings", () => {
   })
 
   describe("sync interval", () => {
-    it("renders every option inline, Custom included", () => {
-      const { getByTestId } = renderComponent()
+    it("hands the picker its label and hint rather than drawing them itself", () => {
+      const { getByText } = renderComponent()
 
-      expect(getByTestId("sync-interval-0")).toBeTruthy()
-      expect(getByTestId("sync-interval-60")).toBeTruthy()
-      expect(getByTestId("sync-interval-300")).toBeTruthy()
-      expect(getByTestId("sync-interval-900")).toBeTruthy()
-      expect(getByTestId("sync-interval-custom")).toBeTruthy()
+      expect(getByText("Sync interval")).toBeTruthy()
+      expect(getByText("How often to upload data to server")).toBeTruthy()
     })
 
     it("selecting a sync interval sets preset to custom", () => {
@@ -241,30 +265,6 @@ describe("SyncStrategySettings", () => {
           syncPreset: "custom"
         })
       )
-    })
-
-    it("opening Custom saves nothing and keeps the interval you already had", () => {
-      const { getByTestId, getByDisplayValue } = renderComponent({ syncInterval: 300 })
-
-      fireEvent.press(getByTestId("sync-interval-custom"))
-
-      // The old code wrote a hardcoded 1800 here, discarding the interval and restarting tracking.
-      expect(mockOnSettingsChange).not.toHaveBeenCalled()
-      expect(mockOnDebouncedSave).not.toHaveBeenCalled()
-      expect(mockOnImmediateSave).not.toHaveBeenCalled()
-      expect(getByDisplayValue("300")).toBeTruthy()
-    })
-
-    it("leaves Custom when a preset is pressed, even though the value was never off-preset", () => {
-      const { getByTestId, queryByDisplayValue } = renderComponent({ syncInterval: 300 })
-
-      fireEvent.press(getByTestId("sync-interval-custom"))
-      expect(queryByDisplayValue("300")).toBeTruthy()
-
-      fireEvent.press(getByTestId("sync-interval-60"))
-
-      expect(queryByDisplayValue("300")).toBeNull()
-      expect(mockOnDebouncedSave).toHaveBeenCalledWith(expect.objectContaining({ syncInterval: 60 }))
     })
   })
 

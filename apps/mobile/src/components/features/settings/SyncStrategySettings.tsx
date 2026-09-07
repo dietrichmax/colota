@@ -7,16 +7,9 @@ import React, { useState, useCallback, useEffect, useMemo } from "react"
 import { Text, StyleSheet, View, Pressable, AppState } from "react-native"
 import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
 import { fonts, fontSizes, lineHeights } from "../../../styles/typography"
-import {
-  HIT_SLOP_MD,
-  OVERLAND_BATCH_MAX,
-  OVERLAND_BATCH_MIN,
-  SYNC_INTERVAL_LABELS,
-  SYNC_INTERVAL_PRESETS,
-  size,
-  space
-} from "../../../constants"
+import { HIT_SLOP_MD, OVERLAND_BATCH_MAX, OVERLAND_BATCH_MIN, size, space } from "../../../constants"
 import { Card, NumericInput, RadioRow, SectionTitle, SettingRow, TextField, Toggle } from "../../index"
+import { SyncIntervalPicker } from "./SyncIntervalPicker"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 import { isOverlandFormat } from "../../../utils/apiPayload"
 import NativeLocationService from "../../../services/NativeLocationService"
@@ -57,7 +50,6 @@ export function SyncStrategySettings({
   const [accuracyThresholdInput, setAccuracyThresholdInput] = useState(
     metersToInput(settings.accuracyThreshold).toString()
   )
-  const [syncIntervalInput, setSyncIntervalInput] = useState(settings.syncInterval.toString())
   const [overlandBatchSizeInput, setOverlandBatchSizeInput] = useState(settings.overlandBatchSize.toString())
   const showOverlandBatchSize = isOverlandFormat(settings.apiTemplate, settings.dawarichMode)
   const [currentSsid, setCurrentSsid] = useState("")
@@ -77,17 +69,11 @@ export function SyncStrategySettings({
     return () => sub.remove()
   }, [settings.syncCondition])
 
-  // Custom mode cannot be derived from the value alone: every number the user might pick first is
-  // also a preset, so deriving it forced the old code to invent one and save it on the spot.
-  const [customSyncOpen, setCustomSyncOpen] = useState(false)
-  const isCustomSyncInterval = customSyncOpen || !SYNC_INTERVAL_PRESETS.includes(settings.syncInterval)
-
   // Sync inputs with settings changes (e.g. preset selection)
   useEffect(() => {
     setIntervalInput(settings.interval.toString())
     setDistanceInput(metersToInput(settings.distance ?? 0).toString())
     setAccuracyThresholdInput(metersToInput(settings.accuracyThreshold).toString())
-    setSyncIntervalInput(settings.syncInterval.toString())
     setOverlandBatchSizeInput(settings.overlandBatchSize.toString())
   }, [
     settings.interval,
@@ -235,67 +221,19 @@ export function SyncStrategySettings({
         <>
           <SectionTitle style={styles.groupTop}>Network settings</SectionTitle>
           <Card rows>
-            {/* Sync Interval */}
             <View style={styles.settingBlock}>
-              <Text style={[styles.blockLabel, { color: colors.text }]}>Sync interval</Text>
-              <Text style={[styles.blockHint, { color: colors.textSecondary }]}>
-                How often to upload data to server
-              </Text>
-
-              <View accessibilityRole="radiogroup">
-                {SYNC_INTERVAL_PRESETS.map((seconds) => (
-                  <RadioRow
-                    key={seconds}
-                    testID={`sync-interval-${seconds}`}
-                    label={SYNC_INTERVAL_LABELS[seconds]}
-                    sub={seconds === 0 ? "Uploads each fix as soon as it is recorded" : undefined}
-                    selected={!isCustomSyncInterval && settings.syncInterval === seconds}
-                    onPress={() => {
-                      setCustomSyncOpen(false)
-                      handleGridSelect("syncInterval", seconds)
-                    }}
-                  />
-                ))}
-                <RadioRow
-                  testID="sync-interval-custom"
-                  label="Custom"
-                  sub={isCustomSyncInterval ? `Every ${settings.syncInterval} seconds` : "Set your own interval"}
-                  selected={isCustomSyncInterval}
-                  onPress={() => {
-                    setSyncIntervalInput(settings.syncInterval.toString())
-                    setCustomSyncOpen(true)
-                  }}
-                />
-
-                {isCustomSyncInterval && (
-                  <View style={styles.customSyncInput}>
-                    <NumericInput
-                      label="Custom sync interval"
-                      value={syncIntervalInput}
-                      onChange={(val) => {
-                        setSyncIntervalInput(val)
-                        const num = Number(val)
-                        if (!isNaN(num) && num >= 1) {
-                          const next = { ...settings, syncInterval: num, syncPreset: "custom" as const }
-                          onDebouncedSave(next)
-                        }
-                      }}
-                      onBlur={() => {
-                        let val = Number(syncIntervalInput)
-                        if (isNaN(val) || val < 1) {
-                          val = 1
-                          setSyncIntervalInput("1")
-                          const next = { ...settings, syncInterval: val, syncPreset: "custom" as const }
-                          onSettingsChange(next)
-                          onImmediateSave(next)
-                        }
-                      }}
-                      unit="seconds"
-                      hint="Custom interval in seconds"
-                    />
-                  </View>
-                )}
-              </View>
+              <SyncIntervalPicker
+                label="Sync interval"
+                hint="How often to upload data to server"
+                value={settings.syncInterval}
+                onSelect={(seconds) => handleGridSelect("syncInterval", seconds)}
+                onChange={(seconds) => onDebouncedSave({ ...settings, syncInterval: seconds, syncPreset: "custom" })}
+                onClamp={(seconds) => {
+                  const next = { ...settings, syncInterval: seconds, syncPreset: "custom" as const }
+                  onSettingsChange(next)
+                  onImmediateSave(next)
+                }}
+              />
             </View>
 
             {showOverlandBatchSize && (
