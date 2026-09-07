@@ -161,8 +161,6 @@ describe("ConnectionSettings", () => {
 
       expect(getByText("Authentication & headers")).toBeTruthy()
     })
-
-
   })
 
   describe("offline mode", () => {

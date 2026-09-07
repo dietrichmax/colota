@@ -144,9 +144,6 @@ describe("AboutScreen", () => {
     expect(getByText("Version 1.3.0")).toBeTruthy()
   })
 
-
-
-
   it("shows the build details", async () => {
     const { getByText } = renderScreen()
 

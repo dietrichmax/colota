@@ -27,9 +27,7 @@ describe("Button variants", () => {
   it("recedes when disabled instead of wearing an enabled label", () => {
     // The fill itself went to textDisabled while the label stayed textOnPrimary, so Offline maps'
     // disabled download button was white on grey and still read as a filled button you could press.
-    const { getByTestId } = render(
-      <Button title="Download area" onPress={jest.fn()} disabled testID="download-btn" />
-    )
+    const { getByTestId } = render(<Button title="Download area" onPress={jest.fn()} disabled testID="download-btn" />)
 
     expect(flat(getByTestId("download-btn")).backgroundColor).toBe(lightColors.well)
     expect(StyleSheet.flatten(getByTestId("download-btn").findByType(Text).props.style).color).toBe(

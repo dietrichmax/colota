@@ -35,9 +35,7 @@ interface ChecklistItemProps {
 function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps) {
   const content = (
     <View style={styles.checklistItem}>
-      <View
-        style={[styles.checkCircle, { borderColor: colors.border }]}
-      >
+      <View style={[styles.checkCircle, { borderColor: colors.border }]}>
         {completed && <Check size={size.icon.sm} color={colors.success} />}
       </View>
       <Text
@@ -172,5 +170,5 @@ const styles = StyleSheet.create({
   link: {
     fontSize: fontSizes.body,
     ...fonts.semiBold
-  },
+  }
 })

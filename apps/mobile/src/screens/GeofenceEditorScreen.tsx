@@ -48,9 +48,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
   const [saving, setSaving] = useState(false)
   const placedOnEntry = useRef(route?.params?.lat != null)
   const [coord, setCoord] = useState<{ lat: number; lon: number } | null>(
-    route?.params?.lat != null && route?.params?.lon != null
-      ? { lat: route.params.lat, lon: route.params.lon }
-      : null
+    route?.params?.lat != null && route?.params?.lon != null ? { lat: route.params.lat, lon: route.params.lon } : null
   )
 
   const savedState = useRef({

@@ -55,5 +55,4 @@ describe("ChipGroup", () => {
     expect(style.minHeight).toBe(size.chip)
     expect(style.minHeight + slop.top + slop.bottom).toBeGreaterThanOrEqual(size.touch)
   })
-
 })

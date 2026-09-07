@@ -5,7 +5,18 @@
 
 import React, { useMemo, useState, useCallback, useLayoutEffect, useEffect, useRef } from "react"
 import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions } from "react-native"
-import { Share, Trash2, ChevronLeft, ChevronRight, Route, Clock, Gauge, MapPin, TrendingUp, TrendingDown } from "lucide-react-native"
+import {
+  Share,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Route,
+  Clock,
+  Gauge,
+  MapPin,
+  TrendingUp,
+  TrendingDown
+} from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
 import { fontSizes, fonts, type } from "../styles/typography"
 // Deep paths on purpose: the components barrel re-exports DashboardMap, which reaches
@@ -427,7 +438,6 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
     </Container>
   )
 }
-
 
 const styles = StyleSheet.create({
   content: {

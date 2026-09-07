@@ -147,10 +147,7 @@ describe("GeofenceEditorScreen", () => {
 
   function renderEditAt(lat: number, lon: number) {
     return render(
-      <GeofenceEditorScreen
-        navigation={mockNavigation as any}
-        route={{ params: { geofenceId: 1, lat, lon } } as any}
-      />
+      <GeofenceEditorScreen navigation={mockNavigation as any} route={{ params: { geofenceId: 1, lat, lon } } as any} />
     )
   }
 

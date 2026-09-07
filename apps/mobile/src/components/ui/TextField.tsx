@@ -39,18 +39,18 @@ type TextFieldProps = BaseProps &
 
 export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function TextFieldInput(
   {
-  label,
-  accessibilityLabel,
-  error,
-  disabled = false,
-  secure = false,
-  mono = false,
-  border = false,
-  figure = false,
-  style,
-  testID,
-  onFocus,
-  onBlur,
+    label,
+    accessibilityLabel,
+    error,
+    disabled = false,
+    secure = false,
+    mono = false,
+    border = false,
+    figure = false,
+    style,
+    testID,
+    onFocus,
+    onBlur,
     multiline = false,
     ...inputProps
   },
@@ -121,7 +121,12 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
             <RevealIcon size={size.icon.md} color={disabled ? colors.textDisabled : colors.textSecondary} />
           </Pressable>
         ) : error ? (
-          <CircleAlert size={size.icon.md} color={colors.error} accessibilityElementsHidden importantForAccessibility="no" />
+          <CircleAlert
+            size={size.icon.md}
+            color={colors.error}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          />
         ) : null}
       </View>
       {typeof error === "string" ? <FieldMessage variant="error">{error}</FieldMessage> : null}

@@ -22,7 +22,16 @@ import { useTheme } from "../hooks/useTheme"
 import { fonts, fontSizes, lineHeights } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Button, Card, Container, Divider, FloatingSaveIndicator, SectionTitle, StatRow, TextField } from "../components"
+import {
+  Button,
+  Card,
+  Container,
+  Divider,
+  FloatingSaveIndicator,
+  SectionTitle,
+  StatRow,
+  TextField
+} from "../components"
 import { SAVE_SUCCESS_DISPLAY_MS, STATS_REFRESH_FAST, size, space } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"

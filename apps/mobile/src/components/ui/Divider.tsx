@@ -22,14 +22,7 @@ export const Divider = ({ tight = false, inset = false }: DividerProps) => {
   const { colors } = useTheme()
 
   return (
-    <View
-      style={[
-        styles.divider,
-        tight && styles.tight,
-        inset && styles.inset,
-        { backgroundColor: colors.divider }
-      ]}
-    />
+    <View style={[styles.divider, tight && styles.tight, inset && styles.inset, { backgroundColor: colors.divider }]} />
   )
 }
 

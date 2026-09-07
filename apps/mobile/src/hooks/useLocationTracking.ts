@@ -297,36 +297,39 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
    * Used after app restart when tracking_enabled is true in the DB.
    * Does NOT request permissions, but does restart the service if it died.
    */
-  const reconnect = useCallback(async (startSettings?: Settings) => {
-    if (isTrackingRef.current) {
-      logger.debug("[useLocationTracking] Already tracking, skip reconnect")
-      return
-    }
-
-    logger.debug("[useLocationTracking] Reconnecting to active service")
-    setTracking(true)
-
-    await reviveIfDead(startSettings ?? settingsRef.current)
-
-    try {
-      const latest = await NativeLocationService.getMostRecentLocation()
-      if (latest) {
-        setCoords({
-          latitude: latest.latitude,
-          longitude: latest.longitude,
-          accuracy: latest.accuracy,
-          altitude: latest.altitude ?? 0,
-          speed: latest.speed ?? 0,
-          bearing: latest.bearing ?? 0,
-          timestamp: latest.timestamp ?? Date.now(),
-          battery: latest.battery,
-          battery_status: latest.batteryStatus
-        })
+  const reconnect = useCallback(
+    async (startSettings?: Settings) => {
+      if (isTrackingRef.current) {
+        logger.debug("[useLocationTracking] Already tracking, skip reconnect")
+        return
       }
-    } catch (err) {
-      logger.error("[useLocationTracking] Failed to fetch location on reconnect:", err)
-    }
-  }, [reviveIfDead])
+
+      logger.debug("[useLocationTracking] Reconnecting to active service")
+      setTracking(true)
+
+      await reviveIfDead(startSettings ?? settingsRef.current)
+
+      try {
+        const latest = await NativeLocationService.getMostRecentLocation()
+        if (latest) {
+          setCoords({
+            latitude: latest.latitude,
+            longitude: latest.longitude,
+            accuracy: latest.accuracy,
+            altitude: latest.altitude ?? 0,
+            speed: latest.speed ?? 0,
+            bearing: latest.bearing ?? 0,
+            timestamp: latest.timestamp ?? Date.now(),
+            battery: latest.battery,
+            battery_status: latest.batteryStatus
+          })
+        }
+      } catch (err) {
+        logger.error("[useLocationTracking] Failed to fetch location on reconnect:", err)
+      }
+    },
+    [reviveIfDead]
+  )
 
   /**
    * Syncs tracking state and coords when app returns to foreground.
