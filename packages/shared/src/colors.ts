@@ -14,6 +14,7 @@ export interface ThemeColors {
   primaryDark: string
   primaryContainer: string
   onPrimaryContainer: string
+  border: string
   well: string
 
   // Secondary colors
@@ -38,7 +39,6 @@ export interface ThemeColors {
   textDisabled: string
 
   // Borders & dividers
-  border: string
   borderLight: string
   divider: string
 

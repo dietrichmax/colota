@@ -367,7 +367,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           )}
 
           {pauseTracking && pauseOnWifi && pauseOnMotionless && (
-            <View style={[styles.combinedNote, { borderTopColor: colors.border }]}>
+            <View style={[styles.combinedNote, { borderTopColor: colors.divider }]}>
               <Text style={[styles.combinedNoteText, { color: colors.textSecondary }]}>
                 GPS resumes only when both WiFi is disconnected and motion is detected
               </Text>

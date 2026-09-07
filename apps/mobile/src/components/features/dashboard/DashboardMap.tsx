@@ -157,7 +157,7 @@ export function DashboardMap({
         <View
           style={[styles.stateContainer, styles.overlay, { backgroundColor: colors.card, borderRadius: radius.sm }]}
         >
-          <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
+          <View style={[styles.iconCircle, { backgroundColor: colors.well }]}>
             <Image source={icon} style={styles.icon} />
           </View>
           <Text style={[styles.stateTitle, { color: isBatteryCritical ? colors.error : colors.text }]}>

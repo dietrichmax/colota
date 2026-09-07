@@ -263,7 +263,7 @@ export function ActivityLogScreen({ navigation }: ScreenProps) {
         </View>
       </View>
 
-      <View style={[styles.separator, { backgroundColor: colors.border }]} />
+      <View style={[styles.separator, { backgroundColor: colors.divider }]} />
 
       <ScrollView
         ref={scrollRef}

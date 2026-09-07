@@ -40,7 +40,7 @@ export function IconButton({
 }: IconButtonProps) {
   const { colors } = useTheme()
   const hue = tone === "danger" ? colors.error : tone === "primary" ? colors.primary : colors.textSecondary
-  const fill = tone === "neutral" ? colors.border : hue + "15"
+  const fill = tone === "neutral" ? colors.well : hue + "15"
   const content = disabled ? colors.textDisabled : hue
 
   return (

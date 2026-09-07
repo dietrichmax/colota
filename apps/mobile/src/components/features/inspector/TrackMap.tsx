@@ -373,7 +373,7 @@ export function TrackMap({
             <Text style={[styles.popupValue, { color: colors.text }]}>{popup.altitude.toFixed(0)}m</Text>
           </View>
           {popup.id >= 0 && (onPointNoteChange || popup.note !== "") && (
-            <View style={[styles.noteSection, { borderTopColor: colors.border }]}>
+            <View style={[styles.noteSection, { borderTopColor: colors.divider }]}>
               <Text style={[styles.popupLabel, { color: colors.textSecondary }]}>Note</Text>
               {onPointNoteChange ? (
                 <View style={styles.noteRow}>
