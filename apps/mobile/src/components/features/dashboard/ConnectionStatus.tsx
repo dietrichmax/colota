@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 14,
     borderRadius: radius.md,
-    marginBottom: 22
+    marginBottom: space.xl
   },
   dot: {
     width: 8,

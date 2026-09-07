@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     ...fonts.regular
   },
   header: {
-    marginBottom: 20
+    marginBottom: space.xl
   },
   subtitle: {
     fontSize: fontSizes.body,
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     padding: space.md,
     borderRadius: radius.sm,
     borderWidth: 1,
-    marginBottom: 20
+    marginBottom: space.xl
   },
   warningText: {
     fontSize: fontSizes.caption,

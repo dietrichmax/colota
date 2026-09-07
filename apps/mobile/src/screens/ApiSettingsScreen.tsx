@@ -739,8 +739,8 @@ const styles = StyleSheet.create({
     paddingBottom: space.xxl
   },
   header: {
-    marginTop: 20,
-    marginBottom: 20
+    marginTop: space.xl,
+    marginBottom: space.xl
   },
   subtitle: {
     fontSize: fontSizes.body,
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     marginTop: space.sm
   },
   fieldsSection: {
-    marginBottom: 20
+    marginBottom: space.xl
   },
   sectionHeader: {
     flexDirection: "row",
@@ -835,14 +835,14 @@ const styles = StyleSheet.create({
     padding: space.md,
     borderRadius: radius.sm,
     borderWidth: 1,
-    marginBottom: 20
+    marginBottom: space.xl
   },
   warningText: {
     fontSize: fontSizes.caption,
     lineHeight: lineHeights.caption
   },
   exampleSection: {
-    marginBottom: 20
+    marginBottom: space.xl
   },
   copyButton: {
     alignSelf: "flex-end",

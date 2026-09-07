@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     paddingTop: space.sm
   },
   header: {
-    marginTop: 20,
+    marginTop: space.xl,
     marginBottom: space.xl,
     alignItems: "center"
   },

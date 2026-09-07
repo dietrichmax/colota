@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     marginBottom: space.lg
   },
   stateTitle: { ...type.heading, textAlign: "center" },
-  stateTitleSpaced: { marginTop: 20 },
+  stateTitleSpaced: { marginTop: space.lg },
   stateSubtext: {
     fontSize: fontSizes.body,
     textAlign: "center",
