@@ -17,7 +17,7 @@ export interface FileFormat {
   extension: string
   exportable: boolean
   mimeType?: string // present for every exportable format
-  subtitle?: string // export picker only
+  subtitle: string // the name spelled out, shown by both pickers
   description: string
   importHint?: string
 }
@@ -37,6 +37,7 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     icon: Database,
     extension: "Records.json",
     exportable: false,
+    subtitle: "Takeout Archive",
     description:
       "Older bulk Location History export from Google Takeout. Google removed this from Takeout in late 2024; use this for archived files."
   },
@@ -45,6 +46,7 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     icon: MapPin,
     extension: ".json",
     exportable: false,
+    subtitle: "Location History",
     description: "On-device export from Android Settings -> Location -> Location services -> Timeline."
   },
   gpx: {

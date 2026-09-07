@@ -30,7 +30,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = EXPORT_F
     const f = FILE_FORMATS[key]
     acc[key] = {
       label: f.label,
-      subtitle: f.subtitle!,
+      subtitle: f.subtitle,
       description: f.description,
       icon: f.icon,
       extension: f.extension,
