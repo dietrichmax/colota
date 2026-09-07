@@ -458,7 +458,7 @@ export function AutoExportScreen(_props: ScreenProps) {
             {FILENAME_TOKENS.map((token) => (
               <View key={token} style={styles.templateTokenRow}>
                 <Text style={[styles.templateToken, { color: colors.text }]}>{`{${token}}`}</Text>
-                <Text style={[styles.templateHint, { color: colors.textSecondary }]}>{tokenValues[token]}</Text>
+                <Text style={[styles.templateTokenValue, { color: colors.textSecondary }]}>{tokenValues[token]}</Text>
               </View>
             ))}
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
@@ -508,8 +508,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               </>
             )}
             <Divider />
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Time (24h)</Text>
-            <TimePicker value={timeOfDay} onChange={handleTimeChange} />
+            <TimePicker label="Time (24h)" value={timeOfDay} onChange={handleTimeChange} />
           </Card>
         </View>
 
@@ -763,9 +762,8 @@ const styles = StyleSheet.create({
     padding: space.sm
   },
   fieldLabel: {
-    fontSize: fontSizes.caption,
-    ...fonts.semiBold,
-    marginTop: space.md,
+    fontSize: fontSizes.description,
+    ...fonts.medium,
     marginBottom: space.sm
   },
   templateHint: {
@@ -776,13 +774,17 @@ const styles = StyleSheet.create({
   templateTokenRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: space.sm
+    gap: space.sm,
+    marginTop: space.sm
   },
   templateToken: {
     fontSize: fontSizes.description,
     ...fonts.semiBold,
-    marginTop: space.sm,
     minWidth: 72
+  },
+  templateTokenValue: {
+    fontSize: fontSizes.description,
+    ...fonts.regular
   },
   templatePreview: {
     fontSize: fontSizes.description,

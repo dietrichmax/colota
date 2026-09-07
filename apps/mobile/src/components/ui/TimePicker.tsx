@@ -12,6 +12,7 @@ import { space } from "../../constants"
 import { TextField } from "./TextField"
 
 interface TimePickerProps {
+  label: string
   value: string
   onChange: (value: string) => void
 }
@@ -31,7 +32,7 @@ function format(h: number, m: number): string {
   return `${pad2(h)}:${pad2(m)}`
 }
 
-export function TimePicker({ value, onChange }: TimePickerProps) {
+export function TimePicker({ label, value, onChange }: TimePickerProps) {
   const { colors } = useTheme()
   const { h, m } = useMemo(() => parse(value), [value])
 
@@ -63,37 +64,45 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
   }, [minuteText, h, m, onChange])
 
   return (
-    <View style={styles.row}>
-      <TextField
-        testID="timepicker-hour-value"
-        accessibilityLabel="Hours"
-        figure
-        style={styles.field}
-        value={hourText}
-        onChangeText={onHourChange}
-        onBlur={commitHour}
-        keyboardType="number-pad"
-        maxLength={2}
-        selectTextOnFocus
-      />
-      <Text style={[styles.separator, { color: colors.text }]}>:</Text>
-      <TextField
-        testID="timepicker-minute-value"
-        accessibilityLabel="Minutes"
-        figure
-        style={styles.field}
-        value={minuteText}
-        onChangeText={onMinuteChange}
-        onBlur={commitMinute}
-        keyboardType="number-pad"
-        maxLength={2}
-        selectTextOnFocus
-      />
+    <View>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
+      <View style={styles.row}>
+        <TextField
+          testID="timepicker-hour-value"
+          accessibilityLabel={`${label}, hours`}
+          figure
+          style={styles.field}
+          value={hourText}
+          onChangeText={onHourChange}
+          onBlur={commitHour}
+          keyboardType="number-pad"
+          maxLength={2}
+          selectTextOnFocus
+        />
+        <Text style={[styles.separator, { color: colors.text }]}>:</Text>
+        <TextField
+          testID="timepicker-minute-value"
+          accessibilityLabel={`${label}, minutes`}
+          figure
+          style={styles.field}
+          value={minuteText}
+          onChangeText={onMinuteChange}
+          onBlur={commitMinute}
+          keyboardType="number-pad"
+          maxLength={2}
+          selectTextOnFocus
+        />
+      </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
+  label: {
+    fontSize: fontSizes.description,
+    ...fonts.medium,
+    marginBottom: space.sm
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
