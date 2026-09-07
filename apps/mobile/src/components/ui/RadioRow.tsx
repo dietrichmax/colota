@@ -17,6 +17,7 @@ type RadioRowProps = {
   onPress: () => void
   sub?: string
   icon?: LucideIcon
+  disabled?: boolean
   testID?: string
 }
 
@@ -24,7 +25,7 @@ type RadioRowProps = {
  * The whole row is the radio; RadioDot is decoration, which is why it is hidden from
  * accessibility and the state lives here.
  */
-export function RadioRow({ label, selected, onPress, sub, icon: Icon, testID }: RadioRowProps) {
+export function RadioRow({ label, selected, onPress, sub, icon: Icon, disabled = false, testID }: RadioRowProps) {
   const { colors } = useTheme()
 
   return (
@@ -32,16 +33,19 @@ export function RadioRow({ label, selected, onPress, sub, icon: Icon, testID }: 
       testID={testID}
       onPress={onPress}
       accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
+      accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={sub ? `${label}, ${sub}` : label}
-      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      android_ripple={disabled ? undefined : { color: colors.text + STATE_LAYER_ALPHA }}
+      disabled={disabled}
       style={styles.row}
     >
-      <RadioDot selected={selected} />
-      {Icon ? <Icon size={size.icon.md} color={colors.textSecondary} /> : null}
+      <RadioDot selected={selected} disabled={disabled} />
+      {Icon ? <Icon size={size.icon.md} color={disabled ? colors.textDisabled : colors.textSecondary} /> : null}
       <View style={styles.text}>
-        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-        {sub ? <Text style={[styles.sub, { color: colors.textSecondary }]}>{sub}</Text> : null}
+        <Text style={[styles.label, { color: disabled ? colors.textDisabled : colors.text }]}>{label}</Text>
+        {sub ? (
+          <Text style={[styles.sub, { color: disabled ? colors.textDisabled : colors.textSecondary }]}>{sub}</Text>
+        ) : null}
       </View>
     </Pressable>
   )

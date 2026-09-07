@@ -83,6 +83,19 @@ jest.mock("../../components", () => {
     FloatingSaveIndicator: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
+    RadioRow: ({ testID, label, sub, selected, disabled, onPress }: any) =>
+      R.createElement(
+        Pressable,
+        {
+          testID,
+          onPress,
+          disabled,
+          accessibilityRole: "radio",
+          accessibilityState: { checked: selected, disabled }
+        },
+        R.createElement(Text, null, label),
+        sub ? R.createElement(Text, null, sub) : null
+      ),
     ChipGroup: ({ options, selected, onSelect }: any) =>
       R.createElement(
         View,
@@ -290,6 +303,36 @@ describe("ApiSettingsScreen", () => {
       const { getByRole } = renderScreen()
 
       expect(getByRole("button", { name: "Copy" })).toBeTruthy()
+    })
+  })
+
+  describe("dawarich mode", () => {
+    it("says on the row itself why batch cannot be picked, rather than in a line under the group", () => {
+      mockSettings = { ...DEFAULT_SETTINGS, syncInterval: 0 }
+      const { getByText } = renderScreen()
+
+      fireEvent.press(getByText("Dawarich"))
+
+      expect(getByText("Needs a sync interval above Instant")).toBeTruthy()
+    })
+
+    it("names the other blocker when the method is the thing in the way", () => {
+      mockSettings = { ...DEFAULT_SETTINGS, syncInterval: 300 }
+      const { getByText } = renderScreen()
+
+      fireEvent.press(getByText("Dawarich"))
+      fireEvent.press(getByText(/^GET/))
+
+      expect(getByText("Needs the POST method, not GET")).toBeTruthy()
+    })
+
+    it("marks the blocked option disabled instead of only dimming it", () => {
+      mockSettings = { ...DEFAULT_SETTINGS, syncInterval: 0 }
+      const { getByText, getByTestId } = renderScreen()
+
+      fireEvent.press(getByText("Dawarich"))
+
+      expect(getByTestId("dawarich-mode-batch").props.accessibilityState.disabled).toBe(true)
     })
   })
 })
