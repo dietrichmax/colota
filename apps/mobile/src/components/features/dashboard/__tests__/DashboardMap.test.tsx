@@ -33,7 +33,6 @@ jest.mock("../../../../hooks/useTheme", () => ({
       info: "#3b82f6",
       background: "#fff",
       border: "#e5e7eb",
-      borderRadius: 12,
       success: "#22c55e",
       error: "#ef4444",
       link: "#0d9488",

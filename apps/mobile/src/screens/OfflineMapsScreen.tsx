@@ -882,8 +882,8 @@ const styles = StyleSheet.create({
   progressContainer: { gap: space.md },
   progressHeader: { flexDirection: "row", alignItems: "center", gap: space.md },
   progressLabel: { fontSize: fontSizes.body, ...fonts.semiBold },
-  progressTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
-  progressFill: { height: "100%", borderRadius: 3 },
+  progressTrack: { height: 6, borderRadius: radius.pill, overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: radius.pill },
   progressSub: { fontSize: fontSizes.caption, ...fonts.regular },
   cancelBtn: {
     overflow: "hidden",

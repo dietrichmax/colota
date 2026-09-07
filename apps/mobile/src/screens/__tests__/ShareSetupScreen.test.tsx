@@ -41,7 +41,6 @@ jest.mock("../../hooks/useTheme", () => ({
       background: "#fff",
       backgroundElevated: "#f9fafb",
       border: "#e5e7eb",
-      borderRadius: 12,
       success: "#22c55e",
       warning: "#f59e0b",
       info: "#3b82f6",

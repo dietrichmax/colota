@@ -101,8 +101,7 @@ jest.mock("../../hooks/useTheme", () => ({
       border: "#e5e7eb",
       card: "#fff",
       background: "#fff",
-      error: "#ef4444",
-      borderRadius: 8
+      error: "#ef4444"
     }
   })
 }))

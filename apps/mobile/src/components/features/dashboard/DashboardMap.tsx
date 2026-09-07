@@ -128,7 +128,7 @@ export function DashboardMap({
   const locationOff = tracking && !locationEnabled
 
   return (
-    <View style={[styles.container, { borderRadius: colors.borderRadius }]}>
+    <View style={[styles.container, { borderRadius: radius.sm }]}>
       {/* Keep map mounted to avoid MapLibre/Fabric unmount race condition.
           Hide it behind the placeholder when not tracking. */}
       {hasInitialCoords && initialCoords.current ? (
@@ -155,11 +155,7 @@ export function DashboardMap({
 
       {!tracking && (
         <View
-          style={[
-            styles.stateContainer,
-            styles.overlay,
-            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
-          ]}
+          style={[styles.stateContainer, styles.overlay, { backgroundColor: colors.card, borderRadius: radius.sm }]}
         >
           <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
             <Image source={icon} style={styles.icon} />
@@ -179,11 +175,7 @@ export function DashboardMap({
         <Pressable
           accessibilityRole="button"
           onPress={() => NativeLocationService.openLocationSettings()}
-          style={[
-            styles.stateContainer,
-            styles.overlay,
-            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
-          ]}
+          style={[styles.stateContainer, styles.overlay, { backgroundColor: colors.card, borderRadius: radius.sm }]}
         >
           <View style={[styles.iconCircle, { backgroundColor: colors.warning + "20" }]}>
             <TriangleAlert size={32} color={colors.warning} />
@@ -197,11 +189,7 @@ export function DashboardMap({
 
       {waitingForFix && !locationOff && (
         <View
-          style={[
-            styles.stateContainer,
-            styles.overlay,
-            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
-          ]}
+          style={[styles.stateContainer, styles.overlay, { backgroundColor: colors.card, borderRadius: radius.sm }]}
         >
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.stateTitle, styles.stateTitleSpaced, { color: colors.text }]}>Searching GPS...</Text>

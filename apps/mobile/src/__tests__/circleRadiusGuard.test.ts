@@ -41,15 +41,19 @@ function circlesWrittenAsArithmetic(source: string): string[] {
     const body = style[2]
     const width = body.match(/\bwidth:\s*([\d.]+)/)
     const height = body.match(/\bheight:\s*([\d.]+)/)
-    if (!width || !height || width[1] !== height[1]) continue
+    // A square is a circle and a bar is a pill: both write their corner as half a stated dimension,
+    // so checking only squares missed every rounded bar in the app.
+    const sides = [width, height].filter(Boolean).map((m) => parseFloat(m![1]))
+    if (sides.length === 0) continue
+    if (width && height && width[1] !== height[1]) continue
 
     const literal = body.match(/borderRadius:\s*([\d.]+)/)
     const token = body.match(/borderRadius:\s*radius\.(\w+)/)
     const drawn = literal ? parseFloat(literal[1]) : token ? SCALE[token[1]] : null
     if (drawn === null || drawn === undefined) continue
 
-    if (Math.abs(drawn - parseFloat(width[1]) / 2) < 0.01) {
-      found.push(`${style[1]}: ${width[1]}px with borderRadius ${literal ? literal[1] : `radius.${token![1]}`}`)
+    if (sides.some((side) => Math.abs(drawn - side / 2) < 0.01)) {
+      found.push(`${style[1]}: ${sides[0]}px with borderRadius ${literal ? literal[1] : `radius.${token![1]}`}`)
     }
   }
 

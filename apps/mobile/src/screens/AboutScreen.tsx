@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react"
 import { Text, StyleSheet, View, ScrollView, Image } from "react-native"
 import { ScreenProps } from "../types/global"
+import { radius } from "@colota/shared"
 import { useTheme } from "../hooks/useTheme"
 import { Copy, Check } from "lucide-react-native"
 import { fontSizes, fonts, lineHeights, type } from "../styles/typography"
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
   appIconContainer: {
     width: 80,
     height: 80,
-    borderRadius: 20,
+    borderRadius: radius.lg,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: space.lg,

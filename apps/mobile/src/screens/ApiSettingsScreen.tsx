@@ -780,7 +780,7 @@ const styles = StyleSheet.create({
   },
   fieldsCard: {
     padding: space.md,
-    borderRadius: 10
+    borderRadius: radius.md
   },
   fieldRow: {
     flexDirection: "row",

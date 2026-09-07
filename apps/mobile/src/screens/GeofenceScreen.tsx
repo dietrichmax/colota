@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { View, StyleSheet, FlatList, DeviceEventEmitter, Share, useWindowDimensions } from "react-native"
+import { radius } from "@colota/shared"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
@@ -90,7 +91,7 @@ const GeofenceMap = React.memo(function GeofenceMapView({
   const initialZoom = hasRealCoords ? DEFAULT_MAP_ZOOM : WORLD_MAP_ZOOM
 
   return (
-    <View style={[styles.map, { borderRadius: colors.borderRadius }]}>
+    <View style={[styles.map, { borderRadius: radius.sm }]}>
       {hasInitialCoords && initialCenter.current ? (
         <ColotaMapView
           ref={mapRef}

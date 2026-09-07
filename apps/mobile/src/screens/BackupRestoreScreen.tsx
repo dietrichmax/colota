@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   strengthSegment: {
     flex: 1,
     height: 4,
-    borderRadius: 2
+    borderRadius: radius.pill
   },
   strengthLabel: {
     fontSize: fontSizes.caption,

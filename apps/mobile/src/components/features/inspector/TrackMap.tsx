@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.description,
     paddingVertical: space.xxs,
     paddingHorizontal: space.sm,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     minHeight: 32,
     maxHeight: 80
   },
