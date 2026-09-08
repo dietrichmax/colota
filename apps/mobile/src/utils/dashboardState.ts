@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { formatDate, formatTime, metersToInput, shortDistanceUnit, startOfDaySec } from "./geo"
+import { formatTime, formatWhen, metersToInput, shortDistanceUnit } from "./geo"
 
 export type BannerCondition = "permission" | "background" | "locationOff" | "battery"
 
@@ -142,7 +142,5 @@ export function intervalText(intervalSeconds: number, syncIntervalSeconds: numbe
 
 export function formatLastFix(timestampSeconds: number | null, now: Date = new Date()): string {
   if (timestampSeconds === null) return "No fixes yet"
-  const sameDay = startOfDaySec(new Date(timestampSeconds * 1000)) === startOfDaySec(now)
-  if (sameDay) return `Last fix ${formatTime(timestampSeconds)}`
-  return `Last fix ${formatDate(timestampSeconds)} · ${formatTime(timestampSeconds)}`
+  return `Last fix ${formatWhen(timestampSeconds, now)}`
 }

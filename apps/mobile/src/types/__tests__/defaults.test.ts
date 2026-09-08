@@ -152,6 +152,13 @@ describe("API_TEMPLATES", () => {
     expect(API_TEMPLATES[name].description).toBeTruthy()
   })
 
+  it.each(templateNames)(
+    "%s shows the endpoint shape it expects, since the field is where a self-hoster needs it",
+    (name) => {
+      expect(API_TEMPLATES[name].endpointExample).toMatch(/^https?:\/\//)
+    }
+  )
+
   it.each(templateNames)("%s customFields have key and value", (name) => {
     for (const field of API_TEMPLATES[name].customFields) {
       expect(field.key).toBeTruthy()

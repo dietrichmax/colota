@@ -38,7 +38,15 @@ const mockFetch = jest.fn()
 import { ConnectionStatus } from "../ConnectionStatus"
 
 const mockNavigation = { navigate: jest.fn() }
-const stats = (queued: number, sent: number) => ({ queued, sent, total: sent, today: 0, databaseSizeMB: 0 })
+const stats = (queued: number, sent: number, lastSyncTime = sent > 0 ? Date.now() : 0, lastSyncError = "") => ({
+  queued,
+  sent,
+  total: sent,
+  today: 0,
+  databaseSizeMB: 0,
+  lastSyncTime,
+  lastSyncError
+})
 const emit = (event: string, payload: object) =>
   act(() => {
     DeviceEventEmitter.emit(event, payload)
@@ -54,12 +62,16 @@ beforeEach(() => {
 describe("ConnectionStatus", () => {
   const url = "https://example.com/api/locations"
 
-  it("shows 'Checking' until a sync result is known", async () => {
-    const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
+  it("shows 'Checking' until the first read lands, rather than a verdict it does not have", async () => {
+    let resolveStats: (v: unknown) => void = () => {}
+    mockGetStats.mockImplementationOnce(() => new Promise((r) => (resolveStats = r)))
+    const { getByText, getByRole } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    expect(getByText("Checking")).toBeTruthy()
     await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
     expect(getByText("Checking")).toBeTruthy()
+
+    resolveStats(stats(0, 5))
+    await waitFor(() => expect(getByRole("button").props.accessibilityLabel).toBe("example.com, Synced"))
   })
 
   it("a healthy server shows the dot and host alone, while a screen reader still hears Connected", async () => {
@@ -67,8 +79,8 @@ describe("ConnectionStatus", () => {
 
     const { getByRole, queryByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => expect(getByRole("button").props.accessibilityLabel).toBe("example.com, Connected"))
-    expect(queryByText(/Connected/)).toBeNull()
+    await waitFor(() => expect(getByRole("button").props.accessibilityLabel).toBe("example.com, Synced"))
+    expect(queryByText(/Synced/)).toBeNull()
     expect(queryByText(/Checking/)).toBeNull()
   })
 
@@ -77,35 +89,35 @@ describe("ConnectionStatus", () => {
     const { getByRole, getByText, queryByText } = render(
       <ConnectionStatus endpoint="https://tracks.example.org" navigation={mockNavigation} />
     )
-    await waitFor(() => expect(getByRole("button").props.accessibilityLabel).toBe("tracks.example.org, Connected"))
+    await waitFor(() => expect(getByRole("button").props.accessibilityLabel).toBe("tracks.example.org, Synced"))
 
     mockGetStats.mockResolvedValue(stats(12, 400))
     emit("onLocationUpdate", {})
 
     await waitFor(() => expect(getByText("12 queued")).toBeTruthy())
-    expect(queryByText(/Connected/)).toBeNull()
-    expect(getByRole("button").props.accessibilityLabel).toBe("tracks.example.org, Connected · 12 queued")
+    expect(queryByText(/Synced/)).toBeNull()
+    expect(getByRole("button").props.accessibilityLabel).toBe("tracks.example.org, Synced · 12 queued")
   })
 
-  it("stays 'Checking' on a backlog with no sync event yet (does not fabricate a status)", async () => {
+  it("says 'Not synced yet' on a backlog before the first success rather than fabricating a verdict", async () => {
     mockGetStats.mockResolvedValue(stats(3, 0))
 
-    const { getByText, queryByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
+    const { findByText, queryByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
     // The queue rides on the same line, so the status is a prefix rather than the whole string.
-    expect(getByText(/^Checking/)).toBeTruthy()
-    expect(queryByText(/Connected/)).toBeNull()
-    expect(queryByText(/Unreachable/)).toBeNull()
+    expect(await findByText(/^Not synced yet/)).toBeTruthy()
+    expect(queryByText(/Synced$/)).toBeNull()
+    expect(queryByText(/Sync failing/)).toBeNull()
   })
 
-  it("shows 'Unreachable' on a sync error event", async () => {
+  it("shows 'Sync failing' once native records a failure and a sync error event arrives", async () => {
     const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
     await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
+    mockGetStats.mockResolvedValue(stats(3, 400, Date.now(), "send failed"))
 
     emit("onSyncError", { message: "send failed", queuedCount: 3 })
 
-    await waitFor(() => expect(getByText("Unreachable")).toBeTruthy())
+    await waitFor(() => expect(getByText(/^Sync failing/)).toBeTruthy())
   })
 
   it("never performs a network request itself", async () => {
@@ -128,7 +140,7 @@ describe("ConnectionStatus", () => {
     const { getByRole, rerender } = render(<ConnectionStatus endpoint="" navigation={mockNavigation} />)
     rerender(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    const connected = "example.com, Connected"
+    const connected = "example.com, Synced"
     await waitFor(() => expect(getByRole("button").props.accessibilityLabel).toBe(connected))
     await act(async () => resolveStale(true))
     expect(getByRole("button").props.accessibilityLabel).toBe(connected)
@@ -137,13 +149,13 @@ describe("ConnectionStatus", () => {
   it("shows 'No endpoint' when endpoint is empty", async () => {
     const { getByText } = render(<ConnectionStatus endpoint="" navigation={mockNavigation} />)
 
-    await waitFor(() => expect(getByText("No endpoint")).toBeTruthy())
+    await waitFor(() => expect(getByText("No server")).toBeTruthy())
   })
 
   it("shows 'No endpoint' when endpoint is null", async () => {
     const { getByText } = render(<ConnectionStatus endpoint={null} navigation={mockNavigation} />)
 
-    await waitFor(() => expect(getByText("No endpoint")).toBeTruthy())
+    await waitFor(() => expect(getByText("No server")).toBeTruthy())
   })
 
   it("shows 'Offline Mode' when offline mode is enabled", async () => {
@@ -159,7 +171,7 @@ describe("ConnectionStatus", () => {
 
     const { getByText } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
 
-    await waitFor(() => expect(getByText("Device offline")).toBeTruthy())
+    await waitFor(() => expect(getByText("No network")).toBeTruthy())
   })
 
   it("displays the host portion of the endpoint URL", async () => {
@@ -175,7 +187,7 @@ describe("ConnectionStatus", () => {
     const { getByText } = render(<ConnectionStatus endpoint="" navigation={mockNavigation} />)
 
     expect(getByText("Server")).toBeTruthy()
-    await waitFor(() => expect(getByText("No endpoint")).toBeTruthy())
+    await waitFor(() => expect(getByText("No server")).toBeTruthy())
   })
 
   it("carries the queue on the row, because a reachable server can still be falling behind", async () => {
@@ -209,13 +221,14 @@ describe("ConnectionStatus", () => {
     const { getByText, UNSAFE_getAllByType } = render(<ConnectionStatus endpoint={url} navigation={mockNavigation} />)
     await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
 
-    emit("onSyncError", { message: "send failed", queuedCount: 3 })
-    await waitFor(() => expect(getByText("Unreachable")).toBeTruthy())
+    mockGetStats.mockResolvedValue(stats(0, 400, Date.now(), "send failed"))
+    emit("onSyncError", { message: "send failed", queuedCount: 0 })
+    await waitFor(() => expect(getByText("Sync failing")).toBeTruthy())
 
     const { View } = require("react-native")
     const dot = UNSAFE_getAllByType(View).find((v: any) => StyleSheet.flatten(v.props.style)?.width === 8)
     expect(StyleSheet.flatten(dot?.props.style).backgroundColor).toBe(lightColors.error)
-    expect(StyleSheet.flatten(getByText("Unreachable").props.style).color).toBe(lightColors.textSecondary)
+    expect(StyleSheet.flatten(getByText("Sync failing").props.style).color).toBe(lightColors.textSecondary)
   })
 
   it("centres the dot in ListItem's icon column, so the host starts where the rows above it do", async () => {
@@ -242,11 +255,11 @@ describe("ConnectionStatus", () => {
   })
 
   it("reads host and status as one row to a screen reader, so the tap target names what it opens", async () => {
-    mockGetStats.mockResolvedValue(stats(12, 400))
+    mockGetStats.mockResolvedValue(stats(12, 0))
     const { getByRole } = render(<ConnectionStatus endpoint="https://tracks.example.org" navigation={mockNavigation} />)
 
     await waitFor(() =>
-      expect(getByRole("button").props.accessibilityLabel).toBe("tracks.example.org, Checking · 12 queued")
+      expect(getByRole("button").props.accessibilityLabel).toBe("tracks.example.org, Not synced yet · 12 queued")
     )
   })
 })

@@ -24,7 +24,7 @@ Colota is a self-hosted GPS tracking app for Android. It sends your location to 
 - **Display Settings** - Choose between metric and imperial units, 12h or 24h time format. Auto-detected from device locale on first use.
 - **App Shortcuts** - Long-press the app icon to start or stop tracking from the home screen. Compatible with automation apps like Tasker and Samsung Routines.
 - **Quick Setup** - Configure devices via `colota://setup` deep links or QR codes.
-- **Authentication** - Basic Auth, Bearer Token or custom headers. Optional mutual TLS (mTLS) with a PKCS12 client certificate stored in Android Keystore.
+- **Authentication** - Basic auth, bearer token or custom headers. Optional mutual TLS (mTLS) with a PKCS12 client certificate stored in Android Keystore.
 - **Dark Mode** - Full light and dark theme support, optionally coloured from the Android wallpaper.
 
 ## App Screens
@@ -40,8 +40,8 @@ Colota has twenty-eight screens, each focused on a specific task:
 | **Appearance** | Light/dark theme, wallpaper colors, unit system, time format and custom map tile URLs |
 | **Request format** | How the request is shaped: the backend template, the HTTP method, the field names and any custom fields |
 | **Backend template** | Pick the backend Colota formats its payload for, each option describing what it sends |
-| **Auth Settings** | Endpoint authentication (None, Basic Auth, Bearer Token) and custom HTTP headers |
-| **mTLS Settings** | Client certificate (mTLS) import or KeyChain selection and trusted server CA management |
+| **Authentication** | Endpoint authentication (None, Basic auth, Bearer token) and custom HTTP headers |
+| **Client certificate** | Client certificate from the device store or a .p12, and the trusted server CA |
 | **Geofences** | Create pause zones by tapping the map, view all zones with pause option indicators |
 | **Geofence Editor** | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
 | **Place zone** | Pick a zone's centre on a map with its radius drawn live, handing it back to the editor |

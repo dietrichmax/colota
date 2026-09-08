@@ -82,12 +82,12 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Auth Settings",
     component: AuthSettingsScreen,
-    title: "Auth settings"
+    title: "Authentication"
   },
   {
     name: "mTLS Settings",
     component: MtlsSettingsScreen,
-    title: "mTLS settings"
+    title: "Client certificate"
   },
   {
     name: "Geofences",

@@ -545,8 +545,8 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
             </View>
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
               {localDawarichMode === "batch"
-                ? "Endpoint: /api/v1/overland/batches?api_key=YOUR_API_KEY"
-                : "Endpoint: /api/v1/owntracks/points?api_key=YOUR_API_KEY"}
+                ? `Endpoint: ${API_TEMPLATES.dawarich.batchEndpointExample}`
+                : `Endpoint: ${API_TEMPLATES.dawarich.endpointExample}`}
             </Text>
           </View>
         )}

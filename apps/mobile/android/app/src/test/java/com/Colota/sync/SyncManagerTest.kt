@@ -430,6 +430,29 @@ class SyncManagerTest {
         assertTrue(syncManager.lastSuccessfulSyncTime > 0)
     }
 
+    @Test
+    fun `queueAndSend records the success where the bridge reads it and clears a stale error`() = scope.runTest {
+        SyncState.reset()
+        SyncState.recordError("HTTP 401 Unauthorized")
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+
+        syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
+
+        assertEquals(syncManager.lastSuccessfulSyncTime, SyncState.lastSuccessTime)
+        assertEquals("", SyncState.lastSyncError)
+        SyncState.reset()
+    }
+
     // --- manualFlush ---
 
     @Test

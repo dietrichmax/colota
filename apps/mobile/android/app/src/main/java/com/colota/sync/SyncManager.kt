@@ -41,6 +41,12 @@ class SyncManager(
     @Volatile private var lastSyncTime: Long = 0
     @Volatile var lastSuccessfulSyncTime: Long = 0
         private set
+
+    private fun markSuccess() {
+        val now = System.currentTimeMillis()
+        lastSuccessfulSyncTime = now
+        SyncState.recordSuccess(now)
+    }
     @Volatile private var syncInitialized = false
     @Volatile private var consecutiveFailures = 0
 
@@ -108,6 +114,7 @@ class SyncManager(
                     if (errorMessage != null) {
                         consecutiveFailures++
                         if (consecutiveFailures >= 3) {
+                            SyncState.recordError(AppLogger.maskSensitiveUrlValues(errorMessage))
                             LocationServiceModule.sendSyncErrorEvent(
                                 "$errorMessage ($consecutiveFailures consecutive failures)",
                                 getCachedQueuedCount()
@@ -158,7 +165,7 @@ class SyncManager(
                 dbHelper.markLocationsSent(listOf(locationId))
                 dbHelper.removeFromQueueByLocationId(locationId)
                 invalidateQueueCache()
-                lastSuccessfulSyncTime = System.currentTimeMillis()
+                markSuccess()
             } else {
                 dbHelper.incrementRetryCount(queueId, "Send failed")
             }
@@ -193,7 +200,7 @@ class SyncManager(
 
         val success = countAfter < countBefore || countAfter == 0
         if (success && countAfter == 0) {
-            lastSuccessfulSyncTime = System.currentTimeMillis()
+            markSuccess()
         }
 
         return success
@@ -312,7 +319,7 @@ class SyncManager(
         invalidateQueueCache()
 
         if (totalSucceeded > 0) {
-            lastSuccessfulSyncTime = System.currentTimeMillis()
+            markSuccess()
         }
     }
 

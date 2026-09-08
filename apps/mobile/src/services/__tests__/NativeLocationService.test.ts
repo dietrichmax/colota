@@ -9,7 +9,9 @@ jest.mock("react-native", () => ({
         sent: 100,
         total: 105,
         today: 20,
-        databaseSizeMB: 1.5
+        databaseSizeMB: 1.5,
+        lastSyncTime: 0,
+        lastSyncError: ""
       }),
       getTableData: jest.fn().mockResolvedValue([]),
       getLocationsByDateRange: jest.fn().mockResolvedValue([]),
@@ -235,7 +237,9 @@ describe("NativeLocationService", () => {
         sent: 100,
         total: 105,
         today: 20,
-        databaseSizeMB: 1.5
+        databaseSizeMB: 1.5,
+        lastSyncTime: 0,
+        lastSyncError: ""
       })
     })
   })

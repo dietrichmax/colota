@@ -35,7 +35,7 @@ When you start tracking for the first time, Colota requests permissions in seque
 
 Only the two location permissions are required. The app does not request anything until you tap "Start Tracking".
 
-The **Local Network Permission** (Android 17+) is not part of this sequence. It is requested separately when you use **Test Connection** with a local/private server endpoint.
+The **Local Network Permission** (Android 17+) is not part of this sequence. It is requested separately when you use **Test connection** with a local/private server endpoint.
 
 ## Detailed Explanations
 
@@ -91,7 +91,7 @@ On Android 13 and later, apps need this permission before they can show notifica
 android.permission.ACCESS_LOCAL_NETWORK
 ```
 
-Starting with Android 17, apps need this permission to connect to devices on the local network. Colota requests it when you use **Test Connection** with a private/local endpoint - this includes IP addresses (e.g. `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`, `100.64.x.x`) and hostnames that resolve to private IPs via DNS (e.g. `server.local`). Loopback addresses (`localhost` / `127.0.0.1`) do not require this permission. If your server is a public HTTPS endpoint, this permission is never requested.
+Starting with Android 17, apps need this permission to connect to devices on the local network. Colota requests it when you use **Test connection** with a private/local endpoint - this includes IP addresses (e.g. `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`, `100.64.x.x`) and hostnames that resolve to private IPs via DNS (e.g. `server.local`). Loopback addresses (`localhost` / `127.0.0.1`) do not require this permission. If your server is a public HTTPS endpoint, this permission is never requested.
 
 :::note[Android 16]
 

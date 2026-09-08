@@ -10,7 +10,8 @@ import { Zap, Car, ArrowUp, ArrowDown, Pause } from "lucide-react-native"
 export const AUTOSAVE_DEBOUNCE_MS = 1500
 export const STATS_REFRESH_FAST = 3_000
 export const SAVE_SUCCESS_DISPLAY_MS = 2000
-export const TEST_RESULT_DISPLAY_MS = 5_000
+/** A certificate this close to its notAfter reads as expiring: a CA round trip takes weeks. */
+export const CERT_EXPIRY_WARNING_DAYS = 30
 export const SERVICE_RESTART_DELAY_MS = 500
 export const RESTART_DEBOUNCE_MS = 100
 export const SETTINGS_READ_ATTEMPTS = 3

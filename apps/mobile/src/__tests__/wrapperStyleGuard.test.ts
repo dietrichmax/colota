@@ -58,8 +58,8 @@ describe("wrapper style guard", () => {
   it("finds the callers it is meant to police", () => {
     const callers = files.filter((f) => stylesHandedToAWrapper(fs.readFileSync(path.join(SRC, f), "utf8")).length > 0)
 
-    expect(callers).toContain("components/features/settings/ConnectionSettings.tsx")
     expect(callers).toContain("components/features/settings/MtlsSection.tsx")
+    expect(callers).toContain("screens/ProfileEditorScreen.tsx")
   })
 
   it("hands a wrapper layout only, because paint on it is never drawn", () => {

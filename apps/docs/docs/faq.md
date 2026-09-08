@@ -101,10 +101,10 @@ On Android 17+, apps need the Local Network Access permission to connect to loca
 
 ### Does Colota support mutual TLS (mTLS)?
 
-Yes. Import a PKCS12 (`.p12` / `.pfx`) bundle in **Settings → Connection → Authentication & headers → Client Certificate (mTLS)**. The private key is stored in the OS keystore and the password isn't saved. For self-signed server certificates, import a CA in the same screen so trust is scoped to Colota only - no need to install a CA at the OS level. See the [mTLS guide](/docs/configuration/mtls) for details.
+Yes. Pick a device certificate or import a PKCS12 (`.p12` / `.pfx`) bundle in **Settings → Connection → Client certificate**. The private key is stored in the OS keystore and the password isn't saved. For self-signed server certificates, import a CA in the same screen so trust is scoped to Colota only - no need to install a CA at the OS level. See the [mTLS guide](/docs/configuration/mtls) for details.
 
 ### I was using a CA installed in Android Settings for Colota - does it still work?
 
-No, not since 1.9.0. Colota only trusts system CAs and an optional CA you import in-app via mTLS Settings - user-installed device CAs are deliberately ignored. If sync starts failing with `Server certificate is not trusted...` after upgrading, you'll need to re-import your CA through the new in-app screen.
+No, not since 1.9.0. Colota only trusts system CAs and an optional CA you import in-app under Connection → Client certificate - user-installed device CAs are deliberately ignored. If sync starts failing with `Server certificate is not trusted...` after upgrading, you'll need to re-import your CA through the new in-app screen.
 
-The migration is one-time: open Colota → Settings → Connection → Authentication & headers → Client Certificate (mTLS) → Trusted Server CA → Import CA. The same `.crt` / `.pem` you originally installed in Android Settings works. See [Migrating from earlier behavior](/docs/configuration/mtls#trusting-a-privateinternal-server-ca) for the full walkthrough.
+The migration is one-time: open Colota → Settings → Connection → Client certificate → Trusted server CA → Import CA. The same `.crt` / `.pem` you originally installed in Android Settings works. See [Migrating from earlier behavior](/docs/configuration/mtls#trusting-a-privateinternal-server-ca) for the full walkthrough.

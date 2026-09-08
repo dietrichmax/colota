@@ -71,8 +71,6 @@ export interface LocationTrackingResult {
 // API CONFIGURATION
 // ============================================================================
 
-export type ServerStatus = "connected" | "error" | "notConfigured"
-
 export interface ConnectionStatusProps {
   endpoint: string | null
   navigation: any
@@ -123,11 +121,17 @@ export interface ApiTemplate {
   fieldMap: FieldMap
   customFields: CustomField[]
   httpMethod?: HttpMethod
+  /** The shape of a working endpoint, shown as the field's placeholder and helper. */
+  endpointExample: string
+  /** Dawarich's batch mode posts elsewhere than its OwnTracks mode. */
+  batchEndpointExample?: string
 }
 
 export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTemplate> = {
   dawarich: {
     name: "dawarich",
+    endpointExample: "https://dawarich.example/api/v1/owntracks/points?api_key=YOUR_KEY",
+    batchEndpointExample: "https://dawarich.example/api/v1/overland/batches?api_key=YOUR_KEY",
     label: "Dawarich",
     description: "OwnTracks-compatible format for Dawarich",
     fieldMap: {
@@ -145,6 +149,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   geopulse: {
     name: "geopulse",
+    endpointExample: "https://geopulse.example/api/colota",
     label: "GeoPulse",
     description: "Native Colota format for GeoPulse",
     fieldMap: {
@@ -162,6 +167,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   overland: {
     name: "overland",
+    endpointExample: "https://overland.example/",
     label: "Overland",
     description: "Overland-compatible batch endpoint (GeoJSON Features)",
     fieldMap: {
@@ -179,6 +185,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   owntracks: {
     name: "owntracks",
+    endpointExample: "https://owntracks.example/pub",
     label: "OwnTracks",
     description: "Standard OwnTracks HTTP format",
     fieldMap: {
@@ -199,6 +206,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   phonetrack: {
     name: "phonetrack",
+    endpointExample: "https://nextcloud.example/apps/phonetrack/log/owntracks/SESSION_TOKEN/DEVICE_NAME",
     label: "PhoneTrack",
     description: "Nextcloud PhoneTrack logging format",
     fieldMap: {
@@ -216,6 +224,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   reitti: {
     name: "reitti",
+    endpointExample: "https://reitti.example/api/location",
     label: "Reitti",
     description: "OwnTracks-compatible format for Reitti",
     fieldMap: {
@@ -233,6 +242,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   traccar: {
     name: "traccar",
+    endpointExample: "http://192.168.1.10:5055",
     label: "Traccar",
     description: "Traccar OsmAnd protocol (HTTP GET)",
     httpMethod: "GET",
@@ -416,6 +426,10 @@ export interface DatabaseStats {
   total: number
   today: number
   databaseSizeMB: number
+  /** Epoch milliseconds of the last successful sync, 0 when none has happened yet. */
+  lastSyncTime: number
+  /** The masked message of the last sync failure that crossed the consecutive-failure gate, empty after a success. */
+  lastSyncError: string
 }
 
 // ============================================================================
