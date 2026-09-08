@@ -62,7 +62,7 @@ export function TrackingSyncScreen({}: ScreenProps) {
         />
       </ScrollView>
 
-      <FloatingSaveIndicator saving={saving} message={saveMessage} isError={saveIsError} colors={colors} />
+      <FloatingSaveIndicator saving={saving} message={saveMessage} isError={saveIsError} />
     </Container>
   )
 }

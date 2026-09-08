@@ -661,7 +661,7 @@ export function AutoExportScreen(_props: ScreenProps) {
           </View>
         )}
       </ScrollView>
-      <FloatingSaveIndicator saving={saving} colors={colors} />
+      <FloatingSaveIndicator saving={saving} />
     </Container>
   )
 }

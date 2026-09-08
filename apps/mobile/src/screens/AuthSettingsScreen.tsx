@@ -325,7 +325,7 @@ export function AuthSettingsScreen({ navigation }: ScreenProps) {
         </View>
       </ScrollView>
 
-      <FloatingSaveIndicator saving={saving} message={saveMessage} isError={saveIsError} colors={colors} />
+      <FloatingSaveIndicator saving={saving} message={saveMessage} isError={saveIsError} />
     </Container>
   )
 }

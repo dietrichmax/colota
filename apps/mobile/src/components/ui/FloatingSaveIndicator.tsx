@@ -6,8 +6,9 @@
 import React, { useEffect, useRef } from "react"
 import { radius } from "@colota/shared"
 import { View, Text, StyleSheet, Animated } from "react-native"
-import { Check } from "lucide-react-native"
+import { Check, CircleAlert } from "lucide-react-native"
 import { SpinningLoader } from "./SpinningLoader"
+import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { size, space, elevation } from "../../constants"
 
@@ -16,15 +17,10 @@ interface Props {
   /** Shown once the work is done; absent when there is nothing to report. */
   message?: string | null
   isError?: boolean
-  colors: {
-    info: string
-    success: string
-    error: string
-    text: string
-  }
 }
 
-export const FloatingSaveIndicator: React.FC<Props> = ({ saving, message, isError, colors }) => {
+export const FloatingSaveIndicator: React.FC<Props> = ({ saving, message, isError }) => {
+  const { colors } = useTheme()
   const hasMessage = message != null
   const visible = hasMessage || saving
 
@@ -48,19 +44,18 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, message, isErro
   const displayText = hasMessage ? message : "Saving..."
 
   return (
-    <Animated.View style={[styles.container, { opacity, transform: [{ translateY }] }]} pointerEvents="none">
-      <View
-        style={[
-          styles.badge,
-          {
-            backgroundColor: saving ? colors.info : isError ? colors.error : colors.success
-          }
-        ]}
-      >
+    <Animated.View
+      style={[styles.container, { opacity, transform: [{ translateY }] }]}
+      pointerEvents="none"
+      testID="floating-save-indicator"
+    >
+      <View style={[styles.badge, { backgroundColor: colors.surfaceRaised }]} testID="floating-save-indicator-pill">
         {saving ? (
-          <SpinningLoader size={size.icon.sm} color={colors.text} />
-        ) : isError ? null : (
-          <Check size={size.icon.sm} color={colors.text} />
+          <SpinningLoader size={size.icon.sm} color={colors.textSecondary} />
+        ) : isError ? (
+          <CircleAlert size={size.icon.sm} color={colors.error} />
+        ) : (
+          <Check size={size.icon.sm} color={colors.success} />
         )}
         <Text style={[styles.text, { color: colors.text }]}>{displayText}</Text>
       </View>
@@ -71,11 +66,10 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, message, isErro
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 20,
+    bottom: space.xl,
     left: 0,
     right: 0,
     alignItems: "center",
-    zIndex: 1000,
     pointerEvents: "none"
   },
   badge: {

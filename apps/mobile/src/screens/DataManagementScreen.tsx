@@ -386,7 +386,6 @@ export function DataManagementScreen({}: ScreenProps) {
           saving={isProcessing}
           message={feedback}
           isError={feedback?.toLowerCase().includes("failed") ?? false}
-          colors={colors}
         />
       </KeyboardAvoidingView>
     </Container>
