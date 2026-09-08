@@ -68,7 +68,7 @@ describe("DashboardBanner", () => {
     const { getByTestId } = renderBanner("locationOff")
 
     const style = flat(getByTestId("dashboard-banner"))
-    expect(style.backgroundColor).toBe(lightColors.card)
+    expect(style.backgroundColor).toBe(lightColors.surfaceRaised)
     expect(style.backgroundColor).not.toBe(lightColors.warning)
   })
 

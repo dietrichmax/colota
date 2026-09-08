@@ -46,7 +46,7 @@ export function DialogShell({
           accessibilityRole="none"
           testID="dialog-card"
           onPress={() => {}}
-          style={[styles.card, picker ? styles.cardPicker : styles.cardDefault, { backgroundColor: colors.card }]}
+          style={[styles.card, picker ? styles.cardPicker : styles.cardDefault, { backgroundColor: colors.surfaceRaised }]}
         >
           {title ? (
             <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
