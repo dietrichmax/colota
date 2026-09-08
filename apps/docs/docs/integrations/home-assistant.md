@@ -34,7 +34,7 @@ Colota has a dedicated Home Assistant integration that receives location updates
 
 ### 3. Configure the Colota app
 
-1. Go to **Settings > API Settings**
+1. Go to **Settings > Request format**
 2. Paste the webhook URL as the endpoint
 3. No authentication is needed - the webhook URL acts as the secret
 

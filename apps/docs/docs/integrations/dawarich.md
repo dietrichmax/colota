@@ -11,7 +11,7 @@ sidebar_position: 2
 1. **Install Dawarich** - follow the [Dawarich documentation](https://dawarich.app/docs/intro)
 2. **Get your API Key** from Dawarich settings
 3. **Configure Colota**:
-   - Go to **Settings > API Settings**
+   - Go to **Settings > Request format**
    - Select the **Dawarich** template
    - Set your endpoint:
      ```
@@ -21,7 +21,7 @@ sidebar_position: 2
 
 ## Payload Format
 
-The Dawarich template ships with two modes, picked via a chip in **Settings > API Settings** when the Dawarich template is selected.
+The Dawarich template ships with two modes, picked via a chip in **Settings > Request format** when the Dawarich template is selected.
 
 ### Single point (default)
 

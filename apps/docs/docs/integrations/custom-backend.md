@@ -15,7 +15,7 @@ Your server needs to:
 - Handle `alt`, `vel`, and `bear` fields being absent (they are conditional)
 - Handle up to 10 concurrent requests during batch sync
 
-HTTPS is required for public endpoints. HTTP is restricted to private/local addresses at the network level. Self-signed certificates are supported - see [Server Settings](/docs/configuration/server-settings#endpoint-url). On Android 17+, connecting to local network addresses (not localhost) requires the Local Network Access permission, which Colota requests when you use **Test Connection**.
+HTTPS is required for public endpoints. HTTP is restricted to private/local addresses at the network level. Self-signed certificates are supported - see [Server Settings](/docs/configuration/server-settings#endpoint-url). On Android 17+, connecting to local network addresses (not localhost) requires the Local Network Access permission, which Colota requests when you use **Test connection**.
 
 ## Default Payload
 
@@ -100,7 +100,7 @@ your-domain.com {
 
 ## Configuration
 
-1. Go to **Settings > API Settings**
+1. Go to **Settings > Request format**
 2. Select the **Custom** template (or start from any template and modify)
 3. Set your endpoint URL
 4. Customize [field mapping](/docs/configuration/field-mapping) to match your API

@@ -35,6 +35,7 @@ import {
 } from "lucide-react-native"
 import { getTimeFormat, getUnitSystem } from "../utils/geo"
 import { trackingSummary } from "../utils/dashboardState"
+import { describeServer } from "../utils/serverState"
 import { formatCount } from "../utils/format"
 import { ProfileService } from "../services/ProfileService"
 import { logger } from "../utils/logger"
@@ -50,6 +51,8 @@ export function SettingsScreen({ navigation }: Props) {
   const [totalCount, setTotalCount] = useState(0)
   const [databaseSizeMB, setDatabaseSizeMB] = useState(0)
   const [todayCount, setTodayCount] = useState(0)
+  const [lastSyncTime, setLastSyncTime] = useState(0)
+  const [lastSyncError, setLastSyncError] = useState("")
   const [profileCount, setProfileCount] = useState(0)
 
   const updateStats = useCallback(async () => {
@@ -59,6 +62,8 @@ export function SettingsScreen({ navigation }: Props) {
       setTotalCount(stats.total)
       setDatabaseSizeMB(stats.databaseSizeMB)
       setTodayCount(stats.today)
+      setLastSyncTime(stats.lastSyncTime ?? 0)
+      setLastSyncError(stats.lastSyncError ?? "")
     } catch (err) {
       logger.error("[SettingsScreen] Failed to get stats:", err)
     }
@@ -85,19 +90,19 @@ export function SettingsScreen({ navigation }: Props) {
     updateStats()
   }, [settings.isOfflineMode, settings.endpoint, updateStats])
 
-  // The row carries the numbers the stats strip used to, so the strip could go. One line, so a
-  // segment only appears when it has something to say.
-  const connectionSummary = useMemo(() => {
-    if (settings.isOfflineMode) return `Offline - saved locally · ${todayCount.toLocaleString()} today`
-    if (!settings.endpoint) return "No server configured"
-    let host = settings.endpoint
-    try {
-      host = new URL(settings.endpoint).host
-    } catch {
-      host = settings.endpoint
-    }
-    return queueCount > 0 ? `${host} · ${formatCount(queueCount)} queued` : host
-  }, [settings.isOfflineMode, settings.endpoint, queueCount, todayCount])
+  const connectionSummary = useMemo(
+    () =>
+      describeServer({
+        offline: settings.isOfflineMode,
+        endpoint: settings.endpoint,
+        deviceOnline: true,
+        queued: queueCount,
+        today: todayCount,
+        lastSyncTime,
+        lastSyncError
+      }).rowSub,
+    [settings.isOfflineMode, settings.endpoint, queueCount, todayCount, lastSyncTime, lastSyncError]
+  )
 
   const syncSummary = useMemo(
     () => trackingSummary(settings.interval, settings.distance, settings.syncInterval, settings.isOfflineMode),

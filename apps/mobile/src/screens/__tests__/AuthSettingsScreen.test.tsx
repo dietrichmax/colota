@@ -1,8 +1,7 @@
 import React from "react"
 import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { ActivityIndicator } from "react-native"
 import { DEFAULT_AUTH_CONFIG, AuthConfig } from "../../types/global"
-
-// --- Mocks ---
 
 let mockAuthConfig: AuthConfig = { ...DEFAULT_AUTH_CONFIG }
 const mockSaveAuthConfig = jest.fn().mockResolvedValue(undefined)
@@ -26,23 +25,7 @@ jest.mock("../../contexts/TrackingProvider", () => ({
 }))
 
 jest.mock("../../hooks/useTheme", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      primaryDark: "#115E59",
-      border: "#e5e7eb",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textLight: "#9ca3af",
-      background: "#fff",
-      info: "#3b82f6",
-      success: "#22c55e",
-      error: "#ef4444",
-      card: "#fff",
-      placeholder: "#9ca3af",
-      textOnPrimary: "#fff"
-    }
-  })
+  useTheme: () => ({ colors: require("@colota/shared").lightColors })
 }))
 
 const mockDebouncedSaveAndRestart = jest.fn()
@@ -51,7 +34,8 @@ const mockImmediateSaveAndRestart = jest.fn()
 jest.mock("../../hooks/useAutoSave", () => ({
   useAutoSave: () => ({
     saving: false,
-    saveSuccess: false,
+    message: null,
+    isError: false,
     debouncedSaveAndRestart: mockDebouncedSaveAndRestart,
     immediateSaveAndRestart: mockImmediateSaveAndRestart
   })
@@ -62,36 +46,22 @@ jest.mock("../../components", () => {
   const { View, Text, Pressable } = require("react-native")
   return {
     IconButton: require("../../testing/componentStubs").IconButtonStub,
-    ListItem: require("../../testing/componentStubs").ListItemStub,
     TextField: require("../../testing/componentStubs").TextFieldStub,
-    Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
-        testID: props.testID,
-        value: props.value,
-        onValueChange: props.onValueChange,
-        disabled: props.disabled,
-        accessibilityLabel: props.accessibilityLabel
-      })
-    },
+    RadioRow: ({ testID, label, sub, selected, onPress }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress, accessibilityRole: "radio", accessibilityState: { checked: selected } },
+        R.createElement(Text, null, label),
+        sub ? R.createElement(Text, null, sub) : null
+      ),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     FloatingSaveIndicator: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
-    Button: ({ title, onPress }: any) => R.createElement(Pressable, { onPress }, R.createElement(Text, null, title)),
-    FieldMessage: ({ children }: any) => R.createElement(Text, null, children),
-    ChipGroup: ({ options, onSelect }: any) =>
-      R.createElement(
-        View,
-        null,
-        options.map((opt: any) =>
-          R.createElement(
-            Pressable,
-            { key: opt.value, onPress: () => onSelect(opt.value) },
-            R.createElement(Text, null, opt.label)
-          )
-        )
-      )
+    Button: ({ title, onPress, testID }: any) =>
+      R.createElement(Pressable, { onPress, testID }, R.createElement(Text, null, title)),
+    FieldMessage: ({ children }: any) => R.createElement(Text, null, children)
   }
 })
 
@@ -99,7 +69,18 @@ jest.mock("../../utils/logger", () => ({
   logger: { error: jest.fn(), info: jest.fn(), debug: jest.fn() }
 }))
 
-import { AuthSettingsScreen } from "../AuthSettingsScreen"
+import { AuthSettingsScreen, withMethod } from "../AuthSettingsScreen"
+
+const lastImmediateConfig = async () => {
+  const [saveFn] = mockImmediateSaveAndRestart.mock.calls.at(-1)
+  await saveFn()
+  return mockSaveAuthConfig.mock.calls.at(-1)[0] as AuthConfig
+}
+const lastDebouncedConfig = async () => {
+  const [saveFn] = mockDebouncedSaveAndRestart.mock.calls.at(-1)
+  await saveFn()
+  return mockSaveAuthConfig.mock.calls.at(-1)[0] as AuthConfig
+}
 
 describe("AuthSettingsScreen", () => {
   beforeEach(() => {
@@ -111,242 +92,157 @@ describe("AuthSettingsScreen", () => {
     return render(<AuthSettingsScreen navigation={{} as any} />)
   }
 
-  describe("loading state", () => {
-    it("shows loading text while fetching config", () => {
-      // Keep the promise pending
-      mockGetAuthConfig.mockReturnValueOnce(new Promise(() => {}))
-      const { getByText } = renderScreen()
+  it("spins while the config loads, never the word", () => {
+    mockGetAuthConfig.mockReturnValueOnce(new Promise(() => {}))
+    const { UNSAFE_getByType, queryByText } = renderScreen()
 
-      expect(getByText("Loading...")).toBeTruthy()
+    expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy()
+    expect(queryByText("Loading...")).toBeNull()
+  })
+
+  describe("method", () => {
+    it("is a radio group whose rows say what each sends, with only the chosen method's fields", async () => {
+      const { getByTestId, getByText, queryByText } = renderScreen()
+
+      await waitFor(() => expect(getByTestId("auth-none").props.accessibilityState.checked).toBe(true))
+      expect(
+        getByText(
+          "Sends Authorization: Basic with the username and password encoded, not encrypted. Only safe over https."
+        )
+      ).toBeTruthy()
+      expect(getByText("Sends Authorization: Bearer with the token.")).toBeTruthy()
+      expect(queryByText("Username")).toBeNull()
+      expect(queryByText("Token")).toBeNull()
+
+      fireEvent.press(getByTestId("auth-basic"))
+      expect(getByText("Username")).toBeTruthy()
+      expect(getByText("Password")).toBeTruthy()
+
+      fireEvent.press(getByTestId("auth-bearer"))
+      expect(queryByText("Username")).toBeNull()
+      expect(getByText("Token")).toBeTruthy()
     })
 
-    it("shows content after config is loaded", async () => {
-      const { getByText } = renderScreen()
+    it("saves a method at once and drops the credentials of the others, so a never-shown secret can be cleared", async () => {
+      mockAuthConfig = { ...DEFAULT_AUTH_CONFIG, authType: "basic", username: "max", password: "hunter2" }
+      const { getByTestId } = renderScreen()
+      await waitFor(() => expect(getByTestId("auth-basic").props.accessibilityState.checked).toBe(true))
 
-      await waitFor(() => {
-        // The screen name lives in the navigation header now, so anchor on the body's own caption.
-        expect(getByText("Secure your endpoint connection")).toBeTruthy()
+      fireEvent.press(getByTestId("auth-bearer"))
+
+      expect(await lastImmediateConfig()).toMatchObject({
+        authType: "bearer",
+        username: "",
+        password: "",
+        bearerToken: ""
       })
+      expect(withMethod({ ...DEFAULT_AUTH_CONFIG, bearerToken: "t", username: "u" }, "none")).toMatchObject({
+        bearerToken: "",
+        username: ""
+      })
+    })
+
+    it("names the storage on the card, not in a footer paragraph", async () => {
+      const { findByText } = renderScreen()
+
+      expect(await findByText("Choosing a method removes the credentials stored for the others.")).toBeTruthy()
+      expect(await findByText(/Stored encrypted on this device and in encrypted backups/)).toBeTruthy()
     })
   })
 
-  describe("auth type changes", () => {
-    it("renders all three auth type options", async () => {
-      const { getByText } = renderScreen()
+  describe("secrets", () => {
+    it("never echoes a stored secret: the field is empty and the note says it is set", async () => {
+      mockAuthConfig = { ...DEFAULT_AUTH_CONFIG, authType: "bearer", bearerToken: "my-secret-token" }
+      const { getByTestId, getByText, queryByDisplayValue } = renderScreen()
 
-      await waitFor(() => {
-        expect(getByText("None")).toBeTruthy()
-      })
-      expect(getByText("Basic auth")).toBeTruthy()
-      expect(getByText("Bearer token")).toBeTruthy()
+      await waitFor(() => expect(getByTestId("bearer-token")).toBeTruthy())
+
+      expect(queryByDisplayValue("my-secret-token")).toBeNull()
+      expect(getByText("Set · encrypted on this device, in encrypted backups. Type to replace.")).toBeTruthy()
     })
 
-    it("defaults to None with no credential fields visible", async () => {
-      const { queryByText, getByText } = renderScreen()
+    it("says when nothing is stored yet", async () => {
+      mockAuthConfig = { ...DEFAULT_AUTH_CONFIG, authType: "basic", username: "max" }
+      const { findByText, getByDisplayValue } = renderScreen()
 
-      await waitFor(() => {
-        expect(getByText("None")).toBeTruthy()
-      })
-
-      expect(queryByText("Username")).toBeNull()
-      expect(queryByText("Password")).toBeNull()
-      expect(queryByText("Token")).toBeNull()
+      expect(await findByText("Not set · encrypted once saved.")).toBeTruthy()
+      expect(getByDisplayValue("max")).toBeTruthy()
     })
 
-    it("switching to Basic Auth shows username and password fields", async () => {
-      const { getByText } = renderScreen()
+    it("replaces the stored value when typed and keeps it when the draft is cleared", async () => {
+      mockAuthConfig = { ...DEFAULT_AUTH_CONFIG, authType: "bearer", bearerToken: "old" }
+      const { getByTestId } = renderScreen()
+      await waitFor(() => expect(getByTestId("bearer-token")).toBeTruthy())
 
-      await waitFor(() => {
-        expect(getByText("None")).toBeTruthy()
-      })
+      fireEvent.changeText(getByTestId("bearer-token"), "new-token")
+      expect((await lastDebouncedConfig()).bearerToken).toBe("new-token")
 
-      fireEvent.press(getByText("Basic auth"))
-
-      expect(getByText("Username")).toBeTruthy()
-      expect(getByText("Password")).toBeTruthy()
+      mockDebouncedSaveAndRestart.mockClear()
+      fireEvent.changeText(getByTestId("bearer-token"), "")
+      expect(mockDebouncedSaveAndRestart).not.toHaveBeenCalled()
     })
 
-    it("switching to Bearer Token shows token field", async () => {
-      const { getByText } = renderScreen()
+    it("carries a first edit into a second one typed inside the debounce", async () => {
+      mockAuthConfig = { ...DEFAULT_AUTH_CONFIG, authType: "basic" }
+      const { getByTestId } = renderScreen()
+      await waitFor(() => expect(getByTestId("basic-username")).toBeTruthy())
 
-      await waitFor(() => {
-        expect(getByText("None")).toBeTruthy()
-      })
+      fireEvent.changeText(getByTestId("basic-username"), "max")
+      fireEvent.changeText(getByTestId("basic-password"), "hunter2")
 
-      fireEvent.press(getByText("Bearer token"))
-
-      expect(getByText("Token")).toBeTruthy()
-    })
-
-    it("switching from Basic Auth to Bearer hides username/password, shows token", async () => {
-      const { getByText, queryByText } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByText("None")).toBeTruthy()
-      })
-
-      fireEvent.press(getByText("Basic auth"))
-      expect(getByText("Username")).toBeTruthy()
-
-      fireEvent.press(getByText("Bearer token"))
-      expect(queryByText("Username")).toBeNull()
-      expect(queryByText("Password")).toBeNull()
-      expect(getByText("Token")).toBeTruthy()
-    })
-
-    it("switching from Bearer to None hides token field", async () => {
-      const { getByText, queryByText } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByText("None")).toBeTruthy()
-      })
-
-      fireEvent.press(getByText("Bearer token"))
-      expect(getByText("Token")).toBeTruthy()
-
-      fireEvent.press(getByText("None"))
-      expect(queryByText("Token")).toBeNull()
-    })
-
-    it("auth type change triggers immediate save", async () => {
-      const { getByText } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByText("None")).toBeTruthy()
-      })
-
-      fireEvent.press(getByText("Basic auth"))
-
-      expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
-    })
-
-    it("loads saved Basic Auth config and shows fields", async () => {
-      mockAuthConfig = {
-        ...DEFAULT_AUTH_CONFIG,
-        authType: "basic",
-        username: "testuser",
-        password: "testpass"
-      }
-
-      const { getByText, getByDisplayValue } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByText("Username")).toBeTruthy()
-      })
-
-      expect(getByDisplayValue("testuser")).toBeTruthy()
-      expect(getByDisplayValue("testpass")).toBeTruthy()
-    })
-
-    it("loads saved Bearer config and shows field", async () => {
-      mockAuthConfig = {
-        ...DEFAULT_AUTH_CONFIG,
-        authType: "bearer",
-        bearerToken: "my-secret-token"
-      }
-
-      const { getByText, getByDisplayValue } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByText("Token")).toBeTruthy()
-      })
-
-      expect(getByDisplayValue("my-secret-token")).toBeTruthy()
-    })
-
-    it("typing in username triggers debounced save", async () => {
-      const { getByText, getByPlaceholderText } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByText("None")).toBeTruthy()
-      })
-
-      fireEvent.press(getByText("Basic auth"))
-
-      const usernameInput = getByPlaceholderText("Username")
-      fireEvent.changeText(usernameInput, "newuser")
-
-      expect(mockDebouncedSaveAndRestart).toHaveBeenCalled()
+      expect(await lastDebouncedConfig()).toMatchObject({ username: "max", password: "hunter2" })
     })
   })
 
   describe("custom headers", () => {
-    it("shows empty state when no headers configured", async () => {
-      const { getByText } = renderScreen()
+    it("says none are set and what a header does", async () => {
+      const { findByText } = renderScreen()
 
-      await waitFor(() => {
-        expect(getByText("No custom headers configured")).toBeTruthy()
-      })
+      expect(await findByText("None. A custom header is sent with every request.")).toBeTruthy()
     })
 
-    it("adds a header row when + Add Header is pressed", async () => {
-      const { getByText, getAllByPlaceholderText } = renderScreen()
+    it("adds a row and saves it once a name exists", async () => {
+      const { getByTestId, getAllByPlaceholderText, findByTestId } = renderScreen()
 
-      await waitFor(() => {
-        expect(getByText("+ Add Header")).toBeTruthy()
-      })
+      fireEvent.press(await findByTestId("add-header-btn"))
+      expect(getAllByPlaceholderText("Name")).toHaveLength(1)
 
-      fireEvent.press(getByText("+ Add Header"))
+      fireEvent.changeText(getAllByPlaceholderText("Name")[0], "CF-Access-Client-Id")
+      fireEvent.changeText(getAllByPlaceholderText("Value")[0], "abc")
 
-      expect(getAllByPlaceholderText("Header name")).toHaveLength(1)
-      expect(getAllByPlaceholderText("Value")).toHaveLength(1)
+      expect((await lastDebouncedConfig()).customHeaders).toEqual({ "CF-Access-Client-Id": "abc" })
+      expect(getByTestId("add-header-btn")).toBeTruthy()
     })
 
-    it("loads saved custom headers", async () => {
-      mockAuthConfig = {
-        ...DEFAULT_AUTH_CONFIG,
-        customHeaders: { "CF-Access-Client-Id": "abc123" }
-      }
+    it("loads saved headers with their values, since a name and value pair must be auditable", async () => {
+      mockAuthConfig = { ...DEFAULT_AUTH_CONFIG, customHeaders: { "CF-Access-Client-Id": "abc123" } }
+      const { findByDisplayValue, getByDisplayValue } = renderScreen()
 
-      const { getByDisplayValue } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByDisplayValue("CF-Access-Client-Id")).toBeTruthy()
-      })
-
+      expect(await findByDisplayValue("CF-Access-Client-Id")).toBeTruthy()
       expect(getByDisplayValue("abc123")).toBeTruthy()
     })
 
-    it("removes a header when X is pressed", async () => {
-      mockAuthConfig = {
-        ...DEFAULT_AUTH_CONFIG,
-        customHeaders: { "X-Custom": "val" }
-      }
+    it("removes a header at once, named for a screen reader", async () => {
+      mockAuthConfig = { ...DEFAULT_AUTH_CONFIG, customHeaders: { "X-Custom": "val" } }
+      const { findByLabelText, queryByDisplayValue } = renderScreen()
 
-      const { getByDisplayValue, getByLabelText, queryByDisplayValue } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByDisplayValue("X-Custom")).toBeTruthy()
-      })
-
-      // The remove control is an icon now, so it is found by the name TalkBack reads.
-      fireEvent.press(getByLabelText("Remove this header"))
+      fireEvent.press(await findByLabelText("Remove header X-Custom"))
 
       expect(queryByDisplayValue("X-Custom")).toBeNull()
-      expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
+      expect((await lastImmediateConfig()).customHeaders).toEqual({})
     })
 
-    it("shows duplicate key warning when header names collide", async () => {
-      mockAuthConfig = {
-        ...DEFAULT_AUTH_CONFIG,
-        customHeaders: { "X-One": "a" }
-      }
+    it("marks a duplicate name on its own field instead of a banner", async () => {
+      mockAuthConfig = { ...DEFAULT_AUTH_CONFIG, customHeaders: { "X-One": "a" } }
+      const { findByTestId, getAllByPlaceholderText, queryByText, getByText } = renderScreen()
 
-      const { getByText, getAllByPlaceholderText, queryByText } = renderScreen()
+      fireEvent.press(await findByTestId("add-header-btn"))
+      expect(queryByText("Also used above. Only the last value is sent.")).toBeNull()
 
-      await waitFor(() => {
-        expect(getByText("+ Add Header")).toBeTruthy()
-      })
+      fireEvent.changeText(getAllByPlaceholderText("Name")[1], "X-One")
 
-      // No warning initially
+      expect(getByText("Also used above. Only the last value is sent.")).toBeTruthy()
       expect(queryByText(/Duplicate header names/)).toBeNull()
-
-      // Add second header and type same key
-      fireEvent.press(getByText("+ Add Header"))
-      const nameInputs = getAllByPlaceholderText("Header name")
-      fireEvent.changeText(nameInputs[1], "X-One")
-
-      expect(getByText(/Duplicate header names/)).toBeTruthy()
     })
   })
 })

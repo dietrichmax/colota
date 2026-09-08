@@ -83,7 +83,7 @@ A zone [heartbeat](/docs/guides/geofencing) produces the same kind of synthetic 
 
 ### Custom fields
 
-Custom static fields (configured in API Settings) are added to the payload first, then location fields are added. If a custom field has the same name as a location field, the location field overwrites it.
+Custom static fields (configured in Request format) are added to the payload first, then location fields are added. If a custom field has the same name as a location field, the location field overwrites it.
 
 Custom field values are always sent as strings.
 
@@ -160,7 +160,7 @@ Failed items stay in the queue indefinitely until they succeed. The queue can be
 ## Network Requirements
 
 - **HTTPS required** for all public endpoints
-- **HTTP allowed** for private/local addresses - enforced via DNS resolution at both sync time and Test Connection
+- **HTTP allowed** for private/local addresses - enforced via DNS resolution at both sync time and Test connection
 - Non-standard ports are supported (e.g., `https://my-server.com:8443/api`)
 - Self-signed certificates are supported - see [Server Settings](/docs/configuration/server-settings#endpoint-url) for setup instructions
 

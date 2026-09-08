@@ -8,7 +8,7 @@ Colota is a drop-in Android client for the [Overland](https://github.com/aaronpk
 
 ## Setup
 
-1. **Pick the Overland template** in **Settings > API Settings**
+1. **Pick the Overland template** in **Settings > Request format**
 2. **Set your endpoint** to your Overland-compatible server's batch URL, e.g.:
    ```
    https://overland.yourdomain.com/

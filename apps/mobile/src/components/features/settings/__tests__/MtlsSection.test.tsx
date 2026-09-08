@@ -1,51 +1,43 @@
 import React from "react"
 import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { ActivityIndicator } from "react-native"
+import { CERT_EXPIRY_WARNING_DAYS } from "../../../../constants"
 
 jest.mock("../../../index", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
     TextField: require("../../../../testing/componentStubs").TextFieldStub,
-    Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
-        testID: props.testID,
-        value: props.value,
-        onValueChange: props.onValueChange,
-        disabled: props.disabled,
-        accessibilityLabel: props.accessibilityLabel
-      })
-    },
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
-    Button: ({ title, onPress, disabled }: any) =>
+    Button: ({ title, onPress, disabled, testID }: any) =>
       R.createElement(
         Pressable,
-        { onPress, disabled, accessibilityRole: "button" },
+        { onPress, disabled, testID, accessibilityRole: "button" },
         R.createElement(Text, null, title)
       ),
-    FieldMessage: ({ children }: any) => R.createElement(Text, null, children)
+    FieldMessage: ({ children }: any) => R.createElement(Text, null, children),
+    StateLine: ({ label, caption, testID }: any) =>
+      R.createElement(View, { testID }, R.createElement(Text, null, label), R.createElement(Text, null, caption)),
+    StatRow: ({ label, value }: any) =>
+      R.createElement(View, null, R.createElement(Text, null, label), R.createElement(Text, null, value))
   }
 })
 
 jest.mock("../../../../hooks/useTheme", () => ({
-  useTheme: () => ({
-    colors: {
-      text: "#000",
-      textSecondary: "#666",
-      textLight: "#999",
-      background: "#fff",
-      border: "#ddd",
-      placeholder: "#999",
-      error: "#f00",
-      warning: "#f80",
-      success: "#0a0"
-    }
-  })
+  useTheme: () => ({ colors: require("@colota/shared").lightColors })
 }))
 
 jest.mock("../../../../utils/logger", () => ({
   logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() }
+}))
+
+const mockShowConfirm = jest.fn().mockResolvedValue(true)
+const mockShowChoice = jest.fn().mockResolvedValue(2)
+jest.mock("../../../../services/modalService", () => ({
+  showConfirm: (...a: any[]) => mockShowConfirm(...a),
+  showChoice: (...a: any[]) => mockShowChoice(...a)
 }))
 
 const mockGetClientCertInfo = jest.fn().mockResolvedValue({ configured: false })
@@ -76,268 +68,204 @@ jest.mock("../../../../services/NativeLocationService", () => ({
 import { MtlsSection } from "../MtlsSection"
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
+const loaded = (daysLeft: number, extra: Record<string, unknown> = {}) => ({
+  configured: true,
+  subject: "CN=colota-test-client,O=Colota",
+  issuer: "CN=Test CA",
+  notBefore: Date.now() - ONE_DAY_MS,
+  notAfter: Date.now() + daysLeft * ONE_DAY_MS + 60_000,
+  ...extra
+})
 
 describe("MtlsSection", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetClientCertInfo.mockResolvedValue({ configured: false })
     mockGetServerCaInfo.mockResolvedValue({ configured: false })
+    mockShowConfirm.mockResolvedValue(true)
+    mockShowChoice.mockResolvedValue(2)
   })
 
-  describe("loading + empty states", () => {
-    it("shows Loading text before the initial info fetch resolves", () => {
-      // Pending promises so refresh() doesn't complete before the render assertion
+  describe("loading and empty", () => {
+    it("spins before the first read resolves, never the word", () => {
       mockGetClientCertInfo.mockReturnValue(new Promise(() => {}))
       mockGetServerCaInfo.mockReturnValue(new Promise(() => {}))
-      const { getByText } = render(<MtlsSection />)
-      expect(getByText("Loading...")).toBeTruthy()
+      const { UNSAFE_getByType, queryByText } = render(<MtlsSection />)
+      expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy()
+      expect(queryByText("Loading...")).toBeNull()
     })
 
-    it("renders both empty-state sections with their action buttons", async () => {
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => {
-        expect(getByText("Pick from device certificates")).toBeTruthy()
-        expect(getByText("Import .p12 / .pfx")).toBeTruthy()
-        expect(getByText("Import CA (.crt / .pem)")).toBeTruthy()
-      })
+    it("offers the two paths as equals, each with its custody line", async () => {
+      const { findByText, getByText } = render(<MtlsSection />)
+
+      expect(await findByText("Pick from device certificates")).toBeTruthy()
+      expect(
+        getByText("Key stays in the device credential store, survives reinstalling Colota, never backed up.")
+      ).toBeTruthy()
+      expect(getByText("Import .p12 / .pfx")).toBeTruthy()
+      expect(getByText(/^Key moves into the Android Keystore/)).toBeTruthy()
+      expect(getByText("None. Only for a server that asks for one.")).toBeTruthy()
+    })
+
+    it("says when a CA is needed at all and where it lives", async () => {
+      const { findByText, getByText } = render(<MtlsSection />)
+
+      expect(await findByText("Import CA (.crt / .pem)")).toBeTruthy()
+      expect(getByText(/^None\. Public CAs such as Let's Encrypt work without it\./)).toBeTruthy()
+      expect(getByText("Encrypted on this device and included in encrypted backups.")).toBeTruthy()
     })
   })
 
   describe("client cert: KeyChain pick", () => {
     it("refreshes info after a successful KeyChain pick", async () => {
       mockPickKeyChainCert.mockResolvedValueOnce({ configured: true, subject: "CN=picked" })
-      mockGetClientCertInfo.mockResolvedValueOnce({ configured: false }).mockResolvedValueOnce({
-        configured: true,
-        subject: "CN=picked",
-        issuer: "CN=Test CA",
-        notBefore: Date.now() - ONE_DAY_MS,
-        notAfter: Date.now() + 365 * ONE_DAY_MS,
-        source: "keychain"
-      })
+      mockGetClientCertInfo
+        .mockResolvedValueOnce({ configured: false })
+        .mockResolvedValueOnce(loaded(365, { source: "keychain" }))
 
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => expect(getByText("Pick from device certificates")).toBeTruthy())
-      fireEvent.press(getByText("Pick from device certificates"))
+      const { findByText } = render(<MtlsSection />)
+      fireEvent.press(await findByText("Pick from device certificates"))
 
-      await waitFor(() => {
-        expect(mockPickKeyChainCert).toHaveBeenCalled()
-        expect(mockGetClientCertInfo).toHaveBeenCalledTimes(2)
-      })
+      await waitFor(() => expect(mockGetClientCertInfo).toHaveBeenCalledTimes(2))
     })
 
     it("does not refresh when the user cancels the KeyChain picker", async () => {
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => getByText("Pick from device certificates"))
-      fireEvent.press(getByText("Pick from device certificates"))
+      const { findByText } = render(<MtlsSection />)
+      fireEvent.press(await findByText("Pick from device certificates"))
       await waitFor(() => expect(mockPickKeyChainCert).toHaveBeenCalled())
-      // Only the initial info fetch, no second refresh
       expect(mockGetClientCertInfo).toHaveBeenCalledTimes(1)
     })
   })
 
-  describe("client cert: PKCS12 import", () => {
-    it("shows password field after picking a .p12 file", async () => {
-      mockPickClientCertFile.mockResolvedValueOnce("base64bytes")
-      const { getByText, getByPlaceholderText } = render(<MtlsSection />)
-      await waitFor(() => getByText("Import .p12 / .pfx"))
-      fireEvent.press(getByText("Import .p12 / .pfx"))
+  describe("client cert: .p12 import", () => {
+    it("asks for the file password after a pick and says the password is used once", async () => {
+      mockPickClientCertFile.mockResolvedValueOnce("BASE64")
+      const { findByText, getByText } = render(<MtlsSection />)
 
-      await waitFor(() => {
-        expect(getByText("Password (leave empty if none)")).toBeTruthy()
-        expect(getByPlaceholderText("PKCS12 password")).toBeTruthy()
-        expect(getByText("Save")).toBeTruthy()
-        expect(getByText("Cancel")).toBeTruthy()
-      })
+      fireEvent.press(await findByText("Import .p12 / .pfx"))
+
+      expect(await findByText("File password")).toBeTruthy()
+      expect(getByText("Used once to unwrap the key, then discarded. Leave empty if the file has none.")).toBeTruthy()
+      expect(getByText("Import")).toBeTruthy()
+      expect(getByText("Cancel")).toBeTruthy()
     })
 
-    it("surfaces wrong-password error inline without persisting state", async () => {
-      mockPickClientCertFile.mockResolvedValueOnce("base64bytes")
-      mockImportClientCert.mockRejectedValueOnce({ code: "E_CERT_PASSWORD", message: "bad password" })
+    it("surfaces a wrong password on the field and keeps the form", async () => {
+      mockPickClientCertFile.mockResolvedValueOnce("BASE64")
+      mockImportClientCert.mockRejectedValueOnce({ code: "E_CERT_PASSWORD" })
+      const { findByText, getByText } = render(<MtlsSection />)
 
-      const { getByText, getByPlaceholderText } = render(<MtlsSection />)
-      await waitFor(() => getByText("Import .p12 / .pfx"))
-      fireEvent.press(getByText("Import .p12 / .pfx"))
-      await waitFor(() => getByText("Save"))
-      fireEvent.changeText(getByPlaceholderText("PKCS12 password"), "wrong")
-      fireEvent.press(getByText("Save"))
+      fireEvent.press(await findByText("Import .p12 / .pfx"))
+      fireEvent.press(await findByText("Import"))
 
-      await waitFor(() => expect(getByText("Incorrect password")).toBeTruthy())
-      // Still in picked state - user can retry without re-picking file
-      expect(getByText("Save")).toBeTruthy()
-    })
-
-    it("surfaces invalid-PKCS12 error inline", async () => {
-      mockPickClientCertFile.mockResolvedValueOnce("base64bytes")
-      mockImportClientCert.mockRejectedValueOnce({ code: "E_CERT_INVALID", message: "not pkcs12" })
-
-      const { getByText, getByPlaceholderText } = render(<MtlsSection />)
-      await waitFor(() => getByText("Import .p12 / .pfx"))
-      fireEvent.press(getByText("Import .p12 / .pfx"))
-      await waitFor(() => getByText("Save"))
-      fireEvent.changeText(getByPlaceholderText("PKCS12 password"), "any")
-      fireEvent.press(getByText("Save"))
-
-      await waitFor(() => expect(getByText("Not a valid PKCS12 file")).toBeTruthy())
+      expect(await findByText("Incorrect password")).toBeTruthy()
+      expect(getByText("File password")).toBeTruthy()
     })
 
     it("Cancel returns to the empty state", async () => {
-      mockPickClientCertFile.mockResolvedValueOnce("base64bytes")
-      const { getByText, queryByText } = render(<MtlsSection />)
-      await waitFor(() => getByText("Import .p12 / .pfx"))
-      fireEvent.press(getByText("Import .p12 / .pfx"))
-      await waitFor(() => getByText("Save"))
+      mockPickClientCertFile.mockResolvedValueOnce("BASE64")
+      const { findByText, queryByText } = render(<MtlsSection />)
 
-      fireEvent.press(getByText("Cancel"))
+      fireEvent.press(await findByText("Import .p12 / .pfx"))
+      fireEvent.press(await findByText("Cancel"))
 
-      await waitFor(() => {
-        expect(queryByText("Save")).toBeNull()
-        expect(getByText("Pick from device certificates")).toBeTruthy()
-      })
+      await waitFor(() => expect(queryByText("File password")).toBeNull())
+      expect(await findByText("Pick from device certificates")).toBeTruthy()
     })
   })
 
-  describe("client cert: configured state", () => {
-    it("renders subject, issuer and shows expiry date", async () => {
-      const notAfter = Date.now() + 320 * ONE_DAY_MS
-      mockGetClientCertInfo.mockResolvedValue({
-        configured: true,
-        subject: "CN=colota-test-client,O=Colota",
-        issuer: "CN=Test CA",
-        notBefore: Date.now() - ONE_DAY_MS,
-        notAfter,
-        source: "p12"
-      })
+  describe("client cert: loaded", () => {
+    it("opens with the certificate's state and origin, then subject and issuer as ledger rows", async () => {
+      mockGetClientCertInfo.mockResolvedValue(loaded(320, { source: "keychain" }))
+      const { findByText, getByText } = render(<MtlsSection />)
 
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => {
-        // shortenDn strips down to just the CN value
-        expect(getByText("colota-test-client")).toBeTruthy()
-        expect(getByText("Remove Certificate")).toBeTruthy()
-      })
+      expect(await findByText("Valid")).toBeTruthy()
+      expect(getByText(/^Until .* · device credential store$/)).toBeTruthy()
+      expect(getByText("colota-test-client")).toBeTruthy()
+      expect(getByText("Test CA")).toBeTruthy()
+      expect(getByText("Replace")).toBeTruthy()
+      expect(getByText("Remove")).toBeTruthy()
     })
 
-    it("shows the expiring-soon warning when within EXPIRY_WARNING_DAYS", async () => {
-      const notAfter = Date.now() + 5 * ONE_DAY_MS
-      mockGetClientCertInfo.mockResolvedValue({
-        configured: true,
-        subject: "CN=expiring",
-        issuer: "CN=Test CA",
-        notBefore: Date.now() - ONE_DAY_MS,
-        notAfter
-      })
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => expect(getByText(/Certificate expires in \d+ day/)).toBeTruthy())
+    it("warns inside the window as a word, never a fill", async () => {
+      mockGetClientCertInfo.mockResolvedValue(loaded(5, { source: "p12" }))
+      const { findByText } = render(<MtlsSection />)
+
+      expect(await findByText("Expires in 5 days")).toBeTruthy()
+      expect(CERT_EXPIRY_WARNING_DAYS).toBe(30)
     })
 
-    it("shows the expired error when notAfter is in the past", async () => {
-      mockGetClientCertInfo.mockResolvedValue({
-        configured: true,
-        subject: "CN=stale",
-        issuer: "CN=Test CA",
-        notBefore: Date.now() - 365 * ONE_DAY_MS,
-        notAfter: Date.now() - ONE_DAY_MS
-      })
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => expect(getByText(/Certificate has expired/)).toBeTruthy())
-    })
-  })
+    it("says what an expired certificate will do", async () => {
+      mockGetClientCertInfo.mockResolvedValue(loaded(-1))
+      const { findByText, getByText } = render(<MtlsSection />)
 
-  describe("server CA section", () => {
-    it("renders the empty-state Import CA button + helper text", async () => {
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => {
-        expect(getByText("Trusted Server CA")).toBeTruthy()
-        expect(getByText("Import CA (.crt / .pem)")).toBeTruthy()
-      })
+      expect(await findByText("Expired")).toBeTruthy()
+      expect(getByText(/the server will refuse it$/)).toBeTruthy()
     })
 
-    it("shows friendly error when picker reports file-too-large (E_CA_READ)", async () => {
-      mockPickServerCaFile.mockRejectedValueOnce({ code: "E_CA_READ", message: "File too large" })
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => getByText("Import CA (.crt / .pem)"))
-      fireEvent.press(getByText("Import CA (.crt / .pem)"))
-      await waitFor(() => expect(getByText(/Could not read the selected file/)).toBeTruthy())
+    it("removes only after the confirm that says what will fail", async () => {
+      mockGetClientCertInfo.mockResolvedValue(loaded(320))
+      mockShowConfirm.mockResolvedValueOnce(false)
+      const { findByTestId } = render(<MtlsSection />)
+
+      fireEvent.press(await findByTestId("remove-cert-btn"))
+      await waitFor(() =>
+        expect(mockShowConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({ title: "Remove client certificate?", destructive: true })
+        )
+      )
+      expect(mockClearClientCert).not.toHaveBeenCalled()
+
+      mockShowConfirm.mockResolvedValueOnce(true)
+      fireEvent.press(await findByTestId("remove-cert-btn"))
+      await waitFor(() => expect(mockClearClientCert).toHaveBeenCalled())
+      expect(mockGetClientCertInfo).toHaveBeenCalledTimes(2)
     })
 
-    it("shows friendly error when imported file is not a valid X.509", async () => {
-      mockPickServerCaFile.mockResolvedValueOnce("notACert")
-      mockImportServerCa.mockRejectedValueOnce({ code: "E_CA_INVALID", message: "parse error" })
+    it("Replace offers the same two paths and runs the chosen one", async () => {
+      mockGetClientCertInfo.mockResolvedValue(loaded(320))
+      mockShowChoice.mockResolvedValueOnce(1)
+      mockPickClientCertFile.mockResolvedValueOnce("BASE64")
+      const { findByText } = render(<MtlsSection />)
 
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => getByText("Import CA (.crt / .pem)"))
-      fireEvent.press(getByText("Import CA (.crt / .pem)"))
-      await waitFor(() => expect(getByText(/Not a valid X\.509 certificate/)).toBeTruthy())
-    })
+      fireEvent.press(await findByText("Replace"))
 
-    it("renders configured state with Remove CA action", async () => {
-      mockGetServerCaInfo.mockResolvedValue({
-        configured: true,
-        subject: "CN=Colota Test CA",
-        issuer: "CN=Colota Test CA",
-        notBefore: Date.now() - ONE_DAY_MS,
-        notAfter: Date.now() + 1000 * ONE_DAY_MS
-      })
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => {
-        expect(getByText("Colota Test CA")).toBeTruthy()
-        expect(getByText("Remove CA")).toBeTruthy()
-      })
-    })
-
-    it("shows expired CA error when notAfter is in the past", async () => {
-      mockGetServerCaInfo.mockResolvedValue({
-        configured: true,
-        subject: "CN=Old CA",
-        issuer: "CN=Old CA",
-        notBefore: Date.now() - 730 * ONE_DAY_MS,
-        notAfter: Date.now() - ONE_DAY_MS
-      })
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => expect(getByText(/CA has expired/)).toBeTruthy())
+      await waitFor(() =>
+        expect(mockShowChoice).toHaveBeenCalledWith(expect.objectContaining({ title: "Replace certificate" }))
+      )
+      expect(await findByText("File password")).toBeTruthy()
     })
   })
 
-  describe("remove actions", () => {
-    it("clears client cert and refreshes when Remove Certificate is tapped", async () => {
-      mockGetClientCertInfo
-        .mockResolvedValueOnce({
-          configured: true,
-          subject: "CN=test",
-          issuer: "CN=Test CA",
-          notBefore: Date.now() - ONE_DAY_MS,
-          notAfter: Date.now() + 365 * ONE_DAY_MS
-        })
-        .mockResolvedValueOnce({ configured: false })
+  describe("trusted server CA", () => {
+    it("shows friendly errors from the picker and the parser", async () => {
+      mockPickServerCaFile.mockResolvedValueOnce("BASE64")
+      mockImportServerCa.mockRejectedValueOnce({ code: "E_CA_INVALID" })
+      const { findByText } = render(<MtlsSection />)
 
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => getByText("Remove Certificate"))
-      fireEvent.press(getByText("Remove Certificate"))
+      fireEvent.press(await findByText("Import CA (.crt / .pem)"))
 
-      await waitFor(() => {
-        expect(mockClearClientCert).toHaveBeenCalled()
-        expect(mockGetClientCertInfo).toHaveBeenCalledTimes(2)
-      })
+      expect(await findByText(/^Not a valid X\.509 certificate/)).toBeTruthy()
     })
 
-    it("clears server CA and refreshes when Remove CA is tapped", async () => {
-      mockGetServerCaInfo
-        .mockResolvedValueOnce({
-          configured: true,
-          subject: "CN=Test CA",
-          issuer: "CN=Test CA",
-          notBefore: Date.now() - ONE_DAY_MS,
-          notAfter: Date.now() + 365 * ONE_DAY_MS
-        })
-        .mockResolvedValueOnce({ configured: false })
+    it("reads Valid when loaded and removes only after the confirm", async () => {
+      mockGetServerCaInfo.mockResolvedValue(loaded(900))
+      const { findByTestId, getByText } = render(<MtlsSection />)
 
-      const { getByText } = render(<MtlsSection />)
-      await waitFor(() => getByText("Remove CA"))
-      fireEvent.press(getByText("Remove CA"))
+      fireEvent.press(await findByTestId("remove-ca-btn"))
 
-      await waitFor(() => {
-        expect(mockClearServerCa).toHaveBeenCalled()
-        expect(mockGetServerCaInfo).toHaveBeenCalledTimes(2)
-      })
+      await waitFor(() =>
+        expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Remove trusted CA?" }))
+      )
+      await waitFor(() => expect(mockClearServerCa).toHaveBeenCalled())
+      expect(getByText("Valid")).toBeTruthy()
+    })
+
+    it("names the consequence of an expired CA", async () => {
+      mockGetServerCaInfo.mockResolvedValue(loaded(-2))
+      const { findByText } = render(<MtlsSection />)
+
+      expect(await findByText(/server certificate checks will fail$/)).toBeTruthy()
     })
   })
 })

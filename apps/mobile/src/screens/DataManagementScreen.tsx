@@ -49,7 +49,9 @@ export function DataManagementScreen({}: ScreenProps) {
     sent: 0,
     total: 0,
     today: 0,
-    databaseSizeMB: 0
+    databaseSizeMB: 0,
+    lastSyncTime: 0,
+    lastSyncError: ""
   })
 
   const [daysInput, setDaysInput] = useState("90")

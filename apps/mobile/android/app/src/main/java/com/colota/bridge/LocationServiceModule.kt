@@ -24,6 +24,7 @@ import com.Colota.service.getDoubleOrNull
 import com.Colota.service.getIntOrNull
 import com.Colota.service.getStringOrNull
 import com.Colota.service.getBooleanOrNull
+import com.Colota.sync.SyncState
 import com.Colota.sync.NetworkManager
 import com.Colota.sync.UrlSafety
 import com.Colota.util.DeviceInfoHelper
@@ -352,6 +353,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             putInt("total", stats.total)
             putInt("today", stats.today)
             putDouble("databaseSizeMB", dbHelper.getDatabaseSizeMB())
+            putDouble("lastSyncTime", SyncState.lastSuccessTime.toDouble())
+            putString("lastSyncError", SyncState.lastSyncError)
         }
     }
 

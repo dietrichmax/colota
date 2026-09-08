@@ -299,13 +299,13 @@ For backups, two `internal` methods support the export/import flow without expos
 | --- | --- |
 | `DashboardScreen` | Full-bleed map with no header. One banner slot under the status inset for a missing permission, location services off or a critical battery, and a docked card over the bottom edge: the tracking state line, the interval row (fix cadence and sync cadence, from the active profile or from settings; a zero sync interval reads as instant) and the server row. The Start/Stop pill and the Route toggle float above the dock. Nothing polls: it reads on focus and takes the rest from events |
 | `SettingsScreen` | Hub navigating to Connection, Tracking & sync, Request format, Tracking profiles, Appearance and the data, Colota and about screens. Each row's sub line carries live state rather than a description |
-| `ConnectionScreen` | Server endpoint URL, offline mode toggle and connection test |
+| `ConnectionScreen` | The server hub: a sync state line from `utils/serverState`, offline mode, the endpoint (saved on blur), Test connection, and rows to Request format, Authentication and Client certificate |
 | `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
 | `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |
 | `ApiSettingsScreen` | Route **Request Format**. Backend template as a row opening the picker, HTTP method and Dawarich mode as radio rows, and the field mapping |
 | `BackendTemplateScreen` | The eight backend templates as radio rows, each stating what it sends, returning the choice with `popTo` and `merge`. Eight options that each need a sentence do not fit inline on a form screen |
-| `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers, with a link row to mTLS Settings |
-| `MtlsSettingsScreen` | Client certificate (PKCS12 import + Android Keystore storage) and Trusted Server CA management |
+| `AuthSettingsScreen` | Authentication method as a radio group (None, Basic auth, Bearer token) with never-echoed secrets, and custom HTTP headers |
+| `MtlsSettingsScreen` | Client certificate (device store pick or PKCS12 import into the Android Keystore) and the trusted server CA, each with a state line from `utils/certificateState` |
 | `GeofenceScreen` | Pause zones as rows over a map. Create geofence opens the editor on an empty draft; deletion happens there |
 | `GeofenceEditorScreen` | Every property of a zone: name, radius, location, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
 | `PlaceZoneScreen` | Picks a zone coordinate on a map with the radius drawn live, returning it to the editor with `popTo` and `merge` |

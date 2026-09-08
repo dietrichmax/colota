@@ -24,7 +24,8 @@ export function MtlsSettingsScreen({}: ScreenProps) {
       >
         <View style={styles.header}>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            For endpoints behind a reverse proxy that requires mutual TLS authentication
+            For a server or reverse proxy that requires mutual TLS. Not needed for tokens or passwords. The private key
+            never leaves this device.
           </Text>
         </View>
 
@@ -41,7 +42,7 @@ const styles = StyleSheet.create({
     paddingBottom: space.xxl
   },
   header: {
-    marginBottom: space.xl
+    marginBottom: space.lg
   },
   subtitle: {
     fontSize: fontSizes.body,

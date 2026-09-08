@@ -168,6 +168,17 @@ export function metersToInput(meters: number): number {
   return usesMiles() ? Math.round(meters * FEET_PER_METER) : meters
 }
 
+/** A calendar date with its year, for a date that can be years away, such as a certificate's expiry. */
+export function formatDateWithYear(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+}
+
+/** A time alone for today, the date otherwise, so a caption stays short where the day is implied. */
+export function formatWhen(unixSeconds: number, now: Date = new Date()): string {
+  const sameDay = startOfDaySec(new Date(unixSeconds * 1000)) === startOfDaySec(now)
+  return sameDay ? formatTime(unixSeconds) : `${formatDate(unixSeconds)} · ${formatTime(unixSeconds)}`
+}
+
 /** Start of `date`'s local day, in Unix seconds. */
 export function startOfDaySec(date: Date): number {
   const d = new Date(date)

@@ -44,21 +44,21 @@ Colota starts a new trip after a 15-minute gap in fixes, so a long stop can brea
 ## Server sync not working
 
 1. Check endpoint URL format - must be `https://` for public endpoints, or `http://` for private/local addresses
-2. Use the **Test Connection** button in settings
+2. Use **Test connection** under Settings > Connection; the Server card above it says what sync is doing now and, when it fails, the server's own sentence
 3. Check server logs for incoming requests
 4. Verify network connectivity
 5. Check the queue count in **Data management**
 
 **Common causes**: Wrong URL, HTTPS required for public endpoints, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed / private-CA server cert (see the [mTLS guide](/docs/configuration/mtls) for trust setup), **Sync Condition** restricting uploads to a specific network (Wi-Fi, SSID or VPN), missing local network permission on Android 16+.
 
-### Test Connection error messages
+### Test connection error messages
 
-If **Test Connection** fails, the message points at the specific layer that broke:
+If **Test connection** reads **Not reachable**, the sentence under it points at the specific layer that broke:
 
 | Message | What it means | Fix |
 | --- | --- | --- |
-| `Server certificate is not trusted (self-signed or unknown CA)` | TLS layer: Colota can't validate the server's certificate chain | Import your CA via mTLS Settings -> Trusted Server CA, or use a publicly-trusted cert. User-installed CAs from Android Settings are not honored. |
-| `Server requires a client certificate (mTLS) but none is configured` | TLS layer: the server demanded mTLS, Colota didn't present one | Import a `.p12` in mTLS Settings -> Client Certificate |
+| `Server certificate is not trusted (self-signed or unknown CA)` | TLS layer: Colota can't validate the server's certificate chain | Import your CA under Connection -> Client certificate -> Trusted server CA, or use a publicly trusted cert. User-installed CAs from Android Settings are not honored. |
+| `Server requires a client certificate (mutual TLS) but none is configured` | TLS layer: the server demanded a client certificate, Colota didn't present one | Add one under Connection -> Client certificate |
 | `Server rejected the client certificate` | TLS layer: cert was sent but rejected (wrong CA, expired, revoked) | Verify the cert matches what your reverse proxy expects |
 | `Incorrect password for client certificate` | Import-time: the password doesn't unlock the `.p12` | Re-import with the correct password |
 | `Hostname not verified` | TLS layer: server cert doesn't list the hostname/IP you connected to | Reissue the server cert with a SAN that includes your hostname/IP |
@@ -124,7 +124,7 @@ If sync to a local server stopped working after an Android update:
 1. Go to **Android Settings > Apps > Colota > Permissions**
 2. On Android 17+: Grant the **Local network access** permission
 3. On Android 16: Grant the **Nearby devices** permission
-4. Use the **Test Connection** button to verify
+4. Use **Test connection** to verify
 
 If you denied the permission and the system no longer shows the dialog, reset it from Android Settings.
 
