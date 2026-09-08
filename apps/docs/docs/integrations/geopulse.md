@@ -12,7 +12,7 @@ sidebar_position: 2
 2. **Add a Colota location source** in GeoPulse under **Location Sources**
 3. **Set a username and password** for the Colota source
 4. **Configure Colota**:
-   - Go to **Settings > Request format**
+   - Go to **Settings > Connection > Request format**
    - Select the **GeoPulse** template
    - Set your endpoint:
      ```

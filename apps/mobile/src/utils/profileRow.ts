@@ -55,6 +55,11 @@ export function profileSentence(profile: ProfileLike, isOfflineMode: boolean): s
   return `${when}, ${track} and ${syncSummary(profile.syncInterval).replace(/^syncs/, "sync")}.`
 }
 
+/** "Charging is active" or "No profile active": the Profiles state line and the Settings row print one string. */
+export function profileStateLabel(activeName: string | null | undefined, tracking: boolean): string {
+  return tracking && activeName ? `${activeName} is active` : "No profile active"
+}
+
 export interface ProfileState {
   icon: LucideIcon
   tone: "success" | "secondary"
@@ -72,7 +77,7 @@ export function describeProfileState(
     return {
       icon: UserRoundPen,
       tone: "secondary",
-      label: "No profile active",
+      label: profileStateLabel(null, false),
       caption: "Profiles apply while tracking runs"
     }
   }
@@ -81,14 +86,14 @@ export function describeProfileState(
     return {
       icon: conditionOf(activeProfile).icon,
       tone: "success",
-      label: `${activeProfile.name} is active`,
+      label: profileStateLabel(activeProfile.name, true),
       caption: `In force: ${lowerFirst(recordingClause(activeProfile))}${sync}`
     }
   }
   return {
     icon: UserRoundPen,
     tone: "secondary",
-    label: "No profile active",
+    label: profileStateLabel(null, true),
     caption: `Tracking & sync applies: ${lowerFirst(trackingSummary(settings.interval, settings.distance, settings.syncInterval, settings.isOfflineMode))}`
   }
 }

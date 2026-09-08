@@ -64,7 +64,7 @@ function buildPreviewMessage(preview: ImportPreview): string {
     }
   }
   lines.push("")
-  lines.push("Tip: back up your data first (Settings -> Backup & Restore). Imports can't be selectively undone.")
+  lines.push("Tip: back up your data first (Settings > Backup & restore). Imports can't be selectively undone.")
   return lines.join("\n")
 }
 

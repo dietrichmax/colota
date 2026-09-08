@@ -34,6 +34,25 @@ describe("ListItem", () => {
     expect(getByTestId("row").props.accessibilityLabel).toBe("Note")
   })
 
+  it("says a link row leaves the app, so every caller inherits it instead of writing its own hint", () => {
+    const { getByTestId, rerender } = render(
+      <ListItem label="Feedback & help" onPress={jest.fn()} accessibilityRole="link" testID="row" />
+    )
+    expect(getByTestId("row").props.accessibilityHint).toBe("Opens Feedback & help in the browser")
+
+    // An explicit hint still wins: the Play row is not a browser.
+    rerender(
+      <ListItem
+        label="Rate the app"
+        onPress={jest.fn()}
+        accessibilityRole="link"
+        accessibilityHint="Opens Colota in Google Play"
+        testID="row"
+      />
+    )
+    expect(getByTestId("row").props.accessibilityHint).toBe("Opens Colota in Google Play")
+  })
+
   it("leaves expanded unset on a row that opens nothing", () => {
     const { getByTestId } = render(<ListItem label="Connection" onPress={jest.fn()} testID="row" />)
     expect(getByTestId("row").props.accessibilityState.expanded).toBeUndefined()

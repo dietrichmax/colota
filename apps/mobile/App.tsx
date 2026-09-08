@@ -147,7 +147,7 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "About Colota",
     component: AboutScreen,
-    title: "About Colota"
+    title: "About"
   },
   {
     name: "Legal",

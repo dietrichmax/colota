@@ -100,7 +100,7 @@ your-domain.com {
 
 ## Configuration
 
-1. Go to **Settings > Request format**
+1. Go to **Settings > Connection > Request format**
 2. Select the **Custom** template (or start from any template and modify)
 3. Set your endpoint URL
 4. Customize [field mapping](/docs/configuration/field-mapping) to match your API
