@@ -184,7 +184,7 @@
 }
 
 .output {
-  background: var(--colota-card-elevated-bg);
+  background: var(--colota-card-bg);
   border: 1px solid var(--colota-border);
   border-radius: 8px;
   padding: 0.75rem;

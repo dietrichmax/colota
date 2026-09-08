@@ -92,7 +92,7 @@ export function DashboardMap({
   const recentredRef = useRef(0)
   const flyUntilRef = useRef(0)
   const firstLoadRef = useRef(true)
-  const initialRef = useRef(lastKnown ?? null)
+  const initialRef = useRef<LastKnownLocation | LocationCoords | null | undefined>(undefined)
   const [mapLoads, setMapLoads] = useState(0)
   const { locations: trackLocations, version: trackVersion } = useTodayTrack(tracking, coords)
 
@@ -209,11 +209,16 @@ export function DashboardMap({
 
   const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences ?? [], colors), [geofences, colors])
 
+  // The tiles wait for the database, so the map never opens on the world view and jumps to the fix a frame later.
+  const settled = liveFix != null || lastKnown !== undefined
+  if (settled && initialRef.current === undefined) initialRef.current = liveFix ?? lastKnown ?? null
   const initial = initialRef.current
   const staleCoords = useMemo<LocationCoords | null>(
     () => (lastKnown ? { latitude: lastKnown.latitude, longitude: lastKnown.longitude, accuracy: 0 } : null),
     [lastKnown]
   )
+
+  if (!settled) return <View style={StyleSheet.absoluteFill} testID="dashboard-map-pending" />
 
   return (
     <View style={StyleSheet.absoluteFill}>

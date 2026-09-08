@@ -4,18 +4,18 @@
  */
 
 import React from "react"
-import { ScrollView, StyleSheet } from "react-native"
+import { ScrollView } from "react-native"
 import { CircleAlert, CircleDashed, CircleDot, CirclePause, Timer, type LucideIcon } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { Settings, ThemeColors } from "../../../types/global"
 import { describeState, type StateIcon, type StateTone } from "../../../utils/dashboardState"
-import { size, space } from "../../../constants"
-import { Card } from "../../ui/Card"
+import { size } from "../../../constants"
+import { MapDock } from "../../ui/MapDock"
 import { Divider } from "../../ui/Divider"
 import { SpinningLoader } from "../../ui/SpinningLoader"
 import { StatRow } from "../../ui/StatRow"
 import { ConnectionStatus } from "./ConnectionStatus"
-import { StateLine } from "./StateLine"
+import { StateLine } from "../../ui/StateLine"
 import { WelcomeCard } from "./WelcomeCard"
 
 type DashboardDockProps = {
@@ -114,32 +114,16 @@ export function DashboardDock({
   const icon = state.icon === "loader" ? <SpinningLoader size={size.icon.md} color={iconColor} /> : GLYPHS[state.icon]
 
   return (
-    <Card variant="elevated" rows>
-      <ScrollView
-        style={[styles.scroll, { maxHeight }]}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <StateLine icon={icon} iconColor={iconColor} label={state.label} caption={state.caption} testID="dock-state" />
-        <Divider tight inset />
-        <StatRow icon={Timer} label="Interval" value={intervalText} testID="dock-interval" />
-        {!isOfflineMode && (
-          <>
-            <Divider tight inset />
-            <ConnectionStatus endpoint={endpoint} navigation={navigation} />
-          </>
-        )}
-      </ScrollView>
-    </Card>
+    <MapDock maxHeight={maxHeight}>
+      <StateLine icon={icon} iconColor={iconColor} label={state.label} caption={state.caption} testID="dock-state" />
+      <Divider tight inset />
+      <StatRow icon={Timer} label="Interval" value={intervalText} testID="dock-interval" />
+      {!isOfflineMode && (
+        <>
+          <Divider tight inset />
+          <ConnectionStatus endpoint={endpoint} navigation={navigation} />
+        </>
+      )}
+    </MapDock>
   )
 }
-
-const styles = StyleSheet.create({
-  // The ScrollView clips, so it spans the card and insets its content or the server row's ripple stops at the padding.
-  scroll: {
-    marginHorizontal: -space.lg
-  },
-  scrollContent: {
-    paddingHorizontal: space.lg
-  }
-})

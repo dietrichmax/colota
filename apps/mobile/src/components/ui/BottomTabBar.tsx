@@ -5,7 +5,8 @@
 import React from "react"
 import { View, Pressable, Text, StyleSheet } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Settings, House, CircleDot, Route } from "lucide-react-native"
+import { Settings, House, CircleDot } from "lucide-react-native"
+import { TrackMark } from "./TrackMark"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { size, space, STATE_LAYER_ALPHA, elevation } from "../../constants"
@@ -22,7 +23,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { name: "dashboard", label: "Dashboard", icon: House, route: "Dashboard" },
-  { name: "history", label: "History", icon: Route, route: "Location History" },
+  { name: "history", label: "History", icon: TrackMark, route: "Location History" },
   { name: "geofences", label: "Geofences", icon: CircleDot, route: "Geofences" },
   { name: "settings", label: "Settings", icon: Settings, route: "Settings" }
 ]

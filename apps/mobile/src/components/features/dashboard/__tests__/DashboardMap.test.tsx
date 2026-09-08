@@ -130,6 +130,21 @@ describe("DashboardMap", () => {
     mockGetLocationsByDateRange.mockResolvedValue([])
   })
 
+  it("draws no tiles until the database has answered, so the map never opens on the world view and jumps", async () => {
+    const { queryByTestId, getByTestId, rerender } = render(<DashboardMap {...baseProps} lastKnown={undefined} />)
+    await act(zonesLoaded)
+
+    expect(queryByTestId("ColotaMapView")).toBeNull()
+    expect(getByTestId("dashboard-map-pending")).toBeTruthy()
+
+    rerender(<DashboardMap {...baseProps} lastKnown={lastKnown} />)
+    await act(zonesLoaded)
+
+    expect(getByTestId("ColotaMapView")).toBeTruthy()
+    expect(mockMapProps.mock.calls[0][0].initialCenter).toEqual([lastKnown.longitude, lastKnown.latitude])
+    expect(mockMapProps.mock.calls[0][0].initialZoom).toBe(DEFAULT_MAP_ZOOM)
+  })
+
   it("mounts idle with no fix on the world view", async () => {
     const { getByTestId } = render(<DashboardMap {...baseProps} />)
     await act(zonesLoaded)

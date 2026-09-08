@@ -22,6 +22,17 @@ describe("ListItem", () => {
     expect(getByTestId("row").props.accessibilityState.expanded).toBe(true)
   })
 
+  it("speaks the sub after the label, because an Android label replaces the row's text", () => {
+    const { getByTestId, rerender } = render(
+      <ListItem label="Note" sub="Coffee stop" onPress={jest.fn()} testID="row" />
+    )
+    expect(getByTestId("row").props.accessibilityLabel).toBe("Note, Coffee stop")
+    expect(getByTestId("row").props.accessibilityHint).toBe("Opens Note")
+
+    rerender(<ListItem label="Note" onPress={jest.fn()} testID="row" />)
+    expect(getByTestId("row").props.accessibilityLabel).toBe("Note")
+  })
+
   it("leaves expanded unset on a row that opens nothing", () => {
     const { getByTestId } = render(<ListItem label="Connection" onPress={jest.fn()} testID="row" />)
     expect(getByTestId("row").props.accessibilityState.expanded).toBeUndefined()

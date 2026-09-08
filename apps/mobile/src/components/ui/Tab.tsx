@@ -4,10 +4,10 @@
  */
 
 import React from "react"
-import { Pressable, Text, StyleSheet } from "react-native"
+import { Pressable, Text, View, StyleSheet } from "react-native"
 import { fontSizes, fonts } from "../../styles/typography"
 import { ThemeColors } from "../../types/global"
-import { space, STATE_LAYER_ALPHA } from "../../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
 import { radius } from "@colota/shared"
 
 interface TabProps {
@@ -19,18 +19,20 @@ interface TabProps {
 
 export function Tab({ label, active, onPress, colors }: TabProps) {
   const borderBottomColor = active ? colors.primary : "transparent"
-  const textColor = active ? colors.primary : colors.textSecondary
+  const textColor = active ? colors.text : colors.textSecondary
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
       android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
-      style={[styles.tab, { borderBottomColor }]}
+      style={styles.tab}
     >
-      <Text style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive, { color: textColor }]}>
-        {label}
-      </Text>
+      <View style={[styles.indicator, { borderBottomColor }]}>
+        <Text style={[styles.label, active ? styles.labelActive : styles.labelInactive, { color: textColor }]}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   )
 }
@@ -38,21 +40,24 @@ export function Tab({ label, active, onPress, colors }: TabProps) {
 const styles = StyleSheet.create({
   tab: {
     flex: 1,
+    minHeight: size.touch,
     alignItems: "center",
-    padding: space.md,
-    borderBottomWidth: 2,
-    // Top corners only: the bottom rule is the active indicator and must stay square.
-    borderTopLeftRadius: radius.sm,
-    borderTopRightRadius: radius.sm,
-    overflow: "hidden"
+    justifyContent: "center",
+    padding: space.md
   },
-  tabText: {
+  indicator: {
+    paddingHorizontal: space.xs,
+    borderBottomWidth: 2,
+    borderTopLeftRadius: radius.xs,
+    borderTopRightRadius: radius.xs
+  },
+  label: {
     fontSize: fontSizes.body
   },
-  tabTextActive: {
+  labelActive: {
     ...fonts.bold
   },
-  tabTextInactive: {
+  labelInactive: {
     ...fonts.regular
   }
 })

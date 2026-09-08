@@ -60,7 +60,7 @@ export function Card({
         }
       case "elevated":
         return {
-          backgroundColor: colors.cardElevated,
+          backgroundColor: colors.card,
           borderColor: "transparent",
           borderWidth: 0,
           elevation: elevation.raised

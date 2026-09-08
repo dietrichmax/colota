@@ -9,6 +9,7 @@ import { type LucideIcon } from "lucide-react-native"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts, lineHeights } from "../../styles/typography"
 import { size, space } from "../../constants"
+import { Button } from "./Button"
 
 type EmptyStateProps = {
   title: string
@@ -18,12 +19,13 @@ type EmptyStateProps = {
   icon?: LucideIcon
   /** For a container that already insets its rows, which would otherwise double the padding. */
   style?: StyleProp<ViewStyle>
+  action?: { label: string; onPress: () => void }
 }
 
 // Two shapes, and the icon picks between them. An empty tab or screen gets the glyph and
 // centres, so it reads as new rather than broken. An empty section inside a populated screen
 // stays one left-aligned line, where a glyph would be louder than the content around it.
-export function EmptyState({ title, hint, icon: Icon, style }: EmptyStateProps) {
+export function EmptyState({ title, hint, icon: Icon, style, action }: EmptyStateProps) {
   const { colors } = useTheme()
   const centred = Boolean(Icon)
 
@@ -38,6 +40,7 @@ export function EmptyState({ title, hint, icon: Icon, style }: EmptyStateProps) 
       {hint ? (
         <Text style={[styles.hint, centred && styles.centredText, { color: colors.textSecondary }]}>{hint}</Text>
       ) : null}
+      {action ? <Button variant="ghost" title={action.label} onPress={action.onPress} style={styles.action} /> : null}
     </View>
   )
 }
@@ -77,5 +80,8 @@ const styles = StyleSheet.create({
     ...fonts.regular,
     lineHeight: lineHeights.description,
     marginTop: space.xs
+  },
+  action: {
+    alignSelf: "center"
   }
 })

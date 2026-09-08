@@ -42,7 +42,7 @@ export function DashboardBanner({ condition, onAction, top, left, right, onLayou
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
       onLayout={onLayout}
-      style={[styles.container, { top, left, right, backgroundColor: colors.cardElevated }]}
+      style={[styles.container, { top, left, right, backgroundColor: colors.card }]}
       testID="dashboard-banner"
     >
       <Icon size={size.icon.md} color={colors[tone]} />
