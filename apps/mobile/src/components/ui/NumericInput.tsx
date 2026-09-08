@@ -9,6 +9,7 @@ import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts, lineHeights } from "../../styles/typography"
 import { space } from "../../constants"
 import { TextField } from "./TextField"
+import { FieldMessage } from "./FieldMessage"
 
 interface NumericInputProps {
   label: string
@@ -19,6 +20,10 @@ interface NumericInputProps {
   placeholder?: string
   min?: number
   hint?: string
+  /** Shown under the box while the text would not be stored; the box takes the error ring. */
+  error?: string
+  /** A transient note under the box, such as the value a blur clamped to. */
+  message?: string
   testID?: string
 }
 
@@ -34,6 +39,8 @@ export function NumericInput({
   unit,
   placeholder = "0",
   hint,
+  error,
+  message,
   testID
 }: NumericInputProps) {
   const { colors } = useTheme()
@@ -54,9 +61,11 @@ export function NumericInput({
           onChangeText={onChange}
           onBlur={onBlur}
           placeholder={placeholder}
+          error={error}
         />
         <Text style={[styles.unit, { color: colors.textSecondary }]}>{unit}</Text>
       </View>
+      {message ? <FieldMessage>{message}</FieldMessage> : null}
     </View>
   )
 }

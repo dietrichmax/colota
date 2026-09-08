@@ -33,7 +33,8 @@ import {
   MessageCircle,
   Star
 } from "lucide-react-native"
-import { formatDuration, getTimeFormat, getUnitSystem } from "../utils/geo"
+import { getTimeFormat, getUnitSystem } from "../utils/geo"
+import { trackingSummary } from "../utils/dashboardState"
 import { formatCount } from "../utils/format"
 import { ProfileService } from "../services/ProfileService"
 import { logger } from "../utils/logger"
@@ -98,12 +99,10 @@ export function SettingsScreen({ navigation }: Props) {
     return queueCount > 0 ? `${host} · ${formatCount(queueCount)} queued` : host
   }, [settings.isOfflineMode, settings.endpoint, queueCount, todayCount])
 
-  // The row names both, so it shows both: interval is the GPS cadence and syncInterval the upload
-  // one. The preset label stood in for numbers the row now carries.
-  const syncSummary = useMemo(() => {
-    const sync = settings.syncInterval <= 0 ? "syncs instantly" : `syncs every ${formatDuration(settings.syncInterval)}`
-    return `Every ${settings.interval}s · ${sync}`
-  }, [settings.interval, settings.syncInterval])
+  const syncSummary = useMemo(
+    () => trackingSummary(settings.interval, settings.distance, settings.syncInterval, settings.isOfflineMode),
+    [settings.interval, settings.distance, settings.syncInterval, settings.isOfflineMode]
+  )
 
   // Both getters read a module cache the Appearance screen refreshes on save, so this costs no
   // bridge call; the screen re-reads on focus, which is when a change can have happened.

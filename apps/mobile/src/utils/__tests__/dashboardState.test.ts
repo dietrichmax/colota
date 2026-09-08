@@ -1,9 +1,13 @@
 import {
   describeState,
+  formatDuration,
   formatInterval,
   formatLastFix,
   intervalText,
   pickBannerCondition,
+  recordingSummary,
+  syncSummary,
+  trackingSummary,
   type StateInput
 } from "../dashboardState"
 import { formatDate, formatTime, loadDisplayPreferences } from "../geo"
@@ -225,6 +229,29 @@ describe("intervalText", () => {
 
   it("calls a zero sync interval instant, since every fix is sent as it lands", () => {
     expect(intervalText(5, 0)).toBe("Every 5 s · Instant sync")
+  })
+})
+
+describe("trackingSummary", () => {
+  it("prints a preset as fix rate, movement gate and sync cadence in one grammar", () => {
+    expect(trackingSummary(5, 0, 0, false)).toBe("Every 5 s, any movement · syncs each fix")
+    expect(trackingSummary(30, 2, 300, false)).toBe("Every 30 s after 2 m · syncs every 5 min")
+    expect(trackingSummary(60, 2, 900, false)).toBe("Every 1 min after 2 m · syncs every 15 min")
+  })
+
+  it("keeps a custom value in seconds when no unit divides it", () => {
+    expect(trackingSummary(20, 5, 90, false)).toBe("Every 20 s after 5 m · syncs every 90 s")
+  })
+
+  it("drops the sync clause offline, since nothing syncs", () => {
+    expect(trackingSummary(30, 2, 300, true)).toBe("Every 30 s after 2 m")
+  })
+
+  it("exposes the two halves so a caption can carry one of them", () => {
+    expect(recordingSummary(5, 20)).toBe("Every 5 s after 20 m")
+    expect(syncSummary(0)).toBe("syncs each fix")
+    expect(syncSummary(900)).toBe("syncs every 15 min")
+    expect(formatDuration(90)).toBe("90 s")
   })
 })
 

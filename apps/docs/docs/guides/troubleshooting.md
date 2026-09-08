@@ -130,9 +130,9 @@ If you denied the permission and the system no longer shows the dialog, reset it
 
 ## Locations not syncing on certain networks
 
-If **Sync Only On** is set to Wi-Fi, a specific SSID or VPN, uploads are skipped when the condition is not met. Locations continue to be recorded and queued locally - they sync automatically when the condition is satisfied.
+If **Sync only on** is set to Wi-Fi or Ethernet, a specific Wi-Fi network or VPN, uploads are skipped when the condition is not met. Locations continue to be recorded and queued locally - they sync automatically when the condition is satisfied.
 
-To change: **Settings > Advanced Settings > Network Settings > Sync Only On**.
+To change: **Settings > Tracking & sync > Sync only on**.
 
 ## Auto-export not working
 

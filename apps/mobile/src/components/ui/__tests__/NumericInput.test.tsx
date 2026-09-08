@@ -84,4 +84,13 @@ describe("NumericInput", () => {
 
     expect(getByText("meters")).toBeTruthy()
   })
+
+  it("hands an error to the box and a message under it, so a clamp and a rejection read in place", () => {
+    const withError = renderInput({ error: "A whole number" })
+    expect(withError.getByText("A whole number")).toBeTruthy()
+    expect(withError.getByLabelText("Test label, A whole number")).toBeTruthy()
+
+    const withMessage = renderInput({ message: "Set to 1 s" })
+    expect(withMessage.getByText("Set to 1 s")).toBeTruthy()
+  })
 })

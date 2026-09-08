@@ -134,6 +134,13 @@ export const SYNC_INTERVAL_LABELS: Record<number, string> = {
   900: "15 min"
 }
 
+export const SYNC_INTERVAL_SUBS: Record<number, string> = {
+  0: "Each fix is its own request · radio never idles",
+  60: "One request a minute · fixes wait in between",
+  300: "One request every 5 min · fewer wake-ups",
+  900: "One request every 15 min · the server hears you up to 15 min late"
+}
+
 // Overland batch envelope (Dawarich + batch mode, Overland template)
 export const OVERLAND_BATCH_MIN = 1
 export const OVERLAND_BATCH_MAX = 500

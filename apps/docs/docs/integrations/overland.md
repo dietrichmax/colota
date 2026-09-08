@@ -14,7 +14,7 @@ Colota is a drop-in Android client for the [Overland](https://github.com/aaronpk
    https://overland.yourdomain.com/
    ```
    Some implementations use a path like `/api/v1/overland/batches`. Check your server's docs.
-3. **Choose a batched sync preset** (Balanced or Power Saver). Instant sync is not supported because Overland is a batch-only protocol.
+3. **Choose a batched sync preset** (Balanced or Power saver). Instant sync is not supported because Overland is a batch-only protocol.
 4. **Set a `device_id`** in custom fields if you want to override the default `"colota"`.
 
 ## Payload Format
@@ -49,7 +49,7 @@ Each upload is a single POST containing one or more locations as GeoJSON Feature
 
 ## Configuration
 
-**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & sync > Advanced > Network Settings > Batch Size**. Larger bundles mean fewer round trips but bigger payloads on flaky networks.
+**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & sync > Sync interval > Batch size**. Larger bundles mean fewer round trips but bigger payloads on flaky networks.
 
 **HTTP method**: POST only. The Overland protocol does not support GET; the option is hidden when this template is selected.
 

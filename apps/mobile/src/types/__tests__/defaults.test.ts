@@ -117,15 +117,12 @@ describe("TRACKING_PRESETS", () => {
     expect(TRACKING_PRESETS[name].label).toBeTruthy()
   })
 
-  it.each(presetNames)("%s description uses bullet separator for sync info", (name) => {
-    const parts = TRACKING_PRESETS[name].description.split(" • ")
-    expect(parts[0]).toBeTruthy()
-    expect(parts[0]).not.toContain("Send")
-    expect(parts[0]).not.toContain("Batch")
+  it.each(presetNames)("%s names its cost, which the row prints beside the numbers it prices", (name) => {
+    expect(TRACKING_PRESETS[name].cost).toMatch(/battery/)
   })
 
-  it.each(presetNames)("%s has valid batteryImpact", (name) => {
-    expect(["Low", "Medium", "High"]).toContain(TRACKING_PRESETS[name].batteryImpact)
+  it("labels read in sentence case, like every other row", () => {
+    expect(TRACKING_PRESETS.powersaver.label).toBe("Power saver")
   })
 
   it("instant has shortest interval", () => {

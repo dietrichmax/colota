@@ -26,6 +26,7 @@ import {
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
+import { formatDuration } from "../utils/dashboardState"
 import {
   MS_TO_KMH,
   PROFILE_CONDITIONS,
@@ -38,9 +39,7 @@ import {
 import type { RootScreenProps } from "../types/navigation"
 
 function formatSyncDefault(seconds: number): string {
-  if (SYNC_INTERVAL_LABELS[seconds]) return SYNC_INTERVAL_LABELS[seconds]
-  if (seconds < 60) return `${seconds}s`
-  return `${Math.round(seconds / 60)} min`
+  return SYNC_INTERVAL_LABELS[seconds] ?? formatDuration(seconds)
 }
 
 export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Profile Editor">) {
@@ -290,7 +289,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                 onChangeText={(val) => handleNumericChange(setIntervalStr, "interval", val, 1)}
                 placeholder="5"
               />
-              <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
+              <Text style={[styles.unit, { color: colors.textSecondary }]}>s</Text>
             </View>
           </SettingRow>
 
@@ -361,7 +360,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                   onChangeText={(val) => handleNumericChange(setActivationDelayStr, "activationDelay", val, 0)}
                   placeholder="60"
                 />
-                <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
+                <Text style={[styles.unit, { color: colors.textSecondary }]}>s</Text>
               </View>
             </SettingRow>
           ) : (
@@ -380,7 +379,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                     onChangeText={(val) => handleNumericChange(setActivationDelayStr, "activationDelay", val, 0)}
                     placeholder="0"
                   />
-                  <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
+                  <Text style={[styles.unit, { color: colors.textSecondary }]}>s</Text>
                 </View>
               </SettingRow>
 
@@ -400,7 +399,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                     onChangeText={(val) => handleNumericChange(setDelayStr, "deactivationDelay", val, 0)}
                     placeholder="60"
                   />
-                  <Text style={[styles.unit, { color: colors.textSecondary }]}>sec</Text>
+                  <Text style={[styles.unit, { color: colors.textSecondary }]}>s</Text>
                 </View>
               </SettingRow>
             </>

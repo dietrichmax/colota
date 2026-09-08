@@ -7,8 +7,9 @@ import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo } fro
 import { StyleSheet, View, DeviceEventEmitter, AppState, StatusBar, useWindowDimensions } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useFocusEffect, useIsFocused } from "@react-navigation/native"
-import { SavedTrackingProfile, ScreenProps } from "../types/global"
+import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
+import { useActiveProfile } from "../hooks/useActiveProfile"
 import NativeLocationService from "../services/NativeLocationService"
 import { checkPermissions, ensurePermissions, PermissionStatus } from "../services/LocationServicePermission"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
@@ -52,7 +53,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   const [stoppedByBattery, setStoppedByBattery] = useState(false)
   const [showTrack, setShowTrack] = useState<boolean | null>(null)
   const [hasTrack, setHasTrack] = useState(false)
-  const [activeProfile, setActiveProfile] = useState<SavedTrackingProfile | null>(null)
+  const activeProfile = useActiveProfile(activeProfileId)
   const [stackHeight, setStackHeight] = useState(0)
   const [bannerHeight, setBannerHeight] = useState(0)
   const [recentreSignal, setRecentreSignal] = useState(0)
@@ -105,22 +106,6 @@ export function DashboardScreen({ navigation }: ScreenProps) {
         setShowTrack(false)
       })
   }, [])
-
-  useEffect(() => {
-    if (activeProfileId === null) {
-      setActiveProfile(null)
-      return
-    }
-    let cancelled = false
-    NativeLocationService.getProfiles()
-      .then((profiles) => {
-        if (!cancelled) setActiveProfile(profiles.find((p) => p.id === activeProfileId) ?? null)
-      })
-      .catch((err) => logger.error("[Dashboard] Failed to resolve the active profile:", err))
-    return () => {
-      cancelled = true
-    }
-  }, [activeProfileId])
 
   useFocusEffect(
     useCallback(() => {

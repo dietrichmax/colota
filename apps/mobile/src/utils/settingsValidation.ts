@@ -31,3 +31,17 @@ export function parsePositiveInt(str: string, fallback: number): number {
 export function isPositiveInt(str: string): boolean {
   return parseInt(str, 10) >= 1
 }
+
+/** The digits of a whole number, or null: decimals, signs, exponents and the empty string never reach a setting. */
+export function parseWholeNumber(text: string): number | null {
+  return /^\d+$/.test(text) ? Number(text) : null
+}
+
+/** The error a numeric field shows while its text is non-empty and would not be stored. */
+export function wholeNumberError(text: string, min: number, unit: string): string | undefined {
+  if (text === "") return undefined
+  const value = parseWholeNumber(text)
+  if (value === null) return "A whole number"
+  if (value < min) return `At least ${min} ${unit}`
+  return undefined
+}
