@@ -21,7 +21,7 @@ Self-signed and private-CA certificates are supported via three trust paths (sys
 
 On **Android 17+**, connecting to another device on the local network (everything above except `localhost`) requires the **ACCESS_LOCAL_NETWORK** permission. Colota requests this when you use **Test connection**. See [Permissions](/docs/development/permissions#local-network-access) for details.
 
-**Test connection** sits under the field. It sends your latest recorded location to the address with your credentials, so it needs one recorded fix, and it is disabled with the reason until it has one, while Offline mode is on or while the address does not pass. The result stays under the button until the next test or an edit: **Reachable** with the HTTP status and the time, or **Not reachable** with the status or "No response" and the server's own sentence. Test saves nothing itself; the field does, when you leave it.
+**Test connection** sits under the field. It sends your latest recorded location to the address with your credentials, so it needs one recorded fix, and it is disabled with the reason until it has one or while the address does not pass. The result stays under the button until the next test or an edit: **Reachable** with the HTTP status and the time, or **Not reachable** with the status or "No response" and the server's own sentence. Test saves nothing itself; the field does, when you leave it.
 
 ### Multiple Backends
 
@@ -67,9 +67,9 @@ If no locations are queued, offline mode enables immediately.
 
 The UI simplifies to remove sync-related elements that don't apply:
 
-**Hidden or disabled in offline mode:**
+**Hidden in offline mode:**
 
-- Test connection is disabled with the reason; the Server endpoint field stays editable so an address can be prepared
+- Server endpoint, Test connection and the Server details rows (Request format, Authentication, Client certificate); the sync state line and the Offline mode switch stay
 - Sync interval, Sync only on (Any network / Wi-Fi or Ethernet / Specific Wi-Fi network / VPN)
 - Queue statistics (Queued / Sent counts)
 - Queue actions (Sync Now, Clear Sent History, Clear Queue)

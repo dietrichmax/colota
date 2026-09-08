@@ -134,12 +134,15 @@ describe("ConnectionSettings", () => {
       expect(getByText("Server endpoint")).toBeTruthy()
     })
 
-    it("keeps the field editable under offline mode and disables Test with the reason, rather than hiding either", () => {
-      const { getByText, getByTestId } = renderComponent({ isOfflineMode: true })
+    it("drops the server and its details under offline mode, since a standalone tracker never sends", () => {
+      const { getByText, queryByTestId, queryByText } = renderComponent({ isOfflineMode: true })
 
-      expect(getByTestId("endpoint-input")).toBeTruthy()
-      expect(getByTestId("test-connection-btn").props.accessibilityState.disabled).toBe(true)
-      expect(getByText("Turn off Offline mode to test.")).toBeTruthy()
+      expect(getByText("Synced")).toBeTruthy()
+      expect(getByText("Offline mode")).toBeTruthy()
+      expect(queryByTestId("endpoint-input")).toBeNull()
+      expect(queryByTestId("test-connection-btn")).toBeNull()
+      expect(queryByText("Server details")).toBeNull()
+      expect(queryByTestId("nav-auth-settings")).toBeNull()
     })
 
     it("shows the template's endpoint shape as the persistent helper", () => {

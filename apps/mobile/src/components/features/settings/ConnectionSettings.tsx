@@ -192,11 +192,9 @@ export function ConnectionSettings({
     ? "Enter a server endpoint to test."
     : !draftPasses
       ? "Fix the address above to test."
-      : settings.isOfflineMode
-        ? "Turn off Offline mode to test."
-        : !hasFix
-          ? "Needs one recorded location to send. Start tracking first."
-          : null
+      : !hasFix
+        ? "Needs one recorded location to send. Start tracking first."
+        : null
 
   const handleTestEndpoint = useCallback(async () => {
     Keyboard.dismiss()
@@ -301,97 +299,107 @@ export function ConnectionSettings({
             onValueChange={handleOfflineModeChange}
           />
         </SettingRow>
-        <Divider tight />
 
-        <View style={styles.block}>
-          <View>
-            <TextField
-              label="Server endpoint"
-              testID="endpoint-input"
-              mono
-              value={draft}
-              onChangeText={handleDraftChange}
-              onBlur={() => {
-                commitDraft()
-              }}
-              placeholder={example}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              error={validation.error}
-            />
-            {!validation.error && <FieldMessage>{helper}</FieldMessage>}
-            {validation.warnings.map((warning) => (
-              <FieldMessage key={warning} variant="warning">
-                {warning}
-              </FieldMessage>
-            ))}
-          </View>
+        {/* A standalone tracker never sends, so the server and its details leave the screen with the toggle. */}
+        {!settings.isOfflineMode && (
+          <>
+            <Divider tight />
 
-          <View>
-            <Button
-              icon={Radio}
-              title="Test connection"
-              onPress={handleTestEndpoint}
-              disabled={testBlocker !== null}
-              loading={test?.kind === "testing"}
-              testID="test-connection-btn"
-            />
-            <FieldMessage>
-              {testBlocker ?? "Sends your latest recorded location to this endpoint with your credentials."}
-            </FieldMessage>
-          </View>
+            <View style={styles.block}>
+              <View>
+                <TextField
+                  label="Server endpoint"
+                  testID="endpoint-input"
+                  mono
+                  value={draft}
+                  onChangeText={handleDraftChange}
+                  onBlur={() => {
+                    commitDraft()
+                  }}
+                  placeholder={example}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                  error={validation.error}
+                />
+                {!validation.error && <FieldMessage>{helper}</FieldMessage>}
+                {validation.warnings.map((warning) => (
+                  <FieldMessage key={warning} variant="warning">
+                    {warning}
+                  </FieldMessage>
+                ))}
+              </View>
 
-          {test?.kind === "testing" && (
-            <StateLine
-              icon={<ActivityIndicator size="small" color={colors.textLight} />}
-              iconColor={colors.textLight}
-              label="Testing"
-              caption="Sending your latest location"
-              testID="test-result"
-            />
-          )}
-          {test?.kind === "done" && (
-            <View>
-              <StateLine
-                icon={test.ok ? CircleCheckBig : CircleAlert}
-                iconColor={test.ok ? colors.success : colors.error}
-                label={test.ok ? "Reachable" : "Not reachable"}
-                caption={`${test.status > 0 ? `HTTP ${test.status}` : "No response"} · ${formatTime(Math.floor(test.at / 1000))}`}
-                testID="test-result"
-              />
-              {!test.ok && test.message ? <FieldMessage variant="error">{test.message}</FieldMessage> : null}
+              <View>
+                <Button
+                  icon={Radio}
+                  title="Test connection"
+                  onPress={handleTestEndpoint}
+                  disabled={testBlocker !== null}
+                  loading={test?.kind === "testing"}
+                  testID="test-connection-btn"
+                />
+                <FieldMessage>
+                  {testBlocker ?? "Sends your latest recorded location to this endpoint with your credentials."}
+                </FieldMessage>
+              </View>
+
+              {test?.kind === "testing" && (
+                <StateLine
+                  icon={<ActivityIndicator size="small" color={colors.textLight} />}
+                  iconColor={colors.textLight}
+                  label="Testing"
+                  caption="Sending your latest location"
+                  testID="test-result"
+                />
+              )}
+              {test?.kind === "done" && (
+                <View>
+                  <StateLine
+                    icon={test.ok ? CircleCheckBig : CircleAlert}
+                    iconColor={test.ok ? colors.success : colors.error}
+                    label={test.ok ? "Reachable" : "Not reachable"}
+                    caption={`${test.status > 0 ? `HTTP ${test.status}` : "No response"} · ${formatTime(Math.floor(test.at / 1000))}`}
+                    testID="test-result"
+                  />
+                  {!test.ok && test.message ? <FieldMessage variant="error">{test.message}</FieldMessage> : null}
+                </View>
+              )}
             </View>
-          )}
-        </View>
+          </>
+        )}
       </Card>
 
-      <SectionTitle style={styles.groupTop}>Server details</SectionTitle>
-      <Card rows>
-        <ListItem
-          testID="nav-request-format"
-          icon={Braces}
-          label="Request format"
-          sub={requestSummary}
-          onPress={() => navigation.navigate("Request Format")}
-        />
-        <Divider tight inset />
-        <ListItem
-          testID="nav-auth-settings"
-          icon={KeyRound}
-          label="Authentication"
-          sub={authSummary}
-          onPress={() => navigation.navigate("Auth Settings")}
-        />
-        <Divider tight inset />
-        <ListItem
-          testID="nav-mtls-settings"
-          icon={ShieldCheck}
-          label="Client certificate"
-          sub={certificateSummary}
-          onPress={() => navigation.navigate("mTLS Settings")}
-        />
-      </Card>
+      {!settings.isOfflineMode && (
+        <>
+          <SectionTitle style={styles.groupTop}>Server details</SectionTitle>
+          <Card rows>
+            <ListItem
+              testID="nav-request-format"
+              icon={Braces}
+              label="Request format"
+              sub={requestSummary}
+              onPress={() => navigation.navigate("Request Format")}
+            />
+            <Divider tight inset />
+            <ListItem
+              testID="nav-auth-settings"
+              icon={KeyRound}
+              label="Authentication"
+              sub={authSummary}
+              onPress={() => navigation.navigate("Auth Settings")}
+            />
+            <Divider tight inset />
+            <ListItem
+              testID="nav-mtls-settings"
+              icon={ShieldCheck}
+              label="Client certificate"
+              sub={certificateSummary}
+              onPress={() => navigation.navigate("mTLS Settings")}
+            />
+          </Card>
+        </>
+      )}
     </View>
   )
 }
