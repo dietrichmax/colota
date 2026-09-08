@@ -4,6 +4,7 @@
  */
 
 import type { ThemeColors, Geofence } from "../../../types/global"
+import { size } from "../../../constants"
 
 /** MapLibre line-layer style for colored track segments (`color` is a per-feature property). */
 export const TRACK_LINE_STYLE: any = {
@@ -250,7 +251,8 @@ export function buildGeofencesGeoJSON(
         fillColor,
         fillOpacity: 0.3,
         strokeColor: fillColor,
-        pauseTracking: zone.pauseTracking
+        pauseTracking: zone.pauseTracking,
+        radius: zone.radius
       },
       geometry: createCirclePolygon([zone.lon, zone.lat], zone.radius)
     })
@@ -383,4 +385,38 @@ export function darkifyStyle(style: any): object {
   }
 
   return result
+}
+
+const METERS_PER_DEGREE = 111_320
+
+/** The box around every zone's circle, for fitBounds. */
+export function geofenceBounds(geofences: Geofence[]): [number, number, number, number] {
+  let west = Infinity
+  let south = Infinity
+  let east = -Infinity
+  let north = -Infinity
+  for (const zone of geofences) {
+    const dLat = zone.radius / METERS_PER_DEGREE
+    const dLon = zone.radius / (METERS_PER_DEGREE * Math.cos((zone.lat * Math.PI) / 180))
+    west = Math.min(west, zone.lon - dLon)
+    east = Math.max(east, zone.lon + dLon)
+    south = Math.min(south, zone.lat - dLat)
+    north = Math.max(north, zone.lat + dLat)
+  }
+  return [west, south, east, north]
+}
+
+/** A zone circle takes a 48 dp target like a point does. */
+export const ZONE_HITBOX = { top: size.touch / 2, right: size.touch / 2, bottom: size.touch / 2, left: size.touch / 2 }
+
+/** Where circles overlap, the smallest is the one the finger meant; it is the one the others hide. */
+export function pickSmallestZone(features: GeoJSON.Feature[]): number | null {
+  let best: { id: number; radius: number } | null = null
+  for (const f of features) {
+    const id = f.properties?.id
+    const radius = f.properties?.radius ?? Infinity
+    if (typeof id !== "number") continue
+    if (!best || radius < best.radius) best = { id, radius }
+  }
+  return best?.id ?? null
 }

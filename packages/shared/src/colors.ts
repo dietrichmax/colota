@@ -119,7 +119,7 @@ export const darkColors: ThemeColors = {
   // Border & divider
   border: "#767676",
   borderLight: "#333333",
-  divider: "#333333",
+  divider: "#505050",
 
   // Interactive
   placeholder: "#AAAAAA",

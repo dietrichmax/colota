@@ -17,7 +17,14 @@ import type { NativeSyntheticEvent } from "react-native"
 import { Compass, ExternalLink, Info } from "lucide-react-native"
 import { useIsFocused } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
-import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_DARK, MAP_STYLE_URL_LIGHT, size, space } from "../../../constants"
+import {
+  DEFAULT_MAP_ZOOM,
+  MAP_STYLE_URL_DARK,
+  MAP_STYLE_URL_LIGHT,
+  MAX_MAP_ZOOM,
+  size,
+  space
+} from "../../../constants"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
 import { DialogShell } from "../../ui/DialogShell"
@@ -239,6 +246,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
       >
         <Camera
           ref={cameraRef}
+          maxZoom={MAX_MAP_ZOOM}
           initialViewState={{
             center: initialCenter,
             zoom: initialZoom,

@@ -18,6 +18,7 @@ interface Props {
   accessibilityRole?: PressableProps["accessibilityRole"]
   accessibilityState?: PressableProps["accessibilityState"]
   anchored?: boolean
+  testID?: string
 }
 
 export function MapActionButton({
@@ -28,7 +29,8 @@ export function MapActionButton({
   accessibilityLabel,
   accessibilityRole,
   accessibilityState,
-  anchored = true
+  anchored = true,
+  testID
 }: Props) {
   const { colors } = useTheme()
 
@@ -43,6 +45,7 @@ export function MapActionButton({
         accessibilityLabel={accessibilityLabel}
         accessibilityRole={accessibilityRole}
         accessibilityState={accessibilityState}
+        testID={testID}
       >
         {children}
       </Pressable>

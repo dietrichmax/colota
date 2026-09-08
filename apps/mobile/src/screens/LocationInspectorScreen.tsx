@@ -15,7 +15,7 @@ import {
   Merge,
   RotateCcwClock,
   Route,
-  Share,
+  Upload,
   Table,
   Trash2,
   X,
@@ -484,7 +484,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     () => (
       <View style={styles.headerRow}>
         <HeaderAction
-          icon={Share}
+          icon={Upload}
           label="Export selected trips"
           color={colors.text}
           rippleColor={colors.text}
@@ -546,7 +546,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         )}
         {trips.length > 0 && (
           <HeaderAction
-            icon={Share}
+            icon={Upload}
             label="Export day"
             color={colors.text}
             rippleColor={colors.text}

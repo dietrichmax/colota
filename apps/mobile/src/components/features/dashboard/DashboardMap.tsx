@@ -20,12 +20,16 @@ import {
 } from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
-import { buildGeofencesGeoJSON } from "../map/mapUtils"
+import { buildGeofencesGeoJSON, geofenceBounds } from "../map/mapUtils"
 import { GeofenceLayers } from "../map/GeofenceLayers"
 import { CurrentTrackLayers } from "../map/CurrentTrackLayers"
 import { UserLocationOverlay } from "../map/UserLocationOverlay"
 import { useTodayTrack } from "../../../hooks/useTodayTrack"
 import { logger } from "../../../utils/logger"
+
+const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
+  return c !== null && c.latitude !== 0 && c.longitude !== 0
+}
 
 export type LastKnownLocation = {
   latitude: number
@@ -49,28 +53,6 @@ type Props = {
 }
 
 const WORLD_CENTER: [number, number] = [0, 20]
-const METERS_PER_DEGREE = 111_320
-
-const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
-  return c !== null && c.latitude !== 0 && c.longitude !== 0
-}
-
-function geofenceBounds(geofences: Geofence[]): [number, number, number, number] {
-  let west = Infinity
-  let south = Infinity
-  let east = -Infinity
-  let north = -Infinity
-  for (const zone of geofences) {
-    const dLat = zone.radius / METERS_PER_DEGREE
-    const dLon = zone.radius / (METERS_PER_DEGREE * Math.cos((zone.lat * Math.PI) / 180))
-    west = Math.min(west, zone.lon - dLon)
-    east = Math.max(east, zone.lon + dLon)
-    south = Math.min(south, zone.lat - dLat)
-    north = Math.max(north, zone.lat + dLat)
-  }
-  return [west, south, east, north]
-}
-
 export function DashboardMap({
   tracking,
   activeZoneName,
