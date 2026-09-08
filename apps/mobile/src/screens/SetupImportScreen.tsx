@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from "react"
-import { View, Text, ScrollView, StyleSheet } from "react-native"
+import { View, Text, ScrollView, StyleSheet, DeviceEventEmitter } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
 import {
@@ -107,6 +107,7 @@ export function SetupImportScreen({ route, navigation }: any) {
           }
           await NativeLocationService.createGeofence(g)
         }
+        DeviceEventEmitter.emit("geofenceUpdated")
       }
 
       if (result.config.profiles.length > 0) {

@@ -411,6 +411,18 @@ describe("SetupImportScreen", () => {
       expect(mockCreateGeofence.mock.calls[1][0].name).toBe("Office")
     })
 
+    it("tells the geofence screens to reload once the zones are written, as the editor does", async () => {
+      const { DeviceEventEmitter } = require("react-native")
+      const emit = jest.spyOn(DeviceEventEmitter, "emit")
+      const { getByText } = renderScreen(encode({ geofences: [validGeofence] }))
+
+      fireEvent.press(getByText("Apply configuration"))
+
+      await waitFor(() => expect(mockCreateGeofence).toHaveBeenCalledTimes(1))
+      expect(emit).toHaveBeenCalledWith("geofenceUpdated")
+      emit.mockRestore()
+    })
+
     it("does not call createGeofence when no geofences in config", async () => {
       const { getByText } = renderScreen(encode({ endpoint: "https://test.com" }))
 

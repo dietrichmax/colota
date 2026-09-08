@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react"
-import { AccessibilityInfo, View, StyleSheet, Pressable, BackHandler, useWindowDimensions } from "react-native"
+import { AccessibilityInfo, View, StyleSheet, BackHandler, useWindowDimensions } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useFocusEffect } from "@react-navigation/native"
 import {
@@ -18,8 +18,7 @@ import {
   Upload,
   Table,
   Trash2,
-  X,
-  type LucideIcon
+  X
 } from "lucide-react-native"
 import {
   Container,
@@ -29,7 +28,8 @@ import {
   EmptyState,
   InspectorDock,
   SpinningLoader,
-  TrackMap
+  TrackMap,
+  HeaderAction
 } from "../components"
 import type { DockContent } from "../components/features/inspector/InspectorDock"
 import { dayLongDate, dayTitle, type DayStats } from "../components/features/inspector/DayHeader"
@@ -61,7 +61,7 @@ import {
 } from "../utils/inspectorDay"
 import { showAlert, showChoice, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
-import { LOADING_INDICATOR_DELAY_MS, size, space, STATE_LAYER_ALPHA } from "../constants"
+import { LOADING_INDICATOR_DELAY_MS, size, space } from "../constants"
 
 type TabType = "map" | "trips" | "data"
 
@@ -70,38 +70,6 @@ const SCREEN_TITLE = "Location history"
 const NO_SELECTION = new Set<number>()
 
 type ExportRequest = { title: string; message: string; resolve: (format: ExportFormat | null) => void }
-
-function HeaderAction({
-  icon: Icon,
-  label,
-  hint,
-  color,
-  rippleColor,
-  onPress,
-  testID
-}: {
-  icon: LucideIcon
-  label: string
-  hint?: string
-  color: string
-  rippleColor: string
-  onPress: () => void
-  testID?: string
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={hint}
-      onPress={onPress}
-      android_ripple={{ color: rippleColor + STATE_LAYER_ALPHA, borderless: true, radius: size.touch / 2 }}
-      style={styles.headerAction}
-      testID={testID}
-    >
-      <Icon size={size.icon.lg} color={color} />
-    </Pressable>
-  )
-}
 
 export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Location History">) {
   const { colors } = useTheme()
@@ -467,17 +435,8 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   }, [selecting, exitSelection])
 
   const renderExitSelection = useCallback(
-    () => (
-      <HeaderAction
-        icon={X}
-        label="Exit selection"
-        color={colors.text}
-        rippleColor={colors.text}
-        onPress={exitSelection}
-        testID="exit-selection-btn"
-      />
-    ),
-    [colors, exitSelection]
+    () => <HeaderAction icon={X} label="Exit selection" onPress={exitSelection} testID="exit-selection-btn" />,
+    [exitSelection]
   )
 
   const renderSelectionActions = useCallback(
@@ -486,8 +445,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         <HeaderAction
           icon={Upload}
           label="Export selected trips"
-          color={colors.text}
-          rippleColor={colors.text}
           onPress={handleExportSelected}
           testID="export-selected-btn"
         />
@@ -497,7 +454,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
             label="Merge trips"
             hint={canMerge ? undefined : "Select two or more trips that follow each other"}
             color={canMerge ? colors.text : colors.textDisabled}
-            rippleColor={colors.text}
             onPress={handleMergeSelected}
             testID="merge-btn"
           />
@@ -506,18 +462,10 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
           icon={Trash2}
           label="Delete trips"
           color={colors.error}
-          rippleColor={colors.text}
           onPress={handleDeleteSelected}
           testID="delete-trips-btn"
         />
-        <HeaderAction
-          icon={EllipsisVertical}
-          label="More"
-          color={colors.text}
-          rippleColor={colors.text}
-          onPress={handleMoreSelection}
-          testID="more-btn"
-        />
+        <HeaderAction icon={EllipsisVertical} label="More" onPress={handleMoreSelection} testID="more-btn" />
       </View>
     ),
     [
@@ -534,37 +482,19 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   const renderDayActions = useCallback(
     () => (
       <View style={styles.headerRow}>
-        {!isToday && (
-          <HeaderAction
-            icon={CalendarCheck}
-            label="Go to today"
-            color={colors.text}
-            rippleColor={colors.text}
-            onPress={goToToday}
-            testID="today-btn"
-          />
-        )}
+        {!isToday && <HeaderAction icon={CalendarCheck} label="Go to today" onPress={goToToday} testID="today-btn" />}
         {trips.length > 0 && (
-          <HeaderAction
-            icon={Upload}
-            label="Export day"
-            color={colors.text}
-            rippleColor={colors.text}
-            onPress={handleExportDay}
-            testID="export-day-btn"
-          />
+          <HeaderAction icon={Upload} label="Export day" onPress={handleExportDay} testID="export-day-btn" />
         )}
         <HeaderAction
           icon={ChartNoAxesColumn}
           label="Location summary"
-          color={colors.text}
-          rippleColor={colors.text}
           onPress={() => navigation.navigate("Location Summary")}
           testID="summary-btn"
         />
       </View>
     ),
-    [colors, isToday, trips.length, goToToday, handleExportDay, navigation]
+    [isToday, trips.length, goToToday, handleExportDay, navigation]
   )
 
   useLayoutEffect(() => {
@@ -813,9 +743,6 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
 const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row"
-  },
-  headerAction: {
-    padding: space.md
   },
   tabBar: {
     flexDirection: "row"

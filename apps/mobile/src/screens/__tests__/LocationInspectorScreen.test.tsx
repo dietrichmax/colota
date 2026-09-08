@@ -67,6 +67,16 @@ jest.mock("../../components", () => {
   const { dayKey: key } = require("../../utils/inspectorDay")
   return {
     Container: ({ children }: any) => R.createElement(View, null, children),
+    HeaderAction: ({ label, hint, disabled, onPress, testID }: any) =>
+      R.createElement(Pressable, {
+        testID,
+        onPress,
+        disabled,
+        accessibilityRole: "button",
+        accessibilityLabel: label,
+        accessibilityHint: hint,
+        accessibilityState: { disabled: !!disabled }
+      }),
     Divider: () => R.createElement(View, { testID: "divider" }),
     SpinningLoader: () => R.createElement(View, { testID: "spinner" }),
     EmptyState: ({ title, hint, action }: any) =>
