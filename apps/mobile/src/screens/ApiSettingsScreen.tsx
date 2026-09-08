@@ -731,7 +731,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
       </ScrollView>
 
       {/* Floating Save Indicator */}
-      <FloatingSaveIndicator saving={saving} message={saveMessage} isError={saveIsError} colors={colors} />
+      <FloatingSaveIndicator saving={saving} message={saveMessage} isError={saveIsError} />
     </Container>
   )
 }
