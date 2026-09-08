@@ -16,6 +16,7 @@ type CardProps = {
   /** Lands on the surface inside the Pressable, so a margin here grows the ripple box past the
    *  card it paints. Spacing between cards belongs to the list. */
   style?: StyleProp<ViewStyle>
+  testID?: string
   danger?: boolean
   variant?: CardVariant
   /** A card that is nothing but rows: it gives up its vertical padding so the first and last
@@ -40,7 +41,8 @@ export function Card({
   accessibilityRole,
   accessibilityLabel,
   accessibilityHint,
-  accessibilityState
+  accessibilityState,
+  testID
 }: CardProps) {
   const { colors } = useTheme()
 
@@ -80,7 +82,11 @@ export function Card({
     }
   }
 
-  const cardView = <View style={[styles.card, rows && styles.rowsCard, getVariantStyles(), style]}>{children}</View>
+  const cardView = (
+    <View style={[styles.card, rows && styles.rowsCard, getVariantStyles(), style]} testID={testID}>
+      {children}
+    </View>
+  )
 
   if (variant === "interactive" && (onPress || onLongPress)) {
     return (

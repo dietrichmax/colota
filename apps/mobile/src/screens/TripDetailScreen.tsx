@@ -6,42 +6,32 @@
 import React, { useMemo, useState, useCallback, useLayoutEffect, useEffect, useRef } from "react"
 import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import {
-  Share,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  Route,
-  Clock,
-  Gauge,
-  MapPin,
-  TrendingUp,
-  TrendingDown
-} from "lucide-react-native"
+import { Share, Trash2, Route, Clock, Gauge, MapPin, TrendingUp, TrendingDown } from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
-import { fontSizes, fonts, type } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
 // Deep paths on purpose: the components barrel re-exports DashboardMap, which reaches
 // TrackingProvider and builds a NativeEventEmitter at module scope. This screen needs none of it.
-import { Button } from "../components/ui/Button"
 import { Card } from "../components/ui/Card"
 import { Container } from "../components/ui/Container"
 import { SectionTitle } from "../components/ui/SectionTitle"
 import { Divider } from "../components/ui/Divider"
 import { StatRow } from "../components/ui/StatRow"
+import { StepperHeader } from "../components/ui/StepperHeader"
 import { TrackMap } from "../components/features/inspector/TrackMap"
+import { TripSwatch } from "../components/features/inspector/TripRow"
+import { ExportFormatDialog } from "../components/features/inspector/ExportFormatDialog"
 import { InspectorDock } from "../components/features/inspector/InspectorDock"
 import { InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
 import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
-import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
-import { HIT_SLOP_LG, HIT_SLOP_MD, size, space, STATE_LAYER_ALPHA } from "../constants"
+import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
+import { HIT_SLOP_MD, size, space, STATE_LAYER_ALPHA } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
 import { BOUNDARY_ACTION_SPLIT } from "../types/global"
 import type { Trip, BoundaryAction } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
-import { radius } from "@colota/shared"
 
 const MAX_BARS = 120
 
@@ -60,7 +50,9 @@ function downsample(values: number[], maxBars: number): number[] {
   return result
 }
 
-const MAP_VIEWPORT_SHARE = 0.45
+const MAP_VIEWPORT_SHARE = 0.5
+// The point card may cover this much of the map; a band of tiles always stays above it.
+const DOCK_MAP_SHARE = 0.6
 
 export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip Detail">) {
   const { colors } = useTheme()
@@ -82,7 +74,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   const duration = trip.endTime - trip.startTime
   const displayName = `Trip ${trip.index}`
 
-  const [showExport, setShowExport] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [chartActiveIndex, setChartActiveIndex] = useState<number | null>(null)
   // Without these, a boundary the user merged reads as a plain gap and refuses to split
   const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, BoundaryAction>>(() => new Map())
@@ -124,7 +116,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   // Reset transient UI state when switching to a different trip.
   useEffect(() => {
     setChartActiveIndex(null)
-    setShowExport(false)
+    setExportOpen(false)
     setSelectedPointId(null)
   }, [trip.index])
 
@@ -147,7 +139,6 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   }, [])
 
   const splittingRef = useRef(false)
-  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null)
   const handlePointSplit = useCallback(
     async (id: number) => {
       if (splittingRef.current) return
@@ -209,7 +200,6 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
           EXPORT_FORMATS[format].mimeType,
           `Colota ${displayName} - ${dateStr}`
         )
-        setShowExport(false)
       } catch (error) {
         logger.error("[TripDetail] Export failed:", error)
         showAlert("Export Failed", "Unable to export. Please try again.", "error")
@@ -241,21 +231,34 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
   const headerRight = useCallback(
     () => (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Delete trip"
-        accessibilityState={{ disabled: deleting }}
-        onPress={handleDelete}
-        disabled={deleting}
-        hitSlop={HIT_SLOP_MD}
-        android_ripple={deleting ? undefined : { color: colors.error + STATE_LAYER_ALPHA, borderless: true }}
-        style={styles.headerBtn}
-      >
-        {/* Busy recedes to textDisabled the way every other disabled control does, rather than fading. */}
-        <Trash2 size={size.icon.md} color={deleting ? colors.textDisabled : colors.error} />
-      </Pressable>
+      <View style={styles.headerActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Export trip"
+          onPress={() => setExportOpen(true)}
+          hitSlop={HIT_SLOP_MD}
+          android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true }}
+          style={styles.headerBtn}
+          testID="export-trip-btn"
+        >
+          <Share size={size.icon.md} color={colors.text} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Delete trip"
+          accessibilityState={{ disabled: deleting }}
+          onPress={handleDelete}
+          disabled={deleting}
+          hitSlop={HIT_SLOP_MD}
+          android_ripple={deleting ? undefined : { color: colors.error + STATE_LAYER_ALPHA, borderless: true }}
+          style={styles.headerBtn}
+        >
+          {/* Busy recedes to textDisabled the way every other disabled control does, rather than fading. */}
+          <Trash2 size={size.icon.md} color={deleting ? colors.textDisabled : colors.error} />
+        </Pressable>
+      </View>
     ),
-    [handleDelete, deleting, colors.error, colors.textDisabled]
+    [handleDelete, deleting, colors.text, colors.error, colors.textDisabled]
   )
 
   useLayoutEffect(() => {
@@ -300,6 +303,18 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
   return (
     <Container>
+      <StepperHeader
+        title={displayName}
+        caption={`${formatDate(trip.startTime)} · ${formatTime(trip.startTime, true)} - ${formatTime(trip.endTime, true)}`}
+        leading={<TripSwatch index={trip.index} />}
+        onPrevious={() => goToTrip(prevTrip)}
+        onNext={() => goToTrip(nextTrip)}
+        previousLabel="Previous trip"
+        nextLabel="Next trip"
+        previousDisabled={!prevTrip}
+        nextDisabled={!nextTrip}
+        testID="trip"
+      />
       <View style={{ height: mapHeight }}>
         <TrackMap
           locations={trip.locations}
@@ -327,51 +342,12 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
             }}
             left={edgeStart}
             right={edgeEnd}
-            maxHeight={mapHeight / 2}
+            maxHeight={mapHeight * DOCK_MAP_SHARE}
             onLayout={(e) => setDockHeight(e.nativeEvent.layout.height)}
           />
         )}
       </View>
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
-        {/* Header */}
-        <View style={styles.section}>
-          <View style={styles.headerTitleRow}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Previous trip"
-              accessibilityState={{ disabled: !prevTrip }}
-              onPress={() => goToTrip(prevTrip)}
-              disabled={!prevTrip}
-              hitSlop={HIT_SLOP_LG}
-              android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
-              style={styles.navBtn}
-            >
-              <ChevronLeft size={size.icon.lg} color={prevTrip ? colors.primary : colors.textDisabled} />
-            </Pressable>
-            <View style={styles.headerTitleCenter}>
-              <View style={styles.headerTitleLine}>
-                <View style={[styles.dot, { backgroundColor: tripColor }]} />
-                <Text style={[styles.title, { color: colors.text }]}>{displayName}</Text>
-              </View>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                {formatDate(trip.startTime)} · {formatTime(trip.startTime, true)} - {formatTime(trip.endTime, true)}
-              </Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Next trip"
-              accessibilityState={{ disabled: !nextTrip }}
-              onPress={() => goToTrip(nextTrip)}
-              disabled={!nextTrip}
-              hitSlop={HIT_SLOP_LG}
-              android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
-              style={styles.navBtn}
-            >
-              <ChevronRight size={size.icon.lg} color={nextTrip ? colors.primary : colors.textDisabled} />
-            </Pressable>
-          </View>
-        </View>
-
+      <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.section}>
           <Card rows>
             <StatRow icon={Route} label="Distance" value={formatDistance(trip.distance)} />
@@ -458,42 +434,17 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
             </Card>
           </View>
         )}
-
-        {/* Export */}
-        <View style={styles.section}>
-          <Button
-            title="Export trip"
-            icon={Share}
-            expanded={showExport}
-            onPress={() => {
-              const opening = !showExport
-              setShowExport(opening)
-              // The button ends the scroll, so the formats would open below the fold.
-              if (opening) requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }))
-            }}
-          />
-
-          {showExport && (
-            <View style={styles.exportRow}>
-              {EXPORT_FORMAT_KEYS.map((fmt) => (
-                <Pressable
-                  key={fmt}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Export as ${fmt.toUpperCase()}`}
-                  onPress={() => handleExport(fmt)}
-                  hitSlop={HIT_SLOP_MD}
-                  android_ripple={{ color: colors.onPrimaryContainer + STATE_LAYER_ALPHA }}
-                  style={[styles.exportChip, { backgroundColor: colors.primaryContainer }]}
-                >
-                  <Text style={[styles.exportChipText, { color: colors.onPrimaryContainer }]}>
-                    {EXPORT_FORMATS[fmt].label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
       </ScrollView>
+      <ExportFormatDialog
+        visible={exportOpen}
+        title={`Export ${displayName}`}
+        message={`${formatDate(trip.startTime)} · ${formatDistance(trip.distance)} · ${formatDuration(duration)}`}
+        onSelect={(format) => {
+          setExportOpen(false)
+          handleExport(format)
+        }}
+        onRequestClose={() => setExportOpen(false)}
+      />
     </Container>
   )
 }
@@ -507,37 +458,6 @@ const styles = StyleSheet.create({
     marginTop: space.md
   },
 
-  headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  headerTitleCenter: {
-    flex: 1,
-    alignItems: "center",
-    gap: space.xs
-  },
-  headerTitleLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.sm
-  },
-  navBtn: {
-    padding: space.xs
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: radius.pill
-  },
-  title: {
-    ...type.title
-  },
-  subtitle: {
-    fontSize: fontSizes.description,
-    ...fonts.regular,
-    textAlign: "center"
-  },
   chartCard: {
     padding: space.md
   },
@@ -561,22 +481,8 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.micro,
     ...fonts.regular
   },
-  exportRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: space.sm,
-    marginTop: space.md
-  },
-  exportChip: {
-    minHeight: size.chip,
-    justifyContent: "center",
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderRadius: radius.sm
-  },
-  exportChipText: {
-    fontSize: fontSizes.caption,
-    ...fonts.medium
+  headerActions: {
+    flexDirection: "row"
   },
   headerBtn: {
     padding: space.sm

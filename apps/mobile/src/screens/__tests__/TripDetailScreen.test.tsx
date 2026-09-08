@@ -59,6 +59,15 @@ jest.mock("../../components/features/inspector/InteractiveLineChart", () => {
   return { InteractiveLineChart: (_props: any) => R.createElement(View, { testID: "Chart" }) }
 })
 
+jest.mock("../../components/features/inspector/ExportFormatDialog", () => {
+  const R = require("react")
+  const { View } = require("react-native")
+  return {
+    ExportFormatDialog: (props: any) =>
+      props.visible ? R.createElement(View, { testID: "ExportFormatDialog", ...props }) : null
+  }
+})
+
 jest.mock("../../components/ui/Container", () => {
   const R = require("react")
   const { View } = require("react-native")
@@ -321,5 +330,51 @@ describe("TripDetailScreen - figures card", () => {
     const seams = getAllByTestId("divider")
     expect(seams).toHaveLength(3)
     for (const seam of seams) expect(seam.props).toMatchObject({ tight: true, inset: true })
+  })
+})
+
+describe("TripDetailScreen - header and stepper", () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  const headerRight = (props: any) => render(props.navigation.setOptions.mock.calls.at(-1)[0].headerRight())
+
+  it("names the trip with its swatch over its date and times, between chevrons that step the day's trips", async () => {
+    const first = makeTrip(3)
+    const second = { ...makeTrip(3), index: 2 }
+    const props = { ...makeProps(first), route: { params: { trip: first, trips: [first, second] } } }
+    const { getByTestId, getByLabelText } = render(<TripDetailScreen {...props} />)
+    await act(async () => {})
+
+    expect(getByTestId("trip-title").props.accessibilityLabel).toMatch(/^Trip 1, /)
+    expect(getByLabelText("Previous trip").props.accessibilityState).toEqual({ disabled: true })
+    fireEvent.press(getByLabelText("Next trip"))
+    expect(props.navigation.setParams).toHaveBeenCalledWith({ trip: second })
+  })
+
+  it("exports from the app bar through the format dialog, with no button at the foot of the page", async () => {
+    const props = makeProps(makeTrip(3))
+    const { getByTestId, queryByTestId, queryByText } = render(<TripDetailScreen {...props} />)
+    await act(async () => {})
+    expect(queryByText("Export trip")).toBeNull()
+    expect(queryByTestId("ExportFormatDialog")).toBeNull()
+
+    fireEvent.press(headerRight(props).getByLabelText("Export trip"))
+    const dialog = getByTestId("ExportFormatDialog")
+    expect(dialog.props.title).toBe("Export Trip 1")
+    await act(async () => dialog.props.onSelect("gpx"))
+
+    await waitFor(() => expect(NativeLocationService.exportTripsToFile).toHaveBeenCalled())
+    expect((NativeLocationService.exportTripsToFile as jest.Mock).mock.calls[0][1]).toBe("gpx")
+    expect(queryByTestId("ExportFormatDialog")).toBeNull()
+  })
+
+  it("keeps Delete in the app bar beside Export", async () => {
+    const props = makeProps(makeTrip(3))
+    render(<TripDetailScreen {...props} />)
+    await act(async () => {})
+
+    const bar = headerRight(props)
+    expect(bar.getByLabelText("Export trip")).toBeTruthy()
+    expect(bar.getByLabelText("Delete trip")).toBeTruthy()
   })
 })
