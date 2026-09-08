@@ -34,7 +34,7 @@ Colota has twenty-eight screens, each focused on a specific task:
 | Screen | Purpose |
 | --- | --- |
 | **Dashboard** | Live map with current coordinates, today's track overlay, tracking controls, database stats, and geofence status |
-| **Settings** | Hub linking to Connection, Tracking and Sync, Request format, Tracking profiles, Appearance and data/about screens |
+| **Settings** | The hub: Tracking, Display, Data, Help and About, each row showing the value it holds |
 | **Connection** | Server endpoint URL, offline mode toggle and connection test |
 | **Tracking & sync** | GPS polling interval, distance filter, accuracy threshold and sync strategy preset |
 | **Appearance** | Light/dark theme, wallpaper colors, unit system, time format and custom map tile URLs |

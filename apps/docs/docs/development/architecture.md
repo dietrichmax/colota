@@ -298,7 +298,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | Screen | Purpose |
 | --- | --- |
 | `DashboardScreen` | Full-bleed map with no header. One banner slot under the status inset for a missing permission, location services off or a critical battery, and a docked card over the bottom edge: the tracking state line, the interval row (fix cadence and sync cadence, from the active profile or from settings; a zero sync interval reads as instant) and the server row. The Start/Stop pill and the Route toggle float above the dock. Nothing polls: it reads on focus and takes the rest from events |
-| `SettingsScreen` | Hub navigating to Connection, Tracking & sync, Request format, Tracking profiles, Appearance and the data, Colota and about screens. Each row's sub line carries live state rather than a description |
+| `SettingsScreen` | The hub, a tab of five grouped lists: Tracking (Connection, Tracking & sync, Tracking profiles), Display, Data, Help and About. Two rows carry live state through the derivation their target screen opens with (`serverState.describeServer`, `profileRow.profileStateLabel`); every other sub is a stored value, an on-disk fact or the nouns inside the screen, computed by `utils/settingsRow` |
 | `ConnectionScreen` | The server hub: a sync state line from `utils/serverState`, offline mode, the endpoint (saved on blur), Test connection, and rows to Request format, Authentication and Client certificate |
 | `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
 | `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |

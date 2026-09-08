@@ -1,4 +1,11 @@
-import { conditionText, describeProfileState, profileRowSub, profileSentence, recordingClause } from "../profileRow"
+import {
+  conditionText,
+  describeProfileState,
+  profileRowSub,
+  profileSentence,
+  profileStateLabel,
+  recordingClause
+} from "../profileRow"
 import { loadDisplayPreferences } from "../geo"
 import type { SavedTrackingProfile } from "../../types/global"
 
@@ -128,5 +135,12 @@ describe("describeProfileState", () => {
     expect(describeProfileState(resting, settings, true).caption).toBe(
       "In force: every 1 min while still · syncs every 5 min"
     )
+  })
+
+  it("takes its label from profileStateLabel, so the Settings row cannot drift from this line", () => {
+    expect(describeProfileState(driving, settings, true).label).toBe(profileStateLabel(driving.name, true))
+    expect(describeProfileState(null, settings, true).label).toBe(profileStateLabel(null, true))
+    expect(describeProfileState(driving, settings, false).label).toBe(profileStateLabel(driving.name, false))
+    expect(profileStateLabel("Driving", false)).toBe("No profile active")
   })
 })

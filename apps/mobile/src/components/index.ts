@@ -74,7 +74,6 @@ export { PointCard } from "./features/inspector/PointCard"
 // ============================================================================
 // Feature Components - Settings
 // ============================================================================
-export { QueueWarning } from "./features/settings/QueueWarning"
 export { ConnectionSettings } from "./features/settings/ConnectionSettings"
 export { SyncStrategySettings } from "./features/settings/SyncStrategySettings"
 export { StatRow } from "./ui/StatRow"

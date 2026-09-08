@@ -16,6 +16,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import icon from "../assets/icons/icon.png"
 import { space } from "../constants"
 import { logger } from "../utils/logger"
+import { getVariantLabel } from "../utils/settingsRow"
 
 // Helper function to map SDK to Android version
 function getAndroidVersion(sdkVersion: number): string {
@@ -36,17 +37,6 @@ function getAndroidVersion(sdkVersion: number): string {
     37: "17"
   }
   return versions[sdkVersion] || "Unknown"
-}
-
-function getVariantLabel(flavor: string): string {
-  switch (flavor) {
-    case "foss":
-      return "FOSS"
-    case "gms":
-      return "Google Play"
-    default:
-      return flavor || "Unknown"
-  }
 }
 
 function InfoCard({ rows }: { rows: { label: string; value: string }[] }) {

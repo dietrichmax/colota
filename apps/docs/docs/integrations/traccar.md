@@ -17,7 +17,7 @@ sidebar_position: 6
 
 ## Setup in Colota
 
-1. Go to **Settings > Request format**
+1. Go to **Settings > Connection > Request format**
 2. Select the **Traccar** template
 3. Choose your HTTP method:
    - **GET** - OsmAnd protocol, compatible with all Traccar versions

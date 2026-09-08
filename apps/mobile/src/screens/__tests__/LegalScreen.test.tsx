@@ -14,7 +14,15 @@ jest.mock("../../components", () => {
     Card: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => null,
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    ListItem: require("../../testing/componentStubs").ListItemStub
+    // Not the shared stub: this screen's rows must carry the link role that ListItem turns into
+    // "Opens {label} in the browser", so the role has to reach the assertion.
+    ListItem: ({ label, sub, onPress, testID, accessibilityRole }: any) =>
+      R.createElement(
+        require("react-native").Pressable,
+        { testID, onPress, accessibilityRole },
+        R.createElement(Text, null, label),
+        sub ? R.createElement(Text, null, sub) : null
+      )
   }
 })
 
@@ -49,5 +57,12 @@ describe("LegalScreen", () => {
     await waitFor(() => {
       expect(Linking.openURL).toHaveBeenCalledWith("https://www.openstreetmap.org/copyright")
     })
+  })
+
+  it("marks every row a link, which is what ListItem turns into an in-the-browser hint", async () => {
+    const { findAllByRole, queryAllByRole } = render(<LegalScreen navigation={{} as any} />)
+
+    expect(await findAllByRole("link")).toHaveLength(5)
+    expect(queryAllByRole("button")).toHaveLength(0)
   })
 })

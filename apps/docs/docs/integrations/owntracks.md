@@ -10,7 +10,7 @@ sidebar_position: 3
 
 1. **Install OwnTracks Recorder** - follow the [OwnTracks documentation](https://owntracks.org/booklet/)
 2. **Configure Colota**:
-   - Go to **Settings > Request format**
+   - Go to **Settings > Connection > Request format**
    - Select the **OwnTracks** template
    - Set your endpoint URL, e.g. `https://owntracks.yourdomain.com/pub`
    - If your Recorder uses HTTP Basic Auth, configure it in **Settings > Connection > Authentication**

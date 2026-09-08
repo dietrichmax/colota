@@ -8,7 +8,7 @@ Colota is a drop-in Android client for the [Overland](https://github.com/aaronpk
 
 ## Setup
 
-1. **Pick the Overland template** in **Settings > Request format**
+1. **Pick the Overland template** in **Settings > Connection > Request format**
 2. **Set your endpoint** to your Overland-compatible server's batch URL, e.g.:
    ```
    https://overland.yourdomain.com/
@@ -57,7 +57,7 @@ Each upload is a single POST containing one or more locations as GeoJSON Feature
 
 ## Device Identifier
 
-Your server sees this device as the value of the `device_id` custom field, defaulting to `"colota"`. Edit it under **Settings > API Settings > Custom fields** if you run multiple devices. If you previously set `tid` (OwnTracks) or `id` (Traccar) as a custom field, that value is reused so you don't have to reconfigure.
+Your server sees this device as the value of the `device_id` custom field, defaulting to `"colota"`. Edit it under **Settings > Connection > Request format > Custom fields** if you run multiple devices. If you previously set `tid` (OwnTracks) or `id` (Traccar) as a custom field, that value is reused so you don't have to reconfigure.
 
 ## Dawarich Users
 

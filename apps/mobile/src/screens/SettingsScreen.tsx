@@ -6,102 +6,152 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
 import { StyleSheet, View, ScrollView, Linking, DeviceEventEmitter } from "react-native"
-import { API_TEMPLATES } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import { useTheme } from "../hooks/useTheme"
-import { SectionTitle, Card, Container, Divider, QueueWarning, ListItem } from "../components"
+import { showAlert } from "../services/modalService"
+import { SectionTitle, Card, Container, Divider, ListItem } from "../components"
 import {
-  ExternalLink,
+  Archive,
+  Clock,
   Cloud,
-  Navigation,
-  Braces,
-  UserRoundPen,
-  Palette,
   Database,
   Download,
-  Upload,
-  Map,
-  ScrollText,
-  ShieldCheck,
-  Info,
+  ExternalLink,
   Heart,
-  Clock,
-  Share2,
-  Sparkles,
+  Info,
+  Map,
   MessageCircle,
-  Star
+  Navigation,
+  Palette,
+  Scale,
+  ScrollText,
+  Sparkles,
+  Share2,
+  Star,
+  Upload,
+  UserRoundPen
 } from "lucide-react-native"
 import { getTimeFormat, getUnitSystem } from "../utils/geo"
+import { t } from "../i18n"
 import { trackingSummary } from "../utils/dashboardState"
 import { describeServer } from "../utils/serverState"
-import { formatCount } from "../utils/format"
+import { profileStateLabel } from "../utils/profileRow"
+import {
+  autoExportRowSub,
+  dataRowSub,
+  exportFormatsSub,
+  getVariantLabel,
+  importFormatsSub,
+  loggingRowSub,
+  offlineMapsRowSub
+} from "../utils/settingsRow"
 import { ProfileService } from "../services/ProfileService"
+import { loadOfflineAreas, type OfflineAreaInfo } from "../components/features/map/OfflinePackManager"
 import { logger } from "../utils/logger"
-import { space, RELEASES_URL, ISSUES_URL, PLAY_STORE_MARKET_URL, PLAY_STORE_WEB_URL } from "../constants"
+import { space, RELEASES_URL, ISSUES_URL, SUPPORT_URL, PLAY_STORE_MARKET_URL, PLAY_STORE_WEB_URL } from "../constants"
 
 type Props = RootScreenProps<"Settings">
 
-export function SettingsScreen({ navigation }: Props) {
-  const { settings, activeProfileName } = useTracking()
-  const { preference } = useTheme()
+type AutoExportStatus = Awaited<ReturnType<typeof NativeLocationService.getAutoExportStatus>>
 
-  const [queueCount, setQueueCount] = useState(0)
+export function SettingsScreen({ navigation }: Props) {
+  const { settings, activeProfileName, tracking } = useTracking()
+  const { colors, preference } = useTheme()
+
   const [totalCount, setTotalCount] = useState(0)
   const [databaseSizeMB, setDatabaseSizeMB] = useState(0)
+  const [queueCount, setQueueCount] = useState(0)
   const [todayCount, setTodayCount] = useState(0)
   const [lastSyncTime, setLastSyncTime] = useState(0)
   const [lastSyncError, setLastSyncError] = useState("")
+  const [deviceOnline, setDeviceOnline] = useState(true)
   const [profileCount, setProfileCount] = useState(0)
+  const [autoExport, setAutoExport] = useState<AutoExportStatus | null>(null)
+  const [fileLogging, setFileLogging] = useState({ enabled: false, bytes: 0 })
+  const [offlineAreas, setOfflineAreas] = useState<OfflineAreaInfo[]>([])
+  const [, setFocusTick] = useState(0)
 
-  const updateStats = useCallback(async () => {
-    try {
-      const stats = await NativeLocationService.getStats()
-      setQueueCount(stats.queued)
-      setTotalCount(stats.total)
-      setDatabaseSizeMB(stats.databaseSizeMB)
-      setTodayCount(stats.today)
-      setLastSyncTime(stats.lastSyncTime ?? 0)
-      setLastSyncError(stats.lastSyncError ?? "")
-    } catch (err) {
-      logger.error("[SettingsScreen] Failed to get stats:", err)
+  /** The two cheap reads behind the Connection sub; every sync event re-runs these alone. */
+  const readSyncState = useCallback(async () => {
+    const [stats, online] = await Promise.allSettled([
+      NativeLocationService.getStats(),
+      NativeLocationService.isNetworkAvailable()
+    ])
+    if (stats.status === "fulfilled") {
+      setTotalCount(stats.value.total)
+      setDatabaseSizeMB(stats.value.databaseSizeMB)
+      setQueueCount(stats.value.queued)
+      setTodayCount(stats.value.today)
+      setLastSyncTime(stats.value.lastSyncTime ?? 0)
+      setLastSyncError(stats.value.lastSyncError ?? "")
+    } else {
+      logger.error("[SettingsScreen] Failed to get stats:", stats.reason)
     }
+    if (online.status === "fulfilled") setDeviceOnline(online.value)
+  }, [])
+
+  const readAutoExport = useCallback(async () => {
     try {
-      setProfileCount((await ProfileService.getProfiles()).length)
+      setAutoExport(await NativeLocationService.getAutoExportStatus())
     } catch (err) {
-      logger.error("[SettingsScreen] Failed to count profiles:", err)
+      logger.error("[SettingsScreen] Failed to read the auto-export status:", err)
     }
   }, [])
 
+  /** Every sub keeps its last value when its own read rejects, so one slow pack walk never blanks the card. */
+  const readAll = useCallback(async () => {
+    // One batch: the MapLibre pack walk must not wait behind the two sync reads on every focus.
+    const [, profiles, exportStatus, logEnabled, logBytes, areas] = await Promise.allSettled([
+      readSyncState(),
+      ProfileService.getProfiles(),
+      NativeLocationService.getAutoExportStatus(),
+      NativeLocationService.getSetting("debugFileLoggingEnabled", "false"),
+      NativeLocationService.getFileLogSize(),
+      loadOfflineAreas()
+    ])
+    if (profiles.status === "fulfilled") setProfileCount(profiles.value.length)
+    if (exportStatus.status === "fulfilled") setAutoExport(exportStatus.value)
+    setFileLogging((prev) => ({
+      enabled: logEnabled.status === "fulfilled" ? logEnabled.value === "true" : prev.enabled,
+      bytes: logBytes.status === "fulfilled" ? logBytes.value : prev.bytes
+    }))
+    if (areas.status === "fulfilled") setOfflineAreas(areas.value)
+    // A focus read may change nothing the state above holds, and the Appearance sub reads a module
+    // cache rather than state, so it needs a render to pick a change up.
+    setFocusTick((tick) => tick + 1)
+  }, [readSyncState])
+
   useFocusEffect(
     useCallback(() => {
-      updateStats()
+      readAll()
       const subs = [
-        DeviceEventEmitter.addListener("onLocationUpdate", updateStats),
-        DeviceEventEmitter.addListener("onSyncProgress", updateStats),
-        DeviceEventEmitter.addListener("onSyncError", updateStats)
+        DeviceEventEmitter.addListener("onLocationUpdate", readSyncState),
+        DeviceEventEmitter.addListener("onSyncProgress", readSyncState),
+        DeviceEventEmitter.addListener("onSyncError", readSyncState),
+        DeviceEventEmitter.addListener("onAutoExportComplete", readAutoExport)
       ]
       return () => subs.forEach((s) => s.remove())
-    }, [updateStats])
+    }, [readAll, readSyncState, readAutoExport])
   )
 
   useEffect(() => {
-    updateStats()
-  }, [settings.isOfflineMode, settings.endpoint, updateStats])
+    readSyncState()
+  }, [settings.isOfflineMode, settings.endpoint, readSyncState])
 
-  const connectionSummary = useMemo(
+  const server = useMemo(
     () =>
       describeServer({
         offline: settings.isOfflineMode,
         endpoint: settings.endpoint,
-        deviceOnline: true,
+        deviceOnline,
         queued: queueCount,
         today: todayCount,
         lastSyncTime,
         lastSyncError
-      }).rowSub,
-    [settings.isOfflineMode, settings.endpoint, queueCount, todayCount, lastSyncTime, lastSyncError]
+      }),
+    [settings.isOfflineMode, settings.endpoint, deviceOnline, queueCount, todayCount, lastSyncTime, lastSyncError]
   )
 
   const syncSummary = useMemo(
@@ -110,66 +160,42 @@ export function SettingsScreen({ navigation }: Props) {
   )
 
   // Both getters read a module cache the Appearance screen refreshes on save, so this costs no
-  // bridge call; the screen re-reads on focus, which is when a change can have happened.
-  const appearanceSummary = useMemo(() => {
-    const theme = preference.charAt(0).toUpperCase() + preference.slice(1)
-    const units = getUnitSystem() === "imperial" ? "Imperial" : "Metric"
-    return `${theme} · ${units} · ${getTimeFormat()}`
-  }, [preference])
+  // bridge call and is not worth a memo: memoising on `preference` alone would keep the units and
+  // the time format from the render before the change for the rest of the session.
+  const appearanceSummary = `${t(`appearance.theme.${preference}`)} · ${t(`appearance.units.${getUnitSystem()}`)} · ${getTimeFormat()}`
 
-  // Nothing recorded yet is not state worth reporting, and it is the first thing a new install
-  // shows under this heading.
-  const dataSummary = useMemo(() => {
-    if (totalCount === 0) return "View queue and clear data"
-    return `${formatCount(totalCount)} recorded · ${databaseSizeMB.toFixed(1)} MB`
-  }, [totalCount, databaseSizeMB])
+  const profileSummary = profileCount === 0 ? "No profiles yet" : profileStateLabel(activeProfileName, tracking)
+  const inForce = profileCount > 0 && tracking && !!activeProfileName
+  const serverTint = server.tone === "error" ? colors.error : server.tone === "warning" ? colors.warning : undefined
 
-  // Which profile is overriding the tracking settings, not how many exist: a count is inventory
-  // and tells a user with profiles nothing they do not know.
-  const profileSummary = useMemo(() => {
-    if (profileCount === 0) return "Switch GPS settings by condition"
-    return activeProfileName ? `${activeProfileName} active` : "No profile active"
-  }, [profileCount, activeProfileName])
-
-  const apiSummary = useMemo(() => {
-    const template = settings.apiTemplate
-    if (template === "custom") {
-      const fieldCount = Object.values(settings.fieldMap).filter(Boolean).length + settings.customFields.length
-      return `Custom (${fieldCount} field${fieldCount === 1 ? "" : "s"})`
-    }
-    return API_TEMPLATES[template]?.label ?? "Custom"
-  }, [settings.apiTemplate, settings.fieldMap, settings.customFields])
-
-  const handleNavigateDataManagement = useCallback(() => {
-    navigation.navigate("Data Management")
-  }, [navigation])
-
-  const handleRateApp = useCallback(async () => {
-    // The Play app resolves market:// straight to the listing; a device without it falls back.
+  const openLink = useCallback(async (url: string, fallback?: string) => {
     try {
-      await Linking.openURL(PLAY_STORE_MARKET_URL)
-    } catch {
-      Linking.openURL(PLAY_STORE_WEB_URL)
+      await Linking.openURL(url)
+    } catch (err) {
+      if (fallback) {
+        openLink(fallback)
+        return
+      }
+      logger.error("[SettingsScreen] Failed to open a link:", err)
+      showAlert("Error", "Could not open the link.", "error")
     }
   }, [])
 
+  const isPlayBuild = NativeLocationService.getBuildConfig()?.FLAVOR === "gms"
+
   return (
     <Container>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <QueueWarning queueCount={queueCount} onPress={handleNavigateDataManagement} />
-
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <SectionTitle>Tracking</SectionTitle>
           <Card rows>
             <ListItem
               testID="nav-connection"
               icon={Cloud}
+              iconColor={serverTint}
               label="Connection"
-              sub={connectionSummary}
+              sub={server.rowSub}
+              subLines={2}
               onPress={() => navigation.navigate("Connection")}
             />
             <Divider tight inset />
@@ -180,22 +206,11 @@ export function SettingsScreen({ navigation }: Props) {
               sub={syncSummary}
               onPress={() => navigation.navigate("Tracking & Sync")}
             />
-            {!settings.isOfflineMode && (
-              <>
-                <Divider tight inset />
-                <ListItem
-                  testID="nav-api-config"
-                  icon={Braces}
-                  label="Request format"
-                  sub={apiSummary}
-                  onPress={() => navigation.navigate("Request Format")}
-                />
-              </>
-            )}
             <Divider tight inset />
             <ListItem
               testID="nav-tracking-profiles"
               icon={UserRoundPen}
+              iconColor={inForce ? colors.success : undefined}
               label="Tracking profiles"
               sub={profileSummary}
               onPress={() => navigation.navigate("Tracking Profiles")}
@@ -213,6 +228,14 @@ export function SettingsScreen({ navigation }: Props) {
               sub={appearanceSummary}
               onPress={() => navigation.navigate("Appearance")}
             />
+            <Divider tight inset />
+            <ListItem
+              testID="nav-offline-maps"
+              icon={Map}
+              label="Offline maps"
+              sub={offlineMapsRowSub(offlineAreas)}
+              onPress={() => navigation.navigate("Offline Maps")}
+            />
           </Card>
         </View>
 
@@ -223,7 +246,7 @@ export function SettingsScreen({ navigation }: Props) {
               testID="nav-data-management"
               icon={Database}
               label="Data management"
-              sub={dataSummary}
+              sub={dataRowSub(totalCount, databaseSizeMB)}
               onPress={() => navigation.navigate("Data Management")}
             />
             <Divider tight inset />
@@ -231,7 +254,7 @@ export function SettingsScreen({ navigation }: Props) {
               testID="nav-import-locations"
               icon={Download}
               label="Import locations"
-              sub="Merge locations from a GeoJSON or Google Timeline file"
+              sub={importFormatsSub()}
               onPress={() => navigation.navigate("Import Locations")}
             />
             <Divider tight inset />
@@ -239,23 +262,23 @@ export function SettingsScreen({ navigation }: Props) {
               testID="nav-export-locations"
               icon={Upload}
               label="Export locations"
-              sub="Export locations as CSV, GeoJSON, GPX or KML"
+              sub={exportFormatsSub()}
               onPress={() => navigation.navigate("Export Locations")}
             />
             <Divider tight inset />
             <ListItem
               testID="nav-auto-export"
               icon={Clock}
-              label="Auto-Export"
-              sub="Schedule daily, weekly or monthly exports"
+              label="Auto-export"
+              sub={autoExportRowSub(autoExport)}
               onPress={() => navigation.navigate("Auto-Export")}
             />
             <Divider tight inset />
             <ListItem
               testID="nav-backup-restore"
-              icon={ShieldCheck}
+              icon={Archive}
               label="Backup & restore"
-              sub="Encrypted backup of all your data"
+              sub="Locations, settings and credentials"
               onPress={() => navigation.navigate("Backup & Restore")}
             />
             <Divider tight inset />
@@ -263,66 +286,78 @@ export function SettingsScreen({ navigation }: Props) {
               testID="nav-share-setup"
               icon={Share2}
               label="Share setup"
-              sub="Share your settings, geofences and profiles as a link"
+              sub="Settings, geofences and profiles as a link"
               onPress={() => navigation.navigate("Share Setup")}
-            />
-            <Divider tight inset />
-            <ListItem
-              testID="nav-offline-maps"
-              icon={Map}
-              label="Offline maps"
-              sub="Download map tiles for use without internet"
-              onPress={() => navigation.navigate("Offline Maps")}
-            />
-            <Divider tight inset />
-            <ListItem
-              testID="nav-logging"
-              icon={ScrollText}
-              label="Logging"
-              sub="View activity log and configure file logging"
-              onPress={() => navigation.navigate("Logging")}
             />
           </Card>
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Colota</SectionTitle>
+          <SectionTitle>Help</SectionTitle>
           <Card rows>
             <ListItem
-              testID="nav-whats-new"
-              icon={Sparkles}
-              label="What's new"
-              sub="Release notes for every version"
-              trailingIcon={ExternalLink}
-              accessibilityRole="link"
-              onPress={() => Linking.openURL(RELEASES_URL)}
+              testID="nav-logging"
+              icon={ScrollText}
+              label="Logging"
+              sub={loggingRowSub(fileLogging.enabled, fileLogging.bytes)}
+              onPress={() => navigation.navigate("Logging")}
             />
             <Divider tight inset />
             <ListItem
               testID="nav-feedback"
               icon={MessageCircle}
               label="Feedback & help"
-              sub="Report a bug or ask a question"
+              sub="github.com/dietrichmax/colota/issues"
               trailingIcon={ExternalLink}
               accessibilityRole="link"
-              onPress={() => Linking.openURL(ISSUES_URL)}
+              onPress={() => openLink(ISSUES_URL)}
             />
             <Divider tight inset />
             <ListItem
-              testID="nav-rate"
-              icon={Star}
-              label="Rate the app"
-              sub="Leave a review on Google Play"
+              testID="nav-whats-new"
+              icon={Sparkles}
+              label="What's new"
+              sub="colota.app/releases"
               trailingIcon={ExternalLink}
               accessibilityRole="link"
-              onPress={handleRateApp}
+              onPress={() => openLink(RELEASES_URL)}
+            />
+          </Card>
+        </View>
+
+        <View style={styles.section}>
+          <SectionTitle>About</SectionTitle>
+          <Card rows>
+            {isPlayBuild && (
+              <>
+                <ListItem
+                  testID="nav-rate"
+                  icon={Star}
+                  label="Rate the app"
+                  sub="Google Play"
+                  trailingIcon={ExternalLink}
+                  accessibilityRole="link"
+                  accessibilityHint="Opens Colota in Google Play"
+                  onPress={() => openLink(PLAY_STORE_MARKET_URL, PLAY_STORE_WEB_URL)}
+                />
+                <Divider tight inset />
+              </>
+            )}
+            <ListItem
+              testID="nav-support"
+              icon={Heart}
+              label="Say thanks"
+              sub="mxd.codes/support"
+              trailingIcon={ExternalLink}
+              accessibilityRole="link"
+              onPress={() => openLink(SUPPORT_URL)}
             />
             <Divider tight inset />
             <ListItem
               testID="nav-legal"
-              icon={ScrollText}
+              icon={Scale}
               label="Legal"
-              sub="Privacy policy, license and attribution"
+              sub="Privacy policy, license, map data"
               onPress={() => navigation.navigate("Legal")}
             />
             <Divider tight inset />
@@ -330,19 +365,10 @@ export function SettingsScreen({ navigation }: Props) {
               testID="nav-about"
               icon={Info}
               label="About"
-              sub="Version and build details"
+              sub={`Version ${NativeLocationService.getBuildConfig()?.VERSION_NAME ?? ""} · ${getVariantLabel(
+                NativeLocationService.getBuildConfig()?.FLAVOR ?? ""
+              )}`}
               onPress={() => navigation.navigate("About Colota")}
-            />
-            <Divider tight inset />
-            <ListItem
-              testID="nav-support"
-              icon={Heart}
-              label="Say thanks"
-              sub="Free, one click, or a donation"
-              trailingIcon={ExternalLink}
-              accessibilityRole="link"
-              accessibilityHint="Opens external support page"
-              onPress={() => Linking.openURL("https://mxd.codes/support")}
             />
           </Card>
         </View>
@@ -355,7 +381,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: space.lg,
     paddingTop: space.lg,
-    paddingBottom: space.lg
+    paddingBottom: space.xxl
   },
   section: {
     marginBottom: space.xl

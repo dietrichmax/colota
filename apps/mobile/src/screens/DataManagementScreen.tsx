@@ -37,7 +37,7 @@ import { useTimeout } from "../hooks/useTimeout"
 import { showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 
-const BACKUP_TIP = "Tip: back up your data first (Settings -> Backup & Restore)."
+const BACKUP_TIP = "Tip: back up your data first (Settings > Backup & restore)."
 
 export function DataManagementScreen({}: ScreenProps) {
   const { colors } = useTheme()

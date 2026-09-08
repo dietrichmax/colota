@@ -31,6 +31,11 @@ type ListItemProps = {
   expanded?: boolean
 }
 
+/** A link row says it leaves the app, so Legal and the map credits dialog inherit the wording. */
+function defaultHint(label: string, role: "button" | "link"): string {
+  return role === "link" ? `Opens ${label} in the browser` : `Opens ${label}`
+}
+
 export function ListItem({
   label,
   sub,
@@ -52,7 +57,7 @@ export function ListItem({
       testID={testID}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={sub ? `${label}, ${sub}` : label}
-      accessibilityHint={accessibilityHint ?? `Opens ${label}`}
+      accessibilityHint={accessibilityHint ?? defaultHint(label, accessibilityRole)}
       accessibilityState={{ disabled, expanded }}
       android_ripple={disabled ? undefined : { color: colors.text + STATE_LAYER_ALPHA }}
       disabled={disabled}
