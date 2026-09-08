@@ -34,6 +34,8 @@ export interface LocationCoords {
   timestamp?: number
   /** User-entered free-text note (POI annotation). Local-only, not synced. */
   note?: string
+  /** 1 once the point reached the server, 0 while it waits in the queue. */
+  sent?: number
 }
 
 export interface Geofence {

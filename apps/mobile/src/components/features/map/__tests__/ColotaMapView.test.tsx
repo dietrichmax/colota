@@ -181,9 +181,13 @@ describe("ColotaMapView attribution popup", () => {
   it("names the map data, lists every source as a link and ends with a Close button like the app's dialogs", () => {
     const { getByText, getAllByRole, getByRole, queryByLabelText } = openPopup()
 
-    expect(getByText("Map data")).toBeTruthy()
-    expect(getAllByRole("link").map((n) => n.props.accessibilityRole)).toEqual(["link", "link", "link"])
+    expect(getByText("Map credits")).toBeTruthy()
+    expect(getAllByRole("link")).toHaveLength(4)
     expect(getByText("© OpenStreetMap contributors")).toBeTruthy()
+    expect(getByText("Map data")).toBeTruthy()
+    expect(getByText("Tile schema and base styles")).toBeTruthy()
+    expect(getByText("Planet tiles, rebuilt weekly")).toBeTruthy()
+    expect(getByText("Tile hosting and the Colota styles")).toBeTruthy()
     expect(getByRole("button", { name: "Close" })).toBeTruthy()
     expect(queryByLabelText("Close")).toBeNull()
   })
@@ -201,6 +205,6 @@ describe("ColotaMapView attribution popup", () => {
 
     fireEvent.press(getByRole("button", { name: "Close" }))
 
-    expect(queryByText("Map data")).toBeNull()
+    expect(queryByText("Map credits")).toBeNull()
   })
 })

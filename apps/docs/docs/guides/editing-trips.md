@@ -14,7 +14,7 @@ Two cases the gap threshold gets wrong:
 ## Merging Trips
 
 1. Go to **Location History → Trips**
-2. Long-press a trip card to enter selection mode
+2. Long-press a trip to enter selection mode
 3. Tap the other trips you want to join
 4. Tap the merge icon in the selection header and confirm
 
@@ -24,17 +24,17 @@ No points are moved or deleted. Trips are renumbered afterwards, so a day with f
 
 ## Splitting a Trip
 
-Split from the map, on either the **Map** tab or **Trip Detail**.
+Split from the map on **Trip Detail**; the Location History map shows a point's details but does not split.
 
 1. Tap the point where the new trip should start
-2. Tap the split icon in the popup
+2. Tap the split icon in the card that opens over the map
 3. Confirm
 
-The previous trip ends at the point before the one you picked. The confirmation names that point's time, since the dialog covers the popup.
+The previous trip ends at the point before the one you picked. The confirmation names that point's time, since the dialog covers the card.
 
-On the Map tab the track is coloured per trip, so points from the split onwards change colour immediately. Splitting from Trip Detail returns you to the day view, because the trip you were viewing is now two.
+Splitting returns you to the day view, where the track is coloured per trip, because the trip you were viewing is now two.
 
-Zoom in first where points are bunched together, which happens wherever you moved slowly or stopped. The time in the popup identifies the exact point.
+Zoom in first where points are bunched together, which happens wherever you moved slowly or stopped. The time in the card identifies the exact point.
 
 ### Points that cannot be split
 

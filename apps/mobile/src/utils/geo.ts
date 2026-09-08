@@ -117,6 +117,11 @@ export function formatDuration(seconds: number): string {
 }
 
 /** Format a Unix-seconds timestamp as a localized time string. */
+/** The unit spelled out, for a screen reader. */
+export function spokenDistance(meters: number): string {
+  return formatDistance(meters).replace(/ km$/, " kilometres").replace(/ mi$/, " miles")
+}
+
 export function formatTime(unixSeconds: number, showSeconds = false): string {
   const d = new Date(unixSeconds * 1000)
   return d.toLocaleTimeString(undefined, {

@@ -1,14 +1,18 @@
 import React from "react"
-import { render, fireEvent, act } from "@testing-library/react-native"
-import { StyleSheet, View } from "react-native"
-import { lightColors } from "@colota/shared"
+import { render, fireEvent } from "@testing-library/react-native"
+import { ScrollView, StyleSheet } from "react-native"
+import { space } from "../../../../constants"
 import type { Trip } from "../../../../types/global"
-import type { ExportFormat } from "../../../../utils/exportConverters"
+
+jest.mock("../../../../hooks/useTheme", () => ({
+  useTheme: () => ({ colors: require("@colota/shared").lightColors })
+}))
 
 jest.mock("../../../../utils/geo", () => ({
   formatDistance: (m: number) => `${(m / 1000).toFixed(1)} km`,
-  formatDuration: (s: number) => `${Math.round(s / 60)}m`,
-  formatSpeed: (s: number) => `${s} m/s`,
+  spokenDistance: (m: number) => `${(m / 1000).toFixed(1)} kilometres`,
+  formatDuration: (s: number) => `${Math.round(s / 60)}min`,
+  formatSpeed: (mps: number) => `${(mps * 3.6).toFixed(1)} km/h`,
   formatTime: (_ts: number) => "12:00"
 }))
 
@@ -17,57 +21,23 @@ jest.mock("../../../../utils/trips", () => ({
   computeTripStats: () => ({ avgSpeed: 0, elevationGain: 0, elevationLoss: 0 })
 }))
 
-jest.mock("../../../../styles/typography", () => ({
-  fonts: { regular: {}, bold: {}, semiBold: {} },
-  // The real scale, not stubs: these tests render styles that read a named size, and a
-  // stubbed object would let a renamed key through.
-  fontSizes: jest.requireActual("@colota/shared").fontSizes,
-  lineHeights: jest.requireActual("../../../../styles/typography").lineHeights
-}))
-
-jest.mock("../../../../utils/exportConverters", () => ({
-  EXPORT_FORMATS: {
-    csv: { label: "CSV" },
-    geojson: { label: "GeoJSON" },
-    gpx: { label: "GPX" },
-    kml: { label: "KML" }
-  },
-  EXPORT_FORMAT_KEYS: ["csv", "geojson", "gpx", "kml"]
-}))
-
-jest.mock("../../../../hooks/useTheme", () => ({
-  useTheme: () => ({ colors: jest.requireActual("@colota/shared").lightColors })
-}))
-
 jest.mock("lucide-react-native", () => {
   const R = require("react")
   const { Text } = require("react-native")
-  const stub = (name: string) => (_props: any) => R.createElement(Text, null, name)
-  return {
-    Check: stub("Check"),
-    Route: stub("Route"),
-    Share: stub("Share"),
-    Trash2: stub("Trash2"),
-    X: stub("X"),
-    Merge: stub("Merge"),
-    CheckSquare: stub("CheckSquare"),
-    Square: stub("Square")
-  }
+  return { Check: (_props: any) => R.createElement(Text, null, "Check") }
 })
 
 import { TripList } from "../TripList"
+import { Card } from "../../../ui/Card"
+import { Divider } from "../../../ui/Divider"
 
-// The real palette, not a hand-written subset: a missing key reads undefined and the style
-// it feeds silently disappears.
-const colors = lightColors
-
-function makeTrip(index: number, distance = 1000): Trip {
+function makeTrip(index: number): Trip {
   return {
     index,
     locations: [],
     startTime: index * 100,
     endTime: index * 100 + 60,
-    distance,
+    distance: 1000,
     locationCount: 5,
     startIndex: (index - 1) * 5
   }
@@ -77,292 +47,71 @@ function makeTrips(n: number): Trip[] {
   return Array.from({ length: n }, (_, i) => makeTrip(i + 1))
 }
 
-describe("TripList - CAB selection", () => {
-  beforeEach(() => jest.clearAllMocks())
+function renderList(props: Partial<React.ComponentProps<typeof TripList>> = {}) {
+  const handlers = { onToggle: jest.fn(), onEnterSelection: jest.fn(), onOpenTrip: jest.fn() }
+  const utils = render(<TripList trips={makeTrips(3)} selected={new Set<number>()} {...handlers} {...props} />)
+  return { ...utils, ...handlers }
+}
 
-  it("marks a selected trip with a fill, because a border that comes and goes clips the card", () => {
-    const { getByLabelText, UNSAFE_getAllByType } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} />
-    )
-    const filled = () =>
-      UNSAFE_getAllByType(View).filter(
-        (v) => StyleSheet.flatten(v.props.style)?.backgroundColor === colors.primaryContainer
-      )
+describe("TripList", () => {
+  it("lists the day's trips in order inside one card, seamed by inset hairlines", () => {
+    const { getAllByRole, UNSAFE_getAllByType, UNSAFE_getByType } = renderList()
 
-    expect(filled()).toHaveLength(0)
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
-
-    expect(filled()).toHaveLength(1)
-    expect(StyleSheet.flatten(filled()[0].props.style).borderWidth).toBeUndefined()
+    const rows = getAllByRole("button")
+    expect(rows.map((r) => r.props.accessibilityLabel)).toEqual([
+      expect.stringMatching(/^Trip 1,/),
+      expect.stringMatching(/^Trip 2,/),
+      expect.stringMatching(/^Trip 3,/)
+    ])
+    expect(UNSAFE_getByType(Card).props.rows).toBe(true)
+    const dividers = UNSAFE_getAllByType(Divider)
+    expect(dividers).toHaveLength(2)
+    expect(dividers.every((d) => d.props.tight && d.props.inset)).toBe(true)
   })
 
-  it("puts every stat on one line, so a row is a name, a time and a caption", () => {
-    // The stats were five icon and text pairs that wrapped at three columns on a narrow phone.
-    const { getByText, queryByText } = render(
-      <TripList trips={makeTrips(1)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} />
-    )
+  it("scrolls with the screen skeleton's insets, so the card lands where every other screen's does", () => {
+    const { UNSAFE_getByType } = renderList()
+    const content = StyleSheet.flatten(UNSAFE_getByType(ScrollView).props.contentContainerStyle)
 
-    // One node holding every stat, separated by the middot, rather than one node per stat
-    expect(getByText(/· 1m$/)).toBeTruthy()
-    expect(queryByText("Route")).toBeNull()
+    expect(content).toEqual({ paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.xxl })
   })
 
-  it("swaps the trip colour dot for a check when selected, so the fill is not the only signal", () => {
-    const { getByLabelText, queryByText } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} />
-    )
+  it("starts selecting on a long press, so a row is picked without opening it", () => {
+    const { getByTestId, onEnterSelection, onToggle, onOpenTrip } = renderList()
 
-    expect(queryByText("Check")).toBeNull()
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+    fireEvent(getByTestId("trip-row-2"), "longPress")
 
-    expect(queryByText("Check")).toBeTruthy()
+    expect(onEnterSelection).toHaveBeenCalledWith(2)
+    expect(onToggle).not.toHaveBeenCalled()
+    expect(onOpenTrip).not.toHaveBeenCalled()
   })
 
-  it("renders idle header with Export All when trips exist", () => {
-    const { getByLabelText, queryByLabelText } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} />
-    )
-    expect(getByLabelText("Export all trips")).toBeTruthy()
-    expect(queryByLabelText("Cancel selection")).toBeNull()
+  it("toggles a row on tap while selecting and marks the picked ones, so the tap never navigates away", () => {
+    const { getByTestId, onToggle, onOpenTrip, onEnterSelection } = renderList({ selected: new Set([1]) })
+
+    fireEvent.press(getByTestId("trip-row-2"))
+    fireEvent(getByTestId("trip-row-3"), "longPress")
+
+    expect(onToggle.mock.calls).toEqual([[2], [3]])
+    expect(onOpenTrip).not.toHaveBeenCalled()
+    expect(onEnterSelection).not.toHaveBeenCalled()
+    expect(getByTestId("trip-row-1").props.accessibilityState.selected).toBe(true)
+    expect(getByTestId("trip-row-2").props.accessibilityState.selected).toBe(false)
+    expect(getByTestId("trip-row-2").props.accessibilityHint).toBeUndefined()
   })
 
-  it("long-press on a card enters selection mode and shows CAB", () => {
-    const { getByLabelText, queryByLabelText } = render(
-      <TripList
-        trips={makeTrips(3)}
-        colors={colors}
-        onTripSelect={jest.fn()}
-        onExport={jest.fn()}
-        onDelete={jest.fn().mockResolvedValue(undefined)}
-      />
-    )
+  it("opens a trip on tap when nothing is selected", () => {
+    const { getByTestId, onOpenTrip, onToggle } = renderList()
 
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
+    fireEvent.press(getByTestId("trip-row-2"))
 
-    expect(getByLabelText("Cancel selection")).toBeTruthy()
-    expect(getByLabelText("Export selected trips")).toBeTruthy()
-    expect(getByLabelText("Delete selected trips")).toBeTruthy()
-    expect(queryByLabelText("Export all trips")).toBeNull()
+    expect(onOpenTrip).toHaveBeenCalledWith(2)
+    expect(onToggle).not.toHaveBeenCalled()
   })
 
-  it("tap in selection mode toggles, does not navigate", () => {
-    const onTripSelect = jest.fn()
-    const { getByLabelText } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={onTripSelect} onExport={jest.fn()} />
-    )
+  it("renders nothing on an empty day, leaving the empty composition to the screen", () => {
+    const { toJSON } = renderList({ trips: [] })
 
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
-    fireEvent.press(getByLabelText(/Trip 2,/))
-
-    expect(onTripSelect).not.toHaveBeenCalled()
-  })
-
-  it("tap when idle navigates via onTripSelect", () => {
-    const onTripSelect = jest.fn()
-    const { getByLabelText } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={onTripSelect} onExport={jest.fn()} />
-    )
-
-    fireEvent.press(getByLabelText(/Trip 2,/))
-
-    expect(onTripSelect).toHaveBeenCalledTimes(1)
-    expect(onTripSelect.mock.calls[0][0].index).toBe(2)
-  })
-
-  it("Select all selects every trip, then deselect all clears", () => {
-    const onExport = jest.fn()
-    const { getByLabelText } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={onExport} />
-    )
-
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
-    fireEvent.press(getByLabelText("Select all trips"))
-    fireEvent.press(getByLabelText("Export selected trips"))
-    fireEvent.press(getByLabelText(/Export 3 selected trips as GPX/))
-
-    expect(onExport).toHaveBeenCalledTimes(1)
-    const [, trips] = onExport.mock.calls[0]
-    expect(trips.map((t: Trip) => t.index)).toEqual([1, 2, 3])
-  })
-
-  it("CAB Share exports only the selected subset (non-contiguous)", () => {
-    const onExport = jest.fn()
-    const trips = makeTrips(3)
-    const { getByLabelText } = render(
-      <TripList trips={trips} colors={colors} onTripSelect={jest.fn()} onExport={onExport} />
-    )
-
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
-    fireEvent.press(getByLabelText(/Trip 3,/))
-    fireEvent.press(getByLabelText("Export selected trips"))
-    fireEvent.press(getByLabelText(/Export 2 selected trips as GeoJSON/))
-
-    expect(onExport).toHaveBeenCalledTimes(1)
-    const [fmt, exported] = onExport.mock.calls[0] as [ExportFormat, Trip[]]
-    expect(fmt).toBe("geojson")
-    expect(exported.map((t) => t.index)).toEqual([1, 3])
-  })
-
-  it("CAB Trash fires onDelete with the selected subset", async () => {
-    const onDelete = jest.fn().mockResolvedValue(undefined)
-    const { getByLabelText } = render(
-      <TripList
-        trips={makeTrips(3)}
-        colors={colors}
-        onTripSelect={jest.fn()}
-        onExport={jest.fn()}
-        onDelete={onDelete}
-      />
-    )
-
-    fireEvent(getByLabelText(/Trip 2,/), "longPress")
-    await act(async () => {
-      fireEvent.press(getByLabelText("Delete selected trips"))
-    })
-
-    expect(onDelete).toHaveBeenCalledTimes(1)
-    expect(onDelete.mock.calls[0][0].map((t: Trip) => t.index)).toEqual([2])
-  })
-
-  it("double-press Trash does not fire onDelete twice while in-flight", async () => {
-    let resolve!: () => void
-    const onDelete = jest.fn().mockImplementation(
-      () =>
-        new Promise<void>((r) => {
-          resolve = r
-        })
-    )
-    const { getByLabelText } = render(
-      <TripList
-        trips={makeTrips(3)}
-        colors={colors}
-        onTripSelect={jest.fn()}
-        onExport={jest.fn()}
-        onDelete={onDelete}
-      />
-    )
-
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
-
-    await act(async () => {
-      fireEvent.press(getByLabelText("Delete selected trips"))
-      fireEvent.press(getByLabelText("Delete selected trips"))
-    })
-
-    expect(onDelete).toHaveBeenCalledTimes(1)
-
-    await act(async () => {
-      resolve()
-    })
-  })
-
-  it("CAB Merge fires onMerge with the selected adjacent trips", async () => {
-    const onMerge = jest.fn().mockResolvedValue(undefined)
-    const { getByLabelText } = render(
-      <TripList trips={makeTrips(4)} colors={colors} onTripSelect={jest.fn()} onMerge={onMerge} />
-    )
-
-    fireEvent(getByLabelText(/Trip 2,/), "longPress")
-    fireEvent.press(getByLabelText(/Trip 3,/))
-    await act(async () => {
-      fireEvent.press(getByLabelText("Merge selected trips"))
-    })
-
-    expect(onMerge).toHaveBeenCalledTimes(1)
-    expect(onMerge.mock.calls[0][0].map((t: Trip) => t.index)).toEqual([2, 3])
-  })
-
-  it("does not merge a non-contiguous selection", async () => {
-    // Merging trips 1 and 3 would have to swallow trip 2, which the user never asked for
-    const onMerge = jest.fn().mockResolvedValue(undefined)
-    const { getByLabelText } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onMerge={onMerge} />
-    )
-
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
-    fireEvent.press(getByLabelText(/Trip 3,/))
-
-    const mergeBtn = getByLabelText("Merge selected trips")
-    expect(mergeBtn.props.accessibilityState.disabled).toBe(true)
-    await act(async () => {
-      fireEvent.press(mergeBtn)
-    })
-    expect(onMerge).not.toHaveBeenCalled()
-  })
-
-  it("does not merge a single trip", async () => {
-    const onMerge = jest.fn().mockResolvedValue(undefined)
-    const { getByLabelText } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onMerge={onMerge} />
-    )
-
-    fireEvent(getByLabelText(/Trip 2,/), "longPress")
-
-    expect(getByLabelText("Merge selected trips").props.accessibilityState.disabled).toBe(true)
-    await act(async () => {
-      fireEvent.press(getByLabelText("Merge selected trips"))
-    })
-    expect(onMerge).not.toHaveBeenCalled()
-  })
-
-  it("keeps the selection when a merge fails so the user can retry", async () => {
-    const onMerge = jest.fn().mockRejectedValue(new Error("bridge down"))
-    const { getByLabelText } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onMerge={onMerge} />
-    )
-
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
-    fireEvent.press(getByLabelText(/Trip 2,/))
-    await act(async () => {
-      fireEvent.press(getByLabelText("Merge selected trips"))
-    })
-
-    expect(getByLabelText("Cancel selection")).toBeTruthy()
-    await act(async () => {
-      fireEvent.press(getByLabelText("Merge selected trips"))
-    })
-    expect(onMerge).toHaveBeenCalledTimes(2)
-  })
-
-  it("Cancel X clears selection and returns to idle header", () => {
-    const { getByLabelText, queryByLabelText } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} />
-    )
-
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
-    expect(getByLabelText("Cancel selection")).toBeTruthy()
-
-    fireEvent.press(getByLabelText("Cancel selection"))
-
-    expect(queryByLabelText("Cancel selection")).toBeNull()
-    expect(getByLabelText("Export all trips")).toBeTruthy()
-  })
-
-  it("changing the trips prop clears the selection", () => {
-    const { getByLabelText, queryByLabelText, rerender } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} />
-    )
-
-    fireEvent(getByLabelText(/Trip 1,/), "longPress")
-    expect(getByLabelText("Cancel selection")).toBeTruthy()
-
-    rerender(<TripList trips={makeTrips(2)} colors={colors} onTripSelect={jest.fn()} onExport={jest.fn()} />)
-
-    expect(queryByLabelText("Cancel selection")).toBeNull()
-  })
-
-  it("idle Export All exports the full trips array", () => {
-    const onExport = jest.fn()
-    const { getByLabelText, getByText } = render(
-      <TripList trips={makeTrips(3)} colors={colors} onTripSelect={jest.fn()} onExport={onExport} />
-    )
-
-    fireEvent.press(getByLabelText("Export all trips"))
-    fireEvent.press(getByText("KML"))
-
-    expect(onExport).toHaveBeenCalledTimes(1)
-    const [fmt, exported] = onExport.mock.calls[0] as [ExportFormat, Trip[]]
-    expect(fmt).toBe("kml")
-    expect(exported).toHaveLength(3)
+    expect(toJSON()).toBeNull()
   })
 })

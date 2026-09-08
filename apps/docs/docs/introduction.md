@@ -49,7 +49,7 @@ Colota has twenty-eight screens, each focused on a specific task:
 | **Tracking profiles** | Create and manage condition-based profiles that automatically adjust tracking settings |
 | **Profile Editor** | Configure profile name, condition trigger, GPS interval, distance filter, sync interval, priority, and deactivation delay |
 | **Location History** | Browse recorded locations on a track map with calendar day picker and trip-colored segments, view segmented trips with per-trip stats; tap a point to add a note or delete it |
-| **Trip Detail** | Full trip view with dedicated map, stats grid (distance, duration, avg speed, elevation), speed and elevation profile charts, export, and delete |
+| **Trip Detail** | Full trip view with dedicated map, stat rows (distance, duration, avg speed, elevation), speed and elevation profile charts, export and delete |
 | **Location Summary** | Aggregated stats (total distance, trips, active days, avg distance) for selectable periods with daily breakdown and tap-to-inspect navigation |
 | **Export locations** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
 | **Import locations** | Import tracks from GeoJSON, Google Timeline, GPX, KML or CSV with a preview before committing |
