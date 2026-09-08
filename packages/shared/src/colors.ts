@@ -29,6 +29,8 @@ export interface ThemeColors {
   background: string
   backgroundElevated: string
   card: string
+  /** One tonal step above `card` for what floats over content: docks, dialogs, banners, map discs. Never a list card. */
+  surfaceRaised: string
   surface: string
 
   // Text colors
@@ -68,6 +70,7 @@ export const lightColors: ThemeColors = {
   background: "#F1F4F6",
   backgroundElevated: "#FFFFFF",
   card: "#FFFFFF",
+  surfaceRaised: "#FFFFFF",
   surface: "#FFFFFF",
 
   // Text
@@ -108,6 +111,7 @@ export const darkColors: ThemeColors = {
   background: "#121212",
   backgroundElevated: "#1E1E1E",
   card: "#2D2D2D",
+  surfaceRaised: "#353535",
   surface: "#1E1E1E",
 
   // Text

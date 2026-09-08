@@ -47,7 +47,7 @@ describe("DialogShell", () => {
     expect(scrim.paddingHorizontal).toBe(space.xxl)
     expect(scrim.backgroundColor).toBe(lightColors.overlay)
     expect(card.padding).toBe(space.xl)
-    expect(card.backgroundColor).toBe(lightColors.card)
+    expect(card.backgroundColor).toBe(lightColors.surfaceRaised)
   })
 
   it("gives the calendar grid the width of Material's own picker with the picker gutter", () => {

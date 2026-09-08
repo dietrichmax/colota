@@ -66,7 +66,7 @@ describe("MapActionButton", () => {
     )
 
     const style = flat(disc(getByRole("button")))
-    expect(style.backgroundColor).toBe(lightColors.card)
+    expect(style.backgroundColor).toBe(lightColors.surfaceRaised)
     expect(style.overflow).toBe("hidden")
   })
 
