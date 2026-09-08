@@ -42,7 +42,7 @@ export function ListItem({
     <Pressable
       testID={testID}
       accessibilityRole={accessibilityRole}
-      accessibilityLabel={label}
+      accessibilityLabel={sub ? `${label}, ${sub}` : label}
       accessibilityHint={accessibilityHint ?? `Opens ${label}`}
       accessibilityState={{ disabled, expanded }}
       android_ripple={disabled ? undefined : { color: colors.text + STATE_LAYER_ALPHA }}

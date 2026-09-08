@@ -6,9 +6,9 @@
 import React from "react"
 import { View, Text, StyleSheet } from "react-native"
 import { type LucideIcon } from "lucide-react-native"
-import { useTheme } from "../../../hooks/useTheme"
-import { fontSizes, fonts, lineHeights } from "../../../styles/typography"
-import { size, space } from "../../../constants"
+import { useTheme } from "../../hooks/useTheme"
+import { fontSizes, fonts, lineHeights } from "../../styles/typography"
+import { size, space } from "../../constants"
 
 type StateLineProps = {
   icon: LucideIcon | React.ReactNode

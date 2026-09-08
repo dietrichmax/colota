@@ -417,13 +417,25 @@ describe("DashboardScreen", () => {
     expect(getByTestId("DashboardDock").props.lastKnown).toBeNull()
   })
 
-  it("does not read the last known fix while tracking, because the live hook owns the position then", async () => {
+  it("reads the last known fix while tracking too, so the map opens where the service last was instead of on the world", async () => {
     mockTracking = true
+    mockGetMostRecentLocation.mockResolvedValue({
+      latitude: 48.1,
+      longitude: 11.5,
+      accuracy: 4,
+      timestamp: 1_700_000_000
+    })
 
-    renderScreen()
-    await settle()
+    const { getByTestId } = renderScreen()
 
-    expect(mockGetMostRecentLocation).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(getByTestId("DashboardMap").props.lastKnown).toEqual({
+        latitude: 48.1,
+        longitude: 11.5,
+        accuracy: 4,
+        timestamp: 1_700_000_000
+      })
+    )
   })
 
   it("reads the battery-stop flag while idle so the state line stays honest after the banner clears", async () => {

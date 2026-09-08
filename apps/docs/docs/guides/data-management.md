@@ -40,11 +40,11 @@ To correct how points are grouped into trips rather than remove them, see [Editi
 
 ### Single points
 
-A stray fix can land far from where you actually were, which drags the track and the day's distance with it. On the **Map** tab, tap the point to open its popup, check the time and accuracy to make sure it is the one you mean, then tap the trash icon next to the close button. You'll be asked to confirm.
+A stray fix can land far from where you actually were, which drags the track and the day's distance with it. On the **Map** tab, tap the point to open its card, check the time and accuracy to make sure it is the one you mean, then tap the trash icon next to the close button. You'll be asked to confirm. The **Data** tab lists every point of the day; tapping a row opens the same card.
 
 Only that one point is removed, so the rest of the trip stays intact. If the point had not synced yet, its pending upload is dropped with it.
 
-The same popup carries a split icon, which starts a new trip at that point instead of removing it - see [Editing Trips](editing-trips.md).
+The same card carries a split icon, which starts a new trip at that point instead of removing it - see [Editing Trips](editing-trips.md).
 
 Deleting locally does not remove anything already uploaded to your server.
 

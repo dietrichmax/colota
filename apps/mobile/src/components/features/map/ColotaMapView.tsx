@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useImperativeHandle, forwardRef, useState, useEffect, useCallback } from "react"
-import { StyleProp, ViewStyle, View, Text, StyleSheet, Linking, Pressable, Modal } from "react-native"
+import { StyleProp, ViewStyle, View, StyleSheet, Linking } from "react-native"
 import { Map, Camera } from "@maplibre/maplibre-react-native"
 import type {
   MapRef,
@@ -14,22 +14,15 @@ import type {
   ViewPadding
 } from "@maplibre/maplibre-react-native"
 import type { NativeSyntheticEvent } from "react-native"
-import { Compass, Info } from "lucide-react-native"
+import { Compass, ExternalLink, Info } from "lucide-react-native"
 import { useIsFocused } from "@react-navigation/native"
-import { radius } from "@colota/shared"
 import { useTheme } from "../../../hooks/useTheme"
-import {
-  DEFAULT_MAP_ZOOM,
-  MAP_STYLE_URL_DARK,
-  MAP_STYLE_URL_LIGHT,
-  size,
-  space,
-  elevation,
-  STATE_LAYER_ALPHA
-} from "../../../constants"
-import { fontSizes, fonts, lineHeights, type } from "../../../styles/typography"
+import { DEFAULT_MAP_ZOOM, MAP_STYLE_URL_DARK, MAP_STYLE_URL_LIGHT, size, space } from "../../../constants"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
+import { DialogShell } from "../../ui/DialogShell"
+import { Divider } from "../../ui/Divider"
+import { ListItem } from "../../ui/ListItem"
 import { Button } from "../../ui/Button"
 
 interface AttributionLink {
@@ -42,9 +35,22 @@ interface AttributionLink {
 // OpenMapTiles CC-BY) so attribution is never silently hidden.
 const FALLBACK_ATTRIBUTION_LINKS: AttributionLink[] = [
   { url: "https://www.openstreetmap.org/copyright", label: "© OpenStreetMap contributors" },
-  { url: "https://maps.mxd.codes", label: "© maps.mxd.codes" },
-  { url: "https://openmaptiles.org", label: "© OpenMapTiles" }
+  { url: "https://openmaptiles.org", label: "© OpenMapTiles" },
+  { url: "https://openfreemap.org", label: "OpenFreeMap" },
+  { url: "https://maps.mxd.codes", label: "maps.mxd.codes" }
 ]
+
+/** What each known source contributes; a custom tile server's own credits show without a role. */
+const ATTRIBUTION_ROLES: Array<[RegExp, string]> = [
+  [/openstreetmap\.org/, "Map data"],
+  [/openmaptiles\.org/, "Tile schema and base styles"],
+  [/openfreemap\.org/, "Planet tiles, rebuilt weekly"],
+  [/maps\.mxd\.codes/, "Tile hosting and the Colota styles"]
+]
+
+export function attributionRole(url: string): string | undefined {
+  return ATTRIBUTION_ROLES.find(([host]) => host.test(url))?.[1]
+}
 
 function parseStyleAttribution(sources: unknown): AttributionLink[] {
   if (!sources || typeof sources !== "object") return []
@@ -268,42 +274,27 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
             <Info size={size.icon.md} color={colors.textLight} />
           </MapActionButton>
 
-          <Modal
-            transparent
-            statusBarTranslucent
+          <DialogShell
             visible={attributionOpen}
-            animationType="fade"
+            title="Map credits"
             onRequestClose={() => setAttributionOpen(false)}
+            footer={<Button title="Close" variant="ghost" onPress={() => setAttributionOpen(false)} />}
           >
-            <Pressable
-              accessibilityRole="none"
-              style={[styles.attributionBackdrop, { backgroundColor: colors.overlay }]}
-              onPress={() => setAttributionOpen(false)}
-            >
-              <Pressable
-                accessibilityRole="none"
-                onPress={() => {}}
-                style={[styles.attributionPopup, { backgroundColor: colors.card }]}
-              >
-                <Text style={[styles.attributionTitle, { color: colors.text }]}>Map data</Text>
-                <View style={styles.attributionLinks}>
-                  {attributionLinks.map((link) => (
-                    <Pressable
-                      key={link.url}
-                      accessibilityRole="link"
-                      onPress={() => Linking.openURL(link.url)}
-                      android_ripple={{ color: colors.link + STATE_LAYER_ALPHA, borderless: true }}
-                    >
-                      <Text style={[styles.attributionLink, { color: colors.link }]}>{link.label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <View style={styles.attributionButtons}>
-                  <Button title="Close" variant="ghost" onPress={() => setAttributionOpen(false)} />
-                </View>
-              </Pressable>
-            </Pressable>
-          </Modal>
+            <View style={styles.attributionRows}>
+              {attributionLinks.map((link, i) => (
+                <React.Fragment key={link.url}>
+                  {i > 0 && <Divider tight />}
+                  <ListItem
+                    label={link.label}
+                    sub={attributionRole(link.url)}
+                    trailingIcon={ExternalLink}
+                    accessibilityRole="link"
+                    onPress={() => Linking.openURL(link.url)}
+                  />
+                </React.Fragment>
+              ))}
+            </View>
+          </DialogShell>
         </>
       )}
     </View>
@@ -314,33 +305,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   compassPosition: { bottom: space.xxl + 2 * (size.iconColumn + space.lg) },
-  attributionBackdrop: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: space.xxl
-  },
-  attributionPopup: {
-    width: "100%",
-    padding: space.xl,
-    borderRadius: radius.lg,
-    elevation: elevation.overlay
-  },
-  attributionTitle: {
-    ...type.title,
-    marginBottom: space.md
-  },
-  attributionLinks: {
-    gap: space.sm
-  },
-  attributionLink: {
-    fontSize: fontSizes.body,
-    lineHeight: lineHeights.body,
-    ...fonts.regular
-  },
-  attributionButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: space.lg
+  // A row cancels a card's lg inset; the dialog pads xl, so the rows step out the remaining sm to reach its edge.
+  attributionRows: {
+    marginHorizontal: -space.sm
   }
 })

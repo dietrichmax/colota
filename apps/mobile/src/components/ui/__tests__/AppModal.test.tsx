@@ -1,5 +1,5 @@
 import React from "react"
-import { render, act } from "@testing-library/react-native"
+import { render, act, fireEvent } from "@testing-library/react-native"
 import { StyleSheet } from "react-native"
 import { lightColors } from "@colota/shared"
 
@@ -12,7 +12,7 @@ jest.mock("../../../hooks/useTheme", () => ({
 }))
 
 import { AppModal } from "../AppModal"
-import { showConfirm } from "../../../services/modalService"
+import { showConfirm, showPrompt } from "../../../services/modalService"
 
 describe("AppModal", () => {
   it("announces every choice as a button", async () => {
@@ -39,5 +39,41 @@ describe("AppModal", () => {
 
     const style = StyleSheet.flatten(getByRole("button", { name: "Delete" }).props.style)
     expect(style.backgroundColor).toBe(lightColors.error)
+  })
+
+  it("asks for text through a field seeded with the current value and resolves the trimmed answer on confirm", async () => {
+    const { getByTestId, getByRole } = render(<AppModal />)
+
+    let answer: Promise<string | null> = Promise.resolve(null)
+    await act(async () => {
+      answer = showPrompt({
+        title: "Note",
+        initialValue: "Coffee stop",
+        placeholder: "Add a note",
+        cancelText: "Close"
+      })
+    })
+
+    expect(getByTestId("prompt-input").props.value).toBe("Coffee stop")
+    fireEvent.changeText(getByTestId("prompt-input"), "  Lunch ")
+    await act(async () => {
+      fireEvent.press(getByRole("button", { name: "Save" }))
+    })
+
+    await expect(answer).resolves.toBe("Lunch")
+  })
+
+  it("resolves null when the prompt is dismissed, so a caller can tell a cleared note from a closed dialog", async () => {
+    const { getByRole } = render(<AppModal />)
+
+    let answer: Promise<string | null> = Promise.resolve("unset")
+    await act(async () => {
+      answer = showPrompt({ title: "Note", cancelText: "Close" })
+    })
+    await act(async () => {
+      fireEvent.press(getByRole("button", { name: "Close" }))
+    })
+
+    await expect(answer).resolves.toBeNull()
   })
 })

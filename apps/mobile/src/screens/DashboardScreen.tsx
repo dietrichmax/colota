@@ -129,24 +129,24 @@ export function DashboardScreen({ navigation }: ScreenProps) {
         setIsBatteryCritical(false)
       } else {
         NativeLocationService.isBatteryCritical().then(setIsBatteryCritical)
-        NativeLocationService.getMostRecentLocation()
-          .then((latest) =>
-            setLastKnown(
-              latest
-                ? {
-                    latitude: latest.latitude,
-                    longitude: latest.longitude,
-                    accuracy: latest.accuracy ?? 0,
-                    timestamp: latest.timestamp
-                  }
-                : null
-            )
-          )
-          .catch((err) => logger.error("[Dashboard] Failed to read the last known location:", err))
         NativeLocationService.getSetting("stopped_by_battery")
           .then((val) => setStoppedByBattery(val === "true"))
           .catch((err) => logger.error("[Dashboard] Failed to read stopped_by_battery:", err))
       }
+      NativeLocationService.getMostRecentLocation()
+        .then((latest) =>
+          setLastKnown(
+            latest
+              ? {
+                  latitude: latest.latitude,
+                  longitude: latest.longitude,
+                  accuracy: latest.accuracy ?? 0,
+                  timestamp: latest.timestamp
+                }
+              : null
+          )
+        )
+        .catch((err) => logger.error("[Dashboard] Failed to read the last known location:", err))
       NativeLocationService.isLocationEnabled().then(setLocationEnabled)
       refreshPermissions()
     }, [tracking, updatePauseZone, refreshPermissions])

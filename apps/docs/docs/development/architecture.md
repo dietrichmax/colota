@@ -311,8 +311,8 @@ For backups, two `internal` methods support the export/import flow without expos
 | `PlaceZoneScreen` | Picks a zone coordinate on a map with the radius drawn live, returning it to the editor with `popTo` and `merge` |
 | `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
 | `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
-| `LocationHistoryScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip rows, per-trip and multi-select export and multi-select delete |
-| `TripDetailScreen` | Full trip view with dedicated map, stat ledger rows, speed and elevation profile charts, per-trip export, and per-trip delete |
+| `LocationHistoryScreen` | One day at a time: a day header (chevrons, title opening the calendar dialog, ledger caption) over Map, Trips and Data lenses. Map docks a card over the track: the trip rows as legend, the tapped point (split, delete, note) or the empty day's next step. Trips is one card of trip rows; long-press turns the header into a contextual action bar for export, merge and delete. Data is a frozen-time table whose row tap opens the point on the map. Export of the day and the summary live in the header |
+| `TripDetailScreen` | Full trip view with dedicated map (a tapped point docks its card for split and note), stat ledger rows, speed and elevation profile charts, per-trip export and per-trip delete |
 | `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
 | `ExportLocationsScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
 | `ImportLocationsScreen` | Import external location files (GeoJSON, Google Timeline legacy + new, GPX, KML, CSV) with auto format detection, dedup preview, and recovery vs migration (queue-for-sync) commit choice |
@@ -346,9 +346,10 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 | --- | --- |
 | `ColotaMapView` | Shared base map component wrapping MapLibre's `MapView` with OpenFreeMap vector tiles, dark mode style transformation, custom compass, and attribution |
 | `DashboardMap` | Live tracking map with user marker, accuracy circle, today's track (its visibility is the screen's Route toggle, the map only draws it), geofence polygons with labels, follow-me until the user pans, then a centre button in the disc column. Frames the last known fix, or the zones when there is none |
-| `TrackMap` | Location history map with trip-colored track segments, tappable point markers with detail popups, fit-to-track bounds, and trip legend |
-| `CalendarPicker` | Day picker with month navigation, dot indicators for days with data, and daily distance/count display |
-| `TripList` | Segmented trip cards with distance, duration, avg speed, elevation gain/loss. Per-trip share icon plus a long-press contextual action bar for multi-select export and delete |
+| `TrackMap` | Location history map: trip-colored track segments over a casing layer, a focused trip drawn wider while the rest dim, 48 dp point hitboxes, fit-to-day and fit-to-trip bounds. Selection and focus are props; it draws no popup or legend |
+| `CalendarPicker` | Day, month and year panes inside `DayPickerModal`, dot indicators for days with data, per-day stats spoken by the cell |
+| `LocationTable` | The day's points newest first with a frozen time column beside a horizontally scrolling pane; a Sync column when an endpoint is set; a row tap opens the point on the map |
+| `TripList` | One card of `TripRow`s (swatch, number, time range, distance, duration, speed) with controlled selection: long-press enters, tap toggles; the screen owns the action bar, export, merge and delete |
 | `GeofenceLayers` | Shared geofence rendering (fill polygons, stroke outlines, labels) used by DashboardMap and GeofenceScreen |
 | `UserLocationOverlay` | User position dot with accuracy circle, used by DashboardMap and GeofenceScreen |
 | `MapCenterButton` | Reusable button overlay to re-center the map |

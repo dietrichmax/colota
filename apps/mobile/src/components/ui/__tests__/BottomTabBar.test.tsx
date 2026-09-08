@@ -60,4 +60,11 @@ describe("BottomTabBar", () => {
   it("exports the routes it covers, so App.tsx does not keep a second list", () => {
     expect(TAB_ROUTES).toEqual(new Set(["Dashboard", "Location History", "Geofences", "Settings"]))
   })
+
+  it("draws the History tab with the app's own mark, the track between a disc and a ring", () => {
+    const { getByLabelText } = renderBar("Dashboard")
+    const { TrackMark } = require("../TrackMark")
+
+    expect(getByLabelText("History").findByType(TrackMark)).toBeTruthy()
+  })
 })

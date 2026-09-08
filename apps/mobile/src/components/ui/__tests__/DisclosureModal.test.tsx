@@ -6,7 +6,6 @@ jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({
     colors: {
       overlay: "rgba(0,0,0,0.5)",
-      cardElevated: "#fff",
       primary: "#0d9488",
       text: "#000",
       textSecondary: "#666",

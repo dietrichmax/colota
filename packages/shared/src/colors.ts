@@ -29,7 +29,6 @@ export interface ThemeColors {
   background: string
   backgroundElevated: string
   card: string
-  cardElevated: string
   surface: string
 
   // Text colors
@@ -69,7 +68,6 @@ export const lightColors: ThemeColors = {
   background: "#F1F4F6",
   backgroundElevated: "#FFFFFF",
   card: "#FFFFFF",
-  cardElevated: "#FFFFFF",
   surface: "#FFFFFF",
 
   // Text
@@ -110,7 +108,6 @@ export const darkColors: ThemeColors = {
   background: "#121212",
   backgroundElevated: "#1E1E1E",
   card: "#2D2D2D",
-  cardElevated: "#3D3D3D",
   surface: "#1E1E1E",
 
   // Text

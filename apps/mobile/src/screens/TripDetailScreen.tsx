@@ -5,6 +5,7 @@
 
 import React, { useMemo, useState, useCallback, useLayoutEffect, useEffect, useRef } from "react"
 import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   Share,
   Trash2,
@@ -28,6 +29,7 @@ import { SectionTitle } from "../components/ui/SectionTitle"
 import { Divider } from "../components/ui/Divider"
 import { StatRow } from "../components/ui/StatRow"
 import { TrackMap } from "../components/features/inspector/TrackMap"
+import { InspectorDock } from "../components/features/inspector/InspectorDock"
 import { InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
 import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
@@ -62,6 +64,7 @@ const MAP_VIEWPORT_SHARE = 0.45
 
 export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip Detail">) {
   const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
   const { height: viewportHeight } = useWindowDimensions()
   const mapHeight = Math.round(viewportHeight * MAP_VIEWPORT_SHARE)
   const trip: Trip = route.params.trip
@@ -71,6 +74,9 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   // The map reads a note back when the point is re-tapped, and the chevrons swap in a trip from
   // route.params, so a saved note has to be held here rather than inside the map.
   const [noteOverrides, setNoteOverrides] = useState<Record<number, string | undefined>>({})
+  const [selectedPointId, setSelectedPointId] = useState<number | null>(null)
+  const [dockHeight, setDockHeight] = useState(0)
+  const [hasEndpoint, setHasEndpoint] = useState(false)
 
   const stats = useMemo(() => computeTripStats(trip.locations), [trip])
   const duration = trip.endTime - trip.startTime
@@ -99,6 +105,18 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
     }
   }, [])
 
+  useEffect(() => {
+    let active = true
+    NativeLocationService.getSetting("endpoint")
+      .then((endpoint) => {
+        if (active) setHasEndpoint((endpoint ?? "").trim().length > 0)
+      })
+      .catch((error) => logger.error("[TripDetail] Endpoint read failed:", error))
+    return () => {
+      active = false
+    }
+  }, [])
+
   const currentIdx = trips.findIndex((t) => t.index === trip.index)
   const prevTrip = currentIdx > 0 ? trips[currentIdx - 1] : null
   const nextTrip = currentIdx >= 0 && currentIdx < trips.length - 1 ? trips[currentIdx + 1] : null
@@ -107,6 +125,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   useEffect(() => {
     setChartActiveIndex(null)
     setShowExport(false)
+    setSelectedPointId(null)
   }, [trip.index])
 
   const goToTrip = useCallback(
@@ -264,6 +283,21 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   )
   const elevationRange = maxElevation - minElevation
 
+  const selectedPoint = selectedPointId == null ? undefined : trip.locations.find((l) => l.id === selectedPointId)
+  const dockInset = selectedPoint ? dockHeight : 0
+  const edgeStart = space.lg + insets.left
+  const edgeEnd = space.lg + insets.right
+  const controlsBottom = space.lg + dockInset + space.sm
+  const cameraPadding = useMemo(
+    () => ({
+      top: space.lg,
+      bottom: dockInset + space.lg + space.lg,
+      left: edgeStart,
+      right: edgeEnd + size.iconColumn + space.lg
+    }),
+    [dockInset, edgeStart, edgeEnd]
+  )
+
   return (
     <Container>
       <View style={{ height: mapHeight }}>
@@ -273,9 +307,30 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
           trackColor={tripColor}
           fitVersion={trip.index}
           noteOverrides={noteOverrides}
-          onPointNoteChange={handlePointNoteChange}
-          onPointSplit={handlePointSplit}
+          selectedPointId={selectedPointId}
+          onSelectPoint={setSelectedPointId}
+          onFocusTrip={() => {}}
+          cameraPadding={cameraPadding}
+          controlsBottom={controlsBottom}
+          controlsEnd={edgeEnd}
         />
+        {selectedPoint && selectedPointId != null && (
+          <InspectorDock
+            content={{
+              kind: "point",
+              point: selectedPoint,
+              note: selectedPointId in noteOverrides ? noteOverrides[selectedPointId] : selectedPoint.note,
+              hasEndpoint,
+              onSplit: () => handlePointSplit(selectedPointId),
+              onClose: () => setSelectedPointId(null),
+              onSaveNote: (note) => handlePointNoteChange(selectedPointId, note)
+            }}
+            left={edgeStart}
+            right={edgeEnd}
+            maxHeight={mapHeight / 2}
+            onLayout={(e) => setDockHeight(e.nativeEvent.layout.height)}
+          />
+        )}
       </View>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
         {/* Header */}

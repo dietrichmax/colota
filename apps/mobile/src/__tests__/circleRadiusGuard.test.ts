@@ -67,7 +67,8 @@ describe("circle radius guard", () => {
     const square = files.filter((f) => /\bwidth:\s*[\d.]+/.test(fs.readFileSync(path.join(SRC, f), "utf8")))
 
     expect(square).toContain("components/ui/RadioDot.tsx")
-    expect(square.length).toBeGreaterThan(10)
+    expect(square).toContain("components/features/inspector/TripRow.tsx")
+    expect(square.length).toBeGreaterThan(5)
   })
 
   it("draws every circle with radius.pill rather than half its own width", () => {

@@ -9,6 +9,7 @@ jest.mock("../../services/NativeLocationService", () => ({
     getBoundaryOverrides: jest.fn().mockResolvedValue([]),
     deleteLocationsInRange: jest.fn().mockResolvedValue(0),
     updateLocationNote: jest.fn().mockResolvedValue(undefined),
+    getSetting: jest.fn().mockResolvedValue(""),
     exportTripsToFile: jest.fn().mockResolvedValue("/tmp/export"),
     shareFile: jest.fn()
   }
@@ -16,51 +17,41 @@ jest.mock("../../services/NativeLocationService", () => ({
 
 jest.mock("../../services/modalService", () => ({
   showAlert: jest.fn(),
-  showConfirm: jest.fn().mockResolvedValue(false)
+  showConfirm: jest.fn().mockResolvedValue(false),
+  showPrompt: jest.fn().mockResolvedValue(null)
 }))
 
 jest.mock("../../utils/logger", () => ({
   logger: { error: jest.fn(), info: jest.fn(), debug: jest.fn() }
 }))
 
-// Exposes the point popup's split action without a real map
+// A point tap hands the screen an id, and the screen docks the card; no real map is needed
 jest.mock("../../components/features/inspector/TrackMap", () => {
   const R = require("react")
   const { View, Pressable, Text } = require("react-native")
+  const trigger = (props: any, testID: string, pick: (locations: any[]) => any) =>
+    R.createElement(Pressable, { key: testID, testID, onPress: () => props.onSelectPoint(pick(props.locations)?.id) })
   return {
     TrackMap: (props: any) =>
       R.createElement(
         View,
         { testID: "TrackMap" },
         R.createElement(Text, { testID: "TrackMap-overrides" }, JSON.stringify(props.noteOverrides ?? {})),
-        props.onPointNoteChange
-          ? R.createElement(Pressable, {
-              testID: "trigger-point-note",
-              onPress: () => props.onPointNoteChange(props.locations?.[0]?.id, "lunch")
-            })
-          : null,
-        props.onPointSplit
-          ? [
-              R.createElement(Pressable, {
-                key: "s",
-                testID: "trigger-point-split",
-                onPress: () => props.onPointSplit(props.locations?.[2]?.id)
-              }),
-              R.createElement(Pressable, {
-                key: "s0",
-                testID: "trigger-point-split-first",
-                onPress: () => props.onPointSplit(props.locations?.[0]?.id)
-              }),
-              R.createElement(Pressable, {
-                key: "sl",
-                testID: "trigger-point-split-last",
-                onPress: () => props.onPointSplit(props.locations?.[props.locations.length - 1]?.id)
-              })
-            ]
-          : null
+        R.createElement(
+          Text,
+          { testID: "TrackMap-frame" },
+          JSON.stringify({ cameraPadding: props.cameraPadding, controlsBottom: props.controlsBottom })
+        ),
+        trigger(props, "select-point-first", (l) => l[0]),
+        trigger(props, "select-point", (l) => l[2]),
+        trigger(props, "select-point-last", (l) => l[l.length - 1])
       )
   }
 })
+
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 24, bottom: 0, left: 0, right: 0 })
+}))
 
 jest.mock("../../components/features/inspector/InteractiveLineChart", () => {
   const R = require("react")
@@ -115,25 +106,14 @@ jest.mock("../../hooks/useTheme", () => ({
 jest.mock("lucide-react-native", () => {
   const R = require("react")
   const { Text } = require("react-native")
-  const stub = (name: string) => (_props: any) => R.createElement(Text, null, name)
-  return {
-    Route: stub("Route"),
-    Clock: stub("Clock"),
-    Gauge: stub("Gauge"),
-    TrendingUp: stub("TrendingUp"),
-    TrendingDown: stub("TrendingDown"),
-    MapPin: stub("MapPin"),
-    Share: stub("Share"),
-    Trash2: stub("Trash2"),
-    ChevronLeft: stub("ChevronLeft"),
-    ChevronRight: stub("ChevronRight")
-  }
+  return new Proxy({}, { get: (_target, name) => (_props: any) => R.createElement(Text, null, String(name)) })
 })
 
 import { TripDetailScreen } from "../TripDetailScreen"
 import NativeLocationService from "../../services/NativeLocationService"
-import { showConfirm, showAlert } from "../../services/modalService"
+import { showConfirm, showAlert, showPrompt } from "../../services/modalService"
 import { BOUNDARY_ACTION_SPLIT } from "../../types/global"
+import { space, size } from "../../constants"
 
 function makeTrip(pointCount: number): Trip {
   const locations = Array.from({ length: pointCount }, (_, i) => ({
@@ -170,6 +150,11 @@ describe("TripDetailScreen - split from the map", () => {
     return utils
   }
 
+  const splitAt = (getByTestId: (id: string) => any, point: string) => {
+    fireEvent.press(getByTestId(point))
+    fireEvent.press(getByTestId("point-split"))
+  }
+
   it("splits at the tapped point, keyed off the point before it", async () => {
     // A trip's locations are contiguous in the day, so the preceding point is the real boundary.
     // An off-by-one would write a pair that matches no gap and quietly do nothing.
@@ -177,7 +162,7 @@ describe("TripDetailScreen - split from the map", () => {
     const props = makeProps(makeTrip(4))
     const { getByTestId } = await renderLoaded(props)
 
-    fireEvent.press(getByTestId("trigger-point-split"))
+    splitAt(getByTestId, "select-point")
 
     await waitFor(() =>
       expect(NativeLocationService.addBoundaryOverrides).toHaveBeenCalledWith([
@@ -192,7 +177,7 @@ describe("TripDetailScreen - split from the map", () => {
     const props = makeProps(makeTrip(4))
     const { getByTestId } = await renderLoaded(props)
 
-    fireEvent.press(getByTestId("trigger-point-split"))
+    splitAt(getByTestId, "select-point")
 
     await waitFor(() => expect(props.navigation.goBack).toHaveBeenCalled())
   })
@@ -201,7 +186,7 @@ describe("TripDetailScreen - split from the map", () => {
     const props = makeProps(makeTrip(4))
     const { getByTestId } = await renderLoaded(props)
 
-    fireEvent.press(getByTestId("trigger-point-split"))
+    splitAt(getByTestId, "select-point")
 
     await waitFor(() => expect(showConfirm).toHaveBeenCalled())
     expect(NativeLocationService.addBoundaryOverrides).not.toHaveBeenCalled()
@@ -214,7 +199,7 @@ describe("TripDetailScreen - split from the map", () => {
     const props = makeProps(makeTrip(4))
     const { getByTestId } = await renderLoaded(props)
 
-    fireEvent.press(getByTestId("trigger-point-split-first"))
+    splitAt(getByTestId, "select-point-first")
 
     expect(showConfirm).not.toHaveBeenCalled()
     expect(NativeLocationService.addBoundaryOverrides).not.toHaveBeenCalled()
@@ -225,7 +210,7 @@ describe("TripDetailScreen - split from the map", () => {
     const props = makeProps(makeTrip(2))
     const { getByTestId } = await renderLoaded(props)
 
-    fireEvent.press(getByTestId("trigger-point-split"))
+    splitAt(getByTestId, "select-point-last")
 
     // Says why instead of doing nothing
     expect(showAlert).toHaveBeenCalledWith("Cannot Split Here", expect.any(String), "info")
@@ -237,7 +222,7 @@ describe("TripDetailScreen - split from the map", () => {
     const props = makeProps(makeTrip(4))
     const { getByTestId } = await renderLoaded(props)
 
-    fireEvent.press(getByTestId("trigger-point-split-last"))
+    splitAt(getByTestId, "select-point-last")
 
     expect(showConfirm).not.toHaveBeenCalled()
     expect(NativeLocationService.addBoundaryOverrides).not.toHaveBeenCalled()
@@ -249,25 +234,80 @@ describe("TripDetailScreen - split from the map", () => {
     const props = makeProps(makeTrip(4))
     const { getByTestId } = await renderLoaded(props)
 
-    fireEvent.press(getByTestId("trigger-point-split"))
+    splitAt(getByTestId, "select-point")
 
     await waitFor(() => expect(NativeLocationService.addBoundaryOverrides).toHaveBeenCalled())
     expect(props.navigation.goBack).not.toHaveBeenCalled()
   })
 })
 
-describe("TripDetailScreen - notes saved on the map", () => {
+describe("TripDetailScreen - point card over the map", () => {
   beforeEach(() => jest.clearAllMocks())
 
-  /** The map is unmounted when this screen is left, so a saved note has to live in the screen. */
-  it("hands a note saved this session back to the map", async () => {
-    const { getByTestId } = render(<TripDetailScreen {...makeProps(makeTrip(3))} />)
+  it("docks the tapped point's card over the map and lifts the camera above it until the card closes", async () => {
+    const { getByTestId, queryByTestId } = render(<TripDetailScreen {...makeProps(makeTrip(4))} />)
+    await act(async () => {})
+    const frame = () => JSON.parse(getByTestId("TrackMap-frame").props.children)
+    const base = {
+      top: space.lg,
+      bottom: space.lg + space.lg,
+      left: space.lg,
+      right: space.lg + size.iconColumn + space.lg
+    }
+    expect(queryByTestId("point-card")).toBeNull()
+    expect(frame()).toEqual({ cameraPadding: base, controlsBottom: space.lg + space.sm })
+
+    fireEvent.press(getByTestId("select-point"))
+    fireEvent(getByTestId("inspector-dock"), "layout", { nativeEvent: { layout: { height: 200 } } })
+
+    expect(getByTestId("point-card")).toBeTruthy()
+    expect(frame()).toEqual({
+      cameraPadding: { ...base, bottom: 200 + space.lg + space.lg },
+      controlsBottom: space.lg + 200 + space.sm
+    })
+
+    fireEvent.press(getByTestId("point-close"))
+
+    expect(queryByTestId("point-card")).toBeNull()
+    expect(frame()).toEqual({ cameraPadding: base, controlsBottom: space.lg + space.sm })
+  })
+
+  it("offers split and a note but no delete, since a trip's points are removed with the trip", async () => {
+    const { getByTestId, queryByLabelText, getByLabelText } = render(<TripDetailScreen {...makeProps(makeTrip(4))} />)
     await act(async () => {})
 
-    fireEvent.press(getByTestId("trigger-point-note"))
+    fireEvent.press(getByTestId("select-point"))
+
+    expect(getByLabelText("Start a new trip here")).toBeTruthy()
+    expect(getByLabelText("Note, Add a note")).toBeTruthy()
+    expect(queryByLabelText("Delete point")).toBeNull()
+  })
+
+  it("drops the card when the chevrons swap in another trip, whose points it does not describe", async () => {
+    const props = makeProps(makeTrip(4))
+    const { getByTestId, queryByTestId, rerender } = render(<TripDetailScreen {...props} />)
+    await act(async () => {})
+    fireEvent.press(getByTestId("select-point"))
+    expect(getByTestId("point-card")).toBeTruthy()
+
+    const next = { ...makeTrip(4), index: 2 }
+    rerender(<TripDetailScreen {...props} route={{ params: { trip: next, trips: [props.route.params.trip, next] } }} />)
+
+    expect(queryByTestId("point-card")).toBeNull()
+  })
+
+  /** The map is unmounted when this screen is left, so a saved note has to live in the screen. */
+  it("hands a note saved from the card back to the map", async () => {
+    const { getByTestId, getByText } = render(<TripDetailScreen {...makeProps(makeTrip(3))} />)
+    await act(async () => {})
+
+    fireEvent.press(getByTestId("select-point-first"))
+    ;(showPrompt as jest.Mock).mockResolvedValueOnce("lunch")
+    fireEvent.press(getByTestId("point-note"))
 
     await waitFor(() => expect(NativeLocationService.updateLocationNote).toHaveBeenCalledWith(1, "lunch"))
     await waitFor(() => expect(getByTestId("TrackMap-overrides").props.children).toContain("lunch"))
+    expect(getByText("lunch")).toBeTruthy()
   })
 })
 

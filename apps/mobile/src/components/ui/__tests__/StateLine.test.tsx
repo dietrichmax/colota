@@ -2,10 +2,10 @@ import React from "react"
 import { render } from "@testing-library/react-native"
 import { StyleSheet, Text, View } from "react-native"
 import { CircleDot } from "lucide-react-native"
-import { size, space } from "../../../../constants"
+import { size, space } from "../../../constants"
 import { StateLine } from "../StateLine"
 
-jest.mock("../../../../hooks/useTheme", () => ({
+jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
 }))
 

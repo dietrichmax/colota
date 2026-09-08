@@ -30,6 +30,7 @@ export { LoadingOverlay } from "./ui/LoadingOverlay"
 export { LocationDisclosureModal } from "./ui/LocationDisclosureModal"
 export { LocalNetworkDisclosureModal } from "./ui/LocalNetworkDisclosureModal"
 export { AppModal } from "./ui/AppModal"
+export { DialogShell } from "./ui/DialogShell"
 export { ChipGroup } from "./ui/ChipGroup"
 export { FormatOption } from "./ui/FormatOption"
 export { FormatSelector } from "./ui/FormatSelector"
@@ -39,6 +40,9 @@ export { SettingRow } from "./ui/SettingRow"
 export { Toggle } from "./ui/Toggle"
 export { FieldMessage } from "./ui/FieldMessage"
 export { ListItem } from "./ui/ListItem"
+export { StateLine } from "./ui/StateLine"
+export { MapDock } from "./ui/MapDock"
+export { TrackMark } from "./ui/TrackMark"
 export { BottomTabBar, TAB_ROUTES } from "./ui/BottomTabBar"
 
 // ============================================================================
@@ -47,7 +51,6 @@ export { BottomTabBar, TAB_ROUTES } from "./ui/BottomTabBar"
 export { DashboardMap } from "./features/dashboard/DashboardMap"
 export { ConnectionStatus } from "./features/dashboard/ConnectionStatus"
 export { WelcomeCard } from "./features/dashboard/WelcomeCard"
-export { StateLine } from "./features/dashboard/StateLine"
 export { DashboardBanner } from "./features/dashboard/DashboardBanner"
 export { DashboardDock } from "./features/dashboard/DashboardDock"
 
@@ -60,6 +63,11 @@ export { MapCenterButton } from "./features/map/MapCenterButton"
 // Feature Components - Inspector
 // ============================================================================
 export { TrackMap } from "./features/inspector/TrackMap"
+export { DayHeader } from "./features/inspector/DayHeader"
+export { DayPickerModal } from "./features/inspector/DayPickerModal"
+export { TripRow } from "./features/inspector/TripRow"
+export { InspectorDock } from "./features/inspector/InspectorDock"
+export { PointCard } from "./features/inspector/PointCard"
 
 // ============================================================================
 // Feature Components - Settings
