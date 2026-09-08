@@ -16,7 +16,13 @@ type ListItemProps = {
   label: string
   sub?: string
   icon?: IconComponent
+  /** Tints the leading icon; the default is `textLight`, or `textDisabled` while disabled. */
+  iconColor?: string
   trailingIcon?: IconComponent
+  /** A control of its own beside the body, behind a hairline: the row opens, the control allows. Replaces the chevron. */
+  trailing?: React.ReactNode
+  /** The sub wraps once when 2, for a row that must carry a full sentence beside a control. */
+  subLines?: 1 | 2
   onPress: () => void
   testID?: string
   accessibilityRole?: "button" | "link"
@@ -29,7 +35,10 @@ export function ListItem({
   label,
   sub,
   icon: Icon,
+  iconColor,
   trailingIcon: TrailingIcon = ChevronRight,
+  trailing,
+  subLines = 1,
   onPress,
   testID,
   accessibilityRole = "button",
@@ -38,7 +47,7 @@ export function ListItem({
   expanded
 }: ListItemProps) {
   const { colors } = useTheme()
-  return (
+  const body = (
     <Pressable
       testID={testID}
       accessibilityRole={accessibilityRole}
@@ -48,11 +57,11 @@ export function ListItem({
       android_ripple={disabled ? undefined : { color: colors.text + STATE_LAYER_ALPHA }}
       disabled={disabled}
       onPress={onPress}
-      style={styles.row}
+      style={[styles.row, trailing !== undefined && styles.body]}
     >
       {Icon && (
         <View style={styles.icon}>
-          <Icon size={size.icon.md} color={disabled ? colors.textDisabled : colors.textLight} />
+          <Icon size={size.icon.md} color={disabled ? colors.textDisabled : (iconColor ?? colors.textLight)} />
         </View>
       )}
       <View style={styles.content}>
@@ -60,14 +69,24 @@ export function ListItem({
         {sub ? (
           <Text
             style={[styles.sub, { color: disabled ? colors.textDisabled : colors.textSecondary }]}
-            numberOfLines={1}
+            numberOfLines={subLines}
           >
             {sub}
           </Text>
         ) : null}
       </View>
-      <TrailingIcon size={size.icon.md} color={disabled ? colors.textDisabled : colors.textLight} />
+      {trailing === undefined && (
+        <TrailingIcon size={size.icon.md} color={disabled ? colors.textDisabled : colors.textLight} />
+      )}
     </Pressable>
+  )
+  if (trailing === undefined) return body
+  return (
+    <View style={styles.split}>
+      {body}
+      <View style={[styles.rule, { backgroundColor: colors.divider }]} />
+      {trailing}
+    </View>
   )
 }
 
@@ -79,6 +98,23 @@ const styles = StyleSheet.create({
     paddingVertical: space.lg,
     marginHorizontal: -space.lg,
     paddingHorizontal: space.lg
+  },
+  // The body keeps the row's inset on its start edge only; the control after the rule sits at the card's own inset.
+  split: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginEnd: -space.lg,
+    paddingEnd: space.lg
+  },
+  body: {
+    flex: 1,
+    marginEnd: 0,
+    paddingEnd: 0
+  },
+  rule: {
+    width: StyleSheet.hairlineWidth,
+    height: size.iconButton,
+    marginHorizontal: space.md
   },
   icon: {
     marginEnd: space.lg

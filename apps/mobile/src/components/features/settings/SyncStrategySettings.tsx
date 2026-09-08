@@ -31,7 +31,8 @@ import { SyncIntervalPicker } from "./SyncIntervalPicker"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
-import { recordingSummary, syncSummary, trackingSummary } from "../../../utils/dashboardState"
+import { syncSummary, trackingSummary } from "../../../utils/dashboardState"
+import { recordingClause } from "../../../utils/profileRow"
 import { parseWholeNumber, wholeNumberError } from "../../../utils/settingsValidation"
 import { isOverlandFormat } from "../../../utils/apiPayload"
 import NativeLocationService from "../../../services/NativeLocationService"
@@ -233,7 +234,7 @@ export function SyncStrategySettings({
               icon={UserRoundPen}
               iconColor={colors.textSecondary}
               label={`${activeProfile.name} is active`}
-              caption={`In force: ${lowerFirst(recordingSummary(activeProfile.interval, activeProfile.distance))}`}
+              caption={`In force: ${lowerFirst(recordingClause(activeProfile))}`}
               testID="profile-override-recording"
             />
             <Divider tight />

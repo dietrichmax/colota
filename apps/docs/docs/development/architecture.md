@@ -246,7 +246,7 @@ The stationary condition is decided by the fixes and never by a timer. `evaluate
 
 ### ProfileHelper
 
-Database access layer for tracking profiles and trip events. Maintains a `TimedCache` of enabled profiles (30s TTL) and provides CRUD operations plus trip event logging.
+Database access layer for tracking profiles and trip events. Maintains a `TimedCache` of enabled profiles (30s TTL) ordered by priority then id, so equal priorities go to the older profile, and provides CRUD operations plus trip event logging.
 
 ### ConditionMonitor
 
@@ -309,8 +309,8 @@ For backups, two `internal` methods support the export/import flow without expos
 | `GeofenceScreen` | Pause zones as rows over a map. Create geofence opens the editor on an empty draft; deletion happens there |
 | `GeofenceEditorScreen` | Every property of a zone: name, radius, location, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
 | `PlaceZoneScreen` | Picks a zone coordinate on a map with the radius drawn live, returning it to the editor with `popTo` and `merge` |
-| `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
-| `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
+| `TrackingProfilesScreen` | One card: a state line naming the profile in force (or what applies instead), then a row per profile in evaluation order reading as a rule, each with its enabled switch |
+| `ProfileEditorScreen` | The rule as a live sentence, then Condition, Profile (name, priority), Tracking while active and Switching, with inline validation and a Save button |
 | `LocationHistoryScreen` | One day at a time: a day header (chevrons, title opening the calendar dialog, ledger caption) over Map, Trips and Data lenses. Map docks a card over the track: the trip rows as legend, the tapped point (split, delete, note) or the empty day's next step. Trips is one card of trip rows; long-press turns the header into a contextual action bar for export, merge and delete. Data is a frozen-time table whose row tap opens the point on the map. Export of the day and the summary live in the header |
 | `TripDetailScreen` | A trip stepper (swatch, name, date and times) over the trip's map, where a tapped point docks its card for split and note; a ledger of distance, duration, speed, points and elevation, then the speed and elevation charts; export and delete in the header |
 | `LocationSummaryScreen` | A period stepper (week or month) over a ledger of distance, trips, active days and average, and the period's days as rows that open the day in Location History; each period is read from the daily stats on its own, since a year or all time would walk every row |

@@ -1,7 +1,8 @@
 import React from "react"
-import { render } from "@testing-library/react-native"
-import { StyleSheet } from "react-native"
-import { space } from "../../../constants"
+import { render, fireEvent } from "@testing-library/react-native"
+import { StyleSheet, Switch } from "react-native"
+import { lightColors } from "@colota/shared"
+import { size, space } from "../../../constants"
 
 jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
@@ -48,5 +49,57 @@ describe("ListItem", () => {
     expect(style.marginHorizontal).toBe(-space.lg)
     expect(style.paddingHorizontal).toBe(space.lg)
     expect(style.marginHorizontal + style.paddingHorizontal).toBe(0)
+  })
+
+  it("seats a trailing control outside the body behind a hairline, so the row opens and the control allows", () => {
+    const onPress = jest.fn()
+    const onValueChange = jest.fn()
+    const { getByTestId, getByRole, UNSAFE_getAllByType } = render(
+      <ListItem
+        label="Driving"
+        sub="When charging"
+        onPress={onPress}
+        testID="row"
+        trailing={<Switch testID="use" value onValueChange={onValueChange} />}
+      />
+    )
+
+    fireEvent.press(getByTestId("row"))
+    expect(onPress).toHaveBeenCalledTimes(1)
+    fireEvent(getByRole("switch"), "valueChange", false)
+    expect(onValueChange).toHaveBeenCalledWith(false)
+    expect(onPress).toHaveBeenCalledTimes(1)
+
+    const { View } = require("react-native")
+    const rule = UNSAFE_getAllByType(View).find(
+      (v: any) => StyleSheet.flatten(v.props.style)?.width === StyleSheet.hairlineWidth
+    )
+    expect(StyleSheet.flatten(rule?.props.style).height).toBe(size.iconButton)
+    expect(StyleSheet.flatten(rule?.props.style).backgroundColor).toBe(lightColors.divider)
+  })
+
+  it("tints the leading glyph on request and lets the sub wrap once when asked", () => {
+    const Icon = (props: any) => {
+      const { Text } = require("react-native")
+      return (
+        <Text testID="glyph" {...props}>
+          i
+        </Text>
+      )
+    }
+    const { getByTestId, getByText } = render(
+      <ListItem
+        label="Driving"
+        sub="Active · when charging"
+        icon={Icon}
+        iconColor="#123456"
+        subLines={2}
+        onPress={jest.fn()}
+        testID="row"
+      />
+    )
+
+    expect(getByTestId("glyph").props.color).toBe("#123456")
+    expect(getByText("Active · when charging").props.numberOfLines).toBe(2)
   })
 })

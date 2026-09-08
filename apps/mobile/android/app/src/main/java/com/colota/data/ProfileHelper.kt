@@ -56,7 +56,7 @@ class ProfileHelper(private val context: Context) {
                 ),
                 "enabled = 1",
                 null, null, null,
-                "priority DESC"
+                "priority DESC, id ASC"
             ).use { cursor ->
                 val idIdx = cursor.getColumnIndexOrThrow("id")
                 val nameIdx = cursor.getColumnIndexOrThrow("name")
@@ -98,7 +98,7 @@ class ProfileHelper(private val context: Context) {
             dbHelper.readableDatabase.query(
                 DatabaseHelper.TABLE_PROFILES,
                 null, null, null, null, null,
-                "priority DESC"
+                "priority DESC, id ASC"
             ).use { cursor ->
                 val idIdx = cursor.getColumnIndexOrThrow("id")
                 val nameIdx = cursor.getColumnIndexOrThrow("name")

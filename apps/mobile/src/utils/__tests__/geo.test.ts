@@ -9,6 +9,8 @@ import {
   inputToMeters,
   metersToInput,
   getSpeedUnit,
+  speedToInput,
+  inputToSpeed,
   loadDisplayPreferences,
   getUnitSystem,
   getTimeFormat
@@ -301,5 +303,19 @@ describe("formatTime", () => {
     await setPreferences("", "12h")
     const result = formatTime(1700000000)
     expect(result).toMatch(/am|pm/i)
+  })
+})
+
+describe("speedToInput / inputToSpeed", () => {
+  it("round-trips a stored speed through the display unit, so 13.9 m/s reads 50 km/h and 31 mph", async () => {
+    mockGetSetting.mockImplementation((key: string) => Promise.resolve(key === "unitSystem" ? "metric" : ""))
+    await loadDisplayPreferences()
+    expect(speedToInput(13.89)).toBe(50)
+    expect(inputToSpeed(50)).toBeCloseTo(13.89, 2)
+
+    mockGetSetting.mockImplementation((key: string) => Promise.resolve(key === "unitSystem" ? "imperial" : ""))
+    await loadDisplayPreferences()
+    expect(speedToInput(13.89)).toBe(31)
+    expect(inputToSpeed(31)).toBeCloseTo(13.86, 2)
   })
 })
