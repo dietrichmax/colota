@@ -158,6 +158,16 @@ export function shortDistanceUnit(): string {
   return usesMiles() ? "ft" : "m"
 }
 
+/** A stored speed in m/s as the whole number the speed field shows, in the user's unit. */
+export function speedToInput(metersPerSecond: number): number {
+  return Math.round(metersPerSecond * getSpeedUnit().factor)
+}
+
+/** A typed speed in the user's unit back to the m/s the profile stores. */
+export function inputToSpeed(value: number): number {
+  return value / getSpeedUnit().factor
+}
+
 /** Convert a user-entered short distance to meters. */
 export function inputToMeters(value: number): number {
   return usesMiles() ? value / FEET_PER_METER : value

@@ -1,369 +1,273 @@
 import React from "react"
 import { render, fireEvent, waitFor } from "@testing-library/react-native"
-import { Share, StyleSheet, View as RNView } from "react-native"
+import { Share } from "react-native"
 import { lightColors } from "@colota/shared"
 import { TrackingProfile } from "../../types/global"
 
-// --- Mocks ---
-
 const mockProfiles: TrackingProfile[] = [
   {
+    id: 2,
+    name: "Driving",
+    interval: 2,
+    distance: 10,
+    syncInterval: 60,
+    priority: 20,
+    condition: { type: "speed_above", speedThreshold: 13.89 },
+    activationDelay: 15,
+    deactivationDelay: 30,
+    enabled: true
+  },
+  {
     id: 1,
-    name: "Charging",
-    interval: 10,
+    name: "Commute",
+    interval: 5,
     distance: 0,
     syncInterval: 0,
     priority: 10,
     condition: { type: "charging" },
     activationDelay: 0,
     deactivationDelay: 60,
-    enabled: true
-  },
-  {
-    id: 2,
-    name: "Driving",
-    interval: 3,
-    distance: 5,
-    syncInterval: 60,
-    priority: 20,
-    condition: { type: "speed_above", speedThreshold: 13.89 },
-    activationDelay: 15,
-    deactivationDelay: 30,
     enabled: false
   }
 ]
 
 const mockGetProfiles = jest.fn().mockResolvedValue(mockProfiles)
 const mockUpdateProfile = jest.fn().mockResolvedValue(true)
-const mockDeleteProfile = jest.fn().mockResolvedValue(true)
 
 jest.mock("../../services/ProfileService", () => ({
   ProfileService: {
     getProfiles: () => mockGetProfiles(),
-    updateProfile: (update: any) => mockUpdateProfile(update),
-    deleteProfile: (id: number) => mockDeleteProfile(id)
+    updateProfile: (update: any) => mockUpdateProfile(update)
   }
 }))
 
 const mockShowAlert = jest.fn()
-const mockShowConfirm = jest.fn().mockResolvedValue(true)
-
 jest.mock("../../services/modalService", () => ({
-  showAlert: (...args: any[]) => mockShowAlert(...args),
-  showConfirm: (...args: any[]) => mockShowConfirm(...args)
+  showAlert: (...args: any[]) => mockShowAlert(...args)
 }))
 
-let mockActiveProfileName: string | null = null
-
+let mockActiveProfileId: number | null = null
+let mockTracking = true
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
-    activeProfileName: mockActiveProfileName,
-    settings: { isOfflineMode: false }
+    activeProfileId: mockActiveProfileId,
+    tracking: mockTracking,
+    settings: { isOfflineMode: false, interval: 30, distance: 2, syncInterval: 300 }
   })
+}))
+
+jest.mock("../../hooks/useActiveProfile", () => ({
+  useActiveProfile: (id: number | null) => (id === null ? null : (mockProfiles.find((p) => p.id === id) ?? null))
 }))
 
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: jest.requireActual("@colota/shared").lightColors })
 }))
 
+jest.mock("../../utils/geo", () => ({
+  ...jest.requireActual("../../utils/geo"),
+  shortDistanceUnit: () => "m",
+  metersToInput: (v: number) => v,
+  getSpeedUnit: () => ({ factor: 3.6, unit: "km/h" }),
+  speedToInput: (mps: number) => Math.round(mps * 3.6)
+}))
+
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text } = require("react-native")
+  const { View, Text, Pressable } = require("react-native")
   return {
-    EmptyState: require("../../testing/componentStubs").EmptyStateStub,
-    IconButton: require("../../testing/componentStubs").IconButtonStub,
-    Button: function (props: any) {
-      return require("react").createElement(
-        require("react-native").Pressable,
-        { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
-        require("react").createElement(require("react-native").Text, null, props.title)
-      )
-    },
+    EmptyState: ({ title, hint, action }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, title),
+        R.createElement(Text, null, hint),
+        action &&
+          R.createElement(
+            Pressable,
+            { testID: "empty-action", onPress: action.onPress },
+            R.createElement(Text, null, action.label)
+          )
+      ),
+    HeaderAction: ({ label, onPress, testID }: any) =>
+      R.createElement(Pressable, { testID, onPress, accessibilityRole: "button", accessibilityLabel: label }),
     Toggle: function (props: any) {
-      return require("react").createElement(require("react-native").Switch, {
+      return R.createElement(require("react-native").Switch, {
         testID: props.testID,
         value: props.value,
         onValueChange: props.onValueChange,
-        disabled: props.disabled,
         accessibilityLabel: props.accessibilityLabel
       })
     },
+    ListItem: ({ label, sub, onPress, testID, icon, iconColor, trailing }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(
+          Pressable,
+          { testID, onPress, accessibilityRole: "button", accessibilityLabel: `${label}, ${sub}` },
+          R.createElement(Text, null, label),
+          R.createElement(Text, null, sub),
+          R.createElement(Text, { testID: `${testID}-glyph`, style: { color: iconColor } }, icon?.displayName ?? "icon")
+        ),
+        trailing
+      ),
+    StateLine: ({ label, caption, iconColor, testID }: any) =>
+      R.createElement(
+        View,
+        { testID, accessibilityValue: { text: iconColor } },
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, caption)
+      ),
     Container: ({ children }: any) => R.createElement(View, null, children),
-    SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children, style }: any) => R.createElement(View, { style }, children)
+    Card: ({ children }: any) => R.createElement(View, { testID: "profiles-card" }, children),
+    Divider: () => R.createElement(View, null)
   }
 })
 
-const mockNavigate = jest.fn()
-const mockAddListener = jest.fn().mockReturnValue(jest.fn())
-
-const mockNavigation = {
-  navigate: mockNavigate,
-  addListener: mockAddListener
-}
+jest.mock("../../utils/logger", () => ({ logger: { error: jest.fn() } }))
 
 import { TrackingProfilesScreen } from "../TrackingProfilesScreen"
+
+const mockNavigate = jest.fn()
+const mockAddListener = jest.fn().mockReturnValue(jest.fn())
+const mockSetOptions = jest.fn()
+const mockNavigation = { navigate: mockNavigate, addListener: mockAddListener, setOptions: mockSetOptions }
+const headerRight = () => render(mockSetOptions.mock.calls.at(-1)[0].headerRight())
 
 describe("TrackingProfilesScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockActiveProfileName = null
+    mockActiveProfileId = null
+    mockTracking = true
     mockGetProfiles.mockResolvedValue(mockProfiles)
-    mockShowConfirm.mockResolvedValue(true)
   })
 
   function renderScreen() {
     return render(<TrackingProfilesScreen navigation={mockNavigation as any} />)
   }
 
-  it("marks the active profile with a fill, because a border that comes and goes clips the card", async () => {
-    mockActiveProfileName = "Charging"
+  describe("the state line", () => {
+    it("names the profile in force with its values and tints its glyph", async () => {
+      mockActiveProfileId = 2
+      const { findByText, getByText, getByTestId } = renderScreen()
 
-    const { UNSAFE_getAllByType, findByText } = renderScreen()
-    await findByText("Active")
+      expect(await findByText("Driving is active")).toBeTruthy()
+      expect(getByText("In force: every 2 s after 10 m · syncs every 1 min")).toBeTruthy()
+      expect(getByTestId("profile-state").props.accessibilityValue.text).toBe(lightColors.success)
+    })
 
-    const filled = UNSAFE_getAllByType(RNView).filter(
-      (v) => StyleSheet.flatten(v.props.style)?.backgroundColor === lightColors.primaryContainer
-    )
+    it("gives the default a meaning while tracking runs with no profile", async () => {
+      const { findByText, getByText } = renderScreen()
 
-    expect(filled).toHaveLength(1)
-    expect(StyleSheet.flatten(filled[0].props.style).borderWidth).toBeUndefined()
-  })
+      expect(await findByText("No profile active")).toBeTruthy()
+      expect(getByText("Tracking & sync applies: every 30 s after 2 m · syncs every 5 min")).toBeTruthy()
+    })
 
-  it("renders profile list", async () => {
-    const { getByText } = renderScreen()
+    it("says profiles wait for tracking instead of inventing a state", async () => {
+      mockTracking = false
+      mockActiveProfileId = 2
+      const { findByText, queryByText } = renderScreen()
 
-    await waitFor(() => {
-      expect(getByText("Charging")).toBeTruthy()
-      expect(getByText("Driving")).toBeTruthy()
+      expect(await findByText("Profiles apply while tracking runs")).toBeTruthy()
+      expect(queryByText(/^Active · /)).toBeNull()
     })
   })
 
-  it("shows profile condition text", async () => {
-    const { getByText } = renderScreen()
+  describe("the rows", () => {
+    it("reads each profile as a sentence in priority order, with its switch", async () => {
+      const { findByText, getByText, getByTestId } = renderScreen()
 
-    await waitFor(() => {
-      expect(getByText("When charging")).toBeTruthy()
-      expect(getByText(/Speed above 50 km\/h/)).toBeTruthy()
+      expect(await findByText("Speed above 50 km/h · Every 2 s after 10 m · syncs every 1 min")).toBeTruthy()
+      expect(getByText("When charging · Every 5 s, any movement · syncs each fix")).toBeTruthy()
+      expect(getByTestId("profile-toggle-2").props.value).toBe(true)
+      expect(getByTestId("profile-toggle-1").props.value).toBe(false)
+      expect(getByTestId("profile-toggle-1").props.accessibilityLabel).toBe("Use Commute")
+    })
+
+    it("opens the row in force with Active and tints its glyph, and no other", async () => {
+      mockActiveProfileId = 2
+      const { findByText, getByTestId, queryByText } = renderScreen()
+
+      expect(await findByText("Active · speed above 50 km/h · Every 2 s after 10 m · syncs every 1 min")).toBeTruthy()
+      expect(getByTestId("profile-2-glyph").props.style.color).toBe(lightColors.success)
+      expect(getByTestId("profile-1-glyph").props.style.color).toBeUndefined()
+      expect(queryByText(/Active · when charging/)).toBeNull()
+    })
+
+    it("opens the editor from the row body", async () => {
+      const { findByTestId } = renderScreen()
+
+      fireEvent.press(await findByTestId("profile-1"))
+
+      expect(mockNavigate).toHaveBeenCalledWith("Profile Editor", { profileId: 1 })
+    })
+
+    it("flips a profile's switch and reloads, and says when that fails", async () => {
+      const { findByTestId } = renderScreen()
+
+      fireEvent(await findByTestId("profile-toggle-1"), "valueChange", true)
+
+      await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledWith({ id: 1, enabled: true }))
+      expect(mockGetProfiles).toHaveBeenCalledTimes(2)
+
+      mockUpdateProfile.mockRejectedValueOnce(new Error("db"))
+      fireEvent(await findByTestId("profile-toggle-2"), "valueChange", false)
+      await waitFor(() => expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to update profile.", "error"))
+    })
+
+    it("reloads on focus, so an edit shows on the way back", () => {
+      renderScreen()
+      expect(mockAddListener).toHaveBeenCalledWith("focus", expect.any(Function))
     })
   })
 
-  it("shows profile settings summary", async () => {
-    const { getByText } = renderScreen()
+  describe("the app bar", () => {
+    it("holds Share before Create, and Share only with profiles", async () => {
+      const { findByTestId } = renderScreen()
+      await findByTestId("profile-1")
 
-    await waitFor(() => {
-      expect(getByText(/10s interval/)).toBeTruthy()
-      expect(getByText(/3s interval/)).toBeTruthy()
-    })
-  })
+      const bar = headerRight()
+      expect(bar.getByLabelText("Share all profiles")).toBeTruthy()
+      expect(bar.getByLabelText("Create profile")).toBeTruthy()
 
-  it("shows priority badges", async () => {
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("P10")).toBeTruthy()
-      expect(getByText("P20")).toBeTruthy()
-    })
-  })
-
-  it("shows empty state when no profiles", async () => {
-    mockGetProfiles.mockResolvedValue([])
-
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("No profiles yet")).toBeTruthy()
-    })
-  })
-
-  it("navigates to editor when pressing Create Profile", async () => {
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Create profile")).toBeTruthy()
+      mockGetProfiles.mockResolvedValue([])
+      const empty = renderScreen()
+      await empty.findByText("No profiles yet")
+      expect(headerRight().queryByLabelText("Share all profiles")).toBeNull()
     })
 
-    fireEvent.press(getByText("Create profile"))
+    it("shares a setup link with every profile and no database fields", async () => {
+      const shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction", activityType: undefined })
+      const { findByTestId } = renderScreen()
+      await findByTestId("profile-1")
 
-    expect(mockNavigate).toHaveBeenCalledWith("Profile Editor", {})
-  })
+      fireEvent.press(headerRight().getByLabelText("Share all profiles"))
 
-  it("navigates to editor with profileId when pressing a profile", async () => {
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Charging")).toBeTruthy()
-    })
-
-    fireEvent.press(getByText("Charging"))
-
-    expect(mockNavigate).toHaveBeenCalledWith("Profile Editor", { profileId: 1 })
-  })
-
-  it("shows confirmation dialog before deleting", async () => {
-    const { getByText, getByTestId } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Charging")).toBeTruthy()
-    })
-
-    fireEvent.press(getByTestId("delete-profile-1"))
-
-    await waitFor(() => {
-      expect(mockShowConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "Delete profile" }))
-    })
-
-    await waitFor(() => {
-      expect(mockDeleteProfile).toHaveBeenCalledWith(1)
-    })
-  })
-
-  it("shows section title with profile count", async () => {
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Profiles (2)")).toBeTruthy()
-    })
-  })
-
-  it("shows error when toggle fails", async () => {
-    mockUpdateProfile.mockRejectedValueOnce(new Error("Network error"))
-
-    const { getByText, getByTestId } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Driving")).toBeTruthy()
-    })
-
-    fireEvent(getByTestId("toggle-profile-2"), "onValueChange", true)
-
-    await waitFor(() => {
-      expect(mockShowAlert).toHaveBeenCalledWith("Error", expect.any(String), "error")
-    })
-  })
-
-  it("reloads profiles on focus", () => {
-    renderScreen()
-
-    // Verify navigation focus listener is registered
-    expect(mockAddListener).toHaveBeenCalledWith("focus", expect.any(Function))
-  })
-
-  it("shows Active badge when profile matches activeProfileName from context", async () => {
-    mockActiveProfileName = "Charging"
-
-    const { getByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(getByText("Active")).toBeTruthy()
-    })
-  })
-
-  it("does not show Active badge when no profile is active", async () => {
-    mockActiveProfileName = null
-
-    const { queryByText } = renderScreen()
-
-    await waitFor(() => {
-      expect(queryByText("Active")).toBeNull()
-    })
-  })
-
-  describe("share profiles", () => {
-    let shareSpy: jest.SpyInstance
-
-    beforeEach(() => {
-      shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction", activityType: undefined })
-    })
-
-    afterEach(() => {
+      await waitFor(() => expect(shareSpy).toHaveBeenCalledWith({ message: expect.stringContaining("colota://setup") }))
+      const link: string = shareSpy.mock.calls[0][0].message as string
+      expect(decodeURIComponent(link.split("config=")[1])).not.toMatch(/"id"/)
       shareSpy.mockRestore()
     })
 
-    it("does not render the share button when there are no profiles", async () => {
-      mockGetProfiles.mockResolvedValue([])
-      const { queryByTestId, getByText } = renderScreen()
+    it("opens the editor on an empty draft from Create", async () => {
+      const { findByTestId } = renderScreen()
+      await findByTestId("profile-1")
 
-      await waitFor(() => {
-        expect(getByText("No profiles yet")).toBeTruthy()
-      })
+      fireEvent.press(headerRight().getByLabelText("Create profile"))
 
-      expect(queryByTestId("share-profiles-btn")).toBeNull()
+      expect(mockNavigate).toHaveBeenCalledWith("Profile Editor", {})
     })
+  })
 
-    it("renders the share button when at least one profile exists", async () => {
-      const { getByTestId } = renderScreen()
+  it("shows the empty state with one action and no card or caption", async () => {
+    mockGetProfiles.mockResolvedValue([])
+    const { findByText, queryByTestId, queryByText, getByTestId } = renderScreen()
 
-      await waitFor(() => {
-        expect(getByTestId("share-profiles-btn")).toBeTruthy()
-      })
-    })
-
-    it("opens the share sheet with a colota://setup link on press", async () => {
-      const { getByTestId } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByTestId("share-profiles-btn")).toBeTruthy()
-      })
-
-      fireEvent.press(getByTestId("share-profiles-btn"))
-
-      await waitFor(() => {
-        expect(shareSpy).toHaveBeenCalledTimes(1)
-      })
-
-      const arg = shareSpy.mock.calls[0][0]
-      expect(arg.message).toMatch(/^colota:\/\/setup\?config=/)
-    })
-
-    it("encodes profiles without id or createdAt fields", async () => {
-      const { getByTestId } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByTestId("share-profiles-btn")).toBeTruthy()
-      })
-
-      fireEvent.press(getByTestId("share-profiles-btn"))
-
-      await waitFor(() => {
-        expect(shareSpy).toHaveBeenCalledTimes(1)
-      })
-
-      const link = shareSpy.mock.calls[0][0].message as string
-      const encoded = link.split("config=")[1]
-      const decoded = JSON.parse(atob(encoded))
-
-      expect(decoded.profiles).toHaveLength(2)
-      expect(decoded.profiles[0]).not.toHaveProperty("id")
-      expect(decoded.profiles[0]).not.toHaveProperty("createdAt")
-      expect(decoded.profiles[0]).toEqual({
-        name: "Charging",
-        interval: 10,
-        distance: 0,
-        syncInterval: 0,
-        priority: 10,
-        condition: { type: "charging" },
-        activationDelay: 0,
-        deactivationDelay: 60,
-        enabled: true
-      })
-      expect(decoded.profiles[1].condition).toEqual({ type: "speed_above", speedThreshold: 13.89 })
-    })
-
-    it("shows an error alert when sharing fails", async () => {
-      shareSpy.mockRejectedValueOnce(new Error("share failed"))
-
-      const { getByTestId } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByTestId("share-profiles-btn")).toBeTruthy()
-      })
-
-      fireEvent.press(getByTestId("share-profiles-btn"))
-
-      await waitFor(() => {
-        expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to share profiles.", "error")
-      })
-    })
+    expect(await findByText("No profiles yet")).toBeTruthy()
+    expect(queryByTestId("profiles-card")).toBeNull()
+    expect(queryByText(/Checked top to bottom/)).toBeNull()
+    fireEvent.press(getByTestId("empty-action"))
+    expect(mockNavigate).toHaveBeenCalledWith("Profile Editor", {})
   })
 })

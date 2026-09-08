@@ -7,6 +7,7 @@ import React, { useState, useEffect, useLayoutEffect, useCallback } from "react"
 import { View, Text, StyleSheet, ScrollView } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
+import { useTimeout } from "../hooks/useTimeout"
 import { ProfileService } from "../services/ProfileService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { TrackingProfile, ProfileConditionType } from "../types/global"
@@ -18,6 +19,7 @@ import {
   Container,
   Divider,
   FieldMessage,
+  NumericInput,
   RadioRow,
   SectionTitle,
   SettingRow,
@@ -25,11 +27,13 @@ import {
 } from "../components"
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
-import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
+import { shortDistanceUnit, inputToMeters, metersToInput, getSpeedUnit, speedToInput, inputToSpeed } from "../utils/geo"
 import { formatDuration } from "../utils/dashboardState"
+import { conditionOf, profileSentence } from "../utils/profileRow"
+import { parseWholeNumber, wholeNumberError } from "../utils/settingsValidation"
 import {
-  MS_TO_KMH,
   PROFILE_CONDITIONS,
+  SAVE_SUCCESS_DISPLAY_MS,
   SYNC_INTERVAL_LABELS,
   STATIONARY_MAX_INTERVAL_SECONDS,
   defaultProfileDelays,
@@ -38,35 +42,43 @@ import {
 } from "../constants"
 import type { RootScreenProps } from "../types/navigation"
 
-function formatSyncDefault(seconds: number): string {
-  return SYNC_INTERVAL_LABELS[seconds] ?? formatDuration(seconds)
-}
+type Draft = Omit<TrackingProfile, "id" | "createdAt">
+type NumericKey = "interval" | "distance" | "activationDelay" | "deactivationDelay" | "speed"
+
+const DEFAULT_SPEED_INPUT = 30
+const DEFAULT_PRIORITY = 10
+
+const isSpeedType = (type: ProfileConditionType) => type === "speed_above" || type === "speed_below"
 
 export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Profile Editor">) {
   const { colors } = useTheme()
   const { settings } = useTracking()
   const profileId = route?.params?.profileId as number | undefined
   const isEditing = !!profileId
+  const distanceUnit = shortDistanceUnit()
+  const speedUnit = getSpeedUnit().unit
 
-  const [profile, setProfile] = useState<Omit<TrackingProfile, "id" | "createdAt">>({
+  const [profile, setProfile] = useState<Draft>({
     name: "",
     interval: settings.interval,
     distance: settings.distance,
     syncInterval: settings.syncInterval,
-    priority: 10,
+    priority: DEFAULT_PRIORITY,
     condition: { type: "charging" },
     ...defaultProfileDelays("charging"),
     enabled: true
   })
-  const [speedKmh, setSpeedKmh] = useState("30")
   const [saving, setSaving] = useState(false)
-
-  // String representations for numeric inputs
-  const [intervalStr, setIntervalStr] = useState(String(settings.interval))
-  const [distanceStr, setDistanceStr] = useState(String(metersToInput(settings.distance)))
-  const [priorityStr, setPriorityStr] = useState("10")
-  const [activationDelayStr, setActivationDelayStr] = useState("0")
-  const [delayStr, setDelayStr] = useState("60")
+  const [text, setText] = useState({
+    interval: String(settings.interval),
+    distance: String(metersToInput(settings.distance)),
+    speed: String(DEFAULT_SPEED_INPUT),
+    priority: String(DEFAULT_PRIORITY),
+    activationDelay: String(defaultProfileDelays("charging").activationDelay),
+    deactivationDelay: String(defaultProfileDelays("charging").deactivationDelay)
+  })
+  const [note, setNote] = useState<{ key: NumericKey; text: string } | null>(null)
+  const noteTimer = useTimeout()
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerTitle: isEditing ? "Edit profile" : "New profile" })
@@ -74,31 +86,31 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 
   useEffect(() => {
     if (!profileId) return
-
     ProfileService.getProfiles()
       .then((profiles) => {
         const existing = profiles.find((p) => p.id === profileId)
-        if (existing) {
-          setProfile({
-            name: existing.name,
-            interval: existing.interval,
-            distance: existing.distance,
-            syncInterval: existing.syncInterval,
-            priority: existing.priority,
-            condition: existing.condition,
-            activationDelay: existing.activationDelay,
-            deactivationDelay: existing.deactivationDelay,
-            enabled: existing.enabled
-          })
-          setIntervalStr(String(existing.interval))
-          setDistanceStr(String(metersToInput(existing.distance)))
-          setPriorityStr(String(existing.priority))
-          setActivationDelayStr(String(existing.activationDelay))
-          setDelayStr(String(existing.deactivationDelay))
-          if (existing.condition.speedThreshold) {
-            setSpeedKmh((existing.condition.speedThreshold * MS_TO_KMH).toFixed(0))
-          }
-        }
+        if (!existing) return
+        setProfile({
+          name: existing.name,
+          interval: existing.interval,
+          distance: existing.distance,
+          syncInterval: existing.syncInterval,
+          priority: existing.priority,
+          condition: existing.condition,
+          activationDelay: existing.activationDelay,
+          deactivationDelay: existing.deactivationDelay,
+          enabled: existing.enabled
+        })
+        setText({
+          interval: String(existing.interval),
+          distance: String(metersToInput(existing.distance)),
+          speed: String(
+            existing.condition.speedThreshold ? speedToInput(existing.condition.speedThreshold) : DEFAULT_SPEED_INPUT
+          ),
+          priority: String(existing.priority),
+          activationDelay: String(existing.activationDelay),
+          deactivationDelay: String(existing.deactivationDelay)
+        })
       })
       .catch((err) => {
         logger.error("[ProfileEditor] Failed to load profile:", err)
@@ -107,59 +119,87 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
       })
   }, [profileId, navigation])
 
-  const handleNumericChange = useCallback(
-    (setter: (v: string) => void, field: keyof typeof profile, value: string, min = 0) => {
-      setter(value)
-      const num = Number(value)
-      if (!isNaN(num) && num >= min) {
-        const stored = field === "distance" ? inputToMeters(num) : num
-        setProfile((prev) => ({ ...prev, [field]: stored }))
-      }
-    },
-    []
-  )
+  const type = profile.condition.type
+  const isSpeed = isSpeedType(type)
+  const isStationary = type === "stationary"
+  const conditionLabel = conditionOf(profile).label
 
-  const setConditionType = useCallback(
-    (type: ProfileConditionType) => {
-      const isSpeed = type === "speed_above" || type === "speed_below"
-      const isStationary = type === "stationary"
-      const { activationDelay: defaultActivation, deactivationDelay: defaultDeactivation } = defaultProfileDelays(type)
-      setProfile((prev) => ({
-        ...prev,
-        // A distance filter is ignored for a stationary profile; store 0 so UI, DB and runtime agree.
-        distance: isStationary ? 0 : prev.distance,
-        deactivationDelay: prev.condition.type !== type ? defaultDeactivation : prev.deactivationDelay,
-        activationDelay: prev.condition.type !== type ? defaultActivation : prev.activationDelay,
-        condition: {
-          type,
-          ...(isSpeed ? { speedThreshold: Number(speedKmh) / MS_TO_KMH } : {})
-        }
-      }))
-      if (isStationary) setDistanceStr("0")
-      if (profile.condition.type !== type) {
-        setDelayStr(String(defaultDeactivation))
-        setActivationDelayStr(String(defaultActivation))
-      }
-    },
-    [speedKmh, profile.condition.type]
-  )
-
-  const handleSpeedChange = useCallback((val: string) => {
-    setSpeedKmh(val)
-    const num = Number(val)
-    if (!isNaN(num) && num > 0) {
-      setProfile((prev) => ({
-        ...prev,
-        condition: { ...prev.condition, speedThreshold: num / MS_TO_KMH }
-      }))
-    }
+  const store = useCallback((key: NumericKey, value: number) => {
+    setProfile((prev) => {
+      if (key === "speed") return { ...prev, condition: { ...prev.condition, speedThreshold: inputToSpeed(value) } }
+      if (key === "distance") return { ...prev, distance: inputToMeters(value) }
+      return { ...prev, [key]: value }
+    })
   }, [])
+
+  const minOf = (key: NumericKey) => (key === "interval" || key === "speed" ? 1 : 0)
+  const unitOf = (key: NumericKey) => (key === "distance" ? distanceUnit : key === "speed" ? speedUnit : "s")
+
+  const handleNumeric = (key: NumericKey, value: string) => {
+    setText((prev) => ({ ...prev, [key]: value }))
+    setNote(null)
+    const num = parseWholeNumber(value)
+    if (num !== null && num >= minOf(key)) store(key, num)
+  }
+
+  // An empty or below-minimum box clamps to the minimum on blur and says so, the Tracking & sync rule.
+  const handleBlur = (key: NumericKey) => {
+    const min = minOf(key)
+    const num = parseWholeNumber(text[key])
+    if (num !== null && num >= min) return
+    setText((prev) => ({ ...prev, [key]: String(min) }))
+    setNote({ key, text: `Set to ${min} ${unitOf(key)}` })
+    noteTimer.set(() => setNote(null), SAVE_SUCCESS_DISPLAY_MS)
+    store(key, min)
+  }
+
+  const errorOf = (key: NumericKey) => wholeNumberError(text[key], minOf(key), unitOf(key))
+  const noteOf = (key: NumericKey) => (note?.key === key ? note.text : undefined)
+
+  const priorityError = text.priority !== "" && parseWholeNumber(text.priority) === null ? "A whole number" : undefined
+  const handlePriority = (value: string) => {
+    setText((prev) => ({ ...prev, priority: value }))
+    const num = parseWholeNumber(value)
+    if (num !== null) setProfile((prev) => ({ ...prev, priority: num }))
+  }
+  const handlePriorityBlur = () => {
+    if (parseWholeNumber(text.priority) === null) setText((prev) => ({ ...prev, priority: String(profile.priority) }))
+  }
+
+  const setConditionType = (next: ProfileConditionType) => {
+    if (next === type) return
+    const previousDefaults = defaultProfileDelays(type)
+    const nextDefaults = defaultProfileDelays(next)
+    const keepDelays =
+      profile.activationDelay !== previousDefaults.activationDelay ||
+      profile.deactivationDelay !== previousDefaults.deactivationDelay
+    const delays = keepDelays
+      ? { activationDelay: profile.activationDelay, deactivationDelay: profile.deactivationDelay }
+      : nextDefaults
+    const speedThreshold = isSpeedType(next)
+      ? (profile.condition.speedThreshold ?? inputToSpeed(parseWholeNumber(text.speed) ?? DEFAULT_SPEED_INPUT))
+      : undefined
+    setProfile((prev) => ({
+      ...prev,
+      ...delays,
+      // A distance filter is ignored for a stationary profile; store 0 so UI, DB and runtime agree.
+      distance: next === "stationary" ? 0 : prev.distance,
+      condition: { type: next, ...(speedThreshold !== undefined ? { speedThreshold } : {}) }
+    }))
+    setText((prev) => ({
+      ...prev,
+      distance: next === "stationary" ? "0" : prev.distance,
+      activationDelay: String(delays.activationDelay),
+      deactivationDelay: String(delays.deactivationDelay),
+      speed: speedThreshold !== undefined ? String(speedToInput(speedThreshold)) : prev.speed
+    }))
+  }
 
   const handleDelete = useCallback(async () => {
     if (!profileId) return
     const confirmed = await showConfirm({
       title: "Delete profile",
-      message: `Delete "${profile.name}"?`,
+      message: `Delete "${profile.name || conditionLabel}"?`,
       confirmText: "Delete",
       destructive: true
     })
@@ -171,29 +211,24 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
       logger.error("[ProfileEditor] Delete failed:", err)
       showAlert("Error", "Failed to delete profile.", "error")
     }
-  }, [profileId, profile.name, navigation])
+  }, [profileId, profile.name, conditionLabel, navigation])
+
+  const hasFieldError =
+    !!priorityError ||
+    !!errorOf("interval") ||
+    (!isStationary && !!errorOf("distance")) ||
+    (isSpeed && !!errorOf("speed")) ||
+    !!errorOf("activationDelay") ||
+    (!isStationary && !!errorOf("deactivationDelay"))
 
   const handleSave = useCallback(async () => {
-    if (!profile.name.trim()) {
-      showAlert("Missing Name", "Please enter a profile name.", "warning")
-      return
-    }
-    if (profile.interval < 1) {
-      showAlert("Invalid Interval", "Tracking interval must be at least 1 second.", "warning")
-      return
-    }
-    const isSpeed = profile.condition.type === "speed_above" || profile.condition.type === "speed_below"
-    if (isSpeed && (!profile.condition.speedThreshold || profile.condition.speedThreshold <= 0)) {
-      showAlert("Missing Speed", "Speed conditions require a positive speed threshold.", "warning")
-      return
-    }
-
+    const next: Draft = { ...profile, name: profile.name.trim() || conditionLabel }
     setSaving(true)
     try {
       if (isEditing && profileId) {
-        await ProfileService.updateProfile({ id: profileId, ...profile })
+        await ProfileService.updateProfile({ id: profileId, ...next })
       } else {
-        await ProfileService.createProfile(profile)
+        await ProfileService.createProfile(next)
       }
       navigation.goBack()
     } catch (err) {
@@ -202,9 +237,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     } finally {
       setSaving(false)
     }
-  }, [profile, isEditing, profileId, navigation])
+  }, [profile, conditionLabel, isEditing, profileId, navigation])
 
-  const isSpeed = profile.condition.type === "speed_above" || profile.condition.type === "speed_below"
+  const syncDefault = SYNC_INTERVAL_LABELS[settings.syncInterval] ?? formatDuration(settings.syncInterval)
 
   return (
     <Container>
@@ -213,205 +248,181 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Name & Priority */}
-        <SectionTitle>Profile</SectionTitle>
+        <Text style={[styles.intro, { color: colors.textSecondary }]} testID="profile-sentence">
+          {profileSentence(profile, settings.isOfflineMode)}
+        </Text>
+
+        <SectionTitle>Condition</SectionTitle>
+        <Card rows>
+          <View accessibilityRole="radiogroup" style={styles.group}>
+            {PROFILE_CONDITIONS.map((opt) => (
+              <React.Fragment key={opt.type}>
+                <RadioRow
+                  testID={`condition-${opt.type}`}
+                  icon={opt.icon}
+                  label={opt.label}
+                  sub={opt.description}
+                  selected={type === opt.type}
+                  onPress={() => setConditionType(opt.type)}
+                />
+                {isSpeedType(opt.type) && type === opt.type && (
+                  <View style={styles.reveal}>
+                    <NumericInput
+                      label="Speed"
+                      testID="speed-input"
+                      value={text.speed}
+                      onChange={(v) => handleNumeric("speed", v)}
+                      onBlur={() => handleBlur("speed")}
+                      unit={speedUnit}
+                      placeholder={String(DEFAULT_SPEED_INPUT)}
+                      hint={`At least 1 ${speedUnit}. Applies while your average speed is ${opt.type === "speed_above" ? "above" : "below"} it.`}
+                      error={errorOf("speed")}
+                      message={noteOf("speed")}
+                    />
+                  </View>
+                )}
+              </React.Fragment>
+            ))}
+          </View>
+        </Card>
+
+        <SectionTitle style={styles.groupTop}>Profile</SectionTitle>
         <Card rows style={styles.cardTop}>
-          <View style={styles.inputGroup}>
+          <View style={styles.field}>
             <TextField
-              testID="profile-name-input"
+              testID="name-input"
               label="Name"
-              placeholder="e.g. Driving, Cycling..."
+              placeholder={conditionLabel}
               value={profile.name}
               onChangeText={(val) => setProfile((prev) => ({ ...prev, name: val }))}
             />
+            <FieldMessage>
+              Shown on the Dashboard and in the notification while active. Blank uses the condition&apos;s name.
+            </FieldMessage>
           </View>
-
           <Divider tight />
-
-          <SettingRow label="Priority" hint="Higher number wins when multiple profiles match">
+          <SettingRow
+            label="Priority"
+            hint="Higher wins when two profiles match at once. Equal numbers go to the older profile."
+          >
             <TextField
               accessibilityLabel="Priority"
+              testID="priority-input"
               figure
               style={styles.numInput}
               keyboardType="numeric"
-              value={priorityStr}
-              onChangeText={(val) => handleNumericChange(setPriorityStr, "priority", val, 0)}
-              placeholder="10"
+              value={text.priority}
+              onChangeText={handlePriority}
+              onBlur={handlePriorityBlur}
+              placeholder={String(DEFAULT_PRIORITY)}
+              error={priorityError}
             />
           </SettingRow>
         </Card>
 
-        {/* Condition */}
-        <SectionTitle style={styles.sectionGap}>Activation condition</SectionTitle>
-        <Card rows style={isSpeed && styles.cardTail}>
-          {PROFILE_CONDITIONS.map((opt, i) => (
-            <React.Fragment key={opt.type}>
-              {i > 0 && <Divider tight />}
-              <RadioRow
-                icon={opt.icon}
-                label={opt.label}
-                sub={opt.description}
-                selected={profile.condition.type === opt.type}
-                onPress={() => setConditionType(opt.type)}
-              />
-            </React.Fragment>
-          ))}
-
-          {isSpeed && (
-            <>
-              <Divider tight />
-              <View style={styles.inputGroup}>
-                <TextField
-                  testID="speed-threshold-input"
-                  label="Speed Threshold (km/h)"
-                  figure
-                  placeholder="30"
-                  value={speedKmh}
-                  onChangeText={handleSpeedChange}
-                  keyboardType="numeric"
-                />
-              </View>
-            </>
-          )}
-        </Card>
-
-        {/* Tracking Settings */}
-        <SectionTitle style={styles.sectionGap}>Tracking settings</SectionTitle>
-        <Card rows style={styles.cardTail}>
-          <SettingRow label="Tracking interval" hint={`Default: ${settings.interval}s`}>
-            <View style={styles.inputWithUnit}>
-              <TextField
-                accessibilityLabel="Tracking interval"
-                figure
-                style={styles.numInput}
-                keyboardType="numeric"
-                value={intervalStr}
-                onChangeText={(val) => handleNumericChange(setIntervalStr, "interval", val, 1)}
-                placeholder="5"
-              />
-              <Text style={[styles.unit, { color: colors.textSecondary }]}>s</Text>
-            </View>
-          </SettingRow>
-
-          {profile.condition.type === "stationary" && profile.interval > STATIONARY_MAX_INTERVAL_SECONDS && (
-            <FieldMessage variant="warning">
-              The device may miss the first {Math.floor(profile.interval / 60)} minutes of a trip when you start moving
-              with the specified interval!
+        <SectionTitle style={styles.groupTop}>Tracking while active</SectionTitle>
+        <Card rows style={styles.cardTop}>
+          <NumericInput
+            label="Tracking interval"
+            testID="interval-input"
+            value={text.interval}
+            onChange={(v) => handleNumeric("interval", v)}
+            onBlur={() => handleBlur("interval")}
+            unit="s"
+            placeholder={String(settings.interval)}
+            hint={`At least 1 s. Replaces the ${formatDuration(settings.interval)} from Tracking & sync while this profile is active. Shorter keeps the GPS awake more of the time and records more points.`}
+            error={errorOf("interval")}
+            message={noteOf("interval")}
+          />
+          {isStationary && profile.interval > STATIONARY_MAX_INTERVAL_SECONDS && (
+            <FieldMessage variant="warning" style={styles.warning}>
+              Longer than {STATIONARY_MAX_INTERVAL_SECONDS} s may leave the first {formatDuration(profile.interval)} of
+              a trip unrecorded
             </FieldMessage>
           )}
-
-          <Divider tight />
-
-          {profile.condition.type === "stationary" ? (
-            <FieldMessage>
-              Movement threshold does not apply to a stationary profile - a point is recorded at every interval.
-            </FieldMessage>
-          ) : (
+          {isStationary ? (
             <SettingRow
+              disabled
               label="Movement threshold"
-              hint={`Default: ${metersToInput(settings.distance)} ${shortDistanceUnit()}`}
+              hint="Not used while still · a point is recorded every interval"
             >
-              <View style={styles.inputWithUnit}>
-                <TextField
-                  accessibilityLabel="Movement threshold"
-                  figure
-                  style={styles.numInput}
-                  keyboardType="numeric"
-                  value={distanceStr}
-                  onChangeText={(val) => handleNumericChange(setDistanceStr, "distance", val, 0)}
-                  placeholder="0"
-                />
-                <Text style={[styles.unit, { color: colors.textSecondary }]}>{shortDistanceUnit()}</Text>
-              </View>
+              <Text style={[styles.figure, { color: colors.textDisabled }]}>0 {distanceUnit}</Text>
             </SettingRow>
+          ) : (
+            <NumericInput
+              label="Movement threshold"
+              testID="distance-input"
+              value={text.distance}
+              onChange={(v) => handleNumeric("distance", v)}
+              onBlur={() => handleBlur("distance")}
+              unit={distanceUnit}
+              placeholder={String(metersToInput(settings.distance))}
+              hint={`At least 0 ${distanceUnit}. Replaces the ${metersToInput(settings.distance)} ${distanceUnit} from Tracking & sync. 0 records any movement, larger skips small drift.`}
+              error={errorOf("distance")}
+              message={noteOf("distance")}
+            />
           )}
-
           {!settings.isOfflineMode && (
             <>
               <Divider tight />
-
-              <SyncIntervalPicker
-                label="Sync interval"
-                hint={`Default: ${formatSyncDefault(settings.syncInterval)}`}
-                value={profile.syncInterval}
-                min={0}
-                onSelect={(seconds) => setProfile((prev) => ({ ...prev, syncInterval: seconds }))}
-                onChange={(seconds) => setProfile((prev) => ({ ...prev, syncInterval: seconds }))}
-                onClamp={(seconds) => setProfile((prev) => ({ ...prev, syncInterval: seconds }))}
-              />
-            </>
-          )}
-        </Card>
-
-        <SectionTitle style={styles.sectionGap}>Switching</SectionTitle>
-        <Card rows>
-          {profile.condition.type === "stationary" ? (
-            <SettingRow
-              label="Activation delay"
-              hint="How long the device must be still before this profile activates. Resumes instantly via the hardware motion sensor when you move again."
-            >
-              <View style={styles.inputWithUnit}>
-                <TextField
-                  accessibilityLabel="Activation delay"
-                  figure
-                  style={styles.numInput}
-                  keyboardType="numeric"
-                  value={activationDelayStr}
-                  onChangeText={(val) => handleNumericChange(setActivationDelayStr, "activationDelay", val, 0)}
-                  placeholder="60"
+              <View style={styles.pickerTop}>
+                <SyncIntervalPicker
+                  label="Sync interval"
+                  hint={`Replaces the ${syncDefault} from Tracking & sync while this profile is active · shorter means more wake-ups`}
+                  value={profile.syncInterval}
+                  min={0}
+                  pullUp={false}
+                  onSelect={(seconds) => setProfile((prev) => ({ ...prev, syncInterval: seconds }))}
+                  onChange={(seconds) => setProfile((prev) => ({ ...prev, syncInterval: seconds }))}
+                  onClamp={(seconds) => setProfile((prev) => ({ ...prev, syncInterval: seconds }))}
                 />
-                <Text style={[styles.unit, { color: colors.textSecondary }]}>s</Text>
               </View>
-            </SettingRow>
-          ) : (
-            <>
-              <SettingRow
-                label="Activation delay"
-                hint="How long the condition must hold before this profile takes over. Avoids switching on brief, temporary changes. 0 = instant."
-              >
-                <View style={styles.inputWithUnit}>
-                  <TextField
-                    accessibilityLabel="Activation delay"
-                    figure
-                    style={styles.numInput}
-                    keyboardType="numeric"
-                    value={activationDelayStr}
-                    onChangeText={(val) => handleNumericChange(setActivationDelayStr, "activationDelay", val, 0)}
-                    placeholder="0"
-                  />
-                  <Text style={[styles.unit, { color: colors.textSecondary }]}>s</Text>
-                </View>
-              </SettingRow>
-
-              <Divider tight />
-
-              <SettingRow
-                label="Deactivation delay"
-                hint="How long after the condition stops before reverting to your defaults. Prevents rapid back-and-forth switching."
-              >
-                <View style={styles.inputWithUnit}>
-                  <TextField
-                    accessibilityLabel="Deactivation delay"
-                    figure
-                    style={styles.numInput}
-                    keyboardType="numeric"
-                    value={delayStr}
-                    onChangeText={(val) => handleNumericChange(setDelayStr, "deactivationDelay", val, 0)}
-                    placeholder="60"
-                  />
-                  <Text style={[styles.unit, { color: colors.textSecondary }]}>s</Text>
-                </View>
-              </SettingRow>
             </>
           )}
         </Card>
 
-        {/* Save Button */}
+        <SectionTitle style={styles.groupTop}>Switching</SectionTitle>
+        <Card rows style={styles.cardTop}>
+          <NumericInput
+            label="Activation delay"
+            testID="activation-delay-input"
+            value={text.activationDelay}
+            onChange={(v) => handleNumeric("activationDelay", v)}
+            onBlur={() => handleBlur("activationDelay")}
+            unit="s"
+            placeholder={String(defaultProfileDelays(type).activationDelay)}
+            hint={
+              isStationary
+                ? "At least 0 s. How long every fix must read as still first; 0 switches at the first still fix. Moving again ends the profile at once through the motion sensor."
+                : "At least 0 s. How long the condition must hold first. 0 switches at once, longer ignores a brief plug or unplug."
+            }
+            error={errorOf("activationDelay")}
+            message={noteOf("activationDelay")}
+          />
+          {!isStationary && (
+            <NumericInput
+              label="Deactivation delay"
+              testID="deactivation-delay-input"
+              value={text.deactivationDelay}
+              onChange={(v) => handleNumeric("deactivationDelay", v)}
+              onBlur={() => handleBlur("deactivationDelay")}
+              unit="s"
+              placeholder={String(defaultProfileDelays(type).deactivationDelay)}
+              hint="At least 0 s. How long after the condition ends before Tracking & sync applies again. Longer rides out a brief gap so the profile does not flap."
+              error={errorOf("deactivationDelay")}
+              message={noteOf("deactivationDelay")}
+            />
+          )}
+        </Card>
+
         <Button
+          testID="save-profile-btn"
           title={isEditing ? "Save changes" : "Create profile"}
           icon={Check}
           loading={saving}
+          disabled={hasFieldError}
           onPress={handleSave}
+          style={styles.save}
         />
         {isEditing && (
           <Button
@@ -428,16 +439,17 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 }
 
 const styles = StyleSheet.create({
-  cardTop: { paddingTop: space.lg },
-  cardTail: { paddingBottom: space.lg },
   scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.xxl },
-  inputGroup: { marginBottom: space.xs },
+  intro: { fontSize: fontSizes.body, ...fonts.regular, lineHeight: lineHeights.body, marginBottom: space.lg },
+  group: { marginTop: -space.sm },
+  groupTop: { marginTop: space.xl },
+  cardTop: { paddingTop: space.lg },
+  // The row above already pays space.lg below it; the field's own bottom margin is the card's tail.
+  reveal: { paddingLeft: size.iconColumn, marginTop: -space.xs },
+  field: { paddingBottom: space.lg },
   numInput: { width: size.numericField },
-  inputWithUnit: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  unit: { fontSize: fontSizes.body, ...fonts.medium, minWidth: 28 },
-  syncLabelRow: { marginBottom: space.sm },
-  settingLabel: { fontSize: fontSizes.label, ...fonts.semiBold, marginBottom: space.xxs },
-  settingHint: { fontSize: fontSizes.description, ...fonts.regular, lineHeight: lineHeights.description }, // ~3 per row with gap
-  customSyncInput: { marginTop: space.md },
-  sectionGap: { marginTop: space.xl }
+  figure: { fontSize: fontSizes.input, ...fonts.medium, fontVariant: ["tabular-nums"] },
+  warning: { marginTop: -space.sm, marginBottom: space.lg },
+  pickerTop: { paddingTop: space.lg },
+  save: { marginTop: space.xl }
 })
