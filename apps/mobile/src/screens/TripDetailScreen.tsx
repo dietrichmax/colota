@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo, useState, useCallback, useLayoutEffect, useEffect, useRef } from "react"
-import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions } from "react-native"
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Upload, Trash2, Route, Clock, Gauge, MapPin, TrendingUp, TrendingDown } from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
@@ -17,6 +17,7 @@ import { SectionTitle } from "../components/ui/SectionTitle"
 import { Divider } from "../components/ui/Divider"
 import { StatRow } from "../components/ui/StatRow"
 import { StepperHeader } from "../components/ui/StepperHeader"
+import { HeaderAction } from "../components/ui/HeaderAction"
 import { TrackMap } from "../components/features/inspector/TrackMap"
 import { TripSwatch } from "../components/features/inspector/TripRow"
 import { ExportFormatDialog } from "../components/features/inspector/ExportFormatDialog"
@@ -25,7 +26,7 @@ import { InteractiveLineChart } from "../components/features/inspector/Interacti
 import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
-import { HIT_SLOP_MD, size, space, STATE_LAYER_ALPHA } from "../constants"
+import { size, space } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
@@ -232,33 +233,18 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   const headerRight = useCallback(
     () => (
       <View style={styles.headerActions}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Export trip"
-          onPress={() => setExportOpen(true)}
-          hitSlop={HIT_SLOP_MD}
-          android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true }}
-          style={styles.headerBtn}
-          testID="export-trip-btn"
-        >
-          <Upload size={size.icon.md} color={colors.text} />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Delete trip"
-          accessibilityState={{ disabled: deleting }}
-          onPress={handleDelete}
+        <HeaderAction icon={Upload} label="Export trip" onPress={() => setExportOpen(true)} testID="export-trip-btn" />
+        <HeaderAction
+          icon={Trash2}
+          label="Delete trip"
+          color={colors.error}
           disabled={deleting}
-          hitSlop={HIT_SLOP_MD}
-          android_ripple={deleting ? undefined : { color: colors.error + STATE_LAYER_ALPHA, borderless: true }}
-          style={styles.headerBtn}
-        >
-          {/* Busy recedes to textDisabled the way every other disabled control does, rather than fading. */}
-          <Trash2 size={size.icon.md} color={deleting ? colors.textDisabled : colors.error} />
-        </Pressable>
+          onPress={handleDelete}
+          testID="delete-trip-btn"
+        />
       </View>
     ),
-    [handleDelete, deleting, colors.text, colors.error, colors.textDisabled]
+    [handleDelete, deleting, colors.error]
   )
 
   useLayoutEffect(() => {
@@ -483,8 +469,5 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: "row"
-  },
-  headerBtn: {
-    padding: space.sm
   }
 })

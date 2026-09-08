@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from "react"
-import { View, StyleSheet, ScrollView, Pressable, DeviceEventEmitter, Share, useWindowDimensions } from "react-native"
+import { View, StyleSheet, ScrollView, DeviceEventEmitter, Share, useWindowDimensions } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../hooks/useTheme"
@@ -12,16 +12,15 @@ import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
-import { MapPinHouse, MapPinCheck, Share2, Plus, LocateFixed, type LucideIcon } from "lucide-react-native"
-import { Card, Container, Divider, EmptyState, ListItem } from "../components"
+import { MapPinHouse, MapPinCheck, Share2, Plus, LocateFixed } from "lucide-react-native"
+import { Card, Container, Divider, EmptyState, HeaderAction, ListItem } from "../components"
 import {
   DEFAULT_MAP_ZOOM,
   GEOFENCE_ZOOM_PADDING,
   MAP_ANIMATION_DURATION_MS,
   WORLD_MAP_ZOOM,
   size,
-  space,
-  STATE_LAYER_ALPHA
+  space
 } from "../constants"
 import { MapActionButton } from "../components/features/map/MapActionButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
@@ -36,33 +35,6 @@ const MAP_VIEWPORT_SHARE = 0.5
 const WORLD_CENTER: [number, number] = [0, 20]
 
 type Fix = { latitude: number; longitude: number; accuracy: number }
-
-function HeaderAction({
-  icon: Icon,
-  label,
-  color,
-  onPress,
-  testID
-}: {
-  icon: LucideIcon
-  label: string
-  color: string
-  onPress: () => void
-  testID: string
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      android_ripple={{ color: color + STATE_LAYER_ALPHA, borderless: true, radius: size.touch / 2 }}
-      style={styles.headerAction}
-      testID={testID}
-    >
-      <Icon size={size.icon.lg} color={color} />
-    </Pressable>
-  )
-}
 
 export function GeofenceScreen({ navigation }: ScreenProps) {
   const { height: viewportHeight } = useWindowDimensions()
@@ -200,21 +172,14 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
           <HeaderAction
             icon={Share2}
             label="Share all geofences"
-            color={colors.text}
             onPress={handleShareGeofences}
             testID="share-geofences-btn"
           />
         )}
-        <HeaderAction
-          icon={Plus}
-          label="Create geofence"
-          color={colors.text}
-          onPress={() => openEditor()}
-          testID="add-geofence-btn"
-        />
+        <HeaderAction icon={Plus} label="Create geofence" onPress={() => openEditor()} testID="add-geofence-btn" />
       </View>
     ),
-    [hasZones, colors.text, handleShareGeofences, openEditor]
+    [hasZones, handleShareGeofences, openEditor]
   )
   useLayoutEffect(() => {
     navigation.setOptions({ headerRight: renderHeaderActions })
@@ -315,9 +280,6 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
 const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row"
-  },
-  headerAction: {
-    padding: space.md
   },
   disc: {
     position: "absolute"

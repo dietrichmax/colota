@@ -109,6 +109,16 @@ jest.mock("../../components", () => {
   const { View, Text, Pressable } = require("react-native")
   return {
     Container: ({ children }: any) => R.createElement(View, null, children),
+    HeaderAction: ({ label, hint, disabled, onPress, testID }: any) =>
+      R.createElement(Pressable, {
+        testID,
+        onPress,
+        disabled,
+        accessibilityRole: "button",
+        accessibilityLabel: label,
+        accessibilityHint: hint,
+        accessibilityState: { disabled: !!disabled }
+      }),
     Card: ({ children }: any) => R.createElement(View, { testID: "zone-card" }, children),
     Divider: () => null,
     EmptyState: ({ title, hint, action }: any) =>

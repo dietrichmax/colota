@@ -75,7 +75,6 @@ Each entry in the `geofences` array describes one pause zone. `name`, `lat`, `lo
 | `lat`                      | number  | (required) | Latitude in decimal degrees                                  |
 | `lon`                      | number  | (required) | Longitude in decimal degrees                                 |
 | `radius`                   | number  | (required) | Radius in meters, must be > 0                                |
-| `enabled`                  | boolean | `true`     | Zone is active on import                                     |
 | `pauseTracking`            | boolean | `false`    | Stop saving locations inside the zone                        |
 | `pauseOnWifi`              | boolean | `false`    | Also stop GPS while connected to Wi-Fi or Ethernet           |
 | `pauseOnMotionless`        | boolean | `false`    | Also stop GPS after no motion for `motionlessTimeoutMinutes` |
@@ -102,7 +101,6 @@ Each entry in the `profiles` array describes one [tracking profile](tracking-pro
 | `priority` | number | `10` | Higher value wins when multiple profiles match |
 | `activationDelay` | number | `0` (stationary: `60`) | Seconds the condition must keep matching before the profile is applied (0 = immediate). For `stationary`, how long the device must be still before activating |
 | `deactivationDelay` | number | `60` (stationary: `0`) | Seconds to keep the profile active after the condition stops matching. Stationary resumes via the motion sensor instead |
-| `enabled` | boolean | `true` | Profile is active on import |
 
 Imported profiles are appended by default. When both profiles and geofences are present the same "Replace ... with the same name" toggle on the import screen also deletes existing profiles whose names match before creating the incoming ones.
 
