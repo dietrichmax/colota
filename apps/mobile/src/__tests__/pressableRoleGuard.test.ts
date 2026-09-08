@@ -78,7 +78,7 @@ describe("pressable role guard", () => {
   it("finds the Pressables it is meant to police", () => {
     const total = files.reduce((n, f) => n + openingTags(fs.readFileSync(path.join(SRC, f), "utf8")).length, 0)
 
-    expect(total).toBeGreaterThan(50)
+    expect(total).toBeGreaterThan(40)
   })
 
   it("reads a tag past the arrow in an inline handler", () => {

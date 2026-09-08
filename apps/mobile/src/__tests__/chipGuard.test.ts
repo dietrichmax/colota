@@ -58,7 +58,7 @@ describe("chip guard", () => {
 
     expect(withChips).toContain("components/ui/ChipGroup.tsx")
     expect(withChips).toContain("screens/ActivityLogScreen.tsx")
-    expect(withChips).toContain("screens/TripDetailScreen.tsx")
+    expect(withChips).toContain("components/features/inspector/InspectorDock.tsx")
   })
 
   it("gives every chip the token height, so none of them drifts back to a literal", () => {

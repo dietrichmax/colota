@@ -4,12 +4,8 @@
  */
 
 import React from "react"
-import { View, Text, Pressable, StyleSheet } from "react-native"
-import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react-native"
-import { useTheme } from "../../../hooks/useTheme"
-import { fontSizes, fonts, lineHeights } from "../../../styles/typography"
 import { formatDistance } from "../../../utils/geo"
-import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
+import { StepperHeader } from "../../ui/StepperHeader"
 
 export type DayStats = {
   points: number
@@ -78,98 +74,21 @@ export function dayCaption(date: Date, stats: DayStats | null, loading: boolean,
 }
 
 export function DayHeader({ date, stats, loading, onPrevious, onNext, onOpenPicker, nextDisabled }: DayHeaderProps) {
-  const { colors } = useTheme()
   const now = new Date()
-  const title = dayTitle(date, now)
-  const caption = dayCaption(date, stats, loading, now)
-  const ripple = { color: colors.text + STATE_LAYER_ALPHA }
-  const chevronRipple = { ...ripple, borderless: true, radius: size.touch / 2 }
 
   return (
-    <View style={[styles.row, { backgroundColor: colors.background }]} testID="day-header">
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Previous day"
-        onPress={onPrevious}
-        android_ripple={chevronRipple}
-        style={styles.chevron}
-        testID="day-previous"
-      >
-        <ChevronLeft size={size.icon.md} color={colors.text} />
-      </Pressable>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Change day, ${dayLongDate(date, now)}, ${dayLedger(stats, loading)}`}
-        accessibilityHint="Opens the calendar"
-        onPress={onOpenPicker}
-        android_ripple={ripple}
-        style={styles.centre}
-        testID="day-title"
-      >
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-            {title}
-          </Text>
-          <ChevronDown size={size.icon.sm} color={colors.textSecondary} />
-        </View>
-        <Text style={[styles.caption, { color: colors.textSecondary }]} numberOfLines={2}>
-          {caption}
-        </Text>
-      </Pressable>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Next day"
-        accessibilityState={{ disabled: nextDisabled }}
-        disabled={nextDisabled}
-        onPress={onNext}
-        android_ripple={nextDisabled ? undefined : chevronRipple}
-        style={styles.chevron}
-        testID="day-next"
-      >
-        <ChevronRight size={size.icon.md} color={nextDisabled ? colors.textDisabled : colors.text} />
-      </Pressable>
-    </View>
+    <StepperHeader
+      title={dayTitle(date, now)}
+      caption={dayCaption(date, stats, loading, now)}
+      onPrevious={onPrevious}
+      onNext={onNext}
+      previousLabel="Previous day"
+      nextLabel="Next day"
+      nextDisabled={nextDisabled}
+      onPress={onOpenPicker}
+      accessibilityLabel={`Change day, ${dayLongDate(date, now)}, ${dayLedger(stats, loading)}`}
+      accessibilityHint="Opens the calendar"
+      testID="day"
+    />
   )
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    minHeight: size.row,
-    paddingHorizontal: space.sm,
-    paddingVertical: space.xs
-  },
-  chevron: {
-    width: size.touch,
-    minHeight: size.touch,
-    alignSelf: "stretch",
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  centre: {
-    flex: 1,
-    minHeight: size.touch,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: space.sm
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.xs
-  },
-  title: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold
-  },
-  caption: {
-    fontSize: fontSizes.caption,
-    lineHeight: lineHeights.caption,
-    ...fonts.regular,
-    fontVariant: ["tabular-nums"],
-    marginTop: space.xxs
-  }
-})

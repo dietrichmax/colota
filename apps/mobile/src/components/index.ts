@@ -43,6 +43,7 @@ export { ListItem } from "./ui/ListItem"
 export { StateLine } from "./ui/StateLine"
 export { MapDock } from "./ui/MapDock"
 export { TrackMark } from "./ui/TrackMark"
+export { StepperHeader } from "./ui/StepperHeader"
 export { BottomTabBar, TAB_ROUTES } from "./ui/BottomTabBar"
 
 // ============================================================================
