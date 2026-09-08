@@ -1,7 +1,7 @@
 import React from "react"
 import { render, fireEvent } from "@testing-library/react-native"
 import { StyleSheet } from "react-native"
-import { HIT_SLOP_SM, size, space } from "../../../../constants"
+import { HIT_SLOP_SM, size, space, MAX_MAP_ZOOM } from "../../../../constants"
 
 const mockSetStop = jest.fn()
 const mockCameraProps = jest.fn()
@@ -73,6 +73,7 @@ describe("ColotaMapView camera padding", () => {
   it("frames the first camera inside the padding so the dock never covers the position dot", () => {
     render(<ColotaMapView initialCenter={center} cameraPadding={padding} />)
 
+    expect(mockCameraProps.mock.calls[0][0].maxZoom).toBe(MAX_MAP_ZOOM)
     expect(mockCameraProps.mock.calls[0][0].initialViewState).toEqual({
       center,
       zoom: expect.any(Number),

@@ -3,155 +3,180 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { View, StyleSheet, FlatList, DeviceEventEmitter, Share, useWindowDimensions } from "react-native"
-import { radius } from "@colota/shared"
+import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from "react"
+import { View, StyleSheet, ScrollView, Pressable, DeviceEventEmitter, Share, useWindowDimensions } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../hooks/useTheme"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { Geofence, ScreenProps } from "../types/global"
 import { useTracking, useCoords } from "../contexts/TrackingProvider"
-import { MapPinHouse, Share2, Plus } from "lucide-react-native"
-import { Button, Card, Container, Divider, EmptyState, IconButton, ListItem, SectionTitle } from "../components"
-import { DEFAULT_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, WORLD_MAP_ZOOM, space } from "../constants"
-import { MapCenterButton } from "../components/features/map/MapCenterButton"
+import { MapPinHouse, MapPinCheck, Share2, Plus, LocateFixed, type LucideIcon } from "lucide-react-native"
+import { Card, Container, Divider, EmptyState, ListItem } from "../components"
+import {
+  DEFAULT_MAP_ZOOM,
+  GEOFENCE_ZOOM_PADDING,
+  MAP_ANIMATION_DURATION_MS,
+  WORLD_MAP_ZOOM,
+  size,
+  space,
+  STATE_LAYER_ALPHA
+} from "../constants"
+import { MapActionButton } from "../components/features/map/MapActionButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
-import { buildGeofencesGeoJSON } from "../components/features/map/mapUtils"
+import { buildGeofencesGeoJSON, geofenceBounds } from "../components/features/map/mapUtils"
 import { GeofenceLayers } from "../components/features/map/GeofenceLayers"
 import { UserLocationOverlay } from "../components/features/map/UserLocationOverlay"
 import { logger } from "../utils/logger"
-import { formatShortDistance } from "../utils/geo"
+import { zoneRowSub } from "../utils/geofenceRow"
 import { buildGeofencesLink } from "../utils/setupLink"
 
-const ZoneSeparator = () => <Divider tight />
+const MAP_VIEWPORT_SHARE = 0.5
+const WORLD_CENTER: [number, number] = [0, 20]
 
-const GeofenceMap = React.memo(function GeofenceMapView({
-  tracking,
-  geofenceData,
-  currentPauseZone
+type Fix = { latitude: number; longitude: number; accuracy: number }
+
+function HeaderAction({
+  icon: Icon,
+  label,
+  color,
+  onPress,
+  testID
 }: {
-  tracking: boolean
-  geofenceData: ReturnType<typeof buildGeofencesGeoJSON>
-  currentPauseZone: string | null
+  icon: LucideIcon
+  label: string
+  color: string
+  onPress: () => void
+  testID: string
 }) {
-  const coords = useCoords()
-  const { colors } = useTheme()
-
-  const mapRef = useRef<ColotaMapRef>(null)
-  const isCenteredRef = useRef(true)
-  const [isCentered, setIsCentered] = useState(true)
-  const [hasInitialCoords, setHasInitialCoords] = useState(false)
-  const initialCenter = useRef<{ latitude: number; longitude: number; accuracy: number } | null>(null)
-
-  useEffect(() => {
-    if (hasInitialCoords) return
-    if (coords) {
-      initialCenter.current = { latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy ?? 0 }
-      setHasInitialCoords(true)
-      return
-    }
-    NativeLocationService.getMostRecentLocation().then((latest) => {
-      if (initialCenter.current) return
-      initialCenter.current = latest
-        ? { latitude: latest.latitude, longitude: latest.longitude, accuracy: latest.accuracy ?? 0 }
-        : { latitude: 0, longitude: 0, accuracy: 0 }
-      setHasInitialCoords(true)
-    })
-  }, [coords, hasInitialCoords])
-
-  useEffect(() => {
-    if (!coords || !isCenteredRef.current || !tracking || !mapRef.current?.camera) return
-    mapRef.current.camera.easeTo({
-      center: [coords.longitude, coords.latitude],
-      duration: MAP_ANIMATION_DURATION_MS
-    })
-  }, [coords, tracking])
-
-  const handleCenterMe = useCallback(() => {
-    if (coords && mapRef.current?.camera) {
-      mapRef.current.camera.flyTo({
-        center: [coords.longitude, coords.latitude],
-        zoom: DEFAULT_MAP_ZOOM,
-        duration: MAP_ANIMATION_DURATION_MS
-      })
-      isCenteredRef.current = true
-      setIsCentered(true)
-    }
-  }, [coords])
-
-  const handleRegionChange = useCallback((payload: { isUserInteraction: boolean }) => {
-    if (payload.isUserInteraction) {
-      isCenteredRef.current = false
-      setIsCentered(false)
-    }
-  }, [])
-
-  const hasRealCoords =
-    initialCenter.current && (initialCenter.current.latitude !== 0 || initialCenter.current.longitude !== 0)
-  const initialZoom = hasRealCoords ? DEFAULT_MAP_ZOOM : WORLD_MAP_ZOOM
-
   return (
-    <View style={[styles.map, { borderRadius: radius.sm }]}>
-      {hasInitialCoords && initialCenter.current ? (
-        <ColotaMapView
-          ref={mapRef}
-          initialCenter={[initialCenter.current.longitude, initialCenter.current.latitude]}
-          initialZoom={initialZoom}
-          onRegionDidChange={handleRegionChange}
-        >
-          <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
-          {coords && tracking && <UserLocationOverlay coords={coords} isPaused={!!currentPauseZone} colors={colors} />}
-        </ColotaMapView>
-      ) : null}
-      <MapCenterButton visible={!isCentered && tracking} onPress={handleCenterMe} />
-    </View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      android_ripple={{ color: color + STATE_LAYER_ALPHA, borderless: true, radius: size.touch / 2 }}
+      style={styles.headerAction}
+      testID={testID}
+    >
+      <Icon size={size.icon.lg} color={color} />
+    </Pressable>
   )
-})
-
-const MAP_VIEWPORT_SHARE = 0.4
+}
 
 export function GeofenceScreen({ navigation }: ScreenProps) {
   const { height: viewportHeight } = useWindowDimensions()
+  const insets = useSafeAreaInsets()
   const mapHeight = Math.round(viewportHeight * MAP_VIEWPORT_SHARE)
   const { tracking } = useTracking()
+  const coords = useCoords()
   const { colors } = useTheme()
 
-  const [geofences, setGeofences] = useState<Geofence[]>([])
+  const [geofences, setGeofences] = useState<Geofence[] | null>(null)
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
+  // `undefined` until the database has answered, so the tiles never open on the world view and jump.
+  const [lastFix, setLastFix] = useState<Fix | null | undefined>(undefined)
+  const [mapReady, setMapReady] = useState(false)
+  const [panned, setPanned] = useState(false)
+  const mapRef = useRef<ColotaMapRef>(null)
+  const fittedRef = useRef<string | null>(null)
 
   const loadGeofences = useCallback(async () => {
     try {
-      const data = await NativeLocationService.getGeofences()
-      setGeofences(data)
+      setGeofences(await NativeLocationService.getGeofences())
     } catch (err) {
       logger.error("[GeofenceScreen] Failed to load geofences:", err)
     }
   }, [])
 
-  useEffect(() => {
-    loadGeofences()
-  }, [loadGeofences])
-
-  useEffect(() => {
-    const checkPauseZone = async () => {
-      try {
-        const result = await NativeLocationService.checkCurrentPauseZone()
-        setCurrentPauseZone(result?.zoneName ?? null)
-      } catch (err) {
-        logger.error("[GeofenceScreen] Failed to check pause zone:", err)
-      }
+  const checkPauseZone = useCallback(async () => {
+    try {
+      const result = await NativeLocationService.checkCurrentPauseZone()
+      setCurrentPauseZone(result?.zoneName ?? null)
+    } catch (err) {
+      logger.error("[GeofenceScreen] Failed to check pause zone:", err)
     }
+  }, [])
 
-    checkPauseZone()
-    const listener = DeviceEventEmitter.addListener("geofenceUpdated", () => {
-      checkPauseZone()
+  useFocusEffect(
+    useCallback(() => {
       loadGeofences()
+      checkPauseZone()
+    }, [loadGeofences, checkPauseZone])
+  )
+
+  useEffect(() => {
+    const updated = DeviceEventEmitter.addListener("geofenceUpdated", () => {
+      loadGeofences()
+      checkPauseZone()
     })
-    return () => listener.remove()
-  }, [loadGeofences])
+    const zone = DeviceEventEmitter.addListener(
+      "onPauseZoneChange",
+      (data: { entered: boolean; zoneName: string | null }) => setCurrentPauseZone(data.entered ? data.zoneName : null)
+    )
+    return () => {
+      updated.remove()
+      zone.remove()
+    }
+  }, [loadGeofences, checkPauseZone])
+
+  useEffect(() => {
+    if (coords) {
+      setLastFix({ latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy ?? 0 })
+      return
+    }
+    let active = true
+    NativeLocationService.getMostRecentLocation()
+      .then((latest) => {
+        if (!active) return
+        setLastFix(
+          latest ? { latitude: latest.latitude, longitude: latest.longitude, accuracy: latest.accuracy ?? 0 } : null
+        )
+      })
+      .catch((err) => {
+        logger.error("[GeofenceScreen] Failed to read the last known location:", err)
+        if (active) setLastFix(null)
+      })
+    return () => {
+      active = false
+    }
+  }, [coords])
+
+  const edgeStart = space.lg + insets.left
+  const edgeEnd = space.lg + insets.right
+  const controlsBottom = space.lg + space.sm
+  const cameraPadding = useMemo(
+    () => ({ top: space.lg, bottom: space.lg, left: edgeStart, right: edgeEnd + size.iconColumn + space.lg }),
+    [edgeStart, edgeEnd]
+  )
+  const fitPadding = useMemo(() => {
+    const [top, right, bottom, left] = GEOFENCE_ZOOM_PADDING
+    return {
+      top: top + cameraPadding.top,
+      right: right + cameraPadding.right,
+      bottom: bottom + cameraPadding.bottom,
+      left: left + cameraPadding.left
+    }
+  }, [cameraPadding])
+
+  const fitZones = useCallback(
+    (zones: Geofence[], duration: number) => {
+      mapRef.current?.camera?.fitBounds(geofenceBounds(zones), { padding: fitPadding, duration })
+      setPanned(false)
+    },
+    [fitPadding]
+  )
+
+  const zoneKey = geofences?.map((z) => z.id).join(",") ?? null
+  useEffect(() => {
+    if (!mapReady || !geofences || geofences.length === 0 || zoneKey === fittedRef.current) return
+    // The first fit lands before the tiles show; a changed zone set animates so the eye can follow.
+    fitZones(geofences, fittedRef.current === null ? 0 : MAP_ANIMATION_DURATION_MS)
+    fittedRef.current = zoneKey
+  }, [mapReady, geofences, zoneKey, fitZones])
 
   const handleShareGeofences = useCallback(async () => {
-    if (geofences.length === 0) return
+    if (!geofences || geofences.length === 0) return
     try {
       await Share.share({ message: buildGeofencesLink(geofences) })
     } catch (err) {
@@ -160,73 +185,150 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
     }
   }, [geofences])
 
-  const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences, colors), [geofences, colors])
-
-  const renderItem = useCallback(
-    ({ item }: { item: Geofence }) => {
-      const modes = [item.pauseOnWifi && "WiFi pause", item.pauseOnMotionless && "motionless pause"].filter(Boolean)
-      return (
-        <ListItem
-          testID={`edit-geofence-${item.id}`}
-          icon={MapPinHouse}
-          label={item.name}
-          sub={[`${formatShortDistance(item.radius)} radius`, ...modes].join(" · ")}
-          onPress={() => navigation.navigate("Geofence Editor", { geofenceId: item.id })}
-        />
-      )
+  const openEditor = useCallback(
+    (geofenceId?: number) => {
+      navigation.navigate("Geofence Editor", geofenceId === undefined ? {} : { geofenceId })
     },
     [navigation]
   )
 
+  const hasZones = (geofences?.length ?? 0) > 0
+  const renderHeaderActions = useCallback(
+    () => (
+      <View style={styles.headerRow}>
+        {hasZones && (
+          <HeaderAction
+            icon={Share2}
+            label="Share all geofences"
+            color={colors.text}
+            onPress={handleShareGeofences}
+            testID="share-geofences-btn"
+          />
+        )}
+        <HeaderAction
+          icon={Plus}
+          label="Create geofence"
+          color={colors.text}
+          onPress={() => openEditor()}
+          testID="add-geofence-btn"
+        />
+      </View>
+    ),
+    [hasZones, colors.text, handleShareGeofences, openEditor]
+  )
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerRight: renderHeaderActions })
+  }, [navigation, renderHeaderActions])
+
+  const handleRegionChange = useCallback((payload: { isUserInteraction: boolean }) => {
+    if (payload.isUserInteraction) setPanned(true)
+  }, [])
+
+  const handleFit = useCallback(() => {
+    if (geofences && geofences.length > 0) {
+      fitZones(geofences, MAP_ANIMATION_DURATION_MS)
+    } else if (lastFix) {
+      mapRef.current?.camera?.flyTo({
+        center: [lastFix.longitude, lastFix.latitude],
+        zoom: DEFAULT_MAP_ZOOM,
+        padding: cameraPadding,
+        duration: MAP_ANIMATION_DURATION_MS
+      })
+      setPanned(false)
+    }
+  }, [geofences, lastFix, fitZones, cameraPadding])
+
+  const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences ?? [], colors), [geofences, colors])
+  const liveFix = tracking && coords ? coords : null
+  const showDisc = panned && (hasZones || lastFix !== null)
+
   return (
     <Container>
       <View style={{ height: mapHeight }}>
-        <GeofenceMap tracking={tracking} geofenceData={geofenceData} currentPauseZone={currentPauseZone} />
-      </View>
-
-      <View style={styles.listWrap}>
-        <Button
-          title="Create geofence"
-          icon={Plus}
-          testID="add-geofence-btn"
-          onPress={() => navigation.navigate("Geofence Editor", {})}
-        />
-
-        {geofences.length > 0 && (
-          <View style={styles.activeHeader}>
-            <SectionTitle>Active geofences ({geofences.length})</SectionTitle>
-            <IconButton
-              icon={Share2}
-              testID="share-geofences-btn"
-              accessibilityLabel="Share all zones"
-              onPress={handleShareGeofences}
+        {lastFix !== undefined && (
+          <ColotaMapView
+            ref={mapRef}
+            initialCenter={lastFix ? [lastFix.longitude, lastFix.latitude] : WORLD_CENTER}
+            initialZoom={lastFix ? DEFAULT_MAP_ZOOM : WORLD_MAP_ZOOM}
+            cameraPadding={cameraPadding}
+            controlsBottom={controlsBottom}
+            controlsEnd={edgeEnd}
+            onRegionDidChange={handleRegionChange}
+            onMapReady={() => setMapReady(true)}
+          >
+            <GeofenceLayers
+              fills={geofenceData.fills}
+              labels={geofenceData.labels}
+              haloColor={colors.card}
+              onPressZone={openEditor}
             />
-          </View>
+            {liveFix && <UserLocationOverlay coords={liveFix} isPaused={!!currentPauseZone} colors={colors} />}
+          </ColotaMapView>
         )}
-        <Card rows style={styles.listCard}>
-          <FlatList
-            data={geofences}
-            keyExtractor={(item) => item.id!.toString()}
-            contentContainerStyle={styles.listContent}
-            ItemSeparatorComponent={ZoneSeparator}
-            showsVerticalScrollIndicator={false}
-            renderItem={renderItem}
-          />
-        </Card>
-        {geofences.length === 0 && (
-          <EmptyState title="No geofences yet" hint="Create a geofence to stop recording locations in specific areas" />
+        {showDisc && (
+          <MapActionButton
+            anchored={false}
+            style={[styles.disc, { bottom: controlsBottom + size.iconColumn + space.lg, right: edgeEnd }]}
+            accessibilityRole="button"
+            accessibilityLabel={hasZones ? "Fit geofences" : "Centre map on my position"}
+            onPress={handleFit}
+            testID="fit-geofences-btn"
+          >
+            <LocateFixed size={size.icon.md} color={colors.textLight} />
+          </MapActionButton>
         )}
       </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {geofences === null ? null : hasZones ? (
+          <Card rows>
+            {geofences.map((zone, i) => {
+              const pausedHere = tracking && currentPauseZone === zone.name
+              return (
+                <React.Fragment key={zone.id}>
+                  {i > 0 && <Divider tight inset />}
+                  <ListItem
+                    testID={`edit-geofence-${zone.id}`}
+                    icon={pausedHere ? MapPinCheck : MapPinHouse}
+                    label={zone.name}
+                    sub={zoneRowSub(zone, pausedHere)}
+                    onPress={() => openEditor(zone.id)}
+                  />
+                </React.Fragment>
+              )
+            })}
+          </Card>
+        ) : (
+          <EmptyState
+            icon={MapPinHouse}
+            title="No geofences yet"
+            hint="A geofence stops recording while you are inside it."
+            action={{ label: "Create geofence", onPress: () => openEditor() }}
+            style={styles.empty}
+          />
+        )}
+      </ScrollView>
     </Container>
   )
 }
 
 const styles = StyleSheet.create({
-  map: { flex: 1, overflow: "hidden" },
-  listWrap: { flex: 1, padding: space.lg },
-  // ListItem cancels the padding of whatever contains it, and inside a list that is the content
-  // container rather than the card. Moving this back onto the card clips the leading icon.
-  listCard: { flex: 1, paddingHorizontal: 0 },
-  listContent: { paddingHorizontal: space.lg },
-  activeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }
+  headerRow: {
+    flexDirection: "row"
+  },
+  headerAction: {
+    padding: space.md
+  },
+  disc: {
+    position: "absolute"
+  },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
+  },
+  empty: {
+    paddingHorizontal: 0
+  }
 })

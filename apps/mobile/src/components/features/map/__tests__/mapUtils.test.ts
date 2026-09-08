@@ -539,3 +539,45 @@ describe("buildTripTerminalsGeoJSON", () => {
     ])
   })
 })
+
+describe("geofenceBounds and pickSmallestZone", () => {
+  const utils = require("../mapUtils")
+  const zone = (id: number, lat: number, lon: number, radius: number) => ({
+    id,
+    name: `Z${id}`,
+    lat,
+    lon,
+    radius,
+    enabled: true,
+    pauseTracking: true,
+    pauseOnWifi: false,
+    pauseOnMotionless: false,
+    motionlessTimeoutMinutes: 5,
+    heartbeatEnabled: false,
+    heartbeatIntervalMinutes: 15
+  })
+
+  it("boxes every circle, wider in longitude the further north it sits", () => {
+    const [west, south, east, north] = utils.geofenceBounds([zone(1, 60, 10, 1113.2)])
+    expect(north - south).toBeCloseTo(0.02, 4)
+    expect(east - west).toBeGreaterThan(0.03)
+    const two = utils.geofenceBounds([zone(1, 48, 11, 100), zone(2, 49, 12, 100)])
+    expect(two[0]).toBeLessThan(11)
+    expect(two[2]).toBeGreaterThan(12)
+  })
+
+  it("picks the smallest circle under a tap, since the larger ones cover it, and ignores features with no id", () => {
+    const hits = [
+      { type: "Feature", properties: { id: 1, radius: 500 }, geometry: { type: "Point", coordinates: [0, 0] } },
+      { type: "Feature", properties: { id: 2, radius: 50 }, geometry: { type: "Point", coordinates: [0, 0] } },
+      { type: "Feature", properties: { radius: 1 }, geometry: { type: "Point", coordinates: [0, 0] } }
+    ]
+    expect(utils.pickSmallestZone(hits)).toBe(2)
+    expect(utils.pickSmallestZone([])).toBeNull()
+  })
+
+  it("carries the radius on the fill feature so a tap can rank overlapping circles", () => {
+    const { fills } = utils.buildGeofencesGeoJSON([zone(7, 48, 11, 120)], require("@colota/shared").lightColors)
+    expect(fills.features[0].properties.radius).toBe(120)
+  })
+})

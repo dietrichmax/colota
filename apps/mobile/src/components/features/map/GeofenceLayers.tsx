@@ -3,8 +3,10 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useMemo } from "react"
-import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native"
+import React, { useCallback, useMemo } from "react"
+import type { NativeSyntheticEvent } from "react-native"
+import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
+import { pickSmallestZone, ZONE_HITBOX } from "./mapUtils"
 
 const geofenceFillStyle: any = {
   fillColor: ["get", "fillColor"],
@@ -21,9 +23,19 @@ interface Props {
   fills: GeoJSON.FeatureCollection
   labels: GeoJSON.FeatureCollection
   haloColor: string
+  /** Makes the circles tappable; absent, the layers stay a drawing. */
+  onPressZone?: (id: number) => void
 }
 
-export function GeofenceLayers({ fills, labels, haloColor }: Props) {
+export function GeofenceLayers({ fills, labels, haloColor, onPressZone }: Props) {
+  const handlePress = useCallback(
+    (event: NativeSyntheticEvent<PressEventWithFeatures>) => {
+      const id = pickSmallestZone(event.nativeEvent.features)
+      if (id !== null) onPressZone?.(id)
+    },
+    [onPressZone]
+  )
+
   const labelStyle = useMemo<any>(
     () => ({
       textField: ["get", "name"],
@@ -40,7 +52,12 @@ export function GeofenceLayers({ fills, labels, haloColor }: Props) {
   return (
     <>
       {fills.features.length > 0 && (
-        <GeoJSONSource id="geofence-fills" data={fills}>
+        <GeoJSONSource
+          id="geofence-fills"
+          data={fills}
+          onPress={onPressZone ? handlePress : undefined}
+          hitbox={onPressZone ? ZONE_HITBOX : undefined}
+        >
           <Layer id="geofence-fill" type="fill" style={geofenceFillStyle} />
           <Layer id="geofence-stroke" type="line" style={geofenceStrokeStyle} />
         </GeoJSONSource>
