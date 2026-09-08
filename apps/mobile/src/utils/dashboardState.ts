@@ -102,7 +102,7 @@ export function describeState(input: StateInput): StateDescription {
   }
 }
 
-function formatDuration(seconds: number): string {
+export function formatDuration(seconds: number): string {
   if (seconds >= 3600 && seconds % 3600 === 0) return `${seconds / 3600} h`
   if (seconds >= 60 && seconds % 60 === 0) return `${seconds / 60} min`
   return `${seconds} s`
@@ -110,6 +110,29 @@ function formatDuration(seconds: number): string {
 
 export function formatInterval(seconds: number): string {
   return `Every ${formatDuration(seconds)}`
+}
+
+/** "Every 30 s after 2 m", or ", any movement" when no distance gates a fix. */
+export function recordingSummary(intervalSeconds: number, distanceMeters: number): string {
+  const gate =
+    distanceMeters === 0 ? ", any movement" : ` after ${metersToInput(distanceMeters)} ${shortDistanceUnit()}`
+  return `${formatInterval(intervalSeconds)}${gate}`
+}
+
+/** "syncs each fix" or "syncs every 5 min", lower case so a caption can carry it. */
+export function syncSummary(syncIntervalSeconds: number): string {
+  return syncIntervalSeconds === 0 ? "syncs each fix" : `syncs every ${formatDuration(syncIntervalSeconds)}`
+}
+
+/** The one line a preset row, the Custom row and the Settings row all print for a configuration. */
+export function trackingSummary(
+  intervalSeconds: number,
+  distanceMeters: number,
+  syncIntervalSeconds: number,
+  isOfflineMode: boolean
+): string {
+  const recording = recordingSummary(intervalSeconds, distanceMeters)
+  return isOfflineMode ? recording : `${recording} · ${syncSummary(syncIntervalSeconds)}`
 }
 
 export function intervalText(intervalSeconds: number, syncIntervalSeconds: number): string {

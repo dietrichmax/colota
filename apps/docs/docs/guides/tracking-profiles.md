@@ -103,7 +103,7 @@ Note that Stationary has the highest priority so it takes over from Walking when
 - If the condition matches again before the delay expires, the timer is cancelled
 - After the delay expires, settings revert to the defaults configured in the Settings screen
 - Profile changes made in the editor take effect immediately on the running service
-- **Tracking & sync** names the active profile at the top. The values on that screen are the defaults the profile is overriding, not the ones in force
+- **Tracking & sync** shows the active profile above the Recording and Sync interval groups with the values in force. The rows below are the defaults the profile is overriding
 
 ## Active Profile Indicators
 

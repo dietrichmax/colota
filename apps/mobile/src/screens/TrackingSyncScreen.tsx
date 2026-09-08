@@ -6,8 +6,8 @@
 import React, { useCallback } from "react"
 import { StyleSheet, ScrollView } from "react-native"
 import { ScreenProps, Settings } from "../types/global"
-import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
+import { useActiveProfile } from "../hooks/useActiveProfile"
 import { useTracking } from "../contexts/TrackingProvider"
 import { FloatingSaveIndicator } from "../components/ui/FloatingSaveIndicator"
 import { Container } from "../components"
@@ -15,8 +15,8 @@ import { SyncStrategySettings } from "../components/features/settings/SyncStrate
 import { space } from "../constants"
 
 export function TrackingSyncScreen({}: ScreenProps) {
-  const { settings, setSettings, updateSettingsLocal, restartTracking, activeProfileName } = useTracking()
-  const { colors } = useTheme()
+  const { settings, setSettings, updateSettingsLocal, restartTracking, activeProfileId } = useTracking()
+  const activeProfile = useActiveProfile(activeProfileId)
   const {
     saving,
     message: saveMessage,
@@ -57,8 +57,7 @@ export function TrackingSyncScreen({}: ScreenProps) {
           onSettingsChange={updateSettingsLocal}
           onDebouncedSave={handleDebouncedSave}
           onImmediateSave={handleImmediateSave}
-          activeProfileName={activeProfileName}
-          colors={colors}
+          activeProfile={activeProfile}
         />
       </ScrollView>
 

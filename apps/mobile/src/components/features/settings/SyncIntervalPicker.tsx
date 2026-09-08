@@ -6,17 +6,30 @@
 import React, { useEffect, useRef, useState } from "react"
 import { View, Text, StyleSheet } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
+import { useTimeout } from "../../../hooks/useTimeout"
 import { fontSizes, fonts, lineHeights } from "../../../styles/typography"
-import { SYNC_INTERVAL_LABELS, SYNC_INTERVAL_PRESETS, size, space } from "../../../constants"
+import {
+  SAVE_SUCCESS_DISPLAY_MS,
+  SYNC_INTERVAL_LABELS,
+  SYNC_INTERVAL_PRESETS,
+  SYNC_INTERVAL_SUBS,
+  size,
+  space
+} from "../../../constants"
 import { NumericInput } from "../../ui/NumericInput"
 import { RadioRow } from "../../ui/RadioRow"
+import { formatDuration } from "../../../utils/dashboardState"
+import { parseWholeNumber, wholeNumberError } from "../../../utils/settingsValidation"
 
 type SyncIntervalPickerProps = {
-  label: string
-  hint: string
+  /** A heading above the group; the settings screen titles the card instead and passes neither. */
+  label?: string
+  hint?: string
   value: number
   /** The floor a blurred value is clamped to. Settings takes 1, a profile takes 0. */
   min?: number
+  /** Pull the first row up under a SectionTitle or the heading; off when a row precedes the group. */
+  pullUp?: boolean
   /** A preset row was chosen. */
   onSelect: (seconds: number) => void
   /** A valid number was typed into the custom field. */
@@ -40,6 +53,7 @@ export function SyncIntervalPicker({
   hint,
   value,
   min = 1,
+  pullUp = true,
   onSelect,
   onChange,
   onClamp,
@@ -48,6 +62,8 @@ export function SyncIntervalPicker({
   const { colors } = useTheme()
   const [customOpen, setCustomOpen] = useState(false)
   const [input, setInput] = useState(value.toString())
+  const [clampMessage, setClampMessage] = useState<string | undefined>()
+  const clampTimer = useTimeout()
   const isCustom = customOpen || !SYNC_INTERVAL_PRESETS.includes(value)
 
   const emitted = useRef(value)
@@ -63,18 +79,20 @@ export function SyncIntervalPicker({
     notify(seconds)
   }
 
+  const fieldHint = `${min > 0 ? `At least ${min} s. ` : ""}Longer means fewer requests and a later server.`
+
   return (
     <View>
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-      <Text style={[styles.hint, { color: colors.textSecondary }]}>{hint}</Text>
+      {label ? <Text style={[styles.label, { color: colors.text }]}>{label}</Text> : null}
+      {hint ? <Text style={[styles.hint, { color: colors.textSecondary }]}>{hint}</Text> : null}
 
-      <View accessibilityRole="radiogroup" style={styles.group}>
+      <View accessibilityRole="radiogroup" style={pullUp && styles.group}>
         {SYNC_INTERVAL_PRESETS.map((seconds) => (
           <RadioRow
             key={seconds}
             testID={`${testIDPrefix}-${seconds}`}
             label={SYNC_INTERVAL_LABELS[seconds]}
-            sub={seconds === 0 ? "Uploads each fix as soon as it is recorded" : undefined}
+            sub={SYNC_INTERVAL_SUBS[seconds]}
             selected={!isCustom && value === seconds}
             onPress={() => {
               setCustomOpen(false)
@@ -85,7 +103,13 @@ export function SyncIntervalPicker({
         <RadioRow
           testID={`${testIDPrefix}-custom`}
           label="Custom"
-          sub={isCustom ? `Every ${value} seconds` : "Set your own interval"}
+          sub={
+            isCustom
+              ? value === 0
+                ? "Syncs each fix"
+                : `Syncs every ${formatDuration(value)}`
+              : "Set your own interval"
+          }
           selected={isCustom}
           onPress={() => {
             setInput(value.toString())
@@ -96,22 +120,27 @@ export function SyncIntervalPicker({
         {isCustom && (
           <View style={styles.customField}>
             <NumericInput
-              label="Custom sync interval"
+              label="Sync interval"
               value={input}
               onChange={(next) => {
                 setInput(next)
-                const parsed = Number(next)
-                if (!isNaN(parsed) && parsed >= min) report(parsed, onChange)
+                setClampMessage(undefined)
+                const parsed = parseWholeNumber(next)
+                if (parsed !== null && parsed >= min) report(parsed, onChange)
               }}
               onBlur={() => {
-                const parsed = Number(input)
-                if (isNaN(parsed) || parsed < min) {
-                  setInput(min.toString())
-                  report(min, onClamp)
-                }
+                const parsed = parseWholeNumber(input)
+                if (parsed !== null && parsed >= min) return
+                setInput(min.toString())
+                setClampMessage(`Set to ${min} s`)
+                clampTimer.set(() => setClampMessage(undefined), SAVE_SUCCESS_DISPLAY_MS)
+                report(min, onClamp)
               }}
-              unit="seconds"
-              hint="Custom interval in seconds"
+              unit="s"
+              placeholder="300"
+              hint={fieldHint}
+              error={wholeNumberError(input, min, "s")}
+              message={clampMessage}
             />
           </View>
         )}
@@ -136,7 +165,6 @@ const styles = StyleSheet.create({
   },
   customField: {
     paddingLeft: size.iconColumn,
-    marginTop: -space.xs,
-    paddingBottom: space.lg
+    marginTop: -space.xs
   }
 })

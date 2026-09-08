@@ -71,7 +71,7 @@ Bundles up to N queued points into a single request to `/api/v1/overland/batches
 
 **Endpoint URL**: change the saved endpoint to `https://dawarich.yourdomain.com/api/v1/overland/batches?api_key=YOUR_API_KEY`. The chip only updates the placeholder hint, not your saved endpoint.
 
-**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & sync > Advanced > Network Settings > Batch Size** (only shown when batch mode is active).
+**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & sync > Sync interval > Batch size** (only shown when batch mode is active).
 
 **Requires non-zero sync interval**: batch mode is incompatible with instant sync. Pick a batched preset or set a custom sync interval before enabling. The chip is disabled when sync interval is 0.
 

@@ -3,56 +3,82 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from "react"
-import { Text, StyleSheet, View, Pressable, AppState } from "react-native"
-import { Settings, TRACKING_PRESETS, SelectablePreset, ThemeColors, SyncCondition } from "../../../types/global"
+import React, { useState, useCallback, useEffect } from "react"
+import { Text, StyleSheet, View, AppState } from "react-native"
+import { UserRoundPen } from "lucide-react-native"
+import {
+  Settings,
+  TRACKING_PRESETS,
+  SelectablePreset,
+  SyncCondition,
+  SavedTrackingProfile
+} from "../../../types/global"
 import { fonts, fontSizes, lineHeights } from "../../../styles/typography"
-import { HIT_SLOP_MD, OVERLAND_BATCH_MAX, OVERLAND_BATCH_MIN, size, space, STATE_LAYER_ALPHA } from "../../../constants"
-import { Card, NumericInput, RadioRow, SectionTitle, SettingRow, TextField, Toggle } from "../../index"
+import { OVERLAND_BATCH_MAX, OVERLAND_BATCH_MIN, SAVE_SUCCESS_DISPLAY_MS, size, space } from "../../../constants"
+import {
+  Button,
+  Card,
+  Divider,
+  NumericInput,
+  RadioRow,
+  SectionTitle,
+  SettingRow,
+  StateLine,
+  TextField,
+  Toggle
+} from "../../index"
 import { SyncIntervalPicker } from "./SyncIntervalPicker"
+import { useTheme } from "../../../hooks/useTheme"
+import { useTimeout } from "../../../hooks/useTimeout"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
+import { recordingSummary, syncSummary, trackingSummary } from "../../../utils/dashboardState"
+import { parseWholeNumber, wholeNumberError } from "../../../utils/settingsValidation"
 import { isOverlandFormat } from "../../../utils/apiPayload"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { radius } from "@colota/shared"
 
 interface SyncStrategySettingsProps {
   settings: Settings
   onSettingsChange: (newSettings: Settings) => void
   onDebouncedSave: (newSettings: Settings) => void
   onImmediateSave: (newSettings: Settings) => void
-  activeProfileName?: string | null
-  colors: ThemeColors
+  /** The profile in force, whose values the Recording and Sync interval groups then show as overridden. */
+  activeProfile?: SavedTrackingProfile | null
 }
+
+type NumericKey = "interval" | "distance" | "accuracyThreshold"
+
+const NUMERIC_MIN: Record<NumericKey, number> = { interval: 1, distance: 0, accuracyThreshold: 1 }
 
 const SYNC_CONDITION_OPTIONS: { value: SyncCondition; label: string; sub: string }[] = [
-  { value: "any", label: "Any network", sub: "Uploads over mobile data as well as Wi-Fi" },
-  { value: "wifi_any", label: "Wi-Fi", sub: "Uploads only while connected to any Wi-Fi" },
-  { value: "wifi_ssid", label: "Specific Wi-Fi network", sub: "Uploads only on one network you choose" },
-  { value: "vpn", label: "VPN", sub: "Uploads only while a VPN is active" }
+  {
+    value: "any",
+    label: "Any network",
+    sub: "Mobile data and Wi-Fi · syncs never wait, counts against your data plan"
+  },
+  { value: "wifi_any", label: "Wi-Fi or Ethernet", sub: "Unmetered networks only · fixes wait on mobile data" },
+  { value: "wifi_ssid", label: "Specific Wi-Fi network", sub: "One network by name · fixes wait elsewhere" },
+  { value: "vpn", label: "VPN", sub: "Only while a VPN is up · fixes wait otherwise" }
 ]
 
-function presetSummary(preset: SelectablePreset, isOfflineMode: boolean): string {
-  const config = TRACKING_PRESETS[preset]
-  const base = isOfflineMode ? config.description.split(" • ")[0] : config.description
-  if (preset === "balanced") return `${base} • recommended`
-  if (config.batteryImpact === "High") return `${base} • high battery`
-  return base
-}
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1)
 
 export function SyncStrategySettings({
   settings,
   onSettingsChange,
   onDebouncedSave,
   onImmediateSave,
-  activeProfileName,
-  colors
+  activeProfile = null
 }: SyncStrategySettingsProps) {
+  const { colors } = useTheme()
+  const unit = shortDistanceUnit()
   const [intervalInput, setIntervalInput] = useState(settings.interval.toString())
   const [distanceInput, setDistanceInput] = useState(metersToInput(settings.distance ?? 0).toString())
   const [accuracyThresholdInput, setAccuracyThresholdInput] = useState(
     metersToInput(settings.accuracyThreshold).toString()
   )
   const [overlandBatchSizeInput, setOverlandBatchSizeInput] = useState(settings.overlandBatchSize.toString())
+  const [clampMessage, setClampMessage] = useState<{ key: string; text: string } | null>(null)
+  const clampTimer = useTimeout()
   const showOverlandBatchSize = isOverlandFormat(settings.apiTemplate, settings.dawarichMode)
   const [currentSsid, setCurrentSsid] = useState("")
 
@@ -71,65 +97,52 @@ export function SyncStrategySettings({
     return () => sub.remove()
   }, [settings.syncCondition])
 
-  // Sync inputs with settings changes (e.g. preset selection)
+  // A preset press rewrites the fields; a keystroke that already means the stored value keeps its text.
   useEffect(() => {
-    setIntervalInput(settings.interval.toString())
-    setDistanceInput(metersToInput(settings.distance ?? 0).toString())
-    setAccuracyThresholdInput(metersToInput(settings.accuracyThreshold).toString())
-    setOverlandBatchSizeInput(settings.overlandBatchSize.toString())
-  }, [
-    settings.interval,
-    settings.distance,
-    settings.accuracyThreshold,
-    settings.syncInterval,
-    settings.overlandBatchSize
-  ])
+    const keep = (shown: number) => (text: string) => (parseWholeNumber(text) === shown ? text : shown.toString())
+    setIntervalInput(keep(settings.interval))
+    setDistanceInput(keep(metersToInput(settings.distance ?? 0)))
+    setAccuracyThresholdInput(keep(metersToInput(settings.accuracyThreshold)))
+    setOverlandBatchSizeInput(keep(settings.overlandBatchSize))
+  }, [settings.interval, settings.distance, settings.accuracyThreshold, settings.overlandBatchSize])
 
-  const handleNumericChange = useCallback(
-    (key: "interval" | "distance" | "accuracyThreshold", value: string, min: number = 0) => {
-      if (key === "interval") setIntervalInput(value)
-      if (key === "distance") setDistanceInput(value)
-      if (key === "accuracyThreshold") setAccuracyThresholdInput(value)
+  const noteClamp = (key: string, text: string) => {
+    setClampMessage({ key, text })
+    clampTimer.set(() => setClampMessage(null), SAVE_SUCCESS_DISPLAY_MS)
+  }
+  const clampNote = (key: string) => (clampMessage?.key === key ? clampMessage.text : undefined)
 
-      const num = Number(value)
-      if (!isNaN(num) && num >= min) {
-        const stored = key === "distance" || key === "accuracyThreshold" ? inputToMeters(num) : num
-        const next = { ...settings, [key]: stored, syncPreset: "custom" as const }
-        onDebouncedSave(next)
-      }
-    },
-    [settings, onDebouncedSave]
-  )
+  const setInput = (key: NumericKey, value: string) => {
+    if (key === "interval") setIntervalInput(value)
+    if (key === "distance") setDistanceInput(value)
+    if (key === "accuracyThreshold") setAccuracyThresholdInput(value)
+  }
+  const inputOf = (key: NumericKey) =>
+    key === "interval" ? intervalInput : key === "distance" ? distanceInput : accuracyThresholdInput
+  const toStored = (key: NumericKey, value: number) => (key === "interval" ? value : inputToMeters(value))
 
-  const handleNumericBlur = useCallback(
-    (key: "interval" | "distance" | "accuracyThreshold", min: number = 0) => {
-      const currentStr =
-        key === "interval" ? intervalInput : key === "distance" ? distanceInput : accuracyThresholdInput
-      let val = Number(currentStr)
+  const handleNumericChange = (key: NumericKey, value: string) => {
+    setInput(key, value)
+    setClampMessage(null)
+    const num = parseWholeNumber(value)
+    if (num === null || num < NUMERIC_MIN[key]) return
+    const next = { ...settings, [key]: toStored(key, num) }
+    onSettingsChange(next)
+    onDebouncedSave(next)
+  }
 
-      if (isNaN(val) || val < min) {
-        val = min
-        if (key === "interval") setIntervalInput(min.toString())
-        if (key === "distance") setDistanceInput(min.toString())
-        if (key === "accuracyThreshold") setAccuracyThresholdInput(min.toString())
-
-        const stored = key === "distance" || key === "accuracyThreshold" ? inputToMeters(val) : val
-        const next = { ...settings, [key]: stored }
-        onSettingsChange(next)
-        onImmediateSave(next)
-      }
-    },
-    [intervalInput, distanceInput, accuracyThresholdInput, settings, onSettingsChange, onImmediateSave]
-  )
+  const handleNumericBlur = (key: NumericKey) => {
+    const min = NUMERIC_MIN[key]
+    const num = parseWholeNumber(inputOf(key))
+    if (num !== null && num >= min) return
+    setInput(key, min.toString())
+    noteClamp(key, `Set to ${min} ${key === "interval" ? "s" : unit}`)
+    const next = { ...settings, [key]: toStored(key, min) }
+    onSettingsChange(next)
+    onImmediateSave(next)
+  }
 
   const isCustomPreset = settings.syncPreset === "custom"
-
-  const customSummary = useMemo(() => {
-    const track = `Track every ${settings.interval}s`
-    if (settings.isOfflineMode) return track
-    const send = settings.syncInterval === 0 ? "Send instantly" : `Batch ${Math.round(settings.syncInterval / 60)} min`
-    return `${track} • ${send}`
-  }, [settings.interval, settings.syncInterval, settings.isOfflineMode])
 
   const handleCustomSelect = useCallback(() => {
     const next: Settings = { ...settings, syncPreset: "custom" }
@@ -154,38 +167,85 @@ export function SyncStrategySettings({
     [settings, onSettingsChange, onImmediateSave]
   )
 
-  const handleGridSelect = useCallback(
-    (key: string, value: number) => {
-      const next = {
-        ...settings,
-        [key]: value,
-        syncPreset: "custom" as const
-      }
+  // A preset owns the sync interval, so changing it is Custom; nothing else on the screen flips the preset.
+  const handleSyncIntervalChange = useCallback(
+    (seconds: number, save: (next: Settings) => void) => {
+      const next: Settings = { ...settings, syncInterval: seconds, syncPreset: "custom" }
       onSettingsChange(next)
-      onDebouncedSave(next)
+      save(next)
     },
-    [settings, onSettingsChange, onDebouncedSave]
+    [settings, onSettingsChange]
   )
 
+  const handleBatchChange = (value: string) => {
+    setOverlandBatchSizeInput(value)
+    setClampMessage(null)
+    const num = parseWholeNumber(value)
+    if (num === null || num < OVERLAND_BATCH_MIN || num > OVERLAND_BATCH_MAX) return
+    const next = { ...settings, overlandBatchSize: num }
+    onSettingsChange(next)
+    onDebouncedSave(next)
+  }
+
+  const handleBatchBlur = () => {
+    const num = parseWholeNumber(overlandBatchSizeInput)
+    if (num !== null && num >= OVERLAND_BATCH_MIN && num <= OVERLAND_BATCH_MAX) return
+    const clamped = num === null || num < OVERLAND_BATCH_MIN ? OVERLAND_BATCH_MIN : OVERLAND_BATCH_MAX
+    setOverlandBatchSizeInput(clamped.toString())
+    noteClamp("batch", `Set to ${clamped} points`)
+    const next = { ...settings, overlandBatchSize: clamped }
+    onSettingsChange(next)
+    onImmediateSave(next)
+  }
+
+  const batchError = (() => {
+    if (overlandBatchSizeInput === "") return undefined
+    const num = parseWholeNumber(overlandBatchSizeInput)
+    if (num === null) return "A whole number"
+    if (num < OVERLAND_BATCH_MIN || num > OVERLAND_BATCH_MAX) return `${OVERLAND_BATCH_MIN} to ${OVERLAND_BATCH_MAX}`
+    return undefined
+  })()
+
+  const presetSub = (preset: SelectablePreset) => {
+    const config = TRACKING_PRESETS[preset]
+    return `${trackingSummary(config.interval, config.distance, config.syncInterval, settings.isOfflineMode)} · ${config.cost}`
+  }
+
+  const thresholdShown = `${metersToInput(settings.accuracyThreshold)} ${unit}`
+  const filterHint = settings.filterInaccurateLocations
+    ? `Drops fixes the chip rates worse than ${thresholdShown}. Stricter leaves gaps indoors.`
+    : `Every fix is kept. When on, fixes worse than ${thresholdShown} are dropped.`
+
+  const ssidTyped = settings.syncSsid
+  const offerCurrentSsid = currentSsid !== "" && currentSsid.toLowerCase() !== ssidTyped.toLowerCase()
+
   return (
-    <View style={styles.section}>
+    <View>
       <Text style={[styles.intro, { color: colors.textSecondary }]}>
-        How often a fix is recorded, and when it uploads
+        How often a fix is recorded and when it syncs. Changes apply at once and restart tracking.
       </Text>
-      {activeProfileName ? (
-        <Text testID="profile-override-notice" style={[styles.override, { color: colors.warning }]}>
-          {activeProfileName} is active and is overriding these values while its condition holds.
-        </Text>
-      ) : null}
-      <SectionTitle>Tracking configuration</SectionTitle>
+
+      <SectionTitle>Recording</SectionTitle>
       <Card rows>
-        <View accessibilityRole="radiogroup">
+        {activeProfile && (
+          <>
+            <StateLine
+              icon={UserRoundPen}
+              iconColor={colors.textSecondary}
+              label={`${activeProfile.name} is active`}
+              caption={`In force: ${lowerFirst(recordingSummary(activeProfile.interval, activeProfile.distance))}`}
+              testID="profile-override-recording"
+            />
+            <Divider tight />
+          </>
+        )}
+        <View accessibilityRole="radiogroup" style={!activeProfile && styles.group}>
           {(Object.keys(TRACKING_PRESETS) as SelectablePreset[]).map((preset) => (
             <RadioRow
               key={preset}
               testID={`preset-${preset}`}
               label={TRACKING_PRESETS[preset].label}
-              sub={presetSummary(preset, settings.isOfflineMode)}
+              sub={presetSub(preset)}
               selected={settings.syncPreset === preset}
               onPress={() => handlePresetSelect(preset)}
             />
@@ -193,31 +253,39 @@ export function SyncStrategySettings({
           <RadioRow
             testID="preset-custom"
             label="Custom"
-            sub={customSummary}
+            sub={
+              isCustomPreset
+                ? trackingSummary(settings.interval, settings.distance, settings.syncInterval, settings.isOfflineMode)
+                : "Your own interval and movement threshold"
+            }
             selected={isCustomPreset}
             onPress={handleCustomSelect}
           />
 
           {isCustomPreset && (
-            <View style={styles.customParams}>
+            <View style={styles.reveal}>
               <NumericInput
-                label="Tracking interval"
+                label="Interval"
                 value={intervalInput}
-                onChange={(val) => handleNumericChange("interval", val, 1)}
-                onBlur={() => handleNumericBlur("interval", 1)}
-                unit="seconds"
-                placeholder="1"
-                hint="How often to capture GPS position"
+                onChange={(val) => handleNumericChange("interval", val)}
+                onBlur={() => handleNumericBlur("interval")}
+                unit="s"
+                placeholder="30"
+                hint="At least 1 s. Shorter keeps the GPS awake more of the time and records more points."
+                error={wholeNumberError(intervalInput, NUMERIC_MIN.interval, "s")}
+                message={clampNote("interval")}
               />
 
               <NumericInput
                 label="Movement threshold"
                 value={distanceInput}
-                onChange={(val) => handleNumericChange("distance", val, 0)}
-                onBlur={() => handleNumericBlur("distance", 0)}
-                unit={shortDistanceUnit()}
-                placeholder="10"
-                hint="Only record if moved more than this distance"
+                onChange={(val) => handleNumericChange("distance", val)}
+                onBlur={() => handleNumericBlur("distance")}
+                unit={unit}
+                placeholder="2"
+                hint="0 keeps every fix. Both the interval and this distance must pass before a fix is kept; higher saves storage and sync data, not battery. Not applied in a pause zone or by a stationary profile."
+                error={wholeNumberError(distanceInput, NUMERIC_MIN.distance, unit)}
+                message={clampNote("distance")}
               />
             </View>
           )}
@@ -226,139 +294,129 @@ export function SyncStrategySettings({
 
       {!settings.isOfflineMode && (
         <>
-          <SectionTitle style={styles.groupTop}>Network settings</SectionTitle>
+          <SectionTitle style={styles.groupTop}>Sync interval</SectionTitle>
           <Card rows>
-            <View style={styles.settingBlock}>
-              <SyncIntervalPicker
-                label="Sync interval"
-                hint="How often to upload data to server"
-                value={settings.syncInterval}
-                onSelect={(seconds) => handleGridSelect("syncInterval", seconds)}
-                onChange={(seconds) => onDebouncedSave({ ...settings, syncInterval: seconds, syncPreset: "custom" })}
-                onClamp={(seconds) => {
-                  const next = { ...settings, syncInterval: seconds, syncPreset: "custom" as const }
-                  onSettingsChange(next)
-                  onImmediateSave(next)
-                }}
-              />
-            </View>
+            {activeProfile && (
+              <>
+                <StateLine
+                  icon={UserRoundPen}
+                  iconColor={colors.textSecondary}
+                  label={`${activeProfile.name} is active`}
+                  caption={`In force: ${syncSummary(activeProfile.syncInterval)}`}
+                  testID="profile-override-sync"
+                />
+                <Divider tight />
+              </>
+            )}
+            <SyncIntervalPicker
+              pullUp={!activeProfile}
+              value={settings.syncInterval}
+              onSelect={(seconds) => handleSyncIntervalChange(seconds, onImmediateSave)}
+              onChange={(seconds) => handleSyncIntervalChange(seconds, onDebouncedSave)}
+              onClamp={(seconds) => handleSyncIntervalChange(seconds, onImmediateSave)}
+            />
 
             {showOverlandBatchSize && (
-              <View style={styles.customSyncInput}>
-                <NumericInput
-                  label="Batch size"
-                  value={overlandBatchSizeInput}
-                  onChange={(val) => {
-                    setOverlandBatchSizeInput(val)
-                    const num = Number(val)
-                    if (!isNaN(num) && num >= OVERLAND_BATCH_MIN && num <= OVERLAND_BATCH_MAX) {
-                      const next = { ...settings, overlandBatchSize: num }
-                      onDebouncedSave(next)
-                    }
-                  }}
-                  onBlur={() => {
-                    let val = Number(overlandBatchSizeInput)
-                    if (isNaN(val) || val < OVERLAND_BATCH_MIN) val = OVERLAND_BATCH_MIN
-                    if (val > OVERLAND_BATCH_MAX) val = OVERLAND_BATCH_MAX
-                    if (val !== settings.overlandBatchSize || overlandBatchSizeInput !== val.toString()) {
-                      setOverlandBatchSizeInput(val.toString())
-                      const next = { ...settings, overlandBatchSize: val }
+              <>
+                <Divider tight />
+                <View style={styles.batch}>
+                  <NumericInput
+                    label="Batch size"
+                    value={overlandBatchSizeInput}
+                    onChange={handleBatchChange}
+                    onBlur={handleBatchBlur}
+                    unit="points"
+                    placeholder="50"
+                    hint={`${OVERLAND_BATCH_MIN} to ${OVERLAND_BATCH_MAX} points per request. Larger means fewer requests and bigger payloads.`}
+                    error={batchError}
+                    message={clampNote("batch")}
+                  />
+                </View>
+              </>
+            )}
+          </Card>
+
+          <SectionTitle style={styles.groupTop}>Sync only on</SectionTitle>
+          <Card rows>
+            <View accessibilityRole="radiogroup" style={styles.group}>
+              {SYNC_CONDITION_OPTIONS.map(({ value, label, sub }) => (
+                <React.Fragment key={value}>
+                  <RadioRow
+                    testID={`sync-condition-${value}`}
+                    label={label}
+                    sub={sub}
+                    selected={settings.syncCondition === value}
+                    onPress={() => {
+                      const next = { ...settings, syncCondition: value }
                       onSettingsChange(next)
                       onImmediateSave(next)
-                    }
-                  }}
-                  unit="points"
-                  placeholder="50"
-                  hint={`Points/upload (${OVERLAND_BATCH_MIN}-${OVERLAND_BATCH_MAX}). Larger = fewer requests, bigger payloads.`}
-                />
-              </View>
-            )}
-
-            {/* Sync Condition */}
-            <View style={styles.settingBlock}>
-              <Text style={[styles.blockLabel, { color: colors.text }]}>Sync only on</Text>
-              <View accessibilityRole="radiogroup">
-                {SYNC_CONDITION_OPTIONS.map(({ value, label, sub }) => (
-                  <React.Fragment key={value}>
-                    <RadioRow
-                      testID={`sync-condition-${value}`}
-                      label={label}
-                      sub={sub}
-                      selected={settings.syncCondition === value}
-                      onPress={() => {
-                        const next = { ...settings, syncCondition: value, syncPreset: "custom" as const }
-                        onSettingsChange(next)
-                        onImmediateSave(next)
-                      }}
-                    />
-                    {/* Belongs to its own row, not to the end of the group: VPN sits below it. */}
-                    {value === "wifi_ssid" && settings.syncCondition === "wifi_ssid" && (
-                      <View style={styles.ssidRow}>
-                        <TextField
-                          accessibilityLabel="Wi-Fi SSID"
-                          testID="sync-ssid-input"
-                          style={styles.ssidField}
-                          mono
-                          value={settings.syncSsid}
-                          onChangeText={(text) => {
-                            const next = { ...settings, syncSsid: text }
+                    }}
+                  />
+                  {/* Belongs to its own row, not to the end of the group: VPN sits below it. */}
+                  {value === "wifi_ssid" && settings.syncCondition === "wifi_ssid" && (
+                    <View style={[styles.reveal, offerCurrentSsid ? styles.revealButtonTail : styles.revealTail]}>
+                      <TextField
+                        label="Network name"
+                        testID="sync-ssid-input"
+                        mono
+                        value={ssidTyped}
+                        onChangeText={(text) => {
+                          const next = { ...settings, syncSsid: text }
+                          onSettingsChange(next)
+                          onDebouncedSave(next)
+                        }}
+                        placeholder="As shown in Wi-Fi settings"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        error={ssidTyped.trim() === "" ? "Nothing syncs until a network is named" : undefined}
+                      />
+                      {offerCurrentSsid && (
+                        <Button
+                          variant="secondary"
+                          title={`Use ${currentSsid}`}
+                          testID="sync-ssid-use"
+                          onPress={() => {
+                            const next = { ...settings, syncSsid: currentSsid }
                             onSettingsChange(next)
-                            onDebouncedSave(next)
+                            onImmediateSave(next)
                           }}
-                          placeholder="Enter Wi-Fi SSID"
-                          autoCapitalize="none"
-                          autoCorrect={false}
                         />
-                        {currentSsid !== "" && currentSsid.toLowerCase() !== settings.syncSsid.toLowerCase() && (
-                          <Pressable
-                            hitSlop={HIT_SLOP_MD}
-                            accessibilityRole="button"
-                            android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA }}
-                            style={[styles.ssidFillButton, { backgroundColor: colors.primary + "15" }]}
-                            onPress={() => {
-                              const next = { ...settings, syncSsid: currentSsid }
-                              onSettingsChange(next)
-                              onImmediateSave(next)
-                            }}
-                          >
-                            <Text style={[styles.ssidFillText, { color: colors.primary }]}>Use current</Text>
-                          </Pressable>
-                        )}
-                      </View>
-                    )}
-                  </React.Fragment>
-                ))}
-              </View>
+                      )}
+                    </View>
+                  )}
+                </React.Fragment>
+              ))}
             </View>
           </Card>
         </>
       )}
 
-      <SectionTitle style={styles.groupTop}>Quality filters</SectionTitle>
-      <Card rows style={styles.cardTail}>
-        <SettingRow label="Filter inaccurate locations" hint="Reject fixes the GPS chip reports as imprecise">
+      <SectionTitle style={styles.groupTop}>Accuracy filter</SectionTitle>
+      <Card rows>
+        <SettingRow label="Filter inaccurate locations" hint={filterHint}>
           <Toggle
             accessibilityLabel="Filter inaccurate locations"
             value={settings.filterInaccurateLocations}
-            onValueChange={(value) =>
-              onImmediateSave({
-                ...settings,
-                filterInaccurateLocations: value
-              })
-            }
+            onValueChange={(value) => {
+              const next = { ...settings, filterInaccurateLocations: value }
+              onSettingsChange(next)
+              onImmediateSave(next)
+            }}
           />
         </SettingRow>
 
         {settings.filterInaccurateLocations && (
-          <View style={styles.nestedSetting}>
+          <View style={styles.filterField}>
             <NumericInput
               label="Accuracy threshold"
               value={accuracyThresholdInput}
-              onChange={(val) => handleNumericChange("accuracyThreshold", val, 1)}
-              onBlur={() => handleNumericBlur("accuracyThreshold", 1)}
-              unit={shortDistanceUnit()}
+              onChange={(val) => handleNumericChange("accuracyThreshold", val)}
+              onBlur={() => handleNumericBlur("accuracyThreshold")}
+              unit={unit}
               placeholder="50"
-              hint="Based on the chip's own estimate, which can be optimistic"
+              hint={`At least 1 ${unit}. The chip's own estimate, often optimistic; lower drops more fixes.`}
+              error={wholeNumberError(accuracyThresholdInput, NUMERIC_MIN.accuracyThreshold, unit)}
+              message={clampNote("accuracyThreshold")}
             />
           </View>
         )}
@@ -374,73 +432,28 @@ const styles = StyleSheet.create({
     lineHeight: lineHeights.body,
     marginBottom: space.lg
   },
-  override: {
-    fontSize: fontSizes.description,
-    ...fonts.medium,
-    lineHeight: lineHeights.description,
-    marginTop: -space.sm,
-    marginBottom: space.lg
-  },
-  section: {
-    marginBottom: space.xl
-  },
-  customParams: {
-    paddingLeft: size.iconColumn,
-    paddingBottom: space.lg,
-    gap: space.lg
+  group: {
+    marginTop: -space.sm
   },
   groupTop: {
     marginTop: space.xl
   },
-  cardTail: {
-    paddingBottom: space.lg
-  },
-  settingBlock: {
-    paddingTop: space.lg,
-    paddingBottom: space.lg
-  },
-  blockLabel: {
-    fontSize: fontSizes.label,
-    ...fonts.semiBold,
-    marginBottom: space.xs
-  },
-  blockHint: {
-    fontSize: fontSizes.description,
-    ...fonts.regular,
-    marginBottom: space.md,
-    lineHeight: lineHeights.description
-  },
-  nestedSetting: {
-    marginTop: space.md,
-    marginStart: space.lg
-  },
-  customSyncInput: {
-    marginTop: space.md
-  },
-  // Indents and spaces itself the way the custom preset parameters do. The row above already pays
-  // space.lg below it, so a top margin here would push the field nearer VPN than its own option.
-  ssidRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  // The row above already pays space.lg below it; the field's own bottom margin is the card's tail.
+  reveal: {
     paddingLeft: size.iconColumn,
-    marginTop: -space.xs,
-    paddingBottom: space.lg,
-    gap: space.sm
+    marginTop: -space.xs
   },
-  ssidField: {
-    flex: 1
+  revealTail: {
+    paddingBottom: space.lg
   },
-  ssidFillButton: {
-    overflow: "hidden",
-    alignSelf: "flex-start",
-    justifyContent: "center",
-    minHeight: size.chip,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderRadius: radius.sm
+  // Button bakes marginVertical space.sm, which completes the 16 to the next row.
+  revealButtonTail: {
+    paddingBottom: space.sm
   },
-  ssidFillText: {
-    ...fonts.medium,
-    fontSize: fontSizes.caption
+  batch: {
+    paddingTop: space.lg
+  },
+  filterField: {
+    marginTop: -space.xs
   }
 })

@@ -4,28 +4,28 @@ sidebar_position: 2
 
 # Tracking Settings
 
-Found under **Settings → Tracking & sync → Tracking configuration**.
+Found under **Settings → Tracking & sync → Recording**. The accuracy filter has its own group, **Accuracy filter**, at the bottom of the same screen.
 
 ## Available Settings
 
-| Setting            | Description                          | Default   | Minimum |
-| ------------------ | ------------------------------------ | --------- | ------- |
-| Tracking Interval  | Time between GPS fixes               | 5 seconds | 1s      |
-| Movement Threshold | Minimum movement to trigger update   | 0         | 0       |
-| Accuracy Threshold | Filter out fixes above this accuracy | 50        | 1       |
-| Filter Inaccurate  | Enable/disable accuracy filtering    | Disabled  | On/Off  |
+| Setting                     | Description                       | Default   | Minimum |
+| --------------------------- | --------------------------------- | --------- | ------- |
+| Interval                    | Time between GPS fixes            | 5 seconds | 1 s     |
+| Movement threshold          | Minimum movement to keep a fix    | 0         | 0       |
+| Filter inaccurate locations | Enable/disable accuracy filtering | Off       | On/Off  |
+| Accuracy threshold          | Drop fixes rated worse than this  | 50        | 1       |
 
-The two distance settings use whichever unit you picked in **Settings → Appearance**, so they read as meters or feet. There is no upper limit on any of the three numbers.
+The interval and movement threshold sit under **Custom** in the Recording group; picking a preset sets both. The two distance settings use whichever unit you picked in **Settings → Appearance**, so they read as meters or feet. Every number field takes whole numbers only and states its minimum under its label; a value below it is set to the minimum when you leave the field. There is no upper limit on any of the three numbers.
 
 :::info[Tracking profiles override two of these]
 
-If a [tracking profile](/docs/guides/tracking-profiles) is active, it supplies its own tracking interval and movement threshold for as long as its condition holds. The values on this screen are what the app falls back to when no profile applies, so a profile is the usual reason fixes arrive at a different rate than the one set here.
+If a [tracking profile](/docs/guides/tracking-profiles) is active, it supplies its own interval, movement threshold and sync interval for as long as its condition holds. The Recording and Sync interval groups then open with a line naming the profile and the values in force, and the rows below stay the defaults the app falls back to when no profile applies. A profile is the usual reason fixes arrive at a different rate than the one set here.
 
 :::
 
-## Tracking Interval
+## Interval
 
-How often the app requests a GPS fix. Shorter intervals give denser track points but drain more battery.
+How often the app requests a GPS fix. Shorter intervals keep the GPS awake more of the time and record more points.
 
 - **1-5 seconds**: High detail, suitable for driving or cycling
 - **15-30 seconds**: Good balance for walking or commuting
@@ -33,14 +33,14 @@ How often the app requests a GPS fix. Shorter intervals give denser track points
 
 ## Movement Threshold
 
-Only records a new location if you've moved at least this far since the last recorded point. Useful for filtering out stationary noise.
+Only records a new location if you've moved at least this far since the last recorded point. Both the interval and this distance must pass before a fix is kept, so a higher threshold saves storage and sync data rather than battery. It is not applied inside a pause zone or by a stationary profile.
 
 - **0**: Record every GPS fix (default)
 - **10-50 m**: Skip stationary updates, good for daily use
 
 ## Accuracy Filter
 
-When enabled, GPS fixes with accuracy worse than the threshold are discarded. This prevents recording poor-quality positions from indoor or urban environments.
+When on, fixes the chip rates worse than the threshold are dropped. A stricter threshold leaves gaps indoors and in dense streets, where every fix is rated poorly. The switch's own caption carries the threshold in both states, so turning the filter off hides the field without losing the number.
 
 The accuracy value comes from the GPS chip's own estimate of its confidence, not from ground truth. Chips sometimes report a tight accuracy on a position that is badly wrong, and no threshold can reject those, because the fix does not admit to being imprecise. If a stationary device is filling your history with drift, the [Movement Threshold](#movement-threshold) is the setting that keeps those points out of the log.
 

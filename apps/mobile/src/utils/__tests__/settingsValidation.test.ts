@@ -1,4 +1,10 @@
-import { isEndpointAllowed, isPositiveInt, parsePositiveInt } from "../settingsValidation"
+import {
+  isEndpointAllowed,
+  isPositiveInt,
+  parsePositiveInt,
+  parseWholeNumber,
+  wholeNumberError
+} from "../settingsValidation"
 
 describe("isEndpointAllowed", () => {
   it("allows valid http and https URLs", () => {
@@ -52,5 +58,28 @@ describe("parsePositiveInt", () => {
 
   it("truncates floats via parseInt", () => {
     expect(parsePositiveInt("5.9", 99)).toBe(5)
+  })
+})
+
+describe("parseWholeNumber", () => {
+  it("accepts only digits, so a decimal, a sign, an exponent or nothing never reaches a setting", () => {
+    expect(parseWholeNumber("20")).toBe(20)
+    expect(parseWholeNumber("0")).toBe(0)
+    expect(parseWholeNumber("1.5")).toBeNull()
+    expect(parseWholeNumber("-3")).toBeNull()
+    expect(parseWholeNumber("1e3")).toBeNull()
+    expect(parseWholeNumber("")).toBeNull()
+  })
+})
+
+describe("wholeNumberError", () => {
+  it("stays silent on an empty field and on a valid value", () => {
+    expect(wholeNumberError("", 1, "s")).toBeUndefined()
+    expect(wholeNumberError("5", 1, "s")).toBeUndefined()
+  })
+
+  it("names the rule the text breaks, with the unit the field shows", () => {
+    expect(wholeNumberError("1.5", 1, "s")).toBe("A whole number")
+    expect(wholeNumberError("0", 1, "m")).toBe("At least 1 m")
   })
 })

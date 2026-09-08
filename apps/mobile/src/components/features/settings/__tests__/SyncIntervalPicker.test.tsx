@@ -1,5 +1,6 @@
 import React from "react"
-import { render, fireEvent } from "@testing-library/react-native"
+import { render, fireEvent, act } from "@testing-library/react-native"
+import { SAVE_SUCCESS_DISPLAY_MS } from "../../../../constants"
 jest.mock("../../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
 }))
@@ -95,5 +96,46 @@ describe("SyncIntervalPicker", () => {
     fireEvent(getByDisplayValue("-5"), "blur")
 
     expect(onClamp).toHaveBeenCalledWith(0)
+  })
+
+  it("prices every row, with Custom printing the interval it holds in the same units as the others", () => {
+    const { getByText } = renderPicker(90)
+
+    expect(getByText("Each fix is its own request · radio never idles")).toBeTruthy()
+    expect(getByText("One request every 15 min · the server hears you up to 15 min late")).toBeTruthy()
+    expect(getByText("Syncs every 90 s")).toBeTruthy()
+  })
+
+  it("draws no heading when the caller titles the group itself", () => {
+    const { queryByText } = render(
+      <SyncIntervalPicker value={300} onSelect={onSelect} onChange={onChange} onClamp={onClamp} />
+    )
+
+    expect(queryByText("Sync interval")).toBeNull()
+  })
+
+  it("rejects a decimal with an error instead of storing a rounded value", () => {
+    const { getByDisplayValue, getByText } = renderPicker(120)
+
+    fireEvent.changeText(getByDisplayValue("120"), "1.5")
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(getByText("A whole number")).toBeTruthy()
+  })
+
+  it("says what a blur clamped to, for as long as a save notice shows", () => {
+    jest.useFakeTimers()
+    const { getByDisplayValue, getByText, queryByText } = renderPicker(120)
+
+    fireEvent.changeText(getByDisplayValue("120"), "")
+    fireEvent(getByDisplayValue(""), "blur")
+
+    expect(onClamp).toHaveBeenCalledWith(1)
+    expect(getByText("Set to 1 s")).toBeTruthy()
+    act(() => {
+      jest.advanceTimersByTime(SAVE_SUCCESS_DISPLAY_MS)
+    })
+    expect(queryByText("Set to 1 s")).toBeNull()
+    jest.useRealTimers()
   })
 })
