@@ -5,7 +5,7 @@
 
 import React from "react"
 import { StyleSheet, Text, View } from "react-native"
-import { Share } from "lucide-react-native"
+import { Upload } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { space } from "../../../constants"
 import { fonts, fontSizes, lineHeights } from "../../../styles/typography"
@@ -41,7 +41,7 @@ export function ExportFormatDialog({ visible, title, message, onSelect, onReques
             <ListItem
               label={EXPORT_FORMATS[key].label}
               sub={EXPORT_FORMATS[key].description}
-              trailingIcon={Share}
+              trailingIcon={Upload}
               onPress={() => onSelect(key)}
               testID={`export-${key}`}
             />
