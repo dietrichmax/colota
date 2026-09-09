@@ -148,9 +148,9 @@ To change: **Settings > Tracking & sync > Sync only on**.
 
 ## Database growing too large
 
-- Use **Clear Sent History** to remove synced locations
-- Use **Delete Older Than X Days** for cleanup
-- Export data first if you want to keep it
-- Use **Vacuum Database** to reclaim space after deletions
+- Use **Delete synced locations** to remove what your server already holds
+- Use **Delete older than** for an age cutoff, which ignores sync state
+- Back up or export first if you want to keep it
+- Use **Compact database** to reclaim space after deleting trips or points, which leave gaps nothing else reclaims
 
 **Size reference**: ~200 bytes per location, ~2 MB per 10,000 locations.

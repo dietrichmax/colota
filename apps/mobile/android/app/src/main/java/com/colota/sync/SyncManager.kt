@@ -134,10 +134,21 @@ class SyncManager(
     }
 
     suspend fun manualFlush() {
-        if (endpoint.isNotBlank()) {
-            val total = dbHelper.getQueuedCount()
-            AppLogger.d(TAG, "Manual flush started: $total items in queue")
-            syncQueue { sent, failed -> LocationServiceModule.sendSyncProgressEvent(sent, failed, total) }
+        if (endpoint.isBlank()) return
+        val total = dbHelper.getQueuedCount()
+        AppLogger.d(TAG, "Manual flush started: $total items in queue")
+        var pass = SyncPass(0, 0)
+        try {
+            pass = syncQueue { sent, failed -> LocationServiceModule.sendSyncProgressEvent(sent, failed, total) }
+        } finally {
+            // A pass caps at MAX_BATCHES_PER_SYNC and stops when a batch moves nothing, so the
+            // running count need not reach the queue it started with. Only this event ends the pass,
+            // and a throw or a cancellation must still send it or the caller waits out its own
+            // timeout and reports a failure over an upload that worked. The totals come from the
+            // pass, not from the last progress tick, which only fires when a batch succeeded.
+            invalidateQueueCache()
+            val remaining = runCatching { dbHelper.getQueuedCount() }.getOrDefault(total - pass.sent)
+            LocationServiceModule.sendSyncProgressEvent(pass.sent, pass.failed, pass.sent + pass.failed, remaining)
         }
     }
 
@@ -220,7 +231,10 @@ class SyncManager(
         delay(backoffSeconds * 1000L)
     }
 
-    private suspend fun syncQueue(onProgress: ((sent: Int, failed: Int) -> Unit)? = null) = coroutineScope {
+    /** What one pass moved. It caps at [MAX_BATCHES_PER_SYNC], so it need not empty the queue. */
+    data class SyncPass(val sent: Int, val failed: Int)
+
+    private suspend fun syncQueue(onProgress: ((sent: Int, failed: Int) -> Unit)? = null): SyncPass = coroutineScope {
         // Snapshot volatile config so it stays consistent for the entire sync pass
         val currentEndpoint = endpoint
         val currentAuthHeaders = authHeaders
@@ -321,6 +335,8 @@ class SyncManager(
         if (totalSucceeded > 0) {
             markSuccess()
         }
+
+        SyncPass(totalSucceeded, totalFailed)
     }
 
     private data class BatchSendResult(val processed: Int, val failed: Int, val stop: Boolean)

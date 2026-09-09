@@ -8,8 +8,12 @@ import { Zap, Car, ArrowUp, ArrowDown, Pause } from "lucide-react-native"
 
 // Timing
 export const AUTOSAVE_DEBOUNCE_MS = 1500
-export const STATS_REFRESH_FAST = 3_000
 export const SAVE_SUCCESS_DISPLAY_MS = 2000
+/** manualFlush is fire and forget, so the screen gives up on progress events after this. */
+export const MANUAL_FLUSH_TIMEOUT_MS = 30_000
+/** A retention preview runs a COUNT per keystroke, so it waits for the typing to settle. */
+export const RETENTION_PREVIEW_DEBOUNCE_MS = 300
+export const RETENTION_PRESET_DAYS = [30, 90, 365]
 /** A certificate this close to its notAfter reads as expiring: a CA round trip takes weeks. */
 export const CERT_EXPIRY_WARNING_DAYS = 30
 export const SERVICE_RESTART_DELAY_MS = 500

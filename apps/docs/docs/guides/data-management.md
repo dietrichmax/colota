@@ -10,21 +10,26 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 <ScreenshotGallery screenshots={[ { src: "/img/screenshots/DataManagement.png", label: "Data management" }, ]} />
 
-## Actions
+## What the screen holds
 
-| Action                       | Description                                                                |
-| ---------------------------- | -------------------------------------------------------------------------- |
-| **Sync Now**                 | Manually flush the queue and upload pending locations                      |
-| **Clear Sent History**       | Remove locations that have already been synced                             |
-| **Clear Queue**              | Remove unsent locations from the upload queue                              |
-| **Delete Older Than X Days** | Clean up old data past a specified age                                     |
-| **Vacuum Database**          | Reclaim disk space after deletions                                         |
-| **Export locations**         | Export location history - see [Data Export](data-export.md)                |
-| **Import locations**         | Merge external files into your history - see [Data Import](data-import.md) |
+**Stored on this device** is the ledger: how many locations this device holds and what they take on disk.
 
-In [offline mode](/docs/configuration/server-settings#offline-mode), sync-related actions (Sync Now, Clear Sent History, Clear Queue) are hidden since no queue is used. A **Delete All Locations** action is available instead. Data export remains fully available - see [Data Export](data-export.md).
+| Control | What it does |
+| --- | --- |
+| **Sync now** | Uploads the queued locations immediately, whatever [Sync only on](/docs/configuration/sync-presets) says. The tracking notification appears for a moment if tracking was off, and nothing is recorded |
+| **Compact database** | Rewrites the database to give unused space back. It deletes nothing. Deleting trips and points from Location History leaves gaps that only this reclaims, so press it after a round of track editing |
+| **Delete queued locations** | Deletes the locations waiting to upload, not their pending uploads. Nothing else holds a copy, so they leave Location History too |
+| **Delete synced locations** | Deletes locations already on your server. Those days leave Location History, notes included, and imported locations count as synced. Copies on your server stay |
+| **Delete older than** | Deletes every location recorded before the age you pick: 30 days, 90 days, 1 year or a custom number of days. Sync state is ignored, so queued locations go with the rest |
+| **Delete all locations** | Deletes every location and every manual trip split you made. Geofences, profiles and settings stay |
 
-For a full archive of locations, settings and credentials in a single password-encrypted file, use **Settings → Backup & restore** - see [Backup & restore](backup-restore.md).
+Each delete names its own count before you press it. No age is chosen when the screen opens, so nothing is counted until you pick one. Every delete asks you to confirm, and none can be undone.
+
+In [offline mode](/docs/configuration/server-settings#offline-mode) nothing new is queued, so Sync now and both sync-scoped deletes leave the screen. Locations queued before you turned it on are still there, and the age delete and Delete all still reach them.
+
+Location History deletes single points and whole trips, see below. Export lives on its own screen, see [Data Export](data-export.md), and so does import, see [Data Import](data-import.md).
+
+For a full archive of locations, settings and credentials in a single password-encrypted file, use **Settings > Backup & restore** - see [Backup & restore](backup-restore.md).
 
 ## Deleting from Location History
 

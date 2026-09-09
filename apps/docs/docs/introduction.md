@@ -54,7 +54,7 @@ Colota has twenty-eight screens, each focused on a specific task:
 | **Export locations** | Export tracked locations as CSV, GeoJSON, GPX, or KML |
 | **Import locations** | Import tracks from GeoJSON, Google Timeline, GPX, KML or CSV with a preview before committing |
 | **Auto-export** | Configure scheduled exports: directory, format, frequency, time of day (with weekday or day-of-month for weekly/monthly), export range and file retention |
-| **Data management** | Clear sent history, delete old data, vacuum the database |
+| **Data management** | Delete by sync state or age, compact the database |
 | **Backup & restore** | Create or restore a single password-encrypted `.colota` archive of all data (locations, settings, geofences, credentials) |
 | **Setup Import** | Confirmation screen for deep link configuration imports (`colota://setup`) |
 | **Share setup** | Build a `colota://setup` link or QR code from selected settings to configure another device |

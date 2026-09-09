@@ -195,12 +195,19 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             }
         }
 
+        /** The detached rewrite after a bulk delete has finished, so any size read before it is stale. */
         @JvmStatic
-        fun sendSyncProgressEvent(sent: Int, failed: Int, total: Int): Boolean =
+        fun sendDatabaseCompactedEvent(success: Boolean): Boolean =
+            emit("onDatabaseCompacted") { putBoolean("success", success) }
+
+        /** `remaining` is present only on the event that ends a pass, and is what says the pass ended. */
+        @JvmStatic
+        fun sendSyncProgressEvent(sent: Int, failed: Int, total: Int, remaining: Int? = null): Boolean =
             emit("onSyncProgress") {
                 putInt("sent", sent)
                 putInt("failed", failed)
                 putInt("total", total)
+                if (remaining != null) putInt("remaining", remaining)
             }
 
         @JvmStatic
@@ -441,8 +448,22 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun countOlderThan(days: Int, promise: Promise) = executeAsync(promise) {
+        val counted = dbHelper.countOlderThan(days)
+        Arguments.createMap().apply {
+            putInt("total", counted.total)
+            putDouble("cutoffSeconds", counted.cutoffSeconds.toDouble())
+        }
+    }
+
+    @ReactMethod
+    fun countUnsentOlderThan(days: Int, promise: Promise) = executeAsync(promise) {
+        dbHelper.countUnsentOlderThan(days)
+    }
+
+    @ReactMethod
     fun deleteLocationsInRange(startTs: Double, endTs: Double, promise: Promise) = executeAsync(promise) {
-        deleteThenVacuum(refresh = true) { dbHelper.deleteInRange(startTs.toLong(), endTs.toLong()) }
+        deleteWithoutVacuum { dbHelper.deleteInRange(startTs.toLong(), endTs.toLong()) }
     }
 
     @ReactMethod
@@ -454,17 +475,25 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             val end = r.getDouble("end").toLong()
             pairs.add(start to end)
         }
-        deleteThenVacuum(refresh = true) { dbHelper.deleteInRanges(pairs) }
+        deleteWithoutVacuum { dbHelper.deleteInRanges(pairs) }
     }
 
     @ReactMethod
     fun deleteLocationsByIds(ids: ReadableArray, promise: Promise) = executeAsync(promise) {
         val locationIds = (0 until ids.size()).map { ids.getDouble(it).toLong() }
-        val deleted = dbHelper.deleteLocations(locationIds)
+        deleteWithoutVacuum { dbHelper.deleteLocations(locationIds) }
+    }
+
+    /**
+     * Editing a track, not maintaining a database: a point or a trip is a few rows out of millions,
+     * and the delete gets repeated. Rewriting the whole file each time holds the one write
+     * connection for minutes and stalls the recording service. Compact database is the deliberate
+     * rewrite, and its figure is what the user watches move.
+     */
+    private fun deleteWithoutVacuum(delete: () -> Int): Int {
+        val deleted = delete()
         if (deleted > 0) refreshNotificationIfTracking()
-        // No vacuum here: a few rows are not worth rewriting the database, and this delete gets
-        // repeated. Data Management has an explicit Vacuum action.
-        deleted
+        return deleted
     }
 
     @ReactMethod
@@ -493,9 +522,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun vacuumDatabase(promise: Promise) = executeAsync(promise) { 
-        dbHelper.vacuum()
-        true 
+    fun vacuumDatabase(promise: Promise) = executeAsync(promise) {
+        // Rejecting is what lets the caller say the database was busy. Resolving regardless made a
+        // failure look like a rewrite that found nothing to release.
+        if (!dbHelper.vacuum()) throw IllegalStateException("The database was busy")
+        true
     }
 
     private fun triggerZoneRecheck() {
@@ -529,11 +560,20 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         triggerProfileRecheck()
     }
 
-    /** delete() runs inline; vacuum is fire-and-forget so callers return immediately. */
+    /**
+     * For the bulk deletes on Data management only: rare, deliberate, and asked for by someone who
+     * just said to remove a large share of the table. delete() runs inline; vacuum is
+     * fire-and-forget so callers return immediately.
+     */
     private fun deleteThenVacuum(refresh: Boolean = false, delete: () -> Int): Int {
         val deleted = delete()
         if (refresh) refreshNotificationIfTracking()
-        moduleScope.launch(Dispatchers.IO) { dbHelper.vacuum() }
+        // The rewrite runs detached so the delete returns at once, which leaves the file its old
+        // size for as long as it takes. The event is how a caller learns the size it read is stale.
+        moduleScope.launch(Dispatchers.IO) {
+            val ok = dbHelper.vacuum()
+            sendDatabaseCompactedEvent(ok)
+        }
         return deleted
     }
 

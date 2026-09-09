@@ -5,7 +5,9 @@
 
 package com.Colota.bridge
 
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.location.Location
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.GeofenceHelper
@@ -13,9 +15,13 @@ import com.Colota.data.ProfileHelper
 import com.Colota.service.LocationForegroundService
 import com.Colota.service.TrackingWatchdogScheduler
 import com.Colota.util.AppLogger
+import com.Colota.util.SecureStorageHelper
 import com.Colota.util.DeviceInfoHelper
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.JavaOnlyArray
 import com.facebook.react.bridge.JavaOnlyMap
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import io.mockk.*
@@ -24,6 +30,8 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.lang.ref.WeakReference
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Tests for LocationServiceModule:
@@ -53,9 +61,18 @@ class LocationServiceModuleTest {
         every { AppLogger.e(any(), any(), any()) } just Runs
 
         mockkStatic(Arguments::class)
-        every { Arguments.createMap() } returns JavaOnlyMap()
+        // A fresh map per call. One shared instance makes every emitted payload look identical, so
+        // an assertion about what one event carries silently reads what a later one wrote.
+        every { Arguments.createMap() } answers { JavaOnlyMap() }
+
+        // NetworkManager casts this in a field initialiser, and a relaxed mock hands back an Object.
+        every { mockContext.getSystemService(Context.CONNECTIVITY_SERVICE) } returns mockk<ConnectivityManager>(relaxed = true)
 
         mockkObject(DatabaseHelper.Companion)
+        // The module builds one in a field initialiser, and it opens an encrypted keystore a plain
+        // JVM has no keys for, so constructing the module needs this stubbed.
+        mockkObject(SecureStorageHelper.Companion)
+        every { SecureStorageHelper.getInstance(any()) } returns mockk(relaxed = true)
         mockkObject(LocationForegroundService.Companion)
         every { LocationForegroundService.isRunning } returns true
 
@@ -76,6 +93,7 @@ class LocationServiceModuleTest {
         unmockkObject(AppLogger)
         unmockkStatic(Arguments::class)
         unmockkObject(DatabaseHelper.Companion)
+        unmockkObject(SecureStorageHelper.Companion)
         unmockkObject(LocationForegroundService.Companion)
         unmockkObject(TrackingWatchdogScheduler)
         setCompanionField("reactContextRef", WeakReference<ReactApplicationContext>(null))
@@ -207,6 +225,25 @@ class LocationServiceModuleTest {
     fun `sendSyncProgressEvent emits onSyncProgress`() {
         assertTrue(LocationServiceModule.sendSyncProgressEvent(5, 2, 100))
         verify { mockEmitter.emit("onSyncProgress", any()) }
+    }
+
+    /**
+     * `remaining` is the whole completion contract. A pass caps at MAX_BATCHES_PER_SYNC, so the
+     * running count need not reach the queue it started with, and a tick carrying the key would end
+     * the caller's flush on the first batch.
+     */
+    @Test
+    fun `a progress tick carries no remaining, and only the event that ends a pass does`() {
+        val payloads = mutableListOf<WritableMap>()
+        every { mockEmitter.emit("onSyncProgress", capture(payloads)) } just Runs
+
+        LocationServiceModule.sendSyncProgressEvent(50, 0, 412)
+        LocationServiceModule.sendSyncProgressEvent(500, 3, 503, 120)
+
+        assertFalse(payloads[0].hasKey("remaining"))
+        assertTrue(payloads[1].hasKey("remaining"))
+        assertEquals(120, payloads[1].getInt("remaining"))
+        assertEquals(3, payloads[1].getInt("failed"))
     }
 
     @Test
@@ -688,6 +725,94 @@ class LocationServiceModuleTest {
             }
         }
         throw NoSuchFieldException(name)
+    }
+
+    // ========================================================================
+    // Which deletes rewrite the database
+    // ========================================================================
+
+    /**
+     * A track edit is a few rows out of millions and gets repeated, so it must not trigger a full
+     * rewrite: VACUUM holds the one write connection for minutes and stalls the recording service.
+     * The bulk deletes on Data management are rare and asked for, so they still do.
+     */
+    @Test
+    fun `deleting a trip does not rewrite the database`() {
+        val db = stubDatabase()
+        every { db.deleteInRange(any(), any()) } returns 120
+
+        awaitPromise { promise -> LocationServiceModule(mockContext).deleteLocationsInRange(1000.0, 2000.0, promise) }
+
+        verify(exactly = 1) { db.deleteInRange(1000L, 2000L) }
+        assertNoVacuum(db)
+    }
+
+    @Test
+    fun `deleting selected trips does not rewrite the database`() {
+        val db = stubDatabase()
+        every { db.deleteInRanges(any()) } returns 40
+        val ranges = JavaOnlyArray().apply {
+            pushMap(JavaOnlyMap().apply {
+                putDouble("start", 10.0)
+                putDouble("end", 20.0)
+            })
+        }
+
+        awaitPromise { promise -> LocationServiceModule(mockContext).deleteLocationsInRanges(ranges, promise) }
+
+        verify(exactly = 1) { db.deleteInRanges(listOf(10L to 20L)) }
+        assertNoVacuum(db)
+    }
+
+    @Test
+    fun `deleting single points does not rewrite the database`() {
+        val db = stubDatabase()
+        every { db.deleteLocations(any()) } returns 1
+        val ids = JavaOnlyArray().apply { pushDouble(7.0) }
+
+        awaitPromise { promise -> LocationServiceModule(mockContext).deleteLocationsByIds(ids, promise) }
+
+        verify(exactly = 1) { db.deleteLocations(listOf(7L)) }
+        assertNoVacuum(db)
+    }
+
+    @Test
+    fun `a bulk delete on Data management still rewrites the database`() {
+        val db = stubDatabase()
+        every { db.deleteOlderThan(any()) } returns 9000
+
+        awaitPromise { promise -> LocationServiceModule(mockContext).deleteOlderThan(90, promise) }
+
+        verify(exactly = 1) { db.deleteOlderThan(90) }
+        // Fire-and-forget on its own coroutine, so the promise resolves before it runs.
+        verify(timeout = 5000, exactly = 1) { db.vacuum() }
+    }
+
+    /**
+     * The rewrite runs on a detached coroutine, so the promise can settle before it would have
+     * started. Proving it never runs means giving it the chance and then checking.
+     */
+    private fun assertNoVacuum(db: DatabaseHelper) {
+        Thread.sleep(200)
+        verify(exactly = 0) { db.vacuum() }
+    }
+
+    private fun stubDatabase(): DatabaseHelper {
+        val db = mockk<DatabaseHelper>(relaxed = true)
+        every { DatabaseHelper.getInstance(any()) } returns db
+        return db
+    }
+
+    /** The bridge resolves on its own coroutine, so a test has to wait for the promise, not the call. */
+    private fun awaitPromise(call: (Promise) -> Unit) {
+        val latch = CountDownLatch(1)
+        val promise = mockk<Promise>(relaxed = true)
+        every { promise.resolve(any()) } answers { latch.countDown() }
+        every { promise.reject(any<String>(), any<String>(), any<Throwable>()) } answers { latch.countDown() }
+
+        call(promise)
+
+        assertTrue("the bridge never settled its promise", latch.await(5, TimeUnit.SECONDS))
     }
 
     private fun getField(obj: Any, name: String): Any? {
