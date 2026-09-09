@@ -55,7 +55,7 @@ class BackupRestorer @JvmOverloads constructor(
             } catch (e: IllegalStateException) {
                 throw BackupException(BackupError.UNSUPPORTED_SCHEMA, e.message ?: "Migration refused", e)
             } catch (e: Exception) {
-                throw BackupException(BackupError.INTEGRITY_FAIL, "Schema migration failed: ${e.message}", e)
+                throw BackupException(BackupError.MIGRATION_FAILED, "Schema migration failed: ${e.message}", e)
             }
 
             val secretsMap = extracted.secrets?.let { parseSecrets(it) }
@@ -76,6 +76,61 @@ class BackupRestorer @JvmOverloads constructor(
         } finally {
             workDir.deleteRecursively()
         }
+    }
+
+    /**
+     * The manifest and nothing else. It is the first entry the builder writes, so reading it costs
+     * one key derivation and the first chunk, and the archive is never extracted.
+     */
+    fun describe(input: InputStream, password: CharArray): JSONObject {
+        val pipedOut = PipedOutputStream()
+        val pipedIn = PipedInputStream(pipedOut, 1024 * 1024)
+        var decryptError: Throwable? = null
+
+        val decryptThread = Thread({
+            try {
+                pipedOut.use { crypto.decrypt(input, it, password) }
+            } catch (t: Throwable) {
+                decryptError = t
+                try { pipedOut.close() } catch (_: Exception) {}
+            }
+        }, "BackupDescribeDecryptor").apply { isDaemon = true }
+        decryptThread.start()
+
+        val bytes = try {
+            ZipInputStream(pipedIn).use { zip ->
+                var found: ByteArray? = null
+                var entry = zip.nextEntry
+                while (entry != null && found == null) {
+                    if (!entry.isDirectory && entry.name == MANIFEST_ENTRY) {
+                        found = readBoundedZipEntry(zip, MANIFEST_ENTRY, MAX_MANIFEST_BYTES)
+                    }
+                    if (found == null) entry = zip.nextEntry
+                }
+                found
+            }
+        } catch (e: Exception) {
+            // Closing the pipe early makes the decryptor throw, so its error only counts if it came first.
+            decryptThread.join()
+            decryptError?.let { throw it }
+            throw e
+        }
+
+        // Not joined on the happy path: the reader stops at the first entry and the writer is a
+        // daemon blocked on a closed pipe, which a join would wait out for the rest of the archive.
+        decryptError?.let { throw it }
+        val manifestBytes = bytes ?: throw BackupException(BackupError.MISSING_ENTRY, MANIFEST_ENTRY)
+
+        val manifest = JSONObject(String(manifestBytes, Charsets.UTF_8))
+        val backupSchema = manifest.optJSONObject("schema")?.optInt("db", -1) ?: -1
+        if (backupSchema > DatabaseHelper.DATABASE_VERSION) {
+            throw BackupException(
+                BackupError.UNSUPPORTED_SCHEMA,
+                "Backup schema $backupSchema is newer than installed app schema " +
+                        "${DatabaseHelper.DATABASE_VERSION}; upgrade Colota first."
+            )
+        }
+        return manifest
     }
 
     private fun decryptAndExtract(

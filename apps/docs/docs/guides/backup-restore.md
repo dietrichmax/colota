@@ -25,7 +25,7 @@ The auth credentials Colota uses to reach your tracking endpoint (Basic Auth, Be
 
 1. Go to **Settings → Backup & restore**
 2. Enter a password (12 characters minimum) and confirm it
-3. Wait for the strength meter to reach at least **OK**
+3. Wait for the line under the field to read at least **OK**
 4. Tap **Create backup**
 5. Acknowledge the no-recovery warning
 6. Choose where to save the `.colota` file
@@ -34,8 +34,10 @@ The app encrypts the file as it writes. You can leave the screen and the backup 
 
 ### Password Requirements
 
-- **12 characters minimum** (hard limit)
-- **~50 bits of entropy minimum** (soft strength meter)
+Both are hard limits. The line under the password field is the same verdict the app checks against, so a password it calls **OK** or better is one **Create backup** will accept.
+
+- **12 characters minimum**
+- **50 bits of entropy minimum**
 - Sequences like `abcd` and `1234` cap the score, as do passwords with fewer than 4 distinct characters
 
 A random 16-character password from a password manager, or a 4-5 word passphrase, both clear the bar comfortably. Common words and short tweaks of dictionary words do not.
@@ -55,11 +57,14 @@ Replaces all current data Restoring overwrites every location, setting, geofence
 :::
 
 1. Go to **Settings → Backup & restore**
-2. Tap **Choose backup file** and pick the `.colota` file
-3. Enter the backup password when prompted
-4. Confirm the replace warning
-5. The app pauses tracking, swaps the database and restarts itself
-6. Re-enable tracking from the Home screen when you're ready
+2. Tap **Choose a backup file** and pick the `.colota` file
+3. Type the backup password and tap **Open this file**
+4. Check the date and app version the screen now reports
+5. Tap **Replace all data** and confirm
+6. The app pauses tracking, swaps the database and restarts itself
+7. Re-enable tracking from the Home screen when you're ready
+
+Opening the file is a read, not a commitment. It checks the password and reads what the archive holds without extracting anything, pausing recording or touching your data, so a wrong password costs you a retry. **Replace all data** does not appear until the file has been opened, so you never aim a destructive button at an archive nobody has verified.
 
 ### What Gets Paused
 
@@ -88,14 +93,22 @@ Each file is authenticated end-to-end with a key derived from your password. Wro
 
 ## Failure Modes
 
-| Error message                               | Cause                                                     |
-| ------------------------------------------- | --------------------------------------------------------- |
-| Incorrect password, or corrupted near start | Wrong password, or the first chunk has been tampered with |
-| This file is not a Colota backup            | Magic bytes don't match - file is something else          |
-| Made with a newer version of Colota         | Schema is ahead of the installed app                      |
-| Backup file is corrupted / incomplete       | Mid-file tamper or truncation                             |
-| Backup file is missing required data        | Container is missing the database or manifest entry       |
-| Credentials could not be applied            | Database restored, but credential write failed            |
+Every failure that happens before the swap ends with the same sentence, **Nothing on this device was changed**, because on every one of them it is true.
+
+| Error message | Cause |
+| --- | --- |
+| That password did not open this file | Wrong password, or the first chunk has been tampered with |
+| This is not a Colota backup | Magic bytes don't match, the file is something else |
+| This backup was made by a newer version of Colota | Schema is ahead of the installed app |
+| This file is damaged and cannot be trusted | Mid-file tamper, or the integrity check failed |
+| This file is incomplete | Truncation, so the file was probably never finished being written |
+| The file is intact but this version of Colota could not read its database | A migration of the archive's database failed. Not the same as a damaged file |
+| This file is missing part of a backup | Container is missing the database or manifest entry |
+| There is not enough free space to unpack this backup | The device ran out of room before the swap |
+| Your server credentials could not be applied | Database restored, but the credential write failed. Enter them again on Connection |
+| Something failed after the swap | The database is the backup's, but a later step did not finish. Check Connection and Tracking |
+
+The last two are the only entries where your data **was** replaced. Both leave recording off, like a clean restore does.
 
 If a backup fails mid-encrypt, the app deletes the partial `.colota` file at the destination. If that cleanup fails (some cloud providers reject delete on freshly-created files), the error message tells you to delete it manually.
 

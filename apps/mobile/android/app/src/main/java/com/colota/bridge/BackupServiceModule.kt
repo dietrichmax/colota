@@ -169,7 +169,7 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
                 val resolver = reactApplicationContext.contentResolver
                 resolver.openOutputStream(uri, "wt")?.use { safOut ->
                     pendingFile.inputStream().use { it.copyTo(safOut) }
-                } ?: throw IllegalStateException("Could not open output stream for $uriString")
+                } ?: throw IllegalStateException("Could not write to the file you chose. Pick a different location and try again.")
 
                 promise.resolve(true)
             } catch (e: Exception) {
@@ -186,6 +186,47 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
                 pendingFile.delete()
                 Arrays.fill(passwordChars, 0.toChar())
                 BackupForegroundService.stop(reactApplicationContext)
+                operationMutex.unlock()
+            }
+        }
+    }
+
+    /**
+     * Reads the manifest and stops. No foreground service, no writer pause, nothing extracted, so a
+     * wrong password costs a retry rather than a stopped recording.
+     */
+    @ReactMethod
+    fun describeBackup(uriString: String, passwordCodes: ReadableArray, promise: Promise) {
+        val passwordChars = readableArrayToCharArray(passwordCodes)
+        if (passwordChars.isEmpty()) {
+            promise.reject("E_PASSWORD_EMPTY", "Password is required")
+            return
+        }
+        scope.launch {
+            BackupOrphanCleanup.awaitComplete()
+            if (!operationMutex.tryLock()) {
+                Arrays.fill(passwordChars, 0.toChar())
+                promise.reject("E_BUSY", "Another backup or restore is in progress")
+                return@launch
+            }
+            try {
+                val uri = Uri.parse(uriString)
+                val input = reactApplicationContext.contentResolver.openInputStream(uri)
+                    ?: throw IllegalStateException("Could not open the file you chose.")
+                val manifest = input.use { BackupRestorer(reactApplicationContext).describe(it, passwordChars) }
+                promise.resolve(
+                    Arguments.createMap().apply {
+                        putString("createdAt", manifest.optString("createdAt", ""))
+                        putString("appVersion", manifest.optString("appVersion", ""))
+                        putInt("appBuild", manifest.optInt("appBuild", 0))
+                        putInt("schemaDb", manifest.optJSONObject("schema")?.optInt("db", -1) ?: -1)
+                    }
+                )
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "describeBackup failed", e)
+                promise.reject(errorCode(e), e.message ?: "Could not read the backup", e)
+            } finally {
+                Arrays.fill(passwordChars, 0.toChar())
                 operationMutex.unlock()
             }
         }
@@ -226,16 +267,18 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
                 // Swap is done; clear the writer block so the post-restore saveSetting can land on the new DB.
                 DatabaseHelper.setRestoreInProgress(false)
 
-                // Don't silently resume tracking on the destination device.
-                DatabaseHelper.getInstance(reactApplicationContext)
-                    .saveSetting(SettingsKeys.TRACKING_ENABLED, "false")
-
                 promise.resolve(true)
             } catch (e: Exception) {
-                // The swap happens inside restore(); SECRETS_PARTIAL is the only failure raised after it.
                 if (e is BackupException && e.error == BackupError.SECRETS_PARTIAL) dbReplaced = true
                 AppLogger.e(TAG, "restoreBackup failed", e)
-                promise.reject(errorCode(e), e.message ?: "Restore failed", e)
+                // A caller cannot tell from an ordinary code whether the swap already happened, and
+                // the answer decides whether it reloads the bundle.
+                val code = if (dbReplaced && !(e is BackupException && e.error == BackupError.SECRETS_PARTIAL)) {
+                    "E_BACKUP_RESTORED_INCOMPLETE"
+                } else {
+                    errorCode(e)
+                }
+                promise.reject(code, e.message ?: "Restore failed", e)
             } finally {
                 Arrays.fill(passwordChars, 0.toChar())
                 BackupForegroundService.stop(reactApplicationContext)
@@ -247,6 +290,16 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
                     AppLogger.w(TAG, "scheduleNext failed after restore: ${e.message}")
                 }
                 // Once the database is the backup's, the destination-device rule applies and tracking stays off.
+                // In the finally, not the try: a throw after the swap would otherwise leave the flag
+                // as the archive carried it and recording could resume at the next revive.
+                if (dbReplaced) {
+                    try {
+                        DatabaseHelper.getInstance(reactApplicationContext)
+                            .saveSetting(SettingsKeys.TRACKING_ENABLED, "false")
+                    } catch (e: Exception) {
+                        AppLogger.w(TAG, "Could not clear tracking_enabled after restore: ${e.message}")
+                    }
+                }
                 // Not in the catch: every saveSetting here is gated until the finally clears restoreInProgress.
                 if (!dbReplaced && trackingWasEnabled) {
                     try {
@@ -334,7 +387,8 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
         if (available < needed) {
             val neededMb = needed / (1024 * 1024)
             val availableMb = available / (1024 * 1024)
-            throw IllegalStateException(
+            throw BackupException(
+                BackupError.NO_SPACE,
                 "Not enough free space for restore. Need ~${neededMb} MB, have ${availableMb} MB."
             )
         }

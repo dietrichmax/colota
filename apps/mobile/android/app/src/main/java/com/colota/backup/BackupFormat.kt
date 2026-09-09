@@ -117,6 +117,10 @@ enum class BackupError {
     TRUNCATED,
     TAMPERED,
     WRONG_PASSWORD,
+    // The archive is intact; this app's own migration of it failed.
+    MIGRATION_FAILED,
+    // Restore ran out of room before the swap. Nothing was replaced.
+    NO_SPACE,
     // DB swapped successfully but secrets commit failed; user must re-enter credentials.
     SECRETS_PARTIAL,
 }

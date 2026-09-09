@@ -39,6 +39,7 @@ import { dataRowSub, getVariantLabel, loggingRowSub, offlineMapsRowSub } from ".
 import { ProfileService } from "../services/ProfileService"
 import { loadOfflineAreas, type OfflineAreaInfo } from "../components/features/map/OfflinePackManager"
 import { appearanceRowSub } from "../utils/appearance"
+import { backupRowSub } from "../utils/backupState"
 import { transferRowSub } from "../utils/locationTransfer"
 import { logger } from "../utils/logger"
 import { space, RELEASES_URL, ISSUES_URL, SUPPORT_URL, PLAY_STORE_MARKET_URL, PLAY_STORE_WEB_URL } from "../constants"
@@ -58,6 +59,7 @@ export function SettingsScreen({ navigation }: Props) {
   const [lastSyncTime, setLastSyncTime] = useState(0)
   const [lastSyncError, setLastSyncError] = useState("")
   const [deviceOnline, setDeviceOnline] = useState(true)
+  const [lastBackupAt, setLastBackupAt] = useState<number | null>(null)
   const [profileCount, setProfileCount] = useState(0)
   const [autoExport, setAutoExport] = useState<AutoExportStatus | null>(null)
   const [fileLogging, setFileLogging] = useState({ enabled: false, bytes: 0 })
@@ -94,13 +96,14 @@ export function SettingsScreen({ navigation }: Props) {
   /** Every sub keeps its last value when its own read rejects, so one slow pack walk never blanks the card. */
   const readAll = useCallback(async () => {
     // One batch: the MapLibre pack walk must not wait behind the two sync reads on every focus.
-    const [, profiles, exportStatus, logEnabled, logBytes, areas] = await Promise.allSettled([
+    const [, profiles, exportStatus, logEnabled, logBytes, areas, lastBackup] = await Promise.allSettled([
       readSyncState(),
       ProfileService.getProfiles(),
       NativeLocationService.getAutoExportStatus(),
       NativeLocationService.getSetting("debugFileLoggingEnabled", "false"),
       NativeLocationService.getFileLogSize(),
-      loadOfflineAreas()
+      loadOfflineAreas(),
+      NativeLocationService.getSetting("last_backup_at", "0")
     ])
     if (profiles.status === "fulfilled") setProfileCount(profiles.value.length)
     if (exportStatus.status === "fulfilled") setAutoExport(exportStatus.value)
@@ -109,6 +112,7 @@ export function SettingsScreen({ navigation }: Props) {
       bytes: logBytes.status === "fulfilled" ? logBytes.value : prev.bytes
     }))
     if (areas.status === "fulfilled") setOfflineAreas(areas.value)
+    if (lastBackup.status === "fulfilled") setLastBackupAt(Number(lastBackup.value ?? 0) || null)
     // A focus read may change nothing the state above holds, and the Appearance sub reads a module
     // cache rather than state, so it needs a render to pick a change up.
     setFocusTick((tick) => tick + 1)
@@ -254,7 +258,7 @@ export function SettingsScreen({ navigation }: Props) {
               testID="nav-backup-restore"
               icon={Archive}
               label="Backup & restore"
-              sub="Locations, settings and credentials"
+              sub={backupRowSub(lastBackupAt)}
               onPress={() => navigation.navigate("Backup & Restore")}
             />
             <Divider tight inset />
