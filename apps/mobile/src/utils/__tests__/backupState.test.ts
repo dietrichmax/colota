@@ -3,6 +3,7 @@ import { formatDateWithYear } from "../geo"
 import {
   archiveLine,
   backupErrorMessage,
+  backupExcludesLine,
   backupRowSub,
   backupScopeLine,
   backupState,
@@ -101,10 +102,20 @@ describe("passwordLine", () => {
   })
 })
 
-describe("backupScopeLine", () => {
-  it("names the certificate only when there is one to lose", () => {
-    expect(backupScopeLine(12481, true)).toContain("client certificate")
-    expect(backupScopeLine(12481, false)).not.toContain("certificate")
+describe("backupScopeLine and backupExcludesLine", () => {
+  /**
+   * BACKED_UP_KEYS carries the auth config and the mTLS server CA. The client certificate's private
+   * key is generated in the Android keystore and cannot be read back, so no archive holds it and the
+   * scope line must never claim one does.
+   */
+  it("never claims the client certificate is written", () => {
+    expect(backupScopeLine(12481)).not.toContain("certificate")
+    expect(backupScopeLine(12481)).toContain("stored server credentials")
+  })
+
+  it("says the certificate is excluded, and only to someone who has one", () => {
+    expect(backupExcludesLine(true)).toContain("not included")
+    expect(backupExcludesLine(false)).toBeNull()
   })
 })
 
@@ -136,8 +147,17 @@ describe("archiveLine and restoreConfirm", () => {
 describe("restoreCaveat", () => {
   // One string or none, so restraint is a signature rather than a discipline.
   it("returns at most one caveat", () => {
-    expect(restoreCaveat(true, manifest())).toContain("client certificate")
-    expect(restoreCaveat(false, manifest())).toBeNull()
+    expect(restoreCaveat(true)).toContain("client certificate")
+    expect(restoreCaveat(false)).toBeNull()
+  })
+
+  /**
+   * deleteAndroidKeyStoreClientCert has one caller, the Remove button in MtlsSection. Nothing in the
+   * restore path touches the keystore, so a caveat promising removal would be false.
+   */
+  it("does not claim a restore removes the certificate", () => {
+    expect(restoreCaveat(true)).not.toMatch(/remov|delet/i)
+    expect(restoreCaveat(true)).toContain("stays as it is")
   })
 })
 

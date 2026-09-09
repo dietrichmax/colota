@@ -276,14 +276,15 @@ describe("BackupRestoreScreen", () => {
       expect(api.getByTestId("restore-btn").props.accessibilityValue.text).toBe("danger")
     })
 
-    it("warns once about a certificate the archive cannot carry", async () => {
+    // The restore never touches the keystore, so the caveat says the certificate stays, not that it goes.
+    it("says once that the certificate is untouched by a restore", async () => {
       mockGetClientCertInfo.mockResolvedValue({ subject: "phone" })
       const api = renderScreen()
       await api.findByText(/^You last backed up /)
 
       await openArchive(api)
 
-      expect(api.getByText(/client certificate is not in this backup/)).toBeTruthy()
+      expect(api.getByText(/client certificate stays as it is/)).toBeTruthy()
     })
   })
 
