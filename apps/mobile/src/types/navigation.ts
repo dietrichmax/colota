@@ -24,8 +24,7 @@ export type RootStackParamList = {
   "Place Zone": { name: string; radius: number; lat?: number; lon?: number }
   "Location History": { initialTab?: InspectorTab; initialDate?: number } | undefined
   "Location Summary": undefined
-  "Export Locations": undefined
-  "Import Locations": undefined
+  "Export & Import": undefined
   "Auto-Export": undefined
   "Data Management": undefined
   "Tracking Profiles": undefined

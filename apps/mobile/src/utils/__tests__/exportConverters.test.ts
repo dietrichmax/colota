@@ -40,7 +40,6 @@ describe("export format registry", () => {
     expect(exportable).toEqual([...EXPORT_FORMAT_KEYS].sort())
     EXPORT_FORMAT_KEYS.forEach((key) => {
       expect(EXPORT_FORMATS[key].mimeType).toBeTruthy()
-      expect(EXPORT_FORMATS[key].subtitle).toBeTruthy()
     })
   })
 })

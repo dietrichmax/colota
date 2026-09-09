@@ -59,7 +59,7 @@ jest.mock("../../components/features/inspector/InteractiveLineChart", () => {
   return { InteractiveLineChart: (_props: any) => R.createElement(View, { testID: "Chart" }) }
 })
 
-jest.mock("../../components/features/inspector/ExportFormatDialog", () => {
+jest.mock("../../components/ui/ExportFormatDialog", () => {
   const R = require("react")
   const { View } = require("react-native")
   return {

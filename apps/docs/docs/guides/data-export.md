@@ -14,18 +14,24 @@ Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) 
 
 ## Supported Formats
 
-| Format      | Extension  | Use Case                    |
-| ----------- | ---------- | --------------------------- |
-| **CSV**     | `.csv`     | Spreadsheets, data analysis |
-| **GeoJSON** | `.geojson` | Web mapping, GIS tools      |
-| **GPX**     | `.gpx`     | GPS devices, hiking apps    |
-| **KML**     | `.kml`     | Google Earth, mapping       |
+| Format | Extension | Use Case |
+| --- | --- | --- |
+| **CSV** | `.csv` | Spreadsheets, data analysis |
+| **GeoJSON** | `.geojson` | Web mapping, GIS tools. One Point feature per recording, so each point carries its own time and attributes |
+| **GPX** | `.gpx` | GPS devices, hiking apps |
+| **KML** | `.kml` | Google Earth, mapping |
+
+:::note[GeoJSON file size]
+
+Each recording is written as its own feature so mapping tools can read one row and one timestamp per point. That repeats the attribute names on every point, which makes a GeoJSON export roughly twice the size of the other formats. A database of a few million points produces a file of several hundred megabytes. Compressing it recovers most of the difference.
+
+:::
 
 ## How to Export
 
 ### Bulk Export
 
-1. Go to **Settings → Export locations**
+1. Go to **Settings → Export & import**
 2. Select a format
 3. Tap **Export** and share the file via Android's share menu
 
@@ -142,7 +148,7 @@ Other notes:
 - Templates longer than 100 characters are rejected, and `{device}` is shortened to 32 characters, so the result stays inside the filesystem's name limit.
 - If a file of the same name already exists, Android adds a counter (`… (1).gpx`). Colota still recognises those as its own.
 
-Manual **Export locations** and trip exports are unaffected. Those go through the Android share sheet, where you name the file yourself.
+Manual exports and trip exports are unaffected. Those go through the Android share sheet, where you name the file yourself.
 
 ## Storage Reference
 

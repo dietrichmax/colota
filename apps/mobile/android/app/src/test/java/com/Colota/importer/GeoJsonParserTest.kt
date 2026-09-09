@@ -84,6 +84,8 @@ class GeoJsonParserTest {
     }
 
     @Test
+    // The shape Colota wrote in 1.12.0 through 1.16.0. Not deprecated: such a file can be the last
+    // copy of data since deleted, so this stays readable and this test is what keeps it that way.
     fun `parses a columnar MultiPoint feature into one row per point`() {
         val json = """
             {
@@ -189,7 +191,7 @@ class GeoJsonParserTest {
     }
 
     @Test
-    fun `round-trips a single-point export (still a MultiPoint) back into one row`() {
+    fun `round-trips an export back into one row per point`() {
         val rows = listOf(
             mapOf<String, Any?>(
                 "latitude" to 40.0, "longitude" to -3.0, "timestamp" to 1_700_000_000L,
@@ -198,7 +200,7 @@ class GeoJsonParserTest {
         )
 
         val json = ExportConverters.convert("geojson", rows)
-        assertTrue("a single point must still export as a MultiPoint", json.contains("\"MultiPoint\""))
+        assertTrue("the export is Point features, which is what a GIS reads", json.contains("\"Point\""))
 
         val result = GeoJsonParser.parse(json.byteInputStream(), cancelled, nowSec)
         assertEquals(0, result.invalid)

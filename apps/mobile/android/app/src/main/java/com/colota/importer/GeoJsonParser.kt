@@ -10,8 +10,17 @@ import android.util.JsonToken
 import java.io.InputStream
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Streaming GeoJSON parser. Reads Point (scalar props) or MultiPoint (columnar, parallel-array
- *  props) features from a FeatureCollection; other geometries are counted invalid and skipped. */
+/**
+ * Streaming GeoJSON parser over a FeatureCollection. Other geometries are counted invalid and skipped.
+ *
+ * Two shapes are read, and both are permanent:
+ *  - Point with scalar properties, which is what every tool writes and what Colota now exports.
+ *  - MultiPoint with parallel-array properties, index-aligned to the coordinates. Only Colota ever
+ *    wrote that, in 1.12.0 through 1.16.0, and the docs of the day called GeoJSON the format to back
+ *    up with. Such a file can be the last copy of data since deleted from the device, so this reader
+ *    does not get removed. It costs one branch: a scalar becomes a single-element list, so both
+ *    shapes run through the same zip-by-index loop below.
+ */
 object GeoJsonParser {
 
     fun parse(

@@ -14,10 +14,9 @@ import { showAlert } from "../services/modalService"
 import { SectionTitle, Card, Container, Divider, ListItem } from "../components"
 import {
   Archive,
-  Clock,
+  ArrowUpDown,
   Cloud,
   Database,
-  Download,
   ExternalLink,
   Heart,
   Info,
@@ -30,7 +29,6 @@ import {
   Sparkles,
   Share2,
   Star,
-  Upload,
   UserRoundPen
 } from "lucide-react-native"
 import { getTimeFormat, getUnitSystem } from "../utils/geo"
@@ -38,17 +36,10 @@ import { t } from "../i18n"
 import { trackingSummary } from "../utils/dashboardState"
 import { describeServer } from "../utils/serverState"
 import { profileStateLabel } from "../utils/profileRow"
-import {
-  autoExportRowSub,
-  dataRowSub,
-  exportFormatsSub,
-  getVariantLabel,
-  importFormatsSub,
-  loggingRowSub,
-  offlineMapsRowSub
-} from "../utils/settingsRow"
+import { dataRowSub, getVariantLabel, loggingRowSub, offlineMapsRowSub } from "../utils/settingsRow"
 import { ProfileService } from "../services/ProfileService"
 import { loadOfflineAreas, type OfflineAreaInfo } from "../components/features/map/OfflinePackManager"
+import { transferRowSub } from "../utils/locationTransfer"
 import { logger } from "../utils/logger"
 import { space, RELEASES_URL, ISSUES_URL, SUPPORT_URL, PLAY_STORE_MARKET_URL, PLAY_STORE_WEB_URL } from "../constants"
 
@@ -251,27 +242,12 @@ export function SettingsScreen({ navigation }: Props) {
             />
             <Divider tight inset />
             <ListItem
-              testID="nav-import-locations"
-              icon={Download}
-              label="Import locations"
-              sub={importFormatsSub()}
-              onPress={() => navigation.navigate("Import Locations")}
-            />
-            <Divider tight inset />
-            <ListItem
-              testID="nav-export-locations"
-              icon={Upload}
-              label="Export locations"
-              sub={exportFormatsSub()}
-              onPress={() => navigation.navigate("Export Locations")}
-            />
-            <Divider tight inset />
-            <ListItem
-              testID="nav-auto-export"
-              icon={Clock}
-              label="Auto-export"
-              sub={autoExportRowSub(autoExport)}
-              onPress={() => navigation.navigate("Auto-Export")}
+              testID="nav-export-import"
+              icon={ArrowUpDown}
+              label="Export & import"
+              sub={transferRowSub(autoExport)}
+              subLines={2}
+              onPress={() => navigation.navigate("Export & Import")}
             />
             <Divider tight inset />
             <ListItem

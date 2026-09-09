@@ -14,7 +14,8 @@ import {
   Container,
   Divider,
   FloatingSaveIndicator,
-  FormatSelector,
+  ExportFormatDialog,
+  ListItem,
   NumericInput,
   RadioRow,
   SectionTitle,
@@ -37,6 +38,7 @@ import {
   renderFilenamePreview
 } from "../utils/exportConverters"
 import { fontSizes, fonts, lineHeights } from "../styles/typography"
+import { FILE_FORMATS } from "../utils/fileFormats"
 import { logger } from "../utils/logger"
 import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
@@ -77,6 +79,7 @@ const WEEKDAY_OPTIONS: readonly { value: string; label: string }[] = [
 export function AutoExportScreen(_props: ScreenProps) {
   const { colors } = useTheme()
   const [enabled, setEnabled] = useState(false)
+  const [formatOpen, setFormatOpen] = useState(false)
   const [format, setFormat] = useState<ExportFormat>("geojson")
   const [interval, setInterval] = useState<ExportInterval>("daily")
   const [mode, setMode] = useState<ExportMode>("all")
@@ -437,7 +440,13 @@ export function AutoExportScreen(_props: ScreenProps) {
         <View style={styles.section}>
           <SectionTitle>Format</SectionTitle>
           <Card rows>
-            <FormatSelector selectedFormat={format} onSelectFormat={handleFormatChange} />
+            <ListItem
+              testID="auto-export-format"
+              icon={FILE_FORMATS[format].icon}
+              label="Format"
+              sub={EXPORT_FORMATS[format].label}
+              onPress={() => setFormatOpen(true)}
+            />
           </Card>
         </View>
 
@@ -662,6 +671,16 @@ export function AutoExportScreen(_props: ScreenProps) {
         )}
       </ScrollView>
       <FloatingSaveIndicator saving={saving} />
+      <ExportFormatDialog
+        visible={formatOpen}
+        title="Export format"
+        message="Every scheduled run writes this format."
+        onSelect={(next) => {
+          setFormatOpen(false)
+          handleFormatChange(next)
+        }}
+        onRequestClose={() => setFormatOpen(false)}
+      />
     </Container>
   )
 }
