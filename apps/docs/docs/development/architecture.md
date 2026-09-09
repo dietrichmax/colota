@@ -61,7 +61,7 @@ Three React Native bridge modules are registered by `LocationServicePackage`: `L
 The primary React Native bridge module (exposed as `"LocationServiceModule"`). Handles all JS-to-native communication for:
 
 - Service control (`startService`, `stopService`)
-- Database queries (`getStats`, `getTableData`, `getLocationsByDateRange`, `getDaysWithData`, `getDailyStats`)
+- Database queries (`getStats`, `getTableData`, `getLocationsByDateRange`, `getDaysWithData`, `getDailyStats`, `countOlderThan`, `countUnsentOlderThan`)
 - Geofence CRUD operations
 - Settings persistence
 - Device info, file operations, authentication
@@ -71,7 +71,8 @@ Emits events back to JavaScript:
 - `onLocationUpdate` - new GPS fix received
 - `onTrackingStopped` - service stopped (user action or OOM kill)
 - `onSyncError` - 3+ consecutive sync failures
-- `onSyncProgress` - batch sync progress updates with `{sent, failed, total}`
+- `onSyncProgress` - batch sync progress updates with `{sent, failed, total}`, plus `remaining` on the one event that ends a pass. A pass caps at `MAX_BATCHES_PER_SYNC`, so `sent + failed` reaching `total` does not mean the queue is empty
+- `onDatabaseCompacted` - the detached `VACUUM` after a bulk delete has finished, with `{success}`, so a size read before it is known to be stale
 - `onPauseZoneChange` - entered or exited a geofence pause zone
 - `onProfileSwitch` - a tracking profile was activated or deactivated
 - `onAutoExportComplete` - auto-export finished with `{success, fileName, rowCount, error}`
@@ -318,7 +319,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `ImportLocationsScreen` | Import external location files (GeoJSON, Google Timeline legacy + new, GPX, KML, CSV) with auto format detection, dedup preview, and recovery vs migration (queue-for-sync) commit choice |
 | `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, time of day, weekday or day-of-month, export range and file retention |
 | `OfflineMapsScreen` | Download and manage offline map areas - interactive bounding box picker, size estimate, progress tracking, and area deletion |
-| `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
+| `DataManagementScreen` | Database ledger, manual flush, compaction, deletes by sync state or age |
 | `BackupRestoreScreen` | Create or restore a password-encrypted `.colota` archive of all data, with strength meter and no-recovery confirmation |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
 | `ShareSetupScreen` | Bundles selected config categories into a `colota://setup` link to share; credentials opt-in |

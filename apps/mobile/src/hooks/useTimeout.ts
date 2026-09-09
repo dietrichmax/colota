@@ -3,7 +3,7 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { useRef, useEffect, useCallback } from "react"
+import { useRef, useEffect, useCallback, useMemo } from "react"
 
 /**
  * Hook that manages a single timeout with automatic cleanup on unmount.
@@ -30,5 +30,7 @@ export function useTimeout() {
     }
   }, [])
 
-  return { set, clear }
+  // Stable identity: callers list this object in dependency arrays, and a fresh one per render
+  // re-runs their effects forever.
+  return useMemo(() => ({ set, clear }), [set, clear])
 }

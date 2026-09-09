@@ -17,10 +17,12 @@ jest.mock("react-native", () => ({
       getLocationsByDateRange: jest.fn().mockResolvedValue([]),
       getMostRecentLocation: jest.fn().mockResolvedValue(null),
       manualFlush: jest.fn().mockResolvedValue(true),
-      clearSentHistory: jest.fn().mockResolvedValue(undefined),
+      clearSentHistory: jest.fn().mockResolvedValue(42),
       clearQueue: jest.fn().mockResolvedValue(10),
       clearAllLocations: jest.fn().mockResolvedValue(50),
       deleteOlderThan: jest.fn().mockResolvedValue(25),
+      countOlderThan: jest.fn().mockResolvedValue({ total: 3120, cutoffSeconds: 1735689600 }),
+      countUnsentOlderThan: jest.fn().mockResolvedValue(96),
       deleteLocationsInRange: jest.fn().mockResolvedValue(7),
       deleteLocationsByIds: jest.fn().mockResolvedValue(1),
       vacuumDatabase: jest.fn().mockResolvedValue(undefined),
@@ -449,6 +451,44 @@ describe("NativeLocationService", () => {
       const deleted = await NativeLocationService.deleteLocationsByIds([])
       expect(deleted).toBe(0)
       expect(nativeMock.deleteLocationsByIds).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("the age counts", () => {
+    it("hands the age to the cheap count and returns the boundary native used", async () => {
+      const counted = await NativeLocationService.countOlderThan(90)
+
+      expect(nativeMock.countOlderThan).toHaveBeenCalledWith(90)
+      expect(counted).toEqual({ total: 3120, cutoffSeconds: 1735689600 })
+    })
+
+    // Separate on purpose: this one reads every matching row, so it runs on a press and never while
+    // the user types. A single method would put that cost on the typing path.
+    it("keeps the expensive unsent count a separate call", async () => {
+      const unsent = await NativeLocationService.countUnsentOlderThan(90)
+
+      expect(nativeMock.countUnsentOlderThan).toHaveBeenCalledWith(90)
+      expect(unsent).toBe(96)
+      expect(nativeMock.countOlderThan).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("the bulk deletes", () => {
+    it("resolves how many rows each one took", async () => {
+      expect(await NativeLocationService.clearSentHistory()).toBe(42)
+      expect(await NativeLocationService.clearQueue()).toBe(10)
+      expect(await NativeLocationService.clearAllLocations()).toBe(50)
+      expect(await NativeLocationService.deleteOlderThan(90)).toBe(25)
+      expect(nativeMock.deleteOlderThan).toHaveBeenCalledWith(90)
+    })
+
+    // Each is a static opening with this.ensureModule(), so a bare reference loses its receiver and
+    // throws before it reaches native. Three of these shipped dead exactly that way.
+    it("survives being passed as a bare callback", async () => {
+      const run = async (fn: () => Promise<number>) => fn()
+
+      await expect(run(() => NativeLocationService.clearSentHistory())).resolves.toBe(42)
+      await expect(run(() => NativeLocationService.clearAllLocations())).resolves.toBe(50)
     })
   })
 

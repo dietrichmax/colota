@@ -72,7 +72,7 @@ The UI simplifies to remove sync-related elements that don't apply:
 - Server endpoint, Test connection and the Server details rows (Request format, Authentication, Client certificate); the sync state line and the Offline mode switch stay
 - Sync interval, Sync only on (Any network / Wi-Fi or Ethernet / Specific Wi-Fi network / VPN)
 - Queue statistics (Queued / Sent counts)
-- Queue actions (Sync Now, Clear Sent History, Clear Queue)
+- Queue actions (Sync now, Delete queued locations, Delete synced locations)
 - Queue info in the tracking notification
 
 **Still available in offline mode:**
@@ -80,8 +80,8 @@ The UI simplifies to remove sync-related elements that don't apply:
 - All tracking parameters (interval, movement threshold, accuracy)
 - Tracking profiles and geofences
 - Data export (CSV, GeoJSON, GPX, KML) - both manual and auto-export
-- Database statistics (Total locations, Today count, Storage)
-- Data cleanup (Delete All Locations, Delete Old, Optimize Database)
+- Database statistics (Total locations, Storage)
+- Data cleanup (Delete older than, Delete all locations, Compact database)
 
 ### Disabling Offline Mode
 

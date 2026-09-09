@@ -260,13 +260,11 @@ class NativeLocationService {
   // CLEANUP OPERATIONS
   // ============================================================================
 
-  /**
-   * Deletes all successfully sent locations
-   */
-  static async clearSentHistory(): Promise<void> {
+  /** Deletes the locations themselves where `sent = 1`, imported rows included. Resolves how many went. */
+  static async clearSentHistory(): Promise<number> {
     this.ensureModule()
-    logger.debug("[NativeLocationService] Clearing sent history")
-    await LocationServiceModule.clearSentHistory()
+    logger.debug("[NativeLocationService] Deleting synced locations")
+    return LocationServiceModule.clearSentHistory()
   }
 
   /**
@@ -298,6 +296,21 @@ class NativeLocationService {
     this.ensureModule()
     logger.debug(`[NativeLocationService] Deleting locations older than ${days} days`)
     return LocationServiceModule.deleteOlderThan(days)
+  }
+
+  /**
+   * What `deleteOlderThan(days)` would take, plus the boundary it used, so a preview cannot name a
+   * different one. The timestamp index answers this, so it is safe to call as the user types.
+   */
+  static async countOlderThan(days: number): Promise<{ total: number; cutoffSeconds: number }> {
+    this.ensureModule()
+    return LocationServiceModule.countOlderThan(days)
+  }
+
+  /** How many of those have never been uploaded. Reads every match, so call it only on a press. */
+  static async countUnsentOlderThan(days: number): Promise<number> {
+    this.ensureModule()
+    return LocationServiceModule.countUnsentOlderThan(days)
   }
 
   /**

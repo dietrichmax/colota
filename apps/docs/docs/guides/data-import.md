@@ -76,7 +76,7 @@ If you've configured an optional sync backend in **Settings → Connection**, th
 
 - Rows are written into Colota with `sent=1` - flagged as already replicated.
 - **The sync engine will not push them to your backend.**
-- Use this when the backend already holds these points - for example, you're re-importing your own Colota export, or repopulating local history after a "Clear Sent History".
+- Use this when the backend already holds these points - for example, you're re-importing your own Colota export, or repopulating local history after a "Delete synced locations".
 
 ### Import + Queue for Sync
 

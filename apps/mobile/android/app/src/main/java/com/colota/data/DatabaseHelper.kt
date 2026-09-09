@@ -874,11 +874,44 @@ class DatabaseHelper private constructor(context: Context) :
         return out
     }
 
+    /** The boundary a retention age names, in seconds. The preview and the delete must share it or they drift. */
+    /**
+     * The boundary a retention age names, snapped to the start of that local day. A rolling instant
+     * would move between the count and the delete the user then confirms, so the delete would take
+     * slightly more than the confirmation named. Snapped, the boundary holds still, and the date the
+     * confirmation prints is the whole of what goes.
+     */
+    private fun cutoffFor(days: Int): Long =
+        LocalDate.now().minusDays(days.toLong()).atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
+
     fun deleteOlderThan(days: Int): Int {
         requireNotRestoring()
-        val cutoff = (System.currentTimeMillis() - days.toLong() * 24 * 60 * 60 * 1000) / 1000
-        return writableDatabase.delete(TABLE_LOCATIONS, "timestamp < ?", arrayOf(cutoff.toString()))
+        return writableDatabase.delete(TABLE_LOCATIONS, "timestamp < ?", arrayOf(cutoffFor(days).toString()))
     }
+
+    /** What `deleteOlderThan(days)` would take, and the boundary it would take it at. */
+    data class OlderThan(val total: Int, val cutoffSeconds: Long)
+
+    /** Cheap: the timestamp index answers this without reading the table. Safe to call as the user types. */
+    fun countOlderThan(days: Int): OlderThan {
+        requireNotRestoring()
+        val cutoff = cutoffFor(days)
+        return OlderThan(countWhereOlder("", arrayOf(cutoff.toString())), cutoff)
+    }
+
+    /**
+     * Expensive: `sent` is not in any index, so this reads every matching row. Call it once, when a
+     * delete is actually pressed, never on the way to one.
+     */
+    fun countUnsentOlderThan(days: Int): Int {
+        requireNotRestoring()
+        return countWhereOlder(" AND sent = 0", arrayOf(cutoffFor(days).toString()))
+    }
+
+    private fun countWhereOlder(extra: String, args: Array<String>): Int =
+        readableDatabase.rawQuery("SELECT COUNT(*) FROM $TABLE_LOCATIONS WHERE timestamp < ?$extra", args).use {
+            if (it.moveToFirst()) it.getInt(0) else 0
+        }
 
     fun deleteInRange(startTs: Long, endTs: Long): Int {
         requireNotRestoring()
@@ -912,15 +945,18 @@ class DatabaseHelper private constructor(context: Context) :
     }
 
     /** Reclaims unused space. Call from background thread only. */
-    fun vacuum() {
+    /** False when the rewrite did not happen, so a caller cannot report a failure as nothing to release. */
+    fun vacuum(): Boolean {
         requireNotRestoring()
         AppLogger.d(TAG, "Starting VACUUM + ANALYZE")
-        try {
+        return try {
             writableDatabase.execSQL("VACUUM")
             writableDatabase.execSQL("ANALYZE")
             AppLogger.d(TAG, "VACUUM + ANALYZE completed")
+            true
         } catch (e: Exception) {
             AppLogger.e(TAG, "Vacuum failed (likely concurrent access)", e)
+            false
         }
     }
 
