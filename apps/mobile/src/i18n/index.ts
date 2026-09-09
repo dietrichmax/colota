@@ -54,7 +54,7 @@ export function initI18n(): SupportedLanguage {
 // starts mattering the day the screen-config and preset constants become keys.
 initI18n()
 
-/** The non-React entry point. Nothing calls it yet; modalService and setupConfig are the ones that will. */
+/** The non-React entry point, for a caller with no hook available. `utils/appearance` uses it. */
 export function t(key: string, options?: Record<string, unknown>): string {
   return i18next.t(key, options) as string
 }

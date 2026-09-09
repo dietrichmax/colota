@@ -8,3 +8,5 @@
 - Appearance can take the app colors from your Android wallpaper
 - GeoJSON exports write one point per recording, so mapping tools can read and filter them
 - Export and import share one screen, and an import says what it will add before you confirm
+- Switching units updates every screen at once, instead of leaving the location table on the old one
+- Appearance shows the units and clock each setting produces, and names the server your map tiles come from

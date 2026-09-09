@@ -302,7 +302,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `SettingsScreen` | The hub, a tab of five grouped lists: Tracking (Connection, Tracking & sync, Tracking profiles), Display, Data, Help and About. Two rows carry live state through the derivation their target screen opens with (`serverState.describeServer`, `profileRow.profileStateLabel`); every other sub is a stored value, an on-disk fact or the nouns inside the screen, computed by `utils/settingsRow` |
 | `ConnectionScreen` | The server hub: a sync state line from `utils/serverState`, offline mode, the endpoint (saved on blur), Test connection, and rows to Request format, Authentication and Client certificate |
 | `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
-| `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |
+| `AppearanceScreen` | Theme, wallpaper colors on Android 12 and up, unit system, time format and custom map tile URLs (light and dark, refused unless they parse as an http or https URL) |
 | `ApiSettingsScreen` | Route **Request Format**. Backend template as a row opening the picker, HTTP method and Dawarich mode as radio rows, and the field mapping |
 | `BackendTemplateScreen` | The eight backend templates as radio rows, each stating what it sends, returning the choice with `popTo` and `merge`. Eight options that each need a sentence do not fit inline on a form screen |
 | `AuthSettingsScreen` | Authentication method as a radio group (None, Basic auth, Bearer token) with never-echoed secrets, and custom HTTP headers |

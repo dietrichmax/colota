@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useContext, createContext, ReactNode, useMemo, useCallback } from "react"
-import { Appearance, AppState, ColorSchemeName } from "react-native"
+import { Appearance, AppState, ColorSchemeName, Platform } from "react-native"
 import { ThemeColors, ThemeMode } from "../types/global"
 import { darkColors, lightColors } from "../styles/colors"
 import { buildDynamicColors, type SystemPalette } from "../styles/dynamicColors"
@@ -26,8 +26,10 @@ interface ThemeContextType {
   isDark: boolean
   wallpaperColors: boolean
   setWallpaperColors: (enabled: boolean) => void
-  /** False below API 31, where there is no wallpaper palette to offer. */
+  /** False below API 31, where the platform has no wallpaper palette to offer. */
   wallpaperColorsAvailable: boolean
+  /** Whether a palette has been read. Separate from availability, so a failed read still offers the switch. */
+  wallpaperPaletteReady: boolean
 }
 
 /**
@@ -123,7 +125,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       isDark: mode === "dark",
       wallpaperColors,
       setWallpaperColors,
-      wallpaperColorsAvailable: palette !== null
+      wallpaperColorsAvailable: Platform.OS === "android" && Number(Platform.Version) >= 31,
+      wallpaperPaletteReady: palette !== null
     }),
     [colors, mode, preference, setPreference, wallpaperColors, setWallpaperColors, palette]
   )
@@ -135,7 +138,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
  * Hook to access theme context.
  *
  * Provides colors, mode, preference, setPreference, isDark, wallpaperColors, setWallpaperColors
- * and wallpaperColorsAvailable.
+ * wallpaperColorsAvailable and wallpaperPaletteReady.
  *
  * @throws If used outside ThemeProvider
  *

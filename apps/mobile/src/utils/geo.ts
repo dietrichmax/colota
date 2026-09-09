@@ -103,8 +103,12 @@ export function formatSpeed(metersPerSecond: number): string {
 }
 
 /** Return the speed unit info (used by TrackMap). */
+// Module-level so the identity tracks the unit, and a caller can read it during render.
+const MPH = Object.freeze({ factor: MPH_PER_MPS, unit: "mph" })
+const KMH = Object.freeze({ factor: 3.6, unit: "km/h" })
+
 export function getSpeedUnit(): { factor: number; unit: string } {
-  return usesMiles() ? { factor: MPH_PER_MPS, unit: "mph" } : { factor: 3.6, unit: "km/h" }
+  return usesMiles() ? MPH : KMH
 }
 
 /** Format seconds duration as "Xh Ymin" or "Ymin" */
@@ -122,14 +126,19 @@ export function spokenDistance(meters: number): string {
   return formatDistance(meters).replace(/ km$/, " kilometres").replace(/ mi$/, " miles")
 }
 
-export function formatTime(unixSeconds: number, showSeconds = false): string {
+/** The app's clock, with the format passed in, so a sample of a format cannot drift from it. */
+export function formatTimeIn(unixSeconds: number, format: TimeFormat | null, showSeconds = false): string {
   const d = new Date(unixSeconds * 1000)
   return d.toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
     ...(showSeconds && { second: "2-digit" }),
-    ...(cachedTimeFormat && { hour12: cachedTimeFormat === "12h" })
+    ...(format && { hour12: format === "12h" })
   })
+}
+
+export function formatTime(unixSeconds: number, showSeconds = false): string {
+  return formatTimeIn(unixSeconds, cachedTimeFormat, showSeconds)
 }
 
 /** Format a Unix-seconds timestamp as a localized date string (e.g. "Wed, Feb 27"). */
