@@ -74,9 +74,17 @@ export function submitBlockedReason(
 }
 
 /** What a new archive would contain. Stated once, where the button that writes it lives. */
-export function backupScopeLine(total: number, hasClientCert: boolean): string {
-  const cert = hasClientCert ? ", your stored credentials and your client certificate" : " and your stored credentials"
-  return `Writes ${plural(total, "location")}, your geofences, profiles, settings${cert} to a file you pick.`
+export function backupScopeLine(total: number): string {
+  return `Writes ${plural(total, "location")}, your geofences, profiles, settings and your stored server credentials to a file you pick.`
+}
+
+/**
+ * The client certificate's private key is generated in the Android keystore and cannot be read back
+ * out, so no backup can carry it. Only said to someone who has one, since it is otherwise noise.
+ */
+export function backupExcludesLine(hasClientCert: boolean): string | null {
+  if (!hasClientCert) return null
+  return "Your client certificate is not included. Its private key cannot leave this device's keystore."
 }
 
 /** The archive is encrypted and there is no reset, which is the one thing worth saying twice. */
@@ -103,11 +111,9 @@ export function archiveLine(manifest: BackupManifest): { label: string; caption:
 }
 
 /** At most one caveat, so restraint is a signature rather than a discipline. */
-export function restoreCaveat(certConfigured: boolean, manifest: BackupManifest): string | null {
-  if (certConfigured && manifest.appBuild > 0) {
-    return "Your client certificate is not in this backup and will be removed. Add it again afterwards."
-  }
-  return null
+export function restoreCaveat(certConfigured: boolean): string | null {
+  if (!certConfigured) return null
+  return "Your client certificate stays as it is. A backup carries none, and a restore does not replace it."
 }
 
 export interface ConfirmCopy {

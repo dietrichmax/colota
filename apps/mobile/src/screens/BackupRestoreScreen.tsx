@@ -26,6 +26,7 @@ import { logger } from "../utils/logger"
 import {
   archiveLine,
   backupErrorMessage,
+  backupExcludesLine,
   backupScopeLine,
   backupState,
   BACKUP_WRITTEN_LINE,
@@ -213,7 +214,8 @@ export function BackupRestoreScreen({}: ScreenProps) {
   }, [picked, manifest, restorePassword])
 
   const opening = backupState(lastBackupAt, stats)
-  const caveat = manifest ? restoreCaveat(hasClientCert, manifest) : null
+  const caveat = manifest ? restoreCaveat(hasClientCert) : null
+  const excludes = backupExcludesLine(hasClientCert)
   const pwLine = passwordLine(strength, strengthFailed)
 
   return (
@@ -282,8 +284,9 @@ export function BackupRestoreScreen({}: ScreenProps) {
             onPress={onCreateBackup}
           />
           <FieldMessage variant={backupMessage?.tone === "error" ? "error" : "info"}>
-            {backupMessage?.text ?? blocked ?? backupScopeLine(stats.total, hasClientCert)}
+            {backupMessage?.text ?? blocked ?? backupScopeLine(stats.total)}
           </FieldMessage>
+          {!backupMessage && !blocked && excludes ? <FieldMessage>{excludes}</FieldMessage> : null}
         </View>
 
         <View style={styles.section}>
