@@ -87,6 +87,36 @@ class BackupRestorerTest {
     }
 
     @Test
+    fun `describe reads the manifest and replaces nothing`() {
+        seedDatabase(latPrefix = 51.0)
+        val backup = backupBytes()
+        val before = countLocations()
+
+        val manifest = restorer.describe(ByteArrayInputStream(backup), password)
+
+        assertEquals(DatabaseHelper.DATABASE_VERSION, manifest.getJSONObject("schema").getInt("db"))
+        assertTrue(manifest.getString("createdAt").isNotEmpty())
+        assertEquals(before, countLocations())
+    }
+
+    // A wrong password has to fail here, before anything is stopped or swapped.
+    @Test
+    fun `describe rejects a wrong password and leaves the database untouched`() {
+        seedDatabase(latPrefix = 51.0)
+        val backup = backupBytes()
+        val before = countLocations()
+
+        try {
+            restorer.describe(ByteArrayInputStream(backup), "not-the-password".toCharArray())
+            fail("expected a wrong password to be rejected")
+        } catch (e: BackupException) {
+            assertEquals(BackupError.WRONG_PASSWORD, e.error)
+        }
+
+        assertEquals(before, countLocations())
+    }
+
+    @Test
     fun `restore re-imports secrets via SecureStorageHelper`() {
         seedDatabase(latPrefix = 51.0)
         val backup = backupBytes()
