@@ -182,7 +182,7 @@ const keyExtractor = (item: TableRow, index: number) => String(item.id ?? index)
 const getItemLayout = (_: unknown, index: number) => ({ length: ROW_LENGTH, offset: ROW_LENGTH * index, index })
 
 export function LocationTable({ locations, colors, hasEndpoint, selectedPointId, onSelectPoint }: Props) {
-  const speedUnit = useMemo(() => getSpeedUnit(), [])
+  const speedUnit = getSpeedUnit()
   const timeListRef = useRef<FlatList<TableRow>>(null)
 
   const data = useMemo<TableRow[]>(() => {

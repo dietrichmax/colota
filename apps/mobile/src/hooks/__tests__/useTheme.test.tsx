@@ -1,6 +1,6 @@
 import React from "react"
 import { renderHook, act, waitFor } from "@testing-library/react-native"
-import { Appearance, AppState } from "react-native"
+import { Appearance, AppState, Platform } from "react-native"
 import { lightColors, darkColors } from "@colota/shared"
 
 import NativeLocationService from "../../services/NativeLocationService"
@@ -207,13 +207,30 @@ describe("useTheme", () => {
 })
 
 describe("wallpaper colors", () => {
-  it("offers nothing to turn on where the platform has no palette", async () => {
+  it("separates what the platform offers from whether a palette arrived", async () => {
     const { result } = renderHook(() => useTheme(), { wrapper })
 
     await waitFor(() => {
       expect(NativeLocationService.getSystemPalette).toHaveBeenCalled()
     })
-    expect(result.current.wallpaperColorsAvailable).toBe(false)
+    expect(result.current.wallpaperPaletteReady).toBe(false)
+    expect(result.current.wallpaperColorsAvailable).toBe(Platform.OS === "android" && Number(Platform.Version) >= 31)
+  })
+
+  it("still offers the setting when the platform supports it but the read failed", async () => {
+    ;(NativeLocationService.getSystemPalette as jest.Mock).mockResolvedValue(null)
+    // Version is a getter with no setter under the preset, so it is redefined rather than assigned.
+    const version = Object.getOwnPropertyDescriptor(Platform, "Version")
+    Object.defineProperty(Platform, "Version", { configurable: true, get: () => 34 })
+
+    const { result } = renderHook(() => useTheme(), { wrapper })
+
+    await waitFor(() => {
+      expect(NativeLocationService.getSystemPalette).toHaveBeenCalled()
+    })
+    expect(result.current.wallpaperColorsAvailable).toBe(Platform.OS === "android")
+    expect(result.current.wallpaperPaletteReady).toBe(false)
+    if (version) Object.defineProperty(Platform, "Version", version)
   })
 
   it("keeps the brand palette while the toggle is off, so having one is not using one", async () => {
@@ -222,7 +239,7 @@ describe("wallpaper colors", () => {
     const { result } = renderHook(() => useTheme(), { wrapper })
 
     await waitFor(() => {
-      expect(result.current.wallpaperColorsAvailable).toBe(true)
+      expect(result.current.wallpaperPaletteReady).toBe(true)
     })
     expect(result.current.colors.primary).toBe(lightColors.primary)
   })
@@ -233,7 +250,7 @@ describe("wallpaper colors", () => {
     const { result } = renderHook(() => useTheme(), { wrapper })
 
     await waitFor(() => {
-      expect(result.current.wallpaperColorsAvailable).toBe(true)
+      expect(result.current.wallpaperPaletteReady).toBe(true)
     })
     act(() => {
       result.current.setWallpaperColors(true)

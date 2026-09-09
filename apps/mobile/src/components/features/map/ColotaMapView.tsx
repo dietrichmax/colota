@@ -31,6 +31,7 @@ import { DialogShell } from "../../ui/DialogShell"
 import { Divider } from "../../ui/Divider"
 import { ListItem } from "../../ui/ListItem"
 import { Button } from "../../ui/Button"
+import { logger } from "../../../utils/logger"
 
 interface AttributionLink {
   url: string
@@ -241,6 +242,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
         logo={false}
         compass={false}
         onDidFinishLoadingMap={onMapReady}
+        onDidFailLoadingMap={() => logger.error("[ColotaMapView] Map style failed to load")}
         onPress={onPress ? handlePress : undefined}
         onRegionDidChange={handleRegionDidChange}
       >

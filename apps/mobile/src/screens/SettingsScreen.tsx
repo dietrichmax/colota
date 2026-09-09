@@ -32,13 +32,13 @@ import {
   UserRoundPen
 } from "lucide-react-native"
 import { getTimeFormat, getUnitSystem } from "../utils/geo"
-import { t } from "../i18n"
 import { trackingSummary } from "../utils/dashboardState"
 import { describeServer } from "../utils/serverState"
 import { profileStateLabel } from "../utils/profileRow"
 import { dataRowSub, getVariantLabel, loggingRowSub, offlineMapsRowSub } from "../utils/settingsRow"
 import { ProfileService } from "../services/ProfileService"
 import { loadOfflineAreas, type OfflineAreaInfo } from "../components/features/map/OfflinePackManager"
+import { appearanceRowSub } from "../utils/appearance"
 import { transferRowSub } from "../utils/locationTransfer"
 import { logger } from "../utils/logger"
 import { space, RELEASES_URL, ISSUES_URL, SUPPORT_URL, PLAY_STORE_MARKET_URL, PLAY_STORE_WEB_URL } from "../constants"
@@ -153,7 +153,7 @@ export function SettingsScreen({ navigation }: Props) {
   // Both getters read a module cache the Appearance screen refreshes on save, so this costs no
   // bridge call and is not worth a memo: memoising on `preference` alone would keep the units and
   // the time format from the render before the change for the rest of the session.
-  const appearanceSummary = `${t(`appearance.theme.${preference}`)} · ${t(`appearance.units.${getUnitSystem()}`)} · ${getTimeFormat()}`
+  const appearanceSummary = appearanceRowSub(preference, getUnitSystem(), getTimeFormat())
 
   const profileSummary = profileCount === 0 ? "No profiles yet" : profileStateLabel(activeProfileName, tracking)
   const inForce = profileCount > 0 && tracking && !!activeProfileName
