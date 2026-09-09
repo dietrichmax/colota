@@ -61,6 +61,15 @@ jest.mock("../../utils/logger", () => ({
   logger: { error: jest.fn(), info: jest.fn(), debug: jest.fn() }
 }))
 
+jest.mock("../../components/ui/ExportFormatDialog", () => {
+  const R = require("react")
+  const { View } = require("react-native")
+  return {
+    ExportFormatDialog: (props: any) =>
+      props.visible ? R.createElement(View, { testID: "ExportFormatDialog", ...props }) : null
+  }
+})
+
 jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
@@ -189,15 +198,6 @@ jest.mock("../../components", () => {
         R.createElement(Pressable, { key: "l", testID: "map-focus-line", onPress: () => props.onFocusTrip(2) })
       )
     }
-  }
-})
-
-jest.mock("../../components/features/inspector/ExportFormatDialog", () => {
-  const R = require("react")
-  const { View } = require("react-native")
-  return {
-    ExportFormatDialog: (props: any) =>
-      props.visible ? R.createElement(View, { testID: "ExportFormatDialog", ...props }) : null
   }
 })
 

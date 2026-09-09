@@ -163,19 +163,27 @@ jest.mock("../../components", () => {
           )
         )
       ),
-    FormatSelector: (props: any) =>
+    ListItem: ({ label, sub, testID, onPress }: any) =>
       R.createElement(
-        RN.View,
-        null,
-        EXPORT_FORMAT_KEYS.map((key: any) =>
-          R.createElement(
-            RN.Pressable,
-            { key, onPress: () => props.onSelectFormat(key), testID: `format-${key}` },
-            R.createElement(RN.Text, null, EXPORT_FORMATS[key].label),
-            R.createElement(RN.Text, null, EXPORT_FORMATS[key].extension)
-          )
-        )
+        RN.Pressable,
+        { testID, onPress },
+        R.createElement(RN.Text, null, label),
+        R.createElement(RN.Text, null, sub)
       ),
+    ExportFormatDialog: (props: any) =>
+      props.visible
+        ? R.createElement(
+            RN.View,
+            null,
+            EXPORT_FORMAT_KEYS.map((key: any) =>
+              R.createElement(
+                RN.Pressable,
+                { key, onPress: () => props.onSelect(key), testID: `format-${key}` },
+                R.createElement(RN.Text, null, EXPORT_FORMATS[key].label)
+              )
+            )
+          )
+        : null,
     FloatingSaveIndicator: () => null,
     SettingRow: (props: any) =>
       R.createElement(
@@ -269,15 +277,17 @@ describe("AutoExportScreen", () => {
     })
   })
 
-  it("renders all format options", async () => {
-    const { getByText } = render(<AutoExportScreen {...mockProps} />)
+  it("names the stored format on the row, and offers the rest in the shared dialog", async () => {
+    const { getByText, getByTestId } = render(<AutoExportScreen {...mockProps} />)
 
-    await waitFor(() => {
-      expect(getByText("CSV")).toBeTruthy()
-      expect(getByText("GeoJSON")).toBeTruthy()
-      expect(getByText("GPX")).toBeTruthy()
-      expect(getByText("KML")).toBeTruthy()
-    })
+    await waitFor(() => expect(getByTestId("auto-export-format")).toBeTruthy())
+    expect(getByText("GeoJSON")).toBeTruthy()
+
+    fireEvent.press(getByTestId("auto-export-format"))
+
+    expect(getByTestId("format-csv")).toBeTruthy()
+    expect(getByTestId("format-gpx")).toBeTruthy()
+    expect(getByTestId("format-kml")).toBeTruthy()
   })
 
   it("renders all interval options including monthly", async () => {
@@ -407,13 +417,12 @@ describe("AutoExportScreen", () => {
   })
 
   it("changing format saves the setting", async () => {
-    const { getByText } = render(<AutoExportScreen {...mockProps} />)
+    const { getByTestId } = render(<AutoExportScreen {...mockProps} />)
 
-    await waitFor(() => {
-      expect(getByText("CSV")).toBeTruthy()
-    })
+    await waitFor(() => expect(getByTestId("auto-export-format")).toBeTruthy())
+    fireEvent.press(getByTestId("auto-export-format"))
 
-    fireEvent.press(getByText("CSV"))
+    fireEvent.press(getByTestId("format-csv"))
 
     await waitFor(() => {
       expect(mockSaveSetting).toHaveBeenCalledWith("autoExportFormat", "csv")

@@ -39,15 +39,11 @@ The exported file is saved to your phone's `Downloads` folder.
 
 ## How to Import
 
-1. Go to **Settings → Import locations**
+1. Go to **Settings → Export & import**
 2. Tap **Choose File** and pick the file you want to import
 3. Wait for the parse to finish (large Google Timeline files can take 10+ seconds)
 4. Review the preview: format, points found, duplicates that will be skipped, invalid rows, date range
 5. Choose **Import** (or **Import + Queue for Sync** - see below)
-
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ImportLocations.png", label: "Import locations" }, ]} />
 
 ### How duplicates are handled
 

@@ -1,13 +1,4 @@
-import {
-  autoExportRowSub,
-  dataRowSub,
-  exportFormatsSub,
-  getVariantLabel,
-  importFormatsSub,
-  loggingRowSub,
-  offlineMapsRowSub
-} from "../settingsRow"
-import { FILE_FORMATS, IMPORT_FORMAT_ORDER } from "../fileFormats"
+import { dataRowSub, getVariantLabel, loggingRowSub, offlineMapsRowSub } from "../settingsRow"
 
 const area = (name: string, sizeBytes: number | null) => ({ name, sizeBytes, isComplete: true, isActive: false })
 
@@ -28,25 +19,6 @@ describe("offlineMapsRowSub", () => {
   })
 })
 
-describe("autoExportRowSub", () => {
-  const status = { enabled: true, interval: "weekly", format: "geojson", lastError: null }
-
-  it("prints the schedule and the format", () => {
-    expect(autoExportRowSub(status)).toBe("Weekly · GeoJSON")
-  })
-
-  it("adds the failure clause while the last run left an error", () => {
-    expect(autoExportRowSub({ ...status, lastError: "Folder not writable" })).toBe(
-      "Weekly · GeoJSON · last export failed"
-    )
-  })
-
-  it("is Off when disabled or unread, never a sentence about the screen", () => {
-    expect(autoExportRowSub({ ...status, enabled: false })).toBe("Off")
-    expect(autoExportRowSub(null)).toBe("Off")
-  })
-})
-
 describe("loggingRowSub", () => {
   it("names the size only while the log is being written", () => {
     expect(loggingRowSub(true, 2516582)).toBe("File logging on · 2.4 MB")
@@ -61,26 +33,6 @@ describe("dataRowSub", () => {
 
   it("words the zero rather than printing 0 locations · 0.00 MB", () => {
     expect(dataRowSub(0, 0.02)).toBe("No locations recorded")
-  })
-})
-
-describe("the format lists", () => {
-  it("comes from the shared table, so a new format lands without touching the hub", () => {
-    expect(importFormatsSub()).toBe("GeoJSON, GPX, KML, Google Timeline, CSV")
-    expect(exportFormatsSub()).toBe("GeoJSON, GPX, KML, CSV")
-  })
-
-  it("folds the legacy Timeline parser into its sibling rather than listing one noun twice", () => {
-    // Both entries exist in the table and both must reach the row as one word.
-    expect(IMPORT_FORMAT_ORDER).toContain("google_timeline_legacy")
-    expect(FILE_FORMATS.google_timeline_legacy.label).toBe("Google Timeline (legacy)")
-    expect(importFormatsSub().match(/Google Timeline/g)).toHaveLength(1)
-  })
-
-  it("lists only what can actually be exported", () => {
-    const exportable = IMPORT_FORMAT_ORDER.filter((f) => FILE_FORMATS[f].exportable)
-    expect(exportFormatsSub().split(", ")).toHaveLength(exportable.length)
-    expect(exportFormatsSub()).not.toContain("Timeline")
   })
 })
 

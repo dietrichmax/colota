@@ -18,7 +18,6 @@ export const EXPORT_FORMAT_KEYS: ExportFormat[] = IMPORT_FORMAT_ORDER.filter(
 
 export interface ExportFormatConfig {
   label: string
-  subtitle: string
   description: string
   icon: LucideIcon
   extension: string
@@ -30,7 +29,6 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = EXPORT_F
     const f = FILE_FORMATS[key]
     acc[key] = {
       label: f.label,
-      subtitle: f.subtitle,
       description: f.description,
       icon: f.icon,
       extension: f.extension,

@@ -36,7 +36,10 @@ export function MapActionButton({
 
   return (
     // The wrapper paints, clips and carries the slop: a touch never extends past the parent's bounds.
-    <View hitSlop={hitSlop} style={[styles.disc, anchored && styles.anchored, { backgroundColor: colors.surfaceRaised }, style]}>
+    <View
+      hitSlop={hitSlop}
+      style={[styles.disc, anchored && styles.anchored, { backgroundColor: colors.surfaceRaised }, style]}
+    >
       <Pressable
         android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
         style={styles.button}

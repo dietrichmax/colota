@@ -35,7 +35,7 @@ import type { DockContent } from "../components/features/inspector/InspectorDock
 import { dayLongDate, dayTitle, type DayStats } from "../components/features/inspector/DayHeader"
 import { Tab } from "../components/ui/Tab"
 import { TripList } from "../components/features/inspector/TripList"
-import { ExportFormatDialog } from "../components/features/inspector/ExportFormatDialog"
+import { ExportFormatDialog } from "../components/ui/ExportFormatDialog"
 import { LocationTable } from "../components/features/inspector/LocationTable"
 import { useTheme } from "../hooks/useTheme"
 import { useTimeout } from "../hooks/useTimeout"

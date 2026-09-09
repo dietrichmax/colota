@@ -6,3 +6,5 @@
 - About now links to the release notes, feedback and the Play listing, with the legal detail on its own screen
 - Tapping the month in Location History picks a year and a month, instead of one chevron tap per month
 - Appearance can take the app colors from your Android wallpaper
+- GeoJSON exports write one point per recording, so mapping tools can read and filter them
+- Export and import share one screen, and an import says what it will add before you confirm

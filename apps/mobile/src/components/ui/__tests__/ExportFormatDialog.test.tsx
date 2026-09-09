@@ -1,9 +1,9 @@
 import React from "react"
 import { render, fireEvent } from "@testing-library/react-native"
-import { EXPORT_FORMAT_KEYS, EXPORT_FORMATS } from "../../../../utils/exportConverters"
+import { EXPORT_FORMAT_KEYS, EXPORT_FORMATS } from "../../../utils/exportConverters"
 import { ExportFormatDialog } from "../ExportFormatDialog"
 
-jest.mock("../../../../hooks/useTheme", () => ({
+jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
 }))
 

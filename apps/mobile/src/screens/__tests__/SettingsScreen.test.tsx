@@ -190,9 +190,7 @@ describe("SettingsScreen", () => {
         "nav-appearance",
         "nav-offline-maps",
         "nav-data-management",
-        "nav-import-locations",
-        "nav-export-locations",
-        "nav-auto-export",
+        "nav-export-import",
         "nav-backup-restore",
         "nav-share-setup",
         "nav-logging",
@@ -216,9 +214,7 @@ describe("SettingsScreen", () => {
         ["nav-appearance", "Appearance"],
         ["nav-offline-maps", "Offline Maps"],
         ["nav-data-management", "Data Management"],
-        ["nav-import-locations", "Import Locations"],
-        ["nav-export-locations", "Export Locations"],
-        ["nav-auto-export", "Auto-Export"],
+        ["nav-export-import", "Export & Import"],
         ["nav-backup-restore", "Backup & Restore"],
         ["nav-share-setup", "Share Setup"],
         ["nav-logging", "Logging"],
@@ -313,8 +309,7 @@ describe("SettingsScreen", () => {
       const api = renderScreen()
       await waitFor(() => expect(mockGetStats).toHaveBeenCalled())
 
-      expect(api.getByText("GeoJSON, GPX, KML, Google Timeline, CSV")).toBeTruthy()
-      expect(api.getByText("GeoJSON, GPX, KML, CSV")).toBeTruthy()
+      expect(api.getByText("GeoJSON, GPX, KML, Google Timeline, CSV in, and out")).toBeTruthy()
       expect(api.queryByText(/Merge locations from/)).toBeNull()
       expect(api.queryByText("Encrypted backup of all your data")).toBeNull()
     })
@@ -333,7 +328,7 @@ describe("SettingsScreen", () => {
       ])
       const api = renderScreen()
 
-      expect(await api.findByText("Weekly · GeoJSON · last export failed")).toBeTruthy()
+      expect(await api.findByText("Auto-export weekly · GeoJSON · last export failed")).toBeTruthy()
       expect(api.getByText("File logging on · 2.4 MB")).toBeTruthy()
       expect(api.getByText("1 area · 42.0 MB")).toBeTruthy()
     })
@@ -349,7 +344,8 @@ describe("SettingsScreen", () => {
       expect(await api.findByText("12,480 locations · 3.42 MB")).toBeTruthy()
       expect(api.getByText("File logging on · 2.4 MB")).toBeTruthy()
       expect(api.getByText("No saved areas")).toBeTruthy()
-      expect(api.getByText("Off")).toBeTruthy()
+      // The export status never landed, so the row falls back to the nouns inside the screen.
+      expect(api.getByText(/in, and out$/)).toBeTruthy()
     })
 
     it("issues every focus read at once, so a slow pack walk does not hold the others back", async () => {
@@ -387,19 +383,21 @@ describe("SettingsScreen", () => {
 
     it("re-reads the export status when a scheduled run completes, so the row is not stale", async () => {
       const api = renderScreen()
-      await api.findByText("Off")
+      await api.findByText(/in, and out$/)
 
       mockGetAutoExportStatus.mockResolvedValue({
         enabled: true,
         interval: "daily",
         format: "gpx",
-        lastError: null
+        uri: "content://tree",
+        lastError: null,
+        retentionCount: 0
       })
       act(() => {
         DeviceEventEmitter.emit("onAutoExportComplete", {})
       })
 
-      expect(await api.findByText("Daily · GPX")).toBeTruthy()
+      expect(await api.findByText("Auto-export daily · GPX")).toBeTruthy()
     })
 
     it("words the zero states rather than printing a zero", async () => {

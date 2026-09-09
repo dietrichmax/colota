@@ -47,49 +47,6 @@ class KmlCoordsCollector(cacheDir: File) : AutoCloseable {
     }
 }
 
-/** Spools the property columns to temp files (they trail the coords in the JSON) so large exports stay O(1) memory, like [KmlCoordsCollector]. */
-class GeoJsonColumnSpooler(cacheDir: File, private val columns: List<String>) : AutoCloseable {
-    // Per-instance name so two exports in the same dir don't share temp files.
-    private val files = columns.associateWith { File(cacheDir, "geojson_col_${System.identityHashCode(this)}_$it.txt") }
-    private val writers = files.mapValues { BufferedWriter(FileWriter(it.value)) }
-    var count = 0
-        private set
-
-    /** `tokens`: pre-formatted JSON values, one per column in [columns] order. */
-    fun addRow(tokens: List<String>) {
-        columns.forEachIndexed { i, name ->
-            val w = writers.getValue(name)
-            w.write(tokens[i])
-            w.newLine()
-        }
-        count++
-    }
-
-    fun writeProperties(w: Writer) {
-        writers.values.forEach { it.close() }
-        columns.forEachIndexed { idx, name ->
-            // Stream each token straight to the output (like KmlCoordsCollector.writeTo) rather than
-            // building the whole column string first, so peak memory is one token, not one column.
-            w.write("        \"$name\": [")
-            var first = true
-            BufferedReader(FileReader(files.getValue(name))).use { reader ->
-                reader.forEachLine { line ->
-                    if (!first) w.write(", ")
-                    w.write(line)
-                    first = false
-                }
-            }
-            w.write("]")
-            w.write(if (idx < columns.size - 1) ",\n" else "\n")
-        }
-    }
-
-    override fun close() {
-        writers.values.forEach { try { it.close() } catch (_: Exception) {} }
-        files.values.forEach { it.delete() }
-    }
-}
-
 object ExportConverters {
 
     const val PAGE_SIZE = 10_000
@@ -373,45 +330,43 @@ object ExportConverters {
         override fun writeFooter(w: Writer, sink: AutoCloseable?) {}
     }
 
-    // The whole export is one MultiPoint feature: coords stream inline while the property columns
-    // (parallel arrays, index-aligned to coords) spool to disk and splice in at the footer, keeping memory O(1).
+    /**
+     * One Point feature per location, which is what every GIS reads. The whole export used to be a
+     * single MultiPoint feature with the properties as parallel arrays: legal GeoJSON, but only
+     * Colota's own parser understood it. GDAL reports such a file as one feature with every
+     * attribute an opaque JSON string, and refuses it outright past `OGR_GEOJSON_MAX_OBJ_SIZE`,
+     * which defaults to 200 MB and a full database exceeds.
+     *
+     * A self-contained feature also streams more simply than the columnar shape did: nothing has to
+     * spool to disk and splice in at the footer, and memory stays O(1) without a side channel.
+     */
     private object GeoJsonFormat : FormatWriter(".geojson", "application/geo+json") {
-        private val COLUMNS = listOf("accuracy", "altitude", "speed", "bearing", "battery", "battery_status", "note", "time")
-
-        override fun newSideChannel(cacheDir: File): AutoCloseable = GeoJsonColumnSpooler(cacheDir, COLUMNS)
-
         override fun writeHeader(w: Writer) {
             w.write("{\n  \"type\": \"FeatureCollection\",\n  \"features\": [")
         }
         override fun writeRow(w: Writer, row: ExportRow, globalIndex: Int, sink: AutoCloseable?) {
-            val coord = "[${jsNum(row.lon)}, ${jsNum(row.lat)}]"
-            if (globalIndex == 0) {
-                w.write("\n    {\n      \"type\": \"Feature\",\n      \"geometry\": {\n        \"type\": \"MultiPoint\",\n        \"coordinates\": [\n          $coord")
-            } else {
-                w.write(",\n          $coord")
+            if (globalIndex > 0) w.write(",")
+            w.write("\n    {\n      \"type\": \"Feature\",\n      \"geometry\": {\n        \"type\": \"Point\",")
+            w.write("\n        \"coordinates\": [${jsNum(row.lon)}, ${jsNum(row.lat)}]\n      },")
+            w.write("\n      \"properties\": {")
+            // A null property is omitted rather than written, so a reader gets no field instead of a
+            // null one, and the file loses the columns that are empty for most rows.
+            val props = mutableListOf<String>()
+            fun put(key: String, value: String) {
+                if (value != "null") props.add("\"$key\": $value")
             }
-            // Order must match COLUMNS.
-            (sink as? GeoJsonColumnSpooler)?.addRow(listOf(
-                jsonValue(row.accuracy),
-                jsonValue(row.altitude),
-                jsonValue(row.speed),
-                jsonValue(row.bearing),
-                jsonValue(row.battery),
-                jsonValue(batteryStatusLabel(row.batteryStatus)),
-                jsonValue(row.note),
-                "\"${isoTime(row.ts)}\"",
-            ))
+            put("time", "\"${isoTime(row.ts)}\"")
+            put("accuracy", jsonValue(row.accuracy))
+            put("altitude", jsonValue(row.altitude))
+            put("speed", jsonValue(row.speed))
+            put("bearing", jsonValue(row.bearing))
+            put("battery", jsonValue(row.battery))
+            put("battery_status", jsonValue(batteryStatusLabel(row.batteryStatus)))
+            put("note", jsonValue(row.note))
+            w.write(props.joinToString(", ", "\n        ", "\n      }\n    }"))
         }
         override fun writeFooter(w: Writer, sink: AutoCloseable?) {
-            val spool = sink as? GeoJsonColumnSpooler
-            if (spool == null || spool.count == 0) {
-                // No points: keep it a valid, empty FeatureCollection rather than an empty MultiPoint.
-                w.write("]\n}\n")
-                return
-            }
-            w.write("\n        ]\n      },\n      \"properties\": {\n")
-            spool.writeProperties(w)
-            w.write("      }\n    }\n  ]\n}\n")
+            w.write("\n  ]\n}\n")
         }
     }
 
@@ -676,37 +631,39 @@ object ExportConverters {
         return sb.toString()
     }
 
-    // One MultiPoint feature per trip. In-memory (not spooled like the flat export) is fine - trips are day-sized.
+    /**
+     * One Point feature per location, carrying the trip number it belongs to, so a GIS can colour
+     * or filter by trip. The columnar MultiPoint this replaced put every attribute of a whole trip
+     * into one feature, which reads back as a single unqueryable row.
+     */
     private fun tripsToGeoJson(trips: List<TripExport>): String {
         val features = ArrayList<String>()
         for (trip in trips) {
-            if (trip.rows.isEmpty()) continue
-            val coords = trip.rows.joinToString(",\n          ") {
-                "[${numOrZero(it["longitude"])}, ${numOrZero(it["latitude"])}]"
+            for (row in trip.rows) {
+                val props = mutableListOf("\"trip\": ${trip.index}", "\"time\": \"${isoTime(rowTs(row))}\"")
+                fun put(key: String, value: String) {
+                    if (value != "null") props.add("\"$key\": $value")
+                }
+                put("accuracy", jsonNum(row["accuracy"]))
+                put("altitude", jsonNum(row["altitude"]))
+                put("speed", jsonNum(row["speed"]))
+                put("bearing", jsonNum(row["bearing"]))
+                put("battery", jsonNum(row["battery"]))
+                put("battery_status", jsonValue(batteryStatusLabel(row["battery_status"])))
+                put("note", jsonValue(row["note"]))
+                features.add(
+                    "    {\n" +
+                    "      \"type\": \"Feature\",\n" +
+                    "      \"geometry\": {\n" +
+                    "        \"type\": \"Point\",\n" +
+                    "        \"coordinates\": [${numOrZero(row["longitude"])}, ${numOrZero(row["latitude"])}]\n" +
+                    "      },\n" +
+                    "      \"properties\": {\n" +
+                    "        ${props.joinToString(", ")}\n" +
+                    "      }\n" +
+                    "    }"
+                )
             }
-            fun col(transform: (Map<String, Any?>) -> String) = trip.rows.joinToString(", ", transform = transform)
-            features.add(
-                "    {\n" +
-                "      \"type\": \"Feature\",\n" +
-                "      \"geometry\": {\n" +
-                "        \"type\": \"MultiPoint\",\n" +
-                "        \"coordinates\": [\n" +
-                "          $coords\n" +
-                "        ]\n" +
-                "      },\n" +
-                "      \"properties\": {\n" +
-                "        \"trip\": ${trip.index},\n" +
-                "        \"accuracy\": [${col { jsonNum(it["accuracy"]) }}],\n" +
-                "        \"altitude\": [${col { jsonNum(it["altitude"]) }}],\n" +
-                "        \"speed\": [${col { jsonNum(it["speed"]) }}],\n" +
-                "        \"bearing\": [${col { jsonNum(it["bearing"]) }}],\n" +
-                "        \"battery\": [${col { jsonNum(it["battery"]) }}],\n" +
-                "        \"battery_status\": [${col { jsonValue(batteryStatusLabel(it["battery_status"])) }}],\n" +
-                "        \"note\": [${col { jsonValue(it["note"]) }}],\n" +
-                "        \"time\": [${col { "\"${isoTime(rowTs(it))}\"" }}]\n" +
-                "      }\n" +
-                "    }"
-            )
         }
         val featuresBlock = if (features.isEmpty()) "[]" else "[\n${features.joinToString(",\n")}\n  ]"
         return "{\n  \"type\": \"FeatureCollection\",\n  \"features\": $featuresBlock\n}"
