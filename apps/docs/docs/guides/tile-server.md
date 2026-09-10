@@ -32,7 +32,7 @@ If you find Colota useful and want to help keep the default server running, cont
 
 :::note[Offline maps]
 
-Offline map packs are downloaded from the **light** style URL, whichever tile server that points at. Filling only the dark field leaves downloads coming from the default server. Switching servers won't affect packs you've already downloaded, but new downloads will come from the new one.
+Offline map packs are downloaded from the **light** style URL, whichever tile server that points at. Filling only the dark field leaves downloads coming from the default server. Switching servers won't affect packs you've already downloaded, but new downloads will come from the new one. A pack downloaded under a different light style URL is marked **Map style changed** in Offline maps; **Download again** fetches it from the current one.
 
 :::
 

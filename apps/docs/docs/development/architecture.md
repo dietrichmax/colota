@@ -319,7 +319,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `ExportLocationsScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
 | `ImportLocationsScreen` | Import external location files (GeoJSON, Google Timeline legacy + new, GPX, KML, CSV) with auto format detection, dedup preview, and recovery vs migration (queue-for-sync) commit choice |
 | `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, time of day, weekday or day-of-month, export range and file retention |
-| `OfflineMapsScreen` | Download and manage offline map areas - interactive bounding box picker, size estimate, progress tracking, and area deletion |
+| `OfflineMapsScreen` | Download and manage offline map areas - the viewport as the bounding box with a live estimate, one download at a time with progress the screen picks up again on return, re-download and delete, a Map style changed mark |
 | `DataManagementScreen` | Database ledger, manual flush, compaction, deletes by sync state or age |
 | `BackupRestoreScreen` | Create or restore a password-encrypted `.colota` archive of all data, with strength meter and no-recovery confirmation |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
@@ -361,11 +361,13 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 | Export | Purpose |
 | --- | --- |
 | `createOfflinePack` | Creates a MapLibre offline pack for a bounding box at z8-14 |
-| `loadOfflineAreas` | Fetches all stored packs from MapLibre's `OfflineManager` and returns status info (size, complete, active) |
+| `loadOfflineAreas` | Fetches all stored packs from MapLibre's `OfflineManager` and returns status info (size, complete, active) and each pack's bounds |
+| `subscribeOfflinePack` | Re-attaches progress and error listeners to a pack native reports active and returns its status. Never call it on an inactive pack: observing one re-activates it |
+| `pruneOfflineAreaBounds` | Drops sidecar entries whose pack is gone, in one write |
 | `deleteOfflineArea` | Unsubscribes, pauses, and deletes a pack; resets the tile database when the last pack is removed to reclaim OS storage |
 | `willExceedTileLimit` | Estimates whether an area would hit the 100k-tile cap before downloading |
 | `estimateSizeLabel` / `estimateSizeBytes` | Pre-download size estimates using per-zoom tile counting and per-tile byte averages |
-| `loadOfflineAreaBounds` / `saveOfflineAreaBounds` / `removeOfflineAreaBounds` | Persist area metadata (center, radius) to the native SQLite settings table |
+| `loadOfflineAreaBounds` / `saveOfflineAreaBounds` / `removeOfflineAreaBounds` | Persist area metadata (style URL and completion time; the extent comes from the pack) to the native SQLite settings table |
 
 Supporting utilities in `mapUtils.ts`:
 

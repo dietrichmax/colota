@@ -38,9 +38,30 @@ export interface OfflinePackStatus {
 
 export interface OfflineAreaInfo {
   name: string
+  /** Null when the pack's status could not be read, which is not the same as an empty pack. */
   sizeBytes: number | null
   isComplete: boolean
   isActive: boolean
+  /** `[west, south, east, north]` as the pack stores it; null only when native gave none. */
+  bounds: [number, number, number, number] | null
+}
+
+function boundsOf(pack: OfflinePack): OfflineAreaInfo["bounds"] {
+  const b = pack.bounds as unknown
+  return Array.isArray(b) && b.length === 4 && b.every((n) => typeof n === "number")
+    ? (b as [number, number, number, number])
+    : null
+}
+
+/** Only the terminal state is worth a line; progress fires continuously. */
+function progressListener(name: string, onProgress: (status: OfflinePackStatus) => void) {
+  return (_pack: unknown, status: unknown) => {
+    const s = status as OfflinePackStatus
+    if (s.state === DOWNLOAD_STATE.COMPLETE) {
+      logger.info(`[OfflinePackManager] Download complete: '${name}', ${formatBytes(s.completedResourceSize ?? 0)}`)
+    }
+    onProgress(s)
+  }
 }
 
 function lonToTileX(lon: number, z: number): number {
@@ -128,16 +149,27 @@ export async function createOfflinePack(
       bounds: [sw[0], sw[1], ne[0], ne[1]],
       metadata: { name }
     },
-    (_pack, status) => {
-      const s = status as OfflinePackStatus
-      // Progress fires continuously, so only the terminal state is worth a line.
-      if (s.state === DOWNLOAD_STATE.COMPLETE) {
-        logger.info(`[OfflinePackManager] Download complete: '${name}', ${formatBytes(s.completedResourceSize ?? 0)}`)
-      }
-      onProgress(s)
-    },
+    progressListener(name, onProgress),
     (_pack, err) => onError(err)
   )
+}
+
+/**
+ * Re-attaches to a download this JS instance did not start, and returns where it stands. Observing
+ * a pack sets it active natively, so this is only for a pack native already reports as active: on
+ * anything else it would start a download nobody asked for.
+ */
+export async function subscribeOfflinePack(
+  name: string,
+  onProgress: (status: OfflinePackStatus) => void,
+  onError: (err: unknown) => void
+): Promise<OfflinePackStatus | null> {
+  const pack = await findPackByName(name)
+  if (!pack) return null
+  const status = (await pack.status()) as OfflinePackStatus
+  await OfflineManager.addListener(pack.id, progressListener(name, onProgress), (_pack, err) => onError(err))
+  logger.info(`[OfflinePackManager] Re-attached to '${name}' at ${Math.round(status.percentage)}%`)
+  return status
 }
 
 export async function loadOfflineAreas(): Promise<OfflineAreaInfo[]> {
@@ -153,11 +185,12 @@ export async function loadOfflineAreas(): Promise<OfflineAreaInfo[]> {
           name,
           sizeBytes: status?.completedResourceSize ?? null,
           isComplete: status?.state === DOWNLOAD_STATE.COMPLETE,
-          isActive: status?.state === DOWNLOAD_STATE.ACTIVE
+          isActive: status?.state === DOWNLOAD_STATE.ACTIVE,
+          bounds: boundsOf(pack)
         }
       } catch (err) {
         logger.warn(`[OfflinePackManager] Status unreadable for pack '${name}':`, err)
-        return { name, sizeBytes: null, isComplete: false, isActive: false }
+        return { name, sizeBytes: null, isComplete: false, isActive: false, bounds: boundsOf(pack) }
       }
     })
   )
@@ -206,7 +239,7 @@ export interface OfflineAreaBounds {
   ne: [number, number] // [lon, lat]
   sw: [number, number] // [lon, lat]
   styleUrl?: string
-  downloadedAt?: number // Unix ms timestamp set when download starts
+  downloadedAt?: number // Unix ms, set when the download completes
 }
 
 /** Reads the stored list. Throws when it cannot be read, so a writer can tell empty from failed. */
@@ -269,4 +302,18 @@ export async function removeOfflineAreaBounds(name: string): Promise<void> {
   }
   const updated = existing.filter((b) => b.name !== name)
   await NativeLocationService.saveSetting(BOUNDS_KEY, JSON.stringify(updated))
+}
+
+/** Drops entries whose pack is gone, in one write, so a list of orphans cannot race itself. */
+export async function pruneOfflineAreaBounds(keep: ReadonlySet<string>): Promise<void> {
+  let existing: OfflineAreaBounds[]
+  try {
+    existing = await readOfflineAreaBoundsOrThrow()
+  } catch (err) {
+    logger.error("[OfflinePackManager] Not pruning bounds, stored list unreadable:", err)
+    return
+  }
+  const kept = existing.filter((b) => keep.has(b.name))
+  if (kept.length === existing.length) return
+  await NativeLocationService.saveSetting(BOUNDS_KEY, JSON.stringify(kept))
 }

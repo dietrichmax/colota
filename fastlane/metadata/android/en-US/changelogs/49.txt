@@ -10,3 +10,4 @@
 - Export and import share one screen, and an import says what it will add before you confirm
 - Switching units updates every screen at once, instead of leaving the location table on the old one
 - Appearance shows the units and clock each setting produces, and names the server your map tiles come from
+- Offline maps picks up a running download when you come back, names what a delete removes and no longer retries silently

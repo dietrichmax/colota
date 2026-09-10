@@ -1,6 +1,12 @@
 import { buildLine, dataRowSub, getVariantLabel, loggingRowSub, offlineMapsRowSub, versionLine } from "../settingsRow"
 
-const area = (name: string, sizeBytes: number | null) => ({ name, sizeBytes, isComplete: true, isActive: false })
+const area = (name: string, sizeBytes: number | null) => ({
+  name,
+  sizeBytes,
+  isComplete: true,
+  isActive: false,
+  bounds: null
+})
 
 describe("offlineMapsRowSub", () => {
   it("counts the areas and sums what they take on disk", () => {
