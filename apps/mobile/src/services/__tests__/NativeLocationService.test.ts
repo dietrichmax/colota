@@ -47,6 +47,11 @@ jest.mock("react-native", () => ({
         apiLevel: 34
       }),
       writeFile: jest.fn().mockResolvedValue("/cache/test.csv"),
+      setFileLoggingEnabled: jest.fn().mockResolvedValue(undefined),
+      clearFileLog: jest.fn().mockResolvedValue(undefined),
+      getFileLogSize: jest.fn().mockResolvedValue(2516582),
+      getNativeLogs: jest.fn().mockResolvedValue(["2026-09-09 09:00:00.000 INFO/Service: started"]),
+      exportFileLogToUri: jest.fn().mockResolvedValue("content://tree/logs/colota-log.txt"),
       shareFile: jest.fn().mockResolvedValue(true),
       pickExportDirectory: jest.fn().mockResolvedValue("content://com.android.externalstorage/tree/primary%3AExports"),
       scheduleAutoExport: jest.fn().mockResolvedValue(true),
@@ -496,6 +501,48 @@ describe("NativeLocationService", () => {
     it("writeFile returns file path", async () => {
       const path = await NativeLocationService.writeFile("test.csv", "data")
       expect(path).toBe("/cache/test.csv")
+    })
+  })
+
+  describe("file logging", () => {
+    it("setFileLoggingEnabled passes the value through", async () => {
+      await NativeLocationService.setFileLoggingEnabled(true)
+      expect(nativeMock.setFileLoggingEnabled).toHaveBeenCalledWith(true)
+
+      await NativeLocationService.setFileLoggingEnabled(false)
+      expect(nativeMock.setFileLoggingEnabled).toHaveBeenCalledWith(false)
+    })
+
+    it("clearFileLog calls native module", async () => {
+      await NativeLocationService.clearFileLog()
+      expect(nativeMock.clearFileLog).toHaveBeenCalled()
+    })
+
+    it("getFileLogSize returns the byte count", async () => {
+      await expect(NativeLocationService.getFileLogSize()).resolves.toBe(2516582)
+    })
+
+    it("getNativeLogs returns the lines the bridge answered with", async () => {
+      await expect(NativeLocationService.getNativeLogs()).resolves.toEqual([
+        "2026-09-09 09:00:00.000 INFO/Service: started"
+      ])
+    })
+
+    /**
+     * The header and the app log are what turn the exported file from a Kotlin-only stream into
+     * the whole picture, and nothing else can supply them: native has no access to the JS ring
+     * buffer or the build config. Dropping either argument silently exports the old file.
+     */
+    it("exportFileLogToUri carries the header and the app log across", async () => {
+      const uri = await NativeLocationService.exportFileLogToUri("content://tree/logs", "HEADER\n", "APPLOG\n")
+
+      expect(uri).toBe("content://tree/logs/colota-log.txt")
+      expect(nativeMock.exportFileLogToUri).toHaveBeenCalledWith("content://tree/logs", "HEADER\n", "APPLOG\n")
+    })
+
+    it("exportFileLogToUri returns null when there was nothing recorded", async () => {
+      nativeMock.exportFileLogToUri.mockResolvedValueOnce(null)
+      await expect(NativeLocationService.exportFileLogToUri("content://tree/logs", "", "")).resolves.toBeNull()
     })
   })
 

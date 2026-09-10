@@ -3,7 +3,8 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-export { ActivityLogScreen } from "./ActivityLogScreen"
+export { LoggingScreen } from "./LoggingScreen"
+export { LogPreviewScreen } from "./LogPreviewScreen"
 export { ApiSettingsScreen } from "./ApiSettingsScreen"
 export { AutoExportScreen } from "./AutoExportScreen"
 export { AuthSettingsScreen } from "./AuthSettingsScreen"

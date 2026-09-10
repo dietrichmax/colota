@@ -5,15 +5,13 @@
  * - debug/info: Only logged in development console
  * - warn/error: Always logged to console
  *
- * All levels are always captured in a ring buffer for export
- * via the Activity Log screen.
+ * All levels are always captured in a ring buffer, which the Logging screen previews and the
+ * exported log file carries alongside the recorded native lines.
  */
 
 export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR"
 
 export const LOG_LEVELS: readonly LogLevel[] = ["DEBUG", "INFO", "WARN", "ERROR"]
-
-export const DEFAULT_LOG_LEVELS: readonly LogLevel[] = ["WARN", "ERROR"]
 
 export interface LogEntry {
   timestamp: string
@@ -21,7 +19,8 @@ export interface LogEntry {
   message: string
 }
 
-const MAX_BUFFER_SIZE = 2000
+/** The buffer is process-lifetime, which the exported file has to state where the JS half begins. */
+export const MAX_BUFFER_SIZE = 2000
 const logBuffer: LogEntry[] = []
 
 function formatArgs(args: unknown[]): string {
