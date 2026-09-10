@@ -68,29 +68,28 @@ If **Test connection** reads **Not reachable**, the sentence under it points at 
 
 ## Viewing and exporting logs
 
-**Settings > Logging** shows app log entries in two tabs.
+**Settings > Logging** records a log file and hands it over as one file.
 
-### Live tab
+### Recording a log
 
-This is the easiest way to view and share recent logs.
+1. Open **Settings > Logging** and turn on **Record a log file**
+2. Use the app until the problem happens again. Recording keeps going across restarts, so this can take days
+3. Come back and tap **Save log file...** - pick a folder
+4. Open a bug report at [github.com/dietrichmax/colota/issues](https://github.com/dietrichmax/colota/issues/new) and attach the saved `colota-log-*.txt`
 
-1. Open **Settings > Logging** (the Live tab opens by default)
-2. Scroll through recent entries - the chips at the top filter by severity (`DEBUG` / `INFO` / `WARN` / `ERROR`)
-3. Tap the share icon (top right) to save a text file containing the recent entries plus your app version and device info
+Step 2 is the one people skip. A log saved without reproducing the problem contains everything except the thing being reported.
 
-### File tab
+The saved file is one timeline: your app version, flavor and device at the top, then the native and app log lines interleaved by the time they happened. A marker says where the app log's own coverage begins, because it only spans the current app session while the recorded file spans restarts.
 
-For bugs that take a while to happen:
+### Reading it first
 
-1. Open **Settings > Logging** and switch to the **File** tab
-2. Turn on **Persistent file logging**
-3. Use the app until the problem happens again
-4. Come back to the **File** tab and tap **Export log file...** - pick where to save it
-5. Open a bug report at [github.com/dietrichmax/colota/issues](https://github.com/dietrichmax/colota/issues/new) and attach the saved `colota-log-*.txt`
+**Read the log** opens a preview of the most recent lines, newest first. Search filters on the message, and the chips set the lowest level shown, each carrying its own count so you can see there are four errors without selecting Errors.
 
-**Heads up:** log files can contain your location coordinates. Please check the content of the file before sharing it.
+The preview shows the recorded file while recording is on, and the system log's last few minutes while it is off. It shows the most recent lines only, so a long capture holds far more than you can read here.
 
-The file grows the whole time logging is on. Tap **Clear log files** on the **File** tab to reset it.
+**Heads up:** the file names your geofences, your tracking profiles and your server host. Colota writes no coordinates into it, but a rejected upload can carry your server's reply, which may. Read it before you attach it.
+
+The file grows the whole time recording is on. **Delete the log file** clears it and, if recording is still on, starts a fresh one.
 
 ## Debugging with adb logcat
 

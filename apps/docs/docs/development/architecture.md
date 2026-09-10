@@ -324,7 +324,8 @@ For backups, two `internal` methods support the export/import flow without expos
 | `BackupRestoreScreen` | Create or restore a password-encrypted `.colota` archive of all data, with strength meter and no-recovery confirmation |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
 | `ShareSetupScreen` | Bundles selected config categories into a `colota://setup` link to share; credentials opt-in |
-| `ActivityLogScreen` | In-app log viewer with level filtering, search, and export |
+| `LoggingScreen` | Records a log file and saves it as one file: capture state, the toggle, and the save and delete actions, which are absent while the file is empty |
+| `LogPreviewScreen` | Reads the recorded file, or the system log while recording is off. Newest first, search, and a single-select severity floor whose chips carry their own counts |
 | `AboutScreen` | App version, and the build and device details under them |
 | `LegalScreen` | Privacy policy, licence, source link and map attribution |
 
@@ -384,7 +385,9 @@ Supporting utilities in `mapUtils.ts`:
 
 | Utility | Purpose |
 | --- | --- |
-| `logger` | Environment-aware logging - suppresses debug/info console output in production via `__DEV__`, always logs warn/error to console. All levels are always captured in a ring buffer (2000 entries) for the Logging screen |
+| `logger` | Environment-aware logging - suppresses debug/info console output in production via `__DEV__`, always logs warn/error to console. All levels are always captured in a ring buffer (`MAX_BUFFER_SIZE`, 2000 entries) which the Logging screen previews and `logExport.buildAppLog` formats into `AppFileLogger`'s own line shape for the exported file |
+| `logExport` | Parses native log lines into `MergedLogEntry` and builds the two halves of an export. A line matching neither the file nor the logcat shape is a continuation and inherits the time and level of the line above it, so a stack trace filters and sorts with the throw it belongs to. `buildExportHeader` writes the version, flavor, device and capture window; `buildAppLog` writes the ring buffer with an `APP_LOG_COVERAGE` marker at its first line, because the buffer spans one process while the recorded file spans restarts |
+| `LogExportMerger` (Kotlin, `util/`) | Interleaves the app log into the recorded segments by timestamp while streaming them to the SAF document, so an export is one timeline and never holds a multi-megabyte file in memory. The merge is native because the segments are copied natively and the bridge only hands JS a capped tail of them, so a JS-side merge would truncate the file it completes |
 | `geo` | Haversine distance, speed/distance/duration/time formatting with configurable unit system (metric/imperial) and time format (12h/24h), auto-detected from locale on first use |
 | `exportConverters` | Export-format metadata (labels, icons, extensions, MIME types) for the export UI. Serialization itself is native - see `ExportConverters.kt` |
 | `trips` | Trip segmentation via time-gap detection (15-min threshold), dropping segments whose bounding box spans under 100 m so stationary heartbeat runs do not become trips, plus distance computation, trip stats (avg speed, elevation gain/loss), and trip color assignment. Elevation is smoothed over a time window before accumulating, since raw altitude swings between fixes overstate the climb. Manual `trip_boundary_overrides` take priority over the gap threshold, and a segment abutting a forced split is exempt from the 100 m filter so an explicit edit is never silently dropped. `getDailyStats` in `DatabaseHelper.kt` mirrors all of this for the calendar and summary |

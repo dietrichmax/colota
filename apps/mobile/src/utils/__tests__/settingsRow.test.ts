@@ -20,9 +20,17 @@ describe("offlineMapsRowSub", () => {
 })
 
 describe("loggingRowSub", () => {
-  it("names the size only while the log is being written", () => {
+  it("names the size while the log is being written", () => {
     expect(loggingRowSub(true, 2516582)).toBe("File logging on · 2.4 MB")
-    expect(loggingRowSub(false, 2516582)).toBe("File logging off")
+  })
+
+  /**
+   * Switching the toggle off stops writing and deletes nothing. A bare "File logging off" over
+   * megabytes of named-zone and profile history reads as though the file went with the switch.
+   */
+  it("still says what is on disk after the switch goes off", () => {
+    expect(loggingRowSub(false, 2516582)).toBe("File logging off · 2.4 MB kept")
+    expect(loggingRowSub(false, 0)).toBe("File logging off")
   })
 })
 

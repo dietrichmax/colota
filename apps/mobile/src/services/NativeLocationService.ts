@@ -842,9 +842,9 @@ class NativeLocationService {
   }
 
   /** Returns null if there are no entries to export. */
-  static async exportFileLogToUri(treeUri: string): Promise<string | null> {
+  static async exportFileLogToUri(treeUri: string, header: string, appLog: string): Promise<string | null> {
     this.ensureModule()
-    return LocationServiceModule.exportFileLogToUri(treeUri)
+    return LocationServiceModule.exportFileLogToUri(treeUri, header, appLog)
   }
 
   // ============================================================================

@@ -22,7 +22,10 @@ export function offlineMapsRowSub(areas: OfflineAreaInfo[]): string {
 
 /** "File logging on · 2.4 MB". The size only means something while the log is being written. */
 export function loggingRowSub(enabled: boolean, bytes: number): string {
-  return enabled ? `File logging on · ${formatBytes(bytes)}` : "File logging off"
+  if (enabled) return `File logging on · ${formatBytes(bytes)}`
+  // Switching off stops writing and deletes nothing, so a bare "off" over megabytes of named-zone
+  // history implies the data has gone.
+  return bytes > 0 ? `File logging off · ${formatBytes(bytes)} kept` : "File logging off"
 }
 
 /** Formatted exactly as the ledger it opens, so the row and the screen cannot disagree. */

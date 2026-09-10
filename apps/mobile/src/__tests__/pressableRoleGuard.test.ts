@@ -75,10 +75,12 @@ function openingTags(source: string): { tag: string; line: number }[] {
 describe("pressable role guard", () => {
   const files = sourceFiles()
 
+  // A floor on the scanner's own reach, not on the tree: it exists so a regex that quietly matches
+  // nothing cannot pass as a clean run. Screens moving to the primitives lower the real count.
   it("finds the Pressables it is meant to police", () => {
     const total = files.reduce((n, f) => n + openingTags(fs.readFileSync(path.join(SRC, f), "utf8")).length, 0)
 
-    expect(total).toBeGreaterThan(40)
+    expect(total).toBeGreaterThan(30)
   })
 
   it("reads a tag past the arrow in an inline handler", () => {

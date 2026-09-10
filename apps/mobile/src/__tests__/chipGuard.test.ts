@@ -57,7 +57,6 @@ describe("chip guard", () => {
     const withChips = files.filter((f) => chipStyles(fs.readFileSync(path.join(SRC, f), "utf8")).length > 0)
 
     expect(withChips).toContain("components/ui/ChipGroup.tsx")
-    expect(withChips).toContain("screens/ActivityLogScreen.tsx")
     expect(withChips).toContain("components/features/inspector/InspectorDock.tsx")
   })
 

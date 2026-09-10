@@ -34,6 +34,7 @@ import com.Colota.export.AutoExportWorker
 import com.Colota.export.ExportConverters
 import com.Colota.util.AppFileLogger
 import com.Colota.util.FileOperations
+import com.Colota.util.LogExportMerger
 import com.Colota.util.AppLogger
 import com.Colota.util.SecureStorageHelper
 import com.facebook.react.bridge.Arguments
@@ -114,6 +115,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     companion object {
         private const val TAG = "LocationServiceModule"
+
+        /** A debug flag outside Settings, so it goes through saveSetting and no ServiceConfig parser. */
+        private const val SETTING_LOG_STARTED_AT = "debugFileLoggingStartedAt"
 
         /** JS config key -> secure storage key mapping for saveAuthConfig. */
         private val AUTH_CONFIG_KEYS = listOf(
@@ -971,7 +975,13 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun setFileLoggingEnabled(enabled: Boolean, promise: Promise) = executeAsync(promise) {
+        val was = AppFileLogger.isEnabled()
         dbHelper.saveSetting("debugFileLoggingEnabled", if (enabled) "true" else "false")
+        // The arming edge only: a re-enable that was already on must not reset the window.
+        if (enabled && !was) {
+            dbHelper.saveSetting(SETTING_LOG_STARTED_AT, System.currentTimeMillis().toString())
+        }
+        if (!enabled) dbHelper.saveSetting(SETTING_LOG_STARTED_AT, "")
         AppFileLogger.setEnabled(enabled)
         null
     }
@@ -979,6 +989,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun clearFileLog(promise: Promise) = executeAsync(promise) {
         AppFileLogger.clear()
+        // The window described bytes that no longer exist.
+        dbHelper.saveSetting(
+            SETTING_LOG_STARTED_AT,
+            if (AppFileLogger.isEnabled()) System.currentTimeMillis().toString() else ""
+        )
         null
     }
 
@@ -988,7 +1003,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun exportFileLogToUri(treeUriString: String, promise: Promise) = executeAsync(promise) {
+    fun exportFileLogToUri(
+        treeUriString: String,
+        header: String,
+        appLog: String,
+        promise: Promise,
+    ) = executeAsync(promise) {
         AppFileLogger.flushNow()
         // Oldest segment first so the exported file reads chronologically.
         val sources = AppFileLogger.logFiles()
@@ -1005,13 +1025,16 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             ?: throw Exception("Could not create document in selected directory")
 
         reactApplicationContext.contentResolver.openOutputStream(doc.uri)?.use { output ->
-            for (source in sources) {
-                source.inputStream().use { input -> input.copyTo(output) }
+            output.write(header.toByteArray())
+            output.bufferedWriter().let { writer ->
+                LogExportMerger.merge(sources, appLog, writer)
+                writer.flush()
             }
         } ?: throw Exception("Could not open output stream")
 
         doc.uri.toString()
     }
+
 
     // =========================================================================
     // AUTO-EXPORT
