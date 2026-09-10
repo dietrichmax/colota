@@ -21,12 +21,6 @@ class BuildConfigModule(reactContext: ReactApplicationContext) :
 
     override fun getConstants(): Map<String, Any> {
         return mapOf(
-            "MIN_SDK_VERSION" to BuildConfig.MIN_SDK_VERSION,
-            "TARGET_SDK_VERSION" to BuildConfig.TARGET_SDK_VERSION,
-            "BUILD_TOOLS_VERSION" to BuildConfig.BUILD_TOOLS_VERSION,
-            "COMPILE_SDK_VERSION" to BuildConfig.COMPILE_SDK_VERSION,
-            "KOTLIN_VERSION" to BuildConfig.KOTLIN_VERSION,
-            "NDK_VERSION" to BuildConfig.NDK_VERSION,
             "VERSION_NAME" to BuildConfig.VERSION_NAME,
             "VERSION_CODE" to BuildConfig.VERSION_CODE,
             "FLAVOR" to BuildConfig.FLAVOR,

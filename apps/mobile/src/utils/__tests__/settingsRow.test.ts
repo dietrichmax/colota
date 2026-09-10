@@ -1,4 +1,4 @@
-import { dataRowSub, getVariantLabel, loggingRowSub, offlineMapsRowSub } from "../settingsRow"
+import { buildLine, dataRowSub, getVariantLabel, loggingRowSub, offlineMapsRowSub, versionLine } from "../settingsRow"
 
 const area = (name: string, sizeBytes: number | null) => ({ name, sizeBytes, isComplete: true, isActive: false })
 
@@ -45,9 +45,40 @@ describe("dataRowSub", () => {
 })
 
 describe("getVariantLabel", () => {
-  it("prints the words the About screen's Variant row prints", () => {
+  it("names each flavor as the About row and the About screen print it after the version", () => {
     expect(getVariantLabel("gms")).toBe("Google Play")
     expect(getVariantLabel("foss")).toBe("FOSS")
     expect(getVariantLabel("")).toBe("Unknown")
+  })
+})
+
+const gms = { VERSION_NAME: "1.16.0", VERSION_CODE: 48, FLAVOR: "gms" }
+const foss = { VERSION_NAME: "1.16.0", VERSION_CODE: 48, FLAVOR: "foss" }
+
+describe("versionLine", () => {
+  it("is the hub's About row, version and flavor", () => {
+    expect(versionLine(gms)).toBe("1.16.0 · Google Play")
+    expect(versionLine(foss)).toBe("1.16.0 · FOSS")
+  })
+
+  // A missing bridge module used to print "Version  · Unknown" on the hub.
+  it("says Unknown for a build module that did not link", () => {
+    expect(versionLine(null)).toBe("Unknown")
+  })
+})
+
+describe("buildLine", () => {
+  // Play's crash reports, F-Droid and changelogs/<code>.txt are keyed by the code, and 1.8.0
+  // shipped under both 36 and 37.
+  it("is the About screen's line, with the version code the release artefacts are keyed by", () => {
+    expect(buildLine(gms)).toBe("1.16.0 (48) · Google Play")
+    expect(buildLine(foss)).toBe("1.16.0 (48) · FOSS")
+    expect(buildLine(null)).toBe("Unknown")
+  })
+
+  it("is the row's line with the code inserted, so the two cannot disagree", () => {
+    for (const config of [gms, foss]) {
+      expect(buildLine(config).replace(" (48)", "")).toBe(versionLine(config))
+    }
   })
 })

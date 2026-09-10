@@ -34,7 +34,7 @@ export function dataRowSub(total: number, databaseSizeMB: number): string {
   return `${total.toLocaleString()} locations · ${databaseSizeMB.toFixed(2)} MB`
 }
 
-/** The build a user is running, in the words the About screen's Variant row prints. */
+/** The build a user is running, as `versionLine` and `buildLine` name it after the version. */
 export function getVariantLabel(flavor: string): string {
   switch (flavor) {
     case "foss":
@@ -44,4 +44,19 @@ export function getVariantLabel(flavor: string): string {
     default:
       return flavor || "Unknown"
   }
+}
+
+/** "1.16.0 · Google Play": the hub's About row, under the word Version. */
+export function versionLine(config: { VERSION_NAME: string; FLAVOR: string } | null): string {
+  if (!config) return "Unknown"
+  return `${config.VERSION_NAME} · ${getVariantLabel(config.FLAVOR)}`
+}
+
+/**
+ * "1.16.0 (48) · Google Play": the About screen's line, the row's with the version code, which the
+ * changelog files, Play's crash reports and F-Droid are keyed by; a versionName has shipped under two codes.
+ */
+export function buildLine(config: { VERSION_NAME: string; VERSION_CODE: number; FLAVOR: string } | null): string {
+  if (!config) return "Unknown"
+  return `${config.VERSION_NAME} (${config.VERSION_CODE}) · ${getVariantLabel(config.FLAVOR)}`
 }

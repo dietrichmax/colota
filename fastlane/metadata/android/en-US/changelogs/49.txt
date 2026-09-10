@@ -3,7 +3,7 @@
 - Unplugging at a low battery no longer restarts tracking in a loop
 - Pause zones no longer take hours to engage when a tracking profile is active
 - Headings and labels read as sentences instead of shouting in capitals, and the smallest icons are easier to see
-- About now links to the release notes, feedback and the Play listing, with the legal detail on its own screen
+- About shows the version and build over the privacy policy, licence and source code; the phone and toolchain details are gone, since a saved log file carries them
 - Tapping the month in Location History picks a year and a month, instead of one chevron tap per month
 - Appearance can take the app colors from your Android wallpaper
 - GeoJSON exports write one point per recording, so mapping tools can read and filter them

@@ -7,7 +7,7 @@ sidebar_position: 8
 ## Reporting Issues
 
 1. Check if the issue already exists in [GitHub Issues](https://github.com/dietrichmax/colota/issues)
-2. Provide device info (model, Android version, Colota version)
+2. Provide device info (model, Android version and the Colota version as Settings > About prints it)
 3. Include logs if possible: `adb logcat | grep Colota`
 4. Describe steps to reproduce
 

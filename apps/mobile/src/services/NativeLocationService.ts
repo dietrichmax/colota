@@ -721,12 +721,6 @@ class NativeLocationService {
    * @returns Build config object with SDK versions, tools versions, etc.
    */
   static getBuildConfig(): {
-    MIN_SDK_VERSION: number
-    TARGET_SDK_VERSION: number
-    COMPILE_SDK_VERSION: number
-    BUILD_TOOLS_VERSION: string
-    KOTLIN_VERSION: string
-    NDK_VERSION: string
     VERSION_NAME: string
     VERSION_CODE: number
     FLAVOR: string
@@ -762,9 +756,6 @@ class NativeLocationService {
   static async getDeviceInfo(): Promise<{
     model: string
     brand: string
-    manufacturer: string
-    device: string
-    deviceId: string
     systemVersion: string
     apiLevel: number
   }> {

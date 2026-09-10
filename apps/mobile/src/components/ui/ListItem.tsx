@@ -31,7 +31,7 @@ type ListItemProps = {
   expanded?: boolean
 }
 
-/** A link row says it leaves the app, so Legal and the map credits dialog inherit the wording. */
+/** A link row says it leaves the app, so About and the map credits dialog inherit the wording. */
 function defaultHint(label: string, role: "button" | "link"): string {
   return role === "link" ? `Opens ${label} in the browser` : `Opens ${label}`
 }

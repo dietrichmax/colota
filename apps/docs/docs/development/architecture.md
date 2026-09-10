@@ -282,7 +282,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `PayloadBuilder` | Builds outgoing JSON payloads (field-mapped, Overland batch envelope, Traccar JSON) and extracts envelope custom fields |
 | `ServiceConfig` | Centralized configuration data class |
 | `TimedCache` | Generic TTL cache used for queue count, device info, profiles, and network state |
-| `BuildConfigModule` | Exposes build constants (SDK versions, app version) to JS, plus `getSystemPalette` - the Android 12+ wallpaper tonal steps as `#RRGGBB` hex, null below API 31 |
+| `BuildConfigModule` | Exposes the version name, version code, flavor and device language to JS, plus `getSystemPalette` - the Android 12+ wallpaper tonal steps as `#RRGGBB` hex, null below API 31 |
 | `AppLogger` | Centralized logger - always active, all tags prefixed with `Colota.` for logcat filtering |
 | `AutoExportWorker` | WorkManager `CoroutineWorker` enqueued by `AutoExportAlarmReceiver` - performs the export (chunked writes to a per-run temp file, foreground service, retries, retention cleanup), verifies the copy by bytes written and re-arms the next alarm in `finally` |
 | `AutoExportAlarmReceiver` | Broadcast receiver fired by AlarmManager at the configured time - hands off to `AutoExportWorker` because the receiver's 10s budget can't run an export |
@@ -326,8 +326,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `ShareSetupScreen` | Bundles selected config categories into a `colota://setup` link to share; credentials opt-in |
 | `LoggingScreen` | Records a log file and saves it as one file: capture state, the toggle, and the save and delete actions, which are absent while the file is empty |
 | `LogPreviewScreen` | Reads the recorded file, or the system log while recording is off. Newest first, search, and a single-select severity floor whose chips carry their own counts |
-| `AboutScreen` | App version, and the build and device details under them |
-| `LegalScreen` | Privacy policy, licence, source link and map attribution |
+| `AboutScreen` | The app's icon and name over the version with its build code, then the privacy policy, licence and source links and the copyright notice; map credits stay on the map's own dialog |
 
 ### Services
 
