@@ -110,7 +110,6 @@ export function Card({
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
     padding: space.lg,
     borderRadius: radius.md,
     width: "100%",
