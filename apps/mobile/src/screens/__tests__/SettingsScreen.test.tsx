@@ -198,7 +198,6 @@ describe("SettingsScreen", () => {
         "nav-whats-new",
         "nav-rate",
         "nav-support",
-        "nav-legal",
         "nav-about"
       ])
     })
@@ -218,7 +217,6 @@ describe("SettingsScreen", () => {
         ["nav-backup-restore", "Backup & Restore"],
         ["nav-share-setup", "Share Setup"],
         ["nav-logging", "Logging"],
-        ["nav-legal", "Legal"],
         ["nav-about", "About Colota"]
       ]
       for (const [testID, route] of routes) {
@@ -429,7 +427,7 @@ describe("SettingsScreen", () => {
       expect(meta(api, "nav-feedback")[2]).toBe("link")
       expect(api.getByTestId("nav-feedback").props.accessibilityHint).toBe("Opens Feedback & help in the browser")
       expect(api.getByTestId("nav-rate").props.accessibilityHint).toBe("Opens Colota in Google Play")
-      expect(meta(api, "nav-legal")[2]).toBe("chevron")
+      expect(meta(api, "nav-about")[2]).toBe("chevron")
     })
 
     it("opens the destination each link row names", async () => {

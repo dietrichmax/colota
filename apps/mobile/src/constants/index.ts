@@ -167,9 +167,7 @@ export const MAP_STYLE_URL_DARK = "https://maps.mxd.codes/styles/dark/style.json
 export const REPO_URL = "https://github.com/dietrichmax/colota"
 export const ISSUES_URL = `${REPO_URL}/issues`
 export const PRIVACY_POLICY_URL = "https://colota.app/privacy-policy"
-export const TILE_SERVER_DOCS_URL = "https://colota.app/docs/guides/tile-server"
 export const RELEASES_URL = "https://colota.app/releases"
-export const OSM_COPYRIGHT_URL = "https://www.openstreetmap.org/copyright"
 export const SUPPORT_URL = "https://mxd.codes/support"
 /** market:// opens the Play app straight on the listing; the https form is the fallback. */
 export const PLAY_STORE_MARKET_URL = "market://details?id=com.Colota"

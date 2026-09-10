@@ -104,13 +104,6 @@ android {
             }
         }
 
-        // Expose build config to the module
-        buildConfigField "int", "MIN_SDK_VERSION", "${rootProject.ext.minSdkVersion}"
-        buildConfigField "int", "TARGET_SDK_VERSION", "${rootProject.ext.targetSdkVersion}"
-        buildConfigField "int", "COMPILE_SDK_VERSION", "${rootProject.ext.compileSdkVersion}"
-        buildConfigField "String", "BUILD_TOOLS_VERSION", "\"${rootProject.ext.buildToolsVersion}\""
-        buildConfigField "String", "KOTLIN_VERSION", "\"${rootProject.ext.kotlinVersion}\""
-        buildConfigField "String", "NDK_VERSION", "\"${rootProject.ext.ndkVersion}\""
     }
     
     signingConfigs {

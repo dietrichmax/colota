@@ -40,9 +40,6 @@ jest.mock("react-native", () => ({
       getDeviceInfo: jest.fn().mockResolvedValue({
         model: "Pixel 7",
         brand: "Google",
-        manufacturer: "Google",
-        device: "panther",
-        deviceId: "panther",
         systemVersion: "14",
         apiLevel: 34
       }),
@@ -90,12 +87,6 @@ jest.mock("react-native", () => ({
       getActiveProfile: jest.fn().mockResolvedValue(null)
     },
     BuildConfigModule: {
-      MIN_SDK_VERSION: 26,
-      TARGET_SDK_VERSION: 34,
-      COMPILE_SDK_VERSION: 34,
-      BUILD_TOOLS_VERSION: "34.0.0",
-      KOTLIN_VERSION: "1.9.0",
-      NDK_VERSION: "25.1.8937393",
       VERSION_NAME: "1.0.0",
       VERSION_CODE: 1,
       FLAVOR: "gms",
@@ -340,7 +331,6 @@ describe("NativeLocationService", () => {
       const config = NativeLocationService.getBuildConfig()
       expect(config).toEqual(
         expect.objectContaining({
-          MIN_SDK_VERSION: 26,
           VERSION_NAME: "1.0.0"
         })
       )

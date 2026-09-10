@@ -24,7 +24,6 @@ import {
   MessageCircle,
   Navigation,
   Palette,
-  Scale,
   ScrollText,
   Sparkles,
   Share2,
@@ -35,7 +34,7 @@ import { getTimeFormat, getUnitSystem } from "../utils/geo"
 import { trackingSummary } from "../utils/dashboardState"
 import { describeServer } from "../utils/serverState"
 import { profileStateLabel } from "../utils/profileRow"
-import { dataRowSub, getVariantLabel, loggingRowSub, offlineMapsRowSub } from "../utils/settingsRow"
+import { dataRowSub, loggingRowSub, offlineMapsRowSub, versionLine } from "../utils/settingsRow"
 import { ProfileService } from "../services/ProfileService"
 import { loadOfflineAreas, type OfflineAreaInfo } from "../components/features/map/OfflinePackManager"
 import { appearanceRowSub } from "../utils/appearance"
@@ -334,20 +333,10 @@ export function SettingsScreen({ navigation }: Props) {
             />
             <Divider tight inset />
             <ListItem
-              testID="nav-legal"
-              icon={Scale}
-              label="Legal"
-              sub="Privacy policy, license, map data"
-              onPress={() => navigation.navigate("Legal")}
-            />
-            <Divider tight inset />
-            <ListItem
               testID="nav-about"
               icon={Info}
               label="About"
-              sub={`Version ${NativeLocationService.getBuildConfig()?.VERSION_NAME ?? ""} · ${getVariantLabel(
-                NativeLocationService.getBuildConfig()?.FLAVOR ?? ""
-              )}`}
+              sub={`Version ${versionLine(NativeLocationService.getBuildConfig())}`}
               onPress={() => navigation.navigate("About Colota")}
             />
           </Card>
