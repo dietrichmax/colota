@@ -322,7 +322,7 @@ describe("SettingsScreen", () => {
       mockGetSetting.mockResolvedValue("true")
       mockGetFileLogSize.mockResolvedValue(2516582)
       mockLoadOfflineAreas.mockResolvedValue([
-        { name: "Munich", sizeBytes: 44040192, isComplete: true, isActive: false }
+        { name: "Munich", sizeBytes: 44040192, isComplete: true, isActive: false, bounds: null }
       ])
       const api = renderScreen()
 

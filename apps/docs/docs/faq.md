@@ -44,7 +44,7 @@ To ensure modifications stay open source, especially server-side components.
 
 ### Can I use maps without internet?
 
-Yes. Go to **Settings → Offline maps** to download map areas to your device. Pan and zoom the map to frame the area you want, give it a name, and tap **Download**. Downloaded tiles persist across app restarts and work without any network connection. See [Offline maps](/docs/guides/offline-maps) for details.
+Yes. Go to **Settings → Offline maps** to download map areas to your device. Pan and zoom the map to frame the area you want, give it a name, and tap **Download area**. Downloaded tiles persist across app restarts and work without any network connection. See [Offline maps](/docs/guides/offline-maps) for details.
 
 ### Can I export my location history?
 
