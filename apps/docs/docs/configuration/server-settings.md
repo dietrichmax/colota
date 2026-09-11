@@ -73,7 +73,7 @@ The UI simplifies to remove sync-related elements that don't apply:
 - Sync interval, Sync only on (Any network / Wi-Fi or Ethernet / Specific Wi-Fi network / VPN)
 - Queue statistics (Queued / Sent counts)
 - Queue actions (Sync now, Delete queued locations, Delete synced locations)
-- Queue info in the tracking notification
+- Queue info in the tracking notification, which reads "Offline mode" instead
 
 **Still available in offline mode:**
 

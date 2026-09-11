@@ -1,28 +1,55 @@
 package com.Colota.service
 
+import android.app.Notification
+import android.app.NotificationManager
+import com.Colota.R
 import io.mockk.*
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 
 /**
  * Tests for NotificationHelper using a real instance with mocked Android deps:
- * - Status text generation (all branches)
+ * - Status building
  * - Time-since-last-sync formatting
- * - Throttle decisions
- * - Movement filter decisions
- * - Title building
- * - Deduplication via update()
+ * - Deduplication
+ * - Posted notification fields (Robolectric)
  */
 class NotificationHelperTest {
 
+    companion object {
+        const val FIX = 1_700_000_000_000L
+        const val NOW = FIX + 600_000L
+
+        fun input(
+            locationEnabled: Boolean = true,
+            isPaused: Boolean = false,
+            isWifiPaused: Boolean = false,
+            isMotionlessPaused: Boolean = false,
+            isStationary: Boolean = false,
+            hasFix: Boolean = false,
+            lastFixMs: Long = FIX,
+            isOfflineMode: Boolean = false,
+            queuedCount: Int = 0,
+            lastSyncTime: Long = 0L
+        ) = NotificationHelper.StatusInput(
+            locationEnabled, isPaused, isWifiPaused, isMotionlessPaused, isStationary,
+            hasFix, lastFixMs, isOfflineMode, queuedCount, lastSyncTime
+        )
+    }
+
     // --- channel routing (Robolectric: a real Notification, so the channel can be read back) ---
 
-    @org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+    @RunWith(RobolectricTestRunner::class)
     class ChannelRouting {
-        private fun helperFor(): Pair<NotificationHelper, android.app.NotificationManager> {
-            val ctx = org.robolectric.RuntimeEnvironment.getApplication()
-            val nm = ctx.getSystemService(android.app.NotificationManager::class.java)
+        private fun helperFor(): Pair<NotificationHelper, NotificationManager> {
+            val ctx = RuntimeEnvironment.getApplication()
+            val nm = ctx.getSystemService(NotificationManager::class.java)
             return NotificationHelper(ctx, nm) to nm
         }
 
@@ -54,8 +81,124 @@ class NotificationHelperTest {
             val tracking = nm.getNotificationChannel(NotificationHelper.CHANNEL_ID)
             val stopped = nm.getNotificationChannel(NotificationHelper.STOPPED_CHANNEL_ID)
 
-            assertEquals(android.app.NotificationManager.IMPORTANCE_LOW, tracking.importance)
-            assertEquals(android.app.NotificationManager.IMPORTANCE_DEFAULT, stopped.importance)
+            assertEquals(NotificationManager.IMPORTANCE_LOW, tracking.importance)
+            assertEquals(NotificationManager.IMPORTANCE_DEFAULT, stopped.importance)
+        }
+    }
+
+    // --- posted notification (Robolectric) ---
+
+    @RunWith(RobolectricTestRunner::class)
+    class TrackingNotification {
+        private lateinit var helper: NotificationHelper
+        private lateinit var nm: NotificationManager
+
+        @Before
+        fun setUp() {
+            val ctx = RuntimeEnvironment.getApplication()
+            nm = ctx.getSystemService(NotificationManager::class.java)
+            helper = NotificationHelper(ctx, nm)
+            helper.createChannel()
+        }
+
+        private fun posted(): Notification = shadowOf(nm).getNotification(NotificationHelper.NOTIFICATION_ID)
+
+        @Test
+        fun `what is posted is the status that was built`() {
+            helper.update(input(hasFix = true, queuedCount = 2))
+
+            val n = posted()
+            assertNull(n.extras.getString(Notification.EXTRA_TITLE))
+            assertEquals("Tracking · 2 queued", n.extras.getString(Notification.EXTRA_TEXT))
+            assertEquals("Tracking", n.extras.getString(Notification.EXTRA_TITLE_BIG))
+            assertEquals("2 queued", n.extras.getString(Notification.EXTRA_BIG_TEXT))
+        }
+
+        @Test
+        fun `from Android 12 there is no title and the state leads the text`() {
+            helper.update(input(isPaused = true, isWifiPaused = true, hasFix = true))
+
+            val n = posted()
+            assertNull(n.extras.getString(Notification.EXTRA_TITLE))
+            assertEquals("Paused · Zone WiFi · resumes when you leave · All sent", n.extras.getString(Notification.EXTRA_TEXT))
+            assertEquals("Paused", n.extras.getString(Notification.EXTRA_TITLE_BIG))
+            assertEquals("Zone WiFi · resumes when you leave · All sent", n.extras.getString(Notification.EXTRA_BIG_TEXT))
+        }
+
+        @Test
+        @Config(sdk = [30])
+        fun `before Android 12 the state is the title`() {
+            helper.update(input(isPaused = true, isWifiPaused = true, hasFix = true))
+
+            val n = posted()
+            assertEquals("Paused", n.extras.getString(Notification.EXTRA_TITLE))
+            assertEquals("Zone WiFi · resumes when you leave · All sent", n.extras.getString(Notification.EXTRA_TEXT))
+        }
+
+        @Test
+        fun `the stopped notification keeps the full reason in the expanded view`() {
+            val n = helper.buildStoppedNotification("killed", unexpected = true)
+
+            assertNull(n.extras.getString(Notification.EXTRA_TITLE))
+            assertEquals("Tracking stopped · killed", n.extras.getString(Notification.EXTRA_TEXT))
+            assertEquals("Tracking stopped", n.extras.getString(Notification.EXTRA_TITLE_BIG))
+            assertEquals("killed", n.extras.getString(Notification.EXTRA_BIG_TEXT))
+        }
+
+        @Test
+        fun `the small icon is ic_notification`() {
+            helper.update(input(hasFix = true))
+
+            assertEquals(R.drawable.ic_notification, posted().smallIcon.resId)
+        }
+
+        @Test
+        fun `the icon color is the launcher background`() {
+            helper.update(input(hasFix = true))
+
+            assertEquals(0xFF0D9387.toInt(), posted().color)
+        }
+
+        @Test
+        fun `the header time is the last fix received`() {
+            val s = input(hasFix = true, lastFixMs = FIX)
+            helper.update(s)
+
+            val n = posted()
+            assertEquals(FIX, n.`when`)
+            assertTrue(n.extras.getBoolean(Notification.EXTRA_SHOW_WHEN))
+        }
+
+        @Test
+        fun `the tracking notification is public`() {
+            helper.update(input(hasFix = true))
+
+            val n = posted()
+            assertEquals(Notification.VISIBILITY_PUBLIC, n.visibility)
+            assertNull(n.publicVersion)
+        }
+
+        @Test
+        fun `the stopped notification is public`() {
+            assertEquals(Notification.VISIBILITY_PUBLIC, helper.buildStoppedNotification("killed", unexpected = true).visibility)
+            assertEquals(Notification.VISIBILITY_PUBLIC, helper.buildStoppedNotification("stopped", unexpected = false).visibility)
+        }
+
+        @Test
+        fun `the tracking notification is ongoing and silent on the tracking channel`() {
+            helper.update(input(hasFix = true))
+
+            val n = posted()
+            assertTrue(n.flags and Notification.FLAG_ONGOING_EVENT != 0)
+            assertEquals(NotificationHelper.CHANNEL_ID, n.channelId)
+        }
+
+        @Test
+        fun `the foreground notification carries the same facts as an update`() {
+            val n = helper.buildForegroundNotification(input(isStationary = true, hasFix = true, queuedCount = 3))
+
+            assertEquals("Tracking · Stationary · 3 queued", n.extras.getString(Notification.EXTRA_TEXT))
+            assertEquals("Stationary · 3 queued", n.extras.getString(Notification.EXTRA_BIG_TEXT))
         }
     }
 
@@ -70,288 +213,189 @@ class NotificationHelperTest {
         every { helper.buildTrackingNotification(any(), any()) } returns mockk()
     }
 
+    private fun status(s: NotificationHelper.StatusInput) = helper.buildStatus(s, NOW)
+
+    // --- buildStatus ---
+
+    @Test
+    fun `a fix reads Tracking with the sending state and nothing about where it was`() {
+        assertEquals(NotificationHelper.Status("Tracking", "All sent"), status(input(hasFix = true)))
+    }
+
+    @Test
+    fun `a backed-up queue after a sync this run prints depth and age`() {
+        assertEquals(
+            "12 queued · last sync 3 min ago",
+            status(input(hasFix = true, queuedCount = 12, lastSyncTime = NOW - 180_000L)).text
+        )
+    }
+
+    @Test
+    fun `a backed-up queue with no sync this run prints the depth alone`() {
+        assertEquals("12 queued", status(input(hasFix = true, queuedCount = 12)).text)
+    }
+
+    @Test
+    fun `an empty queue reads All sent regardless of the last sync time`() {
+        assertEquals("All sent", status(input(hasFix = true, lastSyncTime = 0L)).text)
+        assertEquals("All sent", status(input(hasFix = true, lastSyncTime = NOW - 60_000L)).text)
+    }
+
+    @Test
+    fun `offline mode replaces every queue fact`() {
+        assertEquals(
+            "Offline mode",
+            status(input(hasFix = true, isOfflineMode = true, queuedCount = 12, lastSyncTime = NOW - 60_000L)).text
+        )
+    }
+
+    @Test
+    fun `no fix reads Searching for GPS over the sending state`() {
+        assertEquals(NotificationHelper.Status("Searching for GPS", "3 queued"), status(input(hasFix = false, queuedCount = 3)))
+    }
+
+    @Test
+    fun `location services off takes precedence over pause and stationary`() {
+        assertEquals(
+            NotificationHelper.Status("Location services are off", "Not recording · All sent"),
+            status(input(locationEnabled = false, isPaused = true, isStationary = true, hasFix = true))
+        )
+    }
+
+    @Test
+    fun `a zone pause shows how it resumes without the zone name`() {
+        assertEquals(
+            NotificationHelper.Status("Paused", "Inside zone · resumes when you leave · All sent"),
+            status(input(isPaused = true, hasFix = true))
+        )
+    }
+
+    @Test
+    fun `a WiFi hold names the WiFi as the reason`() {
+        assertEquals(
+            "Zone WiFi · resumes when you leave · All sent",
+            status(input(isPaused = true, isWifiPaused = true, hasFix = true)).text
+        )
+    }
+
+    @Test
+    fun `a motionless hold names movement as the release`() {
+        assertEquals(
+            "No movement · resumes when you move · All sent",
+            status(input(isPaused = true, isMotionlessPaused = true, hasFix = true)).text
+        )
+    }
+
+    @Test
+    fun `WiFi wins over motionless when both hold`() {
+        assertEquals(
+            "Zone WiFi · resumes when you leave · All sent",
+            status(input(isPaused = true, isWifiPaused = true, isMotionlessPaused = true, hasFix = true)).text
+        )
+    }
+
+    @Test
+    fun `a pause keeps the queue visible`() {
+        assertEquals(
+            "Inside zone · resumes when you leave · 5 queued · last sync just now",
+            status(input(isPaused = true, hasFix = true, queuedCount = 5, lastSyncTime = NOW - 30_000L)).text
+        )
+    }
+
+    @Test
+    fun `a pause wins over stationary`() {
+        assertEquals("Paused", status(input(isPaused = true, isStationary = true, hasFix = true)).title)
+    }
+
+    @Test
+    fun `stationary keeps the Tracking title and prefixes Stationary`() {
+        assertEquals(
+            NotificationHelper.Status("Tracking", "Stationary · All sent"),
+            status(input(isStationary = true, hasFix = true))
+        )
+    }
+
+    @Test
+    fun `stationary keeps the queue visible`() {
+        assertEquals(
+            "Stationary · 3 queued · last sync 1 h ago",
+            status(input(isStationary = true, hasFix = true, queuedCount = 3, lastSyncTime = NOW - 3_600_000L)).text
+        )
+    }
+
     // --- formatTimeSinceSync ---
 
     @Test
-    fun `time since sync shows Never when no sync happened`() {
-        assertEquals("Never", helper.formatTimeSinceSync(lastSyncTime = 0L, now = 1000L))
+    fun `under a minute is just now`() {
+        assertEquals("just now", helper.formatTimeSinceSync(NOW - 30_000L, NOW))
     }
 
     @Test
-    fun `time since sync shows Just now for less than 1 min`() {
-        val now = 100000L
-        assertEquals("Just now", helper.formatTimeSinceSync(now - 30000L, now))
+    fun `one minute is singular`() {
+        assertEquals("1 min ago", helper.formatTimeSinceSync(NOW - 60_000L, NOW))
     }
 
     @Test
-    fun `time since sync shows 1 min ago`() {
-        val now = 100000L
-        assertEquals("1 min ago", helper.formatTimeSinceSync(now - 60000L, now))
+    fun `minutes under an hour count minutes`() {
+        assertEquals("25 min ago", helper.formatTimeSinceSync(NOW - 1_500_000L, NOW))
     }
 
     @Test
-    fun `time since sync shows N min ago for less than 1 hour`() {
-        val now = 100000L
-        assertEquals("25 min ago", helper.formatTimeSinceSync(now - 1500000L, now))
+    fun `sixty minutes is 1 h ago`() {
+        assertEquals("1 h ago", helper.formatTimeSinceSync(NOW - 3_600_000L, NOW))
     }
 
     @Test
-    fun `time since sync shows 1h ago for 60-119 minutes`() {
-        val now = 10000000L
-        assertEquals("1h ago", helper.formatTimeSinceSync(now - 3600000L, now))
+    fun `hours under a day count hours`() {
+        assertEquals("5 h ago", helper.formatTimeSinceSync(NOW - 18_000_000L, NOW))
     }
 
     @Test
-    fun `time since sync shows Nh ago for 120+ minutes`() {
-        val now = 10000000L
-        assertEquals("2 h ago", helper.formatTimeSinceSync(now - 7200000L, now))
+    fun `twenty-four hours is 1 d ago`() {
+        assertEquals("1 d ago", helper.formatTimeSinceSync(NOW - 86_400_000L, NOW))
     }
 
     @Test
-    fun `time since sync shows 5h ago for 300 minutes`() {
-        val now = 100000000L
-        assertEquals("5 h ago", helper.formatTimeSinceSync(now - 18000000L, now))
-    }
-
-    // --- buildStatusText ---
-
-    @Test
-    fun `status text shows Paused with zone name`() {
-        assertEquals("Paused: Home", helper.buildStatusText(true, "Home", 52.0, 13.0, 0, 0L))
-    }
-
-    @Test
-    fun `status text shows Paused Unknown when zone name is null`() {
-        assertEquals("Paused: Unknown", helper.buildStatusText(true, null, 52.0, 13.0, 0, 0L))
-    }
-
-    @Test
-    fun `status text shows WiFi suffix when wifi paused`() {
-        assertEquals(
-            "Paused: Home \u00b7 WiFi",
-            helper.buildStatusText(true, "Home", 52.0, 13.0, 0, 0L, isWifiPaused = true)
-        )
-    }
-
-    @Test
-    fun `status text shows Motionless suffix when motionless paused`() {
-        assertEquals(
-            "Paused: Home \u00b7 Motionless",
-            helper.buildStatusText(true, "Home", 52.0, 13.0, 0, 0L, isMotionlessPaused = true)
-        )
-    }
-
-    @Test
-    fun `status text WiFi takes priority over motionless when both active`() {
-        assertEquals(
-            "Paused: Home \u00b7 WiFi",
-            helper.buildStatusText(true, "Home", 52.0, 13.0, 0, 0L, isWifiPaused = true, isMotionlessPaused = true)
-        )
-    }
-
-    @Test
-    fun `status text shows location-off message when location services disabled`() {
-        // Disabled location takes priority over every other state - the user needs to know.
-        assertEquals(
-            "Location services off - tracking won't get fixes",
-            helper.buildStatusText(false, null, 52.0, 13.0, 0, 0L, locationEnabled = false)
-        )
-        // Even when paused or stationary, the location-off message wins.
-        assertEquals(
-            "Location services off - tracking won't get fixes",
-            helper.buildStatusText(true, "Home", 52.0, 13.0, 0, 0L, locationEnabled = false)
-        )
-    }
-
-    @Test
-    fun `status text shows coordinates when tracking normally`() {
-        assertEquals("52.51630, 13.37770", helper.buildStatusText(false, null, 52.51630, 13.37770, 0, 0L))
-    }
-
-    @Test
-    fun `status text shows Synced when queue empty and has synced`() {
-        val text = helper.buildStatusText(false, null, 52.0, 13.0, 0, System.currentTimeMillis())
-        assertEquals("52.00000, 13.00000 (Synced)", text)
-    }
-
-    @Test
-    fun `status text shows queued count when never synced`() {
-        assertEquals("52.00000, 13.00000 (Queued: 15)", helper.buildStatusText(false, null, 52.0, 13.0, 15, 0L))
-    }
-
-    @Test
-    fun `status text shows queued count and last sync when both present`() {
-        val now = System.currentTimeMillis()
-        assertEquals(
-            "52.00000, 13.00000 (Queued: 7 \u00b7 Just now)",
-            helper.buildStatusText(false, null, 52.0, 13.0, 7, now - 30000L)
-        )
-    }
-
-    @Test
-    fun `status text shows Searching GPS when no coordinates`() {
-        assertEquals("Searching GPS...", helper.buildStatusText(false, null, null, null, 0, 0L))
-    }
-
-    @Test
-    fun `status text uses locale-safe coordinate formatting`() {
-        val text = helper.buildStatusText(false, null, -33.86882, 151.20930, 0, 0L)
-        assertTrue(text.contains("-33.86882"))
-        assertTrue(text.contains("151.20930"))
-        assertFalse(text.contains(",209"))  // Would appear with German locale
-    }
-
-    @Test
-    fun `paused takes priority over coordinates`() {
-        assertEquals(
-            "Paused: Office",
-            helper.buildStatusText(true, "Office", 52.0, 13.0, 5, System.currentTimeMillis())
-        )
-    }
-
-    // --- shouldThrottle ---
-
-    @Test
-    fun `throttle suppresses within 10s`() {
-        setField("lastUpdateTime", 1000L)
-        assertTrue(helper.shouldThrottle(now = 5000L))
-    }
-
-    @Test
-    fun `throttle allows after 10s`() {
-        setField("lastUpdateTime", 1000L)
-        assertFalse(helper.shouldThrottle(now = 12000L))
-    }
-
-    @Test
-    fun `throttle allows at exactly 10s`() {
-        setField("lastUpdateTime", 1000L)
-        assertFalse(helper.shouldThrottle(now = 11000L))
-    }
-
-    // --- shouldFilterByMovement ---
-
-    @Test
-    fun `movement less than 2m is filtered`() {
-        assertTrue(helper.shouldFilterByMovement(1.5f))
-    }
-
-    @Test
-    fun `movement of exactly 2m is not filtered`() {
-        assertFalse(helper.shouldFilterByMovement(2.0f))
-    }
-
-    @Test
-    fun `movement greater than 2m is not filtered`() {
-        assertFalse(helper.shouldFilterByMovement(5.0f))
-    }
-
-    // --- buildTitle ---
-
-    @Test
-    fun `title shows Colota Tracking when no profile active`() {
-        assertEquals("Colota Tracking", helper.buildTitle(null))
-    }
-
-    @Test
-    fun `title includes profile name when active`() {
-        assertEquals("Colota \u00b7 Charging", helper.buildTitle("Charging"))
-    }
-
-    @Test
-    fun `title includes custom profile name`() {
-        assertEquals("Colota \u00b7 Fast Driving", helper.buildTitle("Fast Driving"))
+    fun `days count days`() {
+        assertEquals("3 d ago", helper.formatTimeSinceSync(NOW - 3 * 86_400_000L, NOW))
     }
 
     // --- Deduplication (via update()) ---
 
     @Test
-    fun `same state is deduplicated on second non-forced update`() {
-        assertTrue(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
-        assertFalse(helper.update(lat = 52.52, lon = 13.405, forceUpdate = false))
+    fun `an unchanged state within the same minute is not re-posted`() {
+        val s = input(hasFix = true)
+        assertTrue(helper.update(s))
+        assertFalse(helper.update(s.copy(lastFixMs = FIX + 30_000L)))
     }
 
     @Test
-    fun `forceUpdate bypasses dedup`() {
-        assertTrue(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
-        assertTrue(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
+    fun `a fix in the next minute re-posts`() {
+        val s = input(hasFix = true)
+        helper.update(s)
+        assertTrue(helper.update(s.copy(lastFixMs = FIX + 60_000L)))
     }
 
     @Test
-    fun `different coordinates trigger update`() {
-        helper.update(lat = 52.52, lon = 13.405, forceUpdate = true)
-        assertTrue(helper.update(lat = 52.521, lon = 13.406, forceUpdate = true))
+    fun `a queue count change re-posts at once`() {
+        val s = input(hasFix = true)
+        helper.update(s)
+        assertTrue(helper.update(s.copy(queuedCount = 5)))
     }
 
     @Test
-    fun `first update always proceeds`() {
-        assertTrue(helper.update(lat = 52.52, lon = 13.405, forceUpdate = true))
+    fun `forceUpdate re-posts an identical state`() {
+        val s = input(hasFix = true)
+        helper.update(s)
+        assertTrue(helper.update(s, forceUpdate = true))
     }
 
     @Test
-    fun `queue count change triggers update`() {
-        val now = System.currentTimeMillis()
-        helper.update(lat = 52.0, lon = 13.0, queuedCount = 0, lastSyncTime = now, forceUpdate = true)
-        assertTrue(helper.update(lat = 52.0, lon = 13.0, queuedCount = 5, lastSyncTime = now, forceUpdate = true))
-    }
+    fun `the foreground notification primes the dedup key`() {
+        val s = input(hasFix = true)
+        helper.buildForegroundNotification(s)
 
-    @Test
-    fun `profile name change triggers update`() {
-        helper.update(lat = 52.0, lon = 13.0, forceUpdate = true)
-        assertTrue(helper.update(lat = 52.0, lon = 13.0, activeProfileName = "Charging", forceUpdate = true))
-    }
-
-    // --- Stationary status ---
-
-    @Test
-    fun `buildStatusText shows stationary with coords`() {
-        val text = helper.buildStatusText(
-            isPaused = false, zoneName = null,
-            lat = 52.52, lon = 13.405,
-            queuedCount = 0, lastSyncTime = 0L,
-            isStationary = true
-        )
-        assertEquals("Stationary - 52.52000, 13.40500", text)
-    }
-
-    @Test
-    fun `buildStatusText shows stationary without coords`() {
-        val text = helper.buildStatusText(
-            isPaused = false, zoneName = null,
-            lat = null, lon = null,
-            queuedCount = 0, lastSyncTime = 0L,
-            isStationary = true
-        )
-        assertEquals("Stationary - GPS paused", text)
-    }
-
-    @Test
-    fun `buildStatusText pause zone takes priority over stationary`() {
-        val text = helper.buildStatusText(
-            isPaused = true, zoneName = "Home",
-            lat = 52.52, lon = 13.405,
-            queuedCount = 0, lastSyncTime = 0L,
-            isStationary = true
-        )
-        assertEquals("Paused: Home", text)
-    }
-
-    @Test
-    fun `buildStatusText WiFi suffix shown with stationary also active`() {
-        val text = helper.buildStatusText(
-            isPaused = true, zoneName = "Home",
-            lat = 52.52, lon = 13.405,
-            queuedCount = 0, lastSyncTime = 0L,
-            isStationary = true, isWifiPaused = true
-        )
-        assertEquals("Paused: Home \u00b7 WiFi", text)
-    }
-
-    // --- Reflection helper ---
-
-    private fun setField(name: String, value: Any?) {
-        val field = NotificationHelper::class.java.getDeclaredField(name)
-        field.isAccessible = true
-        field.set(helper, value)
+        assertFalse(helper.update(s))
+        assertTrue(helper.update(s.copy(queuedCount = 3)))
     }
 }

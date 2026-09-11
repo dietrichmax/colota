@@ -111,9 +111,8 @@ Note that Stationary has the highest priority so it takes over from Walking when
 
 ## Active Profile Indicators
 
-When a profile is active, Colota shows it in four places:
+When a profile is active, Colota shows it in three places:
 
-- **Notification** - The foreground notification title changes from "Colota Tracking" to "Colota · ProfileName" (e.g., "Colota · Charging")
 - **Dashboard** - The state line reads "Tracking · ProfileName"
 - **Tracking profiles** - The list's first line names it with the values in force, and its row opens with "Active"
 - **Tracking & sync** - A line above the Recording and Sync interval groups names it with the values in force

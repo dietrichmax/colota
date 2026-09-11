@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Paths from ic_launcher_monochrome.xml without the outer arc, stroke doubled to hold at 24 dp. -->
+  <group
+      android:scaleX="0.0625"
+      android:scaleY="0.0625"
+      android:translateX="-6.5"
+      android:translateY="-2.5">
+    <path
+        android:pathData="M256,120C196,120 152,164 152,224C152,300 256,392 256,392C256,392 360,300 360,224C360,164 316,120 256,120Z M220,224A36,36 0,1,1 292,224A36,36 0,1,1 220,224Z"
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"/>
+    <path
+        android:pathData="M256,88a168,168 0,0 1,168 168"
+        android:strokeWidth="32"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"/>
+  </group>
+</vector>

@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import com.Colota.R
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.SettingsKeys
 import com.Colota.util.AppLogger
@@ -40,7 +41,8 @@ class BatteryRecoveryWorker(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         ensureNotificationChannel()
         val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(NotificationHelper.ICON_COLOR)
             .setContentTitle("Resuming tracking")
             .setContentText("Charger connected - restarting location tracking")
             .setOngoing(true)
