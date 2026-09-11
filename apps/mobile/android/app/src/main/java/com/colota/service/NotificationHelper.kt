@@ -8,9 +8,10 @@ package com.Colota.service
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.Colota.MainActivity
-import java.util.Locale
+import com.Colota.R
 
 /**
  * Main-thread only. All callers run on Main (onStartCommand, FLP callback,
@@ -22,18 +23,35 @@ class NotificationHelper(
     private val notificationManager: NotificationManager
 ) {
 
-    private var lastText: String? = null
-    private var lastUpdateTime: Long = 0
-    private var lastCoords: Pair<Double, Double>? = null
-    private var lastQueuedCount: Int = 0
+    /** No coordinate, zone or profile field on purpose: the notification is public. */
+    data class StatusInput(
+        val locationEnabled: Boolean = true,
+        val isPaused: Boolean = false,
+        val isWifiPaused: Boolean = false,
+        val isMotionlessPaused: Boolean = false,
+        val isStationary: Boolean = false,
+        val hasFix: Boolean = false,
+        val lastFixMs: Long,
+        val isOfflineMode: Boolean = false,
+        val queuedCount: Int = 0,
+        val lastSyncTime: Long = 0L
+    )
+
+    data class Status(val title: String, val text: String)
+
+    private var lastKey: String? = null
+
+    /** From Android 12 the collapsed row shows the app name only when there is no title. */
+    private val headerless = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     companion object {
         const val CHANNEL_ID = "location_service_channel"
         const val STOPPED_CHANNEL_ID = "tracking_stopped_channel"
         const val NOTIFICATION_ID = 1
         const val STOPPED_NOTIFICATION_ID = 2
-        const val THROTTLE_MS = 10000L
-        const val MIN_MOVEMENT_METERS = 2f
+        const val STOP_REASON_BATTERY = "Battery fell below 5% · resumes when charging"
+        /** ic_launcher_background, copied because unit tests run without app resources. */
+        const val ICON_COLOR = 0xFF0D9387.toInt()
     }
 
     fun createChannel() {
@@ -58,7 +76,7 @@ class NotificationHelper(
         notificationManager.createNotificationChannel(stoppedChannel)
     }
 
-    fun buildTrackingNotification(title: String, statusText: String): Notification {
+    fun buildTrackingNotification(status: Status, whenMs: Long): Notification {
         val pendingIntent = PendingIntent.getActivity(
             context,
             0,
@@ -67,18 +85,20 @@ class NotificationHelper(
         )
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(statusText)
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setContentTitle(collapsedTitle(status.title))
+            .setContentText(collapsedText(status.title, status.text))
+            .setStyle(NotificationCompat.BigTextStyle().setBigContentTitle(status.title).bigText(status.text))
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(ICON_COLOR)
             .setOngoing(true)
             .setSilent(true)
+            .setWhen(whenMs)
+            .setShowWhen(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
     }
-
-    fun buildTitle(activeProfileName: String?): String =
-        if (activeProfileName != null) "Colota \u00b7 $activeProfileName" else "Colota Tracking"
 
     /**
      * @param unexpected a stop the user did not ask for, which alerts. Anything else stays on the
@@ -98,8 +118,9 @@ class NotificationHelper(
             context,
             if (unexpected) STOPPED_CHANNEL_ID else CHANNEL_ID
         )
-            .setContentTitle("Tracking stopped")
-            .setContentText(reason)
+            .setContentTitle(collapsedTitle("Tracking stopped"))
+            .setContentText(collapsedText("Tracking stopped", reason))
+            .setStyle(NotificationCompat.BigTextStyle().setBigContentTitle("Tracking stopped").bigText(reason))
             .setSmallIcon(android.R.drawable.ic_lock_power_off)
             .setOngoing(false)
             .setAutoCancel(true)
@@ -107,134 +128,71 @@ class NotificationHelper(
             // starts a fresh post, which alerts again: tracking is still down and a tap is the fix.
             .setOnlyAlertOnce(true)
             .setContentIntent(pendingIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
     }
 
-    /** Status text for the initial startForeground notification, before any location arrives. */
-    fun getInitialStatus(
-        insidePauseZone: Boolean,
-        currentZoneName: String?,
-        lastKnownLocation: android.location.Location?
-    ): String = when {
-        insidePauseZone -> "Paused: ${currentZoneName ?: "Unknown"}"
-        lastKnownLocation != null -> formatCoords(lastKnownLocation.latitude, lastKnownLocation.longitude)
-        else -> "Searching GPS..."
-    }
+    private fun collapsedTitle(state: String): String? = if (headerless) null else state
 
-    private fun formatCoords(lat: Double, lon: Double): String =
-        String.format(Locale.US, "%.5f, %.5f", lat, lon)
+    private fun collapsedText(state: String, text: String): String = if (headerless) "$state · $text" else text
 
-    fun buildStatusText(
-        isPaused: Boolean,
-        zoneName: String?,
-        lat: Double?,
-        lon: Double?,
-        queuedCount: Int,
-        lastSyncTime: Long,
-        isOfflineMode: Boolean = false,
-        isStationary: Boolean = false,
-        isWifiPaused: Boolean = false,
-        isMotionlessPaused: Boolean = false,
-        locationEnabled: Boolean = true
-    ): String = when {
-        !locationEnabled -> "Location services off - tracking won't get fixes"
-        isPaused -> {
-            val zone = zoneName ?: "Unknown"
-            when {
-                isWifiPaused -> "Paused: $zone \u00b7 WiFi"
-                isMotionlessPaused -> "Paused: $zone \u00b7 Motionless"
-                else -> "Paused: $zone"
-            }
-        }
-        isStationary -> {
-            val coords = if (lat != null && lon != null) formatCoords(lat, lon) else ""
-            if (coords.isNotEmpty()) "Stationary - $coords" else "Stationary - GPS paused"
-        }
-        lat != null && lon != null -> {
-            val coords = formatCoords(lat, lon)
-            if (isOfflineMode) {
-                coords
-            } else if (queuedCount > 0 && lastSyncTime > 0) {
-                "$coords (Queued: $queuedCount · ${formatTimeSinceSync(lastSyncTime)})"
-            } else if (queuedCount > 0) {
-                "$coords (Queued: $queuedCount)"
-            } else if (lastSyncTime > 0) {
-                "$coords (Synced)"
-            } else {
-                coords
-            }
-        }
-        else -> "Searching GPS..."
-    }
-
-    fun formatTimeSinceSync(lastSyncTime: Long, now: Long = System.currentTimeMillis()): String {
-        if (lastSyncTime == 0L) return "Never"
-
-        val elapsedMs = now - lastSyncTime
-        val elapsedMinutes = (elapsedMs / 60000).toInt()
-
+    /** Title is the recording state, text the sending state. */
+    fun buildStatus(input: StatusInput, now: Long = System.currentTimeMillis()): Status {
+        val send = sendSegment(input, now)
         return when {
-            elapsedMinutes < 1 -> "Just now"
-            elapsedMinutes == 1 -> "1 min ago"
-            elapsedMinutes < 60 -> "$elapsedMinutes min ago"
-            elapsedMinutes < 120 -> "1h ago"
-            else -> "${elapsedMinutes / 60} h ago"
+            !input.locationEnabled -> Status("Location services are off", "Not recording · $send")
+            input.isPaused -> Status("Paused", "${pauseDetail(input)} · $send")
+            !input.hasFix -> Status("Searching for GPS", send)
+            input.isStationary -> Status("Tracking", "Stationary · $send")
+            else -> Status("Tracking", send)
         }
     }
 
-    fun shouldThrottle(now: Long): Boolean = (now - lastUpdateTime) < THROTTLE_MS
+    private fun pauseDetail(input: StatusInput): String = when {
+        input.isWifiPaused -> "Zone WiFi · resumes when you leave"
+        input.isMotionlessPaused -> "No movement · resumes when you move"
+        else -> "Inside zone · resumes when you leave"
+    }
 
-    fun shouldFilterByMovement(distanceMeters: Float): Boolean = distanceMeters < MIN_MOVEMENT_METERS
+    private fun sendSegment(input: StatusInput, now: Long): String = when {
+        input.isOfflineMode -> "Offline mode"
+        input.queuedCount > 0 && input.lastSyncTime > 0 ->
+            "${input.queuedCount} queued · last sync ${formatTimeSinceSync(input.lastSyncTime, now)}"
+        input.queuedCount > 0 -> "${input.queuedCount} queued"
+        else -> "All sent"
+    }
 
-    /** Runs throttle + movement filter + dedup. Returns true if the notification was posted. */
-    fun update(
-        lat: Double? = null,
-        lon: Double? = null,
-        isPaused: Boolean = false,
-        zoneName: String? = null,
-        queuedCount: Int = 0,
-        lastSyncTime: Long = 0L,
-        activeProfileName: String? = null,
-        forceUpdate: Boolean = false,
-        isOfflineMode: Boolean = false,
-        isStationary: Boolean = false,
-        isWifiPaused: Boolean = false,
-        isMotionlessPaused: Boolean = false,
-        locationEnabled: Boolean = true
-    ): Boolean {
-        val now = System.currentTimeMillis()
-
-        val queueCountChanged = queuedCount != lastQueuedCount
-
-        // Bypass throttle/movement filter when queue count changed, so queue status stays current.
-        if (!forceUpdate && !queueCountChanged && lat != null && lon != null) {
-            if (shouldThrottle(now)) return false
-
-            val prev = lastCoords
-            if (prev != null) {
-                val distance = FloatArray(1)
-                android.location.Location.distanceBetween(
-                    prev.first, prev.second, lat, lon, distance
-                )
-                if (shouldFilterByMovement(distance[0])) return false
-            }
+    fun formatTimeSinceSync(lastSyncTime: Long, now: Long): String {
+        val minutes = ((now - lastSyncTime) / 60_000).toInt()
+        return when {
+            minutes < 1 -> "just now"
+            minutes == 1 -> "1 min ago"
+            minutes < 60 -> "$minutes min ago"
+            minutes < 120 -> "1 h ago"
+            minutes < 1440 -> "${minutes / 60} h ago"
+            minutes < 2880 -> "1 d ago"
+            else -> "${minutes / 1440} d ago"
         }
+    }
 
-        lastUpdateTime = now
-        if (lat != null && lon != null) {
-            lastCoords = Pair(lat, lon)
-        }
+    // The fix minute is part of the key so the header age is at most a minute behind.
+    private fun dedupKey(status: Status, input: StatusInput): String =
+        "${status.title}\n${status.text}\n${input.lastFixMs / 60_000}"
 
-        val statusText = buildStatusText(isPaused, zoneName, lat, lon, queuedCount, lastSyncTime, isOfflineMode, isStationary, isWifiPaused, isMotionlessPaused, locationEnabled)
+    /** Also primes the dedup key, so the first update() does not re-post the same state. */
+    fun buildForegroundNotification(input: StatusInput): Notification {
+        val status = buildStatus(input)
+        lastKey = dedupKey(status, input)
+        return buildTrackingNotification(status, input.lastFixMs)
+    }
 
-        // forceUpdate bypasses dedup so state-change posts land even when the text is unchanged.
-        val cacheKey = "$statusText-$queuedCount-$activeProfileName"
-        if (!forceUpdate && cacheKey == lastText) return false
-
-        lastText = cacheKey
-        lastQueuedCount = queuedCount
-        val title = buildTitle(activeProfileName)
-        notificationManager.notify(NOTIFICATION_ID, buildTrackingNotification(title, statusText))
+    /** Returns true if it posted. forceUpdate skips the dedup check. */
+    fun update(input: StatusInput, forceUpdate: Boolean = false): Boolean {
+        val status = buildStatus(input)
+        val key = dedupKey(status, input)
+        if (!forceUpdate && key == lastKey) return false
+        lastKey = key
+        notificationManager.notify(NOTIFICATION_ID, buildTrackingNotification(status, input.lastFixMs))
         return true
     }
 }

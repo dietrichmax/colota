@@ -171,9 +171,11 @@ the app stays closed.
 Handles all notification logic for the tracking service:
 
 - Channel creation and notification building
-- Dynamic title: "Colota Tracking" by default, "Colota · ProfileName" when a tracking profile is active
-- Status text generation (coordinates, sync status, pause zones)
-- Throttled updates (10s minimum interval, 2m minimum movement)
+- Title is the recording state: "Tracking", "Paused", "Searching for GPS" or "Location services are off". From Android 12 the collapsed row shows the app name only when there is no title, so the notification sets none there: the state leads the text and the expanded view shows it as the title. Before Android 12 the state is the title. The stopped notification follows the same rule
+- Text is the sending state ("All sent", "12 queued · last sync 3 min ago", "Offline mode"), after "Stationary", "Not recording" or how a pause resumes where one applies. `NotificationHelper.StatusInput` has no coordinate, zone or profile field and `statusInput()` in the service is its only builder
+- `Notification.when` is the last fix received, so the header age updates without a post. An update posts when the title, the text or the fix minute changes. A state change always posts
+- Both notifications are `VISIBILITY_PUBLIC`, since the text holds nothing private
+- Small icon `drawable/ic_notification`: the launcher's monochrome pin and inner arc at 24 dp, without the outer arc and with the stroke doubled. `setColor(ICON_COLOR)`, the launcher background, colors the circle Android 12 and later draw behind it. `BatteryRecoveryWorker` uses the same icon and color. The stopped notification keeps `ic_lock_power_off` so the status bar icon changes when tracking ends, and backup and auto-export keep `ic_menu_save`
 - Deduplication to avoid unnecessary notification redraws
 - Stopped notification, posted on a deliberate stop and by the tracking watchdog when Android refuses a background restart, in which case tapping it opens the app so the reconciler can resume. Two channels back it. `location_service_channel` at `IMPORTANCE_LOW` carries the ongoing status and any stop the user asked for; `tracking_stopped_channel` at `IMPORTANCE_DEFAULT` carries the ones they did not, so a killed service is audible instead of sitting silently under the ongoing notification. `buildStoppedNotification` defaults to the silent channel and callers opt in
 

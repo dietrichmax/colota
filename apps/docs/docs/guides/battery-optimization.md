@@ -9,10 +9,10 @@ Settings and tips to reduce battery usage without losing GPS fixes.
 ## Built-in Optimizations
 
 - **Stationary detection**: When the device is still, [tracking profiles](/docs/guides/tracking-profiles) drop to a low-frequency heartbeat and [geofence motionless detection](/docs/guides/geofencing) stops GPS entirely; both resume on motion via the hardware sensor
-- **Notification throttling**: Max 1 update per 10 seconds, plus 2-meter movement filter
+- **Notification updates**: redrawn when the status text changes, otherwise at most once a minute while fixes arrive
 - **Batch processing**: 50 items per batch, 10 concurrent network requests
 - **Smart sync**: Only syncs when queue has items and network is available
-- **Battery critical shutdown & auto-resume**: Stops tracking below 5% when unplugged (the dashboard shows "Tracking Stopped" and a notification appears), then automatically resumes once you connect a charger - or on the next reboot if already plugged in. A stop you triggered yourself is never auto-resumed
+- **Battery critical shutdown & auto-resume**: Stops tracking below 5% when unplugged (the dashboard shows "Tracking stopped" and a notification reads "Battery fell below 5% · resumes when charging"), then automatically resumes once you connect a charger - or on the next reboot if already plugged in. A stop you triggered yourself is never auto-resumed
 
 ## Tips
 

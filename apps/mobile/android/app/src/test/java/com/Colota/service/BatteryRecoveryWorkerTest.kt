@@ -11,6 +11,7 @@ import android.os.BatteryManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
+import com.Colota.R
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.SettingsKeys
@@ -56,6 +57,14 @@ class BatteryRecoveryWorkerTest {
     fun tearDown() {
         unmockkObject(AppLogger)
         unmockkObject(LocationServiceModule)
+    }
+
+    @Test
+    fun `the recovery notification uses the tracking icon and color`() {
+        val n = runBlocking { TestListenableWorkerBuilder<BatteryRecoveryWorker>(app).build().getForegroundInfo().notification }
+
+        assertEquals(R.drawable.ic_notification, n.smallIcon.resId)
+        assertEquals(NotificationHelper.ICON_COLOR, n.color)
     }
 
     @Test

@@ -66,6 +66,8 @@ class LocationForegroundService : Service() {
     @Volatile private var trackingHeartbeatJob: Job? = null
     @Volatile private var lastFixAtMs: Long = 0L
     @Volatile private var lastFixAtUptimeMs: Long = 0L
+    @Volatile private var lastFixEpochMs: Long = 0L
+    private val startedAtMs: Long = System.currentTimeMillis()
     @Volatile private var motionDetector: MotionStateDetector? = null
     @Volatile private var lastKnownLocation: Location? = null
 
@@ -335,18 +337,12 @@ class LocationForegroundService : Service() {
         }
 
         // Must call startForeground within 5s
-        val initialStatus = notificationHelper.getInitialStatus(
-            insidePauseZone, currentZoneName, lastKnownLocation
-        )
-        val initialTitle = notificationHelper.buildTitle(
-            if (::profileManager.isInitialized) profileManager.getActiveProfileName() else null
-        )
         notificationManager.cancel(NotificationHelper.STOPPED_NOTIFICATION_ID)
         try {
             ServiceCompat.startForeground(
                 this,
                 NotificationHelper.NOTIFICATION_ID,
-                notificationHelper.buildTrackingNotification(initialTitle, initialStatus),
+                notificationHelper.buildForegroundNotification(statusInput()),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             )
         } catch (e: Exception) {
@@ -396,12 +392,7 @@ class LocationForegroundService : Service() {
 
     private fun handleRefreshNotification() {
         syncManager.invalidateQueueCache()
-        val loc = lastKnownLocation
-        updateNotification(
-            lat = loc?.latitude,
-            lon = loc?.longitude,
-            forceUpdate = true
-        )
+        updateNotification(forceUpdate = true)
     }
 
     private fun handleRecheckProfiles() {
@@ -521,7 +512,7 @@ class LocationForegroundService : Service() {
         if (deviceInfoHelper.isBatteryCritical()) {
             val (level, _) = deviceInfoHelper.getCachedBatteryStatus()
             AppLogger.d(TAG, "Battery critical ($level%) and unplugged - stopping service")
-            stopForegroundServiceWithReason("Battery below 5% - tracking paused", stoppedByBattery = true)
+            stopForegroundServiceWithReason(NotificationHelper.STOP_REASON_BATTERY, stoppedByBattery = true)
             return
         }
 
@@ -559,7 +550,7 @@ class LocationForegroundService : Service() {
                             geofenceHelper.getPauseZone(location)?.let { zone ->
                                 enterPauseZone(zone)
                             } ?: run {
-                                updateNotification(location.latitude, location.longitude, forceUpdate = true)
+                                updateNotification(forceUpdate = true)
                             }
                         }
                     },
@@ -822,11 +813,7 @@ class LocationForegroundService : Service() {
         // Already inside this zone - refresh settings in case they changed via editor
         if (zone != null && insidePauseZone && zone.name == currentZoneName) {
             applyZoneSettingsIfChanged(zone)
-            updateNotification(
-                lat = location.latitude,
-                lon = location.longitude,
-                forceUpdate = true
-            )
+            updateNotification(forceUpdate = true)
             val reason = when {
                 isWifiPaused -> "wifi"
                 isMotionlessPaused -> "motionless"
@@ -839,11 +826,7 @@ class LocationForegroundService : Service() {
         applyZoneTransition(zone)
 
         if (zone == null && !insidePauseZone && pendingPauseZone == null) {
-            updateNotification(
-                location.latitude,
-                location.longitude,
-                forceUpdate = true
-            )
+            updateNotification(forceUpdate = true)
         }
     }
 
@@ -922,6 +905,9 @@ class LocationForegroundService : Service() {
     }
 
     private fun handleLocationUpdate(location: Location) {
+        // Stamped before the filters: the header time is the last fix received, saved or not.
+        lastFixEpochMs = location.time
+        updateNotification()
         if (config.filterInaccurateLocations && location.accuracy > config.accuracyThreshold) {
             AppLogger.d(TAG, "Location filtered: accuracy ${location.accuracy}m > threshold ${config.accuracyThreshold}m")
             return
@@ -1008,9 +994,7 @@ class LocationForegroundService : Service() {
 
             syncManager.queueAndSend(locationId, payload)
 
-            withContext(Dispatchers.Main) {
-                updateNotification(location.latitude, location.longitude)
-            }
+            withContext(Dispatchers.Main) { updateNotification() }
         }
     }
 
@@ -1423,47 +1407,35 @@ class LocationForegroundService : Service() {
         }
     }
 
-    /**
-     * Forces a notification refresh using the current pause/zone state and last known location.
-     * Call after any pause-state change (enter/exit zone, wifi/motionless activate/clear, profile swap).
-     *
-     * Contract: this reads [insidePauseZone], [currentZoneName], and [lastKnownLocation] directly.
-     * Callers MUST mutate those fields (and persist pause-state settings when relevant)
-     * BEFORE invoking this — order is state → DB → refresh. Refreshing before the state
-     * is written will render a stale notification.
-     */
+    /** Call once the pause-state fields and settings are written, or it posts the old state. */
     private fun refreshNotificationForCurrentState() {
-        val loc = lastKnownLocation
-        updateNotification(lat = loc?.latitude, lon = loc?.longitude, forceUpdate = true)
+        updateNotification(forceUpdate = true)
     }
 
-    private fun updateNotification(
-        lat: Double? = null,
-        lon: Double? = null,
-        forceUpdate: Boolean = false
-    ) {
+    private fun updateNotification(forceUpdate: Boolean = false) {
+        notificationHelper.update(statusInput(), forceUpdate)
+    }
+
+    private fun statusInput(): NotificationHelper.StatusInput {
         val offline = ::config.isInitialized && config.isOfflineMode
-        notificationHelper.update(
-            lat = lat,
-            lon = lon,
+        return NotificationHelper.StatusInput(
+            locationEnabled = deviceInfoHelper.isLocationEnabled(),
             isPaused = insidePauseZone,
-            zoneName = currentZoneName,
-            queuedCount = if (offline) 0 else syncManager.getCachedQueuedCount(),
-            lastSyncTime = if (offline) 0L else syncManager.lastSuccessfulSyncTime,
-            activeProfileName = profileManager.getActiveProfileName(),
-            forceUpdate = forceUpdate,
-            isOfflineMode = offline,
-            isStationary = profileManager.isStationary,
             isWifiPaused = isWifiPaused,
             isMotionlessPaused = isMotionlessPaused,
-            locationEnabled = deviceInfoHelper.isLocationEnabled()
+            isStationary = ::profileManager.isInitialized && profileManager.isStationary,
+            hasFix = lastKnownLocation != null,
+            lastFixMs = lastFixEpochMs.takeIf { it > 0L } ?: startedAtMs,
+            isOfflineMode = offline,
+            queuedCount = if (offline) 0 else syncManager.getCachedQueuedCount(),
+            lastSyncTime = if (offline) 0L else syncManager.lastSuccessfulSyncTime
         )
     }
 
     /** Fired by [batteryMonitor] on a critical-battery broadcast. */
     private fun onBatteryCritical() {
         AppLogger.i(TAG, "Battery critical and unplugged - stopping (battery monitor)")
-        stopForegroundServiceWithReason("Battery below 5% - tracking paused", stoppedByBattery = true)
+        stopForegroundServiceWithReason(NotificationHelper.STOP_REASON_BATTERY, stoppedByBattery = true)
     }
 
     private fun stopForegroundServiceWithReason(

@@ -104,9 +104,6 @@ Note that Stationary has the highest priority so it takes over from Walking when
 
 ## Active Profile Indicators
 
-When a profile is active, Colota shows it in two places:
+When a profile is active, the Dashboard shows it: an info card on the map names the active profile. When inside a pause zone, the pause card shows which profile will resume on exit (e.g., "Profile 'Charging' resumes on exit").
 
-- **Notification** - The foreground notification title changes from "Colota Tracking" to "Colota · ProfileName" (e.g., "Colota · Charging")
-- **Dashboard** - An info card appears on the map showing the active profile name. When inside a pause zone, the pause card shows which profile will resume on exit (e.g., "Profile 'Charging' resumes on exit").
-
-Both indicators disappear automatically when the profile deactivates (after the deactivation delay) or when tracking stops.
+The indicator disappears automatically when the profile deactivates (after the deactivation delay) or when tracking stops.

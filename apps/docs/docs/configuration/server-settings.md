@@ -73,7 +73,7 @@ The UI simplifies to remove sync-related elements that don't apply:
 - Sync Interval, Sync Condition (Any / Wi-Fi / SSID / VPN)
 - Queue statistics (Queued / Sent counts)
 - Queue actions (Sync Now, Clear Sent History, Clear Queue)
-- Queue info in the tracking notification
+- Queue info in the tracking notification, which reads "Offline mode" instead
 
 **Still available in offline mode:**
 

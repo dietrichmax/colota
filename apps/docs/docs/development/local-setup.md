@@ -172,7 +172,7 @@ Test files are located in `apps/mobile/android/app/src/test/java/com/Colota/`. T
 - **DatabaseHelper** - Data model, cutoff calculations, batch operations
 - **SecureStorageHelper** - Basic Auth, Bearer token, custom headers, JSON parsing
 - **DeviceInfoHelper** - Battery threshold logic, status code mapping, percentage calculation
-- **NotificationHelper** - Status text generation, throttling, movement filter, deduplication
+- **NotificationHelper** - Status text generation, header time, deduplication
 - **LocationForegroundService** - Battery shutdown, accuracy filtering, zone state machine
 - **ServiceConfig** - Database/Intent/ReadableMap parsing, defaults, round-trips
 - **PayloadBuilder** - Payload construction (field-mapped, Overland, Traccar) and field map parsing

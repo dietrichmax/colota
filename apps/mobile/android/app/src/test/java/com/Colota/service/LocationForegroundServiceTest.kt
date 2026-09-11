@@ -1285,6 +1285,37 @@ class LocationForegroundServiceTest {
         assertFalse("a sub-min-distance departure must still exit while paused", getField("insidePauseZone"))
     }
 
+    @Test
+    fun `a fix the distance filter drops still refreshes the notification with its time`() = testScope.runTest {
+        setField("config", ServiceConfig(
+            endpoint = "https://example.com",
+            interval = 5000L,
+            minUpdateDistance = 50f,
+            accuracyThreshold = 50f,
+            filterInaccurateLocations = true,
+            syncIntervalSeconds = 0
+        ))
+        setField("lastKnownLocation", mockLocation(lat = 52.0, lon = 13.0, time = 1_000_000L, distanceTo = 5f))
+
+        invokeHandleLocationUpdate(mockLocation(lat = 52.00004, lon = 13.0, time = 1_020_000L))
+
+        verify { notificationHelper.update(match { it.hasFix && it.lastFixMs == 1_020_000L }, false) }
+        verify(exactly = 0) { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `the first accepted fix flips Searching for GPS to Tracking after the save`() = testScope.runTest {
+        setField("lastKnownLocation", null)
+        every { dbHelper.saveLocation(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+
+        invokeHandleLocationUpdate(mockLocation())
+
+        verifyOrder {
+            notificationHelper.update(match { !it.hasFix }, false)
+            notificationHelper.update(match { it.hasFix }, false)
+        }
+    }
+
     // =========================================================================
     // enterPauseZone / exitPauseZone state transitions
     // =========================================================================
@@ -1330,16 +1361,7 @@ class LocationForegroundServiceTest {
 
         invokeEnterPauseZone(officeGeofence)
 
-        verify { notificationHelper.update(
-            lat = 52.0,
-            lon = 13.0,
-            isPaused = true,
-            zoneName = "Office",
-            queuedCount = any(),
-            lastSyncTime = any(),
-            activeProfileName = any(),
-            forceUpdate = true
-        ) }
+        verify { notificationHelper.update(match { it.isPaused && it.hasFix }, forceUpdate = true) }
     }
 
     @Test
@@ -1348,16 +1370,7 @@ class LocationForegroundServiceTest {
 
         invokeEnterPauseZone(homeGeofence)
 
-        verify { notificationHelper.update(
-            lat = null,
-            lon = null,
-            isPaused = true,
-            zoneName = "Home",
-            queuedCount = any(),
-            lastSyncTime = any(),
-            activeProfileName = any(),
-            forceUpdate = true
-        ) }
+        verify { notificationHelper.update(match { it.isPaused && !it.hasFix }, forceUpdate = true) }
     }
 
     @Test
@@ -1444,16 +1457,7 @@ class LocationForegroundServiceTest {
 
         invokeExitPauseZone()
 
-        verify { notificationHelper.update(
-            lat = 52.0,
-            lon = 13.0,
-            isPaused = false,
-            zoneName = null,
-            queuedCount = any(),
-            lastSyncTime = any(),
-            activeProfileName = any(),
-            forceUpdate = true
-        ) }
+        verify { notificationHelper.update(match { !it.isPaused }, forceUpdate = true) }
     }
 
     @Test
@@ -1561,16 +1565,7 @@ class LocationForegroundServiceTest {
 
         invokeRecheckZoneWithLocation(location)
 
-        verify { notificationHelper.update(
-            lat = 52.0,
-            lon = 13.0,
-            isPaused = true,
-            zoneName = "Home",
-            queuedCount = any(),
-            lastSyncTime = any(),
-            activeProfileName = any(),
-            forceUpdate = true
-        ) }
+        verify { notificationHelper.update(match { it.isPaused }, forceUpdate = true) }
         verify { LocationServiceModule.sendPauseZoneEvent(true, "Home", null) }
     }
 
@@ -1630,16 +1625,7 @@ class LocationForegroundServiceTest {
 
         invokeRecheckZoneWithLocation(location)
 
-        verify { notificationHelper.update(
-            lat = 52.0,
-            lon = 13.0,
-            isPaused = false,
-            zoneName = null,
-            queuedCount = any(),
-            lastSyncTime = any(),
-            activeProfileName = any(),
-            forceUpdate = true
-        ) }
+        verify { notificationHelper.update(match { !it.isPaused }, forceUpdate = true) }
     }
 
     // =========================================================================
@@ -1709,16 +1695,7 @@ class LocationForegroundServiceTest {
 
         invokeCancelEntryDelay()
 
-        verify { notificationHelper.update(
-            lat = 52.0,
-            lon = 13.0,
-            isPaused = false,
-            zoneName = null,
-            queuedCount = any(),
-            lastSyncTime = any(),
-            activeProfileName = any(),
-            forceUpdate = true
-        ) }
+        verify { notificationHelper.update(match { !it.isPaused }, forceUpdate = true) }
     }
 
     @Test
@@ -1869,7 +1846,7 @@ class LocationForegroundServiceTest {
     fun `applyProfileConfig forces notification update`() {
         invokeApplyProfileConfig(interval = 2000L, distance = 5f, syncInterval = 30)
 
-        verify { notificationHelper.update(any(), any(), any(), any(), any(), any(), any(), forceUpdate = true) }
+        verify { notificationHelper.update(any(), forceUpdate = true) }
     }
 
     @Test
@@ -2249,7 +2226,7 @@ class LocationForegroundServiceTest {
     fun `stopForBattery sends tracking stopped event`() {
         invokeOnBatteryCritical()
 
-        verify { LocationServiceModule.sendTrackingStoppedEvent("Battery below 5% - tracking paused") }
+        verify { LocationServiceModule.sendTrackingStoppedEvent("Battery fell below 5% \u00b7 resumes when charging") }
     }
 
     @Test
@@ -3449,9 +3426,7 @@ class LocationForegroundServiceTest {
     private fun makeCold() {
         setField("config", null)
         every { dbHelper.getAllSettings() } returns mapOf(SettingsKeys.TRACKING_ENABLED to "true")
-        every { notificationHelper.getInitialStatus(any(), any(), any()) } returns "status"
-        every { notificationHelper.buildTitle(any()) } returns "Colota Tracking"
-        every { notificationHelper.buildTrackingNotification(any(), any()) } returns mockk(relaxed = true)
+        every { notificationHelper.buildForegroundNotification(any()) } returns mockk(relaxed = true)
         every { service.startForeground(any<Int>(), any(), any<Int>()) } returns Unit
     }
 
@@ -3463,6 +3438,17 @@ class LocationForegroundServiceTest {
         every { this@mockk.action } returns action
         every { getStringExtra(any()) } returns null
         every { extras } returns null
+    }
+
+    @Test
+    fun `onStartCommand builds the foreground notification from the service status`() = runServiceTest {
+        makeCold()
+        every { syncManager.getCachedQueuedCount() } returns 7
+
+        service.onStartCommand(intentFor(null), 0, 1)
+        advanceUntilIdle()
+
+        verify { notificationHelper.buildForegroundNotification(match { it.queuedCount == 7 }) }
     }
 
     /** Without this, the tracking notification sits over a service that records nothing. */

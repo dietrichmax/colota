@@ -49,6 +49,10 @@ Colota can produce a single password-encrypted archive of your full dataset (loc
 
 The format is fully documented in [`BackupFormat.kt`](https://github.com/dietrichmax/colota/blob/main/apps/mobile/android/app/src/main/java/com/colota/backup/BackupFormat.kt).
 
+## The Tracking Notification
+
+The persistent notification shows whether tracking is recording, paused or searching, how many locations wait to be sent and when the last sync succeeded. It never shows your coordinates, a zone name or a profile name, so apps with notification access, screenshots and screen shares reveal no location. For the same reason it is shown in full on the lock screen. Android's lock-screen settings can still hide it.
+
 ## What Colota Does Not Do
 
 - No analytics, telemetry or crash reporting

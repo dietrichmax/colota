@@ -5,6 +5,7 @@
 
 package com.Colota.triggers
 
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -57,7 +58,7 @@ class LocationBootReceiverTest {
         mockkConstructor(DeviceInfoHelper::class)
         mockkConstructor(NotificationHelper::class)
         every { anyConstructed<NotificationHelper>().createChannel() } just Runs
-        every { anyConstructed<NotificationHelper>().buildStoppedNotification(any()) } returns mockk(relaxed = true)
+        every { anyConstructed<NotificationHelper>().buildStoppedNotification(any(), any()) } returns mockk(relaxed = true)
     }
 
     @After
@@ -249,10 +250,13 @@ class LocationBootReceiverTest {
         mockDbReadyAndDisabled()
         every { mockDbHelper.getSetting("stopped_by_battery", "false") } returns "true"
         every { anyConstructed<DeviceInfoHelper>().isPluggedIn() } returns false
+        // Without a NotificationManager mock the cast throws and the catch skips the branch under test.
+        every { mockContext.getSystemService(Context.NOTIFICATION_SERVICE) } returns mockk<NotificationManager>(relaxed = true)
 
         callHandleBootCompleted(mockContext, Intent.ACTION_BOOT_COMPLETED)
 
         verify { BatteryRecoveryScheduler.schedule(any()) }
+        verify { anyConstructed<NotificationHelper>().buildStoppedNotification(NotificationHelper.STOP_REASON_BATTERY, true) }
         verify(exactly = 0) { mockContext.startForegroundService(any()) }
     }
 
