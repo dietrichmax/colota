@@ -296,9 +296,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               value={profile.name}
               onChangeText={(val) => setProfile((prev) => ({ ...prev, name: val }))}
             />
-            <FieldMessage>
-              Shown on the Dashboard and in the notification while active. Blank uses the condition&apos;s name.
-            </FieldMessage>
+            <FieldMessage>Shown on the Dashboard while active. Blank uses the condition&apos;s name.</FieldMessage>
           </View>
           <Divider tight />
           <SettingRow

@@ -11,6 +11,7 @@ sidebar_position: 4
 - Grant notification permission if you want to see tracking status
 - If the notification disappeared while the app still shows tracking on, Android killed the service. Opening the app restarts it. With battery set to **Unrestricted** it also restarts on its own, usually within 15 to 30 minutes
 - When Colota cannot restart itself it posts a **Tracking stopped** notification instead, and tapping that resumes tracking. It has its own notification channel, so if you never see it, check that **Tracking stopped** is enabled in Android's notification settings for Colota
+- The time in the notification header is the last position fix Colota received. It keeps counting while a pause keeps GPS off. While you move, it only grows if location updates have stopped
 
 ## Tracking doesn't start after reboot
 
