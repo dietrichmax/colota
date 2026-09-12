@@ -128,6 +128,24 @@ jest.mock("../../components", () => {
   const RN = require("react-native")
   const { EXPORT_FORMATS, EXPORT_FORMAT_KEYS } = require("../../utils/exportConverters")
   return {
+    TextField: require("../../testing/componentStubs").TextFieldStub,
+    RadioRow: function (props: any) {
+      return R.createElement(
+        RN.Pressable,
+        { testID: props.testID, onPress: props.onPress, accessibilityState: { checked: props.selected } },
+        R.createElement(RN.Text, null, props.label),
+        props.sub ? R.createElement(RN.Text, null, props.sub) : null
+      )
+    },
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     Container: (props: any) => R.createElement(RN.View, null, props.children),
     Card: (props: any) => R.createElement(RN.View, null, props.children),
     SectionTitle: (props: any) => R.createElement(RN.Text, null, props.children),
@@ -145,19 +163,27 @@ jest.mock("../../components", () => {
           )
         )
       ),
-    FormatSelector: (props: any) =>
+    ListItem: ({ label, sub, testID, onPress }: any) =>
       R.createElement(
-        RN.View,
-        null,
-        EXPORT_FORMAT_KEYS.map((key: any) =>
-          R.createElement(
-            RN.Pressable,
-            { key, onPress: () => props.onSelectFormat(key), testID: `format-${key}` },
-            R.createElement(RN.Text, null, EXPORT_FORMATS[key].label),
-            R.createElement(RN.Text, null, EXPORT_FORMATS[key].extension)
-          )
-        )
+        RN.Pressable,
+        { testID, onPress },
+        R.createElement(RN.Text, null, label),
+        R.createElement(RN.Text, null, sub)
       ),
+    ExportFormatDialog: (props: any) =>
+      props.visible
+        ? R.createElement(
+            RN.View,
+            null,
+            EXPORT_FORMAT_KEYS.map((key: any) =>
+              R.createElement(
+                RN.Pressable,
+                { key, onPress: () => props.onSelect(key), testID: `format-${key}` },
+                R.createElement(RN.Text, null, EXPORT_FORMATS[key].label)
+              )
+            )
+          )
+        : null,
     FloatingSaveIndicator: () => null,
     SettingRow: (props: any) =>
       R.createElement(
@@ -206,9 +232,9 @@ jest.mock("lucide-react-native", () => {
   const stub = (name: any) => () => R.createElement(RN.Text, null, name)
   return {
     FolderOpen: stub("FolderOpen"),
-    CheckCircle: stub("CheckCircle"),
+    CircleCheckBig: stub("CircleCheckBig"),
     Share2: stub("Share2"),
-    AlertTriangle: stub("AlertTriangle")
+    TriangleAlert: stub("TriangleAlert")
   }
 })
 
@@ -251,15 +277,17 @@ describe("AutoExportScreen", () => {
     })
   })
 
-  it("renders all format options", async () => {
-    const { getByText } = render(<AutoExportScreen {...mockProps} />)
+  it("names the stored format on the row, and offers the rest in the shared dialog", async () => {
+    const { getByText, getByTestId } = render(<AutoExportScreen {...mockProps} />)
 
-    await waitFor(() => {
-      expect(getByText("CSV")).toBeTruthy()
-      expect(getByText("GeoJSON")).toBeTruthy()
-      expect(getByText("GPX")).toBeTruthy()
-      expect(getByText("KML")).toBeTruthy()
-    })
+    await waitFor(() => expect(getByTestId("auto-export-format")).toBeTruthy())
+    expect(getByText("GeoJSON")).toBeTruthy()
+
+    fireEvent.press(getByTestId("auto-export-format"))
+
+    expect(getByTestId("format-csv")).toBeTruthy()
+    expect(getByTestId("format-gpx")).toBeTruthy()
+    expect(getByTestId("format-kml")).toBeTruthy()
   })
 
   it("renders all interval options including monthly", async () => {
@@ -378,10 +406,10 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Select Directory")).toBeTruthy()
+      expect(getByText("Select directory")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Select Directory"))
+    fireEvent.press(getByText("Select directory"))
 
     await waitFor(() => {
       expect(mockPickExportDirectory).toHaveBeenCalled()
@@ -389,13 +417,12 @@ describe("AutoExportScreen", () => {
   })
 
   it("changing format saves the setting", async () => {
-    const { getByText } = render(<AutoExportScreen {...mockProps} />)
+    const { getByTestId } = render(<AutoExportScreen {...mockProps} />)
 
-    await waitFor(() => {
-      expect(getByText("CSV")).toBeTruthy()
-    })
+    await waitFor(() => expect(getByTestId("auto-export-format")).toBeTruthy())
+    fireEvent.press(getByTestId("auto-export-format"))
 
-    fireEvent.press(getByText("CSV"))
+    fireEvent.press(getByTestId("format-csv"))
 
     await waitFor(() => {
       expect(mockSaveSetting).toHaveBeenCalledWith("autoExportFormat", "csv")
@@ -442,8 +469,8 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Next Export")).toBeTruthy()
-      expect(getByText("Export Files")).toBeTruthy()
+      expect(getByText("Next export")).toBeTruthy()
+      expect(getByText("Export files")).toBeTruthy()
       expect(getByText("3")).toBeTruthy()
     })
   })
@@ -463,8 +490,8 @@ describe("AutoExportScreen", () => {
     const { queryByText, getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(queryByText("Next Export")).toBeNull()
-      expect(getByText("Export Files")).toBeTruthy()
+      expect(queryByText("Next export")).toBeNull()
+      expect(getByText("Export files")).toBeTruthy()
     })
   })
 
@@ -622,7 +649,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Export Now")).toBeTruthy()
+      expect(getByText("Export now")).toBeTruthy()
     })
   })
 
@@ -630,7 +657,7 @@ describe("AutoExportScreen", () => {
     const { queryByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(queryByText("Export Now")).toBeNull()
+      expect(queryByText("Export now")).toBeNull()
     })
   })
 
@@ -649,18 +676,95 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Export Now")).toBeTruthy()
+      expect(getByText("Export now")).toBeTruthy()
     })
 
-    fireEvent.press(getByText("Export Now"))
+    fireEvent.press(getByText("Export now"))
 
     await waitFor(() => {
       expect(mockRunAutoExportNow).toHaveBeenCalled()
-      expect(mockShowAlert).toHaveBeenCalledWith(
-        "Export Started",
-        "Export is running in the background. The status will update when complete.",
-        "info"
-      )
+    })
+  })
+
+  it("shows the export as running when the screen opens mid-run", async () => {
+    // The line is component state, so returning to the screen while the worker is still going
+    // would have shown nothing; the status map carries the worker's own flag for that.
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      running: true,
+      uri: "content://some-uri",
+      mode: "all",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0
+    })
+
+    const { getByTestId } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByTestId("export-running")).toBeTruthy()
+    })
+  })
+
+  it("says so when a manual export found nothing new", async () => {
+    // The worker reports a zero-row run with no filename, which read as "Exported 0 locations to
+    // null" before.
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      uri: "content://some-uri",
+      mode: "incremental",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0
+    })
+
+    render(<AutoExportScreen {...mockProps} />)
+    await waitFor(() => expect(mockGetAutoExportStatus).toHaveBeenCalled())
+
+    act(() => {
+      DeviceEventEmitter.emit("onAutoExportComplete", { success: true, fileName: null, rowCount: 0, error: null })
+    })
+
+    await waitFor(() => {
+      expect(mockShowAlert).toHaveBeenCalledWith("Export Complete", "No new locations to export.", "success")
+    })
+  })
+
+  it("keeps saying the export is running until the worker reports back", async () => {
+    // runAutoExportNow only enqueues, so the button's own spinner lasts about a frame while a
+    // real export runs for minutes. Nothing on the screen said the work was still going.
+    mockGetAutoExportStatus.mockResolvedValue({
+      enabled: true,
+      uri: "content://some-uri",
+      mode: "all",
+      lastExportTimestamp: 0,
+      nextExportTimestamp: 0,
+      fileCount: 0
+    })
+
+    const { getByText, getByTestId, queryByTestId } = render(<AutoExportScreen {...mockProps} />)
+
+    await waitFor(() => {
+      expect(getByText("Export now")).toBeTruthy()
+    })
+    expect(queryByTestId("export-running")).toBeNull()
+
+    fireEvent.press(getByText("Export now"))
+    await waitFor(() => {
+      expect(getByTestId("export-running")).toBeTruthy()
+    })
+
+    act(() => {
+      DeviceEventEmitter.emit("onAutoExportComplete", {
+        success: true,
+        fileName: "colota-2026-09-06.geojson",
+        rowCount: 12,
+        error: null
+      })
+    })
+
+    await waitFor(() => {
+      expect(queryByTestId("export-running")).toBeNull()
     })
   })
 
@@ -702,9 +806,9 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Last File")).toBeTruthy()
+      expect(getByText("Last file")).toBeTruthy()
       expect(getByText("colota_export_2026-03-10_1200.geojson")).toBeTruthy()
-      expect(getByText("Locations Exported")).toBeTruthy()
+      expect(getByText("Locations exported")).toBeTruthy()
       expect(getByText("42")).toBeTruthy()
     })
   })
@@ -741,7 +845,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText("Export History")).toBeTruthy()
+      expect(getByText("Export history")).toBeTruthy()
       expect(getByText("colota_export_2026-03-10.geojson")).toBeTruthy()
       expect(getByText("colota_export_2026-03-09.geojson")).toBeTruthy()
     })
@@ -753,7 +857,7 @@ describe("AutoExportScreen", () => {
     const { queryByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(queryByText("Export History")).toBeNull()
+      expect(queryByText("Export history")).toBeNull()
     })
   })
 

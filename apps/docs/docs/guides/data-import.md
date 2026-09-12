@@ -39,15 +39,11 @@ The exported file is saved to your phone's `Downloads` folder.
 
 ## How to Import
 
-1. Go to **Settings → Import Locations**
+1. Go to **Settings → Export & import**
 2. Tap **Choose File** and pick the file you want to import
 3. Wait for the parse to finish (large Google Timeline files can take 10+ seconds)
 4. Review the preview: format, points found, duplicates that will be skipped, invalid rows, date range
 5. Choose **Import** (or **Import + Queue for Sync** - see below)
-
-import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
-
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ImportLocations.png", label: "Import Locations" }, ]} />
 
 ### How duplicates are handled
 
@@ -76,7 +72,7 @@ If you've configured an optional sync backend in **Settings → Connection**, th
 
 - Rows are written into Colota with `sent=1` - flagged as already replicated.
 - **The sync engine will not push them to your backend.**
-- Use this when the backend already holds these points - for example, you're re-importing your own Colota export, or repopulating local history after a "Clear Sent History".
+- Use this when the backend already holds these points - for example, you're re-importing your own Colota export, or repopulating local history after a "Delete synced locations".
 
 ### Import + Queue for Sync
 
@@ -96,7 +92,7 @@ Once queued, the rows are uploaded as soon as the next sync runs. Removing them 
 
 - Imported rows show up immediately on the **Dashboard** and **Location History** screens.
 - Trip detection re-runs on demand the next time you open a screen that uses it (the trip computation is derived from the locations table on the fly).
-- If you imported with **Import + Queue for Sync**, the queue counter in **Data Management** reflects the new pending rows; the next sync cycle replicates them to your configured backend.
+- If you imported with **Import + Queue for Sync**, the queue counter in **Data management** reflects the new pending rows; the next sync cycle replicates them to your configured backend.
 
 ## Edge Cases
 
