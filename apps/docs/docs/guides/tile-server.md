@@ -32,7 +32,7 @@ If you find Colota useful and want to help keep the default server running, cont
 
 :::note[Offline maps]
 
-Offline map packs are downloaded from whichever tile server is configured at the time. Switching to a custom server won't affect packs you've already downloaded, but new downloads will come from the new server.
+Offline map packs are downloaded from the **light** style URL, whichever tile server that points at. Filling only the dark field leaves downloads coming from the default server. Switching servers won't affect packs you've already downloaded, but new downloads will come from the new one. A pack downloaded under a different light style URL is marked **Map style changed** in Offline maps; **Download again** fetches it from the current one.
 
 :::
 
@@ -40,6 +40,8 @@ Offline map packs are downloaded from whichever tile server is configured at the
 2. Open **Appearance** and tap **Map Tile Server**
 3. Enter your style JSON URLs for light and dark mode
 4. Leave a field empty to fall back to the default
+
+A URL is checked when you leave the field. If it doesn't start with `http://` or `https://` and name a host, it is refused and the previous value stays in place, so a typo can't leave you with a blank map.
 
 Any [MapLibre GL style](https://maplibre.org/maplibre-style-spec/) endpoint works. If you only have one style, use the same URL in both fields.
 

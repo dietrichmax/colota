@@ -2,23 +2,23 @@
 sidebar_position: 5
 ---
 
-# Offline Maps
+# Offline maps
 
 Download map areas to your device so the map works without an internet connection. Useful when tracking in areas with poor cell coverage - remote trails, backcountry routes, etc.
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/OfflineMaps.png", label: "Offline Maps" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/OfflineMaps.png", label: "Offline maps" }, ]} />
 
 ## Downloading an Area
 
-1. Go to **Settings > Offline Maps**
+1. Go to **Settings > Offline maps**
 2. Pan and zoom the map to frame the area you want to download
-3. Tap the location button to center on your current position if needed
+3. Tap the location button to return the map to your last recorded position if needed
 4. Enter a **name** for the area
-5. Check the estimated size and tap **Download Area**
+5. Check the estimated size and tap **Download area**
 
-The download runs in the background. A progress bar shows completion percentage. You can navigate away and return - the download continues.
+The download runs in the background. A progress bar shows the percentage and the bytes so far. You can leave the screen and come back: the download keeps running and the screen picks it up again.
 
 ## Zoom Levels
 
@@ -26,29 +26,25 @@ Offline packs cover zoom levels 8-14. This matches the maximum resolution served
 
 ## Tile Limit
 
-Colota caps offline packs at **100,000 tiles**. If your area would exceed this, a warning is shown before you download - the pack will still download but coverage will be incomplete at high zoom levels.
-
-To avoid hitting the cap:
-
-- Zoom out or pan to frame a smaller area
-- Download multiple smaller areas instead of one large one
+The size estimate stops counting at **100,000 tiles**. Above that the screen says "At least" instead of a figure, and the whole framed area still downloads, so the real size can be well past the estimate. Frame a smaller area, or download several smaller ones instead of one large one.
 
 ## Storage
 
-Downloaded areas are stored on the device by MapLibre's offline tile cache. They persist across app restarts. The **Offline Maps** screen shows the current size of each saved area.
+Downloaded areas are stored on the device by MapLibre's offline tile cache. They persist across app restarts. The **Offline maps** screen shows the current size of each saved area and the date each finished.
 
-To free up space, delete areas you no longer need. When the last area is deleted, the tile database is reset and the storage is reclaimed by the OS.
+To free up space, delete areas you no longer need. When the last area is deleted, the tile database is reset, including the map's online tile cache, and the storage is reclaimed by the OS.
 
 ## Managing Areas
 
-From the **Offline Maps** screen you can:
+From the **Offline maps** screen you can:
 
-- See all downloaded areas with their size and status
-- Delete an area (removes all cached tiles for that area)
-- Start a new download
+- See every downloaded area with its size and the date it finished. Tap a row, or its rectangle on the map, to show it
+- An area reads **Map style changed** when it was downloaded from a different light style URL than the one set now, and **Incomplete** when a download was interrupted. **Download again** replaces its tiles from the current style
+- Delete an area. The confirmation names how much it removes, and whether the map's online cache goes with it
+- Start a new download. If you are on mobile data the confirmation says so, and a download that would not fit in free storage is refused with both numbers
 
 ## Tips
 
 - Download areas **before** you go - not when you're already out of coverage
-- For long routes, download the corridor rather than a large bounding box to stay within the tile cap
+- For long routes, download the corridor rather than a large bounding box
 - Offline maps only affect map rendering - GPS tracking, sync, and all other features work independently of the map tile cache
