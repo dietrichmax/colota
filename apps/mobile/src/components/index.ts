@@ -51,6 +51,8 @@ export { BottomTabBar, TAB_ROUTES } from "./ui/BottomTabBar"
 export { DashboardMap } from "./features/dashboard/DashboardMap"
 export { ConnectionStatus } from "./features/dashboard/ConnectionStatus"
 export { WelcomeCard } from "./features/dashboard/WelcomeCard"
+export { DashboardBanner } from "./features/dashboard/DashboardBanner"
+export { DashboardDock } from "./features/dashboard/DashboardDock"
 
 // ============================================================================
 // Feature Components - Map
@@ -61,6 +63,11 @@ export { MapCenterButton } from "./features/map/MapCenterButton"
 // Feature Components - Inspector
 // ============================================================================
 export { TrackMap } from "./features/inspector/TrackMap"
+export { DayHeader } from "./features/inspector/DayHeader"
+export { DayPickerModal } from "./features/inspector/DayPickerModal"
+export { TripRow } from "./features/inspector/TripRow"
+export { InspectorDock } from "./features/inspector/InspectorDock"
+export { PointCard } from "./features/inspector/PointCard"
 
 // ============================================================================
 // Feature Components - Settings
@@ -68,10 +75,3 @@ export { TrackMap } from "./features/inspector/TrackMap"
 export { ConnectionSettings } from "./features/settings/ConnectionSettings"
 export { SyncStrategySettings } from "./features/settings/SyncStrategySettings"
 export { StatRow } from "./ui/StatRow"
-export { DashboardBanner } from "./features/dashboard/DashboardBanner"
-export { DashboardDock } from "./features/dashboard/DashboardDock"
-export { DayHeader } from "./features/inspector/DayHeader"
-export { DayPickerModal } from "./features/inspector/DayPickerModal"
-export { TripRow } from "./features/inspector/TripRow"
-export { InspectorDock } from "./features/inspector/InspectorDock"
-export { PointCard } from "./features/inspector/PointCard"

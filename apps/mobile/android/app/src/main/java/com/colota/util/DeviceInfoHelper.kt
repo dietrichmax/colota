@@ -43,8 +43,6 @@ class DeviceInfoHelper(private val context: Context) {
         return Arguments.createMap().apply {
             putString("model", Build.MODEL)
             putString("brand", Build.BRAND)
-            putString("manufacturer", Build.MANUFACTURER)
-            putString("deviceId", Build.DEVICE)
             putString("systemVersion", Build.VERSION.RELEASE)
             putInt("apiLevel", Build.VERSION.SDK_INT)
         }

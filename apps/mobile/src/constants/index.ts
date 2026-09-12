@@ -172,12 +172,3 @@ export const SUPPORT_URL = "https://mxd.codes/support"
 /** market:// opens the Play app straight on the listing; the https form is the fallback. */
 export const PLAY_STORE_MARKET_URL = "market://details?id=com.Colota"
 export const PLAY_STORE_WEB_URL = "https://play.google.com/store/apps/details?id=com.Colota"
-
-export const STATS_REFRESH_IDLE = 30_000
-export const STATS_REFRESH_FAST = 3_000
-export const MIN_STATS_INTERVAL_MS = 2000
-export const MS_TO_KMH = 3.6
-export const HIGH_QUEUE_THRESHOLD = 50
-export const CRITICAL_QUEUE_THRESHOLD = 100
-export const TILE_SERVER_DOCS_URL = "https://colota.app/docs/guides/tile-server"
-export const TEST_RESULT_DISPLAY_MS = 5_000

@@ -12,7 +12,6 @@ export interface ThemeColors {
   // Primary colors
   primary: string
   primaryDark: string
-  primaryLight: string
   primaryContainer: string
   onPrimaryContainer: string
   border: string
@@ -30,9 +29,6 @@ export interface ThemeColors {
   background: string
   backgroundElevated: string
   card: string
-  cardElevated: string
-  pressedOpacity: number
-  borderRadius: number
   /** One tonal step above `card` for what floats over content: docks, dialogs, banners, map discs. Never a list card. */
   surfaceRaised: string
   surface: string
@@ -60,7 +56,6 @@ export const lightColors: ThemeColors = {
   // Brand (Teal)
   primary: "#0B7D73",
   primaryDark: "#115E59",
-  primaryLight: "#99F6E4",
   primaryContainer: "#B9E4DC",
   onPrimaryContainer: "#115E59",
   well: "#E9EDF0",
@@ -75,9 +70,6 @@ export const lightColors: ThemeColors = {
   background: "#F1F4F6",
   backgroundElevated: "#FFFFFF",
   card: "#FFFFFF",
-  cardElevated: "#FFFFFF",
-  pressedOpacity: 0.7,
-  borderRadius: 8,
   surfaceRaised: "#FFFFFF",
   surface: "#FFFFFF",
 
@@ -88,7 +80,7 @@ export const lightColors: ThemeColors = {
   textDisabled: "#9AA0A6",
 
   // Border & divider
-  border: "#e5e7eb",
+  border: "#7e889c",
   borderLight: "#f3f4f6",
   divider: "#e5e7eb",
 
@@ -105,7 +97,6 @@ export const darkColors: ThemeColors = {
   // Brand (Teal)
   primary: "#2DD4BF",
   primaryDark: "#0FA698",
-  primaryLight: "#99F6E4",
   primaryContainer: "#0F3B36",
   onPrimaryContainer: "#99F6E4",
   well: "#232323",
@@ -120,9 +111,6 @@ export const darkColors: ThemeColors = {
   background: "#121212",
   backgroundElevated: "#1E1E1E",
   card: "#2D2D2D",
-  cardElevated: "#3D3D3D",
-  pressedOpacity: 0.7,
-  borderRadius: 8,
   surfaceRaised: "#353535",
   surface: "#1E1E1E",
 
@@ -133,7 +121,7 @@ export const darkColors: ThemeColors = {
   textDisabled: "#666666",
 
   // Border & divider
-  border: "#424242",
+  border: "#767676",
   borderLight: "#333333",
   divider: "#505050",
 
