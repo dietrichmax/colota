@@ -41,7 +41,6 @@ export type RootStackRoute = keyof RootStackParamList
 export type RootScreenProps<Route extends RootStackRoute> = NativeStackScreenProps<RootStackParamList, Route>
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace ReactNavigation {
     interface RootParamList extends RootStackParamList {}
   }

@@ -3,9 +3,11 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import { elevation, HIT_SLOP_SM, size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import React from "react"
-import { Pressable, StyleSheet, ViewStyle, StyleProp, PressableProps } from "react-native"
+import { Pressable, StyleSheet, View, ViewStyle, StyleProp, PressableProps } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
+import { radius } from "@colota/shared"
 
 interface Props {
   onPress: () => void
@@ -14,47 +16,64 @@ interface Props {
   hitSlop?: PressableProps["hitSlop"]
   accessibilityLabel?: string
   accessibilityRole?: PressableProps["accessibilityRole"]
+  accessibilityState?: PressableProps["accessibilityState"]
+  anchored?: boolean
+  testID?: string
 }
 
-export function MapActionButton({ onPress, style, children, hitSlop, accessibilityLabel, accessibilityRole }: Props) {
+export function MapActionButton({
+  onPress,
+  style,
+  children,
+  hitSlop = HIT_SLOP_SM,
+  accessibilityLabel,
+  accessibilityRole,
+  accessibilityState,
+  anchored = true,
+  testID
+}: Props) {
   const { colors } = useTheme()
 
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.button,
-        { backgroundColor: colors.card },
-        style,
-        pressed && { opacity: colors.pressedOpacity }
-      ]}
-      onPress={onPress}
+    // The wrapper paints, clips and carries the slop: a touch never extends past the parent's bounds.
+    <View
       hitSlop={hitSlop}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole={accessibilityRole}
+      style={[styles.disc, anchored && styles.anchored, { backgroundColor: colors.surfaceRaised }, style]}
     >
-      {children}
-    </Pressable>
+      <Pressable
+        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+        style={styles.button}
+        onPress={onPress}
+        hitSlop={hitSlop}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole={accessibilityRole}
+        accessibilityState={accessibilityState}
+        testID={testID}
+      >
+        {children}
+      </Pressable>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  button: {
-    position: "absolute",
-    bottom: 30,
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+  disc: {
+    overflow: "hidden",
+    width: size.iconColumn,
+    height: size.iconColumn,
+    borderRadius: radius.md,
+    elevation: elevation.floating,
     zIndex: 10
   },
-  right: { right: 16 },
-  left: { left: 16 }
+  button: {
+    width: size.iconColumn,
+    height: size.iconColumn,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  anchored: { position: "absolute", bottom: space.xxl },
+  right: { right: space.lg },
+  left: { left: space.lg }
 })
 
 export { styles as mapActionStyles }

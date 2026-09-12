@@ -4,9 +4,11 @@
  */
 
 import React from "react"
-import { Pressable, Text, StyleSheet } from "react-native"
-import { fonts } from "../../styles/typography"
+import { Pressable, Text, View, StyleSheet } from "react-native"
+import { fontSizes, fonts } from "../../styles/typography"
 import { ThemeColors } from "../../types/global"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { radius } from "@colota/shared"
 
 interface TabProps {
   label: string
@@ -17,15 +19,20 @@ interface TabProps {
 
 export function Tab({ label, active, onPress, colors }: TabProps) {
   const borderBottomColor = active ? colors.primary : "transparent"
-  const textColor = active ? colors.primary : colors.textSecondary
+  const textColor = active ? colors.text : colors.textSecondary
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.tab, { borderBottomColor }, pressed && { opacity: colors.pressedOpacity }]}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      style={styles.tab}
     >
-      <Text style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive, { color: textColor }]}>
-        {label}
-      </Text>
+      <View style={[styles.indicator, { borderBottomColor }]}>
+        <Text style={[styles.label, active ? styles.labelActive : styles.labelInactive, { color: textColor }]}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   )
 }
@@ -33,17 +40,24 @@ export function Tab({ label, active, onPress, colors }: TabProps) {
 const styles = StyleSheet.create({
   tab: {
     flex: 1,
+    minHeight: size.touch,
     alignItems: "center",
-    padding: 12,
-    borderBottomWidth: 2
+    justifyContent: "center",
+    padding: space.md
   },
-  tabText: {
-    fontSize: 14
+  indicator: {
+    paddingHorizontal: space.xs,
+    borderBottomWidth: 2,
+    borderTopLeftRadius: radius.xs,
+    borderTopRightRadius: radius.xs
   },
-  tabTextActive: {
+  label: {
+    fontSize: fontSizes.body
+  },
+  labelActive: {
     ...fonts.bold
   },
-  tabTextInactive: {
+  labelInactive: {
     ...fonts.regular
   }
 })

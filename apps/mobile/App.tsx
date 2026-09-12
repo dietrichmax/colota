@@ -3,7 +3,8 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 import React, { useMemo, useState, useCallback } from "react"
-import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native"
+import { NavigationContainer, NavigationContainerRef, DefaultTheme, DarkTheme } from "@react-navigation/native"
+import { LucideProvider } from "lucide-react-native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { View, StatusBar, Platform, StyleSheet } from "react-native"
@@ -41,7 +42,7 @@ import {
   TrackingSyncScreen,
   BackupRestoreScreen
 } from "./src/screens/"
-import { BottomTabBar } from "./src/components"
+import { BottomTabBar, TAB_ROUTES } from "./src/components"
 import { loadDisplayPreferences } from "./src/utils/geo"
 import { registerTileServerUserAgent } from "./src/utils/tileHeaders"
 
@@ -88,12 +89,12 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Geofence Editor",
     component: GeofenceEditorScreen,
-    title: "Geofence Editor"
+    title: "Geofence editor"
   },
   {
     name: "Location History",
     component: LocationHistoryScreen,
-    title: "Location History"
+    title: "Location history"
   },
   {
     name: "Location Summary",
@@ -103,57 +104,57 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Export Locations",
     component: ExportLocationsScreen,
-    title: "Export Locations"
+    title: "Export locations"
   },
   {
     name: "Import Locations",
     component: ImportLocationsScreen,
-    title: "Import Locations"
+    title: "Import locations"
   },
   {
     name: "Auto-Export",
     component: AutoExportScreen,
-    title: "Auto-Export"
+    title: "Auto-export"
   },
   {
     name: "Data Management",
     component: DataManagementScreen,
-    title: "Data Management"
+    title: "Data management"
   },
   {
     name: "Tracking Profiles",
     component: TrackingProfilesScreen,
-    title: "Tracking Profiles"
+    title: "Tracking profiles"
   },
   {
     name: "Profile Editor",
     component: ProfileEditorScreen,
-    title: "Profile Editor"
+    title: "Profile editor"
   },
   {
     name: "About Colota",
     component: AboutScreen,
-    title: "About Colota"
+    title: "About"
   },
   {
     name: "Setup Import",
     component: SetupImportScreen,
-    title: "Import Configuration"
+    title: "Import configuration"
   },
   {
     name: "Share Setup",
     component: ShareSetupScreen,
-    title: "Share Setup"
+    title: "Share setup"
   },
   {
     name: "Trip Detail",
     component: TripDetailScreen,
-    title: "Trip Detail"
+    title: "Trip detail"
   },
   {
     name: "Offline Maps",
     component: OfflineMapsScreen,
-    title: "Offline Maps"
+    title: "Offline maps"
   },
   {
     name: "Logging",
@@ -163,7 +164,7 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Backup & Restore",
     component: BackupRestoreScreen,
-    title: "Backup & Restore"
+    title: "Backup & restore"
   },
   {
     name: "Appearance",
@@ -178,11 +179,9 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Tracking & Sync",
     component: TrackingSyncScreen,
-    title: "Tracking & Sync"
+    title: "Tracking & sync"
   }
 ]
-
-const TAB_SCREEN_NAMES = new Set(["Dashboard", "Location History", "Geofences", "Settings"])
 
 function AppNavigator() {
   const { colors, isDark } = useTheme()
@@ -201,6 +200,7 @@ function AppNavigator() {
         color: colors.text
       },
       headerTitleAlign: "left" as const,
+      contentStyle: { backgroundColor: colors.background },
       headerBackTitleVisible: false,
       ...(Platform.OS === "android" && {
         animation: "slide_from_right" as const
@@ -208,6 +208,20 @@ function AppNavigator() {
     }),
     [colors]
   )
+  const navigationTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: colors.background,
+        card: colors.background,
+        text: colors.text,
+        border: colors.border,
+        primary: colors.primary
+      }
+    }
+  }, [colors, isDark])
   const statusBarConfig = useMemo(
     () => ({
       barStyle: isDark ? ("light-content" as const) : ("dark-content" as const),
@@ -246,25 +260,33 @@ function AppNavigator() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar {...statusBarConfig} />
-      <NavigationContainer linking={linking} ref={navigationRef} onStateChange={handleStateChange}>
-        <View style={styles.flex}>
-          <Stack.Navigator initialRouteName="Dashboard" screenOptions={screenOptions}>
-            {SCREEN_CONFIG.map((screen) => (
-              <Stack.Screen
-                key={screen.name}
-                name={screen.name}
-                component={screen.component}
-                options={{
-                  headerTitle: screen.title,
-                  ...(TAB_SCREEN_NAMES.has(screen.name) && { headerBackVisible: false })
-                }}
-              />
-            ))}
-          </Stack.Navigator>
-          <BottomTabBar currentRoute={currentRoute} onNavigate={handleTabNavigate} />
-        </View>
-      </NavigationContainer>
+      {/* One provider so a 16 badge and a 24 tab glyph carry the same painted weight. */}
+      <LucideProvider strokeWidth={1.5} absoluteStrokeWidth>
+        <StatusBar {...statusBarConfig} />
+        <NavigationContainer
+          theme={navigationTheme}
+          linking={linking}
+          ref={navigationRef}
+          onStateChange={handleStateChange}
+        >
+          <View style={styles.flex}>
+            <Stack.Navigator initialRouteName="Dashboard" screenOptions={screenOptions}>
+              {SCREEN_CONFIG.map((screen) => (
+                <Stack.Screen
+                  key={screen.name}
+                  name={screen.name}
+                  component={screen.component}
+                  options={{
+                    headerTitle: screen.title,
+                    ...(TAB_ROUTES.has(screen.name) && { headerBackVisible: false })
+                  }}
+                />
+              ))}
+            </Stack.Navigator>
+            <BottomTabBar currentRoute={currentRoute} onNavigate={handleTabNavigate} />
+          </View>
+        </NavigationContainer>
+      </LucideProvider>
     </SafeAreaProvider>
   )
 }

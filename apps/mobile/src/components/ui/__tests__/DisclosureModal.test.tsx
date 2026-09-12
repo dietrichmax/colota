@@ -6,8 +6,6 @@ jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({
     colors: {
       overlay: "rgba(0,0,0,0.5)",
-      cardElevated: "#fff",
-      borderRadius: 12,
       primary: "#0d9488",
       text: "#000",
       textSecondary: "#666",
@@ -51,13 +49,26 @@ describe("DisclosureModal", () => {
     expect(getByText("First paragraph.")).toBeTruthy()
     expect(getByText("Second paragraph.")).toBeTruthy()
     expect(getByText("Confirm")).toBeTruthy()
-    expect(getByText("Not Now")).toBeTruthy()
+    expect(getByText("Not now")).toBeTruthy()
 
     // Clean up by dismissing
     await act(async () => {
-      fireEvent.press(getByText("Not Now"))
+      fireEvent.press(getByText("Not now"))
     })
     expect(await resultPromise!).toBe(false)
+  })
+
+  it("announces both choices as buttons", async () => {
+    // Both were bare Pressables, so TalkBack read "Not now" and the confirm label as text and
+    // said nothing about them being pressable. This is the disclosure a location grant depends on.
+    const { getByRole } = render(<DisclosureModal {...defaultProps} />)
+
+    await act(async () => {
+      triggerModal()
+    })
+
+    expect(getByRole("button", { name: "Not now" })).toBeTruthy()
+    expect(getByRole("button", { name: "Confirm" })).toBeTruthy()
   })
 
   it("resolves true when confirm is pressed", async () => {
@@ -84,7 +95,7 @@ describe("DisclosureModal", () => {
     })
 
     await act(async () => {
-      fireEvent.press(getByText("Not Now"))
+      fireEvent.press(getByText("Not now"))
     })
 
     expect(await resultPromise!).toBe(false)

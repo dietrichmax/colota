@@ -11,6 +11,7 @@ jest.mock("@maplibre/maplibre-react-native", () => ({
     deletePack: jest.fn(),
     setTileCountLimit: jest.fn(),
     removeListener: jest.fn(),
+    addListener: jest.fn(),
     resetDatabase: jest.fn()
   }
 }))
@@ -35,6 +36,8 @@ import {
   saveOfflineAreaBounds,
   removeOfflineAreaBounds,
   unsubscribeOfflinePack,
+  subscribeOfflinePack,
+  pruneOfflineAreaBounds,
   DOWNLOAD_STATE
 } from "../OfflinePackManager"
 
@@ -316,7 +319,7 @@ describe("loadOfflineAreas", () => {
       }
     ] as never)
     expect(await loadOfflineAreas()).toEqual([
-      { name: "downtown", sizeBytes: 5_000_000, isComplete: true, isActive: false }
+      { name: "downtown", sizeBytes: 5_000_000, isComplete: true, isActive: false, bounds: null }
     ])
   })
 
@@ -328,7 +331,7 @@ describe("loadOfflineAreas", () => {
       }
     ] as never)
     expect(await loadOfflineAreas()).toEqual([
-      { name: "in-progress", sizeBytes: 1_000_000, isComplete: false, isActive: true }
+      { name: "in-progress", sizeBytes: 1_000_000, isComplete: false, isActive: true, bounds: null }
     ])
   })
 
@@ -337,8 +340,23 @@ describe("loadOfflineAreas", () => {
       { metadata: { name: "broken-pack" }, status: jest.fn().mockRejectedValue(new Error("status unavailable")) }
     ] as never)
     expect(await loadOfflineAreas()).toEqual([
-      { name: "broken-pack", sizeBytes: null, isComplete: false, isActive: false }
+      { name: "broken-pack", sizeBytes: null, isComplete: false, isActive: false, bounds: null }
     ])
+  })
+
+  // The extent comes from the pack itself, so a re-download never depends on the sidecar being there.
+  it("carries the pack's own bounds, and null when native reports none", async () => {
+    mockOfflineManager.getPacks.mockResolvedValueOnce([
+      {
+        metadata: { name: "boxed" },
+        bounds: [13.4, 52.5, 13.5, 52.6],
+        status: jest.fn().mockResolvedValue({ state: DOWNLOAD_STATE.COMPLETE, completedResourceSize: 10 })
+      },
+      { metadata: { name: "boxless" }, status: jest.fn().mockRejectedValue(new Error("no status")) }
+    ] as never)
+    const areas = await loadOfflineAreas()
+    expect(areas[0].bounds).toEqual([13.4, 52.5, 13.5, 52.6])
+    expect(areas[1].bounds).toBeNull()
   })
 
   it("handles null completedResourceSize as null sizeBytes", async () => {
@@ -570,6 +588,75 @@ describe("removeOfflineAreaBounds", () => {
 
     await removeOfflineAreaBounds("home")
 
+    expect(mockSaveSetting).not.toHaveBeenCalled()
+  })
+})
+
+// ============================================================================
+// subscribeOfflinePack
+// ============================================================================
+
+describe("subscribeOfflinePack", () => {
+  it("returns null when no pack carries the name, and attaches nothing", async () => {
+    mockOfflineManager.getPacks.mockResolvedValueOnce([] as never)
+    expect(await subscribeOfflinePack("gone", jest.fn(), jest.fn())).toBeNull()
+    expect(mockOfflineManager.addListener).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The status is read before the listener attaches, so the caller can seed its progress and take
+   * the completion path if the pack finished while the screen was away.
+   */
+  it("reads the status, then attaches the listeners to the pack's id, and returns it", async () => {
+    const mockStatus = jest.fn().mockResolvedValue({ state: DOWNLOAD_STATE.ACTIVE, percentage: 42 })
+    mockOfflineManager.getPacks.mockResolvedValueOnce([
+      { id: "uuid-9", metadata: { name: "running" }, status: mockStatus }
+    ] as never)
+    mockOfflineManager.addListener.mockResolvedValueOnce(undefined as never)
+    const onProgress = jest.fn()
+    const onError = jest.fn()
+
+    const status = await subscribeOfflinePack("running", onProgress, onError)
+
+    expect(status).toEqual({ state: DOWNLOAD_STATE.ACTIVE, percentage: 42 })
+    expect(mockOfflineManager.addListener).toHaveBeenCalledWith("uuid-9", expect.any(Function), expect.any(Function))
+    const [, progress, error] = mockOfflineManager.addListener.mock.calls[0]
+    progress({} as never, { state: DOWNLOAD_STATE.ACTIVE, percentage: 50 } as never)
+    expect(onProgress).toHaveBeenCalledWith({ state: DOWNLOAD_STATE.ACTIVE, percentage: 50 })
+    error({} as never, new Error("tile") as never)
+    expect(onError).toHaveBeenCalledWith(expect.any(Error))
+  })
+})
+
+// ============================================================================
+// pruneOfflineAreaBounds
+// ============================================================================
+
+describe("pruneOfflineAreaBounds", () => {
+  const stored = (entries: object[]) => mockGetSetting.mockResolvedValueOnce(JSON.stringify(entries))
+  const entry = (name: string) => ({ name, ne: [1, 1], sw: [0, 0] })
+
+  // One write for any number of orphans: the old per-orphan read-modify-write lost all but the last.
+  it("drops every orphan in one write", async () => {
+    stored([entry("keep"), entry("gone-1"), entry("gone-2")])
+    mockSaveSetting.mockResolvedValueOnce(undefined)
+
+    await pruneOfflineAreaBounds(new Set(["keep"]))
+
+    expect(mockSaveSetting).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(mockSaveSetting.mock.calls[0][1])).toEqual([entry("keep")])
+  })
+
+  it("writes nothing when nothing is orphaned", async () => {
+    stored([entry("keep")])
+    await pruneOfflineAreaBounds(new Set(["keep"]))
+    expect(mockSaveSetting).not.toHaveBeenCalled()
+  })
+
+  // A failed read must never become a write that empties the list.
+  it("refuses to write over a list it could not read", async () => {
+    mockGetSetting.mockRejectedValueOnce(new Error("db locked"))
+    await pruneOfflineAreaBounds(new Set())
     expect(mockSaveSetting).not.toHaveBeenCalled()
   })
 })

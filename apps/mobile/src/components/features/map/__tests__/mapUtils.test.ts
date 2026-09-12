@@ -6,7 +6,9 @@ import {
   buildTrackPointsGeoJSON,
   buildGeofencesGeoJSON,
   computeTrackBounds,
-  darkifyStyle
+  darkifyStyle,
+  TRACK_LINE_STYLE,
+  TRACK_CASING_STYLE
 } from "../mapUtils"
 import { haversine as haversineDistance } from "../../../../utils/geo"
 
@@ -196,6 +198,44 @@ describe("buildTrackSegmentsGeoJSON", () => {
     ]
     const result = buildTrackSegmentsGeoJSON(locs, colors, { locationColors: ["#FF0000", "#00FF00"] })
     expect(result.features[0].properties?.color).toBe("#00FF00")
+  })
+
+  it("starts a new feature where the trip changes even in one colour, so each trip can be styled on its own", () => {
+    const locs = [
+      { latitude: 52.52, longitude: 13.405 },
+      { latitude: 52.53, longitude: 13.406 },
+      { latitude: 52.54, longitude: 13.407 },
+      { latitude: 52.55, longitude: 13.408 }
+    ]
+    const result = buildTrackSegmentsGeoJSON(locs, colors, { defaultColor: "#FF0000", locationTrips: [1, 1, 2, 2] })
+    expect(result.features.map((f) => f.properties?.tripIndex)).toEqual([1, 2])
+    expect(result.features.map((f) => f.properties?.focused)).toEqual([false, false])
+  })
+
+  it("flags only the focused trip's features", () => {
+    const locs = [
+      { latitude: 52.52, longitude: 13.405 },
+      { latitude: 52.53, longitude: 13.406 },
+      { latitude: 52.54, longitude: 13.407 },
+      { latitude: 52.55, longitude: 13.408 }
+    ]
+    const result = buildTrackSegmentsGeoJSON(locs, colors, {
+      defaultColor: "#FF0000",
+      locationTrips: [1, 1, 2, 2],
+      focusedTrip: 2
+    })
+    expect(result.features.map((f) => f.properties?.focused)).toEqual([false, true])
+  })
+})
+
+describe("track line styles", () => {
+  it("colours the line per feature and draws the casing wider underneath it", () => {
+    expect(TRACK_LINE_STYLE).toEqual({ lineColor: ["get", "color"], lineWidth: 3, lineCap: "round", lineJoin: "round" })
+    expect(TRACK_CASING_STYLE).toEqual({
+      lineWidth: ["case", ["get", "focused"], 7, 5],
+      lineCap: "round",
+      lineJoin: "round"
+    })
   })
 })
 
@@ -467,5 +507,77 @@ describe("darkifyStyle", () => {
   it("handles style with no layers", () => {
     const result = darkifyStyle({ version: 8 }) as any
     expect(result.version).toBe(8)
+  })
+})
+
+describe("buildTripTerminalsGeoJSON", () => {
+  const { buildTripTerminalsGeoJSON } = require("../mapUtils")
+  const trip = (index: number, color: string, n: number) => ({
+    index,
+    color,
+    locations: Array.from({ length: n }, (_, i) => ({ latitude: index + i * 0.001, longitude: 10 + i * 0.001 }))
+  })
+
+  it("marks where each trip starts and ends in the trip's colour, so a day of trips can be read on the map", () => {
+    const fc = buildTripTerminalsGeoJSON([trip(1, "#111", 3), trip(2, "#222", 2)], null)
+
+    expect(fc.features.map((f: any) => [f.properties.kind, f.properties.trip, f.properties.color])).toEqual([
+      ["start", 1, "#111"],
+      ["end", 1, "#111"],
+      ["start", 2, "#222"],
+      ["end", 2, "#222"]
+    ])
+    expect(fc.features[1].geometry.coordinates).toEqual([10.002, 1.002])
+  })
+
+  it("flags the focused trip's terminals and skips a trip of one point, which has no end to mark", () => {
+    const fc = buildTripTerminalsGeoJSON([trip(1, "#111", 1), trip(2, "#222", 2)], 2)
+
+    expect(fc.features.map((f: any) => [f.properties.trip, f.properties.focused])).toEqual([
+      [2, true],
+      [2, true]
+    ])
+  })
+})
+
+describe("geofenceBounds and pickSmallestZone", () => {
+  const utils = require("../mapUtils")
+  const zone = (id: number, lat: number, lon: number, radius: number) => ({
+    id,
+    name: `Z${id}`,
+    lat,
+    lon,
+    radius,
+    enabled: true,
+    pauseTracking: true,
+    pauseOnWifi: false,
+    pauseOnMotionless: false,
+    motionlessTimeoutMinutes: 5,
+    heartbeatEnabled: false,
+    heartbeatIntervalMinutes: 15
+  })
+
+  it("boxes every circle, wider in longitude the further north it sits", () => {
+    const [west, south, east, north] = utils.geofenceBounds([zone(1, 60, 10, 1113.2)])
+    expect(north - south).toBeCloseTo(0.02, 4)
+    expect(east - west).toBeGreaterThan(0.03)
+    const two = utils.geofenceBounds([zone(1, 48, 11, 100), zone(2, 49, 12, 100)])
+    expect(two[0]).toBeLessThan(11)
+    expect(two[2]).toBeGreaterThan(12)
+  })
+
+  it("picks the smallest circle under a tap, since the larger ones cover it, and ignores features with no id", () => {
+    const hits = [
+      { type: "Feature", properties: { id: 1, radius: 500 }, geometry: { type: "Point", coordinates: [0, 0] } },
+      { type: "Feature", properties: { id: 2, radius: 50 }, geometry: { type: "Point", coordinates: [0, 0] } },
+      { type: "Feature", properties: { radius: 1 }, geometry: { type: "Point", coordinates: [0, 0] } }
+    ]
+    expect(utils.pickSmallestZone(hits)).toBe(2)
+    expect(utils.pickSmallestZone([])).toBeNull()
+  })
+
+  it("carries the radius on the fill feature so a tap can rank overlapping circles", () => {
+    const { fills } = utils.buildGeofencesGeoJSON([zone(7, 48, 11, 120)], require("@colota/shared").lightColors)
+    expect(fills.features[0].properties.radius).toBe(120)
   })
 })
