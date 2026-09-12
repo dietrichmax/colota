@@ -4,35 +4,34 @@
  */
 
 import React, { useMemo, useState, useCallback, useLayoutEffect, useEffect, useRef } from "react"
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native"
-import {
-  Route,
-  Clock,
-  Gauge,
-  TrendingUp,
-  TrendingDown,
-  MapPin,
-  Share,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  type LucideIcon
-} from "lucide-react-native"
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { Upload, Trash2, Route, Clock, Gauge, MapPin, TrendingUp, TrendingDown } from "lucide-react-native"
 import { useTheme } from "../hooks/useTheme"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts } from "../styles/typography"
+// Deep paths on purpose: the components barrel re-exports DashboardMap, which reaches
+// TrackingProvider and builds a NativeEventEmitter at module scope. This screen needs none of it.
 import { Card } from "../components/ui/Card"
 import { Container } from "../components/ui/Container"
+import { SectionTitle } from "../components/ui/SectionTitle"
+import { Divider } from "../components/ui/Divider"
+import { StatRow } from "../components/ui/StatRow"
+import { StepperHeader } from "../components/ui/StepperHeader"
+import { HeaderAction } from "../components/ui/HeaderAction"
 import { TrackMap } from "../components/features/inspector/TrackMap"
+import { TripSwatch } from "../components/features/inspector/TripRow"
+import { ExportFormatDialog } from "../components/ui/ExportFormatDialog"
+import { InspectorDock } from "../components/features/inspector/InspectorDock"
 import { InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
 import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
 import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
-import { EXPORT_FORMATS, EXPORT_FORMAT_KEYS, type ExportFormat } from "../utils/exportConverters"
-import { HIT_SLOP_LG } from "../constants"
+import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
+import { size, space } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import NativeLocationService from "../services/NativeLocationService"
 import { BOUNDARY_ACTION_SPLIT } from "../types/global"
-import type { Trip, ThemeColors, BoundaryAction } from "../types/global"
+import type { Trip, BoundaryAction } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
 
 const MAX_BARS = 120
@@ -52,8 +51,15 @@ function downsample(values: number[], maxBars: number): number[] {
   return result
 }
 
+const MAP_VIEWPORT_SHARE = 0.5
+// The point card may cover this much of the map; a band of tiles always stays above it.
+const DOCK_MAP_SHARE = 0.6
+
 export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip Detail">) {
   const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
+  const { height: viewportHeight } = useWindowDimensions()
+  const mapHeight = Math.round(viewportHeight * MAP_VIEWPORT_SHARE)
   const trip: Trip = route.params.trip
   const trips: Trip[] = route.params.trips
   const tripColor = getTripColor(trip.index)
@@ -61,12 +67,15 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   // The map reads a note back when the point is re-tapped, and the chevrons swap in a trip from
   // route.params, so a saved note has to be held here rather than inside the map.
   const [noteOverrides, setNoteOverrides] = useState<Record<number, string | undefined>>({})
+  const [selectedPointId, setSelectedPointId] = useState<number | null>(null)
+  const [dockHeight, setDockHeight] = useState(0)
+  const [hasEndpoint, setHasEndpoint] = useState(false)
 
   const stats = useMemo(() => computeTripStats(trip.locations), [trip])
   const duration = trip.endTime - trip.startTime
   const displayName = `Trip ${trip.index}`
 
-  const [showExport, setShowExport] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [chartActiveIndex, setChartActiveIndex] = useState<number | null>(null)
   // Without these, a boundary the user merged reads as a plain gap and refuses to split
   const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, BoundaryAction>>(() => new Map())
@@ -89,6 +98,18 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
     }
   }, [])
 
+  useEffect(() => {
+    let active = true
+    NativeLocationService.getSetting("endpoint")
+      .then((endpoint) => {
+        if (active) setHasEndpoint((endpoint ?? "").trim().length > 0)
+      })
+      .catch((error) => logger.error("[TripDetail] Endpoint read failed:", error))
+    return () => {
+      active = false
+    }
+  }, [])
+
   const currentIdx = trips.findIndex((t) => t.index === trip.index)
   const prevTrip = currentIdx > 0 ? trips[currentIdx - 1] : null
   const nextTrip = currentIdx >= 0 && currentIdx < trips.length - 1 ? trips[currentIdx + 1] : null
@@ -96,7 +117,8 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   // Reset transient UI state when switching to a different trip.
   useEffect(() => {
     setChartActiveIndex(null)
-    setShowExport(false)
+    setExportOpen(false)
+    setSelectedPointId(null)
   }, [trip.index])
 
   const goToTrip = useCallback(
@@ -179,7 +201,6 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
           EXPORT_FORMATS[format].mimeType,
           `Colota ${displayName} - ${dateStr}`
         )
-        setShowExport(false)
       } catch (error) {
         logger.error("[TripDetail] Export failed:", error)
         showAlert("Export Failed", "Unable to export. Please try again.", "error")
@@ -211,16 +232,19 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
   const headerRight = useCallback(
     () => (
-      <Pressable
-        onPress={handleDelete}
-        disabled={deleting}
-        hitSlop={8}
-        style={({ pressed }) => [styles.headerBtn, (pressed || deleting) && { opacity: colors.pressedOpacity }]}
-      >
-        <Trash2 size={20} color={colors.error} />
-      </Pressable>
+      <View style={styles.headerActions}>
+        <HeaderAction icon={Upload} label="Export trip" onPress={() => setExportOpen(true)} testID="export-trip-btn" />
+        <HeaderAction
+          icon={Trash2}
+          label="Delete trip"
+          color={colors.error}
+          disabled={deleting}
+          onPress={handleDelete}
+          testID="delete-trip-btn"
+        />
+      </View>
     ),
-    [handleDelete, deleting, colors.error, colors.pressedOpacity]
+    [handleDelete, deleting, colors.error]
   )
 
   useLayoutEffect(() => {
@@ -248,92 +272,114 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
   )
   const elevationRange = maxElevation - minElevation
 
+  const selectedPoint = selectedPointId == null ? undefined : trip.locations.find((l) => l.id === selectedPointId)
+  const dockInset = selectedPoint ? dockHeight : 0
+  const edgeStart = space.lg + insets.left
+  const edgeEnd = space.lg + insets.right
+  const controlsBottom = space.lg + dockInset + space.sm
+  const cameraPadding = useMemo(
+    () => ({
+      top: space.lg,
+      bottom: dockInset + space.lg + space.lg,
+      left: edgeStart,
+      right: edgeEnd + size.iconColumn + space.lg
+    }),
+    [dockInset, edgeStart, edgeEnd]
+  )
+
   return (
     <Container>
-      <View style={styles.mapContainer}>
+      <StepperHeader
+        title={displayName}
+        caption={`${formatDate(trip.startTime)} · ${formatTime(trip.startTime, true)} - ${formatTime(trip.endTime, true)}`}
+        leading={<TripSwatch index={trip.index} />}
+        onPrevious={() => goToTrip(prevTrip)}
+        onNext={() => goToTrip(nextTrip)}
+        previousLabel="Previous trip"
+        nextLabel="Next trip"
+        previousDisabled={!prevTrip}
+        nextDisabled={!nextTrip}
+        testID="trip"
+      />
+      <View style={{ height: mapHeight }}>
         <TrackMap
           locations={trip.locations}
           colors={colors}
           trackColor={tripColor}
           fitVersion={trip.index}
           noteOverrides={noteOverrides}
-          onPointNoteChange={handlePointNoteChange}
-          onPointSplit={handlePointSplit}
+          selectedPointId={selectedPointId}
+          onSelectPoint={setSelectedPointId}
+          onFocusTrip={() => {}}
+          cameraPadding={cameraPadding}
+          controlsBottom={controlsBottom}
+          controlsEnd={edgeEnd}
         />
+        {selectedPoint && selectedPointId != null && (
+          <InspectorDock
+            content={{
+              kind: "point",
+              point: selectedPoint,
+              note: selectedPointId in noteOverrides ? noteOverrides[selectedPointId] : selectedPoint.note,
+              hasEndpoint,
+              onSplit: () => handlePointSplit(selectedPointId),
+              onClose: () => setSelectedPointId(null),
+              onSaveNote: (note) => handlePointNoteChange(selectedPointId, note)
+            }}
+            left={edgeStart}
+            right={edgeEnd}
+            maxHeight={mapHeight * DOCK_MAP_SHARE}
+            onLayout={(e) => setDockHeight(e.nativeEvent.layout.height)}
+          />
+        )}
       </View>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Header */}
         <View style={styles.section}>
-          <View style={styles.headerTitleRow}>
-            <Pressable
-              onPress={() => goToTrip(prevTrip)}
-              disabled={!prevTrip}
-              hitSlop={HIT_SLOP_LG}
-              style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
-            >
-              <ChevronLeft size={24} color={prevTrip ? colors.primary : colors.textDisabled} />
-            </Pressable>
-            <View style={styles.headerTitleCenter}>
-              <View style={styles.headerTitleLine}>
-                <View style={[styles.dot, { backgroundColor: tripColor }]} />
-                <Text style={[styles.title, { color: colors.text }]}>{displayName}</Text>
-              </View>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                {formatDate(trip.startTime)} · {formatTime(trip.startTime, true)} - {formatTime(trip.endTime, true)}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => goToTrip(nextTrip)}
-              disabled={!nextTrip}
-              hitSlop={HIT_SLOP_LG}
-              style={({ pressed }) => [styles.navBtn, pressed && { opacity: colors.pressedOpacity }]}
-            >
-              <ChevronRight size={24} color={nextTrip ? colors.primary : colors.textDisabled} />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Stats grid */}
-        <View style={[styles.statsGrid, styles.section]}>
-          <StatCard icon={Route} label="Distance" value={formatDistance(trip.distance)} colors={colors} />
-          <StatCard icon={Clock} label="Duration" value={formatDuration(duration)} colors={colors} />
-          <StatCard icon={Gauge} label="Avg Speed" value={formatSpeed(stats.avgSpeed)} colors={colors} />
-          <StatCard icon={MapPin} label="Points" value={String(trip.locationCount)} colors={colors} />
-          {stats.elevationGain > 0 && (
-            <StatCard
-              icon={TrendingUp}
-              label="Elev. Gain"
-              value={`${Math.round(stats.elevationGain)}m`}
-              colors={colors}
-            />
-          )}
-          {stats.elevationLoss > 0 && (
-            <StatCard
-              icon={TrendingDown}
-              label="Elev. Loss"
-              value={`${Math.round(stats.elevationLoss)}m`}
-              colors={colors}
-            />
-          )}
+          <Card rows>
+            <StatRow icon={Route} label="Distance" value={formatDistance(trip.distance)} />
+            <Divider tight inset />
+            <StatRow icon={Clock} label="Duration" value={formatDuration(duration)} />
+            <Divider tight inset />
+            <StatRow icon={Gauge} label="Avg speed" value={formatSpeed(stats.avgSpeed)} />
+            <Divider tight inset />
+            <StatRow icon={MapPin} label="Points" value={String(trip.locationCount)} />
+            {stats.elevationGain > 0 && (
+              <>
+                <Divider tight inset />
+                <StatRow icon={TrendingUp} label="Elev. gain" value={`${Math.round(stats.elevationGain)}m`} />
+              </>
+            )}
+            {stats.elevationLoss > 0 && (
+              <>
+                <Divider tight inset />
+                <StatRow icon={TrendingDown} label="Elev. loss" value={`${Math.round(stats.elevationLoss)}m`} />
+              </>
+            )}
+          </Card>
         </View>
 
         {/* Speed profile */}
         {speedProfile.length > 2 && (
           <View style={styles.section}>
+            <View style={styles.chartTitleRow}>
+              <SectionTitle>Speed</SectionTitle>
+              <Text style={[styles.chartRange, { color: colors.textSecondary }]}>max {formatSpeed(maxSpeed)}</Text>
+            </View>
             <Card style={styles.chartCard}>
-              <View style={styles.chartTitleRow}>
-                <Text style={[styles.chartTitle, { color: colors.text }]}>Speed</Text>
-                <Text style={[styles.chartRange, { color: colors.textSecondary }]}>max {formatSpeed(maxSpeed)}</Text>
+              <View
+                accessibilityRole="image"
+                accessibilityLabel={`Speed over the trip, average ${formatSpeed(stats.avgSpeed)}, maximum ${formatSpeed(maxSpeed)}`}
+              >
+                <InteractiveLineChart
+                  data={speedProfile}
+                  color={colors.primary}
+                  textColor={colors.text}
+                  backgroundColor={colors.card}
+                  formatValue={(v) => formatSpeed(v).replace(/\.\d+/, "")}
+                  activeIndex={chartActiveIndex}
+                  onActiveIndexChange={setChartActiveIndex}
+                />
               </View>
-              <InteractiveLineChart
-                data={speedProfile}
-                color={colors.info}
-                textColor={colors.text}
-                backgroundColor={colors.card}
-                formatValue={(v) => formatSpeed(v).replace(/\.\d+/, "")}
-                activeIndex={chartActiveIndex}
-                onActiveIndexChange={setChartActiveIndex}
-              />
               <View style={styles.chartLabels}>
                 {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
                   <Text key={frac} style={[styles.chartLabel, { color: colors.textSecondary }]}>
@@ -348,13 +394,13 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         {/* Elevation profile */}
         {elevationProfile.length > 2 && elevationRange > 0 && (
           <View style={styles.section}>
+            <View style={styles.chartTitleRow}>
+              <SectionTitle>Elevation</SectionTitle>
+              <Text style={[styles.chartRange, { color: colors.textSecondary }]}>
+                {Math.round(minElevation)}m - {Math.round(maxElevation)}m
+              </Text>
+            </View>
             <Card style={styles.chartCard}>
-              <View style={styles.chartTitleRow}>
-                <Text style={[styles.chartTitle, { color: colors.text }]}>Elevation</Text>
-                <Text style={[styles.chartRange, { color: colors.textSecondary }]}>
-                  {Math.round(minElevation)}m - {Math.round(maxElevation)}m
-                </Text>
-              </View>
               <InteractiveLineChart
                 data={elevationProfile}
                 color={colors.primary}
@@ -374,184 +420,54 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
             </Card>
           </View>
         )}
-
-        {/* Export */}
-        <View style={styles.section}>
-          <Pressable
-            onPress={() => setShowExport((prev) => !prev)}
-            style={({ pressed }) => [
-              styles.exportBtn,
-              { backgroundColor: colors.primary, borderRadius: colors.borderRadius },
-              pressed && { opacity: 0.8 }
-            ]}
-          >
-            <Share size={16} color={colors.textOnPrimary} />
-            <Text style={[styles.exportBtnText, { color: colors.textOnPrimary }]}>Export Trip</Text>
-          </Pressable>
-
-          {showExport && (
-            <View style={styles.exportRow}>
-              {EXPORT_FORMAT_KEYS.map((fmt) => (
-                <Pressable
-                  key={fmt}
-                  onPress={() => handleExport(fmt)}
-                  style={({ pressed }) => [
-                    styles.exportChip,
-                    { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
-                >
-                  <Text style={[styles.exportChipText, { color: colors.primary }]}>{EXPORT_FORMATS[fmt].label}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
       </ScrollView>
+      <ExportFormatDialog
+        visible={exportOpen}
+        title={`Export ${displayName}`}
+        message={`${formatDate(trip.startTime)} · ${formatDistance(trip.distance)} · ${formatDuration(duration)}`}
+        onSelect={(format) => {
+          setExportOpen(false)
+          handleExport(format)
+        }}
+        onRequestClose={() => setExportOpen(false)}
+      />
     </Container>
-  )
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  colors
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  colors: ThemeColors
-}) {
-  return (
-    <Card style={styles.statCard}>
-      <Icon size={16} color={colors.primary} />
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
-    </Card>
   )
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: 32
+    paddingBottom: space.xxl
   },
   section: {
-    paddingHorizontal: 16,
-    marginTop: 12
+    paddingHorizontal: space.lg,
+    marginTop: space.md
   },
-  mapContainer: {
-    height: 480
-  },
-  headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  headerTitleCenter: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4
-  },
-  headerTitleLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10
-  },
-  navBtn: {
-    padding: 4
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6
-  },
-  title: {
-    fontSize: 20,
-    ...fonts.bold
-  },
-  subtitle: {
-    fontSize: 13,
-    ...fonts.regular,
-    textAlign: "center"
-  },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8
-  },
-  statCard: {
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    minWidth: "30%",
-    flex: 1
-  },
-  statValue: {
-    fontSize: 16,
-    ...fonts.bold
-  },
-  statLabel: {
-    fontSize: 11,
-    ...fonts.regular,
-    textTransform: "uppercase"
-  },
+
   chartCard: {
-    padding: 12
+    padding: space.md
   },
   chartTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8
-  },
-  chartTitle: {
-    fontSize: 14,
-    ...fonts.semiBold
+    marginBottom: space.sm
   },
   chartRange: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.regular
   },
   chartLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 4,
-    paddingLeft: 40
+    marginTop: space.xs,
+    paddingStart: size.iconColumn
   },
   chartLabel: {
-    fontSize: 10,
+    fontSize: fontSizes.micro,
     ...fonts.regular
   },
-  exportBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14
-  },
-  exportBtnText: {
-    fontSize: 15,
-    ...fonts.semiBold
-  },
-  exportRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 12
-  },
-  exportChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1
-  },
-  exportChipText: {
-    fontSize: 12,
-    ...fonts.bold
-  },
-  headerBtn: {
-    padding: 8
+  headerActions: {
+    flexDirection: "row"
   }
 })
