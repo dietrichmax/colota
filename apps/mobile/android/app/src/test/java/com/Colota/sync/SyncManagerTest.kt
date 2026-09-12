@@ -1298,7 +1298,6 @@ class SyncManagerTest {
         syncManager.stopPeriodicSync()
 
         coVerify(exactly = 20) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
-        // The tick ran once the flush had emptied the queue, which is not a failed sync
         assertEquals(0, getField("consecutiveFailures"))
     }
 
@@ -1321,7 +1320,6 @@ class SyncManagerTest {
         syncManager.queueAndSend(500L, JSONObject().put("lat", 53.0))
         advanceUntilIdle()
 
-        // The running pass can fetch the new row as well, so the instant send leaves it to that pass
         coVerify(exactly = 1) {
             networkManager.sendToEndpoint(match { it.optDouble("lat") == 53.0 }, any(), any(), any(), any())
         }
@@ -1348,7 +1346,7 @@ class SyncManagerTest {
         launch { syncManager.queueAndSend(2L, JSONObject().put("lat", 2.0)) }
         advanceTimeBy(100)
 
-        // Two instant sends never carry the same row, so the second fix goes out beside the first
+        // Two instant sends never carry the same row, so serialising them would buy nothing
         coVerify(exactly = 1) {
             networkManager.sendToEndpoint(match { it.optDouble("lat") == 2.0 }, any(), any(), any(), any())
         }
@@ -1399,7 +1397,6 @@ class SyncManagerTest {
         advanceTimeBy(1_500)
         syncManager.stopPeriodicSync()
 
-        // The pass had nothing it was allowed to post, which is not a failed sync
         assertEquals(0, getField("consecutiveFailures"))
         coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
     }
