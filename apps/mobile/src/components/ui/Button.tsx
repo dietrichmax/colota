@@ -24,7 +24,6 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 type ButtonShape = "rounded" | "pill"
 
 type Props = {
-  activeOpacity?: number
   title: string
   onPress: (event: GestureResponderEvent) => void
   disabled?: boolean

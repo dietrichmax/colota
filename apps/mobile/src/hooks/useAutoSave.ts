@@ -17,13 +17,11 @@ import { logger } from "../utils/logger"
  */
 export function useAutoSave() {
   const [saving, setSaving] = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [isError, setIsError] = useState(false)
   const saveTimeout = useTimeout()
   const restartTimeout = useTimeout()
   const messageTimeout = useTimeout()
-  const successTimeout = useTimeout()
 
   const announce = useCallback(
     (text: string, failed: boolean) => {
@@ -37,8 +35,6 @@ export function useAutoSave() {
   const runRestart = useCallback(
     async (restartFn: () => Promise<boolean>) => {
       try {
-        setSaveSuccess(true)
-        successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
         if (await restartFn()) announce("Tracking restarted", false)
       } catch (err) {
         logger.error("[useAutoSave] Restart failed:", err)
@@ -47,7 +43,7 @@ export function useAutoSave() {
         setSaving(false)
       }
     },
-    [announce, successTimeout]
+    [announce]
   )
 
   /**
@@ -98,7 +94,6 @@ export function useAutoSave() {
 
   return {
     saving,
-    saveSuccess,
     message,
     isError,
     debouncedSaveAndRestart,

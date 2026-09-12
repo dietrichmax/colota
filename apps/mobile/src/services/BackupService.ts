@@ -20,9 +20,6 @@ export type BackupSource = {
   displayName: string | null
 }
 
-export const MIN_BACKUP_PASSWORD_LENGTH = 12
-export const MIN_BACKUP_PASSWORD_BITS = 50
-
 export type BackupManifest = {
   createdAt: string
   appVersion: string

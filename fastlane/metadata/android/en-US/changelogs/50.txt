@@ -1,0 +1,7 @@
+- Every screen redesigned: labels read as sentences and each row shows its value
+- Appearance can take the app colors from your Android wallpaper
+- Tapping the month in Location History picks a year and a month
+- Export and import share one screen, and an import says what it adds first
+- GeoJSON exports write one point per recording
+- Switching units updates every screen at once
+- Offline maps picks up a running download when you come back

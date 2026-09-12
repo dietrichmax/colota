@@ -61,11 +61,7 @@ export function buildDynamicColors(palette: SystemPalette, isDark: boolean): The
     warning: base.warning,
     error: base.error,
     info: base.info,
-    overlay: base.overlay,
-    primaryLight: base.primaryLight,
-    cardElevated: base.cardElevated,
-    pressedOpacity: base.pressedOpacity,
-    borderRadius: base.borderRadius
+    overlay: base.overlay
   }
 
   if (isDark) {

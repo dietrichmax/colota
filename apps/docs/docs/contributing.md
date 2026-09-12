@@ -6,53 +6,17 @@ sidebar_position: 8
 
 ## Reporting Issues
 
-1. Check if the issue already exists in [GitHub Issues](https://github.com/dietrichmax/colota/issues)
-2. Provide device info (model, Android version, Colota version)
-3. Include logs if possible: `adb logcat | grep Colota`
-4. Describe steps to reproduce
+1. Search [GitHub Issues](https://github.com/dietrichmax/colota/issues) first
+2. Name the device, the Android version and the Colota version as Settings > About prints it
+3. Attach a log file recorded while the problem happens, see [viewing and exporting logs](/docs/guides/troubleshooting#viewing-and-exporting-logs)
+4. Describe the steps to reproduce
 
 ## Pull Requests
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/batch-export`
-3. Make your changes with clear commit messages
-4. Add or update tests for new/changed functions, hooks, and components
-5. Test on a real device
-6. Open a Pull Request
+1. Fork the repository and branch off `main`
+2. Build and run the app, see [Local Setup](/docs/development/local-setup)
+3. Keep to the [code conventions](/docs/development/local-setup#code-conventions) and cover the change with tests
+4. Test on a real device
+5. Open a Pull Request
 
-See the [Development Guide](/docs/development/architecture) for architecture details and [Local Setup](/docs/development/local-setup) for building from source.
-
-## Code Style
-
-- **TypeScript / React Native** for the UI layer
-- **Kotlin** for native Android modules
-- Follow existing patterns in the codebase
-- Use `logger` instead of `console.log` - import from `src/utils/logger`
-- Use `AppLogger` instead of `android.util.Log` in Kotlin code - import from `com.Colota.util.AppLogger`
-- Test both build flavors if your changes touch native code:
-  ```bash
-  cd apps/mobile/android
-  ./gradlew assembleGmsDebug assembleFossDebug
-  ```
-- Run before submitting:
-  ```bash
-  npm run lint -w @colota/mobile
-  npx -w @colota/mobile tsc --noEmit
-  npm test -w @colota/mobile
-  cd apps/mobile/android && ./gradlew testGmsDebugUnitTest testFossDebugUnitTest
-  ```
-
-## Project Structure
-
-```
-colota/
-├── apps/
-│   ├── mobile/          # React Native Android app
-│   │   ├── android/     # Native Kotlin modules
-│   │   └── src/         # React Native TypeScript
-│   └── docs/            # Docusaurus documentation
-├── packages/
-│   └── shared/          # Shared colors and types
-├── screenshots/         # App screenshots
-└── package.json         # Monorepo root
-```
+[Architecture](/docs/development/architecture) covers the native modules and the tracking flow.

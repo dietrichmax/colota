@@ -260,11 +260,6 @@ class NativeLocationService {
   // CLEANUP OPERATIONS
   // ============================================================================
 
-  static async insertDummyData(): Promise<number> {
-    this.ensureModule()
-    return this.safeExecute(() => LocationServiceModule.insertDummyData(), 0, "insertDummyData failed")
-  }
-
   /** Deletes the locations themselves where `sent = 1`, imported rows included. Resolves how many went. */
   static async clearSentHistory(): Promise<number> {
     this.ensureModule()
@@ -730,12 +725,6 @@ class NativeLocationService {
     VERSION_CODE: number
     FLAVOR: string
     APP_LANGUAGE: string
-    MIN_SDK_VERSION: number
-    TARGET_SDK_VERSION: number
-    COMPILE_SDK_VERSION: number
-    BUILD_TOOLS_VERSION: string
-    KOTLIN_VERSION: string
-    NDK_VERSION: string
   } | null {
     if (!BuildConfigModule) {
       logger.warn("[NativeLocationService] BuildConfigModule not available")
@@ -769,8 +758,6 @@ class NativeLocationService {
     brand: string
     systemVersion: string
     apiLevel: number
-    manufacturer: string
-    deviceId: string
   }> {
     this.ensureModule()
     return LocationServiceModule.getDeviceInfo()
@@ -846,7 +833,7 @@ class NativeLocationService {
   }
 
   /** Returns null if there are no entries to export. */
-  static async exportFileLogToUri(treeUri: string, header = "", appLog = ""): Promise<string | null> {
+  static async exportFileLogToUri(treeUri: string, header: string, appLog: string): Promise<string | null> {
     this.ensureModule()
     return LocationServiceModule.exportFileLogToUri(treeUri, header, appLog)
   }
