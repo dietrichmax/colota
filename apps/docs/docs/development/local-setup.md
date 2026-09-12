@@ -186,6 +186,14 @@ npm run lint -w @colota/mobile        # ESLint
 npx -w @colota/mobile tsc --noEmit    # TypeScript type check
 ```
 
+## Code Conventions
+
+- TypeScript and React Native for the UI layer, Kotlin for the native modules
+- Follow the patterns the surrounding code already uses
+- Use `logger` from `src/utils/logger` instead of `console.log`, and `AppLogger` from `com.Colota.util.AppLogger` instead of `android.util.Log`
+- Cover every changed function, hook and component with a test
+- Run both flavors' unit tests and both debug builds when a change touches native code
+
 ## Common Tasks
 
 ### Adding a New Screen
