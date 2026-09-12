@@ -1,4 +1,4 @@
-import { getMergedLogs, exportLogs } from "../logExport"
+import { APP_LOG_COVERAGE, buildAppLog, buildExportHeader, getMergedLogs } from "../logExport"
 
 const mockGetLogEntries = jest.fn()
 const mockGetNativeLogs = jest.fn()
@@ -7,6 +7,7 @@ const mockShareFile = jest.fn()
 
 jest.mock("../logger", () => ({
   getLogEntries: (...args: any[]) => mockGetLogEntries(...args),
+  MAX_BUFFER_SIZE: 2000,
   logger: { error: jest.fn() }
 }))
 
@@ -105,6 +106,8 @@ describe("getMergedLogs", () => {
     expect(result[0].message).toContain("native first")
     expect(result[1].message).toBe("js middle")
     expect(result[2].message).toContain("native last")
+    // The stamp, pid, tid and level are stripped, so a search matches a JS line the same way.
+    expect(result[0].message).toBe("Colota.Service: native first")
   })
 
   it("handles native log fetch failure gracefully", async () => {
@@ -119,13 +122,33 @@ describe("getMergedLogs", () => {
     expect(result[0].message).toBe("still works")
   })
 
-  it("assigns NATIVE level for unrecognized logcat format", async () => {
-    mockGetNativeLogs.mockResolvedValue(["some unstructured log line"])
+  // An unparsed line is a continuation, typically a stack frame, not a category of its own. A level
+  // of its own puts it outside every filter, and a time of zero pins it above everything.
+  it("gives a continuation the time and level of the line it belongs to", async () => {
+    mockGetNativeLogs.mockResolvedValue([
+      "2026-03-31 10:00:03.000 ERROR/Sync: Network error",
+      "\tat com.Colota.sync.NetworkManager.run(NetworkManager.kt:88)",
+      "\tat com.Colota.sync.SyncManager.flush(SyncManager.kt:214)"
+    ])
 
     const result = await getMergedLogs()
 
-    expect(result).toHaveLength(1)
-    expect(result[0].level).toBe("NATIVE")
+    expect(result).toHaveLength(3)
+    expect(result.map((e) => e.level)).toEqual(["ERROR", "ERROR", "ERROR"])
+    expect(result[1].time).toBe(result[0].time)
+    expect(result[2].time).toBe(result[0].time)
+  })
+
+  it("keeps a leading orphan out of the way rather than pinning it above everything", async () => {
+    mockGetNativeLogs.mockResolvedValue([
+      "some unstructured log line",
+      "2026-03-31 10:00:03.000 ERROR/Sync: Network error"
+    ])
+
+    const result = await getMergedLogs()
+
+    expect(result).toHaveLength(2)
+    expect(result[0].level).toBe("DEBUG")
     expect(result[0].time).toBe(0)
   })
 
@@ -146,41 +169,63 @@ describe("getMergedLogs", () => {
   })
 })
 
-describe("exportLogs", () => {
-  it("writes file and opens share sheet", async () => {
-    await exportLogs(
-      { VERSION_NAME: "1.5.1", VERSION_CODE: 31 },
-      { systemVersion: "14", apiLevel: "34", brand: "Google", model: "Pixel 7" }
+describe("buildExportHeader", () => {
+  // gms against foss is fused location against LocationManager, which changes what half the log
+  // below can even mean.
+  it("names the build, the flavor and the device", () => {
+    const header = buildExportHeader(
+      { VERSION_NAME: "1.16.0", VERSION_CODE: 48, FLAVOR: "gms" },
+      { systemVersion: "15", apiLevel: "35", brand: "Google", model: "Pixel 8" },
+      0,
+      Date.parse("2026-09-09T14:22:07.000Z")
     )
 
-    expect(mockWriteFile).toHaveBeenCalledTimes(1)
-    const [fileName, content] = mockWriteFile.mock.calls[0]
-    expect(fileName).toMatch(/^colota_logs_\d+\.txt$/)
-    expect(content).toContain("=== Colota Debug Log Export ===")
-    expect(content).toContain("Version: 1.5.1 (31)")
-    expect(content).toContain("OS: Android 14 (API 34)")
-    expect(content).toContain("Device: Google Pixel 7")
-
-    expect(mockShareFile).toHaveBeenCalledWith("/tmp/logs.txt", "text/plain", "Colota Debug Logs")
+    expect(header).toContain("=== Colota log export ===")
+    expect(header).toContain("App: 1.16.0 (48) gms")
+    expect(header).toContain("Android: 15 (API 35)")
+    expect(header).toContain("Device: Google Pixel 8")
   })
 
-  it("works without build config and device info", async () => {
-    await exportLogs(null, null)
-
-    expect(mockWriteFile).toHaveBeenCalledTimes(1)
-    const content = mockWriteFile.mock.calls[0][1]
-    expect(content).toContain("=== Colota Debug Log Export ===")
-    expect(content).not.toContain("App Info")
-    expect(content).not.toContain("Device Info")
+  it("names the capture window only when one was recorded", () => {
+    const withStart = buildExportHeader(null, null, Date.parse("2026-09-09T09:41:12.000Z"), Date.now())
+    expect(withStart).toContain("Recording started:")
+    expect(buildExportHeader(null, null, 0, Date.now())).not.toContain("Recording started:")
   })
 
-  it("includes merged log entries in export", async () => {
-    mockGetLogEntries.mockReturnValue([{ timestamp: "2026-03-31T10:00:00.000Z", level: "INFO", message: "hello" }])
+  it("still writes a header when neither block could be read", () => {
+    expect(buildExportHeader(null, null, 0, Date.now())).toContain("=== Colota log export ===")
+  })
+})
 
-    await exportLogs(null, null)
+describe("buildAppLog", () => {
+  // Native places these by timestamp, so they must be in AppFileLogger's exact shape or the merge
+  // cannot read them and they all sink to the tail.
+  it("writes the buffer in the file logger's own line shape", () => {
+    mockGetLogEntries.mockReturnValue([{ timestamp: "2026-03-31T10:00:00.000Z", level: "WARN", message: "check this" }])
 
-    const content = mockWriteFile.mock.calls[0][1]
-    expect(content).toContain("--- Log Entries (1) ---")
-    expect(content).toContain("[2026-03-31T10:00:00.000Z] [JS] INFO hello")
+    const lines = buildAppLog().trimEnd().split("\n")
+
+    expect(lines).toHaveLength(2)
+    expect(lines[1]).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} WARN\/JS: check this$/)
+  })
+
+  // The buffer is process-lifetime while the recorded file spans restarts, so a merged stream
+  // implies the app was quiet before this launch unless something says where its coverage starts.
+  it("marks where its coverage starts, once", () => {
+    mockGetLogEntries.mockReturnValue([
+      { timestamp: "2026-03-31T10:00:00.000Z", level: "INFO", message: "one" },
+      { timestamp: "2026-03-31T10:00:01.000Z", level: "INFO", message: "two" }
+    ])
+
+    const out = buildAppLog()
+
+    expect(out.split(APP_LOG_COVERAGE)).toHaveLength(2)
+    expect(out.indexOf(APP_LOG_COVERAGE)).toBeLessThan(out.indexOf("one"))
+    expect(APP_LOG_COVERAGE).toContain("this session only")
+  })
+
+  it("writes nothing at all rather than a marker over an empty buffer", () => {
+    mockGetLogEntries.mockReturnValue([])
+    expect(buildAppLog()).toBe("")
   })
 })
