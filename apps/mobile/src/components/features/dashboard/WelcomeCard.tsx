@@ -8,8 +8,11 @@ import { Text, StyleSheet, View, Pressable } from "react-native"
 import { Check, ChevronRight } from "lucide-react-native"
 import { Settings, ThemeColors } from "../../../types/global"
 import { useTracking } from "../../../contexts/TrackingProvider"
-import { fonts } from "../../../styles/typography"
+import { fontSizes, fonts, type } from "../../../styles/typography"
+import { Button } from "../../ui/Button"
 import { Card } from "../../ui/Card"
+import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
+import { radius } from "@colota/shared"
 
 interface WelcomeCardProps {
   settings: Settings
@@ -19,7 +22,7 @@ interface WelcomeCardProps {
   onStartTracking: () => void
   onNavigateToConnection: () => void
   onNavigateToTrackingSync: () => void
-  onNavigateToApiConfig: () => void
+  onNavigateToRequestFormat: () => void
 }
 
 interface ChecklistItemProps {
@@ -32,17 +35,8 @@ interface ChecklistItemProps {
 function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps) {
   const content = (
     <View style={styles.checklistItem}>
-      <View
-        style={[
-          styles.checkCircle,
-          // eslint-disable-next-line react-native/no-inline-styles
-          {
-            borderColor: completed ? colors.success : colors.border,
-            backgroundColor: completed ? colors.success + "20" : "transparent"
-          }
-        ]}
-      >
-        {completed && <Check size={13} color={colors.success} />}
+      <View style={[styles.checkCircle, { borderColor: colors.border }]}>
+        {completed && <Check size={size.icon.sm} color={colors.success} />}
       </View>
       <Text
         style={[
@@ -53,13 +47,17 @@ function ChecklistItem({ label, completed, colors, onPress }: ChecklistItemProps
       >
         {label}
       </Text>
-      {onPress && !completed && <ChevronRight size={18} color={colors.textLight} />}
+      {onPress && !completed && <ChevronRight size={size.icon.md} color={colors.textLight} />}
     </View>
   )
 
   if (onPress && !completed) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      >
         {content}
       </Pressable>
     )
@@ -76,7 +74,7 @@ export function WelcomeCard({
   onStartTracking,
   onNavigateToConnection,
   onNavigateToTrackingSync,
-  onNavigateToApiConfig
+  onNavigateToRequestFormat
 }: WelcomeCardProps) {
   const {
     settings: { isOfflineMode }
@@ -84,88 +82,78 @@ export function WelcomeCard({
   const hasEndpoint = settings.endpoint.trim().length > 0
 
   return (
-    <View style={styles.container}>
-      <Card variant="outlined" style={{ borderColor: colors.primary }}>
-        <Text style={[styles.title, { color: colors.text }]}>Welcome to Colota</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Get started by completing these steps:</Text>
+    <Card variant="elevated">
+      <Text style={[styles.title, { color: colors.text }]}>Welcome to Colota</Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Get started by completing these steps:</Text>
 
-        <View style={styles.checklist}>
-          <ChecklistItem label="1. Start tracking" completed={tracking} colors={colors} onPress={onStartTracking} />
-          {!isOfflineMode && (
-            <ChecklistItem
-              label="2. Configure your server endpoint"
-              completed={hasEndpoint}
-              colors={colors}
-              onPress={onNavigateToConnection}
-            />
-          )}
-        </View>
+      <View style={styles.checklist}>
+        <ChecklistItem label="1. Start tracking" completed={tracking} colors={colors} onPress={onStartTracking} />
+        {!isOfflineMode && (
+          <ChecklistItem
+            label="2. Configure your server endpoint"
+            completed={hasEndpoint}
+            colors={colors}
+            onPress={onNavigateToConnection}
+          />
+        )}
+      </View>
 
-        <View style={styles.linkRow}>
-          {!isOfflineMode && (
-            <Pressable
-              onPress={onNavigateToApiConfig}
-              style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
-            >
-              <Text style={[styles.link, { color: colors.primaryDark }]}>API field mapping</Text>
-            </Pressable>
-          )}
+      <View style={styles.linkRow}>
+        {!isOfflineMode && (
           <Pressable
-            onPress={onNavigateToTrackingSync}
-            style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
+            accessibilityRole="button"
+            onPress={onNavigateToRequestFormat}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+            style={styles.linkTarget}
           >
-            <Text style={[styles.link, { color: colors.primaryDark }]}>Tracking presets</Text>
+            <Text style={[styles.link, { color: colors.link }]}>Request format</Text>
           </Pressable>
-        </View>
-
+        )}
         <Pressable
-          style={({ pressed }) => [
-            styles.dismissButton,
-            { borderColor: colors.border },
-            pressed && { opacity: colors.pressedOpacity }
-          ]}
-          onPress={onDismiss}
+          accessibilityRole="button"
+          onPress={onNavigateToTrackingSync}
+          android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+          style={styles.linkTarget}
         >
-          <Text style={[styles.dismissText, { color: colors.textSecondary }]}>Got it</Text>
+          <Text style={[styles.link, { color: colors.link }]}>Tracking presets</Text>
         </Pressable>
-      </Card>
-    </View>
+      </View>
+
+      <Button title="Got it" variant="secondary" onPress={onDismiss} />
+    </Card>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16
-  },
   title: {
-    fontSize: 20,
-    ...fonts.bold,
-    marginBottom: 4
+    ...type.title,
+    marginBottom: space.xs
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.regular,
-    marginBottom: 16
+    marginBottom: space.lg
   },
   checklist: {
-    gap: 12,
-    marginBottom: 16
+    gap: space.md,
+    marginBottom: space.lg
   },
   checklistItem: {
     flexDirection: "row",
-    alignItems: "center"
+    alignItems: "center",
+    minHeight: size.touch
   },
   checkCircle: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: radius.pill,
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12
+    marginEnd: space.md
   },
   checklistLabel: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.medium,
     flex: 1
   },
@@ -174,21 +162,15 @@ const styles = StyleSheet.create({
   },
   linkRow: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 16
+    gap: space.lg,
+    marginBottom: space.lg
+  },
+  linkTarget: {
+    minHeight: size.touch,
+    justifyContent: "center"
   },
   link: {
-    fontSize: 14,
-    ...fonts.semiBold
-  },
-  dismissButton: {
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 10,
-    borderWidth: 1.5
-  },
-  dismissText: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold
   }
 })

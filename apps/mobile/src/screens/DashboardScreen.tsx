@@ -3,49 +3,60 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useEffect, useState, useCallback, useRef } from "react"
-import { StyleSheet, View, ScrollView, DeviceEventEmitter, Animated, AppState } from "react-native"
-import { ScreenProps, DatabaseStats } from "../types/global"
+import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo } from "react"
+import { StyleSheet, View, DeviceEventEmitter, AppState, StatusBar, useWindowDimensions } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useFocusEffect, useIsFocused } from "@react-navigation/native"
+import { ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
+import { useActiveProfile } from "../hooks/useActiveProfile"
 import NativeLocationService from "../services/NativeLocationService"
-import { useTracking } from "../contexts/TrackingProvider"
-import { useFocusEffect } from "@react-navigation/native"
+import { checkPermissions, ensurePermissions, PermissionStatus } from "../services/LocationServicePermission"
+import { useTracking, useCoords } from "../contexts/TrackingProvider"
 import { showConfirm } from "../services/modalService"
-import {
-  Button,
-  ConnectionStatus,
-  DashboardMap,
-  CoordinateDisplay,
-  Container,
-  DatabaseStatistics,
-  WelcomeCard
-} from "../components"
-import { STATS_REFRESH_IDLE, MIN_STATS_INTERVAL_MS } from "../constants"
+import { Button, Container, DashboardBanner, DashboardDock, DashboardMap } from "../components"
+import type { LastKnownLocation } from "../components/features/dashboard/DashboardMap"
+import { TrackToggleButton } from "../components/features/map/TrackToggleButton"
+import { intervalText, pickBannerCondition } from "../utils/dashboardState"
+import { size, space } from "../constants"
 import { Square, Play } from "lucide-react-native"
 import { logger } from "../utils/logger"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
-  const { settings, tracking, startTracking, stopTracking, setSettings, activeProfileName, settingsHydrated } =
-    useTracking()
-  const { colors } = useTheme()
+  const {
+    settings,
+    tracking,
+    startTracking,
+    stopTracking,
+    setSettings,
+    activeProfileName,
+    activeProfileId,
+    settingsHydrated
+  } = useTracking()
+  const coords = useCoords()
+  const { colors, isDark } = useTheme()
+  const insets = useSafeAreaInsets()
+  const { height: windowHeight } = useWindowDimensions()
+  const isFocused = useIsFocused()
 
-  const [stats, setStats] = useState<DatabaseStats>({
-    queued: 0,
-    sent: 0,
-    total: 0,
-    today: 0,
-    databaseSizeMB: 0
-  })
+  // Hiding the header is safe on a tab root: the tab bar stays as the way out.
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerShown: false })
+  }, [navigation])
 
-  const prevStats = useRef(stats)
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
   const [pauseReason, setPauseReason] = useState<string | null>(null)
-  const [scrollEnabled, setScrollEnabled] = useState(true)
   const [isBatteryCritical, setIsBatteryCritical] = useState(false)
   const [locationEnabled, setLocationEnabled] = useState(true)
-
-  // Animation for button
-  const buttonScale = useRef(new Animated.Value(1)).current
+  const [permissions, setPermissions] = useState<PermissionStatus | null>(null)
+  const [lastKnown, setLastKnown] = useState<LastKnownLocation | null | undefined>(undefined)
+  const [stoppedByBattery, setStoppedByBattery] = useState(false)
+  const [showTrack, setShowTrack] = useState<boolean | null>(null)
+  const [hasTrack, setHasTrack] = useState(false)
+  const activeProfile = useActiveProfile(activeProfileId)
+  const [stackHeight, setStackHeight] = useState(0)
+  const [bannerHeight, setBannerHeight] = useState(0)
+  const [recentreSignal, setRecentreSignal] = useState(0)
 
   const handleStart = async () => {
     const locationOn = await NativeLocationService.isLocationEnabled()
@@ -53,66 +64,21 @@ export function DashboardScreen({ navigation }: ScreenProps) {
       const openSettings = await showConfirm({
         title: "Please enable Location Services",
         message: "Location Services are disabled. Tracking will not work until they are enabled in Settings.",
-        confirmText: "Location Settings",
-        cancelText: "Start Anyway"
+        confirmText: "Location settings",
+        cancelText: "Start anyway"
       })
       if (openSettings) {
         await NativeLocationService.openLocationSettings()
         return
       }
     }
-
-    // Bounce animation
-    Animated.sequence([
-      Animated.spring(buttonScale, {
-        toValue: 0.92,
-        useNativeDriver: true
-      }),
-      Animated.spring(buttonScale, {
-        toValue: 1,
-        useNativeDriver: true,
-        friction: 3
-      })
-    ]).start()
-
+    setRecentreSignal((n) => n + 1)
     await startTracking()
-    setTimeout(updateStats, 500)
   }
 
   const handleStop = async () => {
-    Animated.sequence([
-      Animated.spring(buttonScale, {
-        toValue: 0.92,
-        useNativeDriver: true
-      }),
-      Animated.spring(buttonScale, {
-        toValue: 1,
-        useNativeDriver: true,
-        friction: 3
-      })
-    ]).start()
-
     await stopTracking()
-    updateStats()
   }
-
-  const updateStats = useCallback(async () => {
-    try {
-      const nativeStats = await NativeLocationService.getStats()
-
-      const hasChanged =
-        nativeStats.queued !== prevStats.current.queued ||
-        nativeStats.sent !== prevStats.current.sent ||
-        nativeStats.today !== prevStats.current.today
-
-      if (hasChanged) {
-        setStats(nativeStats)
-        prevStats.current = nativeStats
-      }
-    } catch (err) {
-      logger.error("[Dashboard] Failed to update stats:", err)
-    }
-  }, [])
 
   const updatePauseZone = useCallback(async () => {
     try {
@@ -126,26 +92,49 @@ export function DashboardScreen({ navigation }: ScreenProps) {
     }
   }, [])
 
+  const refreshPermissions = useCallback(() => {
+    checkPermissions()
+      .then(setPermissions)
+      .catch((err) => logger.error("[Dashboard] Failed to check permissions:", err))
+  }, [])
+
+  useEffect(() => {
+    NativeLocationService.getSetting("showTrack")
+      .then((val) => setShowTrack(val === "true"))
+      .catch((err) => {
+        logger.error("[Dashboard] Failed to load showTrack setting:", err)
+        setShowTrack(false)
+      })
+  }, [])
+
   useFocusEffect(
     useCallback(() => {
-      setScrollEnabled(true)
-      updateStats()
-      if (tracking) updatePauseZone()
-      if (!tracking) {
-        NativeLocationService.isBatteryCritical().then(setIsBatteryCritical)
-      } else {
+      if (tracking) {
+        updatePauseZone()
         setIsBatteryCritical(false)
+      } else {
+        NativeLocationService.isBatteryCritical().then(setIsBatteryCritical)
+        NativeLocationService.getSetting("stopped_by_battery")
+          .then((val) => setStoppedByBattery(val === "true"))
+          .catch((err) => logger.error("[Dashboard] Failed to read stopped_by_battery:", err))
       }
+      NativeLocationService.getMostRecentLocation()
+        .then((latest) =>
+          setLastKnown(
+            latest
+              ? {
+                  latitude: latest.latitude,
+                  longitude: latest.longitude,
+                  accuracy: latest.accuracy ?? 0,
+                  timestamp: latest.timestamp
+                }
+              : null
+          )
+        )
+        .catch((err) => logger.error("[Dashboard] Failed to read the last known location:", err))
       NativeLocationService.isLocationEnabled().then(setLocationEnabled)
-
-      const interval = tracking ? Math.max(settings.interval * 1000, MIN_STATS_INTERVAL_MS) : STATS_REFRESH_IDLE
-
-      const statsTimer = setInterval(updateStats, interval)
-
-      return () => {
-        clearInterval(statsTimer)
-      }
-    }, [tracking, updateStats, updatePauseZone, settings.interval])
+      refreshPermissions()
+    }, [tracking, updatePauseZone, refreshPermissions])
   )
 
   useEffect(() => {
@@ -172,13 +161,14 @@ export function DashboardScreen({ navigation }: ScreenProps) {
     const appStateSub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         NativeLocationService.isLocationEnabled().then(setLocationEnabled)
+        refreshPermissions()
       }
     })
     return () => {
       listener.remove()
       appStateSub.remove()
     }
-  }, [])
+  }, [refreshPermissions])
 
   useEffect(() => {
     const pauseZoneListener = DeviceEventEmitter.addListener(
@@ -197,121 +187,144 @@ export function DashboardScreen({ navigation }: ScreenProps) {
     return () => pauseZoneListener.remove()
   }, [])
 
+  const bannerCondition = pickBannerCondition({ permissions, locationEnabled, isBatteryCritical, tracking })
+
+  const handleBannerAction = useCallback(() => {
+    if (bannerCondition === "locationOff") {
+      NativeLocationService.openLocationSettings()
+      return
+    }
+    ensurePermissions()
+      .then(refreshPermissions)
+      .catch((err) => logger.error("[Dashboard] Failed to request permissions:", err))
+  }, [bannerCondition, refreshPermissions])
+
+  const toggleTrack = useCallback(() => {
+    const next = !showTrack
+    setShowTrack(next)
+    NativeLocationService.saveSetting("showTrack", String(next)).catch((err) =>
+      logger.error("[Dashboard] Failed to save showTrack setting:", err)
+    )
+  }, [showTrack])
+
+  const bannerInset = bannerCondition && bannerHeight ? bannerHeight + space.md : 0
+  const edgeStart = space.lg + insets.left
+  const edgeEnd = space.lg + insets.right
+  const cameraPadding = useMemo(
+    () => ({
+      top: insets.top + bannerInset + space.lg,
+      bottom: stackHeight + space.lg + space.lg,
+      left: edgeStart,
+      right: edgeEnd + size.iconColumn + space.lg
+    }),
+    [insets.top, bannerInset, stackHeight, edgeStart, edgeEnd]
+  )
+  const controlsBottom = space.lg + stackHeight + space.sm
+
+  const hasFix = tracking && coords !== null && coords.latitude !== 0 && coords.longitude !== 0
+  const dockCoords = hasFix ? { accuracy: coords.accuracy ?? 0, timestamp: coords.timestamp ?? 0 } : null
+  const intervalRow = activeProfile
+    ? intervalText(activeProfile.interval, activeProfile.syncInterval)
+    : intervalText(settings.interval, settings.syncInterval)
+
   return (
     <Container>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        bounces={false}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
+      {isFocused && <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />}
+
+      <DashboardMap
+        tracking={tracking}
+        activeZoneName={currentPauseZone}
+        lastKnown={lastKnown}
+        cameraPadding={cameraPadding}
+        controlsBottom={controlsBottom}
+        controlsEnd={edgeEnd}
+        showTrack={!!showTrack}
+        onHasTrackChange={setHasTrack}
+        recentreSignal={recentreSignal}
+      />
+
+      {bannerCondition && (
+        <DashboardBanner
+          condition={bannerCondition}
+          onAction={handleBannerAction}
+          top={insets.top + space.md}
+          left={edgeStart}
+          right={edgeEnd}
+          onLayout={(e) => setBannerHeight(e.nativeEvent.layout.height)}
+        />
+      )}
+
+      <View
+        style={[styles.stack, { left: edgeStart, right: edgeEnd }]}
+        pointerEvents="box-none"
+        onLayout={(e) => setStackHeight(e.nativeEvent.layout.height)}
+        testID="dashboard-stack"
       >
-        {/* Map Section */}
-        <View style={styles.mapSection}>
-          <View
-            style={styles.mapWrapper}
-            onTouchStart={() => setScrollEnabled(false)}
-            onTouchEnd={() => setScrollEnabled(true)}
-          >
-            <DashboardMap
-              tracking={tracking}
-              activeZoneName={currentPauseZone}
-              pauseReason={pauseReason}
-              activeProfileName={activeProfileName}
-              isBatteryCritical={isBatteryCritical}
-              locationEnabled={locationEnabled}
-            />
+        <View style={styles.actionRow} pointerEvents="box-none">
+          <View style={styles.routeSlot} testID="route-slot">
+            {showTrack !== null && (tracking || hasTrack) && (
+              <TrackToggleButton anchored={false} active={showTrack} onPress={toggleTrack} />
+            )}
           </View>
-
-          {/* Tracking Control Button */}
-          <Animated.View
-            style={[styles.controlButtonContainer, { transform: [{ scale: buttonScale }] }]}
-            pointerEvents="box-none"
-          >
-            <Button
-              style={styles.controlButton}
-              variant={tracking ? "danger" : "primary"}
-              icon={tracking ? Square : Play}
-              onPress={tracking ? handleStop : handleStart}
-              activeOpacity={0.9}
-              disabled={!tracking && (isBatteryCritical || !settingsHydrated)}
-              title={tracking ? "Stop Tracking" : "Start Tracking"}
-            />
-          </Animated.View>
+          <Button
+            shape="pill"
+            floating
+            variant={tracking ? "danger" : "primary"}
+            icon={tracking ? Square : Play}
+            onPress={tracking ? handleStop : handleStart}
+            loading={!settingsHydrated}
+            disabled={!tracking && isBatteryCritical}
+            title={tracking ? "Stop tracking" : "Start tracking"}
+          />
         </View>
 
-        {/* Content Section */}
-        <View style={[styles.content, { backgroundColor: colors.background }]}>
-          {/* Welcome Card (first run). Unhydrated settings read as a first run and cannot be dismissed. */}
-          {settingsHydrated && !settings.hasCompletedSetup && (
-            <WelcomeCard
-              settings={settings}
-              tracking={tracking}
-              colors={colors}
-              onDismiss={() =>
-                setSettings({ ...settings, hasCompletedSetup: true }).catch((err) =>
-                  logger.error("[DashboardScreen] Failed to dismiss welcome card:", err)
-                )
-              }
-              onStartTracking={handleStart}
-              onNavigateToConnection={() => navigation.navigate("Connection")}
-              onNavigateToTrackingSync={() => navigation.navigate("Tracking & Sync")}
-              onNavigateToApiConfig={() => navigation.navigate("Request Format")}
-            />
-          )}
-
-          {/* Coordinates */}
-          {tracking && (
-            <View style={styles.metricsSection}>
-              <CoordinateDisplay />
-            </View>
-          )}
-
-          {/* Stats Cards */}
-          <DatabaseStatistics stats={stats} />
-
-          {/* Server Connection */}
-          {!settings.isOfflineMode && <ConnectionStatus endpoint={settings.endpoint} navigation={navigation} />}
-        </View>
-      </ScrollView>
+        <DashboardDock
+          tracking={tracking}
+          hasFix={hasFix}
+          locationEnabled={locationEnabled}
+          activeZoneName={currentPauseZone}
+          pauseReason={pauseReason}
+          activeProfileName={activeProfileName}
+          coords={dockCoords}
+          lastKnown={lastKnown ?? null}
+          stoppedByBattery={stoppedByBattery}
+          intervalText={intervalRow}
+          endpoint={settings.endpoint}
+          isOfflineMode={settings.isOfflineMode}
+          navigation={navigation}
+          maxHeight={windowHeight / 2}
+          firstRun={settingsHydrated && !settings.hasCompletedSetup}
+          settings={settings}
+          colors={colors}
+          onDismiss={() =>
+            setSettings({ ...settings, hasCompletedSetup: true }).catch((err) =>
+              logger.error("[DashboardScreen] Failed to dismiss welcome card:", err)
+            )
+          }
+          onStartTracking={handleStart}
+          onNavigateToConnection={() => navigation.navigate("Connection")}
+          onNavigateToTrackingSync={() => navigation.navigate("Tracking & Sync")}
+          onNavigateToRequestFormat={() => navigation.navigate("Request Format")}
+        />
+      </View>
     </Container>
   )
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1
-  },
-  mapSection: {
-    height: 480,
-    position: "relative"
-  },
-  mapWrapper: {
+  stack: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0
+    bottom: space.lg,
+    flexDirection: "column",
+    gap: space.sm
   },
-  controlButtonContainer: {
-    position: "absolute",
-    bottom: 24,
-    left: 0,
-    right: 0,
-    alignItems: "center"
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between"
   },
-  controlButton: {
-    borderRadius: 28,
-    elevation: 4,
-    minWidth: 200,
-    shadowColor: "#000"
-  },
-  content: {
-    flex: 1,
-    paddingTop: 20,
-    paddingHorizontal: 16,
-    paddingBottom: 8
-  },
-  metricsSection: {
-    marginBottom: 20
+  routeSlot: {
+    width: size.iconColumn,
+    marginBottom: space.sm
   }
 })

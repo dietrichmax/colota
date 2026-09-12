@@ -4,72 +4,83 @@
  */
 
 import React, { useRef, useEffect, useMemo, useCallback, useState } from "react"
-import { View, StyleSheet, Text, ActivityIndicator, DeviceEventEmitter, Image, Pressable } from "react-native"
-import { AlertTriangle } from "lucide-react-native"
-import { LocationCoords } from "../../../types/global"
+import { View, StyleSheet, DeviceEventEmitter } from "react-native"
+import type { ViewPadding } from "@maplibre/maplibre-react-native"
+import { Geofence, LocationCoords } from "../../../types/global"
 import { useTheme } from "../../../hooks/useTheme"
 import { useCoords } from "../../../contexts/TrackingProvider"
-import { fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
-import { MAP_ANIMATION_DURATION_MS, MAX_MAP_ZOOM } from "../../../constants"
+import {
+  DEFAULT_MAP_ZOOM,
+  GEOFENCE_ZOOM_PADDING,
+  MAP_ANIMATION_DURATION_MS,
+  WORLD_MAP_ZOOM,
+  size,
+  space
+} from "../../../constants"
 import { MapCenterButton } from "../map/MapCenterButton"
-import { TrackToggleButton } from "../map/TrackToggleButton"
 import { ColotaMapView, ColotaMapRef } from "../map/ColotaMapView"
-import { buildGeofencesGeoJSON } from "../map/mapUtils"
+import { buildGeofencesGeoJSON, geofenceBounds } from "../map/mapUtils"
 import { GeofenceLayers } from "../map/GeofenceLayers"
 import { CurrentTrackLayers } from "../map/CurrentTrackLayers"
 import { UserLocationOverlay } from "../map/UserLocationOverlay"
 import { useTodayTrack } from "../../../hooks/useTodayTrack"
-import icon from "../../../assets/icons/icon.png"
 import { logger } from "../../../utils/logger"
-
-type Props = {
-  tracking: boolean
-  activeZoneName: string | null
-  pauseReason: string | null
-  activeProfileName: string | null
-  isBatteryCritical: boolean
-  locationEnabled: boolean
-}
 
 const isValidCoords = (c: LocationCoords | null): c is LocationCoords => {
   return c !== null && c.latitude !== 0 && c.longitude !== 0
 }
 
+export type LastKnownLocation = {
+  latitude: number
+  longitude: number
+  accuracy: number
+  timestamp: number
+}
+
+type Props = {
+  tracking: boolean
+  activeZoneName: string | null
+  /** `undefined` until the screen has read the database, `null` when it holds no fix. */
+  lastKnown: LastKnownLocation | null | undefined
+  cameraPadding: ViewPadding
+  controlsBottom: number
+  controlsEnd: number
+  showTrack: boolean
+  onHasTrackChange: (hasTrack: boolean) => void
+  /** Bumped by the screen on Start, so the map reacts to the tap and not to the first fix. */
+  recentreSignal: number
+}
+
+const WORLD_CENTER: [number, number] = [0, 20]
 export function DashboardMap({
   tracking,
   activeZoneName,
-  pauseReason,
-  activeProfileName,
-  isBatteryCritical,
-  locationEnabled
+  lastKnown,
+  cameraPadding,
+  controlsBottom,
+  controlsEnd,
+  showTrack,
+  onHasTrackChange,
+  recentreSignal
 }: Props) {
   const coords = useCoords()
   const mapRef = useRef<ColotaMapRef>(null)
   const { colors } = useTheme()
-  const [geofences, setGeofences] = useState<any[]>([])
+  const [geofences, setGeofences] = useState<Geofence[] | null>(null)
   const [isCentered, setIsCentered] = useState(true)
-  const [showTrack, setShowTrack] = useState<boolean | null>(null)
+  const isCenteredRef = useRef(true)
+  const placedRef = useRef(false)
+  const recentredRef = useRef(0)
+  const flyUntilRef = useRef(0)
+  const firstLoadRef = useRef(true)
+  const initialRef = useRef<LastKnownLocation | LocationCoords | null | undefined>(undefined)
+  const [mapLoads, setMapLoads] = useState(0)
   const { locations: trackLocations, version: trackVersion } = useTodayTrack(tracking, coords)
 
-  // Restore persisted track toggle
   useEffect(() => {
-    NativeLocationService.getSetting("showTrack")
-      .then((val) => setShowTrack(val === "true"))
-      .catch((err) => {
-        logger.error("[DashboardMap] Failed to load showTrack setting:", err)
-        setShowTrack(false)
-      })
-  }, [])
-  const isCenteredRef = useRef(true)
-  const initialCoords = useRef<LocationCoords | null>(null)
-  const [hasInitialCoords, setHasInitialCoords] = useState(false)
-  useEffect(() => {
-    if (!initialCoords.current && coords) {
-      initialCoords.current = coords
-      setHasInitialCoords(true)
-    }
-  }, [coords])
+    onHasTrackChange(trackLocations.length > 0)
+  }, [trackLocations, trackVersion, onHasTrackChange])
 
   const loadGeofences = useCallback(async () => {
     try {
@@ -77,6 +88,7 @@ export function DashboardMap({
       setGeofences(data)
     } catch (err) {
       logger.error("[DashboardMap] Failed to load geofences:", err)
+      setGeofences([])
     }
   }, [])
 
@@ -89,28 +101,86 @@ export function DashboardMap({
     return () => listener.remove()
   }, [loadGeofences])
 
-  // Auto-center camera when position changes (only if currently centered).
-  // Uses ref to avoid re-triggering when isCentered flips (which would
-  // override the setCamera zoom from handleCenterMe with a pan-only moveTo).
+  const liveFix = tracking && isValidCoords(coords) ? coords : null
+  const position = liveFix ?? lastKnown ?? null
+
+  // A stop sent before the style loads can be reset to its default, so placement runs again on the first map load.
   useEffect(() => {
-    if (!coords || !isCenteredRef.current || !mapRef.current?.camera) return
+    if (!position) placedRef.current = false
+    if (placedRef.current || !mapRef.current?.camera) return
+    if (position) {
+      placedRef.current = true
+      mapRef.current.camera.setStop({
+        center: [position.longitude, position.latitude],
+        zoom: DEFAULT_MAP_ZOOM,
+        padding: cameraPadding,
+        duration: 0
+      })
+      return
+    }
+    if (lastKnown === null && geofences && geofences.length > 0) {
+      placedRef.current = true
+      const [top, right, bottom, left] = GEOFENCE_ZOOM_PADDING
+      mapRef.current.camera.fitBounds(geofenceBounds(geofences), {
+        padding: {
+          top: top + (cameraPadding.top ?? 0),
+          right: right + (cameraPadding.right ?? 0),
+          bottom: bottom + (cameraPadding.bottom ?? 0),
+          left: left + (cameraPadding.left ?? 0)
+        },
+        duration: 0
+      })
+    }
+  }, [mapLoads, position, lastKnown, geofences, cameraPadding])
+
+  // The event fires again on every style load (a theme flip, the saved style URL resolving), which must not snap the viewport.
+  const handleMapReady = useCallback(() => {
+    if (!firstLoadRef.current) return
+    firstLoadRef.current = false
+    placedRef.current = false
+    setMapLoads((n) => n + 1)
+  }, [])
+
+  // An ease issued mid-flight cancels the fly at whatever zoom it has reached, and it lands on the same point anyway.
+  useEffect(() => {
+    if (!liveFix || !isCenteredRef.current || !mapRef.current?.camera) return
+    if (Date.now() < flyUntilRef.current) return
     mapRef.current.camera.easeTo({
-      center: [coords.longitude, coords.latitude],
+      center: [liveFix.longitude, liveFix.latitude],
+      padding: cameraPadding,
       duration: MAP_ANIMATION_DURATION_MS
     })
-  }, [coords])
+  }, [liveFix, cameraPadding])
+
+  useEffect(() => {
+    if (recentreSignal === recentredRef.current) return
+    recentredRef.current = recentreSignal
+    if (!position || !mapRef.current?.camera) return
+    placedRef.current = true
+    flyUntilRef.current = Date.now() + MAP_ANIMATION_DURATION_MS
+    mapRef.current.camera.flyTo({
+      center: [position.longitude, position.latitude],
+      zoom: DEFAULT_MAP_ZOOM,
+      padding: cameraPadding,
+      duration: MAP_ANIMATION_DURATION_MS
+    })
+    isCenteredRef.current = true
+    setIsCentered(true)
+  }, [recentreSignal, position, cameraPadding])
 
   const handleCenterMe = useCallback(() => {
-    if (coords && mapRef.current?.camera) {
+    if (position && mapRef.current?.camera) {
+      flyUntilRef.current = Date.now() + MAP_ANIMATION_DURATION_MS
       mapRef.current.camera.flyTo({
-        center: [coords.longitude, coords.latitude],
-        zoom: MAX_MAP_ZOOM,
+        center: [position.longitude, position.latitude],
+        zoom: DEFAULT_MAP_ZOOM,
+        padding: cameraPadding,
         duration: MAP_ANIMATION_DURATION_MS
       })
       isCenteredRef.current = true
       setIsCentered(true)
     }
-  }, [coords])
+  }, [position, cameraPadding])
 
   const handleRegionChange = useCallback((payload: { isUserInteraction: boolean }) => {
     if (payload.isUserInteraction) {
@@ -119,171 +189,47 @@ export function DashboardMap({
     }
   }, [])
 
-  // Geofence GeoJSON
-  const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences, colors), [geofences, colors])
+  const geofenceData = useMemo(() => buildGeofencesGeoJSON(geofences ?? [], colors), [geofences, colors])
 
-  const showMap = tracking && isValidCoords(coords)
-  const waitingForFix = tracking && !isValidCoords(coords)
-  const locationOff = tracking && !locationEnabled
+  // The tiles wait for the database, so the map never opens on the world view and jumps to the fix a frame later.
+  const settled = liveFix != null || lastKnown !== undefined
+  if (settled && initialRef.current === undefined) initialRef.current = liveFix ?? lastKnown ?? null
+  const initial = initialRef.current
+  const staleCoords = useMemo<LocationCoords | null>(
+    () => (lastKnown ? { latitude: lastKnown.latitude, longitude: lastKnown.longitude, accuracy: 0 } : null),
+    [lastKnown]
+  )
+
+  if (!settled) return <View style={StyleSheet.absoluteFill} testID="dashboard-map-pending" />
 
   return (
-    <View style={[styles.container, { borderRadius: colors.borderRadius }]}>
-      {/* Keep map mounted to avoid MapLibre/Fabric unmount race condition.
-          Hide it behind the placeholder when not tracking. */}
-      {hasInitialCoords && initialCoords.current ? (
-        <View style={showMap ? styles.mapVisible : styles.mapHidden} pointerEvents={showMap ? "auto" : "none"}>
-          <ColotaMapView
-            ref={mapRef}
-            initialCenter={[initialCoords.current.longitude, initialCoords.current.latitude]}
-            onRegionDidChange={handleRegionChange}
-          >
-            <CurrentTrackLayers
-              locations={trackLocations}
-              version={trackVersion}
-              visible={!!showTrack}
-              colors={colors}
-            />
+    <View style={StyleSheet.absoluteFill}>
+      <ColotaMapView
+        ref={mapRef}
+        initialCenter={initial ? [initial.longitude, initial.latitude] : WORLD_CENTER}
+        initialZoom={initial ? DEFAULT_MAP_ZOOM : WORLD_MAP_ZOOM}
+        cameraPadding={cameraPadding}
+        controlsBottom={controlsBottom}
+        controlsEnd={controlsEnd}
+        onRegionDidChange={handleRegionChange}
+        onMapReady={handleMapReady}
+      >
+        <CurrentTrackLayers locations={trackLocations} version={trackVersion} visible={showTrack} colors={colors} />
 
-            <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
+        <GeofenceLayers fills={geofenceData.fills} labels={geofenceData.labels} haloColor={colors.card} />
 
-            {/* Always keep overlay mounted to avoid MapLibre/Fabric unmount race condition */}
-            {coords && <UserLocationOverlay coords={coords} isPaused={!!activeZoneName} colors={colors} />}
-          </ColotaMapView>
-        </View>
-      ) : null}
+        {liveFix ? (
+          <UserLocationOverlay coords={liveFix} isPaused={!!activeZoneName} colors={colors} />
+        ) : (
+          staleCoords && <UserLocationOverlay coords={staleCoords} isPaused colors={colors} />
+        )}
+      </ColotaMapView>
 
-      {!tracking && (
-        <View
-          style={[
-            styles.stateContainer,
-            styles.overlay,
-            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
-          ]}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: colors.border }]}>
-            <Image source={icon} style={styles.icon} />
-          </View>
-          <Text style={[styles.stateTitle, { color: isBatteryCritical ? colors.error : colors.text }]}>
-            {isBatteryCritical ? "Tracking Stopped" : "Tracking Disabled"}
-          </Text>
-          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
-            {isBatteryCritical
-              ? "Battery critically low. Charge your device to resume."
-              : "Start tracking to see the map."}
-          </Text>
-        </View>
-      )}
-
-      {waitingForFix && locationOff && (
-        <Pressable
-          onPress={() => NativeLocationService.openLocationSettings()}
-          style={[
-            styles.stateContainer,
-            styles.overlay,
-            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
-          ]}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: colors.warning + "20" }]}>
-            <AlertTriangle size={32} color={colors.warning} />
-          </View>
-          <Text style={[styles.stateTitle, { color: colors.warning }]}>Location Services Off</Text>
-          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>
-            Tracking can&apos;t get GPS fixes. Tap to open Settings.
-          </Text>
-        </Pressable>
-      )}
-
-      {waitingForFix && !locationOff && (
-        <View
-          style={[
-            styles.stateContainer,
-            styles.overlay,
-            { backgroundColor: colors.card, borderRadius: colors.borderRadius }
-          ]}
-        >
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.stateTitle, styles.stateTitleSpaced, { color: colors.text }]}>Searching GPS...</Text>
-          <Text style={[styles.stateSubtext, { color: colors.textSecondary }]}>Waiting for GPS signal.</Text>
-        </View>
-      )}
-
-      {showMap && <MapCenterButton visible={!isCentered} onPress={handleCenterMe} />}
-      {showMap && showTrack !== null && (
-        <TrackToggleButton
-          active={!!showTrack}
-          onPress={() => {
-            const next = !showTrack
-            setShowTrack(next)
-            NativeLocationService.saveSetting("showTrack", String(next)).catch((err) =>
-              logger.error("[DashboardMap] Failed to save showTrack setting:", err)
-            )
-          }}
-        />
-      )}
-
-      {showMap && locationOff && (
-        <Pressable
-          onPress={() => NativeLocationService.openLocationSettings()}
-          style={[styles.statusBar, { backgroundColor: colors.error + "DD" }]}
-        >
-          <Text style={styles.barText}>Location off - tap to enable</Text>
-        </Pressable>
-      )}
-
-      {showMap && !locationOff && activeZoneName && (
-        <View style={[styles.statusBar, { backgroundColor: colors.warning + "DD" }]}>
-          <Text style={styles.barText}>
-            Paused in {activeZoneName}
-            {pauseReason === "wifi" ? " - WiFi" : pauseReason === "motionless" ? " - Motionless" : ""}
-          </Text>
-        </View>
-      )}
-
-      {showMap && !locationOff && !activeZoneName && activeProfileName && (
-        <View style={[styles.statusBar, { backgroundColor: colors.primary + "DD" }]}>
-          <Text style={styles.barText}>{activeProfileName}</Text>
-        </View>
-      )}
+      <MapCenterButton
+        visible={!isCentered && position !== null}
+        onPress={handleCenterMe}
+        style={{ bottom: controlsBottom + size.iconColumn + space.lg, right: controlsEnd }}
+      />
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, width: "100%", overflow: "hidden" },
-  mapVisible: { flex: 1 },
-  mapHidden: { flex: 1, opacity: 0 },
-  overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
-  stateContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24
-  },
-  icon: { width: 64, height: 64 },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16
-  },
-  stateTitle: { fontSize: 18, ...fonts.bold, textAlign: "center" },
-  stateTitleSpaced: { marginTop: 20 },
-  stateSubtext: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 20
-  },
-  statusBar: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: 6,
-    alignItems: "center",
-    zIndex: 5
-  },
-  barText: { fontSize: 13, ...fonts.semiBold, color: "#fff" }
-})
