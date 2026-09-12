@@ -135,11 +135,11 @@ describe("formatDistance", () => {
 
 describe("formatDuration", () => {
   it("abbreviates minutes as min, because m is metres and both appear on a trip", () => {
-    expect(formatDuration(34 * 60)).toBe("34m")
+    expect(formatDuration(34 * 60)).toBe("34min")
   })
 
   it("carries the hour when there is one", () => {
-    expect(formatDuration(3600 + 34 * 60)).toBe("1h 34m")
+    expect(formatDuration(3600 + 34 * 60)).toBe("1h 34min")
   })
 })
 

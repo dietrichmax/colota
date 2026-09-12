@@ -4,49 +4,86 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react"
-import { View, Text, StyleSheet, Pressable } from "react-native"
+import { AccessibilityInfo, View, StyleSheet, BackHandler, useWindowDimensions } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useFocusEffect } from "@react-navigation/native"
-import { fonts } from "../styles/typography"
-import { BarChart2 } from "lucide-react-native"
-import { Container } from "../components"
+import {
+  CalendarCheck,
+  ChartNoAxesColumn,
+  CirclePause,
+  EllipsisVertical,
+  Merge,
+  RotateCcwClock,
+  Route,
+  Upload,
+  Table,
+  Trash2,
+  X
+} from "lucide-react-native"
+import {
+  Container,
+  DayHeader,
+  DayPickerModal,
+  Divider,
+  EmptyState,
+  InspectorDock,
+  SpinningLoader,
+  TrackMap,
+  HeaderAction
+} from "../components"
+import type { DockContent } from "../components/features/inspector/InspectorDock"
+import { dayLongDate, dayTitle, type DayStats } from "../components/features/inspector/DayHeader"
 import { Tab } from "../components/ui/Tab"
+import { TripList } from "../components/features/inspector/TripList"
+import { ExportFormatDialog } from "../components/ui/ExportFormatDialog"
+import { LocationTable } from "../components/features/inspector/LocationTable"
 import { useTheme } from "../hooks/useTheme"
-import { Trip, LocationCoords, BoundaryAction, BOUNDARY_ACTION_SPLIT } from "../types/global"
+import { useTimeout } from "../hooks/useTimeout"
+import { useTracking } from "../contexts/TrackingProvider"
+import { Trip, LocationCoords, BoundaryAction, type DailyStat } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
-import { CalendarPicker } from "../components/features/inspector/CalendarPicker"
-import { TrackMap } from "../components/features/inspector/TrackMap"
-import { TripList } from "../components/features/inspector/TripList"
-import { LocationTable } from "../components/features/inspector/LocationTable"
-import { formatDistance, formatTime, startOfDaySec, endOfDaySec } from "../utils/geo"
-import { pad2 } from "../utils/format"
-import {
-  segmentTrips,
-  getTripColor,
-  buildBoundaryOverrideMap,
-  gapsBetweenTrips,
-  splitBlockedReason,
-  SPLIT_BLOCKED_NOT_A_TRIP
-} from "../utils/trips"
+import { formatTime, startOfDaySec, endOfDaySec } from "../utils/geo"
+import { segmentTrips, getTripColor, buildBoundaryOverrideMap, gapsBetweenTrips } from "../utils/trips"
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
-import { showAlert, showConfirm } from "../services/modalService"
+import {
+  EMPTY_MONTH,
+  dateFromKey,
+  dayKey,
+  emptyDayVariant,
+  exportMessage,
+  findLastDayWithData,
+  isAdjacentSelection,
+  lastDaySub,
+  monthKey,
+  type LastDay,
+  type MonthData
+} from "../utils/inspectorDay"
+import { showAlert, showChoice, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
+import { LOADING_INDICATOR_DELAY_MS, size, space } from "../constants"
 
 type TabType = "map" | "trips" | "data"
 
+// setOptions cannot unset a key, so leaving selection writes the SCREEN_CONFIG title back.
+const SCREEN_TITLE = "Location history"
+const NO_SELECTION = new Set<number>()
+
+type ExportRequest = { title: string; message: string; resolve: (format: ExportFormat | null) => void }
+
 export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Location History">) {
   const { colors } = useTheme()
+  const { settings, tracking } = useTracking()
+  const insets = useSafeAreaInsets()
+  const { height: windowHeight } = useWindowDimensions()
   const [activeTab, setActiveTab] = useState<TabType>(route?.params?.initialTab ?? "map")
 
-  // Map tab state - accept initialDate from Summary screen navigation
   const [mapDate, setMapDate] = useState(() => {
     const initialDate = route?.params?.initialDate
     return initialDate ? new Date(initialDate) : new Date()
   })
   const [trackLocations, setTrackLocations] = useState<LocationCoords[]>([])
-  // Note edits, kept out of trackLocations so a save doesn't hand the map a new array (which would
-  // close its popup). Applied wherever a location's note is shown: the table, the map and the
-  // trip handed to Trip Detail.
+  // Note edits stay out of trackLocations so a save does not hand the map a new array.
   const [noteOverrides, setNoteOverrides] = useState<Record<number, string | undefined>>({})
   const withNotes = useCallback(
     (locs: LocationCoords[]) =>
@@ -57,151 +94,177 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   )
 
   const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, BoundaryAction>>(() => new Map())
-  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [fitVersion, setFitVersion] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [showSpinner, setShowSpinner] = useState(false)
+  const [lastDay, setLastDay] = useState<LastDay | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [selectedPointId, setSelectedPointId] = useState<number | null>(null)
+  const [focusedTripIndex, setFocusedTripIndex] = useState<number | null>(null)
+  const [selected, setSelected] = useState(NO_SELECTION)
+  const [dockHeight, setDockHeight] = useState(0)
 
-  // Calendar state
-  const [daysWithData, setDaysWithData] = useState<Set<string>>(new Set())
-  const [daysWithNotes, setDaysWithNotes] = useState<Set<string>>(new Set())
-  const daysCache = useRef<Map<string, Set<string>>>(new Map())
-  const notesCache = useRef<Map<string, Set<string>>>(new Map())
-  const distanceCache = useRef<Map<string, Map<string, number>>>(new Map())
+  const [daysWithData, setDaysWithData] = useState(() => new Set<string>())
+  const [monthStats, setMonthStats] = useState<ReadonlyMap<string, DailyStat>>(EMPTY_MONTH.stats)
+  const monthCache = useRef<Map<string, MonthData>>(new Map())
 
-  // Trip segmentation from already-fetched day data
   const trips = useMemo(
     () => segmentTrips(trackLocations, undefined, boundaryOverrides),
     [trackLocations, boundaryOverrides]
   )
-
-  // Sum of per-trip distances (excludes gap jumps between trips)
-  const dailyDistance = useMemo(() => {
-    if (trips.length === 0) return undefined
-    const meters = trips.reduce((sum, t) => sum + t.distance, 0)
-    return meters > 0 ? formatDistance(meters) : undefined
-  }, [trips])
+  const dayDistanceMeters = useMemo(() => trips.reduce((sum, t) => sum + t.distance, 0), [trips])
+  const dayStats: DayStats | null =
+    trackLocations.length === 0
+      ? null
+      : { points: trackLocations.length, trips: trips.length, distanceMeters: dayDistanceMeters }
+  const isToday = dayKey(mapDate) === dayKey(new Date())
+  const hasEndpoint = settings.endpoint.trim().length > 0
+  const selecting = selected.size > 0
 
   const fetchTrackIdRef = useRef(0)
   const deletingPointRef = useRef(false)
+  const editingTripsRef = useRef(false)
+  const wasSelectingRef = useRef(false)
 
-  // Summary navigation button
-  const headerRight = useCallback(
-    () => (
-      <Pressable
-        onPress={() => navigation.navigate("Location Summary")}
-        style={({ pressed }) => [styles.headerBtn, pressed && { opacity: colors.pressedOpacity }]}
-      >
-        <BarChart2 size={20} color={colors.text} />
-      </Pressable>
-    ),
-    [navigation, colors]
-  )
+  const { set: startSpinnerTimer, clear: clearSpinnerTimer } = useTimeout()
+  useEffect(() => {
+    if (!loading) {
+      clearSpinnerTimer()
+      setShowSpinner(false)
+      return
+    }
+    startSpinnerTimer(() => setShowSpinner(true), LOADING_INDICATOR_DELAY_MS)
+  }, [loading, startSpinnerTimer, clearSpinnerTimer])
 
-  useLayoutEffect(() => {
-    navigation.setOptions({ headerRight })
-  }, [navigation, headerRight])
-
-  /** Fetch days-with-data and daily distances for a month into cache. */
-  const prefetchMonth = useCallback(async (year: number, month: number): Promise<Set<string>> => {
-    const key = `${year}-${pad2(month + 1)}`
-    if (daysCache.current.has(key)) return daysCache.current.get(key)!
+  const prefetchMonth = useCallback(async (year: number, month: number): Promise<MonthData> => {
+    const key = monthKey(year, month)
+    const cached = monthCache.current.get(key)
+    if (cached) return cached
     try {
       const start = new Date(year, month, 1)
       const end = new Date(year, month + 1, 0, 23, 59, 59)
       const startTs = Math.floor(start.getTime() / 1000)
       const endTs = Math.floor(end.getTime() / 1000)
-      const [days, stats, noteDays] = await Promise.all([
+      const [days, stats] = await Promise.all([
         NativeLocationService.getDaysWithData(startTs, endTs),
-        NativeLocationService.getDailyStats(startTs, endTs),
-        NativeLocationService.getDaysWithNotes(startTs, endTs)
+        NativeLocationService.getDailyStats(startTs, endTs)
       ])
-      const daySet = new Set(days)
-      daysCache.current.set(key, daySet)
-      notesCache.current.set(key, new Set(noteDays))
-      const distances = new Map<string, number>()
-      for (const stat of stats) {
-        if (stat.distanceMeters > 0) distances.set(stat.day, stat.distanceMeters)
-      }
-      distanceCache.current.set(key, distances)
-      return daySet
+      const data: MonthData = { days: new Set(days), stats: new Map(stats.map((s) => [s.day, s] as const)) }
+      monthCache.current.set(key, data)
+      return data
     } catch (err) {
       logger.error("[LocationHistory] Failed to fetch days with data:", err)
-      return new Set()
+      return EMPTY_MONTH
     }
   }, [])
 
-  /** Fetch and display days with data for a given month */
   const fetchDaysWithData = useCallback(
     async (year: number, month: number) => {
-      const daySet = await prefetchMonth(year, month)
-      setDaysWithData(daySet)
-      setDaysWithNotes(notesCache.current.get(`${year}-${pad2(month + 1)}`) ?? new Set())
+      const data = await prefetchMonth(year, month)
+      setDaysWithData(new Set(data.days))
+      setMonthStats(data.stats)
     },
     [prefetchMonth]
   )
 
-  // Fetch days for current month on mount and when date changes month
   useEffect(() => {
     fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
   }, [mapDate, fetchDaysWithData])
 
-  /** Fetch track data for the selected day */
   const fetchTrackData = useCallback(async () => {
     const id = ++fetchTrackIdRef.current
+    setLoading(true)
     try {
-      const startTimestamp = startOfDaySec(mapDate)
-      const endTimestamp = endOfDaySec(mapDate)
-
       const [result, overrides] = await Promise.all([
-        NativeLocationService.getLocationsByDateRange(startTimestamp, endTimestamp),
+        NativeLocationService.getLocationsByDateRange(startOfDaySec(mapDate), endOfDaySec(mapDate)),
         NativeLocationService.getBoundaryOverrides()
       ])
-      if (id === fetchTrackIdRef.current) {
-        setTrackLocations(result || [])
-        setBoundaryOverrides(buildBoundaryOverrideMap(overrides))
-        setNoteOverrides({})
-        setSelectedTrip(null)
-        setFitVersion((v) => v + 1)
-      }
+      const locations: LocationCoords[] = result || []
+      const last = locations.length === 0 ? await findLastDayWithData(mapDate, prefetchMonth) : null
+      if (id !== fetchTrackIdRef.current) return
+      setTrackLocations(locations)
+      setBoundaryOverrides(buildBoundaryOverrideMap(overrides))
+      setNoteOverrides({})
+      setLastDay(last)
+      setSelectedPointId(null)
+      setFocusedTripIndex(null)
+      setFitVersion((v) => v + 1)
+      setLoading(false)
     } catch (err) {
       logger.error("[LocationHistory] Track fetch error:", err)
-      if (id === fetchTrackIdRef.current) {
-        setTrackLocations([])
-        setBoundaryOverrides(new Map())
-        setNoteOverrides({})
-        setSelectedTrip(null)
-        setFitVersion((v) => v + 1)
-      }
+      if (id !== fetchTrackIdRef.current) return
+      setTrackLocations([])
+      setBoundaryOverrides(new Map())
+      setNoteOverrides({})
+      setLastDay(null)
+      setSelectedPointId(null)
+      setFocusedTripIndex(null)
+      setFitVersion((v) => v + 1)
+      setLoading(false)
+      showAlert("Load Failed", "Unable to load this day. Please try again.", "error")
     }
-  }, [mapDate])
+  }, [mapDate, prefetchMonth])
 
-  /** Fetch track data when map date changes */
   useEffect(() => {
     fetchTrackData()
   }, [fetchTrackData])
 
-  /** Refresh on focus so trip deletions in TripDetail are reflected */
+  const invalidateMonth = useCallback(() => {
+    monthCache.current.delete(monthKey(mapDate.getFullYear(), mapDate.getMonth()))
+  }, [mapDate])
+
   useFocusEffect(
     useCallback(() => {
-      const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
-      daysCache.current.delete(key)
-      notesCache.current.delete(key)
-      distanceCache.current.delete(key)
+      invalidateMonth()
       fetchTrackData()
       fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
-    }, [fetchTrackData, fetchDaysWithData, mapDate])
+    }, [invalidateMonth, fetchTrackData, fetchDaysWithData, mapDate])
   )
 
-  /** Tap a trip card -> open detail screen */
+  const refreshAfterEdit = useCallback(async () => {
+    invalidateMonth()
+    await fetchTrackData()
+    await fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
+  }, [invalidateMonth, mapDate, fetchTrackData, fetchDaysWithData])
+
+  const exitSelection = useCallback(() => setSelected(NO_SELECTION), [])
+
+  const changeDay = useCallback(
+    (date: Date) => {
+      setMapDate(date)
+      setFocusedTripIndex(null)
+      setSelectedPointId(null)
+      exitSelection()
+    },
+    [exitSelection]
+  )
+
+  const stepDay = useCallback(
+    (delta: number) => changeDay(new Date(mapDate.getFullYear(), mapDate.getMonth(), mapDate.getDate() + delta)),
+    [mapDate, changeDay]
+  )
+
+  const goToToday = useCallback(() => changeDay(new Date()), [changeDay])
+
+  const changeTab = useCallback(
+    (tab: TabType) => {
+      setActiveTab(tab)
+      exitSelection()
+    },
+    [exitSelection]
+  )
+
   // Trip Detail renders what it is handed, so notes saved this visit have to travel with it.
-  const handleTripSelect = useCallback(
-    (trip: Trip) => {
+  const openTrip = useCallback(
+    (index: number) => {
+      const trip = trips.find((t) => t.index === index)
+      if (!trip) return
       const withSessionNotes = (t: Trip) => ({ ...t, locations: withNotes(t.locations) })
       navigation.navigate("Trip Detail", { trip: withSessionNotes(trip), trips: trips.map(withSessionNotes) })
     },
     [navigation, trips, withNotes]
   )
 
-  /** Export trips (all or single) */
   const exportTrips = useCallback(
     async (format: ExportFormat, tripsToExport: Trip[]) => {
       if (tripsToExport.length === 0) return
@@ -231,25 +294,50 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     [mapDate]
   )
 
-  const handleShowFullDay = useCallback(() => {
-    setSelectedTrip(null)
-    setFitVersion((v) => v + 1)
-  }, [])
+  const [exportRequest, setExportRequest] = useState<ExportRequest | null>(null)
+  const chooseExportFormat = useCallback(
+    (title: string, message: string) =>
+      new Promise<ExportFormat | null>((resolve) => setExportRequest({ title, message, resolve })),
+    []
+  )
+  const settleExport = useCallback(
+    (format: ExportFormat | null) => {
+      exportRequest?.resolve(format)
+      setExportRequest(null)
+    },
+    [exportRequest]
+  )
 
-  const refreshAfterEdit = useCallback(async () => {
-    const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
-    daysCache.current.delete(key)
-    notesCache.current.delete(key)
-    distanceCache.current.delete(key)
-    await fetchTrackData()
-    await fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
-  }, [mapDate, fetchTrackData, fetchDaysWithData])
+  const handleExportDay = useCallback(async () => {
+    const format = await chooseExportFormat(
+      "Export day",
+      exportMessage(dayTitle(mapDate), trips.length, dayDistanceMeters)
+    )
+    if (format) await exportTrips(format, trips)
+  }, [mapDate, trips, dayDistanceMeters, exportTrips, chooseExportFormat])
 
-  const handleMergeTrips = useCallback(
-    async (toMerge: Trip[]) => {
-      if (toMerge.length < 2) return
-      const sorted = [...toMerge].sort((a, b) => a.index - b.index)
-      // TripList enforces an adjacency invariant before calling us, so sorted indices are contiguous.
+  const selectedTrips = useMemo(() => trips.filter((t) => selected.has(t.index)), [trips, selected])
+  const canMerge = isAdjacentSelection(selected)
+
+  const handleExportSelected = useCallback(async () => {
+    if (selectedTrips.length === 0) return
+    const distance = selectedTrips.reduce((sum, t) => sum + t.distance, 0)
+    const format = await chooseExportFormat(
+      selectedTrips.length === 1 ? `Export Trip ${selectedTrips[0].index}` : `Export ${selectedTrips.length} trips`,
+      exportMessage(dayTitle(mapDate), selectedTrips.length, distance)
+    )
+    if (format) await exportTrips(format, selectedTrips)
+  }, [selectedTrips, mapDate, exportTrips, chooseExportFormat])
+
+  const handleMergeSelected = useCallback(async () => {
+    if (editingTripsRef.current) return
+    editingTripsRef.current = true
+    try {
+      if (!canMerge) {
+        showAlert("Merge trips", "Select two or more trips that follow each other.", "info")
+        return
+      }
+      const sorted = [...selectedTrips].sort((a, b) => a.index - b.index)
       const first = sorted[0].index
       const last = sorted[sorted.length - 1].index
       const confirmed = await showConfirm({
@@ -265,23 +353,27 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         .flatMap((trip, i) => gapsBetweenTrips(trackLocations, sorted[i], trip, boundaryOverrides))
       try {
         await NativeLocationService.addBoundaryOverrides(overrides)
+        exitSelection()
         await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Trip merge failed:", error)
         showAlert("Merge Failed", "Unable to merge the selected trips. Please try again.", "error")
-        // Re-throw so TripList's CAB preserves the selection and lets the user retry.
-        throw error
       }
-    },
-    [trackLocations, boundaryOverrides, refreshAfterEdit]
-  )
+    } finally {
+      editingTripsRef.current = false
+    }
+  }, [canMerge, selectedTrips, trackLocations, boundaryOverrides, exitSelection, refreshAfterEdit])
 
-  const handleDeleteTrips = useCallback(
-    async (toDelete: Trip[]) => {
-      if (toDelete.length === 0) return
-      const totalPoints = toDelete.reduce((n, t) => n + t.locationCount, 0)
+  const handleDeleteSelected = useCallback(async () => {
+    if (selectedTrips.length === 0 || editingTripsRef.current) return
+    editingTripsRef.current = true
+    try {
+      const totalPoints = selectedTrips.reduce((n, t) => n + t.locationCount, 0)
       const confirmed = await showConfirm({
-        title: toDelete.length === 1 ? `Delete Trip ${toDelete[0].index}?` : `Delete ${toDelete.length} trips?`,
+        title:
+          selectedTrips.length === 1
+            ? `Delete Trip ${selectedTrips[0].index}?`
+            : `Delete ${selectedTrips.length} trips?`,
         message: `Removes ${totalPoints} location point${
           totalPoints === 1 ? "" : "s"
         } from this device only. Already-synced points remain on your server. Unsent points will not be uploaded.`,
@@ -291,65 +383,141 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       if (!confirmed) return
       try {
         await NativeLocationService.deleteLocationsInRanges(
-          toDelete.map((t) => ({ start: t.startTime, end: t.endTime }))
+          selectedTrips.map((t) => ({ start: t.startTime, end: t.endTime }))
         )
+        exitSelection()
         await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Trip delete failed:", error)
         showAlert("Delete Failed", "Unable to delete selection. Please try again.", "error")
       }
-    },
-    [refreshAfterEdit]
+    } finally {
+      editingTripsRef.current = false
+    }
+  }, [selectedTrips, exitSelection, refreshAfterEdit])
+
+  const handleMoreSelection = useCallback(async () => {
+    const choice = await showChoice({
+      title: "Selection",
+      message: `${selected.size} of ${trips.length} trips selected`,
+      variant: "info",
+      buttons: [{ text: "Select all" }, { text: "Clear selection" }, { text: "Cancel", style: "secondary" }]
+    })
+    if (choice === 0) setSelected(new Set(trips.map((t) => t.index)))
+    else if (choice === 1) exitSelection()
+  }, [selected.size, trips, exitSelection])
+
+  const toggleTrip = useCallback((index: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }, [])
+
+  const enterSelection = useCallback((index: number) => setSelected(new Set([index])), [])
+
+  // The title carries the count, and a title change is silent for a screen reader.
+  useEffect(() => {
+    if (selecting) AccessibilityInfo.announceForAccessibility(`${selected.size} selected`)
+    else if (wasSelectingRef.current) AccessibilityInfo.announceForAccessibility("Selection cleared")
+    wasSelectingRef.current = selecting
+  }, [selecting, selected.size])
+
+  useEffect(() => {
+    if (!selecting) return
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      exitSelection()
+      return true
+    })
+    return () => subscription.remove()
+  }, [selecting, exitSelection])
+
+  const renderExitSelection = useCallback(
+    () => <HeaderAction icon={X} label="Exit selection" onPress={exitSelection} testID="exit-selection-btn" />,
+    [exitSelection]
   )
 
-  const splittingPointRef = useRef(false)
-  const handlePointSplit = useCallback(
-    async (id: number) => {
-      if (splittingPointRef.current) return
-      // Match on row id, not timestamp: two fixes can land in the same second
-      const idx = trackLocations.findIndex((l) => l.id === id)
-      // The map draws runs the extent filter dropped, so a tap can land outside every trip.
-      // Splitting there would exempt both halves from that filter and conjure trips from jitter.
-      const inTrip = trips.some((t) => idx >= t.startIndex && idx < t.startIndex + t.locationCount)
-      const blocked = inTrip ? splitBlockedReason(trackLocations, idx, boundaryOverrides) : SPLIT_BLOCKED_NOT_A_TRIP
-      if (blocked) {
-        showAlert("Cannot Split Here", blocked, "info")
-        return
-      }
-      const at = trackLocations[idx].timestamp
-      const confirmed = await showConfirm({
-        // The confirm covers the popup, so name the point in it
-        title: at ? `Start a new trip at ${formatTime(at, true)}?` : "Split Trip?",
-        message:
-          "Everything from this point onwards becomes a separate trip. Your location data is not changed, and you can undo this by merging the two trips again.",
-        confirmText: "Split"
-      })
-      if (!confirmed) return
-      splittingPointRef.current = true
-      try {
-        await NativeLocationService.addBoundaryOverrides([
-          {
-            before_timestamp: trackLocations[idx - 1].timestamp ?? 0,
-            after_timestamp: trackLocations[idx].timestamp ?? 0,
-            action: BOUNDARY_ACTION_SPLIT
-          }
-        ])
-        // Re-segmenting recolours the track at the tapped point, which is the confirmation
-        await refreshAfterEdit()
-      } catch (error) {
-        logger.error("[LocationHistory] Trip split failed:", error)
-        showAlert("Split Failed", "Unable to split the trip here. Please try again.", "error")
-      } finally {
-        splittingPointRef.current = false
-      }
-    },
-    [trackLocations, trips, boundaryOverrides, refreshAfterEdit]
+  const renderSelectionActions = useCallback(
+    () => (
+      <View style={styles.headerRow}>
+        <HeaderAction
+          icon={Upload}
+          label="Export selected trips"
+          onPress={handleExportSelected}
+          testID="export-selected-btn"
+        />
+        {selected.size > 1 && (
+          <HeaderAction
+            icon={Merge}
+            label="Merge trips"
+            hint={canMerge ? undefined : "Select two or more trips that follow each other"}
+            color={canMerge ? colors.text : colors.textDisabled}
+            onPress={handleMergeSelected}
+            testID="merge-btn"
+          />
+        )}
+        <HeaderAction
+          icon={Trash2}
+          label="Delete trips"
+          color={colors.error}
+          onPress={handleDeleteSelected}
+          testID="delete-trips-btn"
+        />
+        <HeaderAction icon={EllipsisVertical} label="More" onPress={handleMoreSelection} testID="more-btn" />
+      </View>
+    ),
+    [
+      colors,
+      canMerge,
+      selected.size,
+      handleExportSelected,
+      handleMergeSelected,
+      handleDeleteSelected,
+      handleMoreSelection
+    ]
   )
+
+  const renderDayActions = useCallback(
+    () => (
+      <View style={styles.headerRow}>
+        {!isToday && <HeaderAction icon={CalendarCheck} label="Go to today" onPress={goToToday} testID="today-btn" />}
+        {trips.length > 0 && (
+          <HeaderAction icon={Upload} label="Export day" onPress={handleExportDay} testID="export-day-btn" />
+        )}
+        <HeaderAction
+          icon={ChartNoAxesColumn}
+          label="Location summary"
+          onPress={() => navigation.navigate("Location Summary")}
+          testID="summary-btn"
+        />
+      </View>
+    ),
+    [isToday, trips.length, goToToday, handleExportDay, navigation]
+  )
+
+  useLayoutEffect(() => {
+    if (selecting) {
+      navigation.setOptions({
+        headerLeft: renderExitSelection,
+        headerTitle: `${selected.size} selected`,
+        headerStyle: { backgroundColor: colors.card },
+        headerRight: renderSelectionActions
+      })
+      return
+    }
+    navigation.setOptions({
+      headerLeft: undefined,
+      headerTitle: SCREEN_TITLE,
+      headerStyle: undefined,
+      headerRight: renderDayActions
+    })
+  }, [navigation, colors, selecting, selected.size, renderExitSelection, renderSelectionActions, renderDayActions])
 
   const handlePointDelete = useCallback(
     async (id: number) => {
       if (deletingPointRef.current) return
-      // The confirm covers the popup, so name the point in it
       const point = trackLocations.find((l) => l.id === id)
       const at = point?.timestamp ? formatTime(point.timestamp, true) : null
       const confirmed = await showConfirm({
@@ -374,146 +542,221 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     [trackLocations, refreshAfterEdit]
   )
 
-  const handlePointNoteChange = useCallback(
-    async (id: number, note: string | null) => {
-      try {
-        await NativeLocationService.updateLocationNote(id, note)
-        setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
-        const key = `${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`
-        daysCache.current.delete(key)
-        notesCache.current.delete(key)
-        fetchDaysWithData(mapDate.getFullYear(), mapDate.getMonth())
-      } catch (error) {
-        logger.error("[LocationHistory] Note update failed:", error)
-        showAlert("Save Failed", "Unable to save note. Please try again.", "error")
-      }
+  const handlePointNoteChange = useCallback(async (id: number, note: string | null) => {
+    try {
+      await NativeLocationService.updateLocationNote(id, note)
+      setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
+    } catch (error) {
+      logger.error("[LocationHistory] Note update failed:", error)
+      showAlert("Save Failed", "Unable to save note. Please try again.", "error")
+    }
+  }, [])
+
+  const focusTripFromDock = useCallback((index: number | null) => {
+    setFocusedTripIndex(index)
+    setFitVersion((v) => v + 1)
+  }, [])
+
+  const selectPointFromTable = useCallback(
+    (id: number) => {
+      setSelectedPointId(id)
+      changeTab("map")
     },
-    [mapDate, fetchDaysWithData]
+    [changeTab]
   )
 
-  const mapLocations = selectedTrip ? (selectedTrip.locations as LocationCoords[]) : trackLocations
-
-  // The map gets the overrides as a prop rather than merged in here, because a new locations
-  // identity closes its open popup.
   const tableLocations = useMemo(() => withNotes(trackLocations), [trackLocations, withNotes])
 
-  const calendarPicker = useMemo(
-    () => (
-      <CalendarPicker
-        date={mapDate}
-        onDateChange={setMapDate}
-        locationCount={trackLocations.length}
-        distance={dailyDistance}
-        colors={colors}
-        daysWithData={daysWithData}
-        daysWithNotes={daysWithNotes}
-        dayDistances={distanceCache.current.get(`${mapDate.getFullYear()}-${pad2(mapDate.getMonth() + 1)}`)}
-        onMonthChange={fetchDaysWithData}
-        onPrefetchMonth={prefetchMonth}
-      />
-    ),
-    [
-      mapDate,
-      trackLocations.length,
-      dailyDistance,
-      colors,
-      daysWithData,
-      daysWithNotes,
-      fetchDaysWithData,
-      prefetchMonth
-    ]
+  const edgeStart = space.lg + insets.left
+  const edgeEnd = space.lg + insets.right
+  const controlsBottom = space.lg + dockHeight + space.sm
+  const cameraPadding = useMemo(
+    () => ({
+      top: space.lg,
+      bottom: dockHeight + space.lg + space.lg,
+      left: edgeStart,
+      right: edgeEnd + size.iconColumn + space.lg
+    }),
+    [dockHeight, edgeStart, edgeEnd]
   )
+
+  const empty = emptyDayVariant({ isToday, tracking, longDate: dayLongDate(mapDate), hasLastDay: lastDay !== null })
+  const dockEmptyAction =
+    empty.action === "lastDay" && lastDay
+      ? {
+          icon: RotateCcwClock,
+          label: "Last day with data",
+          sub: lastDaySub(lastDay),
+          onPress: () => changeDay(dateFromKey(lastDay.day))
+        }
+      : empty.action === "dashboard"
+        ? {
+            icon: CirclePause,
+            label: "Open Dashboard",
+            sub: "Tracking is off",
+            onPress: () => navigation.navigate("Dashboard")
+          }
+        : undefined
+  const emptyAction = dockEmptyAction && { label: dockEmptyAction.label, onPress: dockEmptyAction.onPress }
+
+  const selectedPoint = selectedPointId == null ? undefined : trackLocations.find((l) => l.id === selectedPointId)
+  let dockContent: DockContent
+  if (selectedPoint && selectedPointId != null) {
+    const id = selectedPointId
+    dockContent = {
+      kind: "point",
+      point: selectedPoint,
+      note: id in noteOverrides ? noteOverrides[id] : selectedPoint.note,
+      hasEndpoint,
+      onDelete: () => handlePointDelete(id),
+      onClose: () => setSelectedPointId(null),
+      onSaveNote: (note) => handlePointNoteChange(id, note)
+    }
+  } else if (trackLocations.length === 0) {
+    dockContent = { kind: "empty", title: empty.title, hint: empty.hint, action: dockEmptyAction }
+  } else if (trips.length === 0) {
+    dockContent = {
+      kind: "points",
+      count: trackLocations.length,
+      startTime: trackLocations[0].timestamp ?? 0,
+      endTime: trackLocations[trackLocations.length - 1].timestamp ?? 0
+    }
+  } else {
+    dockContent = { kind: "legend", trips, focusedTripIndex, onFocusTrip: focusTripFromDock }
+  }
+
+  const spinner = showSpinner ? (
+    <View style={styles.spinner} pointerEvents="none" testID="day-loading">
+      <SpinningLoader size={size.icon.lg} color={colors.primary} />
+    </View>
+  ) : null
 
   return (
     <Container>
-      {/* Tab Bar */}
-      <View style={styles.tabBar}>
-        <Tab label="Map" active={activeTab === "map"} onPress={() => setActiveTab("map")} colors={colors} />
-        <Tab label="Trips" active={activeTab === "trips"} onPress={() => setActiveTab("trips")} colors={colors} />
-        <Tab label="Data" active={activeTab === "data"} onPress={() => setActiveTab("data")} colors={colors} />
+      <DayHeader
+        date={mapDate}
+        stats={dayStats}
+        loading={loading}
+        onPrevious={() => stepDay(-1)}
+        onNext={() => stepDay(1)}
+        onOpenPicker={() => setPickerOpen(true)}
+        nextDisabled={isToday}
+      />
+      <DayPickerModal
+        visible={pickerOpen}
+        date={mapDate}
+        onSelect={changeDay}
+        onRequestClose={() => setPickerOpen(false)}
+        daysWithData={daysWithData}
+        dayStats={monthStats}
+        onMonthChange={fetchDaysWithData}
+        onPrefetchMonth={prefetchMonth}
+      />
+
+      <View style={[styles.tabBar, { backgroundColor: colors.background }]}>
+        <Tab label="Map" active={activeTab === "map"} onPress={() => changeTab("map")} colors={colors} />
+        <Tab label="Trips" active={activeTab === "trips"} onPress={() => changeTab("trips")} colors={colors} />
+        <Tab label="Data" active={activeTab === "data"} onPress={() => changeTab("data")} colors={colors} />
       </View>
+      <Divider tight />
 
-      {activeTab === "map" && (
-        <View style={styles.mapContainer}>
-          {calendarPicker}
-          <TrackMap
-            locations={mapLocations}
-            colors={colors}
-            noteOverrides={noteOverrides}
-            trips={selectedTrip ? undefined : trips}
-            trackColor={colors.primary}
-            fitVersion={fitVersion}
-            onPointNoteChange={handlePointNoteChange}
-            onPointDelete={handlePointDelete}
-            onPointSplit={handlePointSplit}
-          />
-          {selectedTrip && (
-            <Pressable
-              onPress={handleShowFullDay}
-              style={({ pressed }) => [
-                styles.floatingPill,
-                { backgroundColor: colors.primary, borderRadius: colors.borderRadius },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-            >
-              <Text style={[styles.floatingPillText, { color: colors.textOnPrimary }]}>
-                Trip {selectedTrip.index} · Show full day
-              </Text>
-            </Pressable>
-          )}
-        </View>
-      )}
+      <View style={styles.content}>
+        {activeTab === "map" && (
+          <>
+            <TrackMap
+              locations={trackLocations}
+              colors={colors}
+              noteOverrides={noteOverrides}
+              trips={trips}
+              trackColor={colors.primary}
+              fitVersion={fitVersion}
+              selectedPointId={selectedPointId}
+              onSelectPoint={setSelectedPointId}
+              focusedTripIndex={focusedTripIndex}
+              onFocusTrip={setFocusedTripIndex}
+              cameraPadding={cameraPadding}
+              controlsBottom={controlsBottom}
+              controlsEnd={edgeEnd}
+            />
+            {loading ? (
+              spinner
+            ) : (
+              <InspectorDock
+                content={dockContent}
+                left={edgeStart}
+                right={edgeEnd}
+                maxHeight={windowHeight / 2}
+                onLayout={(e) => setDockHeight(e.nativeEvent.layout.height)}
+              />
+            )}
+          </>
+        )}
 
-      {activeTab === "trips" && (
-        <View style={styles.mapContainer}>
-          {calendarPicker}
-          <TripList
-            trips={trips}
-            colors={colors}
-            onTripSelect={handleTripSelect}
-            selectedTripIndex={selectedTrip?.index ?? null}
-            onExport={exportTrips}
-            onDelete={handleDeleteTrips}
-            onMerge={handleMergeTrips}
-          />
-        </View>
-      )}
+        {activeTab === "trips" &&
+          (loading ? (
+            spinner
+          ) : trackLocations.length === 0 ? (
+            <EmptyState icon={Route} title={empty.title} hint={empty.hint} action={emptyAction} />
+          ) : trips.length === 0 ? (
+            <EmptyState
+              icon={Route}
+              title="No trips"
+              hint={`${trackLocations.length} points were recorded but none spread more than 100 m`}
+              action={{ label: "Show points", onPress: () => changeTab("data") }}
+            />
+          ) : (
+            <TripList
+              trips={trips}
+              selected={selected}
+              onToggle={toggleTrip}
+              onEnterSelection={enterSelection}
+              onOpenTrip={openTrip}
+            />
+          ))}
 
-      {activeTab === "data" && (
-        <View style={styles.mapContainer}>
-          {calendarPicker}
-          <LocationTable locations={tableLocations} colors={colors} />
-        </View>
-      )}
+        {activeTab === "data" &&
+          (loading ? (
+            spinner
+          ) : trackLocations.length === 0 ? (
+            <EmptyState icon={Table} title={empty.title} hint={empty.hint} action={emptyAction} />
+          ) : (
+            <LocationTable
+              locations={tableLocations}
+              colors={colors}
+              hasEndpoint={hasEndpoint}
+              selectedPointId={selectedPointId ?? undefined}
+              onSelectPoint={selectPointFromTable}
+            />
+          ))}
+      </View>
+      <ExportFormatDialog
+        visible={exportRequest !== null}
+        title={exportRequest?.title ?? ""}
+        message={exportRequest?.message ?? ""}
+        onSelect={settleExport}
+        onRequestClose={() => settleExport(null)}
+      />
     </Container>
   )
 }
 
 const styles = StyleSheet.create({
-  headerBtn: {
-    padding: 8
-  },
-  mapContainer: {
-    flex: 1
-  },
-  floatingPill: {
-    position: "absolute",
-    bottom: 16,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4
-  },
-  floatingPillText: {
-    fontSize: 16,
-    ...fonts.semiBold
+  headerRow: {
+    flexDirection: "row"
   },
   tabBar: {
-    flexDirection: "row",
-    marginBottom: 12
+    flexDirection: "row"
+  },
+  content: {
+    flex: 1
+  },
+  spinner: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center"
   }
 })

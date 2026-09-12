@@ -111,13 +111,13 @@ export function getSpeedUnit(): { factor: number; unit: string } {
   return usesMiles() ? MPH : KMH
 }
 
-/** Format seconds duration as "Xh Ym" or "Ym" */
+/** Format seconds duration as "Xh Ymin" or "Ymin" */
 export function formatDuration(seconds: number): string {
   const s = Math.max(0, seconds)
   const hours = Math.floor(s / 3600)
   const minutes = Math.floor((s % 3600) / 60)
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
+  if (hours > 0) return `${hours}h ${minutes}min`
+  return `${minutes}min`
 }
 
 /** Format a Unix-seconds timestamp as a localized time string. */
