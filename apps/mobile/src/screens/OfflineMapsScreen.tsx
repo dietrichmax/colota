@@ -3,954 +3,699 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react"
-import { View, Text, StyleSheet, TextInput, Pressable, FlatList, ActivityIndicator, AppState } from "react-native"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { ActivityIndicator, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native"
+import type { NativeSyntheticEvent } from "react-native"
 import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
-import type { NativeSyntheticEvent, TextInputInstance } from "react-native"
-import { useTheme } from "../hooks/useTheme"
-import { showAlert, showConfirm } from "../services/modalService"
-import { ScreenProps } from "../types/global"
-import { useCoords } from "../contexts/TrackingProvider"
-import { fonts } from "../styles/typography"
-import { X, CheckCircle, RefreshCw, AlertTriangle } from "lucide-react-native"
-import { Container, SectionTitle, Card } from "../components"
 import { useFocusEffect } from "@react-navigation/native"
-import { DEFAULT_MAP_ZOOM, WORLD_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, MAP_STYLE_URL_LIGHT } from "../constants"
+import { RefreshCw, Trash2, X } from "lucide-react-native"
+import { radius } from "@colota/shared"
+import {
+  Button,
+  Card,
+  Container,
+  Divider,
+  EmptyState,
+  FieldMessage,
+  IconButton,
+  ListItem,
+  SectionTitle,
+  TextField
+} from "../components"
+import { ColotaMapView, type ColotaMapRef, type RegionChangePayload } from "../components/features/map/ColotaMapView"
 import { MapCenterButton } from "../components/features/map/MapCenterButton"
-import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
-import { logger } from "../utils/logger"
-import NativeLocationService from "../services/NativeLocationService"
-import { formatBytes } from "../utils/format"
 import {
   createOfflinePack,
-  loadOfflineAreas,
   deleteOfflineArea,
-  unsubscribeOfflinePack,
   DOWNLOAD_STATE,
-  OfflinePackStatus,
-  OfflineAreaInfo,
-  OfflineAreaBounds,
-  estimateSizeLabel,
   estimateSizeBytes,
-  willExceedTileLimit,
+  estimateSizeLabel,
   loadOfflineAreaBounds,
+  loadOfflineAreas,
+  pruneOfflineAreaBounds,
+  removeOfflineAreaBounds,
   saveOfflineAreaBounds,
-  removeOfflineAreaBounds
+  subscribeOfflinePack,
+  unsubscribeOfflinePack,
+  willExceedTileLimit,
+  type OfflineAreaBounds,
+  type OfflineAreaInfo,
+  type OfflinePackStatus
 } from "../components/features/map/OfflinePackManager"
+import { useCoords } from "../contexts/TrackingProvider"
+import { useTheme } from "../hooks/useTheme"
+import NativeLocationService from "../services/NativeLocationService"
+import { showAlert, showConfirm } from "../services/modalService"
+import { logger } from "../utils/logger"
+import {
+  areaFeature,
+  areasCollection,
+  cornersOf,
+  deleteAreaConfirm,
+  describeArea,
+  downloadConfirm,
+  downloadLine,
+  duplicateNameError,
+  INTRO_LINE,
+  progressCaption,
+  redownloadConfirm,
+  ROW_HINT,
+  storageMessage,
+  type Bounds,
+  type Estimate,
+  type RowTone
+} from "../utils/offlineArea"
+import { fonts, fontSizes, lineHeights } from "../styles/typography"
+import {
+  DEFAULT_MAP_ZOOM,
+  GEOFENCE_ZOOM_PADDING,
+  MAP_ANIMATION_DURATION_MS,
+  MAP_STYLE_URL_LIGHT,
+  space,
+  WORLD_MAP_ZOOM
+} from "../constants"
+import type { ScreenProps } from "../types/global"
 
-type ItemAction = { area: string; action: "deleting" | "canceling" | "refreshing" }
-type ThemeColors = ReturnType<typeof useTheme>["colors"]
+const MAP_VIEWPORT_SHARE = 0.5
+const WORLD_CENTER: [number, number] = [0, 20]
+const STORAGE_HEADROOM = 0.9
+const BYTES_PER_MB = 1024 * 1024
+const [FIT_TOP, FIT_RIGHT, FIT_BOTTOM, FIT_LEFT] = GEOFENCE_ZOOM_PADDING
+const FIT_PADDING = { top: FIT_TOP, right: FIT_RIGHT, bottom: FIT_BOTTOM, left: FIT_LEFT }
 
-function formatRelativeTime(timestamp: number): string {
-  const diffDays = Math.floor((Date.now() - timestamp) / (1000 * 60 * 60 * 24))
-  if (diffDays < 1) return "Today"
-  if (diffDays === 1) return "Yesterday"
-  if (diffDays < 14) return `${diffDays} days ago`
-  if (diffDays < 60) return `${Math.floor(diffDays / 7)} weeks ago`
-  return new Date(timestamp).toLocaleDateString(undefined, { month: "short", year: "numeric" })
+type Fix = { latitude: number; longitude: number; accuracy: number }
+type Download = { name: string; bounds: Bounds | null }
+type Busy = { kind: "start" | "stop" | "delete" | "redownload"; name: string }
+
+const NO_CONNECTION = {
+  title: "No connection",
+  message: "Downloading map tiles needs a network. Saved areas still work."
+} as const
+
+function estimateFor(bounds: Bounds): Estimate {
+  const { ne, sw } = cornersOf(bounds)
+  return { label: estimateSizeLabel(ne, sw), bytes: estimateSizeBytes(ne, sw), large: willExceedTileLimit(ne, sw) }
 }
-
-// ---------------------------------------------------------------------------
-// DownloadForm
-// ---------------------------------------------------------------------------
-
-interface DownloadFormProps {
-  colors: ThemeColors
-  estimatedSizeLabel: string | null
-  downloading: boolean
-  downloadProgress: OfflinePackStatus | null
-  downloadError: string | null
-  areasCount: number
-  totalStorageBytes: number
-  nameInputRef: React.RefObject<TextInputInstance | null>
-  onNameChange: (v: string) => void
-  onDownload: () => void
-  onCancelDownload: () => void
-}
-
-const DownloadForm = memo(
-  ({
-    colors,
-    estimatedSizeLabel,
-    downloading,
-    downloadProgress,
-    downloadError,
-    areasCount,
-    totalStorageBytes,
-    nameInputRef,
-    onNameChange,
-    onDownload,
-    onCancelDownload
-  }: DownloadFormProps) => {
-    const progressPct = downloadProgress?.percentage ?? 0
-    const progressLabel =
-      downloadProgress?.state === DOWNLOAD_STATE.COMPLETE
-        ? "Complete"
-        : downloadProgress
-          ? `${Math.round(progressPct)}%`
-          : "Starting..."
-
-    const sizeLabel = useMemo(() => {
-      if (!downloadProgress || downloadProgress.completedResourceSize <= 0) return null
-      const {
-        completedResourceSize: done,
-        completedResourceCount: count,
-        requiredResourceCount: total
-      } = downloadProgress
-      const downloaded = formatBytes(done)
-      if (count > 0 && total > 0) return `${downloaded} / ~${formatBytes((done / count) * total)}`
-      return downloaded
-    }, [downloadProgress])
-
-    return (
-      <>
-        <View style={styles.section}>
-          <SectionTitle>Download Area</SectionTitle>
-          <Card>
-            <Text style={[styles.hint, { color: colors.textSecondary }]}>
-              Pan and zoom the map to frame the area you want to download, then enter a name and tap Download. Size
-              estimates may be significantly higher in dense urban areas.
-            </Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
-              <TextInput
-                ref={nameInputRef}
-                style={[
-                  styles.input,
-                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }
-                ]}
-                placeholder="Home area, Trail..."
-                placeholderTextColor={colors.placeholder}
-                onChangeText={onNameChange}
-                editable={!downloading}
-              />
-            </View>
-
-            {estimatedSizeLabel && (
-              <Text style={[styles.sizeEstimate, { color: colors.textSecondary }]}>{estimatedSizeLabel} estimated</Text>
-            )}
-
-            {downloading ? (
-              <View style={styles.progressContainer}>
-                <View style={styles.progressHeader}>
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <Text style={[styles.progressLabel, { color: colors.text }]}>Downloading {progressLabel}</Text>
-                </View>
-                <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
-                  <View style={[styles.progressFill, { backgroundColor: colors.primary, width: `${progressPct}%` }]} />
-                </View>
-                {downloadProgress && (
-                  <Text style={[styles.progressSub, { color: colors.textSecondary }]}>
-                    {downloadProgress.completedResourceCount} / {downloadProgress.requiredResourceCount} resources
-                    {sizeLabel ? ` - ${sizeLabel}` : ""}
-                  </Text>
-                )}
-                <Pressable
-                  testID="cancel-download-btn"
-                  onPress={onCancelDownload}
-                  style={({ pressed }) => [
-                    styles.cancelBtn,
-                    { borderColor: colors.error + "40" },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
-                >
-                  <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel Download</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <Pressable
-                testID="download-btn"
-                style={({ pressed }) => [
-                  styles.downloadBtn,
-                  { backgroundColor: estimatedSizeLabel ? colors.primary : colors.border },
-                  pressed && { opacity: colors.pressedOpacity }
-                ]}
-                onPress={onDownload}
-                disabled={!estimatedSizeLabel}
-              >
-                <Text style={[styles.downloadBtnText, { color: colors.textOnPrimary }]}>Download Area</Text>
-              </Pressable>
-            )}
-
-            {downloadError && <Text style={[styles.errorText, { color: colors.error }]}>{downloadError}</Text>}
-          </Card>
-        </View>
-
-        {areasCount > 0 && (
-          <>
-            <SectionTitle>Saved Areas</SectionTitle>
-            {totalStorageBytes > 0 && (
-              <Text style={[styles.savedAreasMeta, { color: colors.textSecondary }]}>
-                {areasCount} {areasCount === 1 ? "area" : "areas"} · {formatBytes(totalStorageBytes)}
-              </Text>
-            )}
-          </>
-        )}
-      </>
-    )
-  }
-)
-
-// ---------------------------------------------------------------------------
-// OfflineMapsScreen
-// ---------------------------------------------------------------------------
 
 export function OfflineMapsScreen({}: ScreenProps) {
-  const coords = useCoords()
   const { colors } = useTheme()
+  const { height: viewportHeight } = useWindowDimensions()
+  const mapHeight = Math.round(viewportHeight * MAP_VIEWPORT_SHARE)
+  const coords = useCoords()
 
-  const [areas, setAreas] = useState<OfflineAreaInfo[]>([])
+  const [areas, setAreas] = useState<OfflineAreaInfo[] | null>(null)
   const [areaBounds, setAreaBounds] = useState<OfflineAreaBounds[]>([])
-  const newNameRef = useRef("")
-  const nameInputRef = useRef<TextInputInstance>(null)
-
-  const currentBoundsRef = useRef<[[number, number], [number, number]] | null>(null)
-  const [estimatedSizeLabel, setEstimatedSizeLabel] = useState<string | null>(null)
-
+  const [name, setName] = useState("")
+  const [estimate, setEstimate] = useState<Estimate | null>(null)
+  // `undefined` until the database has answered, so the tiles never open on the world view and jump.
+  const [lastFix, setLastFix] = useState<Fix | null | undefined>(undefined)
   const [isCentered, setIsCentered] = useState(true)
-  const [hasInitialCoords, setHasInitialCoords] = useState(false)
-  const [isOffline, setIsOffline] = useState(false)
-
-  const [itemAction, setItemAction] = useState<ItemAction | null>(null)
   const [currentStyleUrl, setCurrentStyleUrl] = useState<string | null>(null)
-
-  // Download state
-  const [downloading, setDownloading] = useState(false)
+  const [download, setDownload] = useState<Download | null>(null)
   const [downloadProgress, setDownloadProgress] = useState<OfflinePackStatus | null>(null)
-  const [downloadBounds, setDownloadBounds] = useState<[[number, number], [number, number]] | null>(null)
-  const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [busy, setBusy] = useState<Busy | null>(null)
 
-  // Track the active pack name so we can unsubscribe on unmount
+  // A ref, not the state, because two presses inside one render both read the same state value.
+  const busyRef = useRef(false)
   const activePackNameRef = useRef<string | null>(null)
-
+  // True between createOfflinePack being called and its promise settling: a cancel in that window
+  // has nothing to delete yet, so the post-create continuation deletes it once, when native answers.
+  const createPendingRef = useRef(false)
+  const currentBoundsRef = useRef<Bounds | null>(null)
+  const tileErrorCountRef = useRef(0)
+  const lastTileErrorRef = useRef<unknown>(null)
   const mapRef = useRef<ColotaMapRef>(null)
-  const initialCenter = useRef<{ latitude: number; longitude: number } | null>(null)
 
-  // Unsubscribe listeners when the screen unmounts mid-download
+  const listAreas = useMemo(() => (areas ?? []).filter((a) => a.name !== download?.name), [areas, download])
+  const takenNames = useMemo(() => listAreas.map((a) => a.name), [listAreas])
+  const nameError = duplicateNameError(name, takenNames)
+
+  useEffect(() => {
+    if (coords) {
+      setLastFix({ latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy ?? 0 })
+      return
+    }
+    let active = true
+    NativeLocationService.getMostRecentLocation()
+      .then((latest) => {
+        if (!active) return
+        setLastFix(
+          latest ? { latitude: latest.latitude, longitude: latest.longitude, accuracy: latest.accuracy ?? 0 } : null
+        )
+      })
+      .catch((err) => {
+        logger.error("[OfflineMapsScreen] Failed to read the last known location:", err)
+        if (active) setLastFix(null)
+      })
+    return () => {
+      active = false
+    }
+  }, [coords])
+
   useEffect(() => {
     return () => {
-      if (activePackNameRef.current) {
-        unsubscribeOfflinePack(activePackNameRef.current)
-      }
+      if (activePackNameRef.current) unsubscribeOfflinePack(activePackNameRef.current)
     }
   }, [])
 
-  // Re-check network state when the app comes back to the foreground
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        NativeLocationService.isNetworkAvailable().then((available) => setIsOffline(!available))
-      }
-    })
-    return () => sub.remove()
+  const reportTileErrors = useCallback((packName: string) => {
+    if (tileErrorCountRef.current === 0) return
+    logger.warn(
+      `[OfflineMapsScreen] ${tileErrorCountRef.current} tile error(s) total downloading '${packName}', last:`,
+      lastTileErrorRef.current
+    )
+    tileErrorCountRef.current = 0
   }, [])
+
+  const handleTileError = useCallback(
+    (packName: string) => (err: unknown) => {
+      if (activePackNameRef.current !== packName) return
+      tileErrorCountRef.current += 1
+      lastTileErrorRef.current = err
+      if (tileErrorCountRef.current === 1) {
+        logger.warn(`[OfflineMapsScreen] Tile error downloading '${packName}':`, err)
+      }
+    },
+    []
+  )
+
+  const loadAreasRef = useRef<() => Promise<void>>(async () => {})
+
+  const finishDownload = useCallback(async (packName: string) => {
+    try {
+      const entry = (await loadOfflineAreaBounds()).find((b) => b.name === packName)
+      if (entry) await saveOfflineAreaBounds({ ...entry, downloadedAt: Date.now() })
+    } catch (err) {
+      logger.error("[OfflineMapsScreen] Failed to stamp completion:", err)
+    }
+    await loadAreasRef.current()
+  }, [])
+
+  const handleProgress = useCallback(
+    (packName: string) => (status: OfflinePackStatus) => {
+      if (activePackNameRef.current !== packName) return
+      setDownloadProgress(status)
+      if (status.state !== DOWNLOAD_STATE.COMPLETE) return
+      reportTileErrors(packName)
+      activePackNameRef.current = null
+      setDownload(null)
+      setDownloadProgress(null)
+      setName("")
+      finishDownload(packName).catch(() => {})
+    },
+    [reportTileErrors, finishDownload]
+  )
 
   const loadAreas = useCallback(async () => {
-    try {
-      const [data, bounds] = await Promise.all([loadOfflineAreas(), loadOfflineAreaBounds()])
-      setAreas(data)
-      // Remove bounds entries for packs that no longer exist
-      const packNames = new Set(data.map((a) => a.name))
-      const validBounds = bounds.filter((b) => packNames.has(b.name))
-      if (validBounds.length < bounds.length) {
-        const orphaned = bounds.filter((b) => !packNames.has(b.name))
-        await Promise.all(orphaned.map((b) => removeOfflineAreaBounds(b.name)))
-      }
-      setAreaBounds(validBounds)
-    } catch (err) {
-      logger.error("[OfflineMapsScreen] Failed to load offline areas:", err)
+    const [packsResult, entriesResult, styleResult] = await Promise.allSettled([
+      loadOfflineAreas(),
+      loadOfflineAreaBounds(),
+      NativeLocationService.getSetting("mapStyleUrlLight")
+    ])
+    if (packsResult.status === "rejected") {
+      logger.error("[OfflineMapsScreen] Failed to load offline areas:", packsResult.reason)
     }
-  }, [])
+    if (styleResult.status === "rejected") {
+      logger.error("[OfflineMapsScreen] Failed to read the map style:", styleResult.reason)
+    }
+    const packs = packsResult.status === "fulfilled" ? packsResult.value : null
+    const entries = entriesResult.status === "fulfilled" ? entriesResult.value : null
+    if (styleResult.status === "fulfilled") setCurrentStyleUrl(styleResult.value || MAP_STYLE_URL_LIGHT)
+    if (!packs) return
+
+    const keep = new Set(packs.map((p) => p.name))
+    if (entries) {
+      if (entries.some((e) => !keep.has(e.name))) await pruneOfflineAreaBounds(keep)
+      setAreaBounds(entries.filter((e) => keep.has(e.name)))
+    }
+    setAreas(packs)
+
+    // Only a pack native already reports active is ever attached: observing one sets it active.
+    const active = packs.find((p) => p.isActive)
+    if (!active || activePackNameRef.current !== null || createPendingRef.current) return
+    activePackNameRef.current = active.name
+    const status = await subscribeOfflinePack(active.name, handleProgress(active.name), handleTileError(active.name))
+    if (!status) {
+      activePackNameRef.current = null
+      return
+    }
+    setDownload({ name: active.name, bounds: active.bounds })
+    setName(active.name)
+    handleProgress(active.name)(status)
+  }, [handleProgress, handleTileError])
+  loadAreasRef.current = loadAreas
 
   useFocusEffect(
     useCallback(() => {
       loadAreas()
-      NativeLocationService.isNetworkAvailable().then((available) => setIsOffline(!available))
-      NativeLocationService.getSetting("mapStyleUrlLight").then((url) => {
-        setCurrentStyleUrl(url || MAP_STYLE_URL_LIGHT)
-      })
     }, [loadAreas])
   )
 
-  // Set initial map center from live coords or last known location
-  useEffect(() => {
-    if (hasInitialCoords) return
-
-    if (coords) {
-      initialCenter.current = { latitude: coords.latitude, longitude: coords.longitude }
-      setHasInitialCoords(true)
-      return
-    }
-
-    NativeLocationService.getMostRecentLocation().then((latest) => {
-      if (initialCenter.current) return
-      initialCenter.current = latest
-        ? { latitude: latest.latitude, longitude: latest.longitude }
-        : { latitude: 0, longitude: 0 }
-      setHasInitialCoords(true)
-    })
-  }, [coords, hasInitialCoords])
-
-  const handleCenterMe = useCallback(() => {
-    if (coords && mapRef.current?.camera) {
-      mapRef.current.camera.flyTo({
-        center: [coords.longitude, coords.latitude],
-        zoom: DEFAULT_MAP_ZOOM,
-        duration: MAP_ANIMATION_DURATION_MS
-      })
-      setIsCentered(true)
-    }
-  }, [coords])
-
-  const updateBoundsAndEstimate = useCallback((ne: [number, number], sw: [number, number]) => {
-    currentBoundsRef.current = [ne, sw]
-    setEstimatedSizeLabel(estimateSizeLabel(ne, sw))
+  const noteBounds = useCallback((bounds: Bounds) => {
+    currentBoundsRef.current = bounds
+    setEstimate(estimateFor(bounds))
   }, [])
 
   const handleRegionChange = useCallback(
-    (payload: { isUserInteraction: boolean; bounds?: [number, number, number, number] }) => {
+    (payload: RegionChangePayload) => {
       if (payload.isUserInteraction) setIsCentered(false)
-      if (payload.bounds) {
-        const [west, south, east, north] = payload.bounds
-        updateBoundsAndEstimate([east, north], [west, south])
-      }
+      if (payload.bounds) noteBounds(payload.bounds)
     },
-    [updateBoundsAndEstimate]
+    [noteBounds]
   )
 
   const handleMapReady = useCallback(async () => {
     try {
       const bounds = await mapRef.current?.mapView?.getBounds()
-      if (bounds) {
-        const [west, south, east, north] = bounds
-        updateBoundsAndEstimate([east, north], [west, south])
-      }
-    } catch {
-      // map not ready yet
+      if (bounds) noteBounds(bounds)
+    } catch (err) {
+      logger.warn("[OfflineMapsScreen] Map bounds unavailable on ready:", err)
     }
-  }, [updateBoundsAndEstimate])
+  }, [noteBounds])
+
+  const handleCenterMe = useCallback(() => {
+    const target = coords ?? lastFix
+    if (!target || !mapRef.current?.camera) return
+    mapRef.current.camera.flyTo({
+      center: [target.longitude, target.latitude],
+      zoom: DEFAULT_MAP_ZOOM,
+      duration: MAP_ANIMATION_DURATION_MS
+    })
+    setIsCentered(true)
+  }, [coords, lastFix])
+
+  const fitToArea = useCallback((bounds: Bounds) => {
+    if (!mapRef.current?.camera) return
+    mapRef.current.camera.fitBounds(bounds, { padding: FIT_PADDING, duration: MAP_ANIMATION_DURATION_MS })
+    setIsCentered(false)
+  }, [])
+
+  const handleAreaPress = useCallback(
+    (event: NativeSyntheticEvent<PressEventWithFeatures>) => {
+      const pressed: string | undefined = event.nativeEvent.features?.[0]?.properties?.name
+      const area = pressed ? areas?.find((a) => a.name === pressed) : undefined
+      if (area?.bounds) fitToArea(area.bounds)
+    },
+    [areas, fitToArea]
+  )
 
   const beginDownload = useCallback(
-    (name: string, ne: [number, number], sw: [number, number], onComplete?: () => void) => {
-      const MAX_RETRIES = 3
-      const RETRY_DELAY_MS = 5000
-
-      setDownloading(true)
-      setDownloadBounds([ne, sw])
+    async (packName: string, bounds: Bounds) => {
+      activePackNameRef.current = packName
+      tileErrorCountRef.current = 0
+      setDownload({ name: packName, bounds })
       setDownloadProgress(null)
-      setDownloadError(null)
-      activePackNameRef.current = name
-
-      const attempt = (retriesLeft: number) => {
-        let tileErrors = 0
-        let lastTileError: unknown = null
-        const reportTileErrors = () => {
-          if (tileErrors === 0) return
-          logger.warn(
-            `[OfflineMapsScreen] ${tileErrors} tile error(s) total downloading '${name}', last:`,
-            lastTileError
-          )
-          tileErrors = 0
-        }
-
-        const onFailure = (message: string) => {
-          reportTileErrors()
-          if (retriesLeft > 0) {
-            const attempt_num = MAX_RETRIES - retriesLeft + 1
-            logger.warn(`[OfflineMapsScreen] Download failed, retrying (${attempt_num}/${MAX_RETRIES})...`)
-            setDownloadError(`Retrying... (${attempt_num}/${MAX_RETRIES})`)
-            setDownloadProgress(null)
-            setTimeout(async () => {
-              try {
-                await deleteOfflineArea(name)
-              } catch {}
-              attempt(retriesLeft - 1)
-            }, RETRY_DELAY_MS)
-          } else {
-            activePackNameRef.current = null
-            setDownloading(false)
-            setDownloadBounds(null)
-            setDownloadError(message)
-            removeOfflineAreaBounds(name)
-            setAreaBounds((prev) => prev.filter((b) => b.name !== name))
-          }
-        }
-
-        createOfflinePack(
-          name,
-          ne,
-          sw,
-          (status: OfflinePackStatus) => {
-            setDownloadProgress(status)
-            setDownloadError(null)
-            if (status.state === DOWNLOAD_STATE.COMPLETE) {
-              reportTileErrors()
-              activePackNameRef.current = null
-              setDownloading(false)
-              setDownloadBounds(null)
-              onComplete?.()
-              loadAreas()
-            }
-          },
-          (err: unknown) => {
-            tileErrors += 1
-            lastTileError = err
-            if (tileErrors === 1) logger.warn(`[OfflineMapsScreen] Tile error downloading '${name}':`, err)
-          }
-        ).catch(() => {
-          onFailure("Failed to start download. Please try again.")
-          deleteOfflineArea(name).catch((err) => {
-            logger.error(`[OfflineMapsScreen] Failed to clean up pack '${name}':`, err)
-          })
-        })
+      createPendingRef.current = true
+      const { ne, sw } = cornersOf(bounds)
+      try {
+        await createOfflinePack(packName, ne, sw, handleProgress(packName), handleTileError(packName))
+      } catch (err) {
+        createPendingRef.current = false
+        // Cancelled while pending: native created nothing, so there is nothing to say.
+        if (activePackNameRef.current !== packName) return
+        logger.error("[OfflineMapsScreen] Failed to start download:", err)
+        activePackNameRef.current = null
+        setDownload(null)
+        showAlert("Could not start the download", "Nothing was downloaded. Try again.", "error")
+        return
       }
+      createPendingRef.current = false
+      if (activePackNameRef.current !== packName) {
+        try {
+          await deleteOfflineArea(packName)
+        } catch (err) {
+          logger.error("[OfflineMapsScreen] Failed to delete a pack cancelled during creation:", err)
+        }
+        return
+      }
+      try {
+        await saveOfflineAreaBounds({ name: packName, ne, sw, styleUrl: currentStyleUrl ?? MAP_STYLE_URL_LIGHT })
+      } catch (err) {
+        logger.error("[OfflineMapsScreen] Failed to save area bounds:", err)
+      }
+      await loadAreas()
+    },
+    [currentStyleUrl, handleProgress, handleTileError, loadAreas]
+  )
 
-      attempt(MAX_RETRIES)
+  const handleDownload = useCallback(async () => {
+    const trimmed = name.trim()
+    const bounds = currentBoundsRef.current
+    if (busyRef.current || !trimmed || !bounds || !estimate) return
+    busyRef.current = true
+    setBusy({ kind: "start", name: trimmed })
+    try {
+      if (!(await NativeLocationService.isNetworkAvailable())) {
+        showAlert(NO_CONNECTION.title, NO_CONNECTION.message, "warning")
+        return
+      }
+      const fresh = await loadOfflineAreas()
+      setAreas(fresh)
+      if (fresh.some((a) => a.name === trimmed)) return
+      const availableMB = await NativeLocationService.getAvailableStorageMB()
+      if (availableMB > 0 && estimate.bytes / BYTES_PER_MB > availableMB * STORAGE_HEADROOM) {
+        showAlert("Not enough storage", storageMessage(estimate, availableMB), "warning")
+        return
+      }
+      const metered = !(await NativeLocationService.isUnmeteredConnection())
+      if (!(await showConfirm({ ...downloadConfirm(trimmed, estimate, metered), destructive: false }))) return
+    } catch (err) {
+      logger.error("[OfflineMapsScreen] Failed to start download:", err)
+      showAlert("Could not start the download", "Nothing was downloaded. Try again.", "error")
+      return
+    } finally {
+      busyRef.current = false
+      setBusy(null)
+    }
+    await beginDownload(trimmed, bounds)
+  }, [name, estimate, beginDownload])
+
+  const handleCancelDownload = useCallback(async () => {
+    const packName = activePackNameRef.current
+    if (!packName || busyRef.current) return
+    activePackNameRef.current = null
+    if (createPendingRef.current) {
+      setDownload(null)
+      setDownloadProgress(null)
+      return
+    }
+    busyRef.current = true
+    setBusy({ kind: "stop", name: packName })
+    try {
+      await deleteOfflineArea(packName)
+      await removeOfflineAreaBounds(packName)
+    } catch (err) {
+      logger.error("[OfflineMapsScreen] Failed to stop the download:", err)
+      showAlert("Could not stop the download", "The download may still be running. Try again.", "error")
+    } finally {
+      busyRef.current = false
+      setBusy(null)
+      setDownload(null)
+      setDownloadProgress(null)
+    }
+    await loadAreas()
+  }, [loadAreas])
+
+  const handleCancelArea = useCallback(
+    async (area: OfflineAreaInfo) => {
+      if (busyRef.current) return
+      busyRef.current = true
+      setBusy({ kind: "stop", name: area.name })
+      try {
+        await deleteOfflineArea(area.name)
+        await removeOfflineAreaBounds(area.name)
+      } catch (err) {
+        logger.error("[OfflineMapsScreen] Failed to stop the download:", err)
+        showAlert("Could not stop the download", "The download may still be running. Try again.", "error")
+      } finally {
+        busyRef.current = false
+        setBusy(null)
+      }
+      await loadAreas()
     },
     [loadAreas]
   )
 
-  const handleDownload = useCallback(async () => {
-    if (!newNameRef.current.trim()) {
-      showAlert("Missing Name", "Please enter a name for this area.", "warning")
-      return
-    }
-    if (isOffline) {
-      showAlert("Offline", "An internet connection is required to download map tiles.", "warning")
-      return
-    }
-
-    const name = newNameRef.current.trim()
-    const bounds = currentBoundsRef.current
-    if (!bounds) {
-      showAlert("Map Not Ready", "Wait for the map to load before downloading.", "warning")
-      return
-    }
-    const [ne, sw] = bounds
-
-    if (areas.some((a) => a.name === name)) {
-      showAlert("Duplicate Name", `An area named "${name}" already exists. Choose a different name.`, "warning")
-      return
-    }
-
-    const isUnmetered = await NativeLocationService.isUnmeteredConnection()
-    if (!isUnmetered) {
-      const wifiConfirmed = await showConfirm({
-        title: "Mobile Data",
-        message: "You're not on WiFi. Downloading map tiles may use significant mobile data. Continue?",
-        confirmText: "Download Anyway",
-        destructive: false
-      })
-      if (!wifiConfirmed) return
-    }
-
-    const estimatedBytes = estimateSizeBytes(ne, sw)
-    const availableMB = await NativeLocationService.getAvailableStorageMB()
-    if (availableMB > 0 && estimatedBytes / (1024 * 1024) > availableMB * 0.9) {
-      showAlert("Storage Full", "Not enough storage space for this download.", "warning")
-      return
-    }
-
-    const sizeLabel = estimateSizeLabel(ne, sw)
-    const exceedsLimit = willExceedTileLimit(ne, sw)
-    const confirmed = await showConfirm({
-      title: `Download "${name}"?`,
-      message: `${sizeLabel} estimated${exceedsLimit ? "\n\nThis area is large - outer edges may have incomplete coverage." : ""}`,
-      confirmText: "Download",
-      destructive: false
-    })
-    if (!confirmed) return
-
-    const entry: OfflineAreaBounds = {
-      name,
-      ne,
-      sw,
-      styleUrl: currentStyleUrl ?? MAP_STYLE_URL_LIGHT,
-      downloadedAt: Date.now()
-    }
-    await saveOfflineAreaBounds(entry)
-    setAreaBounds((prev) => [...prev.filter((b) => b.name !== name), entry])
-    beginDownload(name, ne, sw, () => {
-      nameInputRef.current?.clear()
-      newNameRef.current = ""
-    })
-  }, [isOffline, areas, currentStyleUrl, beginDownload])
-
-  const handleCancelDownload = useCallback(async () => {
-    const name = activePackNameRef.current
-    activePackNameRef.current = null
-    setDownloading(false)
-    setDownloadBounds(null)
-    setDownloadProgress(null)
-    setDownloadError(null)
-    if (name) {
-      setAreaBounds((prev) => prev.filter((b) => b.name !== name))
-      try {
-        await deleteOfflineArea(name)
-        await removeOfflineAreaBounds(name)
-      } catch (err) {
-        logger.error("[OfflineMapsScreen] Failed to delete cancelled pack:", err)
-      }
-    }
-  }, [])
-
-  const handleRefresh = useCallback(
+  const handleRedownload = useCallback(
     async (area: OfflineAreaInfo) => {
-      if (downloading) return
-      const bounds = areaBounds.find((b) => b.name === area.name)
-      if (!bounds) {
-        showAlert("Cannot Refresh", "No bounds saved for this area. Delete and re-download it.", "warning")
-        return
-      }
-      if (isOffline) {
-        showAlert("Offline", "An internet connection is required to download map tiles.", "warning")
-        return
-      }
-      const sizeLabel = estimateSizeLabel(bounds.ne, bounds.sw)
-
-      const isUnmetered = await NativeLocationService.isUnmeteredConnection()
-      if (!isUnmetered) {
-        const wifiConfirmed = await showConfirm({
-          title: "Mobile Data",
-          message: "You're not on WiFi. Re-downloading may use significant mobile data. Continue?",
-          confirmText: "Continue",
-          destructive: false
-        })
-        if (!wifiConfirmed) return
-      }
-
-      const confirmed = await showConfirm({
-        title: `Re-download "${area.name}"?`,
-        message: `Replaces existing tiles with a fresh download. ${sizeLabel} estimated.`,
-        confirmText: "Re-download",
-        destructive: false
-      })
-      if (!confirmed) return
-
-      setItemAction({ area: area.name, action: "refreshing" })
+      if (busyRef.current || download) return
+      busyRef.current = true
+      setBusy({ kind: "redownload", name: area.name })
+      let go = false
       try {
+        if (!area.bounds) {
+          showAlert(
+            "Cannot download again",
+            "This area's extent could not be read. Delete it and download it again.",
+            "warning"
+          )
+          return
+        }
+        if (!(await NativeLocationService.isNetworkAvailable())) {
+          showAlert(NO_CONNECTION.title, NO_CONNECTION.message, "warning")
+          return
+        }
+        const metered = !(await NativeLocationService.isUnmeteredConnection())
+        const areaEstimate = estimateFor(area.bounds)
+        if (!(await showConfirm({ ...redownloadConfirm(area.name, areaEstimate, metered), destructive: false }))) return
         await deleteOfflineArea(area.name)
-      } catch {
-        // pack may already be gone
+        go = true
+      } catch (err) {
+        logger.error("[OfflineMapsScreen] Failed to download again:", err)
+        showAlert(
+          "Could not download again",
+          "The old tiles could not be removed, so nothing was downloaded. Try again.",
+          "error"
+        )
+      } finally {
+        busyRef.current = false
+        setBusy(null)
       }
-      setItemAction(null)
-      setAreas((prev) => prev.filter((a) => a.name !== area.name))
-
-      const styleUrl = currentStyleUrl ?? MAP_STYLE_URL_LIGHT
-      const entry: OfflineAreaBounds = {
-        name: area.name,
-        ne: bounds.ne,
-        sw: bounds.sw,
-        styleUrl,
-        downloadedAt: Date.now()
-      }
-      await saveOfflineAreaBounds(entry)
-      setAreaBounds((prev) => [...prev.filter((b) => b.name !== area.name), entry])
-
-      beginDownload(area.name, bounds.ne, bounds.sw)
+      if (!go || !area.bounds) return
+      setName(area.name)
+      await beginDownload(area.name, area.bounds)
     },
-    [downloading, isOffline, areaBounds, currentStyleUrl, beginDownload]
+    [download, beginDownload]
   )
 
   const handleDelete = useCallback(
     async (area: OfflineAreaInfo) => {
-      const confirmed = await showConfirm({
-        title: "Delete Area",
-        message: `Delete "${area.name}"? The downloaded tiles will be removed from your device.`,
-        confirmText: "Delete",
-        destructive: true
-      })
-      if (!confirmed) return
-
-      setItemAction({ area: area.name, action: "deleting" })
+      if (busyRef.current) return
+      busyRef.current = true
+      setBusy({ kind: "delete", name: area.name })
       try {
+        const isLast = (areas?.length ?? 0) === 1
+        if (!(await showConfirm({ ...deleteAreaConfirm(area.name, area.sizeBytes, isLast), destructive: true }))) return
         await deleteOfflineArea(area.name)
         await removeOfflineAreaBounds(area.name)
-        await loadAreas()
-      } catch {
-        showAlert("Error", "Failed to delete area.", "error")
+      } catch (err) {
+        logger.error("[OfflineMapsScreen] Failed to delete area:", err)
+        showAlert("Could not delete the area", "Its tiles are still on the device. Try again.", "error")
       } finally {
-        setItemAction(null)
+        busyRef.current = false
+        setBusy(null)
       }
+      await loadAreas()
     },
-    [loadAreas]
+    [areas, loadAreas]
   )
 
-  const handleCancelArea = useCallback(
-    async (area: OfflineAreaInfo) => {
-      setItemAction({ area: area.name, action: "canceling" })
-      try {
-        await deleteOfflineArea(area.name)
-        await removeOfflineAreaBounds(area.name)
-        await loadAreas()
-      } catch {
-        showAlert("Error", "Failed to cancel download.", "error")
-      } finally {
-        setItemAction(null)
-      }
-    },
-    [loadAreas]
-  )
-
-  const fitToArea = useCallback(
-    (name: string) => {
-      const entry = areaBounds.find((b) => b.name === name)
-      if (!entry || !mapRef.current?.camera) return
-      mapRef.current.camera.fitBounds([entry.sw[0], entry.sw[1], entry.ne[0], entry.ne[1]], {
-        padding: { top: 40, right: 40, bottom: 40, left: 40 },
-        duration: MAP_ANIMATION_DURATION_MS
-      })
-    },
-    [areaBounds]
-  )
-
-  const handleAreaPress = useCallback(
-    (event: NativeSyntheticEvent<PressEventWithFeatures>) => {
-      if (downloading) return
-      const name: string | undefined = event.nativeEvent.features?.[0]?.properties?.name
-      if (name) fitToArea(name)
-    },
-    [downloading, fitToArea]
-  )
-
-  const handleNameChange = useCallback((v: string) => {
-    newNameRef.current = v
-  }, [])
-
-  const savedAreasGeoJSON = useMemo(
-    (): GeoJSON.FeatureCollection => ({
-      type: "FeatureCollection",
-      features: areaBounds.map((b) => {
-        const [neLon, neLat] = b.ne
-        const [swLon, swLat] = b.sw
-        return {
-          type: "Feature",
-          geometry: {
-            type: "Polygon",
-            coordinates: [
-              [
-                [swLon, neLat],
-                [neLon, neLat],
-                [neLon, swLat],
-                [swLon, swLat],
-                [swLon, neLat]
-              ]
-            ]
-          },
-          properties: { name: b.name }
-        }
-      })
+  const savedAreasGeoJSON = useMemo(() => areasCollection(listAreas), [listAreas])
+  const layerStyles = useMemo(
+    () => ({
+      savedFill: { fillColor: colors.success, fillOpacity: 0.1 },
+      savedLine: { lineColor: colors.success, lineWidth: 1.5, lineOpacity: 0.6 },
+      frameFill: { fillColor: colors.info, fillOpacity: 0.2 },
+      frameLine: { lineColor: colors.info, lineWidth: 1.5, lineOpacity: 0.6 }
     }),
-    [areaBounds]
+    [colors.success, colors.info]
   )
-
-  const downloadAreaGeoJSON = useMemo((): GeoJSON.Feature | null => {
-    if (!downloadBounds) return null
-    const [ne, sw] = downloadBounds
-    const [neLon, neLat] = ne
-    const [swLon, swLat] = sw
-    return {
-      type: "Feature",
-      geometry: {
-        type: "Polygon",
-        coordinates: [
-          [
-            [swLon, neLat],
-            [neLon, neLat],
-            [neLon, swLat],
-            [swLon, swLat],
-            [swLon, neLat]
-          ]
-        ]
-      },
-      properties: {}
-    }
-  }, [downloadBounds])
-
-  const hasRealCoords =
-    initialCenter.current && (initialCenter.current.latitude !== 0 || initialCenter.current.longitude !== 0)
-  const initialZoom = hasRealCoords ? DEFAULT_MAP_ZOOM : WORLD_MAP_ZOOM
-
-  const totalStorageBytes = useMemo(() => areas.reduce((sum, a) => sum + (a.sizeBytes ?? 0), 0), [areas])
-
-  // For the map overlay hint only - DownloadForm computes its own copy
-  const progressPct = downloadProgress?.percentage ?? 0
-  const progressLabel =
-    downloadProgress?.state === DOWNLOAD_STATE.COMPLETE
-      ? "Complete"
-      : downloadProgress
-        ? `${Math.round(progressPct)}%`
-        : "Starting..."
-
-  const renderItem = useCallback(
-    ({ item }: { item: OfflineAreaInfo }) => {
-      const isDeleting = itemAction?.area === item.name && itemAction?.action === "deleting"
-      const isCanceling = itemAction?.area === item.name && itemAction?.action === "canceling"
-      const isRefreshing = itemAction?.area === item.name && itemAction?.action === "refreshing"
-      const bounds = areaBounds.find((b) => b.name === item.name)
-      const isStale = item.isComplete && !!bounds?.styleUrl && !!currentStyleUrl && bounds.styleUrl !== currentStyleUrl
-      return (
-        <Card style={styles.card}>
-          <View style={styles.row}>
-            <Pressable
-              style={({ pressed }) => [styles.info, pressed && { opacity: colors.pressedOpacity }]}
-              onPress={() => fitToArea(item.name)}
-              disabled={item.isActive}
-            >
-              <View style={styles.nameRow}>
-                {item.isComplete && <CheckCircle size={14} color={colors.success} />}
-                {item.isActive && <ActivityIndicator size="small" color={colors.primary} />}
-                <Text style={[styles.areaName, { color: colors.text }]}>{item.name}</Text>
-                {isStale && (
-                  <View testID={`stale-indicator-${item.name}`}>
-                    <AlertTriangle size={13} color={colors.warning} />
-                  </View>
-                )}
-              </View>
-              <Text style={[styles.areaSub, { color: colors.textSecondary }]}>
-                {item.isActive ? "Downloading..." : item.sizeBytes !== null ? formatBytes(item.sizeBytes) : ""}
-              </Text>
-              {!item.isActive && bounds?.downloadedAt && (
-                <Text style={[styles.areaSubDate, { color: colors.textSecondary }]}>
-                  {formatRelativeTime(bounds.downloadedAt)}
-                </Text>
-              )}
-            </Pressable>
-
-            {item.isActive ? (
-              <Pressable
-                onPress={() => handleCancelArea(item)}
-                disabled={isCanceling}
-                style={({ pressed }) => [
-                  styles.cancelAreaBtn,
-                  { backgroundColor: colors.error + "15", borderColor: colors.error + "40" },
-                  pressed && { opacity: colors.pressedOpacity }
-                ]}
-              >
-                {isCanceling ? (
-                  <ActivityIndicator size="small" color={colors.error} />
-                ) : (
-                  <Text style={[styles.cancelAreaLabel, { color: colors.error }]}>Cancel</Text>
-                )}
-              </Pressable>
-            ) : (
-              <View style={styles.actionBtns}>
-                {item.isComplete && (
-                  <Pressable
-                    testID={`refresh-btn-${item.name}`}
-                    onPress={() => handleRefresh(item)}
-                    disabled={downloading || isRefreshing}
-                    style={({ pressed }) => [
-                      styles.actionBtn,
-                      { backgroundColor: colors.primary + "15" },
-                      pressed && { opacity: colors.pressedOpacity }
-                    ]}
-                  >
-                    {isRefreshing ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <RefreshCw size={14} color={colors.primary} />
-                    )}
-                  </Pressable>
-                )}
-                <Pressable
-                  testID={`delete-btn-${item.name}`}
-                  onPress={() => handleDelete(item)}
-                  disabled={isDeleting}
-                  style={({ pressed }) => [
-                    styles.actionBtn,
-                    { backgroundColor: colors.error + "15" },
-                    pressed && { opacity: colors.pressedOpacity }
-                  ]}
-                >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color={colors.error} />
-                  ) : (
-                    <X size={16} color={colors.error} />
-                  )}
-                </Pressable>
-              </View>
-            )}
-          </View>
-        </Card>
-      )
-    },
-    [
-      colors,
-      itemAction,
-      areaBounds,
-      currentStyleUrl,
-      downloading,
-      fitToArea,
-      handleDelete,
-      handleCancelArea,
-      handleRefresh
-    ]
-  )
-
-  const listHeader = useMemo(
-    () => (
-      <DownloadForm
-        colors={colors}
-        estimatedSizeLabel={estimatedSizeLabel}
-        downloading={downloading}
-        downloadProgress={downloadProgress}
-        downloadError={downloadError}
-        areasCount={areas.length}
-        totalStorageBytes={totalStorageBytes}
-        nameInputRef={nameInputRef}
-        onNameChange={handleNameChange}
-        onDownload={handleDownload}
-        onCancelDownload={handleCancelDownload}
-      />
-    ),
-    [
-      colors,
-      estimatedSizeLabel,
-      downloading,
-      downloadProgress,
-      downloadError,
-      areas.length,
-      totalStorageBytes,
-      handleDownload,
-      handleCancelDownload,
-      handleNameChange
-    ]
-  )
-
-  const mapDownloadingStyle = downloading ? { borderColor: colors.primary, borderWidth: 2 as const } : null
-  const savedAreasFillStyle = { fillColor: colors.success, fillOpacity: 0.1 }
-  const savedAreasBorderStyle = { lineColor: colors.success, lineWidth: 1.5, lineOpacity: 0.6 }
-  const downloadAreaFillStyle = { fillColor: colors.info, fillOpacity: 0.2 }
-  const downloadAreaBorderStyle = { lineColor: colors.info, lineWidth: 1.5, lineOpacity: 0.6 }
+  const downloadAreaGeoJSON = download?.bounds ? areaFeature(download.name, download.bounds) : null
+  const entryFor = useCallback((areaName: string) => areaBounds.find((b) => b.name === areaName), [areaBounds])
+  const toneColor = (tone: RowTone) =>
+    tone === "active" ? colors.primary : tone === "attention" ? colors.warning : undefined
+  const pct = downloadProgress?.percentage ?? 0
+  const downloadDisabled =
+    areas === null || estimate === null || name.trim() === "" || nameError !== undefined || busy !== null
 
   return (
     <Container>
-      <View style={[styles.map, mapDownloadingStyle]}>
-        {hasInitialCoords && initialCenter.current ? (
+      <View
+        testID="offline-map"
+        style={[styles.map, { height: mapHeight }, download !== null && { borderColor: colors.primary }]}
+      >
+        {lastFix !== undefined && (
           <ColotaMapView
             ref={mapRef}
-            initialCenter={[initialCenter.current.longitude, initialCenter.current.latitude]}
-            initialZoom={initialZoom}
+            initialCenter={lastFix ? [lastFix.longitude, lastFix.latitude] : WORLD_CENTER}
+            initialZoom={lastFix ? DEFAULT_MAP_ZOOM : WORLD_MAP_ZOOM}
             onRegionDidChange={handleRegionChange}
             onMapReady={handleMapReady}
           >
             {savedAreasGeoJSON.features.length > 0 && (
               <GeoJSONSource id="saved-areas" data={savedAreasGeoJSON} onPress={handleAreaPress}>
-                <Layer id="saved-areas-fill" type="fill" style={savedAreasFillStyle} />
-                <Layer id="saved-areas-border" type="line" style={savedAreasBorderStyle} />
+                <Layer id="saved-areas-fill" type="fill" style={layerStyles.savedFill} />
+                <Layer id="saved-areas-border" type="line" style={layerStyles.savedLine} />
               </GeoJSONSource>
             )}
             {downloadAreaGeoJSON && (
               <GeoJSONSource id="offline-area" data={downloadAreaGeoJSON}>
-                <Layer id="offline-area-fill" type="fill" style={downloadAreaFillStyle} />
-                <Layer id="offline-area-border" type="line" style={downloadAreaBorderStyle} />
+                <Layer id="offline-area-fill" type="fill" style={layerStyles.frameFill} />
+                <Layer id="offline-area-border" type="line" style={layerStyles.frameLine} />
               </GeoJSONSource>
             )}
           </ColotaMapView>
-        ) : null}
-
-        <MapCenterButton visible={!isCentered && !!coords} onPress={handleCenterMe} />
-
-        {downloading && (
-          <View style={[styles.mapHint, { backgroundColor: colors.card }]}>
-            <Text style={[styles.mapHintText, { color: colors.text }]}>Downloading... {progressLabel}</Text>
-          </View>
         )}
+        <MapCenterButton visible={!isCentered && !!(coords ?? lastFix)} onPress={handleCenterMe} />
       </View>
 
-      <FlatList
-        data={areas}
-        keyExtractor={(item) => item.name}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={listHeader}
-        ListEmptyComponent={
-          areas.length === 0 && !downloading ? (
-            <View style={styles.empty}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No saved areas yet</Text>
-              <Text style={[styles.emptyHint, { color: colors.textLight }]}>
-                Download map tiles to browse your tracks offline while hiking or camping
-              </Text>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>{INTRO_LINE}</Text>
+
+        <View style={styles.section}>
+          <SectionTitle>New area</SectionTitle>
+          <Card>
+            <TextField
+              testID="area-name-input"
+              label="Name"
+              placeholder="Home area, Trail…"
+              value={name}
+              onChangeText={setName}
+              error={nameError}
+              disabled={download !== null}
+            />
+          </Card>
+          {download === null ? (
+            <View>
+              <Button
+                testID="download-btn"
+                title="Download area"
+                loading={busy?.kind === "start"}
+                disabled={downloadDisabled}
+                onPress={handleDownload}
+              />
+              <FieldMessage variant={estimate?.large ? "warning" : "info"}>{downloadLine(estimate, name)}</FieldMessage>
             </View>
-          ) : undefined
-        }
-        renderItem={renderItem}
-      />
+          ) : (
+            <View>
+              <View style={styles.progressHeader}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.progressLabel, { color: colors.text }]}>Downloading {download.name}</Text>
+              </View>
+              <View
+                testID="download-progress"
+                accessible
+                accessibilityRole="progressbar"
+                accessibilityLabel={`Downloading ${download.name}`}
+                accessibilityValue={{ min: 0, max: 100, now: Math.round(pct) }}
+                style={[styles.progressTrack, { backgroundColor: colors.well }]}
+              >
+                <View style={[styles.progressFill, { backgroundColor: colors.primary, width: `${pct}%` }]} />
+              </View>
+              <FieldMessage>{progressCaption(downloadProgress)}</FieldMessage>
+              <Button
+                testID="cancel-download-btn"
+                variant="ghost"
+                color={colors.error}
+                icon={X}
+                title="Cancel download"
+                loading={busy?.kind === "stop"}
+                disabled={busy !== null}
+                onPress={handleCancelDownload}
+              />
+            </View>
+          )}
+        </View>
+
+        {areas !== null && listAreas.length > 0 && (
+          <View style={styles.section}>
+            <SectionTitle>Saved areas</SectionTitle>
+            <Card rows>
+              {listAreas.map((area, i) => {
+                const row = describeArea(area, entryFor(area.name), currentStyleUrl)
+                const mine = (kind: Busy["kind"]) => busy?.kind === kind && busy.name === area.name
+                return (
+                  <React.Fragment key={area.name}>
+                    {i > 0 && <Divider tight inset />}
+                    <ListItem
+                      testID={`area-${area.name}`}
+                      icon={row.icon}
+                      iconColor={toneColor(row.tone)}
+                      label={area.name}
+                      sub={row.sub}
+                      subLines={2}
+                      accessibilityHint={ROW_HINT}
+                      onPress={() => area.bounds && fitToArea(area.bounds)}
+                      trailing={
+                        area.isActive ? (
+                          <IconButton
+                            icon={X}
+                            tone="danger"
+                            accessibilityLabel={`Stop downloading ${area.name}`}
+                            loading={mine("stop")}
+                            disabled={busy !== null}
+                            onPress={() => handleCancelArea(area)}
+                            testID={`stop-btn-${area.name}`}
+                          />
+                        ) : (
+                          <View style={styles.rowActions}>
+                            <IconButton
+                              icon={RefreshCw}
+                              tone="primary"
+                              accessibilityLabel={`Download ${area.name} again`}
+                              loading={mine("redownload")}
+                              disabled={download !== null || busy !== null}
+                              onPress={() => handleRedownload(area)}
+                              testID={`refresh-btn-${area.name}`}
+                            />
+                            <IconButton
+                              icon={Trash2}
+                              tone="danger"
+                              accessibilityLabel={`Delete ${area.name}`}
+                              loading={mine("delete")}
+                              disabled={busy !== null}
+                              onPress={() => handleDelete(area)}
+                              testID={`delete-btn-${area.name}`}
+                            />
+                          </View>
+                        )
+                      }
+                    />
+                  </React.Fragment>
+                )
+              })}
+            </Card>
+          </View>
+        )}
+
+        {areas !== null && listAreas.length === 0 && download === null && (
+          <EmptyState
+            title="No saved areas yet"
+            hint="Download map tiles to browse your tracks offline while hiking or camping"
+            style={styles.empty}
+          />
+        )}
+      </ScrollView>
     </Container>
   )
 }
 
 const styles = StyleSheet.create({
-  map: { height: 450, overflow: "hidden" },
-  list: { padding: 20, paddingBottom: 40 },
-  section: { marginBottom: 16 },
-  hint: { fontSize: 13, ...fonts.regular, lineHeight: 18, marginBottom: 16 },
-  inputGroup: { marginBottom: 16 },
-  label: {
-    fontSize: 12,
-    ...fonts.semiBold,
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5
+  // The border is always drawn and only changes colour: a width that comes and goes on a
+  // view that clips leaves its children unpainted on Android.
+  map: { overflow: "hidden", borderWidth: 2, borderColor: "transparent" },
+  content: {
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   },
-  input: { padding: 14, borderWidth: 1.5, borderRadius: 10, fontSize: 15 },
-  sizeEstimate: { fontSize: 12, ...fonts.regular, marginBottom: 12 },
-  downloadBtn: { padding: 16, borderRadius: 12, alignItems: "center" },
-  downloadBtnText: { fontSize: 16, ...fonts.semiBold },
-  progressContainer: { gap: 10 },
-  progressHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  progressLabel: { fontSize: 14, ...fonts.semiBold },
-  progressTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
-  progressFill: { height: "100%", borderRadius: 3 },
-  progressSub: { fontSize: 12, ...fonts.regular },
-  cancelBtn: {
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
+  intro: {
+    fontSize: fontSizes.body,
+    ...fonts.regular,
+    lineHeight: lineHeights.body,
+    marginBottom: space.lg
+  },
+  section: {
+    marginBottom: space.xl
+  },
+  progressHeader: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 4
+    gap: space.md,
+    marginTop: space.lg,
+    marginBottom: space.md
   },
-  cancelBtnText: { fontSize: 14, ...fonts.semiBold },
-  errorText: { fontSize: 13, ...fonts.regular, marginTop: 10 },
-  card: { marginBottom: 12 },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  info: { flex: 1, marginRight: 12 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
-  areaName: { fontSize: 15, ...fonts.semiBold },
-  areaSub: { fontSize: 12 },
-  areaSubDate: { fontSize: 11, ...fonts.regular, marginTop: 2, opacity: 0.7 },
-  savedAreasMeta: { fontSize: 12, ...fonts.regular, marginTop: 2, marginBottom: 12, paddingHorizontal: 4 },
-  actionBtns: { flexDirection: "row", gap: 6, alignItems: "center" },
-  actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  progressLabel: {
+    fontSize: fontSizes.body,
+    ...fonts.semiBold
+  },
+  progressTrack: { height: 6, borderRadius: radius.pill, overflow: "hidden" },
+  progressFill: { height: "100%" },
+  rowActions: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center"
+    gap: space.lg
   },
-  cancelAreaBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1
-  },
-  cancelAreaLabel: { fontSize: 13, ...fonts.semiBold },
-  empty: { alignItems: "center", paddingVertical: 40 },
-  emptyText: { fontSize: 15, ...fonts.semiBold, marginBottom: 6 },
-  emptyHint: { fontSize: 13, textAlign: "center", maxWidth: 260, lineHeight: 18 },
-  mapHint: {
-    position: "absolute",
-    top: 14,
-    left: 14,
-    right: 14,
-    padding: 12,
-    borderRadius: 12,
-    elevation: 8,
-    shadowOpacity: 0.2,
-    zIndex: 5,
-    alignItems: "center"
-  },
-  mapHintText: { fontSize: 13, ...fonts.semiBold }
+  // the list around it already insets its rows
+  empty: { paddingHorizontal: 0 }
 })

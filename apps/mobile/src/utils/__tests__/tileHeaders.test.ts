@@ -30,7 +30,7 @@ describe("tileServerUserAgent", () => {
       VERSION_NAME: "1.14.0",
       VERSION_CODE: 45,
       FLAVOR: "gms",
-      NDK_VERSION: "27.1"
+      APP_LANGUAGE: "de-DE"
     })
 
     expect(tileServerUserAgent()).toBe(`Colota/1.14.0 (+${REPO_URL})`)
