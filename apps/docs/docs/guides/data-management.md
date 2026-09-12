@@ -14,7 +14,7 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 | Action                       | Description                                                                |
 | ---------------------------- | -------------------------------------------------------------------------- |
-| **Sync Now**                 | Manually flush the queue and upload pending locations                      |
+| **Sync Now**                 | Manually flush the queue and upload pending locations. A sync already running finishes first |
 | **Clear Sent History**       | Remove locations that have already been synced                             |
 | **Clear Queue**              | Remove unsent locations from the upload queue                              |
 | **Delete Older Than X Days** | Clean up old data past a specified age                                     |

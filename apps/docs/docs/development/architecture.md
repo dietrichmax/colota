@@ -208,6 +208,7 @@ Orchestrates batch location uploads with:
 - Exponential backoff on failure
 - Periodic sync scheduling
 - Manual flush support
+- One pass at a time: a periodic tick and a manual flush wait for the running pass. An instant send leaves its row queued while a pass runs, and a pass skips rows an instant send is still posting
 
 ### NetworkManager
 

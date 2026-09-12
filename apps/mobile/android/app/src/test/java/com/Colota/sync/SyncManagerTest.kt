@@ -1250,6 +1250,183 @@ class SyncManagerTest {
         }
     }
 
+    // ========================================================================
+    // One sender at a time
+    // ========================================================================
+
+    @Test
+    fun `a manual flush during another waits instead of posting the same rows again`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        fakeQueue(20)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); true }
+
+        launch { syncManager.manualFlush() }
+        launch { syncManager.manualFlush() }
+        advanceUntilIdle()
+
+        // Both passes fetch the oldest rows first, so a second pass beside the first posts every row twice
+        coVerify(exactly = 20) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a periodic tick during a manual flush waits and counts no failure`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 1,
+            retryIntervalSeconds = 1,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        fakeQueue(20)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); true }
+
+        launch { syncManager.manualFlush() }
+        syncManager.startPeriodicSync()
+        // The ticks at 1 s and 2 s land while the flush still holds its chunks
+        advanceTimeBy(3_600)
+        syncManager.stopPeriodicSync()
+
+        coVerify(exactly = 20) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        // The tick ran once the flush had emptied the queue, which is not a failed sync
+        assertEquals(0, getField("consecutiveFailures"))
+    }
+
+    @Test
+    fun `an instant send during a pass is posted once, by the pass`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        fakeQueue(10)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); true }
+
+        launch { syncManager.manualFlush() }
+        syncManager.queueAndSend(500L, JSONObject().put("lat", 53.0))
+        advanceUntilIdle()
+
+        // The running pass can fetch the new row as well, so the instant send leaves it to that pass
+        coVerify(exactly = 1) {
+            networkManager.sendToEndpoint(match { it.optDouble("lat") == 53.0 }, any(), any(), any(), any())
+        }
+        verify(exactly = 0) { dbHelper.removeFromQueueByLocationId(500L) }
+    }
+
+    @Test
+    fun `a slow instant send does not hold back the next fix`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        fakeQueue(0)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(5_000); true }
+
+        launch { syncManager.queueAndSend(1L, JSONObject().put("lat", 1.0)) }
+        advanceTimeBy(1_000)
+        launch { syncManager.queueAndSend(2L, JSONObject().put("lat", 2.0)) }
+        advanceTimeBy(100)
+
+        // Two instant sends never carry the same row, so the second fix goes out beside the first
+        coVerify(exactly = 1) {
+            networkManager.sendToEndpoint(match { it.optDouble("lat") == 2.0 }, any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `a manual flush started during an instant send does not post that row again`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        fakeQueue(0)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); true }
+
+        launch { syncManager.queueAndSend(500L, JSONObject().put("lat", 53.0), bypassInterval = true) }
+        launch { syncManager.manualFlush() }
+        advanceUntilIdle()
+
+        // Zone entry starts both together, and the flush fetches the heartbeat row the instant send is posting
+        coVerify(exactly = 1) {
+            networkManager.sendToEndpoint(match { it.optDouble("lat") == 53.0 }, any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `a tick that finds only a row an instant send is posting counts no failure`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 1,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        fakeQueue(0)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(3_000); true }
+
+        launch { syncManager.queueAndSend(500L, JSONObject().put("lat", 53.0)) }
+        syncManager.startPeriodicSync()
+        advanceTimeBy(1_500)
+        syncManager.stopPeriodicSync()
+
+        // The pass had nothing it was allowed to post, which is not a failed sync
+        assertEquals(0, getField("consecutiveFailures"))
+        coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    /** Rows leave only when a pass or an instant send removes them, so two senders running together see the same rows. */
+    private fun fakeQueue(size: Int) {
+        val queue = (1L..size.toLong()).map { QueuedLocation(it, it + 100, """{"lat":52.0}""", 0) }.toMutableList()
+        var nextId = size.toLong()
+        every { dbHelper.getQueuedLocations(50) } answers { queue.toList() }
+        every { dbHelper.getQueuedCount() } answers { queue.size }
+        every { dbHelper.addToQueue(any(), any()) } answers {
+            nextId++
+            queue.add(QueuedLocation(nextId, firstArg(), secondArg(), 0))
+            nextId
+        }
+        every { dbHelper.removeBatchFromQueue(any()) } answers {
+            val ids = firstArg<List<Long>>()
+            queue.removeAll { it.queueId in ids }
+        }
+        every { dbHelper.removeFromQueueByLocationId(any()) } answers {
+            val locationId = firstArg<Long>()
+            val before = queue.size
+            queue.removeAll { it.locationId == locationId }
+            before - queue.size
+        }
+    }
+
     private fun setField(name: String, value: Any?) {
         val field = SyncManager::class.java.getDeclaredField(name)
         field.isAccessible = true

@@ -10,7 +10,10 @@ import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.util.TimedCache
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Two sync modes: instant (syncInterval=0) sends each location on arrival,
@@ -45,6 +48,12 @@ class SyncManager(
     @Volatile private var consecutiveFailures = 0
 
     private val queueCountCache = TimedCache(5000L) { dbHelper.getQueuedCount() }
+
+    /** One pass at a time: two passes fetch the same oldest rows and post each of them twice. */
+    private val syncMutex = Mutex()
+
+    /** Queue rows an instant send is posting; a pass skips them instead of posting them a second time. */
+    private val instantInFlight: MutableSet<Long> = ConcurrentHashMap.newKeySet()
 
     fun updateConfig(
         endpoint: String,
@@ -88,21 +97,24 @@ class SyncManager(
                 }
 
                 if (endpoint.isNotBlank() && queued > 0) {
-                    val errorMessage: String? = try {
-                        val success = performSyncAndCheckSuccess()
+                    if (syncMutex.isLocked) AppLogger.d(TAG, "Sync tick waiting for the running sync")
+                    val errorMessage: String? = syncMutex.withLock {
+                        try {
+                            val success = performSyncAndCheckSuccess()
 
-                        if (success) {
-                            if (consecutiveFailures > 0) {
-                                AppLogger.i(TAG, "Sync restored")
+                            if (success) {
+                                if (consecutiveFailures > 0) {
+                                    AppLogger.i(TAG, "Sync restored")
+                                }
+                                consecutiveFailures = 0
+                                null
+                            } else {
+                                "Sync failed"
                             }
-                            consecutiveFailures = 0
-                            null
-                        } else {
-                            "Sync failed"
+                        } catch (e: Exception) {
+                            AppLogger.e(TAG, "Sync error", e)
+                            e.message ?: "Sync error"
                         }
-                    } catch (e: Exception) {
-                        AppLogger.e(TAG, "Sync error", e)
-                        e.message ?: "Sync error"
                     }
 
                     if (errorMessage != null) {
@@ -128,9 +140,12 @@ class SyncManager(
 
     suspend fun manualFlush() {
         if (endpoint.isNotBlank()) {
-            val total = dbHelper.getQueuedCount()
-            AppLogger.d(TAG, "Manual flush started: $total items in queue")
-            syncQueue { sent, failed -> LocationServiceModule.sendSyncProgressEvent(sent, failed, total) }
+            if (syncMutex.isLocked) AppLogger.d(TAG, "Manual flush waiting for the running sync")
+            syncMutex.withLock {
+                val total = dbHelper.getQueuedCount()
+                AppLogger.d(TAG, "Manual flush started: $total items in queue")
+                syncQueue { sent, failed -> LocationServiceModule.sendSyncProgressEvent(sent, failed, total) }
+            }
         }
     }
 
@@ -151,16 +166,26 @@ class SyncManager(
 
         // Immediate send mode (syncInterval = 0)
         if ((syncIntervalSeconds == 0 || bypassInterval) && isSyncAllowed()) {
-            AppLogger.d(TAG, "Instant send")
-            val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod, apiFormat)
+            // Registered before the lock check: a later pass skips this row, a running one may already hold it
+            instantInFlight.add(queueId)
+            try {
+                if (syncMutex.isLocked) {
+                    AppLogger.d(TAG, "Instant send deferred: a sync is running")
+                    return
+                }
+                AppLogger.d(TAG, "Instant send")
+                val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod, apiFormat)
 
-            if (success) {
-                dbHelper.markLocationsSent(listOf(locationId))
-                dbHelper.removeFromQueueByLocationId(locationId)
-                invalidateQueueCache()
-                lastSuccessfulSyncTime = System.currentTimeMillis()
-            } else {
-                dbHelper.incrementRetryCount(queueId, "Send failed")
+                if (success) {
+                    dbHelper.markLocationsSent(listOf(locationId))
+                    dbHelper.removeFromQueueByLocationId(locationId)
+                    invalidateQueueCache()
+                    lastSuccessfulSyncTime = System.currentTimeMillis()
+                } else {
+                    dbHelper.incrementRetryCount(queueId, "Send failed")
+                }
+            } finally {
+                instantInFlight.remove(queueId)
             }
         }
         // Otherwise the periodic sync job will handle it
@@ -186,12 +211,13 @@ class SyncManager(
 
     private suspend fun performSyncAndCheckSuccess(): Boolean {
         val countBefore = dbHelper.getQueuedCount()
-        syncQueue(onProgress = null)
+        val pass = syncQueue(onProgress = null)
         val countAfter = dbHelper.getQueuedCount()
 
         invalidateQueueCache()
 
-        val success = countAfter < countBefore || countAfter == 0
+        // A pass that only skipped rows an instant send was still posting did not fail
+        val success = countAfter < countBefore || countAfter == 0 || (pass.sent + pass.failed == 0 && pass.skippedInFlight > 0)
         if (success && countAfter == 0) {
             lastSuccessfulSyncTime = System.currentTimeMillis()
         }
@@ -213,7 +239,7 @@ class SyncManager(
         delay(backoffSeconds * 1000L)
     }
 
-    private suspend fun syncQueue(onProgress: ((sent: Int, failed: Int) -> Unit)? = null) = coroutineScope {
+    private suspend fun syncQueue(onProgress: ((sent: Int, failed: Int) -> Unit)? = null): SyncPass = coroutineScope {
         // Snapshot volatile config so it stays consistent for the entire sync pass
         val currentEndpoint = endpoint
         val currentAuthHeaders = authHeaders
@@ -223,11 +249,14 @@ class SyncManager(
         var totalProcessed = 0
         var totalSucceeded = 0
         var totalFailed = 0
+        var skippedInFlight = 0
         var batchNumber = 1
 
         while (isActive && batchNumber <= MAX_BATCHES_PER_SYNC) {
             val fetchSize = if (currentApiFormat == ApiFormat.OVERLAND_BATCH) currentBatchSize else 50
-            val queued = dbHelper.getQueuedLocations(fetchSize)
+            val fetched = dbHelper.getQueuedLocations(fetchSize)
+            val queued = fetched.filterNot { it.queueId in instantInFlight }
+            skippedInFlight += fetched.size - queued.size
             if (queued.isEmpty()) {
                 if (totalProcessed > 0) {
                     AppLogger.d(TAG, "Sync complete: $totalProcessed items in $batchNumber batches")
@@ -314,7 +343,11 @@ class SyncManager(
         if (totalSucceeded > 0) {
             lastSuccessfulSyncTime = System.currentTimeMillis()
         }
+
+        SyncPass(totalSucceeded, totalFailed, skippedInFlight)
     }
+
+    data class SyncPass(val sent: Int, val failed: Int, val skippedInFlight: Int = 0)
 
     private data class BatchSendResult(val processed: Int, val failed: Int, val stop: Boolean)
 
