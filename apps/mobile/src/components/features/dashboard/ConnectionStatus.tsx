@@ -3,22 +3,27 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useMemo } from "react"
+import React, { useState, useCallback } from "react"
 import { StyleSheet, View, Text, Pressable, DeviceEventEmitter } from "react-native"
 import { ChevronRight } from "lucide-react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTracking } from "../../../contexts/TrackingProvider"
-import { ServerStatus, ConnectionStatusProps } from "../../../types/global"
-import { fonts } from "../../../styles/typography"
+import { ConnectionStatusProps, DatabaseStats } from "../../../types/global"
+import { fontSizes, fonts } from "../../../styles/typography"
 import NativeLocationService from "../../../services/NativeLocationService"
+import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
+import { describeServer, endpointHost, type ServerTone } from "../../../utils/serverState"
+import { formatCount } from "../../../utils/format"
+import { radius } from "@colota/shared"
 
 export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps) {
   const { colors } = useTheme()
   const { settings } = useTracking()
   const isOffline = settings.isOfflineMode
 
-  const [serverStatus, setServerStatus] = useState<ServerStatus | "offline" | "deviceOffline" | null>(null)
+  const [stats, setStats] = useState<DatabaseStats | null>(null)
+  const [deviceOnline, setDeviceOnline] = useState(true)
 
   useFocusEffect(
     useCallback(() => {
@@ -26,104 +31,115 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
       let cancelled = false
 
       const refresh = async () => {
-        if (isOffline) {
-          setServerStatus("offline")
-          return
-        }
-
+        if (isOffline) return
         const networkAvailable = await NativeLocationService.isNetworkAvailable()
         if (cancelled) return
-        if (!networkAvailable) {
-          setServerStatus("deviceOffline")
-          return
-        }
-
-        if (!endpoint) {
-          setServerStatus("notConfigured")
-          return
-        }
-
+        setDeviceOnline(networkAvailable)
+        if (!endpoint) return
         try {
-          const stats = await NativeLocationService.getStats()
-          if (cancelled) return
-          // Empty queue plus a prior successful send (sent = retained synced rows) means caught up.
-          if (stats.queued === 0 && stats.sent > 0) {
-            setServerStatus("connected")
-          }
+          const next = await NativeLocationService.getStats()
+          if (!cancelled) setStats(next)
         } catch {
           // getStats is a local DB read; a failure here says nothing about the server.
         }
       }
 
       refresh()
-      const sub = DeviceEventEmitter.addListener("onSyncError", () => setServerStatus("error"))
+      // The queue grows on a fix and drains or fails on a sync, so those events are exactly when the row changes.
+      const subs = ["onSyncError", "onSyncProgress", "onLocationUpdate"].map((event) =>
+        DeviceEventEmitter.addListener(event, refresh)
+      )
       return () => {
         cancelled = true
-        sub.remove()
+        subs.forEach((sub) => sub.remove())
       }
     }, [endpoint, isOffline])
   )
 
-  const displayUrl = endpoint ? endpoint.replace(/^https?:\/\//, "").split("/")[0] : ""
+  const tone = (t: ServerTone) =>
+    t === "success"
+      ? colors.success
+      : t === "error"
+        ? colors.error
+        : t === "warning"
+          ? colors.warning
+          : t === "light"
+            ? colors.textLight
+            : colors.textSecondary
 
-  const config = useMemo(() => {
-    const statusMap = {
-      connected: { color: colors.success, label: "Connected" },
-      error: { color: colors.error, label: "Unreachable" },
-      notConfigured: { color: colors.warning, label: "No endpoint" },
-      deviceOffline: { color: colors.textSecondary, label: "Device offline" },
-      offline: { color: colors.textSecondary, label: "Offline Mode" },
-      loading: { color: colors.textLight, label: "Checking" }
-    }
+  const known = isOffline || !endpoint || !deviceOnline || stats !== null
+  const server = describeServer({
+    offline: isOffline,
+    endpoint: endpoint ?? "",
+    deviceOnline,
+    queued: stats?.queued ?? 0,
+    today: stats?.today ?? 0,
+    lastSyncTime: stats?.lastSyncTime ?? 0,
+    lastSyncError: stats?.lastSyncError ?? ""
+  })
+  const word = known ? server.word : "Checking"
+  const dotColor = known ? tone(server.tone) : colors.textLight
 
-    if (serverStatus === null) return statusMap.loading
-    if (isOffline) return statusMap.offline
-    if (serverStatus === "deviceOffline") return statusMap.deviceOffline
-    return statusMap[serverStatus as ServerStatus] || statusMap.error
-  }, [serverStatus, colors, isOffline])
+  const hostLabel = isOffline ? "Offline mode" : endpoint ? endpointHost(endpoint) : "Server"
+  const queued = stats?.queued ?? 0
+  const queueLabel = queued > 0 ? `${formatCount(queued)} queued` : ""
+  const spokenStatus = [word, queueLabel].filter(Boolean).join(" · ")
+  // A healthy server says nothing; the word is for a screen reader, which cannot see the dot.
+  const statusLabel = known && server.tone === "success" ? queueLabel : spokenStatus
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={isOffline ? hostLabel : `${hostLabel}, ${spokenStatus}`}
       onPress={() => navigation.navigate("Connection")}
-      style={({ pressed }) => [
-        styles.container,
-        { backgroundColor: colors.card, borderColor: colors.border },
-        pressed && { opacity: colors.pressedOpacity }
-      ]}
+      android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+      style={styles.row}
     >
-      <View style={[styles.dot, { backgroundColor: config.color }]} />
+      <View style={styles.glyph}>
+        <View style={[styles.dot, { backgroundColor: dotColor }]} />
+      </View>
       <Text style={[styles.host, { color: colors.text }]} numberOfLines={1}>
-        {isOffline ? "Offline Mode" : displayUrl || "Server"}
+        {hostLabel}
       </Text>
-      {!isOffline && <Text style={[styles.status, { color: config.color }]}>{config.label}</Text>}
-      <ChevronRight size={16} color={colors.textLight} />
+      {/* The endpoint can answer while the backlog grows, held by the sync condition or a 429, so the queue shows on its own. */}
+      {!isOffline && statusLabel !== "" && (
+        <Text style={[styles.status, { color: colors.textSecondary }]} numberOfLines={1}>
+          {statusLabel}
+        </Text>
+      )}
+      <ChevronRight size={size.icon.sm} color={colors.textLight} />
     </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 22
+    gap: space.lg,
+    minHeight: size.row,
+    paddingVertical: space.md,
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg
+  },
+  glyph: {
+    width: size.icon.md,
+    alignItems: "center"
   },
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
-    marginRight: 12
+    borderRadius: radius.pill
   },
   host: {
-    flex: 1,
-    fontSize: 14,
+    flexGrow: 1,
+    flexShrink: 1,
+    fontSize: fontSizes.body,
     ...fonts.medium
   },
   status: {
-    fontSize: 12,
-    ...fonts.medium,
-    marginRight: 8
+    flexShrink: 1,
+    fontSize: fontSizes.caption,
+    ...fonts.medium
   }
 })
