@@ -15,17 +15,19 @@ Create zones where location recording stops automatically. These "pause zones" s
 ## Setup
 
 1. Go to the **Geofences** tab
-2. Enter a name and radius
-3. Tap **Place Geofence**, then tap the map to place it
-4. Tap the **›** arrow on any geofence to open the editor and configure pause options
+2. Tap **+** in the top bar
+3. Give the zone a name and a radius, then tap **Location** and pick a point on the map
+4. Set the pause options, then tap **Save geofence**
+
+Tap any zone in the list, or its circle on the map, to reopen the editor. Every field can be changed there, **Location** included. The zone you are paused in reads **Paused here** in the list.
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Geofences.png", label: "Geofences" }, { src: "/img/screenshots/GeofenceEditor.png", label: "Geofence Editor" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Geofences.png", label: "Geofences" }, { src: "/img/screenshots/GeofenceEditor.png", label: "Geofence editor" }, ]} />
 
 ## GPS Pause Options
 
-Each geofence has independent pause settings, configured in the editor (tap **›**):
+Each geofence has independent pause settings, configured in the editor:
 
 ### Don't record in zone
 
@@ -64,7 +66,7 @@ Changes made in the editor take effect immediately, even when you are already in
 You can share all your geofences with another device or another user via a setup link instead of recreating zones by hand.
 
 1. Open the **Geofences** screen
-2. Tap the share icon next to "Active Geofences"
+2. Tap the share icon in the top bar
 3. The system share sheet opens with a `colota://setup?config=...` link
 4. Send the link through any messenger, email or as a QR code
 
@@ -72,7 +74,7 @@ When the recipient opens the link, Colota shows the import confirmation screen l
 
 The share button is all-or-nothing - every zone in the list is included. The `id`, `createdAt` and `enabled` fields are stripped, so imported zones always start enabled and get fresh database entries on the recipient's device.
 
-To share zones together with your tracking, sync and API settings in a single link, use **Settings -> Share Setup** instead (see [Deep Link Setup](deep-link-setup.md#sharing-from-the-app)).
+To share zones together with your tracking, sync and API settings in a single link, use **Settings -> Share setup** instead (see [Deep Link Setup](deep-link-setup.md#sharing-from-the-app)).
 
 See the [Deep Link Setup](deep-link-setup.md#geofences) guide for the full payload format.
 
