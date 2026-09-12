@@ -8,24 +8,30 @@ Export your location history in multiple formats.
 
 :::tip[Looking for a full archive?]
 
-Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) of your location history. If you instead want a single password-encrypted archive of **everything** - locations, settings, geofences and credentials - for device migration or offsite storage, use [Backup & Restore](backup-restore.md).
+Data Export produces shareable, human-readable formats (CSV, GeoJSON, GPX, KML) of your location history. If you instead want a single password-encrypted archive of **everything** - locations, settings, geofences and credentials - for device migration or offsite storage, use [Backup & restore](backup-restore.md).
 
 :::
 
 ## Supported Formats
 
-| Format      | Extension  | Use Case                    |
-| ----------- | ---------- | --------------------------- |
-| **CSV**     | `.csv`     | Spreadsheets, data analysis |
-| **GeoJSON** | `.geojson` | Web mapping, GIS tools      |
-| **GPX**     | `.gpx`     | GPS devices, hiking apps    |
-| **KML**     | `.kml`     | Google Earth, mapping       |
+| Format | Extension | Use Case |
+| --- | --- | --- |
+| **CSV** | `.csv` | Spreadsheets, data analysis |
+| **GeoJSON** | `.geojson` | Web mapping, GIS tools. One Point feature per recording, so each point carries its own time and attributes |
+| **GPX** | `.gpx` | GPS devices, hiking apps |
+| **KML** | `.kml` | Google Earth, mapping |
+
+:::note[GeoJSON file size]
+
+Each recording is written as its own feature so mapping tools can read one row and one timestamp per point. That repeats the attribute names on every point, which makes a GeoJSON export roughly twice the size of the other formats. A database of a few million points produces a file of several hundred megabytes. Compressing it recovers most of the difference.
+
+:::
 
 ## How to Export
 
 ### Bulk Export
 
-1. Go to **Settings → Export Locations**
+1. Go to **Settings → Export & import**
 2. Select a format
 3. Tap **Export** and share the file via Android's share menu
 
@@ -37,33 +43,33 @@ For exports on a schedule instead of on demand, see [Scheduled Export](#schedule
 
 Go to the **History** tab → **Trips**. There are two ways to export:
 
-- **All trips for the day** - tap **Export All** in the header, pick a format, share.
-- **A custom selection** - long-press any trip card to enter selection mode. Tap additional cards to add or remove them. Use **Select all** to grab every trip. Tap the share icon in the selection header, pick a format, share. Works for a single trip too.
+- **All trips for the day** - tap the share icon in the header, pick a format, share.
+- **A custom selection** - long-press a trip to enter selection mode. Tap other trips to add or remove them; **Select all** is in the selection header's overflow menu. Tap the share icon in the selection header, pick a format, share. Works for a single trip too.
 
-For a single trip you can also tap the card to open **Trip Detail**, then use the share icon in the header.
+For a single trip you can also tap it to open **Trip Detail** and use the share icon in the header.
 
 Trip exports include a `trip` column/property so each location is tagged with its trip number. Custom selections produce a single file containing only the chosen trips.
 
-To remove trips or single points instead of exporting them, see [Data Management](data-management.md#deleting-from-location-history).
+To remove trips or single points instead of exporting them, see [Data management](data-management.md#deleting-from-location-history).
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ExportData.png", label: "Export Data" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-Export" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ExportData.png", label: "Export Data" }, { src: "/img/screenshots/AutoExport.png", label: "Auto-export" }, ]} />
 
-## Scheduled Export (Auto-Export)
+## Scheduled Export (Auto-export)
 
 Automatically export your location data on a schedule without opening the app.
 
 ### Setup
 
-1. Go to **Settings → Auto-Export**
+1. Go to **Settings → Auto-export**
 2. Select an export directory (files are saved there via Android's Storage Access Framework)
 3. Choose a format (CSV, GeoJSON, GPX, or KML)
 4. Set the frequency: **Daily**, **Weekly**, or **Monthly**
 5. Pick the **Time** (24-hour) in your device's local timezone. For **Weekly**, also pick a day of week. For **Monthly**, pick a day of month (1-31)
 6. Enable the toggle
 
-You can also tap **Export Now** to trigger an immediate export using your current auto-export settings, without waiting for the next scheduled run.
+You can also tap **Export Now** to trigger an immediate export using your current auto-export settings, without waiting for the next scheduled run. It works whether or not the toggle is on: the toggle governs the schedule, not the button. A line under the button says the export is running, and it keeps running if you leave the screen.
 
 ### Export Range
 
@@ -95,7 +101,7 @@ If several devices export into the same folder and none of the templates include
 
 - Uses Android AlarmManager (`setAndAllowWhileIdle`) to fire at your configured wall-clock time. Typical accuracy is within minutes; Doze mode may delay by up to ~15 minutes
 - After each export the next alarm is armed automatically. Alarms also re-arm after device reboot
-- Exports fire at the configured time, not on enable. To run an export immediately for testing or backup, tap **Export Now**
+- Exports fire at the configured time, not on enable. To run an export immediately for testing or backup, tap **Export Now**, which needs only an export directory
 - Promotes to a foreground service during export, preventing Android from killing long-running exports
 - Streams data in chunks (10,000 locations at a time) to keep memory usage low even with very large datasets
 - Writes to a temporary file first, then copies to the export directory - if something goes wrong mid-export, you never get a partial or corrupted file
@@ -142,7 +148,7 @@ Other notes:
 - Templates longer than 100 characters are rejected, and `{device}` is shortened to 32 characters, so the result stays inside the filesystem's name limit.
 - If a file of the same name already exists, Android adds a counter (`… (1).gpx`). Colota still recognises those as its own.
 
-Manual **Export Locations** and trip exports are unaffected. Those go through the Android share sheet, where you name the file yourself.
+Manual exports and trip exports are unaffected. Those go through the Android share sheet, where you name the file yourself.
 
 ## Storage Reference
 

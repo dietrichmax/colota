@@ -180,17 +180,17 @@ export function SettingsScreen({ navigation }: Props) {
             <ListItem
               testID="nav-import-locations"
               icon={Download}
-              label="Import Locations"
+              label="Export & Import"
               sub="Merge locations from a GeoJSON or Google Timeline file"
-              onPress={() => navigation.navigate("Import Locations")}
+              onPress={() => navigation.navigate("Export & Import")}
             />
             <Divider />
             <ListItem
               testID="nav-export-locations"
               icon={Upload}
-              label="Export Locations"
+              label="Export & Import"
               sub="Export locations as CSV, GeoJSON, GPX or KML"
-              onPress={() => navigation.navigate("Export Locations")}
+              onPress={() => navigation.navigate("Export & Import")}
             />
             <Divider />
             <ListItem
