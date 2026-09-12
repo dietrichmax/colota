@@ -4,17 +4,18 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { View, Text, ScrollView, StyleSheet, Switch, Share } from "react-native"
+import { View, Text, ScrollView, StyleSheet, Share } from "react-native"
 import { useTheme } from "../hooks/useTheme"
 import { useTracking } from "../contexts/TrackingProvider"
-import { Container, Card, Button, SectionTitle } from "../components"
-import { fonts } from "../styles/typography"
+import { Button, Card, Container, Divider, SectionTitle, SettingRow, Toggle } from "../components"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { Share2, TriangleAlert } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
 import { buildSetupConfig, buildSetupLink, type SetupShareParts, type SetupShareSelection } from "../utils/setupLink"
 import { DEFAULT_AUTH_CONFIG, type AuthConfig, type Geofence, type TrackingProfile } from "../types/global"
+import { size, space } from "../constants"
 
 type ShareCategory = keyof SetupShareSelection
 
@@ -122,53 +123,36 @@ export function ShareSetupScreen() {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.content}>
-        <Card style={styles.headerCard}>
-          <View style={styles.headerRow}>
-            <Share2 size={28} color={colors.primary} />
-            <View style={styles.headerText}>
-              <Text style={[styles.title, { color: colors.text }]}>Share Setup</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                Choose what to bundle into a setup link, then share it. The recipient opens it to apply the same
-                configuration.
-              </Text>
-            </View>
-          </View>
-        </Card>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>
+          Choose what to bundle into a setup link, then share it. The recipient opens it to apply the same
+          configuration.
+        </Text>
 
         <View style={styles.section}>
-          <SectionTitle>INCLUDE</SectionTitle>
-          <Card>
+          <SectionTitle>Include</SectionTitle>
+          <Card rows>
             {rows.map((row, i) => (
-              <View
-                key={row.key}
-                style={[
-                  styles.row,
-                  i < rows.length - 1 && styles.rowBorder,
-                  i < rows.length - 1 && { borderBottomColor: colors.border }
-                ]}
-              >
-                <View style={styles.rowText}>
-                  <Text style={[styles.rowLabel, { color: row.disabled ? colors.textSecondary : colors.text }]}>
-                    {row.label}
-                  </Text>
-                  <Text style={[styles.rowSub, { color: colors.textSecondary }]}>{row.sub}</Text>
-                </View>
-                <Switch
-                  testID={`share-${row.key}`}
-                  value={selection[row.key] && !row.disabled}
-                  onValueChange={() => toggle(row.key)}
-                  disabled={row.disabled}
-                />
-              </View>
+              <React.Fragment key={row.key}>
+                {i > 0 && <Divider tight />}
+                <SettingRow label={row.label} hint={row.sub} disabled={row.disabled}>
+                  <Toggle
+                    accessibilityLabel={row.label}
+                    testID={`share-${row.key}`}
+                    value={selection[row.key] && !row.disabled}
+                    onValueChange={() => toggle(row.key)}
+                    disabled={row.disabled}
+                  />
+                </SettingRow>
+              </React.Fragment>
             ))}
           </Card>
         </View>
 
         {selection.credentials && hasCredentials && credentialFields.length > 0 && (
           <View style={styles.section}>
-            <Card style={[styles.warningCard, { borderColor: colors.error }]}>
+            <Card danger>
               <View style={styles.headerRow}>
-                <TriangleAlert size={20} color={colors.error} />
+                <TriangleAlert size={size.icon.md} color={colors.error} />
                 <Text style={[styles.warningText, { color: colors.text }]}>
                   This link will contain your {credentialFields.join(", ")} in plain text. Anyone who sees the link can
                   read them - only share it over a trusted channel.
@@ -193,70 +177,36 @@ export function ShareSetupScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    padding: 16,
-    paddingBottom: 40
-  },
-  headerCard: {
-    marginBottom: 16
+    padding: space.lg,
+    paddingBottom: space.xxl
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12
+    gap: space.md
   },
-  headerText: {
-    flex: 1
-  },
-  title: {
-    fontSize: 18,
-    ...fonts.bold
-  },
-  subtitle: {
-    fontSize: 13,
+  intro: {
+    fontSize: fontSizes.body,
     ...fonts.regular,
-    marginTop: 2
+    lineHeight: lineHeights.body,
+    marginBottom: space.md
   },
   section: {
-    marginTop: 8
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    gap: 12
-  },
-  rowBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth
-  },
-  rowText: {
-    flex: 1
-  },
-  rowLabel: {
-    fontSize: 14,
-    ...fonts.semiBold
-  },
-  rowSub: {
-    fontSize: 12,
-    ...fonts.regular,
-    marginTop: 2
-  },
-  warningCard: {
-    borderWidth: StyleSheet.hairlineWidth
+    marginTop: space.sm
   },
   warningText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
-    lineHeight: 17
+    lineHeight: lineHeights.caption
   },
   actions: {
-    marginTop: 24
+    marginTop: space.xl
   },
   emptyHint: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular,
     textAlign: "center",
-    marginTop: 8
+    marginTop: space.sm
   }
 })

@@ -41,7 +41,6 @@ jest.mock("../../hooks/useTheme", () => ({
       background: "#fff",
       backgroundElevated: "#f9fafb",
       border: "#e5e7eb",
-      borderRadius: 12,
       success: "#22c55e",
       warning: "#f59e0b",
       info: "#3b82f6",
@@ -92,6 +91,7 @@ jest.mock("../../services/NativeLocationService", () => ({
 jest.mock("../../services/modalService", () => ({ showAlert: jest.fn() }))
 
 import { ShareSetupScreen } from "../ShareSetupScreen"
+import { Card } from "../../components"
 
 const NO_AUTH = { authType: "none", username: "", password: "", bearerToken: "", customHeaders: {} }
 const BASIC_AUTH = { authType: "basic", username: "user", password: "secret", bearerToken: "", customHeaders: {} }
@@ -110,6 +110,18 @@ describe("ShareSetupScreen", () => {
   })
 
   afterEach(() => shareSpy.mockRestore())
+
+  it("warns through the Card danger variant rather than a border drawn by hand", async () => {
+    mockGetAuthConfig.mockResolvedValue(BASIC_AUTH)
+    const { getByTestId, UNSAFE_getAllByType } = render(<ShareSetupScreen />)
+    await waitFor(() => expect(mockGetAuthConfig).toHaveBeenCalled())
+
+    fireEvent(getByTestId("share-credentials"), "valueChange", true)
+
+    const warning = await waitFor(() => UNSAFE_getAllByType(Card).find((c) => c.props.danger))
+    expect(warning).toBeTruthy()
+    expect(warning!.props.style).toBeUndefined()
+  })
 
   it("shares nothing until a category is toggled on", async () => {
     const { getByText } = render(<ShareSetupScreen />)
