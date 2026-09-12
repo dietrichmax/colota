@@ -2,13 +2,13 @@
 sidebar_position: 2
 ---
 
-# Tracking Profiles
+# Tracking profiles
 
 import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
-Tracking profiles automatically adjust GPS interval, distance filter, and sync settings when conditions like charging, car mode, or speed thresholds are met.
+A tracking profile is a rule: while a condition holds, such as charging, Android Auto or a speed, Colota records and syncs with that profile's interval, movement threshold and sync interval instead of the Tracking & sync values.
 
-<ScreenshotGallery screenshots={[ { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking Profiles" }, ]} />
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/TrackingProfiles.png", label: "Tracking profiles" }, ]} />
 
 ## Use Cases
 
@@ -19,22 +19,28 @@ Tracking profiles automatically adjust GPS interval, distance filter, and sync s
 
 ## Setup
 
-1. Go to **Settings** → **Tracking Profiles**
-2. Tap **Create Profile**
-3. Enter a name and select a condition trigger
-4. Configure the GPS interval, distance filter, and sync interval
-5. Set a priority (higher priority profiles take precedence when multiple conditions match)
-6. Tap **Create Profile** to save
+1. Go to **Settings** → **Tracking profiles**
+2. Tap **Create profile** in the app bar
+3. Pick the condition; each row says what watching it costs, and a speed condition asks for the speed
+4. Optionally name it (blank saves as the condition's name) and set a priority
+5. Set the tracking interval, movement threshold and sync interval; each field says which Tracking & sync value it replaces
+6. Tap **Create profile**
+
+The editor's first line reads the rule back as you build it, for example "When charging, track every 5 s, any movement and sync each fix." Tap a profile in the list to edit it; Delete is at the bottom of the editor.
+
+## The list
+
+The list opens with a line that says which profile is in force and its values, "No profile active · Tracking & sync applies: …" while tracking runs without one, or "Profiles apply while tracking runs" while tracking is off. Below it every profile is one row in evaluation order, reading as a sentence: condition, then what it records, then how it syncs, for example "When charging · Every 5 s, any movement · syncs each fix". The row in force opens with "Active". The switch beside a row enables or disables it without opening it; a disabled profile is never in force.
 
 ## Condition Types
 
-| Condition       | Trigger                                                   |
-| --------------- | --------------------------------------------------------- |
-| **Charging**    | Phone is plugged in to a power source                     |
-| **Car Mode**    | Android Auto is connected                                 |
-| **Speed Above** | Average speed exceeds the configured threshold (km/h)     |
-| **Speed Below** | Average speed drops below the configured threshold (km/h) |
-| **Stationary**  | Device not moving for approximately 60 seconds            |
+| Condition | Trigger | Cost |
+| --- | --- | --- |
+| **Charging** | Phone is plugged in to a power source | Nothing to watch |
+| **Android Auto** | Android Auto is connected | Nothing to watch |
+| **Speed above** | Average speed exceeds the speed you set (km/h or mph) | Fixes keep flowing to measure it, even below the movement threshold |
+| **Speed below** | Average speed drops below the speed you set (km/h or mph) | Fixes keep flowing to measure it, even below the movement threshold |
+| **Stationary** | Still for the activation delay (60 s by default) | Fixes keep flowing to measure it; movement threshold not used |
 
 Speed conditions use a rolling average of the last 5 GPS readings to avoid triggering on momentary speed spikes. The stationary condition uses a fixed speed threshold (0.3 m/s) that has to hold across 60 seconds of fixes, so unlike speed-below it does not flap on GPS noise near zero. The window is measured over the fixes themselves, so a stretch with no fixes at all is not counted as stillness and the profile waits for the stream instead of switching on.
 
@@ -60,20 +66,20 @@ Your distance filter does not have that effect: whenever a speed or stationary p
 
 Each profile overrides the default tracking configuration with:
 
-- **GPS Interval** - How often to request a location fix (seconds)
-- **Distance Filter** - Minimum movement required between updates (meters)
-- **Sync Interval** - How often to sync with the server (Instant, 1 min, 5 min, 15 min, or Custom)
-- **Priority** - Determines which profile wins when multiple conditions match simultaneously (higher = wins)
+- **Tracking interval** - How often to request a location fix (seconds)
+- **Movement threshold** - Minimum movement required between updates (meters or feet)
+- **Sync interval** - How often to sync with the server (Instant, 1 min, 5 min, 15 min, or Custom)
+- **Priority** - Determines which profile wins when multiple conditions match simultaneously (higher wins; equal numbers go to the older profile)
 - **Activation Delay** - How long the condition must keep matching before the profile is applied (seconds, default 0 = immediate). Prevents activating on brief spikes, e.g. a momentary speed reading. For the Stationary condition it instead sets how long the device must be still before the profile activates (default 60s).
 - **Deactivation Delay** - How long to wait after the condition stops matching before reverting to default settings (seconds). Prevents rapid toggling when conditions fluctuate.
 
-When creating a new profile, GPS interval, distance filter, and sync interval are pre-filled with your current values from main Settings. Each field also shows a hint with the default value for reference.
+When creating a new profile, the tracking interval, movement threshold and sync interval are pre-filled with your current Tracking & sync values, and each field says which value it replaces. The values a profile hands back to are the ones the service loaded when tracking started; a Tracking & sync change applies at the next restart.
 
 **Choosing delay values:** together the two delays make a profile "sticky" - hard to switch on by accident, hard to switch off by accident. Clean on/off signals like Charging and Android Auto want activation 0 (switch the instant you plug in or connect) plus a small deactivation delay so a brief disconnect or cable wiggle does not drop you. Noisy signals like speed want both: an activation delay to ignore short spikes (a Driving profile won't trigger from one GPS glitch while you walk) and a longer deactivation delay to ride through red lights, traffic and tunnels without flapping. Rule of thumb: if a profile keeps flickering on and off, raise the delays; if it reacts too slowly, lower them. Tracking never stops during either wait - you stay on your defaults through an activation delay, and on the profile through a deactivation delay.
 
 ## Priority
 
-When multiple conditions match at the same time, the profile with the highest priority wins.
+When multiple conditions match at the same time, the profile with the highest priority wins; equal priorities go to the older profile. The list shows profiles in that order, so it is the order they are checked in.
 
 :::tip[Combining Profiles]
 
@@ -86,8 +92,8 @@ If you use both a Speed Below and a Stationary profile, give Stationary the high
 | Profile | Condition | Interval | Distance | Priority | Activation | Deactivation | Use case |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Stationary | Stationary | 1800s | 0m | 40 | 60s | n/a | Heartbeat while not moving |
-| Driving | Car Mode | 10s | 1m | 30 | 0s | 30s | Detailed route while driving |
-| Walking | Speed Below 8 km/h | 60s | 2m | 20 | 20s | 45s | Battery-friendly on foot |
+| Driving | Android Auto | 10s | 1m | 30 | 0s | 30s | Detailed route while driving |
+| Walking | Speed below 8 km/h | 60s | 2m | 20 | 20s | 45s | Battery-friendly on foot |
 | Charging | Charging | 15s | 0m | 10 | 0s | 30s | High accuracy while plugged in |
 
 Note that Stationary has the highest priority so it takes over from Walking when you stop. Charging has the lowest priority so a more specific profile (e.g. Driving) wins when both match.
@@ -101,9 +107,16 @@ Note that Stationary has the highest priority so it takes over from Walking when
 - If the condition matches again before the delay expires, the timer is cancelled
 - After the delay expires, settings revert to the defaults configured in the Settings screen
 - Profile changes made in the editor take effect immediately on the running service
+- **Tracking & sync** shows the active profile above the Recording and Sync interval groups with the values in force. The rows below are the defaults the profile is overriding
 
 ## Active Profile Indicators
 
-When a profile is active, the Dashboard shows it: an info card on the map names the active profile. When inside a pause zone, the pause card shows which profile will resume on exit (e.g., "Profile 'Charging' resumes on exit").
+When a profile is active, Colota shows it in three places:
 
-The indicator disappears automatically when the profile deactivates (after the deactivation delay) or when tracking stops.
+- **Dashboard** - The state line reads "Tracking · ProfileName"
+- **Tracking profiles** - The list's first line names it with the values in force, and its row opens with "Active"
+- **Tracking & sync** - A line above the Recording and Sync interval groups names it with the values in force
+
+All of them clear when the profile deactivates (after the deactivation delay) or when tracking stops.
+
+A blank name saves as the condition's name, so two untouched charging profiles are both called "Charging"; a setup link import replaces a profile by name, so give profiles you share distinct names.
