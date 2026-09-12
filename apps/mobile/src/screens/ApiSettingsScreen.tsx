@@ -3,12 +3,12 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { useState, useCallback, useMemo, useRef } from "react"
-import { Text, StyleSheet, TextInput, View, ScrollView, Pressable } from "react-native"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
+import { Text, StyleSheet, View, ScrollView, Pressable } from "react-native"
+import { RotateCcw, X } from "lucide-react-native"
 import {
   FieldMap,
   DEFAULT_FIELD_MAP,
-  ScreenProps,
   CustomField,
   ApiTemplateName,
   API_TEMPLATES,
@@ -20,8 +20,20 @@ import { useAutoSave } from "../hooks/useAutoSave"
 import { useTimeout } from "../hooks/useTimeout"
 import { useTracking } from "../contexts/TrackingProvider"
 import NativeLocationService from "../services/NativeLocationService"
-import { fonts } from "../styles/typography"
-import { SectionTitle, FloatingSaveIndicator, Container, Divider, ChipGroup } from "../components"
+import { fontSizes, fonts, lineHeights, type } from "../styles/typography"
+import type { RootScreenProps } from "../types/navigation"
+import {
+  SectionTitle,
+  FloatingSaveIndicator,
+  Container,
+  Divider,
+  Card,
+  ListItem,
+  RadioRow,
+  Button,
+  TextField,
+  IconButton
+} from "../components"
 import { findDuplicates } from "../utils/settingsValidation"
 import {
   buildTraccarJsonPayload,
@@ -29,6 +41,8 @@ import {
   isTraccarJsonFormat,
   isOverlandFormat
 } from "../utils/apiPayload"
+import { HIT_SLOP_LG, space, STATE_LAYER_ALPHA } from "../constants"
+import { radius } from "@colota/shared"
 
 type LocalCustomField = CustomField & { id: number }
 
@@ -45,22 +59,9 @@ const FIELD_DESCRIPTIONS: Record<keyof FieldMap, string> = {
   bear: "Direction of travel (0-360°)"
 }
 
-const TEMPLATE_OPTIONS: { value: ApiTemplateName; label: string }[] = [
-  { value: "custom", label: "Custom" },
-  ...Object.entries(API_TEMPLATES).map(([key, tmpl]) => ({
-    value: key as ApiTemplateName,
-    label: tmpl.label
-  }))
-]
-
-const HTTP_METHOD_OPTIONS: { value: HttpMethod; label: string }[] = [
-  { value: "POST", label: "POST" },
-  { value: "GET", label: "GET" }
-]
-
-const DAWARICH_MODE_OPTIONS: { value: DawarichMode; label: string }[] = [
-  { value: "single", label: "Single point" },
-  { value: "batch", label: "Batch" }
+const HTTP_METHOD_OPTIONS: { value: HttpMethod; label: string; sub: string }[] = [
+  { value: "POST", label: "POST", sub: "Sends the fields as a JSON body" },
+  { value: "GET", label: "GET", sub: "Sends the fields as URL query parameters" }
 ]
 
 /**
@@ -81,7 +82,7 @@ function getReferenceCustomFields(template: ApiTemplateName): CustomField[] {
  * Screen for configuring API field name mappings, backend templates,
  * and custom static fields.
  */
-export function ApiSettingsScreen({}: ScreenProps) {
+export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Request Format">) {
   const { settings, setSettings, restartTracking } = useTracking()
   const { colors } = useTheme()
 
@@ -100,8 +101,15 @@ export function ApiSettingsScreen({}: ScreenProps) {
   const isGetMethod = localHttpMethod === "GET"
   const showDawarichChip = localTemplate === "dawarich"
   const batchDisabled = isInstantSync || isGetMethod
+  const batchDisabledReason = isInstantSync ? "Needs a sync interval above Instant" : "Needs the POST method, not GET"
   const copiedTimeout = useTimeout()
-  const { saving, saveSuccess, debouncedSaveAndRestart, immediateSaveAndRestart } = useAutoSave()
+  const {
+    saving,
+    message: saveMessage,
+    isError: saveIsError,
+    debouncedSaveAndRestart,
+    immediateSaveAndRestart
+  } = useAutoSave()
 
   const referenceFieldMap = getReferenceFieldMap(localTemplate)
 
@@ -330,6 +338,15 @@ export function ApiSettingsScreen({}: ScreenProps) {
     [localFieldMap, localCustomFields, localHttpMethod, localDawarichMode, saveImmediately]
   )
 
+  // The picker hands its choice back through the route. Clearing the param afterwards stops the
+  // effect re-applying it on every later render of this screen.
+  const incomingTemplate = route.params?.template
+  useEffect(() => {
+    if (!incomingTemplate) return
+    if (incomingTemplate !== localTemplate) handleTemplateChange(incomingTemplate)
+    navigation.setParams({ template: undefined })
+  }, [incomingTemplate, localTemplate, handleTemplateChange, navigation])
+
   /**
    * Handles field value changes with auto-save.
    * Switching to "custom" template if a known template was selected.
@@ -462,9 +479,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>API Field Mapping</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Customize field names sent to your server
           </Text>
@@ -472,83 +487,88 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
         {/* Template Selector */}
         <View style={styles.section}>
-          <SectionTitle>BACKEND TEMPLATE</SectionTitle>
-          <ChipGroup
-            options={TEMPLATE_OPTIONS}
-            selected={localTemplate}
-            onSelect={handleTemplateChange}
-            colors={colors}
-          />
-          {localTemplate !== "custom" && (
-            <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-              {API_TEMPLATES[localTemplate].description}
-            </Text>
-          )}
+          <SectionTitle>Backend template</SectionTitle>
+          <Card rows>
+            <ListItem
+              testID="nav-backend-template"
+              label={localTemplate === "custom" ? "Custom" : API_TEMPLATES[localTemplate].label}
+              sub={
+                localTemplate === "custom"
+                  ? "Your own field names, mapped by hand"
+                  : API_TEMPLATES[localTemplate].description
+              }
+              onPress={() => navigation.navigate("Backend Template", { selected: localTemplate })}
+            />
+          </Card>
         </View>
 
         {/* HTTP Method Selector */}
         {/* Overland template is POST-only by spec; no need to expose the choice */}
         {localTemplate !== "overland" && (
           <View style={styles.section}>
-            <SectionTitle>HTTP METHOD</SectionTitle>
-            <ChipGroup
-              options={HTTP_METHOD_OPTIONS}
-              selected={localHttpMethod}
-              onSelect={handleHttpMethodChange}
-              colors={colors}
-            />
-            {localHttpMethod === "GET" && (
-              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-                Fields sent as URL query parameters instead of JSON body
-              </Text>
-            )}
+            <SectionTitle>HTTP method</SectionTitle>
+            <View accessibilityRole="radiogroup" style={styles.radioGroup}>
+              {HTTP_METHOD_OPTIONS.map(({ value, label, sub }) => (
+                <RadioRow
+                  key={value}
+                  testID={`http-method-${value.toLowerCase()}`}
+                  label={label}
+                  sub={sub}
+                  selected={localHttpMethod === value}
+                  onPress={() => handleHttpMethodChange(value)}
+                />
+              ))}
+            </View>
           </View>
         )}
 
         {/* Dawarich Mode Selector (Dawarich template only) */}
         {showDawarichChip && (
           <View style={styles.section}>
-            <SectionTitle>DAWARICH MODE</SectionTitle>
-            <ChipGroup
-              options={DAWARICH_MODE_OPTIONS}
-              selected={localDawarichMode}
-              onSelect={handleDawarichModeChange}
-              colors={colors}
-              disabled={batchDisabled ? new Set<DawarichMode>(["batch"]) : undefined}
-            />
+            <SectionTitle>Dawarich mode</SectionTitle>
+            <View accessibilityRole="radiogroup" style={styles.radioGroup}>
+              <RadioRow
+                testID="dawarich-mode-single"
+                label="Single point"
+                sub="Sends one request per location"
+                selected={localDawarichMode === "single"}
+                onPress={() => handleDawarichModeChange("single")}
+              />
+              <RadioRow
+                testID="dawarich-mode-batch"
+                label="Batch"
+                sub={batchDisabled ? batchDisabledReason : "Sends queued locations in one request"}
+                disabled={batchDisabled}
+                selected={localDawarichMode === "batch"}
+                onPress={() => handleDawarichModeChange("batch")}
+              />
+            </View>
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
               {localDawarichMode === "batch"
-                ? "Endpoint: /api/v1/overland/batches?api_key=YOUR_API_KEY"
-                : "Endpoint: /api/v1/owntracks/points?api_key=YOUR_API_KEY"}
+                ? `Endpoint: ${API_TEMPLATES.dawarich.batchEndpointExample}`
+                : `Endpoint: ${API_TEMPLATES.dawarich.endpointExample}`}
             </Text>
-            {isInstantSync && (
-              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-                Batch mode requires a non-zero sync interval. Switch to a batched preset to enable it.
-              </Text>
-            )}
-            {isGetMethod && !isInstantSync && (
-              <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
-                Batch mode requires POST. Switch HTTP method to POST to enable batch.
-              </Text>
-            )}
           </View>
         )}
 
         {/* Field Mapping Section */}
         <View style={styles.fieldsSection}>
           <View style={styles.sectionHeader}>
-            <SectionTitle>FIELD MAPPINGS</SectionTitle>
+            <SectionTitle>Field mappings</SectionTitle>
             {hasModifications && (
               <Pressable
                 onPress={handleResetAll}
-                style={({ pressed }) => [styles.resetAllButton, pressed && { opacity: colors.pressedOpacity }]}
+                hitSlop={HIT_SLOP_LG}
+                accessibilityRole="button"
+                android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
+                style={styles.resetAllButton}
               >
-                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>RESET ALL</Text>
+                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>Reset all</Text>
               </Pressable>
             )}
           </View>
 
-          <View style={[styles.fieldsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.fieldsCard, { backgroundColor: colors.card }]}>
             {(Object.keys(DEFAULT_FIELD_MAP) as Array<keyof FieldMap>).map((key, index) => {
               const isFieldModified = modifiedFields.has(key)
               const fieldValue = localFieldMap[key]?.trim()
@@ -575,37 +595,25 @@ export function ApiSettingsScreen({}: ScreenProps) {
                     {/* Right: Value input */}
                     <View style={styles.valueColumn}>
                       <View style={styles.inputRow}>
-                        <TextInput
-                          style={[
-                            styles.fieldInput,
-                            {
-                              borderColor: isDuplicate
-                                ? colors.error
-                                : isFieldModified
-                                  ? colors.primary
-                                  : colors.border,
-                              color: colors.text,
-                              backgroundColor: colors.background
-                            }
-                          ]}
+                        <TextField
+                          accessibilityLabel={key}
+                          testID={`field-${key}`}
+                          style={styles.fieldInput}
+                          mono
+                          error={isDuplicate}
                           value={localFieldMap[key]}
                           onChangeText={(text) => handleFieldChange(key, text)}
                           placeholder={referenceFieldMap[key]}
-                          placeholderTextColor={colors.placeholder}
                           autoCapitalize="none"
                           autoCorrect={false}
                         />
                         {isFieldModified && (
-                          <Pressable
+                          <IconButton
+                            icon={RotateCcw}
+                            testID={`reset-${key}`}
+                            accessibilityLabel={`Reset ${key} to the default`}
                             onPress={() => handleResetField(key)}
-                            style={({ pressed }) => [
-                              styles.resetButton,
-                              { backgroundColor: colors.border },
-                              pressed && { opacity: colors.pressedOpacity }
-                            ]}
-                          >
-                            <Text style={[styles.resetIcon, { color: colors.textSecondary }]}>↺</Text>
-                          </Pressable>
+                          />
                         )}
                       </View>
                     </View>
@@ -621,10 +629,10 @@ export function ApiSettingsScreen({}: ScreenProps) {
         {/* Custom Fields Section */}
         <View style={styles.fieldsSection}>
           <View style={styles.sectionHeader}>
-            <SectionTitle>CUSTOM FIELDS</SectionTitle>
+            <SectionTitle>Custom fields</SectionTitle>
           </View>
 
-          <View style={[styles.fieldsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.fieldsCard, { backgroundColor: colors.card }]}>
             {localCustomFields.length === 0 ? (
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
                 No custom fields. Add static key-value pairs to include in every payload.
@@ -635,48 +643,36 @@ export function ApiSettingsScreen({}: ScreenProps) {
                 return (
                   <View key={field.id}>
                     <View style={styles.customFieldRow}>
-                      <TextInput
-                        style={[
-                          styles.customFieldInput,
-                          {
-                            borderColor: isDuplicate ? colors.error : colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
+                      <TextField
+                        accessibilityLabel="Custom field key"
+                        testID={`custom-key-${field.id}`}
+                        style={styles.customFieldInput}
+                        mono
+                        error={isDuplicate}
                         value={field.key}
                         onChangeText={(text) => handleCustomFieldChange(field.id, "key", text)}
                         placeholder="Key"
-                        placeholderTextColor={colors.placeholder}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
-                      <TextInput
-                        style={[
-                          styles.customFieldInput,
-                          {
-                            borderColor: colors.border,
-                            color: colors.text,
-                            backgroundColor: colors.background
-                          }
-                        ]}
+                      <TextField
+                        accessibilityLabel="Custom field value"
+                        testID={`custom-value-${field.id}`}
+                        style={styles.customFieldInput}
+                        mono
                         value={field.value}
                         onChangeText={(text) => handleCustomFieldChange(field.id, "value", text)}
                         placeholder="Value"
-                        placeholderTextColor={colors.placeholder}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
-                      <Pressable
+                      <IconButton
+                        icon={X}
+                        tone="danger"
+                        testID={`remove-custom-${field.id}`}
+                        accessibilityLabel="Remove this custom field"
                         onPress={() => handleRemoveCustomField(field.id)}
-                        style={({ pressed }) => [
-                          styles.removeButton,
-                          { backgroundColor: colors.error + "15" },
-                          pressed && { opacity: colors.pressedOpacity }
-                        ]}
-                      >
-                        <Text style={[styles.removeButtonText, { color: colors.error }]}>X</Text>
-                      </Pressable>
+                      />
                     </View>
                     {index < localCustomFields.length - 1 && <Divider />}
                   </View>
@@ -684,16 +680,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
               })
             )}
 
-            <Pressable
-              onPress={handleAddCustomField}
-              style={({ pressed }) => [
-                styles.addButton,
-                { borderColor: colors.border },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
-            >
-              <Text style={[styles.addButtonText, { color: colors.primaryDark }]}>+ Add Field</Text>
-            </Pressable>
+            <Button title="+ Add Field" onPress={handleAddCustomField} variant="secondary" />
           </View>
         </View>
 
@@ -710,7 +697,7 @@ export function ApiSettingsScreen({}: ScreenProps) {
 
         {/* Example payload preview */}
         <View style={styles.exampleSection}>
-          <SectionTitle>{localHttpMethod === "GET" ? "EXAMPLE REQUEST" : "EXAMPLE PAYLOAD"}</SectionTitle>
+          <SectionTitle>{localHttpMethod === "GET" ? "Example request" : "Example payload"}</SectionTitle>
           <View
             style={[
               styles.exampleCard,
@@ -723,10 +710,13 @@ export function ApiSettingsScreen({}: ScreenProps) {
             <Text style={[styles.exampleCode, { color: colors.textSecondary }]}>{examplePayload}</Text>
             <Pressable
               onPress={handleCopyPayload}
-              style={({ pressed }) => [styles.copyButton, pressed && { opacity: colors.pressedOpacity }]}
+              hitSlop={HIT_SLOP_LG}
+              accessibilityRole="button"
+              android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
+              style={styles.copyButton}
             >
               <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
-                {copied ? "COPIED!" : "COPY"}
+                {copied ? "Copied!" : "Copy"}
               </Text>
             </Pressable>
           </View>
@@ -741,39 +731,39 @@ export function ApiSettingsScreen({}: ScreenProps) {
       </ScrollView>
 
       {/* Floating Save Indicator */}
-      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
+      <FloatingSaveIndicator saving={saving} message={saveMessage} isError={saveIsError} />
     </Container>
   )
 }
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 40
+    paddingHorizontal: space.lg,
+    paddingBottom: space.xxl
   },
   header: {
-    marginTop: 20,
-    marginBottom: 20
-  },
-  title: {
-    fontSize: 28,
-    ...fonts.bold,
-    letterSpacing: -0.5,
-    marginBottom: 4
+    marginTop: space.xl,
+    marginBottom: space.xl
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 20
+    fontSize: fontSizes.body,
+    lineHeight: lineHeights.body
   },
   section: {
-    marginBottom: 24
+    marginBottom: space.xl
+  },
+  // Every control pays its own top padding, so the gap under a SectionTitle has to be measured to the
+  // text rather than to the box. A chip pays space.sm and lands at 20; a row pays space.lg and would
+  // land at 28. Pulling up space.sm puts the row text at 20 too, with the ripple still clear of the title.
+  radioGroup: {
+    marginTop: -space.sm
   },
   templateHint: {
-    fontSize: 12,
-    marginTop: 8
+    fontSize: fontSizes.caption,
+    marginTop: space.sm
   },
   fieldsSection: {
-    marginBottom: 20
+    marginBottom: space.xl
   },
   sectionHeader: {
     flexDirection: "row",
@@ -781,23 +771,21 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   resetAllButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8
+    paddingVertical: space.xs,
+    paddingHorizontal: space.sm
   },
   resetAllText: {
-    fontSize: 11,
-    ...fonts.bold,
-    letterSpacing: 0.5
+    fontSize: fontSizes.label,
+    ...fonts.semiBold
   },
   fieldsCard: {
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1
+    padding: space.md,
+    borderRadius: radius.md
   },
   fieldRow: {
     flexDirection: "row",
-    paddingVertical: 10,
-    gap: 12
+    paddingVertical: space.md,
+    gap: space.md
   },
   keyColumn: {
     flex: 1,
@@ -806,27 +794,25 @@ const styles = StyleSheet.create({
   keyHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 2
+    gap: space.sm,
+    marginBottom: space.xxs
   },
   fieldLabel: {
-    fontSize: 13,
-    ...fonts.bold,
-    letterSpacing: 0.5
+    fontSize: fontSizes.description,
+    ...fonts.bold
   },
   modifiedBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xxs,
+    borderRadius: radius.xs
   },
   modifiedText: {
-    fontSize: 9,
-    ...fonts.bold,
-    letterSpacing: 0.3
+    fontSize: fontSizes.micro,
+    ...fonts.bold
   },
   fieldDescription: {
-    fontSize: 11,
-    lineHeight: 15
+    fontSize: fontSizes.small,
+    lineHeight: lineHeights.small
   },
   valueColumn: {
     flex: 1,
@@ -835,111 +821,61 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6
+    gap: space.sm
   },
   fieldInput: {
-    flex: 1,
-    borderWidth: 1.5,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    fontSize: 14,
-    fontFamily: "monospace"
-  },
-  resetButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  resetIcon: {
-    fontSize: 18,
-    ...fonts.semiBold
+    flex: 1
   },
   customFieldRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 8
+    gap: space.sm,
+    paddingVertical: space.sm
   },
   customFieldInput: {
-    flex: 1,
-    borderWidth: 1.5,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    fontSize: 14,
-    fontFamily: "monospace"
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center"
-  },
-  removeButtonText: {
-    fontSize: 13,
-    ...fonts.bold
-  },
-  addButton: {
-    paddingVertical: 12,
-    alignItems: "center",
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    marginTop: 8
-  },
-  addButtonText: {
-    fontSize: 14,
-    ...fonts.semiBold
+    flex: 1
   },
   emptyHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     textAlign: "center",
-    paddingVertical: 8
+    paddingVertical: space.sm
   },
   warningBanner: {
-    padding: 12,
-    borderRadius: 8,
+    padding: space.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    marginBottom: 20
+    marginBottom: space.xl
   },
   warningText: {
-    fontSize: 12,
-    lineHeight: 18
+    fontSize: fontSizes.caption,
+    lineHeight: lineHeights.caption
   },
   exampleSection: {
-    marginBottom: 20
+    marginBottom: space.xl
   },
   copyButton: {
     alignSelf: "flex-end",
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-    marginTop: 8
+    paddingVertical: space.xs,
+    paddingHorizontal: space.sm,
+    marginTop: space.sm
   },
   copyButtonText: {
-    fontSize: 11,
-    ...fonts.bold,
-    letterSpacing: 0.5
+    fontSize: fontSizes.label,
+    ...fonts.semiBold
   },
   exampleCard: {
-    padding: 14,
-    borderRadius: 8,
-    borderWidth: 1
+    padding: space.lg,
+    borderRadius: radius.sm
   },
   exampleCode: {
-    fontSize: 12,
-    fontFamily: "monospace",
-    lineHeight: 18
+    ...type.mono
   },
   footer: {
-    paddingVertical: 16,
+    paddingVertical: space.lg,
     alignItems: "center"
   },
   footerText: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     textAlign: "center"
   }
 })

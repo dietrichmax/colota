@@ -10,7 +10,7 @@ Reference for the HTTP requests Colota sends to your server.
 
 **Method:** `POST` (default) or `GET`
 
-Configure the HTTP method in **Settings → API Field Mapping → HTTP Method**.
+Configure the HTTP method in **Settings → Connection → Request format → HTTP method**.
 
 ### POST (default)
 
@@ -25,10 +25,7 @@ Additional headers may be included based on your [authentication](/docs/configur
 
 **Body:**
 
-This is the body for the default field-mapped format. The Traccar POST and Overland templates and
-Dawarich in batch mode, send a different shape entirely. Those formats use fixed field names, so the
-[field mapping](/docs/configuration/field-mapping) does not apply to them and both add a `device_id`
-key. See [API templates](/docs/integrations/api-templates) for the exact bodies.
+This is the body for the default field-mapped format. The Traccar POST and Overland templates and Dawarich in batch mode, send a different shape entirely. Those formats use fixed field names, so the [field mapping](/docs/configuration/field-mapping) does not apply to them and both add a `device_id` key. See [API templates](/docs/integrations/api-templates) for the exact bodies.
 
 ```json
 {
@@ -82,24 +79,19 @@ When exiting a [pause zone](/docs/guides/geofencing#anchor-points), Colota sends
 - `alt`, `vel`, and `bear` are not included
 - `batt` and `bs` reflect the current battery state
 
-A zone [heartbeat](/docs/guides/geofencing) produces the same kind of synthetic point while you are
-still inside the zone: the zone centre, `acc` 0, timestamped when the heartbeat fired. Filter on both
-if you want to tell app-generated points from real fixes.
+A zone [heartbeat](/docs/guides/geofencing) produces the same kind of synthetic point while you are still inside the zone: the zone centre, `acc` 0, timestamped when the heartbeat fired. Filter on both if you want to tell app-generated points from real fixes.
 
-### Custom Fields
+### Custom fields
 
-Custom static fields (configured in API Settings) are added to the payload first, then location fields are added. If a custom field has the same name as a location field, the location field overwrites it.
+Custom static fields (configured in Request format) are added to the payload first, then location fields are added. If a custom field has the same name as a location field, the location field overwrites it.
 
 Custom field values are always sent as strings.
 
 ## Batch Sync Behavior
 
-In the default field-mapped format Colota sends **one location per HTTP request**. During batch sync
-up to 10 requests are sent concurrently, processing up to 500 queued locations per sync cycle.
+In the default field-mapped format Colota sends **one location per HTTP request**. During batch sync up to 10 requests are sent concurrently, processing up to 500 queued locations per sync cycle.
 
-The Overland format, and Dawarich in batch mode, instead send **an array of locations in a single
-request**. Batch size is configurable (1 to 500, default 50) and up to 10 batches are sent per cycle,
-so one cycle can move considerably more than 500 points.
+The Overland format, and Dawarich in batch mode, instead send **an array of locations in a single request**. Batch size is configurable (1 to 500, default 50) and up to 10 batches are sent per cycle, so one cycle can move considerably more than 500 points.
 
 Your server should handle multiple simultaneous POST requests. If you have rate limiting, some requests may fail and be retried.
 
@@ -147,11 +139,9 @@ Your server only needs to return a 2xx status code. The response body is not rea
 | **Any non-2xx response** | Queued for retry                           |
 | **Network timeout**      | Retried (10s connection, 10s read timeout) |
 
-There is no distinction between 4xx and 5xx in retry behavior - all failures are retried indefinitely,
-and failed items stay in the queue until they succeed.
+There is no distinction between 4xx and 5xx in retry behavior - all failures are retried indefinitely, and failed items stay in the queue until they succeed.
 
-Clearing the queue in **Settings > Data Management** deletes those locations outright, not just their
-place in the queue, so anything not yet sent is lost.
+Clearing the queue in **Settings > Data management** deletes those locations outright, not just their place in the queue, so anything not yet sent is lost.
 
 ## Retry Strategy
 
@@ -165,12 +155,12 @@ Attempt 4: +300s delay (5 minutes)
 Attempt 5+: +900s delay (15 minutes)
 ```
 
-Failed items stay in the queue indefinitely until they succeed. The queue can be cleared manually in Settings > Data Management if needed.
+Failed items stay in the queue indefinitely until they succeed. The queue can be cleared manually in Settings > Data management if needed.
 
 ## Network Requirements
 
 - **HTTPS required** for all public endpoints
-- **HTTP allowed** for private/local addresses - enforced via DNS resolution at both sync time and Test Connection
+- **HTTP allowed** for private/local addresses - enforced via DNS resolution at both sync time and Test connection
 - Non-standard ports are supported (e.g., `https://my-server.com:8443/api`)
 - Self-signed certificates are supported - see [Server Settings](/docs/configuration/server-settings#endpoint-url) for setup instructions
 

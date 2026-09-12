@@ -198,7 +198,7 @@ describe("SettingsScreen", () => {
 
     fireEvent.press(getByText("API Field Mapping"))
 
-    expect(mockNavigate).toHaveBeenCalledWith("API Config")
+    expect(mockNavigate).toHaveBeenCalledWith("Request Format")
   })
 
   // --- Offline mode ---

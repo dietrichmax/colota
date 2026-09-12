@@ -138,7 +138,7 @@ export function SettingsScreen({ navigation }: Props) {
                   icon={Braces}
                   label="API Field Mapping"
                   sub={apiSummary}
-                  onPress={() => navigation.navigate("API Config")}
+                  onPress={() => navigation.navigate("Request Format")}
                 />
               </>
             )}

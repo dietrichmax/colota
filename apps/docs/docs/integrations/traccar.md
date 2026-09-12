@@ -17,7 +17,7 @@ sidebar_position: 6
 
 ## Setup in Colota
 
-1. Go to **Settings > API Settings**
+1. Go to **Settings > Connection > Request format**
 2. Select the **Traccar** template
 3. Choose your HTTP method:
    - **GET** - OsmAnd protocol, compatible with all Traccar versions
@@ -36,7 +36,7 @@ Traccar identifies devices by a unique identifier. Add a custom field with key `
 | GET    | `id` query parameter     | custom field `id`                                             |
 | POST   | `device_id` in JSON body | custom field `id` (or `device_id` if set, otherwise `colota`) |
 
-The current value is visible in the example payload on the API Settings screen.
+The current value is visible in the example payload on the Request format screen.
 
 In Traccar, open **Settings > Devices**, create a new device, and set the **Identifier** to the same value Colota is sending.
 

@@ -255,7 +255,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
               onStartTracking={handleStart}
               onNavigateToConnection={() => navigation.navigate("Connection")}
               onNavigateToTrackingSync={() => navigation.navigate("Tracking & Sync")}
-              onNavigateToApiConfig={() => navigation.navigate("API Config")}
+              onNavigateToApiConfig={() => navigation.navigate("Request Format")}
             />
           )}
 

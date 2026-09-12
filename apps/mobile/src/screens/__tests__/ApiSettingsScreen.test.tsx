@@ -61,10 +61,49 @@ jest.mock("../../components", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
   return {
+    IconButton: require("../../testing/componentStubs").IconButtonStub,
+    TextField: require("../../testing/componentStubs").TextFieldStub,
+    Button: function (props: any) {
+      return require("react").createElement(
+        require("react-native").Pressable,
+        { testID: props.testID, onPress: props.onPress, disabled: props.disabled, accessibilityRole: "button" },
+        require("react").createElement(require("react-native").Text, null, props.title)
+      )
+    },
+    Toggle: function (props: any) {
+      return require("react").createElement(require("react-native").Switch, {
+        testID: props.testID,
+        value: props.value,
+        onValueChange: props.onValueChange,
+        disabled: props.disabled,
+        accessibilityLabel: props.accessibilityLabel
+      })
+    },
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     FloatingSaveIndicator: () => null,
     Container: ({ children }: any) => R.createElement(View, null, children),
     Divider: () => R.createElement(View, null),
+    Card: ({ children }: any) => R.createElement(View, null, children),
+    ListItem: ({ testID, label, sub, onPress }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress, accessibilityRole: "button" },
+        R.createElement(Text, null, label),
+        sub ? R.createElement(Text, null, sub) : null
+      ),
+    RadioRow: ({ testID, label, sub, selected, disabled, onPress }: any) =>
+      R.createElement(
+        Pressable,
+        {
+          testID,
+          onPress,
+          disabled,
+          accessibilityRole: "radio",
+          accessibilityState: { checked: selected, disabled }
+        },
+        R.createElement(Text, null, label),
+        sub ? R.createElement(Text, null, sub) : null
+      ),
     ChipGroup: ({ options, selected, onSelect }: any) =>
       R.createElement(
         View,
@@ -82,6 +121,8 @@ jest.mock("../../components", () => {
 
 import { ApiSettingsScreen } from "../ApiSettingsScreen"
 
+const mockNavigation = { navigate: jest.fn(), setOptions: jest.fn(), goBack: jest.fn(), setParams: jest.fn() }
+
 describe("ApiSettingsScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -92,25 +133,36 @@ describe("ApiSettingsScreen", () => {
     if (settingsOverride) {
       mockSettings = { ...DEFAULT_SETTINGS, ...settingsOverride }
     }
-    return render(<ApiSettingsScreen navigation={{} as any} />)
+    return render(<ApiSettingsScreen navigation={mockNavigation as any} route={{ params: {} } as any} />)
+  }
+
+  /** The picker screen hands its choice back through the route, which is the only way in now. */
+  function renderWithTemplate(template: string, settingsOverride?: Partial<Settings>) {
+    if (settingsOverride) {
+      mockSettings = { ...DEFAULT_SETTINGS, ...settingsOverride }
+    }
+    return render(<ApiSettingsScreen navigation={mockNavigation as any} route={{ params: { template } } as any} />)
   }
 
   describe("template switching", () => {
-    it("renders all template options", () => {
-      const { getByText, getAllByText } = renderScreen()
+    it("names the current template on a row instead of listing eight chips", () => {
+      const { getByTestId, getByText } = renderWithTemplate("dawarich")
 
-      expect(getAllByText(/Custom/).length).toBeGreaterThan(0)
+      expect(getByTestId("nav-backend-template")).toBeTruthy()
       expect(getByText("Dawarich")).toBeTruthy()
-      expect(getByText("OwnTracks")).toBeTruthy()
-      expect(getByText(/PhoneTrack/)).toBeTruthy()
-      expect(getByText("Reitti")).toBeTruthy()
-      expect(getByText("Traccar")).toBeTruthy()
+      expect(getByText(API_TEMPLATES.dawarich.description)).toBeTruthy()
+    })
+
+    it("opens the picker rather than switching in place", () => {
+      const { getByTestId } = renderScreen()
+
+      fireEvent.press(getByTestId("nav-backend-template"))
+
+      expect(mockNavigation.navigate).toHaveBeenCalledWith("Backend Template", { selected: "custom" })
     })
 
     it("selecting Dawarich template applies its field map", () => {
-      const { getByText, getByDisplayValue } = renderScreen()
-
-      fireEvent.press(getByText("Dawarich"))
+      const { getByDisplayValue } = renderWithTemplate("dawarich")
 
       // Dawarich uses "cog" for bearing
       expect(getByDisplayValue("cog")).toBeTruthy()
@@ -120,9 +172,7 @@ describe("ApiSettingsScreen", () => {
     })
 
     it("selecting OwnTracks template applies its custom fields", () => {
-      const { getByText, getByDisplayValue } = renderScreen()
-
-      fireEvent.press(getByText("OwnTracks"))
+      const { getByDisplayValue } = renderWithTemplate("owntracks")
 
       // OwnTracks has _type and tid custom fields
       expect(getByDisplayValue("_type")).toBeTruthy()
@@ -132,9 +182,7 @@ describe("ApiSettingsScreen", () => {
     })
 
     it("selecting PhoneTrack template applies its unique field names", () => {
-      const { getByText, getByDisplayValue } = renderScreen()
-
-      fireEvent.press(getByText(/PhoneTrack/))
+      const { getByDisplayValue } = renderWithTemplate("phonetrack")
 
       // PhoneTrack uses different field names
       expect(getByDisplayValue("speed")).toBeTruthy() // vel -> speed
@@ -144,31 +192,20 @@ describe("ApiSettingsScreen", () => {
     })
 
     it("switching template triggers immediate save", () => {
-      const { getByText } = renderScreen()
-
-      fireEvent.press(getByText("Traccar"))
+      renderWithTemplate("traccar")
 
       expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
     })
 
     it("switching back to Custom preserves current field map", () => {
-      const { getByText, getByDisplayValue } = renderScreen()
-
-      // First switch to PhoneTrack
-      fireEvent.press(getByText(/PhoneTrack/))
+      const { getByDisplayValue, rerender } = renderWithTemplate("phonetrack")
       expect(getByDisplayValue("speed")).toBeTruthy()
 
       // Switch to Custom - field map stays as PhoneTrack's
-      fireEvent.press(getByText("Custom"))
+      rerender(
+        <ApiSettingsScreen navigation={mockNavigation as any} route={{ params: { template: "custom" } } as any} />
+      )
       expect(getByDisplayValue("speed")).toBeTruthy()
-    })
-
-    it("shows template description for non-custom templates", () => {
-      const { getByText } = renderScreen()
-
-      fireEvent.press(getByText("Dawarich"))
-
-      expect(getByText(API_TEMPLATES.dawarich.description)).toBeTruthy()
     })
 
     it("editing a field auto-switches template to Custom", () => {
@@ -199,12 +236,11 @@ describe("ApiSettingsScreen", () => {
       expect(getByText(/GET/)).toBeTruthy()
     })
 
-    it("switching to GET shows query parameter hint", () => {
+    it("states what each method does without one being picked, which the chips could not", () => {
       const { getByText } = renderScreen()
 
-      fireEvent.press(getByText(/^GET$/))
-
-      expect(getByText("Fields sent as URL query parameters instead of JSON body")).toBeTruthy()
+      expect(getByText("Sends the fields as a JSON body")).toBeTruthy()
+      expect(getByText("Sends the fields as URL query parameters")).toBeTruthy()
     })
 
     it("switching method triggers immediate save", () => {
@@ -215,12 +251,14 @@ describe("ApiSettingsScreen", () => {
       expect(mockImmediateSaveAndRestart).toHaveBeenCalled()
     })
 
-    it("example payload changes format for GET method", () => {
-      const { getByText } = renderScreen()
+    it("calls the example a request under GET, because a GET carries no payload", () => {
+      const { getByText, getByTestId } = renderScreen()
 
-      fireEvent.press(getByText(/^GET$/))
+      expect(getByText("Example payload")).toBeTruthy()
 
-      expect(getByText("EXAMPLE REQUEST")).toBeTruthy()
+      fireEvent.press(getByTestId("http-method-get"))
+
+      expect(getByText("Example request")).toBeTruthy()
     })
   })
 
@@ -235,13 +273,15 @@ describe("ApiSettingsScreen", () => {
       expect(getByText("Modified")).toBeTruthy()
     })
 
-    it("shows RESET ALL button when any field is modified", () => {
-      const { getByText, getByDisplayValue } = renderScreen()
+    it("offers Reset all as a button once a field is modified", () => {
+      // The heading's action was a bare Pressable, so a screen reader announced the words with
+      // no role and nothing said it was pressable.
+      const { getByRole, getByDisplayValue } = renderScreen()
 
       const latInput = getByDisplayValue("lat")
       fireEvent.changeText(latInput, "latitude")
 
-      expect(getByText("RESET ALL")).toBeTruthy()
+      expect(getByRole("button", { name: "Reset all" })).toBeTruthy()
     })
   })
 
@@ -264,10 +304,34 @@ describe("ApiSettingsScreen", () => {
   })
 
   describe("copy payload", () => {
-    it("renders the COPY button", () => {
-      const { getByText } = renderScreen()
+    it("offers the payload copy as a button, in sentence case", () => {
+      // A bare Pressable with no role: TalkBack announced the word and nothing else. COPY was
+      // also the last caps label left after the sentence-case sweep.
+      const { getByRole } = renderScreen()
 
-      expect(getByText("COPY")).toBeTruthy()
+      expect(getByRole("button", { name: "Copy" })).toBeTruthy()
+    })
+  })
+
+  describe("dawarich mode", () => {
+    it("says on the row itself why batch cannot be picked, rather than in a line under the group", () => {
+      const { getByText } = renderWithTemplate("dawarich", { syncInterval: 0 })
+
+      expect(getByText("Needs a sync interval above Instant")).toBeTruthy()
+    })
+
+    it("names the other blocker when the method is the thing in the way", () => {
+      const { getByText, getByTestId } = renderWithTemplate("dawarich", { syncInterval: 300 })
+
+      fireEvent.press(getByTestId("http-method-get"))
+
+      expect(getByText("Needs the POST method, not GET")).toBeTruthy()
+    })
+
+    it("marks the blocked option disabled instead of only dimming it", () => {
+      const { getByTestId } = renderWithTemplate("dawarich", { syncInterval: 0 })
+
+      expect(getByTestId("dawarich-mode-batch").props.accessibilityState.disabled).toBe(true)
     })
   })
 })
