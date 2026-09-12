@@ -3,28 +3,55 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, Switch, View, ScrollView, Pressable, TextInput } from "react-native"
+import React, { useState, useCallback, useEffect, useRef } from "react"
+import { StyleSheet, View, ScrollView } from "react-native"
 import { ScreenProps } from "../types/global"
-import { useTheme } from "../hooks/useTheme"
+import { useTheme, type ThemePreference } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
 import NativeLocationService from "../services/NativeLocationService"
-import { fonts } from "../styles/typography"
-import { Card, Container, Divider, SettingRow } from "../components"
+import {
+  Button,
+  Card,
+  ChipGroup,
+  Container,
+  Divider,
+  FieldMessage,
+  SettingRow,
+  TextField,
+  ListItem,
+  Toggle
+} from "../components"
 import { ChevronDown, ChevronUp } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { loadDisplayPreferences, getUnitSystem, getTimeFormat } from "../utils/geo"
 import type { UnitSystem, TimeFormat } from "../utils/geo"
+import { clockSample, isStyleUrlValid, tileRowSub, unitNotation } from "../utils/appearance"
+import { space } from "../constants"
+
+type StyleKey = "mapStyleUrlLight" | "mapStyleUrlDark"
 
 export function AppearanceScreen({}: ScreenProps) {
-  const { mode, toggleTheme, colors } = useTheme()
+  const {
+    preference,
+    setPreference,
+    colors,
+    wallpaperColors,
+    setWallpaperColors,
+    wallpaperColorsAvailable,
+    wallpaperPaletteReady
+  } = useTheme()
   const { t } = useTranslation()
 
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(getUnitSystem)
   const [timeFormat, setTimeFormat] = useState<TimeFormat>(getTimeFormat)
 
-  const [mapStyleUrlLight, setMapStyleUrlLight] = useState("")
-  const [mapStyleUrlDark, setMapStyleUrlDark] = useState("")
+  // The row sub reads the saved pair, not the drafts, so the host moves on a save and not per keystroke.
+  const [draftLight, setDraftLight] = useState("")
+  const [draftDark, setDraftDark] = useState("")
+  const [savedLight, setSavedLight] = useState("")
+  const [savedDark, setSavedDark] = useState("")
+  const [lightError, setLightError] = useState<string | undefined>()
+  const [darkError, setDarkError] = useState<string | undefined>()
   const [showMapTileServer, setShowMapTileServer] = useState(false)
 
   const selectUnitSystem = useCallback(
@@ -55,34 +82,61 @@ export function AppearanceScreen({}: ScreenProps) {
     [timeFormat]
   )
 
+  // The initial read must not undo a save that beat it.
+  const edited = useRef(false)
+
   useEffect(() => {
     Promise.all([
       NativeLocationService.getSetting("mapStyleUrlLight"),
       NativeLocationService.getSetting("mapStyleUrlDark")
     ])
       .then(([light, dark]) => {
-        setMapStyleUrlLight(light ?? "")
-        setMapStyleUrlDark(dark ?? "")
+        if (edited.current) return
+        setDraftLight(light ?? "")
+        setDraftDark(dark ?? "")
+        setSavedLight(light ?? "")
+        setSavedDark(dark ?? "")
       })
       .catch(() => {})
   }, [])
 
-  const saveMapStyleUrl = useCallback(async (key: "mapStyleUrlLight" | "mapStyleUrlDark", value: string) => {
-    try {
-      await NativeLocationService.saveSetting(key, value.trim())
-    } catch (err) {
-      logger.error("[AppearanceScreen] Failed to save map style URL:", err)
-    }
-  }, [])
+  /** Refused rather than stored: a URL the map cannot load blanks every map, and only the reset undoes it. */
+  const commitStyleUrl = useCallback(
+    async (key: StyleKey, text: string) => {
+      const setError = key === "mapStyleUrlLight" ? setLightError : setDarkError
+      const setSaved = key === "mapStyleUrlLight" ? setSavedLight : setSavedDark
+      const trimmed = text.trim()
+      if (!isStyleUrlValid(trimmed)) {
+        setError(t("appearance.mapStyle.error"))
+        return
+      }
+      setError(undefined)
+      edited.current = true
+      try {
+        await NativeLocationService.saveSetting(key, trimmed)
+        setSaved(trimmed)
+      } catch (err) {
+        logger.error("[AppearanceScreen] Failed to save map style URL:", err)
+      }
+    },
+    [t]
+  )
 
   const resetMapStyle = useCallback(() => {
-    setMapStyleUrlLight("")
-    setMapStyleUrlDark("")
+    edited.current = true
+    setDraftLight("")
+    setDraftDark("")
+    setSavedLight("")
+    setSavedDark("")
+    setLightError(undefined)
+    setDarkError(undefined)
     Promise.all([
       NativeLocationService.saveSetting("mapStyleUrlLight", ""),
       NativeLocationService.saveSetting("mapStyleUrlDark", "")
     ]).catch((err) => logger.error("[AppearanceScreen] Failed to reset map style URLs:", err))
   }, [])
+
+  const hasCustom = savedLight.trim() !== "" || savedDark.trim() !== ""
 
   return (
     <Container>
@@ -91,145 +145,119 @@ export function AppearanceScreen({}: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Card>
-          <SettingRow label={t("appearance.darkMode")}>
-            <Switch
-              testID="dark-mode-switch"
-              value={mode === "dark"}
-              onValueChange={toggleTheme}
-              trackColor={{
-                false: colors.border,
-                true: colors.primary + "80"
-              }}
-              thumbColor={mode === "dark" ? colors.primary : colors.border}
+        <Card rows style={showMapTileServer ? (hasCustom ? styles.cardTailButton : styles.cardTail) : undefined}>
+          <SettingRow label={t("appearance.theme")}>
+            <ChipGroup
+              options={[
+                { value: "system", label: t("appearance.theme.system"), testID: "theme-system" },
+                { value: "light", label: t("appearance.theme.light"), testID: "theme-light" },
+                { value: "dark", label: t("appearance.theme.dark"), testID: "theme-dark" }
+              ]}
+              selected={preference}
+              onSelect={(value) => setPreference(value as ThemePreference)}
             />
           </SettingRow>
 
-          <Divider />
+          {wallpaperColorsAvailable && (
+            <>
+              <Divider tight />
+              {/* Present whenever the platform offers it, so a failed read cannot hide the way to turn it off. */}
+              <SettingRow
+                label={t("appearance.wallpaperColors")}
+                hint={t("appearance.wallpaperColors.hint")}
+                disabled={!wallpaperPaletteReady}
+              >
+                <Toggle
+                  testID="wallpaper-colors-toggle"
+                  value={wallpaperColors}
+                  onValueChange={setWallpaperColors}
+                  disabled={!wallpaperPaletteReady}
+                  accessibilityLabel={t("appearance.wallpaperColors")}
+                />
+              </SettingRow>
+            </>
+          )}
 
-          <SettingRow label={t("appearance.units")}>
-            <View style={styles.chipGroup}>
-              {(["metric", "imperial"] as const).map((unit) => {
-                const selected = unitSystem === unit
-                return (
-                  <Pressable
-                    key={unit}
-                    testID={`unit-${unit}`}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: selected ? colors.primary + "15" : colors.background,
-                        borderColor: selected ? colors.primary : colors.border
-                      }
-                    ]}
-                    onPress={() => selectUnitSystem(unit)}
-                  >
-                    <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>
-                      {unit === "metric" ? t("appearance.units.metric") : t("appearance.units.imperial")}
-                    </Text>
-                  </Pressable>
-                )
-              })}
-            </View>
+          <Divider tight />
+
+          <SettingRow label={t("appearance.units")} hint={unitNotation(unitSystem)}>
+            <ChipGroup
+              options={[
+                { value: "metric", label: t("appearance.units.metric"), testID: "unit-metric" },
+                { value: "imperial", label: t("appearance.units.imperial"), testID: "unit-imperial" }
+              ]}
+              selected={unitSystem}
+              onSelect={selectUnitSystem}
+            />
           </SettingRow>
 
-          <Divider />
+          <Divider tight />
 
-          <SettingRow label={t("appearance.timeFormat")}>
-            <View style={styles.chipGroup}>
-              {(["24h", "12h"] as const).map((fmt) => {
-                const selected = timeFormat === fmt
-                return (
-                  <Pressable
-                    key={fmt}
-                    testID={`time-format-${fmt}`}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: selected ? colors.primary + "15" : colors.background,
-                        borderColor: selected ? colors.primary : colors.border
-                      }
-                    ]}
-                    onPress={() => selectTimeFormat(fmt)}
-                  >
-                    <Text style={[styles.chipLabel, { color: selected ? colors.primary : colors.text }]}>{fmt}</Text>
-                  </Pressable>
-                )
-              })}
-            </View>
+          <SettingRow label={t("appearance.timeFormat")} hint={clockSample(timeFormat)}>
+            <ChipGroup
+              options={[
+                { value: "24h", label: t("appearance.timeFormat.24h"), testID: "time-format-24h" },
+                { value: "12h", label: t("appearance.timeFormat.12h"), testID: "time-format-12h" }
+              ]}
+              selected={timeFormat}
+              onSelect={selectTimeFormat}
+            />
           </SettingRow>
 
-          <Divider />
+          <Divider tight />
 
-          <Pressable
+          <ListItem
             testID="map-tile-server-toggle"
-            style={({ pressed }) => [styles.linkRow, pressed && { opacity: colors.pressedOpacity }]}
+            label={t("appearance.mapTileServer")}
+            sub={tileRowSub(savedLight, savedDark)}
+            subLines={2}
+            trailingIcon={showMapTileServer ? ChevronUp : ChevronDown}
+            expanded={showMapTileServer}
             onPress={() => setShowMapTileServer(!showMapTileServer)}
-          >
-            <View style={styles.linkContent}>
-              <Text style={[styles.linkLabel, { color: colors.text }]}>{t("appearance.mapTileServer")}</Text>
-              <Text style={[styles.linkSub, { color: colors.textSecondary }]}>{t("appearance.mapStyle.subtitle")}</Text>
-            </View>
-            {showMapTileServer ? (
-              <ChevronUp size={20} color={colors.textLight} />
-            ) : (
-              <ChevronDown size={20} color={colors.textLight} />
-            )}
-          </Pressable>
+          />
 
           {showMapTileServer && (
-            <View style={styles.mapTilePanel}>
-              <Text style={[styles.mapStyleSub, styles.mapStyleSubFirst, { color: colors.textSecondary }]}>
-                {t("appearance.mapStyle.light")}
-              </Text>
-              <TextInput
-                testID="map-style-url-light"
-                style={[
-                  styles.mapStyleInput,
-                  { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
-                ]}
-                value={mapStyleUrlLight}
-                onChangeText={setMapStyleUrlLight}
-                onBlur={() => saveMapStyleUrl("mapStyleUrlLight", mapStyleUrlLight)}
-                placeholder={t("appearance.mapStyle.placeholder")}
-                placeholderTextColor={colors.placeholder}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
-              <Text style={[styles.mapStyleSub, styles.mapStyleSubSecond, { color: colors.textSecondary }]}>
-                {t("appearance.mapStyle.dark")}
-              </Text>
-              <TextInput
-                testID="map-style-url-dark"
-                style={[
-                  styles.mapStyleInput,
-                  { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }
-                ]}
-                value={mapStyleUrlDark}
-                onChangeText={setMapStyleUrlDark}
-                onBlur={() => saveMapStyleUrl("mapStyleUrlDark", mapStyleUrlDark)}
-                placeholder={t("appearance.mapStyle.placeholder")}
-                placeholderTextColor={colors.placeholder}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
-              <View style={styles.mapStyleFooter}>
-                <Text style={[styles.mapStyleHint, { color: colors.textLight }]}>
-                  {t("appearance.mapStyle.emptyHint")}
-                </Text>
-                {mapStyleUrlLight.trim() || mapStyleUrlDark.trim() ? (
-                  <Pressable
-                    onPress={resetMapStyle}
-                    style={({ pressed }) => pressed && { opacity: colors.pressedOpacity }}
-                  >
-                    <Text style={[styles.mapStyleHint, { color: colors.primary }]}>
-                      {t("appearance.mapStyle.reset")}
-                    </Text>
-                  </Pressable>
-                ) : null}
+            <View style={styles.panel}>
+              <View style={styles.fields}>
+                <TextField
+                  testID="map-style-url-light"
+                  label={t("appearance.mapStyle.light")}
+                  mono
+                  value={draftLight}
+                  onChangeText={setDraftLight}
+                  onBlur={() => commitStyleUrl("mapStyleUrlLight", draftLight)}
+                  error={lightError}
+                  placeholder={t("appearance.mapStyle.placeholder")}
+                  placeholderTextColor={colors.placeholder}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
+                <TextField
+                  testID="map-style-url-dark"
+                  label={t("appearance.mapStyle.dark")}
+                  mono
+                  value={draftDark}
+                  onChangeText={setDraftDark}
+                  onBlur={() => commitStyleUrl("mapStyleUrlDark", draftDark)}
+                  error={darkError}
+                  placeholder={t("appearance.mapStyle.placeholder")}
+                  placeholderTextColor={colors.placeholder}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
               </View>
+              <FieldMessage>{t("appearance.mapStyle.emptyHint")}</FieldMessage>
+              {hasCustom && (
+                <Button
+                  variant="ghost"
+                  shape="rounded"
+                  testID="map-style-reset-btn"
+                  title={t("appearance.mapStyle.reset")}
+                  onPress={resetMapStyle}
+                />
+              )}
             </View>
           )}
         </Card>
@@ -239,69 +267,17 @@ export function AppearanceScreen({}: ScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  // `rows` drops the card's vertical padding, and the panel's last child is not a row, so it comes back.
+  cardTail: { paddingBottom: space.lg },
+  cardTailButton: { paddingBottom: space.sm },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xxl
   },
-  linkRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12
-  },
-  linkContent: {
-    flex: 1
-  },
-  linkLabel: {
-    fontSize: 16,
-    ...fonts.semiBold,
-    marginBottom: 2
-  },
-  linkSub: {
-    fontSize: 13,
-    ...fonts.regular
-  },
-  chipGroup: {
-    flexDirection: "row",
-    gap: 8
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5
-  },
-  chipLabel: {
-    fontSize: 13,
-    ...fonts.semiBold
-  },
-  mapTilePanel: {
-    marginTop: 4,
-    paddingBottom: 4
-  },
-  mapStyleSub: {
-    fontSize: 12,
-    ...fonts.medium,
-    marginBottom: 6
-  },
-  mapStyleSubFirst: { marginTop: 12 },
-  mapStyleSubSecond: { marginTop: 10 },
-  mapStyleInput: {
-    borderWidth: 1.5,
-    padding: 12,
-    borderRadius: 12,
-    fontSize: 13,
-    ...fonts.regular
-  },
-  mapStyleFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8
-  },
-  mapStyleHint: {
-    fontSize: 11,
-    ...fonts.regular
+  // Pulled up against the owning row's bottom padding, so it groups with that row and not the next.
+  panel: { marginTop: -space.xs },
+  fields: {
+    gap: space.lg
   }
 })

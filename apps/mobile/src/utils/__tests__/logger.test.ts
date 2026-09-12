@@ -148,3 +148,20 @@ describe("logger", () => {
     })
   })
 })
+
+describe("what the buffer captures", () => {
+  /**
+   * The preview opens on every level now, so nothing here decides a default. What still matters is
+   * that the buffer keeps DEBUG: the filter is a view and the exported file is not, so dropping a
+   * level at the source would empty the one diagnostic this project runs on.
+   */
+  it("keeps every level, because the filter is a view and the export is not", () => {
+    const mod = require("../logger")
+    mod.logger.debug("zone lookup")
+    mod.logger.info("sync tick")
+
+    const levels = mod.getLogEntries().map((e: { level: string }) => e.level)
+    expect(levels).toContain("DEBUG")
+    expect(levels).toContain("INFO")
+  })
+})
