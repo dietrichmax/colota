@@ -1,385 +1,348 @@
 import React from "react"
-import { render, fireEvent, waitFor } from "@testing-library/react-native"
-import { Share } from "react-native"
+import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
+import { DeviceEventEmitter, Share } from "react-native"
 import { Geofence } from "../../types/global"
-
-// --- Mocks ---
-
-jest.mock("@maplibre/maplibre-react-native", () => {
-  const R = require("react")
-  const { View } = require("react-native")
-  return {
-    __esModule: true,
-    Map: (props: any) => R.createElement(View, { testID: "mapview", ...props }),
-    Camera: () => null,
-    GeoJSONSource: ({ children }: any) => children,
-    Layer: () => null,
-    Marker: ({ children }: any) => children
-  }
-})
+import { GEOFENCE_ZOOM_PADDING, size, space } from "../../constants"
 
 jest.mock("@react-navigation/native", () => ({
-  useFocusEffect: jest.fn()
+  useFocusEffect: (cb: () => (() => void) | void) => {
+    const R = require("react")
+    R.useEffect(() => {
+      const cleanup = cb()
+      return typeof cleanup === "function" ? cleanup : undefined
+    }, [cb])
+  }
+}))
+
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 })
 }))
 
 jest.mock("../../hooks/useTheme", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textDisabled: "#d1d5db",
-      card: "#fff",
-      warning: "#f59e0b",
-      info: "#3b82f6",
-      background: "#fff",
-      border: "#e5e7eb",
-      borderRadius: 12,
-      success: "#22c55e",
-      error: "#ef4444",
-      link: "#0d9488",
-      textLight: "#9ca3af",
-      textOnPrimary: "#fff",
-      placeholder: "#d1d5db",
-      primaryDark: "#0d9488",
-      backgroundElevated: "#f9fafb",
-      surface: "#fff",
-      overlay: "rgba(0,0,0,0.5)"
-    },
-    mode: "light"
-  })
+  useTheme: () => ({ colors: require("@colota/shared").lightColors, mode: "light" })
 }))
 
+let mockTracking = true
+let mockCoords: { latitude: number; longitude: number; accuracy: number } | null = null
 jest.mock("../../contexts/TrackingProvider", () => ({
-  useTracking: () => ({ tracking: true }),
-  useCoords: () => ({ latitude: 48.1, longitude: 11.5, accuracy: 10 })
+  useTracking: () => ({ tracking: mockTracking }),
+  useCoords: () => mockCoords
 }))
 
-const mockGetGeofences = jest.fn().mockResolvedValue([])
-const mockCreateGeofence = jest.fn().mockResolvedValue(undefined)
-const mockUpdateGeofence = jest.fn().mockResolvedValue(undefined)
-const mockDeleteGeofence = jest.fn().mockResolvedValue(undefined)
-const mockCheckCurrentPauseZone = jest.fn().mockResolvedValue(null)
-const mockIsNetworkAvailable = jest.fn().mockResolvedValue(true)
-const mockRecheckZoneSettings = jest.fn().mockResolvedValue(undefined)
-const mockGetMostRecentLocation = jest.fn().mockResolvedValue(null)
-
+const mockGetGeofences = jest.fn()
+const mockCheckCurrentPauseZone = jest.fn()
+const mockGetMostRecentLocation = jest.fn()
 jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
   default: {
     getGeofences: (...args: any[]) => mockGetGeofences(...args),
-    createGeofence: (...args: any[]) => mockCreateGeofence(...args),
-    updateGeofence: (...args: any[]) => mockUpdateGeofence(...args),
-    deleteGeofence: (...args: any[]) => mockDeleteGeofence(...args),
     checkCurrentPauseZone: (...args: any[]) => mockCheckCurrentPauseZone(...args),
-    isNetworkAvailable: (...args: any[]) => mockIsNetworkAvailable(...args),
-    recheckZoneSettings: (...args: any[]) => mockRecheckZoneSettings(...args),
-    getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args),
-    getSetting: jest.fn().mockResolvedValue(null)
+    getMostRecentLocation: (...args: any[]) => mockGetMostRecentLocation(...args)
   }
 }))
 
 const mockShowAlert = jest.fn()
-
 jest.mock("../../services/modalService", () => ({
   showAlert: (...args: any[]) => mockShowAlert(...args)
 }))
 
+const mockFitBounds = jest.fn()
+const mockFlyTo = jest.fn()
+const mockMapProps = jest.fn()
 jest.mock("../../components/features/map/ColotaMapView", () => {
   const R = require("react")
-  const { View } = require("react-native")
+  const { View, Pressable } = require("react-native")
   return {
-    ColotaMapView: R.forwardRef(({ children }: any, _ref: any) =>
-      R.createElement(View, { testID: "colota-map" }, children)
-    )
+    ColotaMapView: R.forwardRef((props: any, ref: any) => {
+      R.useImperativeHandle(ref, () => ({ camera: { fitBounds: mockFitBounds, flyTo: mockFlyTo }, mapView: null }))
+      mockMapProps(props)
+      return R.createElement(
+        View,
+        { testID: "colota-map" },
+        R.createElement(Pressable, { testID: "map-ready", onPress: () => props.onMapReady?.() }),
+        R.createElement(Pressable, {
+          testID: "map-pan",
+          onPress: () => props.onRegionDidChange?.({ isUserInteraction: true })
+        }),
+        props.children
+      )
+    })
   }
 })
 
 jest.mock("../../components/features/map/GeofenceLayers", () => {
   const R = require("react")
-  const { View } = require("react-native")
+  const { View, Pressable } = require("react-native")
   return {
-    GeofenceLayers: () => R.createElement(View, { testID: "geofence-layers" })
+    GeofenceLayers: (props: any) =>
+      R.createElement(
+        View,
+        { testID: "geofence-layers", ...props },
+        props.onPressZone && R.createElement(Pressable, { testID: "tap-zone-2", onPress: () => props.onPressZone(2) })
+      )
   }
 })
 
 jest.mock("../../components/features/map/UserLocationOverlay", () => {
   const R = require("react")
   const { View } = require("react-native")
-  return {
-    UserLocationOverlay: () => R.createElement(View, { testID: "user-location-overlay" })
-  }
+  return { UserLocationOverlay: (props: any) => R.createElement(View, { testID: "user-location-overlay", ...props }) }
 })
 
-jest.mock("../../components/features/map/MapCenterButton", () => {
+jest.mock("../../components/features/map/MapActionButton", () => {
   const R = require("react")
-  const { View } = require("react-native")
+  const { Pressable } = require("react-native")
   return {
-    MapCenterButton: () => R.createElement(View, { testID: "center-button" })
+    MapActionButton: (props: any) =>
+      R.createElement(Pressable, {
+        testID: props.testID,
+        accessibilityRole: "button",
+        accessibilityLabel: props.accessibilityLabel,
+        onPress: props.onPress,
+        style: props.style
+      })
   }
 })
-
-jest.mock("../../components/features/map/mapUtils", () => ({
-  buildGeofencesGeoJSON: jest.fn().mockReturnValue({ fills: null, labels: null })
-}))
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text } = require("react-native")
+  const { View, Text, Pressable } = require("react-native")
   return {
     Container: ({ children }: any) => R.createElement(View, null, children),
-    SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children, style }: any) => R.createElement(View, { style }, children)
-  }
-})
-
-jest.mock("../../assets/icons/icon.png", () => "mock-icon")
-
-jest.mock("lucide-react-native", () => {
-  const R = require("react")
-  const { Text } = require("react-native")
-  return {
-    ChevronRight: (props: any) => R.createElement(Text, props, "ChevronRight"),
-    Wifi: (props: any) => R.createElement(Text, props, "Wifi"),
-    PersonStanding: (props: any) => R.createElement(Text, props, "PersonStanding"),
-    MapPinHouse: (props: any) => R.createElement(Text, props, "MapPinHouse"),
-    Share2: (props: any) => R.createElement(Text, props, "Share2")
+    HeaderAction: ({ label, hint, disabled, onPress, testID }: any) =>
+      R.createElement(Pressable, {
+        testID,
+        onPress,
+        disabled,
+        accessibilityRole: "button",
+        accessibilityLabel: label,
+        accessibilityHint: hint,
+        accessibilityState: { disabled: !!disabled }
+      }),
+    Card: ({ children }: any) => R.createElement(View, { testID: "zone-card" }, children),
+    Divider: () => null,
+    EmptyState: ({ title, hint, action }: any) =>
+      R.createElement(
+        View,
+        { testID: "EmptyState" },
+        R.createElement(Text, null, title),
+        R.createElement(Text, null, hint),
+        action &&
+          R.createElement(
+            Pressable,
+            { testID: "empty-action", onPress: action.onPress },
+            R.createElement(Text, null, action.label)
+          )
+      ),
+    ListItem: ({ label, sub, onPress, testID, icon }: any) =>
+      R.createElement(
+        Pressable,
+        { accessibilityRole: "button", onPress, testID, accessibilityLabel: `${label}, ${sub}` },
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, sub),
+        R.createElement(Text, { testID: `${testID}-glyph` }, icon?.displayName ?? icon?.name ?? "icon")
+      )
   }
 })
 
 jest.mock("../../utils/logger", () => ({
-  logger: { debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn() }
+  logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() }
 }))
 
 jest.mock("../../utils/geo", () => ({
-  formatShortDistance: (meters: number) => `${Math.round(meters)}m`,
-  shortDistanceUnit: () => "m",
-  inputToMeters: (value: number) => value
+  ...jest.requireActual("../../utils/geo"),
+  formatShortDistance: (m: number) => `${m}m`
 }))
 
 import { GeofenceScreen } from "../GeofenceScreen"
 
-// --- Test data ---
+const zone = (id: number, name: string, overrides: Partial<Geofence> = {}): Geofence => ({
+  id,
+  name,
+  lat: 48.1 + id * 0.01,
+  lon: 11.5,
+  radius: 100 * id,
+  enabled: true,
+  pauseTracking: true,
+  pauseOnWifi: id === 1,
+  pauseOnMotionless: false,
+  motionlessTimeoutMinutes: 5,
+  heartbeatEnabled: false,
+  heartbeatIntervalMinutes: 15,
+  ...overrides
+})
+const zones = [zone(1, "Home"), zone(2, "Office", { pauseTracking: false })]
 
-const mockGeofences: Geofence[] = [
-  {
-    id: 1,
-    name: "Home",
-    lat: 48.1,
-    lon: 11.5,
-    radius: 100,
-    enabled: true,
-    pauseTracking: true,
-    pauseOnWifi: false,
-    pauseOnMotionless: false,
-    motionlessTimeoutMinutes: 10,
-    heartbeatEnabled: false,
-    heartbeatIntervalMinutes: 15
-  },
-  {
-    id: 2,
-    name: "Office",
-    lat: 48.2,
-    lon: 11.6,
-    radius: 200,
-    enabled: true,
-    pauseTracking: false,
-    pauseOnWifi: false,
-    pauseOnMotionless: false,
-    motionlessTimeoutMinutes: 10,
-    heartbeatEnabled: false,
-    heartbeatIntervalMinutes: 15
-  }
-]
+const lastOptions = (props: any) => props.navigation.setOptions.mock.calls.at(-1)[0]
+const headerRight = (props: any) => render(lastOptions(props).headerRight())
 
-// --- Tests ---
+function createProps() {
+  return { navigation: { navigate: jest.fn(), setOptions: jest.fn() } } as any
+}
+
+async function renderReady(props = createProps()) {
+  const utils = render(<GeofenceScreen {...props} />)
+  await waitFor(() => expect(utils.getByTestId("colota-map")).toBeTruthy())
+  fireEvent.press(utils.getByTestId("map-ready"))
+  await act(async () => {})
+  return { ...utils, props }
+}
 
 describe("GeofenceScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockTracking = true
+    mockCoords = null
+    mockGetGeofences.mockResolvedValue(zones)
+    mockCheckCurrentPauseZone.mockResolvedValue(null)
+    mockGetMostRecentLocation.mockResolvedValue({ latitude: 48.1, longitude: 11.5, accuracy: 8 })
+  })
+
+  it("lists every geofence as a row that says what it does, with no header counting them", async () => {
+    const { getByText, queryByText, getByTestId } = await renderReady()
+
+    expect(getByTestId("zone-card")).toBeTruthy()
+    expect(getByText("Home")).toBeTruthy()
+    expect(getByText("100m · WiFi pause")).toBeTruthy()
+    expect(getByText("200m · recording continues")).toBeTruthy()
+    expect(queryByText(/Active geofences/)).toBeNull()
+    expect(queryByText("Create geofence")).toBeNull()
+  })
+
+  it("opens the editor from a row, from a circle on the map and from the header Create", async () => {
+    const { getByTestId, props } = await renderReady()
+
+    fireEvent.press(getByTestId("edit-geofence-1"))
+    expect(props.navigation.navigate).toHaveBeenCalledWith("Geofence Editor", { geofenceId: 1 })
+
+    fireEvent.press(getByTestId("tap-zone-2"))
+    expect(props.navigation.navigate).toHaveBeenLastCalledWith("Geofence Editor", { geofenceId: 2 })
+
+    fireEvent.press(headerRight(props).getByLabelText("Create geofence"))
+    expect(props.navigation.navigate).toHaveBeenLastCalledWith("Geofence Editor", {})
+  })
+
+  it("shares every geofence from the header, only once there is one to share", async () => {
+    const shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction", activityType: undefined })
+    const { props } = await renderReady()
+
+    const bar = headerRight(props)
+    fireEvent.press(bar.getByLabelText("Share all geofences"))
+    await waitFor(() => expect(shareSpy).toHaveBeenCalledWith({ message: expect.stringContaining("colota://setup") }))
+
     mockGetGeofences.mockResolvedValue([])
+    const emptyProps = createProps()
+    await renderReady(emptyProps)
+    expect(headerRight(emptyProps).queryByLabelText("Share all geofences")).toBeNull()
+    shareSpy.mockRestore()
   })
 
-  function renderScreen() {
-    return render(<GeofenceScreen navigation={{} as any} />)
-  }
+  it("says so when the share sheet fails", async () => {
+    const shareSpy = jest.spyOn(Share, "share").mockRejectedValue(new Error("no sheet"))
+    const { props } = await renderReady()
 
-  it("shows empty state when no geofences exist", async () => {
-    const { getByText } = renderScreen()
+    fireEvent.press(headerRight(props).getByLabelText("Share all geofences"))
 
-    await waitFor(() => {
-      expect(getByText("No geofences yet")).toBeTruthy()
-    })
+    await waitFor(() => expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to share geofences.", "error"))
+    shareSpy.mockRestore()
   })
 
-  it("renders geofence list with name and radius", async () => {
-    mockGetGeofences.mockResolvedValue(mockGeofences)
+  it("marks the geofence you stand in with a check and the words Paused here, and clears it when you leave", async () => {
+    mockCheckCurrentPauseZone.mockResolvedValue({ zoneName: "Home", pauseReason: "wifi" })
+    const { getByText, queryByText, getByTestId } = await renderReady()
 
-    const { getByText } = renderScreen()
+    await waitFor(() => expect(getByText("Paused here · 100m · WiFi pause")).toBeTruthy())
+    expect(getByTestId("edit-geofence-1-glyph").props.children).toBe("MapPinCheck")
+    expect(getByTestId("edit-geofence-2-glyph").props.children).toBe("MapPinHouse")
 
-    await waitFor(() => {
-      expect(getByText("Home")).toBeTruthy()
-      expect(getByText("100m radius")).toBeTruthy()
-      expect(getByText("Office")).toBeTruthy()
-      expect(getByText("200m radius")).toBeTruthy()
+    act(() => {
+      DeviceEventEmitter.emit("onPauseZoneChange", { entered: false, zoneName: null, pauseReason: null })
     })
+    await waitFor(() => expect(queryByText(/Paused here/)).toBeNull())
+
+    act(() => {
+      DeviceEventEmitter.emit("onPauseZoneChange", { entered: true, zoneName: "Home", pauseReason: "wifi" })
+    })
+    await waitFor(() => expect(getByText(/^Paused here/)).toBeTruthy())
   })
 
-  it("shows validation alert when name is empty", async () => {
-    const { getByText } = renderScreen()
+  it("fits the camera to every geofence once the map is ready, inside the control column, and again only when the set changes", async () => {
+    const { getByTestId } = await renderReady()
 
-    await waitFor(() => {
-      expect(getByText("Place Geofence")).toBeTruthy()
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
+    const [bounds, options] = mockFitBounds.mock.calls[0]
+    expect(bounds[1]).toBeLessThan(48.11)
+    expect(bounds[3]).toBeGreaterThan(48.12)
+    expect(options.padding).toEqual({
+      top: GEOFENCE_ZOOM_PADDING[0] + space.lg,
+      right: GEOFENCE_ZOOM_PADDING[1] + space.lg + size.iconColumn + space.lg,
+      bottom: GEOFENCE_ZOOM_PADDING[2] + space.lg,
+      left: GEOFENCE_ZOOM_PADDING[3] + space.lg
     })
+    expect(options.duration).toBe(0)
 
-    fireEvent.press(getByText("Place Geofence"))
+    act(() => {
+      DeviceEventEmitter.emit("geofenceUpdated")
+    })
+    await act(async () => {})
+    expect(mockFitBounds).toHaveBeenCalledTimes(1)
 
-    expect(mockShowAlert).toHaveBeenCalledWith("Missing Name", "Please enter a name.", "warning")
+    mockGetGeofences.mockResolvedValue([...zones, zone(3, "Gym")])
+    act(() => {
+      DeviceEventEmitter.emit("geofenceUpdated")
+    })
+    await waitFor(() => expect(mockFitBounds).toHaveBeenCalledTimes(2))
+    expect(mockFitBounds.mock.calls[1][1].duration).toBeGreaterThan(0)
+    expect(getByTestId("colota-map")).toBeTruthy()
   })
 
-  it("shows validation alert when radius is invalid (0 or negative)", async () => {
-    const { getByText, getByPlaceholderText, getByDisplayValue } = renderScreen()
+  it("offers a fit disc only after a pan, and hides it again once pressed", async () => {
+    const { getByTestId, queryByTestId, getByLabelText } = await renderReady()
 
-    await waitFor(() => {
-      expect(getByText("Place Geofence")).toBeTruthy()
-    })
+    expect(queryByTestId("fit-geofences-btn")).toBeNull()
+    fireEvent.press(getByTestId("map-pan"))
+    const disc = getByLabelText("Fit geofences")
+    expect(disc.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ bottom: space.lg + space.sm + size.iconColumn + space.lg })])
+    )
 
-    fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
-    fireEvent.changeText(getByDisplayValue("50"), "0")
-    fireEvent.press(getByText("Place Geofence"))
-
-    expect(mockShowAlert).toHaveBeenCalledWith("Invalid Radius", "Please enter a valid radius.", "warning")
+    fireEvent.press(disc)
+    expect(mockFitBounds).toHaveBeenCalledTimes(2)
+    expect(queryByTestId("fit-geofences-btn")).toBeNull()
   })
 
-  it("enters placing mode on valid name and radius", async () => {
-    const { getByText, getByPlaceholderText, getByDisplayValue } = renderScreen()
+  it("shows the empty tab under a map on the last fix, with one action, and the disc centres on the fix after a pan", async () => {
+    mockGetGeofences.mockResolvedValue([])
+    const { getByText, getByTestId, queryByTestId, getByLabelText, props } = await renderReady()
 
-    await waitFor(() => {
-      expect(getByText("Place Geofence")).toBeTruthy()
-    })
+    expect(queryByTestId("zone-card")).toBeNull()
+    expect(getByText("No geofences yet")).toBeTruthy()
+    expect(mockMapProps.mock.calls[0][0].initialCenter).toEqual([11.5, 48.1])
+    fireEvent.press(getByTestId("empty-action"))
+    expect(props.navigation.navigate).toHaveBeenCalledWith("Geofence Editor", {})
 
-    fireEvent.changeText(getByPlaceholderText("Home, Work..."), "Test Zone")
-    fireEvent.changeText(getByDisplayValue("50"), "100")
-    fireEvent.press(getByText("Place Geofence"))
-
-    expect(mockShowAlert).not.toHaveBeenCalled()
-    expect(getByText("Tap Map to Place...")).toBeTruthy()
+    fireEvent.press(getByTestId("map-pan"))
+    fireEvent.press(getByLabelText("Centre map on my position"))
+    expect(mockFlyTo).toHaveBeenCalledWith(expect.objectContaining({ center: [11.5, 48.1] }))
+    expect(mockFitBounds).not.toHaveBeenCalled()
   })
 
-  it("tapping ChevronRight navigates to editor with geofence id", async () => {
-    mockGetGeofences.mockResolvedValue(mockGeofences)
-    const mockNavigate = jest.fn()
+  it("draws no tiles until the database has answered, so the map never opens on the world view and jumps", async () => {
+    mockGetMostRecentLocation.mockReturnValue(new Promise(() => {}))
+    const { queryByTestId } = render(<GeofenceScreen {...createProps()} />)
+    await act(async () => {})
 
-    const { getAllByText } = render(<GeofenceScreen navigation={{ navigate: mockNavigate } as any} />)
-
-    await waitFor(() => {
-      expect(getAllByText("ChevronRight").length).toBeGreaterThanOrEqual(1)
-    })
-
-    fireEvent.press(getAllByText("ChevronRight")[0])
-
-    expect(mockNavigate).toHaveBeenCalledWith("Geofence Editor", { geofenceId: 1 })
+    expect(queryByTestId("colota-map")).toBeNull()
   })
 
-  describe("share geofences", () => {
-    let shareSpy: jest.SpyInstance
+  it("draws the live dot only while tracking, greyed inside the geofence you are paused in", async () => {
+    mockCoords = { latitude: 48.1, longitude: 11.5, accuracy: 4 }
+    mockCheckCurrentPauseZone.mockResolvedValue({ zoneName: "Home", pauseReason: null })
+    const { getByTestId } = await renderReady()
+    await waitFor(() => expect(getByTestId("user-location-overlay").props.isPaused).toBe(true))
 
-    beforeEach(() => {
-      shareSpy = jest.spyOn(Share, "share").mockResolvedValue({ action: "sharedAction", activityType: undefined })
-    })
-
-    afterEach(() => {
-      shareSpy.mockRestore()
-    })
-
-    it("does not render the share button when there are no geofences", async () => {
-      const { queryByTestId, getByText } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByText("No geofences yet")).toBeTruthy()
-      })
-
-      expect(queryByTestId("share-geofences-btn")).toBeNull()
-    })
-
-    it("renders the share button when at least one geofence exists", async () => {
-      mockGetGeofences.mockResolvedValue(mockGeofences)
-      const { getByTestId } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByTestId("share-geofences-btn")).toBeTruthy()
-      })
-    })
-
-    it("opens the share sheet with a colota://setup link on press", async () => {
-      mockGetGeofences.mockResolvedValue(mockGeofences)
-      const { getByTestId } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByTestId("share-geofences-btn")).toBeTruthy()
-      })
-
-      fireEvent.press(getByTestId("share-geofences-btn"))
-
-      await waitFor(() => {
-        expect(shareSpy).toHaveBeenCalledTimes(1)
-      })
-
-      const arg = shareSpy.mock.calls[0][0]
-      expect(arg.message).toMatch(/^colota:\/\/setup\?config=/)
-    })
-
-    it("encodes geofences without id, createdAt, or enabled fields", async () => {
-      mockGetGeofences.mockResolvedValue(mockGeofences)
-      const { getByTestId } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByTestId("share-geofences-btn")).toBeTruthy()
-      })
-
-      fireEvent.press(getByTestId("share-geofences-btn"))
-
-      await waitFor(() => {
-        expect(shareSpy).toHaveBeenCalledTimes(1)
-      })
-
-      const link = shareSpy.mock.calls[0][0].message as string
-      const encoded = link.split("config=")[1]
-      const decoded = JSON.parse(atob(encoded))
-
-      expect(decoded.geofences).toHaveLength(2)
-      expect(decoded.geofences[0]).toEqual({
-        name: "Home",
-        lat: 48.1,
-        lon: 11.5,
-        radius: 100,
-        pauseTracking: true,
-        pauseOnWifi: false,
-        pauseOnMotionless: false,
-        motionlessTimeoutMinutes: 10,
-        heartbeatEnabled: false,
-        heartbeatIntervalMinutes: 15
-      })
-      expect(decoded.geofences[0]).not.toHaveProperty("id")
-      expect(decoded.geofences[0]).not.toHaveProperty("createdAt")
-      expect(decoded.geofences[0]).not.toHaveProperty("enabled")
-    })
-
-    it("shows an error alert when sharing fails", async () => {
-      mockGetGeofences.mockResolvedValue(mockGeofences)
-      shareSpy.mockRejectedValueOnce(new Error("share failed"))
-
-      const { getByTestId } = renderScreen()
-
-      await waitFor(() => {
-        expect(getByTestId("share-geofences-btn")).toBeTruthy()
-      })
-
-      fireEvent.press(getByTestId("share-geofences-btn"))
-
-      await waitFor(() => {
-        expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to share geofences.", "error")
-      })
-    })
+    mockTracking = false
+    const { queryByTestId } = await renderReady()
+    expect(queryByTestId("user-location-overlay")).toBeNull()
   })
 })
