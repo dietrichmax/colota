@@ -439,9 +439,9 @@ export interface DatabaseStats {
   today: number
   databaseSizeMB: number
   /** Epoch milliseconds of the last successful sync, 0 when none has happened yet. */
-  lastSyncTime?: number
+  lastSyncTime: number
   /** The masked message of the last sync failure that crossed the consecutive-failure gate, empty after a success. */
-  lastSyncError?: string
+  lastSyncError: string
 }
 
 // ============================================================================
