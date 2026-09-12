@@ -6,16 +6,18 @@
 import React from "react"
 import { View, StyleSheet } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
+import { radius } from "@colota/shared"
 
-export function RadioDot({ selected }: { selected: boolean }) {
+export function RadioDot({ selected, disabled = false }: { selected: boolean; disabled?: boolean }) {
   const { colors } = useTheme()
+  const tint = disabled ? colors.textDisabled : colors.primary
   return (
     <View
-      style={[styles.radio, { borderColor: selected ? colors.primary : colors.border }]}
+      style={[styles.radio, { borderColor: selected ? tint : colors.border }]}
       importantForAccessibility="no"
       accessibilityElementsHidden
     >
-      {selected && <View style={[styles.inner, { backgroundColor: colors.primary }]} />}
+      {selected && <View style={[styles.inner, { backgroundColor: tint }]} />}
     </View>
   )
 }
@@ -24,7 +26,7 @@ const styles = StyleSheet.create({
   radio: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: radius.pill,
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center"
@@ -32,6 +34,6 @@ const styles = StyleSheet.create({
   inner: {
     width: 12,
     height: 12,
-    borderRadius: 6
+    borderRadius: radius.pill
   }
 })

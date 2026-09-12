@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
     marginTop: 12
   },
   statCard: {
+    flex: 1,
     alignItems: "center"
   },
   statUnit: {

@@ -6,31 +6,30 @@
 import React from "react"
 import { View, StyleSheet, ViewStyle, StyleProp, Text } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
+import { space } from "../../constants"
 
 type SectionTitleProps = {
   children: React.ReactNode
   style?: StyleProp<ViewStyle>
-  color?: string
 }
 
-export function SectionTitle({ children, style, color }: SectionTitleProps) {
+export function SectionTitle({ children, style }: SectionTitleProps) {
   const { colors } = useTheme()
 
   return (
     <View style={style}>
-      <Text style={[styles.sectionTitle, { color: color ? color : colors.primary }]}>{children}</Text>
+      <Text accessibilityRole="header" style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+        {children}
+      </Text>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   sectionTitle: {
-    fontSize: 11,
-    textTransform: "uppercase",
-    ...fonts.bold,
-    letterSpacing: 1.2,
-    marginBottom: 12,
-    paddingHorizontal: 4
+    fontSize: fontSizes.label,
+    ...fonts.semiBold,
+    marginBottom: space.md
   }
 })

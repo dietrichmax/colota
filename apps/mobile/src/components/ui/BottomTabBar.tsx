@@ -5,30 +5,39 @@
 import React from "react"
 import { View, Pressable, Text, StyleSheet } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Settings, LucideIcon, House, MapPinHouse, Waypoints } from "lucide-react-native"
+import { Settings, House, CircleDot } from "lucide-react-native"
+import { TrackMark } from "./TrackMark"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
+import { size, space, STATE_LAYER_ALPHA, elevation } from "../../constants"
+import type { RootStackRoute } from "../../types/navigation"
+
+type TabIcon = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
 
 interface Tab {
   name: string
   label: string
-  icon: LucideIcon
-  route: string
+  icon: TabIcon
+  route: RootStackRoute
 }
 
 const TABS: Tab[] = [
   { name: "dashboard", label: "Dashboard", icon: House, route: "Dashboard" },
-  { name: "history", label: "History", icon: Waypoints, route: "Location History" },
-  { name: "geofences", label: "Geofences", icon: MapPinHouse, route: "Geofences" },
+  { name: "history", label: "History", icon: TrackMark, route: "Location History" },
+  { name: "geofences", label: "Geofences", icon: CircleDot, route: "Geofences" },
   { name: "settings", label: "Settings", icon: Settings, route: "Settings" }
 ]
 
-/** Routes where the tab bar is visible. */
-const TAB_ROUTES = new Set(TABS.map((t) => t.route))
+/** Routes where the tab bar is visible. The one list; App.tsx reads it rather than repeating it. */
+// Typed loosely on purpose: lookups come from navigation state, which is a bare string.
+export const TAB_ROUTES: Set<string> = new Set(TABS.map((t) => t.route))
+
+/** The semibold of a glyph: with no filled variants in the set, weight carries the active tab. */
+const ACTIVE_STROKE = 2.25
 
 interface BottomTabBarProps {
   currentRoute: string | undefined
-  onNavigate: (route: string) => void
+  onNavigate: (route: RootStackRoute) => void
 }
 
 export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
@@ -43,21 +52,28 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
         styles.container,
         {
           backgroundColor: colors.background,
-          paddingBottom: insets.bottom + 8
+          paddingBottom: insets.bottom + space.sm
         }
       ]}
     >
       {TABS.map((tab) => {
         const active = currentRoute === tab.route
-        const color = active ? colors.primary : colors.textLight
+        const color = active ? colors.primary : colors.textSecondary
         return (
           <Pressable
             key={tab.name}
-            style={({ pressed }) => [styles.tab, pressed && { opacity: 0.6 }]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={tab.label}
+            android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+            style={styles.tab}
             onPress={() => onNavigate(tab.route)}
           >
-            <tab.icon size={22} color={color} />
-            <Text style={[styles.label, { color }]}>{tab.label}</Text>
+            {/* The set has no filled variants, so weight is what marks the active glyph. */}
+            <tab.icon size={size.icon.lg} color={color} strokeWidth={active ? ACTIVE_STROKE : undefined} />
+            <Text numberOfLines={2} style={[styles.label, active && fonts.semiBold, { color }]}>
+              {tab.label}
+            </Text>
           </Pressable>
         )
       })}
@@ -65,25 +81,22 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
   )
 }
 
-export { TAB_ROUTES }
-
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    paddingTop: 8,
-    paddingBottom: 6,
-    elevation: 0,
-    shadowOpacity: 0,
-    shadowRadius: 0
+    paddingTop: space.sm,
+    paddingBottom: space.sm,
+    elevation: elevation.flat
   },
   tab: {
     flex: 1,
+    minHeight: size.row,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3
+    gap: space.xs
   },
   label: {
-    fontSize: 11,
+    fontSize: fontSizes.small,
     ...fonts.medium
   }
 })

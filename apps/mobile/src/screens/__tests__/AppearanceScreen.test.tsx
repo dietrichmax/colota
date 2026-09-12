@@ -66,7 +66,7 @@ describe("AppearanceScreen", () => {
 
     expect(getByText("Dark Mode")).toBeTruthy()
     expect(getByText("Units")).toBeTruthy()
-    expect(getByText("Time Format")).toBeTruthy()
+    expect(getByText("Time format")).toBeTruthy()
     expect(getByTestId("dark-mode-switch")).toBeTruthy()
   })
 

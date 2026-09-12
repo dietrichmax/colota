@@ -6,14 +6,22 @@
 import React from "react"
 import { View, Pressable, StyleSheet, ViewStyle, StyleProp, AccessibilityRole, AccessibilityState } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
+import { space, STATE_LAYER_ALPHA, elevation } from "../../constants"
+import { radius } from "@colota/shared"
 
 type CardVariant = "default" | "elevated" | "outlined" | "interactive"
 
 type CardProps = {
   children: React.ReactNode
+  /** Lands on the surface inside the Pressable, so a margin here grows the ripple box past the
+   *  card it paints. Spacing between cards belongs to the list. */
   style?: StyleProp<ViewStyle>
+  testID?: string
   danger?: boolean
   variant?: CardVariant
+  /** A card that is nothing but rows: it gives up its vertical padding so the first and last
+   *  row's state layer reaches its edge. The rows already carry the spacing. */
+  rows?: boolean
   onPress?: () => void
   onLongPress?: () => void
   accessibilityRole?: AccessibilityRole
@@ -27,12 +35,14 @@ export function Card({
   style,
   danger = false,
   variant = "default",
+  rows = false,
   onPress,
   onLongPress,
   accessibilityRole,
   accessibilityLabel,
   accessibilityHint,
-  accessibilityState
+  accessibilityState,
+  testID
 }: CardProps) {
   const { colors } = useTheme()
 
@@ -48,37 +58,35 @@ export function Card({
     switch (variant) {
       case "default":
         return {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderWidth: 1
+          backgroundColor: colors.card
         }
       case "elevated":
         return {
-          backgroundColor: colors.cardElevated,
+          backgroundColor: colors.surfaceRaised,
           borderColor: "transparent",
           borderWidth: 0,
-          elevation: 1,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 6
+          elevation: elevation.raised
         }
       case "outlined":
         return {
           backgroundColor: "transparent",
           borderColor: colors.border,
-          borderWidth: 1.5
+          // Material's outlined card is 1dp. It was 1.5 only to stay visible while border sat at
+          // 1.18:1; the token clears the outline floor now, so the weight goes back to the spec.
+          borderWidth: 1
         }
       case "interactive":
         return {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderWidth: 1
+          backgroundColor: colors.card
         }
     }
   }
 
-  const cardView = <View style={[styles.card, getVariantStyles(), style]}>{children}</View>
+  const cardView = (
+    <View style={[styles.card, rows && styles.rowsCard, getVariantStyles(), style]} testID={testID}>
+      {children}
+    </View>
+  )
 
   if (variant === "interactive" && (onPress || onLongPress)) {
     return (
@@ -89,7 +97,8 @@ export function Card({
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
         accessibilityState={accessibilityState}
-        style={({ pressed }) => ({ opacity: pressed ? colors.pressedOpacity : 1 })}
+        android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+        style={styles.pressable}
       >
         {cardView}
       </Pressable>
@@ -101,10 +110,17 @@ export function Card({
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    width: "100%"
+    padding: space.lg,
+    borderRadius: radius.md,
+    width: "100%",
+    // A row inside the card ripples to its own bounds, so the card has to clip the corners.
+    overflow: "hidden"
+  },
+  rowsCard: {
+    paddingVertical: 0
+  },
+  pressable: {
+    borderRadius: radius.md,
+    overflow: "hidden"
   }
 })

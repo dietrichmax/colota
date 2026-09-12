@@ -5,23 +5,29 @@
 
 import React from "react"
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../../styles/typography"
 import { useTheme } from "../../hooks/useTheme"
+import { space, size } from "../../constants"
 
 interface SettingRowProps {
   label: string
   hint?: string
   children: React.ReactNode
   style?: StyleProp<ViewStyle>
+  disabled?: boolean
 }
 
-export function SettingRow({ label, hint, children, style }: SettingRowProps) {
+export function SettingRow({ label, hint, children, style, disabled = false }: SettingRowProps) {
   const { colors } = useTheme()
   return (
     <View style={[styles.settingRow, style]}>
       <View style={styles.settingContent}>
-        <Text style={[styles.settingLabel, { color: colors.text }]}>{label}</Text>
-        {hint && <Text style={[styles.settingHint, { color: colors.textSecondary }]}>{hint}</Text>}
+        <Text style={[styles.settingLabel, { color: disabled ? colors.textDisabled : colors.text }]}>{label}</Text>
+        {hint && (
+          <Text style={[styles.settingHint, { color: disabled ? colors.textDisabled : colors.textSecondary }]}>
+            {hint}
+          </Text>
+        )}
       </View>
       {children}
     </View>
@@ -33,20 +39,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4
+    minHeight: size.row,
+    paddingVertical: space.lg,
+    // See ListItem: the inset is cancelled and reapplied so a press fills the card's width.
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg
   },
   settingContent: {
     flex: 1,
-    marginRight: 16
+    marginEnd: space.lg
   },
   settingLabel: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: 2
+    marginBottom: space.xxs
   },
   settingHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
-    lineHeight: 18
+    lineHeight: lineHeights.description
   }
 })

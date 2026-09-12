@@ -174,6 +174,7 @@ jest.mock("../../components/features/inspector/LocationTable", () => {
 })
 
 jest.mock("../../styles/typography", () => ({
+  ...jest.requireActual("../../styles/typography"),
   fonts: { regular: {}, bold: {}, semiBold: {} }
 }))
 

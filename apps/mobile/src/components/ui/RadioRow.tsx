@@ -1,0 +1,77 @@
+/**
+ * Copyright (C) 2026 Max Dietrich
+ * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
+ */
+
+import React from "react"
+import { View, Pressable, Text, StyleSheet } from "react-native"
+import { type LucideIcon } from "lucide-react-native"
+import { useTheme } from "../../hooks/useTheme"
+import { fontSizes, fonts } from "../../styles/typography"
+import { size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { RadioDot } from "./RadioDot"
+
+type RadioRowProps = {
+  label: string
+  selected: boolean
+  onPress: () => void
+  sub?: string
+  icon?: LucideIcon
+  disabled?: boolean
+  testID?: string
+}
+
+/**
+ * The whole row is the radio; RadioDot is decoration, which is why it is hidden from
+ * accessibility and the state lives here.
+ */
+export function RadioRow({ label, selected, onPress, sub, icon: Icon, disabled = false, testID }: RadioRowProps) {
+  const { colors } = useTheme()
+
+  return (
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected, disabled }}
+      accessibilityLabel={sub ? `${label}, ${sub}` : label}
+      android_ripple={disabled ? undefined : { color: colors.text + STATE_LAYER_ALPHA }}
+      disabled={disabled}
+      style={styles.row}
+    >
+      <RadioDot selected={selected} disabled={disabled} />
+      {Icon ? <Icon size={size.icon.md} color={disabled ? colors.textDisabled : colors.textSecondary} /> : null}
+      <View style={styles.text}>
+        <Text style={[styles.label, { color: disabled ? colors.textDisabled : colors.text }]}>{label}</Text>
+        {sub ? (
+          <Text style={[styles.sub, { color: disabled ? colors.textDisabled : colors.textSecondary }]}>{sub}</Text>
+        ) : null}
+      </View>
+    </Pressable>
+  )
+}
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    minHeight: size.row,
+    paddingVertical: space.lg,
+    // See ListItem: the card's inset is cancelled and reapplied so a press fills its width.
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg
+  },
+  text: {
+    flex: 1
+  },
+  label: {
+    fontSize: fontSizes.input,
+    ...fonts.medium
+  },
+  sub: {
+    fontSize: fontSizes.description,
+    ...fonts.regular,
+    marginTop: space.xxs
+  }
+})

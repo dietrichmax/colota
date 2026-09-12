@@ -3,12 +3,17 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import type { ThemeColors } from "../../types/global"
 import React from "react"
-import { View, Text, StyleSheet, TextInput } from "react-native"
-import { ThemeColors } from "../../types/global"
-import { fonts } from "../../styles/typography"
+import { View, Text, StyleSheet } from "react-native"
+import { useTheme } from "../../hooks/useTheme"
+import { fontSizes, fonts, lineHeights } from "../../styles/typography"
+import { space } from "../../constants"
+import { TextField } from "./TextField"
+import { FieldMessage } from "./FieldMessage"
 
 interface NumericInputProps {
+  colors?: ThemeColors
   label: string
   value: string
   onChange: (value: string) => void
@@ -16,21 +21,17 @@ interface NumericInputProps {
   unit: string
   placeholder?: string
   min?: number
-  colors: ThemeColors
   hint?: string
+  /** Shown under the box while the text would not be stored; the box takes the error ring. */
+  error?: string
+  /** A transient note under the box, such as the value a blur clamped to. */
+  message?: string
+  testID?: string
 }
 
 /**
- * NumericInput Component
- *
- * A validated numeric input field with:
- * - Label and optional hint text
- * - Unit display (e.g., "seconds", "meters")
- * - Numeric keyboard
- * - Change and blur handlers for validation
- * - Themed styling
- *
- * Used for interval, distance, and threshold inputs.
+ * A validated numeric field with its own label, an optional hint and a unit beside it. The
+ * label stays here rather than on the TextField because the unit sits in the same row.
  */
 export function NumericInput({
   label,
@@ -39,71 +40,63 @@ export function NumericInput({
   onBlur,
   unit,
   placeholder = "0",
-  colors,
-  hint
+  hint,
+  error,
+  message,
+  testID
 }: NumericInputProps) {
+  const { colors } = useTheme()
+
   return (
     <View style={styles.container}>
-      {/* Label */}
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-
-      {/* Hint (optional) */}
+      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       {hint && <Text style={[styles.hint, { color: colors.textSecondary }]}>{hint}</Text>}
 
-      {/* Input Row */}
       <View style={styles.inputRow}>
-        <TextInput
-          style={[
-            styles.input,
-            {
-              borderColor: colors.border,
-              color: colors.text,
-              backgroundColor: colors.backgroundElevated
-            }
-          ]}
+        <TextField
+          accessibilityLabel={label}
+          testID={testID}
+          figure
+          style={styles.field}
           keyboardType="numeric"
           value={value}
           onChangeText={onChange}
           onBlur={onBlur}
           placeholder={placeholder}
-          placeholderTextColor={colors.placeholder}
+          error={error}
         />
         <Text style={[styles.unit, { color: colors.textSecondary }]}>{unit}</Text>
       </View>
+      {message ? <FieldMessage>{message}</FieldMessage> : null}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16
+    marginBottom: space.lg
   },
   label: {
-    fontSize: 14,
-    ...fonts.semiBold,
-    marginBottom: 8
+    fontSize: fontSizes.description,
+    ...fonts.medium,
+    marginBottom: space.sm
   },
   hint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
-    marginBottom: 12,
-    lineHeight: 18
+    marginBottom: space.md,
+    lineHeight: lineHeights.description
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12
+    gap: space.md
   },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    padding: 14,
-    borderRadius: 12,
-    fontSize: 15,
-    textAlign: "center"
+  field: {
+    flex: 1
   },
   unit: {
-    fontSize: 15,
+    fontSize: fontSizes.input,
     ...fonts.medium,
     minWidth: 64
   }

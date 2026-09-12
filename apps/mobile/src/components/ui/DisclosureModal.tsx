@@ -6,8 +6,9 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { Modal, View, Text, Pressable, StyleSheet, BackHandler } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
-import { fontSizes } from "@colota/shared"
+import { fontSizes, fonts, lineHeights, type } from "../../styles/typography"
+import { radius } from "@colota/shared"
+import { size, space, STATE_LAYER_ALPHA, elevation } from "../../constants"
 
 interface DisclosureModalProps {
   icon: React.ReactNode
@@ -60,7 +61,7 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
-        <View style={[styles.card, { backgroundColor: colors.cardElevated, borderRadius: colors.borderRadius + 4 }]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderRadius: radius.lg }]}>
           {/* Icon */}
           <View style={[styles.iconContainer, { backgroundColor: colors.primary + "15" }]}>{icon}</View>
 
@@ -77,24 +78,18 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
           {/* Buttons */}
           <View style={styles.buttons}>
             <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.secondaryButton,
-                { borderColor: colors.border },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
+              accessibilityRole="button"
+              android_ripple={{ color: colors.textSecondary + STATE_LAYER_ALPHA }}
+              style={styles.button}
               onPress={handleNotNow}
             >
-              <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not Now</Text>
+              <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not now</Text>
             </Pressable>
 
             <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.primaryButton,
-                { backgroundColor: colors.primary },
-                pressed && { opacity: colors.pressedOpacity }
-              ]}
+              accessibilityRole="button"
+              android_ripple={{ color: colors.textOnPrimary + STATE_LAYER_ALPHA }}
+              style={[styles.button, { backgroundColor: colors.primary }]}
               onPress={handleConfirm}
             >
               <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>{confirmLabel}</Text>
@@ -111,54 +106,49 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 32
+    paddingHorizontal: space.xxl
   },
   card: {
     width: "100%",
-    padding: 24,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12
+    padding: space.xl,
+    elevation: elevation.overlay
   },
   iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: size.emptyIcon,
+    height: size.emptyIcon,
+    borderRadius: radius.pill,
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
-    marginBottom: 16
+    marginBottom: space.lg
   },
   title: {
-    fontSize: fontSizes.cardTitle,
-    ...fonts.bold,
+    ...type.title,
     textAlign: "center",
-    marginBottom: 16
+    marginBottom: space.lg
   },
   body: {
     fontSize: fontSizes.body,
     ...fonts.regular,
-    lineHeight: 20
+    lineHeight: lineHeights.body
   },
   bodySpaced: {
-    marginTop: 8
+    marginTop: space.sm
   },
   buttons: {
     flexDirection: "row",
-    gap: 12,
-    marginTop: 24
+    gap: space.md,
+    marginTop: space.xl
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center"
-  },
-  primaryButton: {},
-  secondaryButton: {
-    borderWidth: 1.5
+    // 14 was holding the 48 target by itself: on the scale that only works with the minimum stated
+    minHeight: size.touch,
+    paddingVertical: space.md,
+    borderRadius: radius.sm,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center"
   },
   buttonText: {
     fontSize: fontSizes.label,

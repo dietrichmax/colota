@@ -4,11 +4,19 @@
  */
 
 import type { ThemeColors, Geofence } from "../../../types/global"
+import { size } from "../../../constants"
 
 /** MapLibre line-layer style for colored track segments (`color` is a per-feature property). */
 export const TRACK_LINE_STYLE: any = {
   lineColor: ["get", "color"],
   lineWidth: 3,
+  lineCap: "round",
+  lineJoin: "round"
+}
+
+/** Drawn under `TRACK_LINE_STYLE` on the same source; the caller adds `lineColor` from its theme. */
+export const TRACK_CASING_STYLE: any = {
+  lineWidth: ["case", ["get", "focused"], 7, 5],
   lineCap: "round",
   lineJoin: "round"
 }
@@ -97,34 +105,44 @@ interface TrackSegmentOptions {
   skipIndices?: Set<number>
   locationColors?: string[]
   defaultColor?: string
+  /** Trip index per location, -1 outside any trip. */
+  locationTrips?: ArrayLike<number>
+  focusedTrip?: number | null
 }
 
 /** Build LineString features with a pre-computed `color` property.
  *  Consecutive segments of the same color are merged into a single multi-point LineString
  *  to keep feature count low on long trips (O(color changes) instead of O(points)).
  *  Pass `skipIndices` to leave gaps between trips (indices where a new trip starts).
- *  Pass `locationColors` to override speed-based coloring with per-location colors. */
+ *  Pass `locationColors` to override speed-based coloring with per-location colors.
+ *  Pass `locationTrips` to stamp each feature with its `tripIndex` and a `focused` flag. */
 export function buildTrackSegmentsGeoJSON(
   locations: TrackLocation[],
   colors: ThemeColors,
   options?: TrackSegmentOptions
 ): GeoJSON.FeatureCollection {
-  const { skipIndices, locationColors, defaultColor } = options ?? {}
+  const { skipIndices, locationColors, defaultColor, locationTrips, focusedTrip } = options ?? {}
   const features: GeoJSON.Feature[] = []
 
   let currentColor: string | null = null
+  let currentTrip = -1
   let currentCoords: [number, number][] = []
 
   const flush = () => {
     if (currentCoords.length >= 2 && currentColor !== null) {
       features.push({
         type: "Feature",
-        properties: { color: currentColor },
+        properties: {
+          color: currentColor,
+          tripIndex: currentTrip,
+          focused: focusedTrip != null && currentTrip === focusedTrip
+        },
         geometry: { type: "LineString", coordinates: currentCoords }
       })
     }
     currentCoords = []
     currentColor = null
+    currentTrip = -1
   }
 
   for (let i = 1; i < locations.length; i++) {
@@ -138,22 +156,52 @@ export function buildTrackSegmentsGeoJSON(
       : locationColors
         ? locationColors[i]
         : getSpeedColor(((locations[i - 1].speed ?? 0) + (locations[i].speed ?? 0)) / 2, colors)
+    const trip = locationTrips ? locationTrips[i] : -1
 
     if (currentColor === null) {
       currentCoords.push([locations[i - 1].longitude, locations[i - 1].latitude])
       currentCoords.push([locations[i].longitude, locations[i].latitude])
       currentColor = color
-    } else if (color === currentColor) {
+      currentTrip = trip
+    } else if (color === currentColor && trip === currentTrip) {
       currentCoords.push([locations[i].longitude, locations[i].latitude])
     } else {
       flush()
       currentCoords.push([locations[i - 1].longitude, locations[i - 1].latitude])
       currentCoords.push([locations[i].longitude, locations[i].latitude])
       currentColor = color
+      currentTrip = trip
     }
   }
   flush()
 
+  return { type: "FeatureCollection", features }
+}
+
+export type TerminalTrip = { index: number; color: string; locations: TrackLocation[] }
+
+/** Build one Point per trip end: a `start` and an `end`, in the trip's colour, flagged when focused. */
+export function buildTripTerminalsGeoJSON(
+  trips: TerminalTrip[],
+  focusedTrip?: number | null
+): GeoJSON.FeatureCollection {
+  const features: GeoJSON.Feature[] = []
+  for (const trip of trips) {
+    const first = trip.locations[0]
+    const last = trip.locations[trip.locations.length - 1]
+    if (!first || !last || first === last) continue
+    const focused = focusedTrip != null && trip.index === focusedTrip
+    for (const [kind, loc] of [
+      ["start", first],
+      ["end", last]
+    ] as const) {
+      features.push({
+        type: "Feature",
+        properties: { kind, trip: trip.index, color: trip.color, focused },
+        geometry: { type: "Point", coordinates: [loc.longitude, loc.latitude] }
+      })
+    }
+  }
   return { type: "FeatureCollection", features }
 }
 
@@ -203,7 +251,8 @@ export function buildGeofencesGeoJSON(
         fillColor,
         fillOpacity: 0.3,
         strokeColor: fillColor,
-        pauseTracking: zone.pauseTracking
+        pauseTracking: zone.pauseTracking,
+        radius: zone.radius
       },
       geometry: createCirclePolygon([zone.lon, zone.lat], zone.radius)
     })
@@ -336,4 +385,38 @@ export function darkifyStyle(style: any): object {
   }
 
   return result
+}
+
+const METERS_PER_DEGREE = 111_320
+
+/** The box around every zone's circle, for fitBounds. */
+export function geofenceBounds(geofences: Geofence[]): [number, number, number, number] {
+  let west = Infinity
+  let south = Infinity
+  let east = -Infinity
+  let north = -Infinity
+  for (const zone of geofences) {
+    const dLat = zone.radius / METERS_PER_DEGREE
+    const dLon = zone.radius / (METERS_PER_DEGREE * Math.cos((zone.lat * Math.PI) / 180))
+    west = Math.min(west, zone.lon - dLon)
+    east = Math.max(east, zone.lon + dLon)
+    south = Math.min(south, zone.lat - dLat)
+    north = Math.max(north, zone.lat + dLat)
+  }
+  return [west, south, east, north]
+}
+
+/** A zone circle takes a 48 dp target like a point does. */
+export const ZONE_HITBOX = { top: size.touch / 2, right: size.touch / 2, bottom: size.touch / 2, left: size.touch / 2 }
+
+/** Where circles overlap, the smallest is the one the finger meant; it is the one the others hide. */
+export function pickSmallestZone(features: GeoJSON.Feature[]): number | null {
+  let best: { id: number; radius: number } | null = null
+  for (const f of features) {
+    const id = f.properties?.id
+    const radius = f.properties?.radius ?? Infinity
+    if (typeof id !== "number") continue
+    if (!best || radius < best.radius) best = { id, radius }
+  }
+  return best?.id ?? null
 }

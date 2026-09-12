@@ -3,12 +3,11 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useRef, useCallback } from "react"
+import React from "react"
 import {
   Pressable,
   Text,
   View,
-  Animated,
   ActivityIndicator,
   StyleSheet,
   GestureResponderEvent,
@@ -16,21 +15,30 @@ import {
   ViewStyle
 } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
-import { fonts } from "../../styles/typography"
+import { fontSizes, fonts } from "../../styles/typography"
 import { type LucideIcon } from "lucide-react-native"
+import { elevation, size, space, STATE_LAYER_ALPHA } from "../../constants"
+import { radius } from "@colota/shared"
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
+type ButtonShape = "rounded" | "pill"
 
 type Props = {
+  activeOpacity?: number
   title: string
   onPress: (event: GestureResponderEvent) => void
   disabled?: boolean
   style?: StyleProp<ViewStyle>
-  activeOpacity?: number
   color?: string
   variant?: ButtonVariant
+  /** The corner is painted inside, so a caller cannot set it through `style`. */
+  shape?: ButtonShape
   icon?: LucideIcon
   loading?: boolean
+  expanded?: boolean
+  /** Lifts the painted Pressable; a shadow on the wrapper draws nothing because it has no fill. */
+  floating?: boolean
+  testID?: string
 }
 
 export function Button({
@@ -38,116 +46,85 @@ export function Button({
   onPress,
   disabled = false,
   style,
-  activeOpacity,
   color,
   variant = "primary",
+  shape = "rounded",
   icon: Icon,
-  loading = false
+  loading = false,
+  expanded,
+  floating = false,
+  testID
 }: Props) {
   const { colors } = useTheme()
-  const scale = useRef(new Animated.Value(1)).current
-
-  const handlePressIn = useCallback(() => {
-    Animated.spring(scale, {
-      toValue: 0.97,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4
-    }).start()
-  }, [scale])
-
-  const handlePressOut = useCallback(() => {
-    Animated.spring(scale, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4
-    }).start()
-  }, [scale])
-
   const getVariantStyles = () => {
+    // Disabled recedes: the container drops to the recessed fill and the content to the disabled
+    // token. Painting the fill itself disabled left a filled button wearing its enabled label.
+    if (disabled) {
+      return { bg: variant === "ghost" ? "transparent" : colors.well, text: colors.textDisabled }
+    }
     switch (variant) {
       case "primary":
-        return {
-          bg: disabled ? colors.textDisabled : colors.primary,
-          text: color ?? colors.textOnPrimary,
-          borderColor: "transparent",
-          borderWidth: 0
-        }
+        return { bg: colors.primary, text: color ?? colors.textOnPrimary }
       case "secondary":
-        return {
-          bg: "transparent",
-          text: color ?? colors.primaryDark,
-          borderColor: colors.primary,
-          borderWidth: 1.5
-        }
+        return { bg: colors.primaryContainer, text: color ?? colors.onPrimaryContainer }
       case "ghost":
-        return {
-          bg: "transparent",
-          text: color ?? colors.primaryDark,
-          borderColor: "transparent",
-          borderWidth: 0
-        }
+        return { bg: "transparent", text: color ?? colors.primaryDark }
       case "danger":
-        return {
-          bg: disabled ? colors.textDisabled : colors.error,
-          text: color ?? colors.textOnPrimary,
-          borderColor: "transparent",
-          borderWidth: 0
-        }
+        return { bg: colors.error, text: color ?? colors.textOnPrimary }
     }
   }
 
   const v = getVariantStyles()
 
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, style]}>
+    <View style={style}>
       <Pressable
-        style={({ pressed }) => [
+        testID={testID}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: disabled || loading, expanded }}
+        android_ripple={disabled || loading ? undefined : { color: v.text + STATE_LAYER_ALPHA }}
+        style={[
           styles.button,
-          {
-            backgroundColor: v.bg,
-            borderColor: v.borderColor,
-            borderWidth: v.borderWidth,
-            borderRadius: colors.borderRadius,
-            opacity: pressed ? (activeOpacity ?? colors.pressedOpacity) : 1
-          }
+          { backgroundColor: v.bg, borderRadius: shape === "pill" ? radius.pill : radius.sm },
+          floating && { elevation: elevation.floating }
         ]}
         onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
         disabled={disabled || loading}
       >
         <View style={styles.content}>
           {loading ? (
             <ActivityIndicator size="small" color={v.text} style={styles.icon} />
           ) : Icon ? (
-            <Icon size={18} color={v.text} style={styles.icon} />
+            <Icon size={size.icon.md} color={v.text} style={styles.icon} />
           ) : null}
           <Text style={[styles.text, { color: v.text }]}>{title}</Text>
         </View>
       </Pressable>
-    </Animated.View>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    // Android's minimum touch target; padding alone leaves this at about 43.
+    minHeight: size.touch,
+    overflow: "hidden",
+    justifyContent: "center",
+    paddingVertical: space.md,
+    paddingHorizontal: space.xl,
     alignItems: "center",
-    marginVertical: 8
+    marginVertical: space.sm
   },
   content: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8
+    gap: space.sm
   },
   text: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold
   },
   icon: {
-    marginRight: 0
+    marginEnd: 0
   }
 })

@@ -3,29 +3,29 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
+import type { ThemeColors } from "../../types/global"
 import React, { useEffect, useRef } from "react"
+import { radius } from "@colota/shared"
 import { View, Text, StyleSheet, Animated } from "react-native"
-import { Check } from "lucide-react-native"
+import { Check, CircleAlert } from "lucide-react-native"
 import { SpinningLoader } from "./SpinningLoader"
-import { fonts } from "../../styles/typography"
+import { useTheme } from "../../hooks/useTheme"
+import { fontSizes, fonts } from "../../styles/typography"
+import { size, space, elevation } from "../../constants"
 
 interface Props {
+  success?: boolean
+  colors?: ThemeColors
   saving: boolean
-  success: boolean
-  /** Optional custom message. When provided, controls visibility instead of saving/success. */
+  /** Shown once the work is done; absent when there is nothing to report. */
   message?: string | null
   isError?: boolean
-  colors: {
-    info: string
-    success: string
-    error: string
-    text: string
-  }
 }
 
-export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, message, isError, colors }) => {
+export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, message, isError }) => {
+  const { colors } = useTheme()
   const hasMessage = message != null
-  const visible = hasMessage || saving || success
+  const visible = hasMessage || saving || success === true
 
   const translateY = useRef(new Animated.Value(60)).current
   const opacity = useRef(new Animated.Value(0)).current
@@ -44,24 +44,22 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
     }
   }, [visible, translateY, opacity])
 
-  const displayText = hasMessage ? message : saving ? "Saving & restarting..." : "Saved"
+  const displayText = hasMessage ? message : saving ? "Saving..." : "Saved"
 
   return (
-    <Animated.View style={[styles.container, { opacity, transform: [{ translateY }] }]} pointerEvents="none">
-      <View
-        style={[
-          styles.badge,
-          {
-            backgroundColor: saving ? colors.info : isError ? colors.error : colors.success,
-            shadowColor: saving ? colors.info : isError ? colors.error : colors.success
-          }
-        ]}
-      >
+    <Animated.View
+      style={[styles.container, { opacity, transform: [{ translateY }] }]}
+      pointerEvents="none"
+      testID="floating-save-indicator"
+    >
+      <View style={[styles.badge, { backgroundColor: colors.surfaceRaised }]} testID="floating-save-indicator-pill">
         {saving ? (
-          <SpinningLoader size={16} color={colors.text} />
-        ) : !hasMessage ? (
-          <Check size={16} color={colors.text} />
-        ) : null}
+          <SpinningLoader size={size.icon.sm} color={colors.textSecondary} />
+        ) : isError ? (
+          <CircleAlert size={size.icon.sm} color={colors.error} />
+        ) : (
+          <Check size={size.icon.sm} color={colors.success} />
+        )}
         <Text style={[styles.text, { color: colors.text }]}>{displayText}</Text>
       </View>
     </Animated.View>
@@ -71,24 +69,20 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 20,
+    bottom: space.xl,
     left: 0,
     right: 0,
     alignItems: "center",
-    zIndex: 1000,
     pointerEvents: "none"
   },
   badge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 24,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8
+    gap: space.sm,
+    paddingHorizontal: space.xl,
+    paddingVertical: space.md,
+    borderRadius: radius.pill,
+    elevation: elevation.overlay
   },
-  text: { fontSize: 14, ...fonts.semiBold }
+  text: { fontSize: fontSizes.body, ...fonts.semiBold }
 })
