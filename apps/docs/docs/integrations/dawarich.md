@@ -11,7 +11,7 @@ sidebar_position: 2
 1. **Install Dawarich** - follow the [Dawarich documentation](https://dawarich.app/docs/intro)
 2. **Get your API Key** from Dawarich settings
 3. **Configure Colota**:
-   - Go to **Settings > API Settings**
+   - Go to **Settings > Connection > Request format**
    - Select the **Dawarich** template
    - Set your endpoint:
      ```
@@ -21,7 +21,7 @@ sidebar_position: 2
 
 ## Payload Format
 
-The Dawarich template ships with two modes, picked via a chip in **Settings > API Settings** when the Dawarich template is selected.
+The Dawarich template ships with two modes, picked via a chip in **Settings > Connection > Request format** when the Dawarich template is selected.
 
 ### Single point (default)
 
@@ -71,8 +71,8 @@ Bundles up to N queued points into a single request to `/api/v1/overland/batches
 
 **Endpoint URL**: change the saved endpoint to `https://dawarich.yourdomain.com/api/v1/overland/batches?api_key=YOUR_API_KEY`. The chip only updates the placeholder hint, not your saved endpoint.
 
-**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & Sync > Advanced > Network Settings > Batch Size** (only shown when batch mode is active).
+**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & sync > Sync interval > Batch size** (only shown when batch mode is active).
 
 **Requires non-zero sync interval**: batch mode is incompatible with instant sync. Pick a batched preset or set a custom sync interval before enabling. The chip is disabled when sync interval is 0.
 
-**Device identifier**: your Dawarich server sees this device as the value of the `device_id` custom field, defaulting to `"colota"`. Edit it under **Settings > API Settings > Custom Fields** if you run multiple devices.
+**Device identifier**: your Dawarich server sees this device as the value of the `device_id` custom field, defaulting to `"colota"`. Edit it under **Settings > Connection > Request format > Custom fields** if you run multiple devices.

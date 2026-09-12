@@ -8,13 +8,13 @@ Colota is a drop-in Android client for the [Overland](https://github.com/aaronpk
 
 ## Setup
 
-1. **Pick the Overland template** in **Settings > API Settings**
+1. **Pick the Overland template** in **Settings > Connection > Request format**
 2. **Set your endpoint** to your Overland-compatible server's batch URL, e.g.:
    ```
    https://overland.yourdomain.com/
    ```
    Some implementations use a path like `/api/v1/overland/batches`. Check your server's docs.
-3. **Choose a batched sync preset** (Balanced or Power Saver). Instant sync is not supported because Overland is a batch-only protocol.
+3. **Choose a batched sync preset** (Balanced or Power saver). Instant sync is not supported because Overland is a batch-only protocol.
 4. **Set a `device_id`** in custom fields if you want to override the default `"colota"`.
 
 ## Payload Format
@@ -49,7 +49,7 @@ Each upload is a single POST containing one or more locations as GeoJSON Feature
 
 ## Configuration
 
-**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & Sync > Advanced > Network Settings > Batch Size**. Larger bundles mean fewer round trips but bigger payloads on flaky networks.
+**Batch size**: defaults to 50 points per POST, configurable 1-500 under **Settings > Tracking & sync > Sync interval > Batch size**. Larger bundles mean fewer round trips but bigger payloads on flaky networks.
 
 **HTTP method**: POST only. The Overland protocol does not support GET; the option is hidden when this template is selected.
 
@@ -57,7 +57,7 @@ Each upload is a single POST containing one or more locations as GeoJSON Feature
 
 ## Device Identifier
 
-Your server sees this device as the value of the `device_id` custom field, defaulting to `"colota"`. Edit it under **Settings > API Settings > Custom Fields** if you run multiple devices. If you previously set `tid` (OwnTracks) or `id` (Traccar) as a custom field, that value is reused so you don't have to reconfigure.
+Your server sees this device as the value of the `device_id` custom field, defaulting to `"colota"`. Edit it under **Settings > Connection > Request format > Custom fields** if you run multiple devices. If you previously set `tid` (OwnTracks) or `id` (Traccar) as a custom field, that value is reused so you don't have to reconfigure.
 
 ## Dawarich Users
 

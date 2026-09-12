@@ -10,7 +10,7 @@ sidebar_position: 4
 
 1. **Install Reitti** - follow the [Reitti documentation](https://www.dedicatedcode.com/projects/reitti/)
 2. **Configure Colota**:
-   - Go to **Settings > API Settings**
+   - Go to **Settings > Connection > Request format**
    - Select the **Reitti** template
    - Set your endpoint URL, e.g. `https://reitti.yourdomain.com/api/location`
 

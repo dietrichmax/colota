@@ -12,14 +12,14 @@ sidebar_position: 2
 2. **Add a Colota location source** in GeoPulse under **Location Sources**
 3. **Set a username and password** for the Colota source
 4. **Configure Colota**:
-   - Go to **Settings > API Settings**
+   - Go to **Settings > Connection > Request format**
    - Select the **GeoPulse** template
    - Set your endpoint:
      ```
      https://geopulse.yourdomain.com/api/colota
      ```
    - Go to **Settings > Authentication**
-   - Enable **Basic Auth** and enter the username and password from step 3
+   - Choose **Basic auth** and enter the username and password from step 3
 
 ## Payload Format
 

@@ -15,7 +15,7 @@ sidebar_position: 5
    https://nextcloud.yourdomain.com/apps/phonetrack/log/owntracks/SESSION_TOKEN/DEVICE_NAME
    ```
 4. **Configure Colota**:
-   - Go to **Settings > API Settings**
+   - Go to **Settings > Connection > Request format**
    - Select the **OwnTracks** template
    - Paste the URL as your endpoint
 

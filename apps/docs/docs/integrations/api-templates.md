@@ -4,9 +4,9 @@ sidebar_position: 1
 
 # API Templates
 
-Colota includes built-in templates for popular backends. Select a template in **Settings > API Settings** to auto-configure field mappings and custom fields.
+Colota includes built-in templates for popular backends. Select a template in **Settings > Connection > Request format** to auto-configure field mappings and custom fields.
 
-| Template | HTTP Method | Bearing Field | Custom Fields | Notes |
+| Template | HTTP method | Bearing Field | Custom fields | Notes |
 | --- | --- | --- | --- | --- |
 | **Dawarich** | POST | `cog` | `_type: "location"` | OwnTracks single-point format. Optional Batch chip switches to Overland envelope (see [Dawarich integration](./dawarich.md)). |
 | **GeoPulse** | POST | `bear` | _(none)_ | Native Colota format |

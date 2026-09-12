@@ -4,22 +4,24 @@ sidebar_position: 3
 
 # Server Settings
 
-| Setting       | Description                            | Default         | Range       |
-| ------------- | -------------------------------------- | --------------- | ----------- |
-| Endpoint      | HTTP(S) URL of your server             | Empty (offline) | --          |
-| HTTP Method   | POST (JSON body) or GET (query params) | POST            | POST / GET  |
-| Sync Interval | Batch mode interval                    | Instant (0)     | 0s - Custom |
-| Offline Mode  | Disable all network activity           | Disabled        | On/Off      |
+Found under **Settings → Connection**. The Server card opens with a line that says what sync is doing now (Synced, Not synced yet, Sync failing with the server's own sentence, No network, No server, Offline mode), then the settings that produced it. The Server details card below it opens Request format, Authentication and Client certificate, each row showing its stored value.
+
+| Setting         | Description                            | Default         | Range       |
+| --------------- | -------------------------------------- | --------------- | ----------- |
+| Server endpoint | HTTP(S) URL of your server             | Empty (offline) | --          |
+| HTTP method     | POST (JSON body) or GET (query params) | POST            | POST / GET  |
+| Sync interval   | Batch mode interval                    | Instant (0)     | 0s - Custom |
+| Offline mode    | Disable all network activity           | Disabled        | On/Off      |
 
 ## Endpoint URL
 
-Your server endpoint must accept HTTP or HTTPS requests (POST or GET depending on your HTTP Method setting). HTTPS is required for public endpoints. HTTP is restricted to private/local addresses at the network level - public HTTP endpoints will be blocked at request time.
+Your server endpoint must accept HTTP or HTTPS requests (POST or GET depending on your HTTP method setting). The field's helper shows the shape the chosen backend template expects. The address is saved when you leave the field, not on every keystroke, and only when it passes: an address without `http://` or `https://` and a host is refused, and plain `http://` to a public host is refused with "http is refused for a public host. Use https." Plain `http://` to a private host (`192.168.x`, `10.x`, `172.16-31.x`, `100.64.x`, `localhost`) is saved with a warning that it is not encrypted, and an address carrying a key in its query string is saved with a warning that the key is stored with settings, not encrypted, and included in setup links.
 
 Self-signed and private-CA certificates are supported via three trust paths (system CAs, user-installed device CAs, or an in-app imported CA). Servers that require client-certificate authentication (mTLS) are also supported. See the [mTLS guide](./mtls) for setup.
 
-On **Android 17+**, connecting to another device on the local network (everything above except `localhost`) requires the **ACCESS_LOCAL_NETWORK** permission. Colota requests this when you use **Test Connection**. See [Permissions](/docs/development/permissions#local-network-access) for details.
+On **Android 17+**, connecting to another device on the local network (everything above except `localhost`) requires the **ACCESS_LOCAL_NETWORK** permission. Colota requests this when you use **Test connection**. See [Permissions](/docs/development/permissions#local-network-access) for details.
 
-Use the **Test Connection** button in Settings → Connection to verify your server is reachable.
+**Test connection** sits under the field. It sends your latest recorded location to the address with your credentials, so it needs one recorded fix, and it is disabled with the reason until it has one or while the address does not pass. The result stays under the button until the next test or an edit: **Reachable** with the HTTP status and the time, or **Not reachable** with the status or "No response" and the server's own sentence. Test saves nothing itself; the field does, when you leave it.
 
 ### Multiple Backends
 
@@ -49,14 +51,14 @@ This is useful for backends that organize data by date (e.g. S3 with hive partit
 
 ## Offline Mode
 
-Enable **Offline Mode** in Settings to use Colota as a standalone tracker without any server. Locations are recorded and stored locally on-device.
+Enable **Offline mode** under **Settings → Connection** to use Colota as a standalone tracker without any server. Locations are recorded and stored locally on-device.
 
 ### Enabling Offline Mode
 
 When you toggle offline mode on with unsent locations still in the queue, a dialog offers several options:
 
-- **Sync First** - attempt to upload queued locations before switching (only available if an endpoint is configured)
-- **Keep in Queue** - preserve queued locations for later sync when you disable offline mode
+- **Sync first** - attempt to upload queued locations before switching (only available if an endpoint is configured)
+- **Keep in queue** - preserve queued locations for later sync when you disable offline mode
 - **Cancel** - abort and stay in online mode
 
 If no locations are queued, offline mode enables immediately.
@@ -67,12 +69,10 @@ The UI simplifies to remove sync-related elements that don't apply:
 
 **Hidden in offline mode:**
 
-- Server Endpoint and Test Connection
-- Authentication & Headers
-- API Field Mapping
-- Sync Interval, Sync Condition (Any / Wi-Fi / SSID / VPN)
+- Server endpoint, Test connection and the Server details rows (Request format, Authentication, Client certificate); the sync state line and the Offline mode switch stay
+- Sync interval, Sync only on (Any network / Wi-Fi or Ethernet / Specific Wi-Fi network / VPN)
 - Queue statistics (Queued / Sent counts)
-- Queue actions (Sync Now, Clear Sent History, Clear Queue)
+- Queue actions (Sync now, Delete queued locations, Delete synced locations)
 - Queue info in the tracking notification, which reads "Offline mode" instead
 
 **Still available in offline mode:**
@@ -80,8 +80,8 @@ The UI simplifies to remove sync-related elements that don't apply:
 - All tracking parameters (interval, movement threshold, accuracy)
 - Tracking profiles and geofences
 - Data export (CSV, GeoJSON, GPX, KML) - both manual and auto-export
-- Database statistics (Total locations, Today count, Storage)
-- Data cleanup (Delete All Locations, Delete Old, Optimize Database)
+- Database statistics (Total locations, Storage)
+- Data cleanup (Delete older than, Delete all locations, Compact database)
 
 ### Disabling Offline Mode
 
@@ -101,6 +101,6 @@ Attempt 4: +300s delay (5 minutes)
 Attempt 5+: +900s delay (15 minutes)
 ```
 
-Failed uploads stay in the queue and are retried indefinitely until they succeed. No data is ever dropped due to failed sync attempts. You can clear the queue manually in Settings > Data Management if needed.
+Failed uploads stay in the queue and are retried indefinitely until they succeed. No data is ever dropped due to failed sync attempts. You can clear the queue manually in Settings > Data management if needed.
 
 The app also auto-syncs when network connectivity is restored.
