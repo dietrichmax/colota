@@ -24,14 +24,17 @@ import com.Colota.service.getDoubleOrNull
 import com.Colota.service.getIntOrNull
 import com.Colota.service.getStringOrNull
 import com.Colota.service.getBooleanOrNull
+import com.Colota.sync.SyncState
 import com.Colota.sync.NetworkManager
 import com.Colota.sync.UrlSafety
 import com.Colota.util.DeviceInfoHelper
 import com.Colota.export.AutoExportConfig
 import com.Colota.export.AutoExportScheduler
+import com.Colota.export.AutoExportWorker
 import com.Colota.export.ExportConverters
 import com.Colota.util.AppFileLogger
 import com.Colota.util.FileOperations
+import com.Colota.util.LogExportMerger
 import com.Colota.util.AppLogger
 import com.Colota.util.SecureStorageHelper
 import com.facebook.react.bridge.Arguments
@@ -113,6 +116,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     companion object {
         private const val TAG = "LocationServiceModule"
 
+        /** A debug flag outside Settings, so it goes through saveSetting and no ServiceConfig parser. */
+        private const val SETTING_LOG_STARTED_AT = "debugFileLoggingStartedAt"
+
         /** JS config key -> secure storage key mapping for saveAuthConfig. */
         private val AUTH_CONFIG_KEYS = listOf(
             "authType" to SecureStorageHelper.KEY_AUTH_TYPE,
@@ -129,6 +135,9 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
         @Volatile
         private var activeProfileName: String? = null
+
+        @Volatile
+        private var activeProfileId: Int? = null
 
         private inline fun emit(event: String, build: WritableMap.() -> Unit): Boolean {
             val context = reactContextRef.get() ?: return false
@@ -182,6 +191,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         @JvmStatic
         fun sendProfileSwitchEvent(profileName: String?, profileId: Int?): Boolean {
             activeProfileName = profileName
+            activeProfileId = profileId
             return emit("onProfileSwitch") {
                 if (profileName != null) putString("profileName", profileName) else putNull("profileName")
                 if (profileId != null) putInt("profileId", profileId) else putNull("profileId")
@@ -189,12 +199,19 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             }
         }
 
+        /** The detached rewrite after a bulk delete has finished, so any size read before it is stale. */
         @JvmStatic
-        fun sendSyncProgressEvent(sent: Int, failed: Int, total: Int): Boolean =
+        fun sendDatabaseCompactedEvent(success: Boolean): Boolean =
+            emit("onDatabaseCompacted") { putBoolean("success", success) }
+
+        /** `remaining` is present only on the event that ends a pass, and is what says the pass ended. */
+        @JvmStatic
+        fun sendSyncProgressEvent(sent: Int, failed: Int, total: Int, remaining: Int? = null): Boolean =
             emit("onSyncProgress") {
                 putInt("sent", sent)
                 putInt("failed", failed)
                 putInt("total", total)
+                if (remaining != null) putInt("remaining", remaining)
             }
 
         @JvmStatic
@@ -347,6 +364,8 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             putInt("total", stats.total)
             putInt("today", stats.today)
             putDouble("databaseSizeMB", dbHelper.getDatabaseSizeMB())
+            putDouble("lastSyncTime", SyncState.lastSuccessTime.toDouble())
+            putString("lastSyncError", SyncState.lastSyncError)
         }
     }
 
@@ -402,15 +421,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         }
 
     @ReactMethod
-    fun insertDummyData(promise: Promise) {
-        if (!BuildConfig.DEBUG) {
-            promise.reject("ERR_NOT_DEBUG", "insertDummyData is only available in debug builds")
-            return
-        }
-        executeAsync(promise) { DebugSeedData.insertDummyData(dbHelper) }
-    }
-
-    @ReactMethod
     fun manualFlush(promise: Promise) {
         try {
             startServiceWithAction(LocationForegroundService.ACTION_MANUAL_FLUSH)
@@ -442,8 +452,31 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun insertDummyData(promise: Promise) {
+        if (!BuildConfig.DEBUG) {
+            promise.reject("ERR_NOT_DEBUG", "insertDummyData is only available in debug builds")
+            return
+        }
+        executeAsync(promise) { DebugSeedData.insertDummyData(dbHelper) }
+    }
+
+    @ReactMethod
+    fun countOlderThan(days: Int, promise: Promise) = executeAsync(promise) {
+        val counted = dbHelper.countOlderThan(days)
+        Arguments.createMap().apply {
+            putInt("total", counted.total)
+            putDouble("cutoffSeconds", counted.cutoffSeconds.toDouble())
+        }
+    }
+
+    @ReactMethod
+    fun countUnsentOlderThan(days: Int, promise: Promise) = executeAsync(promise) {
+        dbHelper.countUnsentOlderThan(days)
+    }
+
+    @ReactMethod
     fun deleteLocationsInRange(startTs: Double, endTs: Double, promise: Promise) = executeAsync(promise) {
-        deleteThenVacuum(refresh = true) { dbHelper.deleteInRange(startTs.toLong(), endTs.toLong()) }
+        deleteWithoutVacuum { dbHelper.deleteInRange(startTs.toLong(), endTs.toLong()) }
     }
 
     @ReactMethod
@@ -455,17 +488,25 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             val end = r.getDouble("end").toLong()
             pairs.add(start to end)
         }
-        deleteThenVacuum(refresh = true) { dbHelper.deleteInRanges(pairs) }
+        deleteWithoutVacuum { dbHelper.deleteInRanges(pairs) }
     }
 
     @ReactMethod
     fun deleteLocationsByIds(ids: ReadableArray, promise: Promise) = executeAsync(promise) {
         val locationIds = (0 until ids.size()).map { ids.getDouble(it).toLong() }
-        val deleted = dbHelper.deleteLocations(locationIds)
+        deleteWithoutVacuum { dbHelper.deleteLocations(locationIds) }
+    }
+
+    /**
+     * Editing a track, not maintaining a database: a point or a trip is a few rows out of millions,
+     * and the delete gets repeated. Rewriting the whole file each time holds the one write
+     * connection for minutes and stalls the recording service. Compact database is the deliberate
+     * rewrite, and its figure is what the user watches move.
+     */
+    private fun deleteWithoutVacuum(delete: () -> Int): Int {
+        val deleted = delete()
         if (deleted > 0) refreshNotificationIfTracking()
-        // No vacuum here: a few rows are not worth rewriting the database, and this delete gets
-        // repeated. Data Management has an explicit Vacuum action.
-        deleted
+        return deleted
     }
 
     @ReactMethod
@@ -494,9 +535,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun vacuumDatabase(promise: Promise) = executeAsync(promise) { 
-        dbHelper.vacuum()
-        true 
+    fun vacuumDatabase(promise: Promise) = executeAsync(promise) {
+        // Rejecting is what lets the caller say the database was busy. Resolving regardless made a
+        // failure look like a rewrite that found nothing to release.
+        if (!dbHelper.vacuum()) throw IllegalStateException("The database was busy")
+        true
     }
 
     private fun triggerZoneRecheck() {
@@ -530,11 +573,20 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
         triggerProfileRecheck()
     }
 
-    /** delete() runs inline; vacuum is fire-and-forget so callers return immediately. */
+    /**
+     * For the bulk deletes on Data management only: rare, deliberate, and asked for by someone who
+     * just said to remove a large share of the table. delete() runs inline; vacuum is
+     * fire-and-forget so callers return immediately.
+     */
     private fun deleteThenVacuum(refresh: Boolean = false, delete: () -> Int): Int {
         val deleted = delete()
         if (refresh) refreshNotificationIfTracking()
-        moduleScope.launch(Dispatchers.IO) { dbHelper.vacuum() }
+        // The rewrite runs detached so the delete returns at once, which leaves the file its old
+        // size for as long as it takes. The event is how a caller learns the size it read is stale.
+        moduleScope.launch(Dispatchers.IO) {
+            val ok = dbHelper.vacuum()
+            sendDatabaseCompactedEvent(ok)
+        }
         return deleted
     }
 
@@ -693,7 +745,15 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun getActiveProfile(promise: Promise) {
-        promise.resolve(activeProfileName)
+        val name = activeProfileName
+        if (name == null) {
+            promise.resolve(null)
+            return
+        }
+        promise.resolve(Arguments.createMap().apply {
+            putString("name", name)
+            activeProfileId?.let { putInt("id", it) } ?: putNull("id")
+        })
     }
 
     @ReactMethod
@@ -924,7 +984,13 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun setFileLoggingEnabled(enabled: Boolean, promise: Promise) = executeAsync(promise) {
+        val was = AppFileLogger.isEnabled()
         dbHelper.saveSetting("debugFileLoggingEnabled", if (enabled) "true" else "false")
+        // The arming edge only: a re-enable that was already on must not reset the window.
+        if (enabled && !was) {
+            dbHelper.saveSetting(SETTING_LOG_STARTED_AT, System.currentTimeMillis().toString())
+        }
+        if (!enabled) dbHelper.saveSetting(SETTING_LOG_STARTED_AT, "")
         AppFileLogger.setEnabled(enabled)
         null
     }
@@ -932,6 +998,11 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun clearFileLog(promise: Promise) = executeAsync(promise) {
         AppFileLogger.clear()
+        // The window described bytes that no longer exist.
+        dbHelper.saveSetting(
+            SETTING_LOG_STARTED_AT,
+            if (AppFileLogger.isEnabled()) System.currentTimeMillis().toString() else ""
+        )
         null
     }
 
@@ -941,7 +1012,12 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun exportFileLogToUri(treeUriString: String, promise: Promise) = executeAsync(promise) {
+    fun exportFileLogToUri(
+        treeUriString: String,
+        header: String,
+        appLog: String,
+        promise: Promise,
+    ) = executeAsync(promise) {
         AppFileLogger.flushNow()
         // Oldest segment first so the exported file reads chronologically.
         val sources = AppFileLogger.logFiles()
@@ -958,13 +1034,16 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
             ?: throw Exception("Could not create document in selected directory")
 
         reactApplicationContext.contentResolver.openOutputStream(doc.uri)?.use { output ->
-            for (source in sources) {
-                source.inputStream().use { input -> input.copyTo(output) }
+            output.write(header.toByteArray())
+            output.bufferedWriter().let { writer ->
+                LogExportMerger.merge(sources, appLog, writer)
+                writer.flush()
             }
         } ?: throw Exception("Could not open output stream")
 
         doc.uri.toString()
     }
+
 
     // =========================================================================
     // AUTO-EXPORT
@@ -1040,6 +1119,7 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
 
         Arguments.createMap().apply {
             putBoolean("enabled", config.enabled)
+            putBoolean("running", AutoExportWorker.isRunning)
             putString("format", config.format)
             putString("interval", config.interval)
             putString("uri", config.uri)

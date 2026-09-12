@@ -412,11 +412,11 @@ class NetworkManager(private val context: Context) {
 
         return when {
             isServerNotTrusted ->
-                "Server certificate is not trusted (self-signed or unknown CA). Import the server's CA via mTLS Settings, or use a publicly-trusted certificate."
+                "Server certificate is not trusted (self-signed or unknown CA). Import the server's CA under Connection > Client certificate, or use a publicly trusted certificate."
             isClientRejected && hasClientCert ->
                 "Server rejected the client certificate. Common causes: cert signed by wrong CA, cert expired, or cert revoked."
             isClientRejected && !hasClientCert ->
-                "Server requires a client certificate (mTLS) but none is configured. Import a .p12 in Auth Settings."
+                "Server requires a client certificate (mutual TLS) but none is configured. Add one under Connection > Client certificate."
             else ->
                 "TLS handshake failed: ${e.message ?: e.javaClass.simpleName}"
         }

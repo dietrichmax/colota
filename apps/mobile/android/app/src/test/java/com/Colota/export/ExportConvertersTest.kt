@@ -2,6 +2,7 @@ package com.Colota.export
 
 import org.junit.Assert.*
 import org.junit.Rule
+import org.json.JSONObject
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.StringWriter
@@ -104,15 +105,116 @@ class ExportConvertersTest {
 
     // --- GeoJSON ---
 
+    /**
+     * RFC 7946 conformance, checked by parsing rather than by matching strings. The old writer's
+     * defect was invisible to a `contains` assertion, because the file it produced was legal JSON
+     * and legal GeoJSON: it broke no rule here, it just put 2.5 million points in one feature. So
+     * this validates the grammar and the sibling tests validate the shape a reader needs.
+     */
+    private fun assertRfc7946(json: String, expectedFeatures: Int) {
+        val root = JSONObject(json)
+        // Section 3.3: a FeatureCollection has type and a features array.
+        assertEquals("FeatureCollection", root.getString("type"))
+        val features = root.getJSONArray("features")
+        assertEquals(expectedFeatures, features.length())
+        for (i in 0 until features.length()) {
+            val feature = features.getJSONObject(i)
+            // Section 3.2: type, a geometry member and a properties member.
+            assertEquals("Feature", feature.getString("type"))
+            assertTrue("feature $i has no properties member", feature.has("properties"))
+            feature.getJSONObject("properties")
+            val geometry = feature.getJSONObject("geometry")
+            assertEquals("Point", geometry.getString("type"))
+            // Section 3.1.1: a position is an array of at least two numbers, longitude first.
+            val position = geometry.getJSONArray("coordinates")
+            assertTrue("position needs two or more numbers", position.length() >= 2)
+            val lon = position.getDouble(0)
+            val lat = position.getDouble(1)
+            // Section 4: the CRS is WGS 84, so these are the valid ranges. Swapping the pair puts a
+            // German longitude of 11 where a latitude belongs, which stays inside both ranges and is
+            // why the order is asserted against known fixture values elsewhere too.
+            assertTrue("longitude $lon out of range", lon >= -180.0 && lon <= 180.0)
+            assertTrue("latitude $lat out of range", lat >= -90.0 && lat <= 90.0)
+            assertFalse("a position must not carry NaN", lon.isNaN() || lat.isNaN())
+        }
+    }
+
+    // Proves the validator bites. The shape Colota wrote until 1.16.0 is legal GeoJSON, so the
+    // rejection comes from the Point assertion, not from the grammar. The importer still reads it.
     @Test
-    fun `convert GeoJSON produces a single columnar MultiPoint feature`() {
+    fun `the RFC check rejects the columnar MultiPoint Colota wrote until 1_16_0`() {
+        val legacy = """
+            {"type":"FeatureCollection","features":[{"type":"Feature",
+             "geometry":{"type":"MultiPoint","coordinates":[[13.4,52.5],[13.41,52.51]]},
+             "properties":{"accuracy":[10,15],"time":["2023-11-14T22:13:20.000Z","2023-11-14T22:14:20.000Z"]}}]}
+        """.trimIndent()
+        // It parses as JSON and satisfies RFC 7946 on its own terms, which is exactly why a
+        // string-matching test never caught it.
+        JSONObject(legacy)
+        val failure = runCatching { assertRfc7946(legacy, 2) }.exceptionOrNull()
+        assertTrue("the validator must reject a single columnar feature", failure is AssertionError)
+    }
+
+    @Test
+    fun `convert GeoJSON conforms to RFC 7946`() {
+        assertRfc7946(ExportConverters.convert("geojson", sampleRows), sampleRows.size)
+    }
+
+    @Test
+    fun `convertTrips GeoJSON conforms to RFC 7946`() {
+        assertRfc7946(ExportConverters.convertTrips("geojson", tripFixture), 4)
+    }
+
+    @Test
+    fun `an empty GeoJSON export is still a valid FeatureCollection`() {
+        assertRfc7946(streamToString("geojson", emptyList()), 0)
+    }
+
+    @Test
+    fun `a streamed GeoJSON export conforms to RFC 7946 across chunk boundaries`() {
+        val streamed = streamToString("geojson", emptyList(), chunks = listOf(listOf(sampleRows[0]), listOf(sampleRows[1])))
+        assertRfc7946(streamed, 2)
+    }
+
+    // A row with only a position and a time still has to produce a valid feature.
+    @Test
+    fun `a sparse row still conforms to RFC 7946`() {
+        val sparse = listOf(mapOf<String, Any?>("latitude" to 52.0, "longitude" to 13.0, "timestamp" to 1700000000L))
+        assertRfc7946(ExportConverters.convert("geojson", sparse), 1)
+    }
+
+    /**
+     * The contract a GIS reads, not the shape this writer happens to produce. Attributes belong to
+     * features, so one feature for the whole export gives QGIS a single unqueryable row, and past
+     * `OGR_GEOJSON_MAX_OBJ_SIZE` (200 MB by default) GDAL refuses the file outright.
+     */
+    @Test
+    fun `convert GeoJSON produces one Point feature per location`() {
         val json = ExportConverters.convert("geojson", sampleRows)
         assertTrue(json.contains("\"type\": \"FeatureCollection\""))
-        assertTrue(json.contains("\"type\": \"Feature\""))
-        assertTrue(json.contains("\"type\": \"MultiPoint\""))
-        // Exactly one Feature for the whole export (columnar), not one per point.
-        assertEquals(1, Regex("\"type\": \"Feature\"").findAll(json).count())
-        assertFalse(json.contains("\"type\": \"Point\""))
+        assertEquals(sampleRows.size, Regex("\"type\": \"Feature\"").findAll(json).count())
+        assertEquals(sampleRows.size, Regex("\"type\": \"Point\"").findAll(json).count())
+        assertFalse(json.contains("MultiPoint"))
+    }
+
+    @Test
+    fun `convert GeoJSON writes properties as scalars, so a reader gets typed columns`() {
+        val json = ExportConverters.convert("geojson", sampleRows)
+        assertTrue(json.contains("\"accuracy\": 10"))
+        assertTrue(json.contains("\"accuracy\": 15"))
+        assertTrue(json.contains("\"speed\": 1.2"))
+        // A parallel array is what made every attribute an opaque JSON string in GDAL.
+        assertFalse(json.contains("\"accuracy\": ["))
+        assertFalse(json.contains("\"time\": ["))
+    }
+
+    // Omitted, not null: a reader gets no field rather than an empty one, and the column that is
+    // empty for most rows costs nothing.
+    @Test
+    fun `convert GeoJSON omits a property the row does not carry`() {
+        val json = ExportConverters.convert("geojson", sampleRows)
+        assertFalse(json.contains("\"note\": null"))
+        assertFalse(json.contains("null"))
     }
 
     @Test
@@ -123,19 +225,10 @@ class ExportConvertersTest {
     }
 
     @Test
-    fun `convert GeoJSON emits properties as parallel arrays aligned to coordinates`() {
-        val json = ExportConverters.convert("geojson", sampleRows)
-        assertTrue(json.contains("\"accuracy\": [10, 15]"))
-        assertTrue(json.contains("\"speed\": [1.2, 0.5]"))
-        assertTrue(json.contains("\"battery\": [85, 72]"))
-        assertTrue(json.contains("\"time\": [\""))
-    }
-
-    @Test
-    fun `convert GeoJSON keeps a single point as a MultiPoint`() {
+    fun `convert GeoJSON writes one point as one feature, not a collection of one`() {
         val json = ExportConverters.convert("geojson", listOf(sampleRows[0]))
-        assertTrue(json.contains("\"type\": \"MultiPoint\""))
-        assertTrue(json.contains("\"accuracy\": [10]")) // length-1 array, not a scalar
+        assertEquals(1, Regex("\"type\": \"Point\"").findAll(json).count())
+        assertTrue(json.contains("\"accuracy\": 10"))
     }
 
     // --- GPX ---
@@ -204,10 +297,11 @@ class ExportConvertersTest {
     }
 
     @Test
-    fun `GeoJSON JSON-escapes the note and emits null when absent`() {
+    fun `GeoJSON JSON-escapes the note and omits it when absent`() {
         val json = ExportConverters.convert("geojson", noteRows)
         assertTrue(json.contains("\\\"big\\\""))
-        assertTrue(json.contains(", null]")) // the note column ends with null for the second point
+        // One feature carries a note, the other has no note member at all.
+        assertEquals(1, Regex("\"note\":").findAll(json).count())
     }
 
     @Test
@@ -364,10 +458,10 @@ class ExportConvertersTest {
         assertTrue(csvLines[2].startsWith("1,"))
 
         val geojsonResult = streamToString("geojson", emptyList(), chunks = listOf(chunk1, chunk2))
-        // Both chunks fold into one MultiPoint feature.
+        // A chunk boundary is invisible in the output: two rows, two features, whichever chunk they came in.
         assertTrue(geojsonResult.contains("[13.405, 52.52]"))
         assertTrue(geojsonResult.contains("[2.3522, 48.8566]"))
-        assertEquals(1, Regex("\"type\": \"Feature\"").findAll(geojsonResult).count())
+        assertEquals(2, Regex("\"type\": \"Feature\"").findAll(geojsonResult).count())
 
         val gpxResult = streamToString("gpx", emptyList(), chunks = listOf(chunk1, chunk2))
         assertTrue(gpxResult.contains("lat=\"52.520000\""))
@@ -391,8 +485,8 @@ class ExportConvertersTest {
 
         val geojsonResult = streamToString("geojson", emptyList())
         assertTrue(geojsonResult.contains("FeatureCollection"))
-        assertTrue("empty export is an empty FeatureCollection, not an empty MultiPoint", geojsonResult.contains("\"features\": []"))
-        assertFalse(geojsonResult.contains("MultiPoint"))
+        assertTrue("an empty export is a FeatureCollection with no features", geojsonResult.contains("\"features\": ["))
+        assertEquals(0, Regex("\"type\": \"Feature\"").findAll(geojsonResult).count())
     }
 
     @Test
@@ -414,8 +508,8 @@ class ExportConvertersTest {
         val csv = ExportConverters.convert("csv", sampleRows)
         assertTrue(csv.lines()[1].endsWith(",Charging,")) // battery_status label, then empty note (last column)
         val gj = ExportConverters.convert("geojson", sampleRows)
-        assertTrue(gj.contains("\"bearing\": [180")) // whole double -> no trailing ".0"
-        assertTrue(gj.contains("\"battery_status\": [\"Charging\""))
+        assertTrue(gj.contains("\"bearing\": 180")) // whole double -> no trailing ".0"
+        assertTrue(gj.contains("\"battery_status\": \"Charging\""))
         val gpx = ExportConverters.convert("gpx", sampleRows)
         assertTrue(gpx.contains("<bearing>180</bearing>"))
         assertTrue(gpx.contains("<battery_status>Charging</battery_status>"))
@@ -480,7 +574,7 @@ class ExportConvertersTest {
         assertTrue(csv.contains("\"deer, \"\"big\"\" <antlers>\""))
         val gj = ExportConverters.convertTrips("geojson", trips)
         assertTrue(gj.contains("\\\"big\\\""))
-        assertTrue(gj.contains(", null]")) // the note column ends with null for the second point
+        assertEquals(1, Regex("\"note\":").findAll(gj).count())
         val gpx = ExportConverters.convertTrips("gpx", trips)
         assertTrue(gpx.contains("<note>deer, &quot;big&quot; &lt;antlers&gt;</note>"))
         assertTrue(gpx.contains("<note></note>"))

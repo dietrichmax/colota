@@ -20,6 +20,7 @@ import {
   TripBoundaryOverride
 } from "../types/global"
 import { logger } from "../utils/logger"
+import { parseSystemPalette, type SystemPalette } from "../styles/dynamicColors"
 import { SETTINGS_READ_ATTEMPTS, SETTINGS_READ_RETRY_DELAY_MS } from "../constants"
 
 const { LocationServiceModule, MtlsBridgeModule, BuildConfigModule } = NativeModules
@@ -255,23 +256,20 @@ class NativeLocationService {
     )
   }
 
-  /** DEV ONLY: Insert dummy location data for testing */
+  // ============================================================================
+  // CLEANUP OPERATIONS
+  // ============================================================================
+
   static async insertDummyData(): Promise<number> {
     this.ensureModule()
     return this.safeExecute(() => LocationServiceModule.insertDummyData(), 0, "insertDummyData failed")
   }
 
-  // ============================================================================
-  // CLEANUP OPERATIONS
-  // ============================================================================
-
-  /**
-   * Deletes all successfully sent locations
-   */
-  static async clearSentHistory(): Promise<void> {
+  /** Deletes the locations themselves where `sent = 1`, imported rows included. Resolves how many went. */
+  static async clearSentHistory(): Promise<number> {
     this.ensureModule()
-    logger.debug("[NativeLocationService] Clearing sent history")
-    await LocationServiceModule.clearSentHistory()
+    logger.debug("[NativeLocationService] Deleting synced locations")
+    return LocationServiceModule.clearSentHistory()
   }
 
   /**
@@ -303,6 +301,21 @@ class NativeLocationService {
     this.ensureModule()
     logger.debug(`[NativeLocationService] Deleting locations older than ${days} days`)
     return LocationServiceModule.deleteOlderThan(days)
+  }
+
+  /**
+   * What `deleteOlderThan(days)` would take, plus the boundary it used, so a preview cannot name a
+   * different one. The timestamp index answers this, so it is safe to call as the user types.
+   */
+  static async countOlderThan(days: number): Promise<{ total: number; cutoffSeconds: number }> {
+    this.ensureModule()
+    return LocationServiceModule.countOlderThan(days)
+  }
+
+  /** How many of those have never been uploaded. Reads every match, so call it only on a press. */
+  static async countUnsentOlderThan(days: number): Promise<number> {
+    this.ensureModule()
+    return LocationServiceModule.countUnsentOlderThan(days)
   }
 
   /**
@@ -549,9 +562,9 @@ class NativeLocationService {
   }
 
   /**
-   * Returns the name of the currently active tracking profile, or null if using defaults
+   * Returns the name and id of the currently active tracking profile, or null if using defaults
    */
-  static async getActiveProfileName(): Promise<string | null> {
+  static async getActiveProfile(): Promise<{ name: string; id: number | null } | null> {
     this.ensureModule()
     return this.safeExecute(() => LocationServiceModule.getActiveProfile(), null, "getActiveProfile failed")
   }
@@ -713,22 +726,35 @@ class NativeLocationService {
    * @returns Build config object with SDK versions, tools versions, etc.
    */
   static getBuildConfig(): {
+    VERSION_NAME: string
+    VERSION_CODE: number
+    FLAVOR: string
+    APP_LANGUAGE: string
     MIN_SDK_VERSION: number
     TARGET_SDK_VERSION: number
     COMPILE_SDK_VERSION: number
     BUILD_TOOLS_VERSION: string
     KOTLIN_VERSION: string
     NDK_VERSION: string
-    VERSION_NAME: string
-    VERSION_CODE: number
-    FLAVOR: string
-    APP_LANGUAGE: string
   } | null {
     if (!BuildConfigModule) {
       logger.warn("[NativeLocationService] BuildConfigModule not available")
       return null
     }
     return BuildConfigModule
+  }
+
+  /**
+   * The wallpaper-derived tonal steps, or null below API 31 and whenever the map is not the
+   * complete set the theme reads.
+   */
+  static async getSystemPalette(): Promise<SystemPalette | null> {
+    if (!BuildConfigModule) return null
+    return this.safeExecute(
+      async () => parseSystemPalette(await BuildConfigModule.getSystemPalette()),
+      null,
+      "Failed to read the system palette"
+    )
   }
 
   // ============================================================================
@@ -741,11 +767,10 @@ class NativeLocationService {
   static async getDeviceInfo(): Promise<{
     model: string
     brand: string
-    manufacturer: string
-    device: string
-    deviceId: string
     systemVersion: string
     apiLevel: number
+    manufacturer: string
+    deviceId: string
   }> {
     this.ensureModule()
     return LocationServiceModule.getDeviceInfo()
@@ -821,9 +846,9 @@ class NativeLocationService {
   }
 
   /** Returns null if there are no entries to export. */
-  static async exportFileLogToUri(treeUri: string): Promise<string | null> {
+  static async exportFileLogToUri(treeUri: string, header = "", appLog = ""): Promise<string | null> {
     this.ensureModule()
-    return LocationServiceModule.exportFileLogToUri(treeUri)
+    return LocationServiceModule.exportFileLogToUri(treeUri, header, appLog)
   }
 
   // ============================================================================
@@ -876,6 +901,7 @@ class NativeLocationService {
    */
   static async getAutoExportStatus(): Promise<{
     enabled: boolean
+    running: boolean
     format: string
     interval: string
     uri: string | null

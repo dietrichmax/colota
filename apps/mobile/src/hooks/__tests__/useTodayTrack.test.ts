@@ -41,9 +41,17 @@ function makeCoords(ts: number, lat = 48.1, lon = 11.5) {
 
 describe("useTodayTrack", () => {
   describe("initial state", () => {
-    it("returns empty locations when not tracking", () => {
+    it("loads today's track from the DB while idle, so the map can draw it before Start", async () => {
+      const dbRows = [{ latitude: 48.1, longitude: 11.5, timestamp: 1000, accuracy: 10, speed: 2, altitude: 500 }]
+      mockGetLocationsByDateRange.mockResolvedValueOnce(dbRows)
+
       const { result } = renderHook(() => useTodayTrack(false, null))
       expect(result.current.locations).toEqual([])
+
+      await act(async () => {})
+
+      expect(mockGetLocationsByDateRange).toHaveBeenCalledTimes(1)
+      expect(result.current.locations).toHaveLength(1)
     })
 
     it("loads locations from DB when tracking starts", async () => {
@@ -64,10 +72,10 @@ describe("useTodayTrack", () => {
     })
   })
 
-  describe("clearing on tracking stop", () => {
-    it("clears locations when tracking becomes false", async () => {
+  describe("tracking stop", () => {
+    it("keeps today's points when tracking stops, because the day's track is still today's track", async () => {
       const dbRows = [{ latitude: 48.1, longitude: 11.5, timestamp: 1000, accuracy: 10, speed: 2, altitude: 500 }]
-      mockGetLocationsByDateRange.mockResolvedValueOnce(dbRows)
+      mockGetLocationsByDateRange.mockResolvedValue(dbRows)
 
       const { result, rerender } = renderHook(({ tracking }: { tracking: boolean }) => useTodayTrack(tracking, null), {
         initialProps: { tracking: true }
@@ -77,7 +85,8 @@ describe("useTodayTrack", () => {
       expect(result.current.locations).toHaveLength(1)
 
       rerender({ tracking: false })
-      expect(result.current.locations).toEqual([])
+      await act(async () => {})
+      expect(result.current.locations).toHaveLength(1)
     })
   })
 
@@ -197,11 +206,36 @@ describe("useTodayTrack", () => {
       expect(calls[1][0]).toBeGreaterThan(1000000)
     })
 
-    it("does not subscribe to AppState when not tracking", async () => {
+    it("reads nothing on an idle foreground within the same day, since nothing records idle", async () => {
       renderHook(() => useTodayTrack(false, null))
       await act(async () => {})
+      expect(mockGetLocationsByDateRange).toHaveBeenCalledTimes(1)
 
-      expect(appStateCallback).toBeNull()
+      await act(async () => {
+        appStateCallback?.("active")
+      })
+
+      expect(mockGetLocationsByDateRange).toHaveBeenCalledTimes(1)
+    })
+
+    it("drops yesterday's track on the first idle foreground after midnight, so the map does not keep drawing it as today's", async () => {
+      jest.setSystemTime(new Date(2026, 8, 7, 23, 30))
+      const dbRows = [{ latitude: 48.1, longitude: 11.5, timestamp: 1000, accuracy: 10, speed: 2, altitude: 500 }]
+      mockGetLocationsByDateRange.mockResolvedValueOnce(dbRows)
+
+      const { result } = renderHook(() => useTodayTrack(false, null))
+      await act(async () => {})
+      expect(result.current.locations).toHaveLength(1)
+
+      jest.setSystemTime(new Date(2026, 8, 8, 0, 30))
+      mockGetLocationsByDateRange.mockResolvedValueOnce([])
+      await act(async () => {
+        appStateCallback?.("active")
+      })
+
+      expect(mockGetLocationsByDateRange).toHaveBeenCalledTimes(2)
+      expect(mockGetLocationsByDateRange.mock.calls[1][0]).toBeGreaterThan(1000)
+      expect(result.current.locations).toHaveLength(0)
     })
   })
 

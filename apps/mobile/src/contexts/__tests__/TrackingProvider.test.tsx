@@ -9,7 +9,7 @@ jest.mock("../../services/NativeLocationService", () => ({
   saveSetting: jest.fn().mockResolvedValue(undefined),
   isServiceRunning: jest.fn().mockResolvedValue(false),
   isTrackingActive: jest.fn().mockResolvedValue(false),
-  getActiveProfileName: jest.fn().mockResolvedValue(null)
+  getActiveProfile: jest.fn().mockResolvedValue(null)
 }))
 
 jest.mock("../../services/SettingsService", () => ({
@@ -62,7 +62,7 @@ import { logger } from "../../utils/logger"
 
 const mockGetAllSettings = NativeLocationService.getAllSettings as jest.Mock
 const mockUpdateMultiple = SettingsService.updateMultiple as jest.Mock
-const mockGetActiveProfileName = NativeLocationService.getActiveProfileName as jest.Mock
+const mockGetActiveProfile = NativeLocationService.getActiveProfile as jest.Mock
 
 beforeEach(() => {
   jest.clearAllMocks()
@@ -219,7 +219,7 @@ describe("useTracking", () => {
   it("keeps saving when hydration fails after the read landed", async () => {
     // The stored settings are on screen at that point, so blocking saves would be wrong.
     mockGetAllSettings.mockResolvedValueOnce({ endpoint: "https://kept.example/api", tracking_enabled: "true" })
-    mockGetActiveProfileName.mockRejectedValueOnce(new Error("bridge died"))
+    mockGetActiveProfile.mockRejectedValueOnce(new Error("bridge died"))
 
     const { result } = renderHook(() => useTracking(), { wrapper })
 
@@ -388,6 +388,31 @@ describe("useTracking", () => {
     expect(result.current.activeProfileName).toBeNull()
   })
 
+  it("keeps the profile id beside the name so the dashboard can resolve the profile's interval, and drops both on reset", async () => {
+    mockGetAllSettings.mockResolvedValueOnce({ interval: "5000" })
+
+    const { DeviceEventEmitter } = require("react-native")
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    })
+
+    expect(result.current.activeProfileId).toBeNull()
+
+    await act(async () => {
+      DeviceEventEmitter.emit("onProfileSwitch", { profileName: "Night", profileId: 7 })
+    })
+
+    expect(result.current.activeProfileId).toBe(7)
+
+    await act(async () => {
+      DeviceEventEmitter.emit("onProfileSwitch", { profileName: null, profileId: null })
+    })
+
+    expect(result.current.activeProfileId).toBeNull()
+  })
+
   it("clears activeProfileName when stopTracking is called", async () => {
     mockGetAllSettings.mockResolvedValueOnce({ interval: "5000" })
 
@@ -399,7 +424,7 @@ describe("useTracking", () => {
     })
 
     await act(async () => {
-      DeviceEventEmitter.emit("onProfileSwitch", { profileName: "Fast Driving" })
+      DeviceEventEmitter.emit("onProfileSwitch", { profileName: "Fast Driving", profileId: 3 })
     })
 
     expect(result.current.activeProfileName).toBe("Fast Driving")
@@ -409,10 +434,11 @@ describe("useTracking", () => {
     })
 
     expect(result.current.activeProfileName).toBeNull()
+    expect(result.current.activeProfileId).toBeNull()
   })
 
-  it("restores activeProfileName on reconnect when tracking was active", async () => {
-    mockGetActiveProfileName.mockResolvedValueOnce("Charging")
+  it("restores the active profile's name and id on reconnect, so the dock shows the profile's interval after a restart", async () => {
+    mockGetActiveProfile.mockResolvedValueOnce({ name: "Charging", id: 3 })
     mockGetAllSettings.mockResolvedValueOnce({
       interval: "5000",
       tracking_enabled: "true"
@@ -424,8 +450,23 @@ describe("useTracking", () => {
       await new Promise<void>((resolve) => setTimeout(resolve, 100))
     })
 
-    expect(mockGetActiveProfileName).toHaveBeenCalled()
+    expect(mockGetActiveProfile).toHaveBeenCalled()
     expect(result.current.activeProfileName).toBe("Charging")
+    expect(result.current.activeProfileId).toBe(3)
+  })
+
+  it("leaves both profile fields null on reconnect when the service runs the default settings", async () => {
+    mockGetActiveProfile.mockResolvedValueOnce(null)
+    mockGetAllSettings.mockResolvedValueOnce({ interval: "5000", tracking_enabled: "true" })
+
+    const { result } = renderHook(() => useTracking(), { wrapper })
+
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    })
+
+    expect(result.current.activeProfileName).toBeNull()
+    expect(result.current.activeProfileId).toBeNull()
   })
 })
 

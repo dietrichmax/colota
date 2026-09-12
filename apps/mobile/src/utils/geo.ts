@@ -103,8 +103,12 @@ export function formatSpeed(metersPerSecond: number): string {
 }
 
 /** Return the speed unit info (used by TrackMap). */
+// Module-level so the identity tracks the unit, and a caller can read it during render.
+const MPH = Object.freeze({ factor: MPH_PER_MPS, unit: "mph" })
+const KMH = Object.freeze({ factor: 3.6, unit: "km/h" })
+
 export function getSpeedUnit(): { factor: number; unit: string } {
-  return usesMiles() ? { factor: MPH_PER_MPS, unit: "mph" } : { factor: 3.6, unit: "km/h" }
+  return usesMiles() ? MPH : KMH
 }
 
 /** Format seconds duration as "Xh Ym" or "Ym" */
@@ -117,14 +121,24 @@ export function formatDuration(seconds: number): string {
 }
 
 /** Format a Unix-seconds timestamp as a localized time string. */
-export function formatTime(unixSeconds: number, showSeconds = false): string {
+/** The unit spelled out, for a screen reader. */
+export function spokenDistance(meters: number): string {
+  return formatDistance(meters).replace(/ km$/, " kilometres").replace(/ mi$/, " miles")
+}
+
+/** The app's clock, with the format passed in, so a sample of a format cannot drift from it. */
+export function formatTimeIn(unixSeconds: number, format: TimeFormat | null, showSeconds = false): string {
   const d = new Date(unixSeconds * 1000)
   return d.toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
     ...(showSeconds && { second: "2-digit" }),
-    ...(cachedTimeFormat && { hour12: cachedTimeFormat === "12h" })
+    ...(format && { hour12: format === "12h" })
   })
+}
+
+export function formatTime(unixSeconds: number, showSeconds = false): string {
+  return formatTimeIn(unixSeconds, cachedTimeFormat, showSeconds)
 }
 
 /** Format a Unix-seconds timestamp as a localized date string (e.g. "Wed, Feb 27"). */
@@ -153,6 +167,16 @@ export function shortDistanceUnit(): string {
   return usesMiles() ? "ft" : "m"
 }
 
+/** A stored speed in m/s as the whole number the speed field shows, in the user's unit. */
+export function speedToInput(metersPerSecond: number): number {
+  return Math.round(metersPerSecond * getSpeedUnit().factor)
+}
+
+/** A typed speed in the user's unit back to the m/s the profile stores. */
+export function inputToSpeed(value: number): number {
+  return value / getSpeedUnit().factor
+}
+
 /** Convert a user-entered short distance to meters. */
 export function inputToMeters(value: number): number {
   return usesMiles() ? value / FEET_PER_METER : value
@@ -161,6 +185,17 @@ export function inputToMeters(value: number): number {
 /** Convert meters to the user's short distance unit for pre-filling inputs. */
 export function metersToInput(meters: number): number {
   return usesMiles() ? Math.round(meters * FEET_PER_METER) : meters
+}
+
+/** A calendar date with its year, for a date that can be years away, such as a certificate's expiry. */
+export function formatDateWithYear(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+}
+
+/** A time alone for today, the date otherwise, so a caption stays short where the day is implied. */
+export function formatWhen(unixSeconds: number, now: Date = new Date()): string {
+  const sameDay = startOfDaySec(new Date(unixSeconds * 1000)) === startOfDaySec(now)
+  return sameDay ? formatTime(unixSeconds) : `${formatDate(unixSeconds)} · ${formatTime(unixSeconds)}`
 }
 
 /** Start of `date`'s local day, in Unix seconds. */

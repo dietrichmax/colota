@@ -6,3 +6,5 @@
 export { lightColors, darkColors } from "./colors"
 export type { ThemeColors, ThemeMode } from "./colors"
 export { fontFamily, fontSizes } from "./typography"
+export { radius } from "./radius"
+export type { RadiusName } from "./radius"

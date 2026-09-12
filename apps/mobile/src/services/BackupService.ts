@@ -7,9 +7,6 @@ import { NativeModules } from "react-native"
 
 const { BackupServiceModule } = NativeModules
 
-export const MIN_BACKUP_PASSWORD_LENGTH = 12
-export const MIN_BACKUP_PASSWORD_BITS = 50
-
 type PasswordStrengthScore = 0 | 1 | 2 | 3 | 4
 
 export type PasswordStrengthResult = {
@@ -21,6 +18,16 @@ export type PasswordStrengthResult = {
 export type BackupSource = {
   uri: string
   displayName: string | null
+}
+
+export const MIN_BACKUP_PASSWORD_LENGTH = 12
+export const MIN_BACKUP_PASSWORD_BITS = 50
+
+export type BackupManifest = {
+  createdAt: string
+  appVersion: string
+  appBuild: number
+  schemaDb: number
 }
 
 function passwordToCodes(password: string): number[] {
@@ -66,6 +73,12 @@ class BackupService {
     } finally {
       codes.fill(0)
     }
+  }
+
+  /** Reads the archive's manifest and nothing else, so a wrong password costs only a retry. */
+  static async describeBackup(uri: string, password: string): Promise<BackupManifest> {
+    BackupService.ensureModule()
+    return BackupServiceModule.describeBackup(uri, passwordToCodes(password))
   }
 
   static async restoreBackup(uri: string, password: string): Promise<void> {

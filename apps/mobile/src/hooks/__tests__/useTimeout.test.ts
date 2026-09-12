@@ -84,6 +84,18 @@ describe("useTimeout", () => {
     expect(callback).not.toHaveBeenCalled()
   })
 
+  // Callers list the returned object in dependency arrays. A fresh one per render re-runs their
+  // effects every render, which is how DataManagementScreen came to poll the database in a loop.
+  it("returns the same object across renders, so a dependency on it is stable", () => {
+    const { result, rerender } = renderHook(() => useTimeout())
+    const first = result.current
+
+    rerender({})
+    rerender({})
+
+    expect(result.current).toBe(first)
+  })
+
   it("clear is safe to call with no pending timeout", () => {
     const { result } = renderHook(() => useTimeout())
 

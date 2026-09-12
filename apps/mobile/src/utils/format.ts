@@ -20,6 +20,9 @@ export const formatCount = (count: number): string => {
   return `${(count / 1_000_000).toFixed(1)}M`
 }
 
+/** "1 file", "12 files". The count carries thousands separators; the noun takes the s. */
+export const plural = (n: number, noun: string): string => `${n.toLocaleString()} ${noun}${n === 1 ? "" : "s"}`
+
 /** Clamps `value` to the inclusive range [min, max]. */
 export const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value))
 

@@ -34,6 +34,8 @@ export interface LocationCoords {
   timestamp?: number
   /** User-entered free-text note (POI annotation). Local-only, not synced. */
   note?: string
+  /** 1 once the point reached the server, 0 while it waits in the queue. */
+  sent?: number
 }
 
 export interface Geofence {
@@ -60,7 +62,7 @@ export interface LocationTrackingResult {
   tracking: boolean
   startTracking: (overrideSettings?: Settings) => Promise<void>
   stopTracking: () => void
-  restartTracking: (newSettings?: Settings) => Promise<void>
+  restartTracking: (newSettings?: Settings) => Promise<boolean>
   reconnect: (settings?: Settings) => Promise<void>
   settings: Settings
 }
@@ -68,8 +70,6 @@ export interface LocationTrackingResult {
 // ============================================================================
 // API CONFIGURATION
 // ============================================================================
-
-export type ServerStatus = "connected" | "error" | "notConfigured"
 
 export interface ConnectionStatusProps {
   endpoint: string | null
@@ -109,6 +109,8 @@ export type HttpMethod = "POST" | "GET"
 
 export type SyncCondition = "any" | "wifi_any" | "wifi_ssid" | "vpn"
 
+export type ServerStatus = "connected" | "error" | "notConfigured"
+
 export type ApiTemplateName =
   "custom" | "dawarich" | "geopulse" | "overland" | "owntracks" | "phonetrack" | "reitti" | "traccar"
 
@@ -121,11 +123,17 @@ export interface ApiTemplate {
   fieldMap: FieldMap
   customFields: CustomField[]
   httpMethod?: HttpMethod
+  /** The shape of a working endpoint, shown as the field's placeholder and helper. */
+  endpointExample: string
+  /** Dawarich's batch mode posts elsewhere than its OwnTracks mode. */
+  batchEndpointExample?: string
 }
 
 export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTemplate> = {
   dawarich: {
     name: "dawarich",
+    endpointExample: "https://dawarich.example/api/v1/owntracks/points?api_key=YOUR_KEY",
+    batchEndpointExample: "https://dawarich.example/api/v1/overland/batches?api_key=YOUR_KEY",
     label: "Dawarich",
     description: "OwnTracks-compatible format for Dawarich",
     fieldMap: {
@@ -143,6 +151,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   geopulse: {
     name: "geopulse",
+    endpointExample: "https://geopulse.example/api/colota",
     label: "GeoPulse",
     description: "Native Colota format for GeoPulse",
     fieldMap: {
@@ -160,6 +169,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   overland: {
     name: "overland",
+    endpointExample: "https://overland.example/",
     label: "Overland",
     description: "Overland-compatible batch endpoint (GeoJSON Features)",
     fieldMap: {
@@ -177,6 +187,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   owntracks: {
     name: "owntracks",
+    endpointExample: "https://owntracks.example/pub",
     label: "OwnTracks",
     description: "Standard OwnTracks HTTP format",
     fieldMap: {
@@ -197,6 +208,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   phonetrack: {
     name: "phonetrack",
+    endpointExample: "https://nextcloud.example/apps/phonetrack/log/owntracks/SESSION_TOKEN/DEVICE_NAME",
     label: "PhoneTrack",
     description: "Nextcloud PhoneTrack logging format",
     fieldMap: {
@@ -214,6 +226,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   reitti: {
     name: "reitti",
+    endpointExample: "https://reitti.example/api/location",
     label: "Reitti",
     description: "OwnTracks-compatible format for Reitti",
     fieldMap: {
@@ -231,6 +244,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
   },
   traccar: {
     name: "traccar",
+    endpointExample: "http://192.168.1.10:5055",
     label: "Traccar",
     description: "Traccar OsmAnd protocol (HTTP GET)",
     httpMethod: "GET",
@@ -261,6 +275,8 @@ export interface TrackingPresetConfig {
   syncInterval: number
   retryInterval: number
   label: string
+  /** What the preset costs, read beside the numbers it prices. */
+  cost: string
   description: string
   batteryImpact: BatteryImpact
 }
@@ -272,6 +288,7 @@ export const TRACKING_PRESETS = {
     syncInterval: 0,
     retryInterval: 30,
     label: "Instant",
+    cost: "most battery, finest track",
     description: "Track every 5s • Send instantly",
     batteryImpact: "High"
   },
@@ -281,6 +298,7 @@ export const TRACKING_PRESETS = {
     syncInterval: 300,
     retryInterval: 300,
     label: "Balanced",
+    cost: "moderate battery, fewer wake-ups",
     description: "Track every 30s • Batch 5 min",
     batteryImpact: "Medium"
   },
@@ -289,7 +307,8 @@ export const TRACKING_PRESETS = {
     distance: 2,
     syncInterval: 900,
     retryInterval: 900,
-    label: "Power Saver",
+    label: "Power saver",
+    cost: "least battery, coarser track",
     description: "Track every 60s • Batch 15 min",
     batteryImpact: "Low"
   }
@@ -419,6 +438,10 @@ export interface DatabaseStats {
   total: number
   today: number
   databaseSizeMB: number
+  /** Epoch milliseconds of the last successful sync, 0 when none has happened yet. */
+  lastSyncTime?: number
+  /** The masked message of the last sync failure that crossed the consecutive-failure gate, empty after a success. */
+  lastSyncError?: string
 }
 
 // ============================================================================

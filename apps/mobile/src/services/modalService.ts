@@ -7,15 +7,22 @@ import { Alert } from "react-native"
 
 export type AlertVariant = "info" | "error" | "warning" | "success"
 
+export interface PromptInput {
+  placeholder?: string
+  initialValue?: string
+  multiline?: boolean
+}
+
 export interface ModalRequest {
   title: string
   message: string
   variant: AlertVariant
+  input?: PromptInput
   buttons: Array<{
     text: string
     style: "primary" | "secondary" | "destructive"
   }>
-  resolve: (buttonIndex: number) => void
+  resolve: (buttonIndex: number, value?: string) => void
 }
 
 type ModalHandler = (request: ModalRequest) => void
@@ -112,6 +119,45 @@ export function showConfirm(options: {
         { text: confirmText, style: destructive ? "destructive" : "primary" }
       ],
       resolve: (index) => resolve(index === 1)
+    })
+  })
+}
+
+export function showPrompt(options: {
+  title: string
+  message?: string
+  placeholder?: string
+  initialValue?: string
+  multiline?: boolean
+  confirmText?: string
+  cancelText?: string
+}): Promise<string | null> {
+  const {
+    title,
+    message = "",
+    placeholder,
+    initialValue,
+    multiline,
+    confirmText = "Save",
+    cancelText = "Cancel"
+  } = options
+
+  return new Promise((resolve) => {
+    if (!_handler) {
+      resolve(null)
+      return
+    }
+
+    _handler({
+      title,
+      message,
+      variant: "info",
+      input: { placeholder, initialValue, multiline },
+      buttons: [
+        { text: cancelText, style: "secondary" },
+        { text: confirmText, style: "primary" }
+      ],
+      resolve: (index, value) => resolve(index === 1 ? (value ?? "").trim() : null)
     })
   })
 }

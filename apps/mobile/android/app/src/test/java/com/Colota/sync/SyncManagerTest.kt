@@ -430,6 +430,29 @@ class SyncManagerTest {
         assertTrue(syncManager.lastSuccessfulSyncTime > 0)
     }
 
+    @Test
+    fun `queueAndSend records the success where the bridge reads it and clears a stale error`() = scope.runTest {
+        SyncState.reset()
+        SyncState.recordError("HTTP 401 Unauthorized")
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+
+        syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
+
+        assertEquals(syncManager.lastSuccessfulSyncTime, SyncState.lastSuccessTime)
+        assertEquals("", SyncState.lastSyncError)
+        SyncState.reset()
+    }
+
     // --- manualFlush ---
 
     @Test
@@ -1235,22 +1258,6 @@ class SyncManagerTest {
     }
 
     // ========================================================================
-    // Helpers
-    // ========================================================================
-
-    @Suppress("UNCHECKED_CAST")
-    private suspend fun callApplyBackoffDelay() {
-        val method = SyncManager::class.java.getDeclaredMethod(
-            "applyBackoffDelay",
-            Continuation::class.java
-        )
-        method.isAccessible = true
-        kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn<Unit> { cont ->
-            method.invoke(syncManager, cont)
-        }
-    }
-
-    // ========================================================================
     // One sender at a time
     // ========================================================================
 
@@ -1327,6 +1334,91 @@ class SyncManagerTest {
     }
 
     @Test
+    fun `a manual flush reports progress after a chunk that sent nothing`() = scope.runTest {
+        mockkObject(LocationServiceModule.Companion)
+        every { LocationServiceModule.sendSyncProgressEvent(any(), any(), any(), any()) } returns true
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        fakeQueue(10)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns false
+
+        syncManager.manualFlush()
+
+        // Sync Now frees its button after a silence, so a pass that only fails must still report
+        verify { LocationServiceModule.sendSyncProgressEvent(0, 10, 10, null) }
+
+        unmockkObject(LocationServiceModule.Companion)
+    }
+
+    @Test
+    fun `batch path reports progress after a batch that sent nothing`() = scope.runTest {
+        mockkObject(LocationServiceModule.Companion)
+        every { LocationServiceModule.sendSyncProgressEvent(any(), any(), any(), any()) } returns true
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 50
+        )
+        val items = (1L..50L).map {
+            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
+        }
+        every { dbHelper.getQueuedLocations(50) } returns items
+        every { dbHelper.getQueuedCount() } returns 50
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.NetworkError
+
+        syncManager.manualFlush()
+
+        // Sync Now frees its button after a silence, so a batch that only fails must still report
+        verify { LocationServiceModule.sendSyncProgressEvent(0, 50, 50, null) }
+
+        unmockkObject(LocationServiceModule.Companion)
+    }
+
+    @Test
+    fun `a manual flush waiting on a periodic pass hears that pass report`() = scope.runTest {
+        mockkObject(LocationServiceModule.Companion)
+        every { LocationServiceModule.sendSyncProgressEvent(any(), any(), any(), any()) } returns true
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 1,
+            retryIntervalSeconds = 1,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        fakeQueue(20)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); true }
+
+        syncManager.startPeriodicSync()
+        advanceTimeBy(1_200)
+        launch { syncManager.manualFlush() }
+        advanceTimeBy(1_400)
+
+        // The periodic pass has no screen of its own, but the waiting flush does and would give up on silence
+        verify { LocationServiceModule.sendSyncProgressEvent(10, 0, 20, null) }
+        // Only the periodic pass has posted so far, so the event can only be its report
+        coVerify(exactly = 20) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+
+        syncManager.stopPeriodicSync()
+        unmockkObject(LocationServiceModule.Companion)
+    }
+
+    @Test
     fun `a slow instant send does not hold back the next fix`() = scope.runTest {
         syncManager.updateConfig(
             endpoint = "https://example.com",
@@ -1378,6 +1470,35 @@ class SyncManagerTest {
     }
 
     @Test
+    fun `a manual flush cancelled while it waits still sends its ending event`() = scope.runTest {
+        mockkObject(LocationServiceModule.Companion)
+        every { LocationServiceModule.sendSyncProgressEvent(any(), any(), any(), any()) } returns true
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+        fakeQueue(20)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); true }
+
+        launch { syncManager.manualFlush() }
+        val waiting = launch { syncManager.manualFlush() }
+        advanceTimeBy(100)
+        waiting.cancel()
+        advanceTimeBy(100)
+
+        // Sync Now waits for this event, so a flush stopped before it got the lock must still send one
+        verify { LocationServiceModule.sendSyncProgressEvent(0, 0, 0, 20) }
+
+        advanceUntilIdle()
+        unmockkObject(LocationServiceModule.Companion)
+    }
+
+    @Test
     fun `a tick that finds only a row an instant send is posting counts no failure`() = scope.runTest {
         syncManager.updateConfig(
             endpoint = "https://example.com",
@@ -1399,6 +1520,22 @@ class SyncManagerTest {
 
         assertEquals(0, getField("consecutiveFailures"))
         coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    // ========================================================================
+    // Helpers
+    // ========================================================================
+
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun callApplyBackoffDelay() {
+        val method = SyncManager::class.java.getDeclaredMethod(
+            "applyBackoffDelay",
+            Continuation::class.java
+        )
+        method.isAccessible = true
+        kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn<Unit> { cont ->
+            method.invoke(syncManager, cont)
+        }
     }
 
     /** Rows leave only when a pass or an instant send removes them, so two senders running together see the same rows. */

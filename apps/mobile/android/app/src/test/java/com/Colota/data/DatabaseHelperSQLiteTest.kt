@@ -145,6 +145,8 @@ class DatabaseHelperSQLiteTest {
         DatabaseHelper.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
+            // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
+            // passes for any value and stops forcing a migration arm when the version moves.
             assertEquals(7, migrated.version)
             // migrateCandidate stamps the version unconditionally, so the version alone proves
             // nothing about the v7 step. This is the restore-an-older-backup path.
@@ -184,6 +186,8 @@ class DatabaseHelperSQLiteTest {
         DatabaseHelper.migrateCandidate(candidate)
 
         SQLiteDatabase.openDatabase(candidate.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { migrated ->
+            // A literal on purpose: migrateCandidate stamps the constant, so comparing against it
+            // passes for any value and stops forcing a migration arm when the version moves.
             assertEquals(7, migrated.version)
             assertMigratedTableExists(migrated, DatabaseHelper.TABLE_BOUNDARY_OVERRIDES)
             migrated.rawQuery("PRAGMA table_info(locations)", null).use { locCursor ->
@@ -1166,6 +1170,79 @@ class DatabaseHelperSQLiteTest {
         val remaining = db.getTableData(DatabaseHelper.TABLE_LOCATIONS, 100, 0)
         assertEquals(1, remaining.size)
         assertEquals(53.0, remaining[0]["latitude"] as Double, 0.001)
+    }
+
+    @Test
+    fun `countOlderThan counts exactly what deleteOlderThan then removes, so a preview cannot promise a wrong number`() {
+        val now = System.currentTimeMillis() / 1000
+        // Rows sitting on the boundary and one second either side, so a shift of one day or a flip
+        // between < and <= moves the two figures apart instead of leaving both unchanged.
+        val cutoff = db.countOlderThan(7).cutoffSeconds
+        db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = cutoff - 1)
+        db.saveLocation(latitude = 52.1, longitude = 13.1, timestamp = cutoff)
+        db.saveLocation(latitude = 52.2, longitude = 13.2, timestamp = cutoff + 1)
+        db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = now)
+
+        val predicted = db.countOlderThan(7).total
+        val deleted = db.deleteOlderThan(7)
+
+        assertEquals(predicted, deleted)
+        // Only the row strictly before the boundary goes; the one on it stays.
+        assertEquals(1, deleted)
+    }
+
+    @Test
+    fun `the boundary holds still across a dwell, so a confirmation cannot name less than the delete takes`() {
+        val first = db.countOlderThan(30).cutoffSeconds
+
+        Thread.sleep(20)
+
+        assertEquals(first, db.countOlderThan(30).cutoffSeconds)
+    }
+
+    @Test
+    fun `countUnsentOlderThan reports how many matches were never uploaded, since no copy of those survives`() {
+        val now = System.currentTimeMillis() / 1000
+        val sentId = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = now - 86400 * 10)
+        db.saveLocation(latitude = 52.1, longitude = 13.1, timestamp = now - 86400 * 9)
+        db.markLocationsSent(listOf(sentId))
+
+        assertEquals(2, db.countOlderThan(7).total)
+        assertEquals(1, db.countUnsentOlderThan(7))
+    }
+
+    @Test
+    fun `countOlderThan is zero on an empty window rather than reporting a phantom match`() {
+        db.saveLocation(latitude = 53.0, longitude = 14.0, timestamp = System.currentTimeMillis() / 1000)
+
+        assertEquals(0, db.countOlderThan(7).total)
+        assertEquals(0, db.countUnsentOlderThan(7))
+    }
+
+    @Test
+    fun `countOlderThan reports the boundary it counted at, so the confirmation cannot name a different one`() {
+        val now = System.currentTimeMillis() / 1000
+        db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = now - 86400 * 10)
+
+        val counted = db.countOlderThan(7)
+
+        // Every row it counted sits before the boundary it reports.
+        assertEquals(1, counted.total)
+        assertTrue(counted.cutoffSeconds <= now - 86400 * 7)
+        assertTrue(counted.cutoffSeconds > now - 86400 * 8)
+    }
+
+    @Test
+    fun `getStats agrees with the table on how many rows have been uploaded`() {
+        val sentId = db.saveLocation(latitude = 52.0, longitude = 13.0, timestamp = 1000L)
+        db.saveLocation(latitude = 52.1, longitude = 13.1, timestamp = 2000L)
+        db.saveLocation(latitude = 52.2, longitude = 13.2, timestamp = 3000L)
+        db.markLocationsSent(listOf(sentId))
+
+        val stats = db.getStats()
+
+        assertEquals(3, stats.total)
+        assertEquals(1, stats.sent)
     }
 
     // ========================================================================

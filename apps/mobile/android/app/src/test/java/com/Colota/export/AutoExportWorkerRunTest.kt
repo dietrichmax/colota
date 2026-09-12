@@ -125,4 +125,29 @@ class AutoExportWorkerRunTest {
         assertTrue("expected the verification error, got ${config.lastError}", config.lastError!!.contains("Export verification failed"))
         verify { createdDoc.delete() }
     }
+
+    @Test
+    fun `Export now exports while auto-export is switched off`() {
+        // The screen offers Export now whenever a directory is set, and the enabled flag is the
+        // schedule's, so the button used to return success without writing anything.
+        db.saveSetting("autoExportEnabled", "false")
+
+        val result = runWorker()
+
+        assertTrue("expected success, got $result", result is ListenableWorker.Result.Success)
+        val csv = written.toString(Charsets.UTF_8.name())
+        assertTrue("expected rows to be written", csv.contains("1700000500"))
+        assertEquals(200, AutoExportConfig.from(db).lastRowCount)
+    }
+
+    @Test
+    fun `a scheduled run still skips while auto-export is switched off`() {
+        db.saveSetting("autoExportEnabled", "false")
+
+        val worker = TestListenableWorkerBuilder<AutoExportWorker>(context).build()
+        val result = runBlocking { worker.doWork() }
+
+        assertTrue("expected success, got $result", result is ListenableWorker.Result.Success)
+        assertEquals("", written.toString(Charsets.UTF_8.name()))
+    }
 }

@@ -9,48 +9,69 @@ import { AUTOSAVE_DEBOUNCE_MS, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
 import { logger } from "../utils/logger"
 
 /**
- * Hook that encapsulates the debounced auto-save pattern used across settings screens.
+ * The debounced auto-save behind the settings screens.
  *
- * Manages:
- * - Debounced and immediate save triggers
- * - Saving/success state for FloatingSaveIndicator
- * - Timeout cleanup on unmount (via useTimeout)
+ * A plain write is not announced: the control the user moved is the confirmation, which is how
+ * Android settings behave. Only two outcomes get a message - a restart, because the service
+ * cycling has nothing on screen to show for it, and a failure.
  */
 export function useAutoSave() {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [isError, setIsError] = useState(false)
   const saveTimeout = useTimeout()
   const restartTimeout = useTimeout()
+  const messageTimeout = useTimeout()
   const successTimeout = useTimeout()
+
+  const announce = useCallback(
+    (text: string, failed: boolean) => {
+      setMessage(text)
+      setIsError(failed)
+      messageTimeout.set(() => setMessage(null), SAVE_SUCCESS_DISPLAY_MS)
+    },
+    [messageTimeout]
+  )
+
+  const runRestart = useCallback(
+    async (restartFn: () => Promise<boolean>) => {
+      try {
+        setSaveSuccess(true)
+        successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
+        if (await restartFn()) announce("Tracking restarted", false)
+      } catch (err) {
+        logger.error("[useAutoSave] Restart failed:", err)
+        announce("Could not restart tracking", true)
+      } finally {
+        setSaving(false)
+      }
+    },
+    [announce, successTimeout]
+  )
 
   /**
    * Schedules a debounced restart after settings are persisted.
    * Use when you need to save settings first, then restart tracking after the debounce.
    */
   const debouncedSaveAndRestart = useCallback(
-    (saveFn: () => Promise<void>, restartFn: () => Promise<void>) => {
+    (saveFn: () => Promise<void>, restartFn: () => Promise<boolean>) => {
       saveTimeout.set(async () => {
         setSaving(true)
         try {
           await saveFn()
-          // Restart immediately — input was already debounced by saveTimeout
-          restartTimeout.clear()
-          try {
-            await restartFn()
-            setSaveSuccess(true)
-            successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
-          } catch (err) {
-            logger.error("[useAutoSave] Restart failed:", err)
-          } finally {
-            setSaving(false)
-          }
         } catch (err) {
           setSaving(false)
           logger.error("[useAutoSave] Save failed:", err)
+          announce("Could not save", true)
+          return
         }
+        // Restart immediately: the input was already debounced by saveTimeout.
+        restartTimeout.clear()
+        await runRestart(restartFn)
       }, AUTOSAVE_DEBOUNCE_MS)
     },
-    [saveTimeout, restartTimeout, successTimeout]
+    [saveTimeout, restartTimeout, runRestart, announce]
   )
 
   /**
@@ -59,34 +80,27 @@ export function useAutoSave() {
    * but batch the restart.
    */
   const immediateSaveAndRestart = useCallback(
-    (saveFn: () => Promise<void>, restartFn: () => Promise<void>) => {
+    (saveFn: () => Promise<void>, restartFn: () => Promise<boolean>) => {
       saveTimeout.clear()
       setSaving(true)
       saveFn()
         .then(() => {
-          restartTimeout.set(async () => {
-            try {
-              await restartFn()
-              setSaveSuccess(true)
-              successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
-            } catch (err) {
-              logger.error("[useAutoSave] Restart failed:", err)
-            } finally {
-              setSaving(false)
-            }
-          }, AUTOSAVE_DEBOUNCE_MS)
+          restartTimeout.set(() => runRestart(restartFn), AUTOSAVE_DEBOUNCE_MS)
         })
         .catch((err) => {
           setSaving(false)
           logger.error("[useAutoSave] Save failed:", err)
+          announce("Could not save", true)
         })
     },
-    [saveTimeout, restartTimeout, successTimeout]
+    [saveTimeout, restartTimeout, runRestart, announce]
   )
 
   return {
     saving,
     saveSuccess,
+    message,
+    isError,
     debouncedSaveAndRestart,
     immediateSaveAndRestart
   }

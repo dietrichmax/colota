@@ -70,7 +70,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
               altitude: latest.altitude ?? 0,
               speed: latest.speed ?? 0,
               bearing: latest.bearing ?? 0,
-              timestamp: latest.timestamp ?? Date.now(),
+              timestamp: latest.timestamp ?? Math.floor(Date.now() / 1000),
               battery: latest.battery,
               battery_status: latest.batteryStatus
             })
@@ -98,7 +98,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
           altitude: event.altitude,
           speed: event.speed,
           bearing: event.bearing,
-          timestamp: event.timestamp,
+          timestamp: Math.floor(event.timestamp / 1000),
           battery: event.battery,
           battery_status: event.batteryStatus
         })
@@ -211,19 +211,20 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
    * Includes delay for Android to release foreground service resources
    * @param newSettings Settings for the new service instance
    */
+  /** False when nothing was cycled: tracking was off, or a restart was already in flight. */
   const restartTracking = useCallback(
-    async (newSettings?: Settings) => {
-      // Only restart if tracking is active — settings are persisted separately,
+    async (newSettings?: Settings): Promise<boolean> => {
+      // Only restart if tracking is active - settings are persisted separately,
       // so they'll be picked up when the user starts tracking later.
       if (!isTrackingRef.current) {
         logger.debug("[useLocationTracking] Not tracking, skip restart (settings saved separately)")
-        return
+        return false
       }
 
       if (restartingRef.current) {
         logger.debug("[useLocationTracking] Restart already in progress, queuing")
         restartQueuedRef.current = true
-        return
+        return false
       }
 
       logger.debug("[useLocationTracking] Restarting service")
@@ -237,6 +238,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
         await new Promise<void>((resolve) => setTimeout(resolve, SERVICE_RESTART_DELAY_MS))
 
         await startTracking(newSettings ?? settingsRef.current)
+        return true
       } finally {
         restartingRef.current = false
         setIsRestarting(false)
@@ -271,7 +273,13 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
 
       const perms = await checkPermissions()
       if (!perms.location) {
-        logger.warn("[useLocationTracking] Service is dead but location permission is gone, not restarting")
+        logger.warn("[useLocationTracking] Service is dead and location permission is gone - clearing tracking state")
+        await NativeLocationService.saveSetting("tracking_enabled", "false")
+        if (listenerRef.current) {
+          listenerRef.current.remove()
+          listenerRef.current = null
+        }
+        setTracking(false)
         return
       }
 
@@ -289,36 +297,39 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
    * Used after app restart when tracking_enabled is true in the DB.
    * Does NOT request permissions, but does restart the service if it died.
    */
-  const reconnect = useCallback(async (startSettings?: Settings) => {
-    if (isTrackingRef.current) {
-      logger.debug("[useLocationTracking] Already tracking, skip reconnect")
-      return
-    }
-
-    logger.debug("[useLocationTracking] Reconnecting to active service")
-    setTracking(true)
-
-    await reviveIfDead(startSettings ?? settingsRef.current)
-
-    try {
-      const latest = await NativeLocationService.getMostRecentLocation()
-      if (latest) {
-        setCoords({
-          latitude: latest.latitude,
-          longitude: latest.longitude,
-          accuracy: latest.accuracy,
-          altitude: latest.altitude ?? 0,
-          speed: latest.speed ?? 0,
-          bearing: latest.bearing ?? 0,
-          timestamp: latest.timestamp ?? Date.now(),
-          battery: latest.battery,
-          battery_status: latest.batteryStatus
-        })
+  const reconnect = useCallback(
+    async (startSettings?: Settings) => {
+      if (isTrackingRef.current) {
+        logger.debug("[useLocationTracking] Already tracking, skip reconnect")
+        return
       }
-    } catch (err) {
-      logger.error("[useLocationTracking] Failed to fetch location on reconnect:", err)
-    }
-  }, [reviveIfDead])
+
+      logger.debug("[useLocationTracking] Reconnecting to active service")
+      setTracking(true)
+
+      await reviveIfDead(startSettings ?? settingsRef.current)
+
+      try {
+        const latest = await NativeLocationService.getMostRecentLocation()
+        if (latest) {
+          setCoords({
+            latitude: latest.latitude,
+            longitude: latest.longitude,
+            accuracy: latest.accuracy,
+            altitude: latest.altitude ?? 0,
+            speed: latest.speed ?? 0,
+            bearing: latest.bearing ?? 0,
+            timestamp: latest.timestamp ?? Math.floor(Date.now() / 1000),
+            battery: latest.battery,
+            battery_status: latest.batteryStatus
+          })
+        }
+      } catch (err) {
+        logger.error("[useLocationTracking] Failed to fetch location on reconnect:", err)
+      }
+    },
+    [reviveIfDead]
+  )
 
   /**
    * Syncs tracking state and coords when app returns to foreground.
@@ -362,7 +373,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
                 altitude: latest.altitude ?? 0,
                 speed: latest.speed ?? 0,
                 bearing: latest.bearing ?? 0,
-                timestamp: latest.timestamp ?? Date.now(),
+                timestamp: latest.timestamp ?? Math.floor(Date.now() / 1000),
                 battery: latest.battery,
                 battery_status: latest.batteryStatus
               })

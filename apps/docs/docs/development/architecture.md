@@ -61,7 +61,7 @@ Three React Native bridge modules are registered by `LocationServicePackage`: `L
 The primary React Native bridge module (exposed as `"LocationServiceModule"`). Handles all JS-to-native communication for:
 
 - Service control (`startService`, `stopService`)
-- Database queries (`getStats`, `getTableData`, `getLocationsByDateRange`, `getDaysWithData`, `getDailyStats`)
+- Database queries (`getStats`, `getTableData`, `getLocationsByDateRange`, `getDaysWithData`, `getDailyStats`, `countOlderThan`, `countUnsentOlderThan`)
 - Geofence CRUD operations
 - Settings persistence
 - Device info, file operations, authentication
@@ -71,7 +71,8 @@ Emits events back to JavaScript:
 - `onLocationUpdate` - new GPS fix received
 - `onTrackingStopped` - service stopped (user action or OOM kill)
 - `onSyncError` - 3+ consecutive sync failures
-- `onSyncProgress` - batch sync progress updates with `{sent, failed, total}`
+- `onSyncProgress` - batch sync progress updates with `{sent, failed, total}`, plus `remaining` on the one event that ends a pass. A pass caps at `MAX_BATCHES_PER_SYNC`, so `sent + failed` reaching `total` does not mean the queue is empty
+- `onDatabaseCompacted` - the detached `VACUUM` after a bulk delete has finished, with `{success}`, so a size read before it is known to be stale
 - `onPauseZoneChange` - entered or exited a geofence pause zone
 - `onProfileSwitch` - a tracking profile was activated or deactivated
 - `onAutoExportComplete` - auto-export finished with `{success, fileName, rowCount, error}`
@@ -82,12 +83,13 @@ Second React Native bridge module (exposed as `"BackupServiceModule"`). Owns the
 
 - `pickBackupDestination` / `pickBackupSource` - launches the Storage Access Framework picker (`ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT`); a single in-flight picker is enforced via a 5-minute timeout.
 - `createBackup(uri, password)` - validates password strength, claims an operation mutex, runs `BackupBuilder` against a cacheDir-staged file, then atomically copies into the SAF destination. Stops promotion to a foreground service when finished.
-- `restoreBackup(uri, password)` - cancels the location service and any auto-export work, polls until both stop, runs `BackupRestorer`, then forces `tracking_enabled=false` so the destination device doesn't auto-resume. Its `finally` re-arms the auto-export alarm from whichever DB is live, because `pauseAllDbWriters` cancelled it whether or not the restore went through, and starts tracking again through `TrackingControl.start` when the restore failed before it replaced the database. A failure raised after the swap (`SECRETS_PARTIAL`) leaves tracking off like a success does, because the live DB is then the backup's.
+- `describeBackup(uri, password)` - reads the archive's `manifest.json` and stops there, returning `createdAt`, `appVersion`, `appBuild` and `schemaDb`. It claims the same operation mutex but starts no foreground service, pauses no writers and extracts nothing, so a wrong password costs a retry rather than a stopped recording. The manifest is the first entry the builder writes, so the read costs one key derivation and the first chunk. A schema newer than the installed app is refused here, before any destructive control is offered.
+- `restoreBackup(uri, password)` - cancels the location service and any auto-export work, polls until both stop, then runs `BackupRestorer`. Its `finally` writes `tracking_enabled=false` whenever the database was replaced, success or failure, so the destination device doesn't auto-resume; the write sits in the `finally` and not the try because a throw after the swap would otherwise leave the flag as the archive carried it and recording could resume at the next revive. The same `finally` re-arms the auto-export alarm from whichever DB is live, because `pauseAllDbWriters` cancelled it whether or not the restore went through, and starts tracking again through `TrackingControl.start` when the restore failed before it replaced the database. Any failure raised after the swap that is not `SECRETS_PARTIAL` is reported to JS as `E_BACKUP_RESTORED_INCOMPLETE`, because a caller cannot otherwise tell from the code whether the swap already happened, and that answer decides whether it reloads the bundle.
 - `applyRestore` - JS calls this after the success dialog is dismissed; it triggers `reactHost.reload()` so all modules re-read state from the restored DB.
 
 Both `createBackup` and `restoreBackup` await `BackupOrphanCleanup.awaitComplete()` before claiming the operation mutex, ensuring the launch-time orphan sweeper can't race active operations.
 
-Errors are surfaced to JS as `E_BACKUP_<ERROR_NAME>` codes that map onto the `BackupError` enum (`WRONG_PASSWORD`, `BAD_MAGIC`, `UNSUPPORTED_VERSION`, `UNSUPPORTED_KDF`, `UNSUPPORTED_SCHEMA`, `MISSING_ENTRY`, `INTEGRITY_FAIL`, `TRUNCATED`, `TAMPERED`, `SECRETS_PARTIAL`).
+Errors are surfaced to JS as `E_BACKUP_<ERROR_NAME>` codes that map onto the `BackupError` enum (`WRONG_PASSWORD`, `BAD_MAGIC`, `UNSUPPORTED_VERSION`, `UNSUPPORTED_KDF`, `UNSUPPORTED_SCHEMA`, `MISSING_ENTRY`, `INTEGRITY_FAIL`, `MIGRATION_FAILED`, `NO_SPACE`, `TRUNCATED`, `TAMPERED`, `SECRETS_PARTIAL`), plus `E_BACKUP_RESTORED_INCOMPLETE`, which is not an enum member but the code a post-swap failure is reported under.
 
 ### Backup Pipeline
 
@@ -98,7 +100,7 @@ Native-only modules in `backup/` package. The on-disk format is documented in `B
 | `BackupCrypto` | Chunked AES-256-GCM encrypt/decrypt keyed by Argon2id. Each chunk binds the file header into its GCM AAD so any header tamper invalidates the first tag. Argon2 is deferred until the first ciphertext chunk arrives so wrong-password rejection costs no key derivation. |
 | `BackupFormat` | On-disk layout constants, `BackupHeader` data class, `BackupError` enum, and `BackupException`. 76-byte header (magic, format version, KDF id, KDF params, 32-byte salt, 8-byte nonce prefix, chunk size, reserved) followed by length-prefixed ciphertext chunks and an end-marker + chunk-count footer. |
 | `BackupBuilder` | Snapshots the SQLite database via `DatabaseHelper.snapshotTo` (uses `VACUUM INTO` on API 30+, file-copy with WAL checkpoint as fallback), runs `quick_check`, extracts secrets via `SecureStorageHelper.exportPlaintextForBackup()`, deflates everything into a zip, then streams it through `BackupCrypto.encrypt`. Picks Argon2 memory by `ActivityManager.isLowRamDevice` (32 MiB / 64 MiB). |
-| `BackupRestorer` | Decrypts the file via a `PipedInputStream` into a `ZipInputStream`, extracts entries to a temp dir with bounded reads (zip-bomb defense), validates the manifest schema version, runs `PRAGMA integrity_check` on the candidate DB, calls `DatabaseHelper.migrateCandidate` to run any required migrations on the candidate, then atomically swaps the live DB via `DatabaseHelper.replaceLiveDatabase`, then re-imports secrets. A failed secrets commit is surfaced as `SECRETS_PARTIAL` so the UI can prompt the user to re-enter credentials. |
+| `BackupRestorer` | Decrypts the file via a `PipedInputStream` into a `ZipInputStream`, extracts entries to a temp dir with bounded reads (zip-bomb defense), validates the manifest schema version, runs `PRAGMA integrity_check` on the candidate DB, calls `DatabaseHelper.migrateCandidate` to run any required migrations on the candidate, then atomically swaps the live DB via `DatabaseHelper.replaceLiveDatabase`, then re-imports secrets. A migration that fails raises `MIGRATION_FAILED` rather than `INTEGRITY_FAIL`, because the archive is intact and it is this app's reading of it that failed. A failed secrets commit is surfaced as `SECRETS_PARTIAL` so the UI can prompt the user to re-enter credentials. `describe(input, password)` is the read-only half behind `describeBackup`: it stops at `manifest.json` and extracts nothing. |
 | `BackupForegroundService` | Notification-only foreground service shown during long backups/restores. Uses `FOREGROUND_SERVICE_TYPE_DATA_SYNC`. Holds no work itself - the actual encryption stays in `BackupServiceModule`'s coroutine so the password `CharArray` lives only on the heap, not in service state. |
 | `BackupOrphanCleanup` | Singleton kicked off from `MainApplication.onCreate` on a daemon thread. Sweeps `cacheDir/backup_temp`, `cacheDir/restore_temp`, `cacheDir/pending_backup.colota`, and `<dbDir>/Colota.db.incoming` left behind by a process death mid-operation. Exposes a `CompletableDeferred` so `BackupServiceModule` can await completion before claiming the operation mutex. |
 | `PasswordStrength` | Mirror of the JS-side `passwordStrength.ts`. Enforces the 12-character floor and ~50-bit entropy floor; sequential runs and `<4` distinct chars cap the score. |
@@ -123,7 +125,7 @@ Native-only modules in the `importer/` package. Format-specific parsers all retu
 | Module | Purpose |
 | --- | --- |
 | `LocationImporter` | Orchestrator. Detects format from the sniff (XML root for GPX/KML, JSON top-level keys for GeoJSON / Google Timeline, CSV header for CSV), dispatches to the per-format parser, runs streaming **merge-walk dedup** against an ASC-ordered DB cursor (no existing-key `HashSet` is materialised - memory is O(1) on top of the parsed-rows list, so the dedup scales to multi-million-row user histories without OOM). On commit, the recovery path writes `sent = 1` and skips the queue; the migration path (`asQueued=true`) builds payloads via the live `PayloadBuilder` against a synthetic `android.location.Location` so the import path can't drift from the live tracking path. |
-| `GeoJsonParser` | Streaming `android.util.JsonReader`-based parser for a `FeatureCollection` of `Point` features (scalar properties) or Colota's columnar `MultiPoint` features (per-point attributes as parallel arrays, including `note` / `battery_status`), zipped by index. Tolerates foreign shapes - any feature without a recognised time / non-Point-or-MultiPoint geometry is counted as invalid and dropped, but parsing continues. |
+| `GeoJsonParser` | Streaming `android.util.JsonReader`-based parser for a `FeatureCollection` of `Point` features (scalar properties) or the columnar `MultiPoint` features Colota exported in 1.12.0 through 1.16.0 (per-point attributes as parallel arrays, including `note` / `battery_status`), zipped by index. The MultiPoint reader is permanent: such a file can be the last copy of data since deleted from the device. The writer emits Point features only. Tolerates foreign shapes - any feature without a recognised time / non-Point-or-MultiPoint geometry is counted as invalid and dropped, but parsing continues. |
 | `GoogleTimelineParser` | Handles both Google Timeline schemas in a single pass: legacy Takeout (`locations[].latitudeE7/longitudeE7/timestampMs`) and the new on-device export (`semanticSegments[].timelinePath[]` + `rawSignals[].position` with degree-suffix coord strings). Visit/activity inferences are intentionally skipped. |
 | `GpxParser` | `XmlPullParser`-based. Collects `<wpt>` + `<rtept>` + `<trkpt>` uniformly into the flat locations table. Recognises Garmin's nested `TrackPointExtension` wrapper so sport-watch metadata (speed, course) lands on the row. |
 | `KmlParser` | `XmlPullParser`-based. Reads `Placemark/Point/coordinates` (KML's `lon,lat[,alt]` order, flipped back internally) with `TimeStamp/when`. `LineString`-only Placemarks are dropped + counted as invalid since the KML schema doesn't carry per-vertex timestamps. |
@@ -155,16 +157,9 @@ An Android foreground service that runs continuously for GPS tracking. Manages:
 - Stationary detection - slows GPS to the profile's interval after 60s of fixes without movement; resume is driven by the shared `MotionStateDetector` (accelerometer variance, with SIG_MOTION as a fast-path for sharp wake events). It keeps working inside a pause zone and during an entry delay, since fixes reach `ProfileManager` before the in-zone drop; only a hold that stops the stream can prevent a verdict.
 - Queuing data for server sync
 
-**Alarms go through a receiver, not the service.** Each scheduler targets a `BroadcastReceiver`
-that then starts the service. That keeps the PendingIntent a plain explicit broadcast, and the
-foreground-service start runs inside the alarm's temporary allowlist window.
+**Alarms go through a receiver, not the service.** Each scheduler targets a `BroadcastReceiver` that then starts the service. That keeps the PendingIntent a plain explicit broadcast, and the foreground-service start runs inside the alarm's temporary allowlist window.
 
-**Intent vs liveness.** The `tracking_enabled` setting records that the user wants tracking and
-deliberately survives process death and reboot. Whether a service exists right now is
-`LocationForegroundService.isRunning`. Anything asking "is tracking alive" must read `isRunning`,
-because a service the system killed leaves the flag true. Recovery is layered: the app reconciles
-the two whenever it reaches the foreground, and `TrackingWatchdogScheduler` covers the window while
-the app stays closed.
+**Intent vs liveness.** The `tracking_enabled` setting records that the user wants tracking and deliberately survives process death and reboot. Whether a service exists right now is `LocationForegroundService.isRunning`. Anything asking "is tracking alive" must read `isRunning`, because a service the system killed leaves the flag true. Recovery is layered: the app reconciles the two whenever it reaches the foreground, and `TrackingWatchdogScheduler` covers the window while the app stays closed. Reconciling can also drop the intent rather than honour it: a revoked location permission means no service can be started again, so the foreground reconciler clears the flag and the watchdog stops re-arming itself.
 
 ### NotificationHelper
 
@@ -256,7 +251,7 @@ The stationary condition is decided by the fixes and never by a timer. `evaluate
 
 ### ProfileHelper
 
-Database access layer for tracking profiles and trip events. Maintains a `TimedCache` of enabled profiles (30s TTL) and provides CRUD operations plus trip event logging.
+Database access layer for tracking profiles and trip events. Maintains a `TimedCache` of enabled profiles (30s TTL) ordered by priority then id, so equal priorities go to the older profile, and provides CRUD operations plus trip event logging.
 
 ### ConditionMonitor
 
@@ -290,7 +285,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `PayloadBuilder` | Builds outgoing JSON payloads (field-mapped, Overland batch envelope, Traccar JSON) and extracts envelope custom fields |
 | `ServiceConfig` | Centralized configuration data class |
 | `TimedCache` | Generic TTL cache used for queue count, device info, profiles, and network state |
-| `BuildConfigModule` | Exposes build constants (SDK versions, app version) to JS |
+| `BuildConfigModule` | Exposes the version name, version code, flavor and device language to JS, plus `getSystemPalette` - the Android 12+ wallpaper tonal steps as `#RRGGBB` hex, null below API 31 |
 | `AppLogger` | Centralized logger - always active, all tags prefixed with `Colota.` for logcat filtering |
 | `AutoExportWorker` | WorkManager `CoroutineWorker` enqueued by `AutoExportAlarmReceiver` - performs the export (chunked writes to a per-run temp file, foreground service, retries, retention cleanup), verifies the copy by bytes written and re-arms the next alarm in `finally` |
 | `AutoExportAlarmReceiver` | Broadcast receiver fired by AlarmManager at the configured time - hands off to `AutoExportWorker` because the receiver's 10s budget can't run an export |
@@ -307,31 +302,34 @@ For backups, two `internal` methods support the export/import flow without expos
 
 | Screen | Purpose |
 | --- | --- |
-| `DashboardScreen` | Live map with tracking controls, coordinates, database stats, geofence and profile status |
-| `SettingsScreen` | Hub with stats card and navigation to Connection, Tracking & Sync, API Field Mapping, Tracking Profiles, Appearance and data/about screens |
-| `ConnectionScreen` | Server endpoint URL, offline mode toggle and connection test |
+| `DashboardScreen` | Full-bleed map with no header. One banner slot under the status inset for a missing permission, location services off or a critical battery, and a docked card over the bottom edge: the tracking state line, the interval row (fix cadence and sync cadence, from the active profile or from settings; a zero sync interval reads as instant) and the server row. The Start/Stop pill and the Route toggle float above the dock. Nothing polls: it reads on focus and takes the rest from events |
+| `SettingsScreen` | The hub, a tab of five grouped lists: Tracking (Connection, Tracking & sync, Tracking profiles), Display, Data, Help and About. Two rows carry live state through the derivation their target screen opens with (`serverState.describeServer`, `profileRow.profileStateLabel`); every other sub is a stored value, an on-disk fact or the nouns inside the screen, computed by `utils/settingsRow` |
+| `ConnectionScreen` | The server hub: a sync state line from `utils/serverState`, offline mode, the endpoint (saved on blur), Test connection, and rows to Request format, Authentication and Client certificate |
 | `TrackingSyncScreen` | GPS interval, distance filter, accuracy threshold and sync strategy preset |
-| `AppearanceScreen` | Light/dark theme, unit system, time format and custom map tile URLs (light and dark) |
-| `ApiSettingsScreen` | Endpoint URL, HTTP method, field mapping with backend templates |
-| `AuthSettingsScreen` | Authentication method (None, Basic Auth, Bearer Token) and custom HTTP headers, with a link row to mTLS Settings |
-| `MtlsSettingsScreen` | Client certificate (PKCS12 import + Android Keystore storage) and Trusted Server CA management |
-| `GeofenceScreen` | Create, edit, and delete pause zones on an interactive map |
-| `GeofenceEditorScreen` | Configure a zone: name, radius, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
-| `TrackingProfilesScreen` | List and manage condition-based tracking profiles |
-| `ProfileEditorScreen` | Create/edit a profile's name, condition, GPS settings, priority, and deactivation delay |
-| `LocationInspectorScreen` | Calendar day picker with activity dots, map tab with trip-colored tracks, trips tab with trip cards, per-trip and multi-select export and multi-select delete |
-| `TripDetailScreen` | Full trip view with dedicated map, stats grid, speed and elevation profile charts, per-trip export, and per-trip delete |
-| `LocationSummaryScreen` | Aggregated stats for selectable periods (week/month/30 days) with daily breakdown and tap-to-inspect navigation |
+| `AppearanceScreen` | Theme, wallpaper colors on Android 12 and up, unit system, time format and custom map tile URLs (light and dark, refused unless they parse as an http or https URL) |
+| `ApiSettingsScreen` | Route **Request Format**. Backend template as a row opening the picker, HTTP method and Dawarich mode as radio rows, and the field mapping |
+| `BackendTemplateScreen` | The eight backend templates as radio rows, each stating what it sends, returning the choice with `popTo` and `merge`. Eight options that each need a sentence do not fit inline on a form screen |
+| `AuthSettingsScreen` | Authentication method as a radio group (None, Basic auth, Bearer token) with never-echoed secrets, and custom HTTP headers |
+| `MtlsSettingsScreen` | Client certificate (device store pick or PKCS12 import into the Android Keystore) and the trusted server CA, each with a state line from `utils/certificateState` |
+| `GeofenceScreen` | Pause zones as rows over a map. Create geofence opens the editor on an empty draft; deletion happens there |
+| `GeofenceEditorScreen` | Every property of a zone: name, radius, location, record pause, WiFi pause, motionless pause and timeout, stationary heartbeat |
+| `PlaceZoneScreen` | Picks a zone coordinate on a map with the radius drawn live, returning it to the editor with `popTo` and `merge` |
+| `TrackingProfilesScreen` | One card: a state line naming the profile in force (or what applies instead), then a row per profile in evaluation order reading as a rule, each with its enabled switch |
+| `ProfileEditorScreen` | The rule as a live sentence, then Condition, Profile (name, priority), Tracking while active and Switching, with inline validation and a Save button |
+| `LocationHistoryScreen` | One day at a time: a day header (chevrons, title opening the calendar dialog, ledger caption) over Map, Trips and Data lenses. Map docks a card over the track: the trip rows as legend, the tapped point (split, delete, note) or the empty day's next step. Trips is one card of trip rows; long-press turns the header into a contextual action bar for export, merge and delete. Data is a frozen-time table whose row tap opens the point on the map. Export of the day and the summary live in the header |
+| `TripDetailScreen` | A trip stepper (swatch, name, date and times) over the trip's map, where a tapped point docks its card for split and note; a ledger of distance, duration, speed, points and elevation, then the speed and elevation charts; export and delete in the header |
+| `LocationSummaryScreen` | A period stepper (week or month) over a ledger of distance, trips, active days and average, and the period's days as rows that open the day in Location History; each period is read from the daily stats on its own, since a year or all time would walk every row |
 | `ExportLocationsScreen` | Export all tracked locations via native streaming converters as CSV, GeoJSON, GPX, or KML |
 | `ImportLocationsScreen` | Import external location files (GeoJSON, Google Timeline legacy + new, GPX, KML, CSV) with auto format detection, dedup preview, and recovery vs migration (queue-for-sync) commit choice |
 | `AutoExportScreen` | Configure scheduled auto-export: directory, format, frequency, time of day, weekday or day-of-month, export range and file retention |
-| `OfflineMapsScreen` | Download and manage offline map areas - interactive bounding box picker, size estimate, progress tracking, and area deletion |
-| `DataManagementScreen` | Clear sent history, delete old data, vacuum database, sync controls |
+| `OfflineMapsScreen` | Download and manage offline map areas - the viewport as the bounding box with a live estimate, one download at a time with progress the screen picks up again on return, re-download and delete, a Map style changed mark |
+| `DataManagementScreen` | Database ledger, manual flush, compaction, deletes by sync state or age |
 | `BackupRestoreScreen` | Create or restore a password-encrypted `.colota` archive of all data, with strength meter and no-recovery confirmation |
 | `SetupImportScreen` | Confirmation screen for `colota://setup` deep link imports |
 | `ShareSetupScreen` | Bundles selected config categories into a `colota://setup` link to share; credentials opt-in |
-| `ActivityLogScreen` | In-app log viewer with level filtering, search, and export |
-| `AboutScreen` | App version, device info, links to repository and privacy policy |
+| `LoggingScreen` | Records a log file and saves it as one file: capture state, the toggle, and the save and delete actions, which are absent while the file is empty |
+| `LogPreviewScreen` | Reads the recorded file, or the system log while recording is off. Newest first, search, and a single-select severity floor whose chips carry their own counts |
+| `AboutScreen` | The app's icon and name over the version with its build code, then the privacy policy, licence and source links and the copyright notice; map credits stay on the map's own dialog |
 
 ### Services
 
@@ -352,10 +350,11 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 | Component | Purpose |
 | --- | --- |
 | `ColotaMapView` | Shared base map component wrapping MapLibre's `MapView` with OpenFreeMap vector tiles, dark mode style transformation, custom compass, and attribution |
-| `DashboardMap` | Live tracking map with user marker, accuracy circle, today's track overlay with toggle button, geofence polygons with labels, auto-center, and center button |
-| `TrackMap` | Location history map with trip-colored track segments, tappable point markers with detail popups, fit-to-track bounds, and trip legend |
-| `CalendarPicker` | Day picker with month navigation, dot indicators for days with data, and daily distance/count display |
-| `TripList` | Segmented trip cards with distance, duration, avg speed, elevation gain/loss. Per-trip share icon plus a long-press contextual action bar for multi-select export and delete |
+| `DashboardMap` | Live tracking map with user marker, accuracy circle, today's track (its visibility is the screen's Route toggle, the map only draws it), geofence polygons with labels, follow-me until the user pans, then a centre button in the disc column. Frames the last known fix, or the zones when there is none |
+| `TrackMap` | Location history map: trip-colored track segments over a casing layer, a focused trip drawn wider while the rest dim, 48 dp point hitboxes, fit-to-day and fit-to-trip bounds. Selection and focus are props; it draws no popup or legend |
+| `CalendarPicker` | Day, month and year panes inside `DayPickerModal`, dot indicators for days with data, per-day stats spoken by the cell |
+| `LocationTable` | The day's points newest first with a frozen time column beside a horizontally scrolling pane; a Sync column when an endpoint is set; a row tap opens the point on the map |
+| `TripList` | One card of `TripRow`s (swatch, number, time range, distance, duration, speed) with controlled selection: long-press enters, tap toggles; the screen owns the action bar, export, merge and delete |
 | `GeofenceLayers` | Shared geofence rendering (fill polygons, stroke outlines, labels) used by DashboardMap and GeofenceScreen |
 | `UserLocationOverlay` | User position dot with accuracy circle, used by DashboardMap and GeofenceScreen |
 | `MapCenterButton` | Reusable button overlay to re-center the map |
@@ -365,11 +364,13 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 | Export | Purpose |
 | --- | --- |
 | `createOfflinePack` | Creates a MapLibre offline pack for a bounding box at z8-14 |
-| `loadOfflineAreas` | Fetches all stored packs from MapLibre's `OfflineManager` and returns status info (size, complete, active) |
+| `loadOfflineAreas` | Fetches all stored packs from MapLibre's `OfflineManager` and returns status info (size, complete, active) and each pack's bounds |
+| `subscribeOfflinePack` | Re-attaches progress and error listeners to a pack native reports active and returns its status. Never call it on an inactive pack: observing one re-activates it |
+| `pruneOfflineAreaBounds` | Drops sidecar entries whose pack is gone, in one write |
 | `deleteOfflineArea` | Unsubscribes, pauses, and deletes a pack; resets the tile database when the last pack is removed to reclaim OS storage |
 | `willExceedTileLimit` | Estimates whether an area would hit the 100k-tile cap before downloading |
 | `estimateSizeLabel` / `estimateSizeBytes` | Pre-download size estimates using per-zoom tile counting and per-tile byte averages |
-| `loadOfflineAreaBounds` / `saveOfflineAreaBounds` / `removeOfflineAreaBounds` | Persist area metadata (center, radius) to the native SQLite settings table |
+| `loadOfflineAreaBounds` / `saveOfflineAreaBounds` / `removeOfflineAreaBounds` | Persist area metadata (style URL and completion time; the extent comes from the pack) to the native SQLite settings table |
 
 Supporting utilities in `mapUtils.ts`:
 
@@ -388,28 +389,30 @@ Supporting utilities in `mapUtils.ts`:
 
 | Utility | Purpose |
 | --- | --- |
-| `logger` | Environment-aware logging - suppresses debug/info console output in production via `__DEV__`, always logs warn/error to console. All levels are always captured in a ring buffer (2000 entries) for the Logging screen |
+| `logger` | Environment-aware logging - suppresses debug/info console output in production via `__DEV__`, always logs warn/error to console. All levels are always captured in a ring buffer (`MAX_BUFFER_SIZE`, 2000 entries) which the Logging screen previews and `logExport.buildAppLog` formats into `AppFileLogger`'s own line shape for the exported file |
+| `logExport` | Parses native log lines into `MergedLogEntry` and builds the two halves of an export. A line matching neither the file nor the logcat shape is a continuation and inherits the time and level of the line above it, so a stack trace filters and sorts with the throw it belongs to. `buildExportHeader` writes the version, flavor, device and capture window; `buildAppLog` writes the ring buffer with an `APP_LOG_COVERAGE` marker at its first line, because the buffer spans one process while the recorded file spans restarts |
+| `LogExportMerger` (Kotlin, `util/`) | Interleaves the app log into the recorded segments by timestamp while streaming them to the SAF document, so an export is one timeline and never holds a multi-megabyte file in memory. The merge is native because the segments are copied natively and the bridge only hands JS a capped tail of them, so a JS-side merge would truncate the file it completes |
 | `geo` | Haversine distance, speed/distance/duration/time formatting with configurable unit system (metric/imperial) and time format (12h/24h), auto-detected from locale on first use |
 | `exportConverters` | Export-format metadata (labels, icons, extensions, MIME types) for the export UI. Serialization itself is native - see `ExportConverters.kt` |
 | `trips` | Trip segmentation via time-gap detection (15-min threshold), dropping segments whose bounding box spans under 100 m so stationary heartbeat runs do not become trips, plus distance computation, trip stats (avg speed, elevation gain/loss), and trip color assignment. Elevation is smoothed over a time window before accumulating, since raw altitude swings between fixes overstate the climb. Manual `trip_boundary_overrides` take priority over the gap threshold, and a segment abutting a forced split is exempt from the 100 m filter so an explicit edit is never silently dropped. `getDailyStats` in `DatabaseHelper.kt` mirrors all of this for the calendar and summary |
-| `queueStatus` | Maps sync queue size to color indicators for the dashboard |
+| `dashboardState` | Pure functions behind the Dashboard: `pickBannerCondition` ranks the one banner slot (location grant, background grant while tracking, location services, battery), `describeState` turns tracking, pause and fix state into the dock's state line, `intervalText` and `formatLastFix` |
 | `settingsValidation` | URL validation and security checks for endpoint configuration |
 
 ### Hooks
 
-| Hook                  | Purpose                                                                                  |
-| --------------------- | ---------------------------------------------------------------------------------------- |
+| Hook | Purpose |
+| --- | --- |
 | `useLocationTracking` | Manages the foreground service lifecycle, native event subscriptions, and location state. On app foreground it reconciles the user's intent against real service liveness and restarts a service that died |
-| `useTheme`            | Provides theme colors, mode, and toggle from ThemeProvider context                       |
-| `useAutoSave`         | Debounced auto-save pattern for settings screens                                         |
-| `useTimeout`          | Managed timeout with automatic cleanup on unmount                                        |
+| `useTheme` | Provides theme colors, mode, and toggle from ThemeProvider context |
+| `useAutoSave` | Debounced auto-save pattern for settings screens |
+| `useTimeout` | Managed timeout with automatic cleanup on unmount |
 
 ### State Management
 
 The app uses React Context for global state:
 
 - **ThemeProvider** - Light/dark theme with system preference sync
-- **TrackingProvider** - Single source of truth for tracking state, coordinates, settings, and active profile name. Hydrates from SQLite on mount, restores the active profile from the running service on reconnect, and persists changes back through `SettingsService`.
+- **TrackingProvider** - Single source of truth for tracking state, coordinates, settings and the active profile's name and id. Hydrates from SQLite on mount, restores the active profile's name and id from the running service on reconnect, and persists changes back through `SettingsService`.
 
 ### Data Flow
 

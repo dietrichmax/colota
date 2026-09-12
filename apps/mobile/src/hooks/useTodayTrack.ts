@@ -91,15 +91,8 @@ export function useTodayTrack(tracking: boolean, coords: LocationCoords | null) 
     }
   }, [])
 
-  // Initial load + day rollover check
+  // Today's track is drawn idle too, so the load does not wait for tracking; a start or stop reloads.
   useEffect(() => {
-    if (!tracking) {
-      locationsRef.current = []
-      lastTimestampRef.current = 0
-      loadedDayRef.current = ""
-      setVersion((v) => v + 1)
-      return
-    }
     loadFromDb()
   }, [tracking, loadFromDb])
 
@@ -130,14 +123,19 @@ export function useTodayTrack(tracking: boolean, coords: LocationCoords | null) 
     scheduleFlush()
   }, [tracking, coords, scheduleFlush])
 
-  // Catch up on locations missed while backgrounded (incremental)
+  // Catch up on locations missed while backgrounded, and drop yesterday's track once the day has turned.
   useEffect(() => {
-    if (!tracking) return
-
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active" && lastTimestampRef.current > 0) {
+      if (state !== "active") return
+      if (loadedDayRef.current && loadedDayRef.current !== todayDateStr()) {
+        locationsRef.current = []
+        lastTimestampRef.current = 0
+        loadFromDb()
+      } else if (!tracking) {
+        return
+      } else if (lastTimestampRef.current > 0) {
         loadFromDb(lastTimestampRef.current)
-      } else if (state === "active") {
+      } else {
         loadFromDb()
       }
     })

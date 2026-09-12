@@ -9,16 +9,20 @@ jest.mock("react-native", () => ({
         sent: 100,
         total: 105,
         today: 20,
-        databaseSizeMB: 1.5
+        databaseSizeMB: 1.5,
+        lastSyncTime: 0,
+        lastSyncError: ""
       }),
       getTableData: jest.fn().mockResolvedValue([]),
       getLocationsByDateRange: jest.fn().mockResolvedValue([]),
       getMostRecentLocation: jest.fn().mockResolvedValue(null),
       manualFlush: jest.fn().mockResolvedValue(true),
-      clearSentHistory: jest.fn().mockResolvedValue(undefined),
+      clearSentHistory: jest.fn().mockResolvedValue(42),
       clearQueue: jest.fn().mockResolvedValue(10),
       clearAllLocations: jest.fn().mockResolvedValue(50),
       deleteOlderThan: jest.fn().mockResolvedValue(25),
+      countOlderThan: jest.fn().mockResolvedValue({ total: 3120, cutoffSeconds: 1735689600 }),
+      countUnsentOlderThan: jest.fn().mockResolvedValue(96),
       deleteLocationsInRange: jest.fn().mockResolvedValue(7),
       deleteLocationsByIds: jest.fn().mockResolvedValue(1),
       vacuumDatabase: jest.fn().mockResolvedValue(undefined),
@@ -36,13 +40,15 @@ jest.mock("react-native", () => ({
       getDeviceInfo: jest.fn().mockResolvedValue({
         model: "Pixel 7",
         brand: "Google",
-        manufacturer: "Google",
-        device: "panther",
-        deviceId: "panther",
         systemVersion: "14",
         apiLevel: 34
       }),
       writeFile: jest.fn().mockResolvedValue("/cache/test.csv"),
+      setFileLoggingEnabled: jest.fn().mockResolvedValue(undefined),
+      clearFileLog: jest.fn().mockResolvedValue(undefined),
+      getFileLogSize: jest.fn().mockResolvedValue(2516582),
+      getNativeLogs: jest.fn().mockResolvedValue(["2026-09-09 09:00:00.000 INFO/Service: started"]),
+      exportFileLogToUri: jest.fn().mockResolvedValue("content://tree/logs/colota-log.txt"),
       shareFile: jest.fn().mockResolvedValue(true),
       pickExportDirectory: jest.fn().mockResolvedValue("content://com.android.externalstorage/tree/primary%3AExports"),
       scheduleAutoExport: jest.fn().mockResolvedValue(true),
@@ -81,15 +87,10 @@ jest.mock("react-native", () => ({
       getActiveProfile: jest.fn().mockResolvedValue(null)
     },
     BuildConfigModule: {
-      MIN_SDK_VERSION: 26,
-      TARGET_SDK_VERSION: 34,
-      COMPILE_SDK_VERSION: 34,
-      BUILD_TOOLS_VERSION: "34.0.0",
-      KOTLIN_VERSION: "1.9.0",
-      NDK_VERSION: "25.1.8937393",
       VERSION_NAME: "1.0.0",
       VERSION_CODE: 1,
-      FLAVOR: "gms"
+      FLAVOR: "gms",
+      getSystemPalette: jest.fn().mockResolvedValue(null)
     }
   }
 }))
@@ -234,7 +235,9 @@ describe("NativeLocationService", () => {
         sent: 100,
         total: 105,
         today: 20,
-        databaseSizeMB: 1.5
+        databaseSizeMB: 1.5,
+        lastSyncTime: 0,
+        lastSyncError: ""
       })
     })
   })
@@ -328,10 +331,61 @@ describe("NativeLocationService", () => {
       const config = NativeLocationService.getBuildConfig()
       expect(config).toEqual(
         expect.objectContaining({
-          MIN_SDK_VERSION: 26,
           VERSION_NAME: "1.0.0"
         })
       )
+    })
+  })
+
+  describe("getSystemPalette", () => {
+    const palette = {
+      accent1_100: "#D6E3FF",
+      accent1_200: "#ABC7FF",
+      accent1_300: "#8AB4F8",
+      accent1_600: "#2B5CB8",
+      accent1_700: "#12459E",
+      accent1_800: "#002E6B",
+      accent1_900: "#001B3F",
+      neutral1_0: "#FFFFFF",
+      neutral1_50: "#F3F3F6",
+      neutral1_600: "#5B5C63",
+      neutral1_700: "#43444B",
+      neutral1_800: "#2C2D33",
+      neutral1_900: "#1A1B1F",
+      neutral2_100: "#E3E2E9",
+      neutral2_200: "#C7C6CE",
+      neutral2_300: "#ABAAB2",
+      neutral2_400: "#909097",
+      neutral2_500: "#76767D",
+      neutral2_600: "#5E5E65",
+      neutral2_700: "#46464D",
+      neutral2_800: "#2F2F35"
+    }
+
+    it("passes a complete palette through", async () => {
+      ;(NativeModules.BuildConfigModule.getSystemPalette as jest.Mock).mockResolvedValueOnce(palette)
+
+      await expect(NativeLocationService.getSystemPalette()).resolves.toEqual(palette)
+    })
+
+    it("returns null below API 31, where the native side has nothing to send", async () => {
+      ;(NativeModules.BuildConfigModule.getSystemPalette as jest.Mock).mockResolvedValueOnce(null)
+
+      await expect(NativeLocationService.getSystemPalette()).resolves.toBeNull()
+    })
+
+    it("drops a partial palette rather than letting undefined reach a style prop", async () => {
+      const incomplete: Record<string, string> = { ...palette }
+      delete incomplete.neutral2_500
+      ;(NativeModules.BuildConfigModule.getSystemPalette as jest.Mock).mockResolvedValueOnce(incomplete)
+
+      await expect(NativeLocationService.getSystemPalette()).resolves.toBeNull()
+    })
+
+    it("returns null when the bridge rejects, so a failed read is not a crash", async () => {
+      ;(NativeModules.BuildConfigModule.getSystemPalette as jest.Mock).mockRejectedValueOnce(new Error("no resource"))
+
+      await expect(NativeLocationService.getSystemPalette()).resolves.toBeNull()
     })
   })
 
@@ -360,24 +414,24 @@ describe("NativeLocationService", () => {
     })
   })
 
-  describe("getActiveProfileName", () => {
-    it("returns profile name when a profile is active", async () => {
-      nativeMock.getActiveProfile.mockResolvedValueOnce("Charging")
-      const name = await NativeLocationService.getActiveProfileName()
-      expect(name).toBe("Charging")
+  describe("getActiveProfile", () => {
+    it("returns the name and id when a profile is active, so a reconnecting UI can resolve its interval", async () => {
+      nativeMock.getActiveProfile.mockResolvedValueOnce({ name: "Charging", id: 3 })
+      const profile = await NativeLocationService.getActiveProfile()
+      expect(profile).toEqual({ name: "Charging", id: 3 })
       expect(nativeMock.getActiveProfile).toHaveBeenCalled()
     })
 
     it("returns null when no profile is active", async () => {
       nativeMock.getActiveProfile.mockResolvedValueOnce(null)
-      const name = await NativeLocationService.getActiveProfileName()
-      expect(name).toBeNull()
+      const profile = await NativeLocationService.getActiveProfile()
+      expect(profile).toBeNull()
     })
 
     it("returns null on error", async () => {
       nativeMock.getActiveProfile.mockRejectedValueOnce(new Error("Native error"))
-      const name = await NativeLocationService.getActiveProfileName()
-      expect(name).toBeNull()
+      const profile = await NativeLocationService.getActiveProfile()
+      expect(profile).toBeNull()
     })
   })
 
@@ -395,10 +449,90 @@ describe("NativeLocationService", () => {
     })
   })
 
+  describe("the age counts", () => {
+    it("hands the age to the cheap count and returns the boundary native used", async () => {
+      const counted = await NativeLocationService.countOlderThan(90)
+
+      expect(nativeMock.countOlderThan).toHaveBeenCalledWith(90)
+      expect(counted).toEqual({ total: 3120, cutoffSeconds: 1735689600 })
+    })
+
+    // Separate on purpose: this one reads every matching row, so it runs on a press and never while
+    // the user types. A single method would put that cost on the typing path.
+    it("keeps the expensive unsent count a separate call", async () => {
+      const unsent = await NativeLocationService.countUnsentOlderThan(90)
+
+      expect(nativeMock.countUnsentOlderThan).toHaveBeenCalledWith(90)
+      expect(unsent).toBe(96)
+      expect(nativeMock.countOlderThan).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("the bulk deletes", () => {
+    it("resolves how many rows each one took", async () => {
+      expect(await NativeLocationService.clearSentHistory()).toBe(42)
+      expect(await NativeLocationService.clearQueue()).toBe(10)
+      expect(await NativeLocationService.clearAllLocations()).toBe(50)
+      expect(await NativeLocationService.deleteOlderThan(90)).toBe(25)
+      expect(nativeMock.deleteOlderThan).toHaveBeenCalledWith(90)
+    })
+
+    // Each is a static opening with this.ensureModule(), so a bare reference loses its receiver and
+    // throws before it reaches native. Three of these shipped dead exactly that way.
+    it("survives being passed as a bare callback", async () => {
+      const run = async (fn: () => Promise<number>) => fn()
+
+      await expect(run(() => NativeLocationService.clearSentHistory())).resolves.toBe(42)
+      await expect(run(() => NativeLocationService.clearAllLocations())).resolves.toBe(50)
+    })
+  })
+
   describe("file operations", () => {
     it("writeFile returns file path", async () => {
       const path = await NativeLocationService.writeFile("test.csv", "data")
       expect(path).toBe("/cache/test.csv")
+    })
+  })
+
+  describe("file logging", () => {
+    it("setFileLoggingEnabled passes the value through", async () => {
+      await NativeLocationService.setFileLoggingEnabled(true)
+      expect(nativeMock.setFileLoggingEnabled).toHaveBeenCalledWith(true)
+
+      await NativeLocationService.setFileLoggingEnabled(false)
+      expect(nativeMock.setFileLoggingEnabled).toHaveBeenCalledWith(false)
+    })
+
+    it("clearFileLog calls native module", async () => {
+      await NativeLocationService.clearFileLog()
+      expect(nativeMock.clearFileLog).toHaveBeenCalled()
+    })
+
+    it("getFileLogSize returns the byte count", async () => {
+      await expect(NativeLocationService.getFileLogSize()).resolves.toBe(2516582)
+    })
+
+    it("getNativeLogs returns the lines the bridge answered with", async () => {
+      await expect(NativeLocationService.getNativeLogs()).resolves.toEqual([
+        "2026-09-09 09:00:00.000 INFO/Service: started"
+      ])
+    })
+
+    /**
+     * The header and the app log are what turn the exported file from a Kotlin-only stream into
+     * the whole picture, and nothing else can supply them: native has no access to the JS ring
+     * buffer or the build config. Dropping either argument silently exports the old file.
+     */
+    it("exportFileLogToUri carries the header and the app log across", async () => {
+      const uri = await NativeLocationService.exportFileLogToUri("content://tree/logs", "HEADER\n", "APPLOG\n")
+
+      expect(uri).toBe("content://tree/logs/colota-log.txt")
+      expect(nativeMock.exportFileLogToUri).toHaveBeenCalledWith("content://tree/logs", "HEADER\n", "APPLOG\n")
+    })
+
+    it("exportFileLogToUri returns null when there was nothing recorded", async () => {
+      nativeMock.exportFileLogToUri.mockResolvedValueOnce(null)
+      await expect(NativeLocationService.exportFileLogToUri("content://tree/logs", "", "")).resolves.toBeNull()
     })
   })
 

@@ -110,6 +110,17 @@ class ProfileHelperTest {
     }
 
     @Test
+    fun `getEnabledProfiles asks for priority then id, so equal priorities go to the older profile`() {
+        val cursor = mockCursorWithProfiles(emptyList())
+        val order = slot<String>()
+        every { mockDb.query(any(), any(), eq("enabled = 1"), any(), any(), any(), capture(order)) } returns cursor
+
+        ProfileHelper(mockk(relaxed = true)).getEnabledProfiles()
+
+        assertEquals("priority DESC, id ASC", order.captured)
+    }
+
+    @Test
     fun `getEnabledProfiles returns profiles from database`() {
         val cursor = mockCursorWithProfiles(listOf(
             mapOf(
