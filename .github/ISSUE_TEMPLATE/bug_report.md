@@ -22,6 +22,6 @@ assignees: ""
 
 - Device: [e.g. Pixel 7]
 - Android version: [e.g. 14]
-- App version: [e.g. 1.0.0, FOSS/GMS]
+- App version: [as Settings > About prints it, e.g. 1.16.0 (48) · FOSS]
 
 **Additional context** Any other context about the problem (e.g. server type, tracking profile).

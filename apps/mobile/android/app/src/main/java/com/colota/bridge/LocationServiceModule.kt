@@ -452,15 +452,6 @@ class LocationServiceModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun insertDummyData(promise: Promise) {
-        if (!BuildConfig.DEBUG) {
-            promise.reject("ERR_NOT_DEBUG", "insertDummyData is only available in debug builds")
-            return
-        }
-        executeAsync(promise) { DebugSeedData.insertDummyData(dbHelper) }
-    }
-
-    @ReactMethod
     fun countOlderThan(days: Int, promise: Promise) = executeAsync(promise) {
         val counted = dbHelper.countOlderThan(days)
         Arguments.createMap().apply {

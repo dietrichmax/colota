@@ -3,7 +3,6 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import type { ThemeColors } from "../../types/global"
 import React, { useEffect, useRef } from "react"
 import { radius } from "@colota/shared"
 import { View, Text, StyleSheet, Animated } from "react-native"
@@ -14,18 +13,16 @@ import { fontSizes, fonts } from "../../styles/typography"
 import { size, space, elevation } from "../../constants"
 
 interface Props {
-  success?: boolean
-  colors?: ThemeColors
   saving: boolean
   /** Shown once the work is done; absent when there is nothing to report. */
   message?: string | null
   isError?: boolean
 }
 
-export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, message, isError }) => {
+export const FloatingSaveIndicator: React.FC<Props> = ({ saving, message, isError }) => {
   const { colors } = useTheme()
   const hasMessage = message != null
-  const visible = hasMessage || saving || success === true
+  const visible = hasMessage || saving
 
   const translateY = useRef(new Animated.Value(60)).current
   const opacity = useRef(new Animated.Value(0)).current
@@ -44,7 +41,7 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, success, messag
     }
   }, [visible, translateY, opacity])
 
-  const displayText = hasMessage ? message : saving ? "Saving..." : "Saved"
+  const displayText = hasMessage ? message : "Saving..."
 
   return (
     <Animated.View

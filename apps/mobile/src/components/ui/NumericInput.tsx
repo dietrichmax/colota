@@ -3,7 +3,6 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import type { ThemeColors } from "../../types/global"
 import React from "react"
 import { View, Text, StyleSheet } from "react-native"
 import { useTheme } from "../../hooks/useTheme"
@@ -13,7 +12,6 @@ import { TextField } from "./TextField"
 import { FieldMessage } from "./FieldMessage"
 
 interface NumericInputProps {
-  colors?: ThemeColors
   label: string
   value: string
   onChange: (value: string) => void

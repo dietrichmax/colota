@@ -170,7 +170,7 @@ class SyncManager(
             // The totals come from the pass, not from the last progress tick.
             invalidateQueueCache()
             val remaining = runCatching { dbHelper.getQueuedCount() }.getOrDefault(total - pass.sent)
-            LocationServiceModule.sendSyncProgressEvent(pass.sent, pass.failed, total, remaining)
+            LocationServiceModule.sendSyncProgressEvent(pass.sent, pass.failed, pass.sent + pass.failed, remaining)
         }
     }
 

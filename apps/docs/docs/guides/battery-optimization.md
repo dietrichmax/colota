@@ -12,7 +12,7 @@ Settings and tips to reduce battery usage without losing GPS fixes.
 - **Notification updates**: redrawn when the status text changes, otherwise at most once a minute while fixes arrive
 - **Batch processing**: 50 items per batch, 10 concurrent network requests
 - **Smart sync**: Only syncs when queue has items and network is available
-- **Battery critical shutdown & auto-resume**: Stops tracking below 5% when unplugged (the dashboard shows "Tracking stopped" and a notification reads "Battery fell below 5% · resumes when charging"), then automatically resumes once you connect a charger - or on the next reboot if already plugged in. A stop you triggered yourself is never auto-resumed
+- **Battery critical shutdown & auto-resume**: Stops tracking below 5% when unplugged (the dashboard shows "Tracking stopped" and a notification reads "Battery fell below 5% · resumes when charging"), then automatically resumes once you connect a charger or on the next reboot if already plugged in. A stop you triggered yourself is never auto-resumed
 
 ## Tips
 

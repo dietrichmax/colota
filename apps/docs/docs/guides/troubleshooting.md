@@ -46,21 +46,21 @@ Colota starts a new trip after a 15-minute gap in fixes, so a long stop can brea
 ## Server sync not working
 
 1. Check endpoint URL format - must be `https://` for public endpoints, or `http://` for private/local addresses
-2. Use the **Test Connection** button in settings
+2. Use **Test connection** under Settings > Connection; the Server card above it says what sync is doing now and, when it fails, the server's own sentence
 3. Check server logs for incoming requests
 4. Verify network connectivity
-5. Check the queue count in **Data Management**
+5. Check the queue count in **Data management**
 
 **Common causes**: Wrong URL, HTTPS required for public endpoints, expired SSL certificate, incorrect authentication, mismatched field mapping, self-signed / private-CA server cert (see the [mTLS guide](/docs/configuration/mtls) for trust setup), **Sync Condition** restricting uploads to a specific network (Wi-Fi, SSID or VPN), missing local network permission on Android 16+.
 
-### Test Connection error messages
+### Test connection error messages
 
-If **Test Connection** fails, the message points at the specific layer that broke:
+If **Test connection** reads **Not reachable**, the sentence under it points at the specific layer that broke:
 
 | Message | What it means | Fix |
 | --- | --- | --- |
-| `Server certificate is not trusted (self-signed or unknown CA)` | TLS layer: Colota can't validate the server's certificate chain | Import your CA via mTLS Settings -> Trusted Server CA, or use a publicly-trusted cert. User-installed CAs from Android Settings are not honored. |
-| `Server requires a client certificate (mTLS) but none is configured` | TLS layer: the server demanded mTLS, Colota didn't present one | Import a `.p12` in mTLS Settings -> Client Certificate |
+| `Server certificate is not trusted (self-signed or unknown CA)` | TLS layer: Colota can't validate the server's certificate chain | Import your CA under Connection -> Client certificate -> Trusted server CA, or use a publicly trusted cert. User-installed CAs from Android Settings are not honored. |
+| `Server requires a client certificate (mutual TLS) but none is configured` | TLS layer: the server demanded a client certificate, Colota didn't present one | Add one under Connection -> Client certificate |
 | `Server rejected the client certificate` | TLS layer: cert was sent but rejected (wrong CA, expired, revoked) | Verify the cert matches what your reverse proxy expects |
 | `Incorrect password for client certificate` | Import-time: the password doesn't unlock the `.p12` | Re-import with the correct password |
 | `Hostname not verified` | TLS layer: server cert doesn't list the hostname/IP you connected to | Reissue the server cert with a SAN that includes your hostname/IP |
@@ -70,29 +70,28 @@ If **Test Connection** fails, the message points at the specific layer that brok
 
 ## Viewing and exporting logs
 
-**Settings > Logging** shows app log entries in two tabs.
+**Settings > Logging** records a log file and hands it over as one file.
 
-### Live tab
+### Recording a log
 
-This is the easiest way to view and share recent logs.
+1. Open **Settings > Logging** and turn on **Record a log file**
+2. Use the app until the problem happens again. Recording keeps going across restarts, so this can take days
+3. Come back and tap **Save log file...** - pick a folder
+4. Open a bug report at [github.com/dietrichmax/colota/issues](https://github.com/dietrichmax/colota/issues/new) and attach the saved `colota-log-*.txt`
 
-1. Open **Settings > Logging** (the Live tab opens by default)
-2. Scroll through recent entries - the chips at the top filter by severity (`DEBUG` / `INFO` / `WARN` / `ERROR`)
-3. Tap the share icon (top right) to save a text file containing the recent entries plus your app version and device info
+Step 2 is the one people skip. A log saved without reproducing the problem contains everything except the thing being reported.
 
-### File tab
+The saved file is one timeline: your app version, flavor and device at the top, then the native and app log lines interleaved by the time they happened. A marker says where the app log's own coverage begins, because it only spans the current app session while the recorded file spans restarts.
 
-For bugs that take a while to happen:
+### Reading it first
 
-1. Open **Settings > Logging** and switch to the **File** tab
-2. Turn on **Persistent file logging**
-3. Use the app until the problem happens again
-4. Come back to the **File** tab and tap **Export log file...** - pick where to save it
-5. Open a bug report at [github.com/dietrichmax/colota/issues](https://github.com/dietrichmax/colota/issues/new) and attach the saved `colota-log-*.txt`
+**Read the log** opens a preview of the most recent lines, newest first. Search filters on the message, and the chips set the lowest level shown, each carrying its own count so you can see there are four errors without selecting Errors.
 
-**Heads up:** log files can contain your location coordinates. Please check the content of the file before sharing it.
+The preview shows the recorded file while recording is on, and the system log's last few minutes while it is off. It shows the most recent lines only, so a long capture holds far more than you can read here.
 
-The file grows the whole time logging is on. Tap **Clear log files** on the **File** tab to reset it.
+**Heads up:** the file names your geofences, your tracking profiles and your server host. Colota writes no coordinates into it, but a rejected upload can carry your server's reply, which may. Read it before you attach it.
+
+The file grows the whole time recording is on. **Delete the log file** clears it and, if recording is still on, starts a fresh one.
 
 ## Debugging with adb logcat
 
@@ -126,19 +125,19 @@ If sync to a local server stopped working after an Android update:
 1. Go to **Android Settings > Apps > Colota > Permissions**
 2. On Android 17+: Grant the **Local network access** permission
 3. On Android 16: Grant the **Nearby devices** permission
-4. Use the **Test Connection** button to verify
+4. Use **Test connection** to verify
 
 If you denied the permission and the system no longer shows the dialog, reset it from Android Settings.
 
 ## Locations not syncing on certain networks
 
-If **Sync Only On** is set to Wi-Fi, a specific SSID or VPN, uploads are skipped when the condition is not met. Locations continue to be recorded and queued locally - they sync automatically when the condition is satisfied.
+If **Sync only on** is set to Wi-Fi or Ethernet, a specific Wi-Fi network or VPN, uploads are skipped when the condition is not met. Locations continue to be recorded and queued locally - they sync automatically when the condition is satisfied.
 
-To change: **Settings > Advanced Settings > Network Settings > Sync Only On**.
+To change: **Settings > Tracking & sync > Sync only on**.
 
 ## Auto-export not working
 
-- Verify a directory is selected in **Settings > Auto-Export**
+- Verify a directory is selected in **Settings > Auto-export**
 - Check that the toggle is enabled
 - The first export fires at the configured time, not on enable. Tap **Export Now** to confirm the pipeline works without waiting
 - Doze mode can delay an alarm by up to ~15 minutes - if exports are running but a few minutes late, that's expected
@@ -150,9 +149,9 @@ To change: **Settings > Advanced Settings > Network Settings > Sync Only On**.
 
 ## Database growing too large
 
-- Use **Clear Sent History** to remove synced locations
-- Use **Delete Older Than X Days** for cleanup
-- Export data first if you want to keep it
-- Use **Vacuum Database** to reclaim space after deletions
+- Use **Delete synced locations** to remove what your server already holds
+- Use **Delete older than** for an age cutoff, which ignores sync state
+- Back up or export first if you want to keep it
+- Use **Compact database** to reclaim space after deleting trips or points, which leave gaps nothing else reclaims
 
 **Size reference**: ~200 bytes per location, ~2 MB per 10,000 locations.

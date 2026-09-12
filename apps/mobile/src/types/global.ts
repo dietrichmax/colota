@@ -109,8 +109,6 @@ export type HttpMethod = "POST" | "GET"
 
 export type SyncCondition = "any" | "wifi_any" | "wifi_ssid" | "vpn"
 
-export type ServerStatus = "connected" | "error" | "notConfigured"
-
 export type ApiTemplateName =
   "custom" | "dawarich" | "geopulse" | "overland" | "owntracks" | "phonetrack" | "reitti" | "traccar"
 
@@ -267,8 +265,6 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
 // PRESETS
 // ============================================================================
 
-export type BatteryImpact = "Low" | "Medium" | "High"
-
 export interface TrackingPresetConfig {
   interval: number
   distance: number
@@ -277,8 +273,6 @@ export interface TrackingPresetConfig {
   label: string
   /** What the preset costs, read beside the numbers it prices. */
   cost: string
-  description: string
-  batteryImpact: BatteryImpact
 }
 
 export const TRACKING_PRESETS = {
@@ -288,9 +282,7 @@ export const TRACKING_PRESETS = {
     syncInterval: 0,
     retryInterval: 30,
     label: "Instant",
-    cost: "most battery, finest track",
-    description: "Track every 5s • Send instantly",
-    batteryImpact: "High"
+    cost: "most battery, finest track"
   },
   balanced: {
     interval: 30,
@@ -298,9 +290,7 @@ export const TRACKING_PRESETS = {
     syncInterval: 300,
     retryInterval: 300,
     label: "Balanced",
-    cost: "moderate battery, fewer wake-ups",
-    description: "Track every 30s • Batch 5 min",
-    batteryImpact: "Medium"
+    cost: "moderate battery, fewer wake-ups"
   },
   powersaver: {
     interval: 60,
@@ -308,9 +298,7 @@ export const TRACKING_PRESETS = {
     syncInterval: 900,
     retryInterval: 900,
     label: "Power saver",
-    cost: "least battery, coarser track",
-    description: "Track every 60s • Batch 15 min",
-    batteryImpact: "Low"
+    cost: "least battery, coarser track"
   }
 } as const satisfies Record<string, TrackingPresetConfig>
 

@@ -23,7 +23,6 @@ interface ThemeContextType {
   mode: ThemeMode
   preference: ThemePreference
   setPreference: (preference: ThemePreference) => void
-  toggleTheme: () => void
   isDark: boolean
   wallpaperColors: boolean
   setWallpaperColors: (enabled: boolean) => void
@@ -117,22 +116,19 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     return mode === "dark" ? darkColors : lightColors
   }, [mode, wallpaperColors, palette])
 
-  const toggleTheme = useCallback(() => setPreference(mode === "dark" ? "light" : "dark"), [mode, setPreference])
-
   const contextValue = useMemo(
     () => ({
       colors,
       mode,
       preference,
       setPreference,
-      toggleTheme,
       isDark: mode === "dark",
       wallpaperColors,
       setWallpaperColors,
       wallpaperColorsAvailable: Platform.OS === "android" && Number(Platform.Version) >= 31,
       wallpaperPaletteReady: palette !== null
     }),
-    [colors, mode, preference, setPreference, wallpaperColors, setWallpaperColors, palette, toggleTheme]
+    [colors, mode, preference, setPreference, wallpaperColors, setWallpaperColors, palette]
   )
 
   return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>

@@ -17,7 +17,5 @@
   "appearance.mapStyle.reset": "Reset to default",
   "appearance.mapStyle.light": "Light style URL",
   "appearance.mapStyle.dark": "Dark style URL",
-  "appearance.mapStyle.error": "Starts with http:// or https:// and names a host.",
-  "appearance.darkMode": "Dark Mode",
-  "appearance.mapStyle.subtitle": "Override the default map tile source"
+  "appearance.mapStyle.error": "Starts with http:// or https:// and names a host."
 }
