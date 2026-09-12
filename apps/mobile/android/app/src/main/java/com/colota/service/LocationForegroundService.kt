@@ -1301,6 +1301,7 @@ class LocationForegroundService : Service() {
      * concerns here - gating the save on a successful send loses the stay entirely whenever
      * the server is unreachable or sync is not allowed. The send skips the sync interval: on
      * Power Saver a queued stay reaches the endpoint 15 minutes after the user got home.
+     * While a sync pass runs, the point waits in the queue for that pass or the next.
      */
     private suspend fun recordHeartbeatLocation() {
         if (!::config.isInitialized) {
