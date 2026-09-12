@@ -1,8 +1,7 @@
 import React from "react"
-import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
 import { TrackingProfile } from "../../types/global"
-
-// --- Mocks ---
+import { SAVE_SUCCESS_DISPLAY_MS } from "../../constants"
 
 const mockProfiles: TrackingProfile[] = [
   {
@@ -22,71 +21,107 @@ const mockProfiles: TrackingProfile[] = [
 const mockGetProfiles = jest.fn().mockResolvedValue(mockProfiles)
 const mockCreateProfile = jest.fn().mockResolvedValue(1)
 const mockUpdateProfile = jest.fn().mockResolvedValue(true)
+const mockDeleteProfile = jest.fn().mockResolvedValue(true)
 
 jest.mock("../../services/ProfileService", () => ({
   ProfileService: {
     getProfiles: () => mockGetProfiles(),
     createProfile: (p: any) => mockCreateProfile(p),
-    updateProfile: (p: any) => mockUpdateProfile(p)
+    updateProfile: (p: any) => mockUpdateProfile(p),
+    deleteProfile: (id: number) => mockDeleteProfile(id)
   }
 }))
 
 const mockShowAlert = jest.fn()
-
+const mockShowConfirm = jest.fn()
 jest.mock("../../services/modalService", () => ({
-  showAlert: (...args: any[]) => mockShowAlert(...args)
+  showAlert: (...args: any[]) => mockShowAlert(...args),
+  showConfirm: (...args: any[]) => mockShowConfirm(...args)
 }))
 
 jest.mock("../../utils/geo", () => ({
   ...jest.requireActual("../../utils/geo"),
   shortDistanceUnit: () => "m",
   metersToInput: (v: number) => v,
-  inputToMeters: (v: number) => v
+  inputToMeters: (v: number) => v,
+  getSpeedUnit: () => ({ factor: 3.6, unit: "km/h" }),
+  speedToInput: (mps: number) => Math.round(mps * 3.6),
+  inputToSpeed: (v: number) => v / 3.6
 }))
 
+let mockSettings = { isOfflineMode: false, interval: 5, distance: 0, syncInterval: 0 }
 jest.mock("../../contexts/TrackingProvider", () => ({
-  useTracking: () => ({
-    settings: {
-      isOfflineMode: false,
-      interval: 5,
-      distance: 0,
-      syncInterval: 0
-    }
-  })
+  useTracking: () => ({ settings: mockSettings })
 }))
+
+jest.mock("../../components/features/settings/SyncIntervalPicker", () => {
+  const R = require("react")
+  const { View, Text, Pressable } = require("react-native")
+  const { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } = require("../../constants")
+  return {
+    SyncIntervalPicker: ({ label, hint, value, onSelect }: any) =>
+      R.createElement(
+        View,
+        null,
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, hint),
+        SYNC_INTERVAL_PRESETS.map((seconds: number) =>
+          R.createElement(
+            Pressable,
+            {
+              key: seconds,
+              testID: `sync-interval-${seconds}`,
+              onPress: () => onSelect(seconds),
+              accessibilityState: { checked: value === seconds }
+            },
+            R.createElement(Text, null, SYNC_INTERVAL_LABELS[seconds])
+          )
+        )
+      )
+  }
+})
 
 jest.mock("../../hooks/useTheme", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#0d9488",
-      border: "#e5e7eb",
-      text: "#000",
-      textSecondary: "#6b7280",
-      textLight: "#9ca3af",
-      background: "#fff",
-      info: "#3b82f6",
-      success: "#22c55e",
-      error: "#ef4444",
-      card: "#fff",
-      backgroundElevated: "#f9fafb",
-      placeholder: "#9ca3af",
-      textOnPrimary: "#fff"
-    }
-  })
+  useTheme: () => ({ colors: require("@colota/shared").lightColors })
 }))
 
 jest.mock("../../components", () => {
   const R = require("react")
-  const { View, Text } = require("react-native")
+  const { View, Text, Pressable, TextInput } = require("react-native")
   return {
+    TextField: require("../../testing/componentStubs").TextFieldStub,
+    RadioRow: ({ testID, label, sub, selected, onPress }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress, accessibilityRole: "radio", accessibilityState: { checked: selected } },
+        R.createElement(Text, null, label),
+        sub ? R.createElement(Text, null, sub) : null
+      ),
+    Button: ({ title, onPress, disabled, testID }: any) =>
+      R.createElement(
+        Pressable,
+        { testID, onPress, disabled, accessibilityRole: "button", accessibilityState: { disabled } },
+        R.createElement(Text, null, title)
+      ),
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
-    Divider: () => R.createElement(View, null),
-    SettingRow: ({ label, hint, children }: any) =>
+    NumericInput: ({ label, value, onChange, onBlur, unit, hint, error, message, testID }: any) =>
       R.createElement(
         View,
         null,
+        R.createElement(Text, null, label),
+        hint ? R.createElement(Text, null, hint) : null,
+        R.createElement(TextInput, { testID, value, onChangeText: onChange, onBlur }),
+        unit ? R.createElement(Text, null, unit) : null,
+        error ? R.createElement(Text, null, error) : null,
+        message ? R.createElement(Text, null, message) : null
+      ),
+    Divider: () => R.createElement(View, null),
+    SettingRow: ({ label, hint, children, disabled }: any) =>
+      R.createElement(
+        View,
+        { accessibilityState: { disabled: !!disabled } },
         R.createElement(Text, null, label),
         hint && R.createElement(Text, null, hint),
         children
@@ -95,343 +130,227 @@ jest.mock("../../components", () => {
   }
 })
 
-const mockGoBack = jest.fn()
+jest.mock("../../utils/logger", () => ({ logger: { error: jest.fn() } }))
 
-const mockNavigation = {
-  goBack: mockGoBack
-}
+const mockGoBack = jest.fn()
+const mockSetOptions = jest.fn()
+const mockNavigation = { goBack: mockGoBack, setOptions: mockSetOptions }
 
 import { ProfileEditorScreen } from "../ProfileEditorScreen"
 
 describe("ProfileEditorScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockSettings = { isOfflineMode: false, interval: 5, distance: 0, syncInterval: 0 }
     mockGetProfiles.mockResolvedValue(mockProfiles)
   })
 
-  function renderNewProfile() {
-    return render(<ProfileEditorScreen navigation={mockNavigation as any} route={{ params: {} } as any} />)
-  }
+  const renderNew = () =>
+    render(<ProfileEditorScreen navigation={mockNavigation as any} route={{ params: {} } as any} />)
+  const renderEdit = (profileId = 1) =>
+    render(<ProfileEditorScreen navigation={mockNavigation as any} route={{ params: { profileId } } as any} />)
 
-  function renderEditProfile(profileId = 1) {
-    return render(<ProfileEditorScreen navigation={mockNavigation as any} route={{ params: { profileId } } as any} />)
-  }
+  describe("the sentence", () => {
+    it("reads the draft back as the rule and follows every edit", () => {
+      const { getByTestId } = renderNew()
 
-  // --- New Profile Mode ---
+      expect(getByTestId("profile-sentence").props.children).toBe(
+        "When charging, track every 5 s, any movement and sync each fix."
+      )
 
-  it("renders new profile title", () => {
-    const { getByText } = renderNewProfile()
-    expect(getByText("New Profile")).toBeTruthy()
-  })
+      fireEvent.press(getByTestId("condition-speed_above"))
+      fireEvent.changeText(getByTestId("speed-input"), "50")
+      fireEvent.changeText(getByTestId("interval-input"), "2")
+      fireEvent.changeText(getByTestId("distance-input"), "10")
+      fireEvent.press(getByTestId("sync-interval-60"))
 
-  it("shows Create Profile button for new profile", () => {
-    const { getByText } = renderNewProfile()
-    expect(getByText("Create Profile")).toBeTruthy()
-  })
+      expect(getByTestId("profile-sentence").props.children).toBe(
+        "When faster than 50 km/h, track every 2 s after 10 m and sync every 1 min."
+      )
+    })
 
-  it("shows all condition options", () => {
-    const { getByText } = renderNewProfile()
+    it("drops the sync clause in offline mode and hides the sync picker", () => {
+      mockSettings = { ...mockSettings, isOfflineMode: true }
+      const { getByTestId, queryByText } = renderNew()
 
-    expect(getByText("Charging")).toBeTruthy()
-    expect(getByText("Car Mode")).toBeTruthy()
-    expect(getByText("Speed Above")).toBeTruthy()
-    expect(getByText("Speed Below")).toBeTruthy()
-  })
-
-  it("shows all sync interval options inline", () => {
-    const { getByText, getAllByText } = renderNewProfile()
-
-    expect(getAllByText("Instant").length).toBeGreaterThan(0)
-    expect(getByText("1 min")).toBeTruthy()
-    expect(getByText("5 min")).toBeTruthy()
-    expect(getByText("15 min")).toBeTruthy()
-  })
-
-  it("pre-fills fields with main settings values", () => {
-    const { getByDisplayValue, getAllByDisplayValue } = renderNewProfile()
-
-    expect(getByDisplayValue("5")).toBeTruthy() // interval from settings
-    // distance from settings is 0; activation delay also defaults to 0
-    expect(getAllByDisplayValue("0").length).toBeGreaterThan(0)
-  })
-
-  it("shows default hints from main settings", () => {
-    const { getByText } = renderNewProfile()
-
-    expect(getByText("Default: 5s")).toBeTruthy()
-    expect(getByText("Default: 0 m")).toBeTruthy()
-    expect(getByText("Default: Instant")).toBeTruthy()
-  })
-
-  // --- Validation ---
-
-  it("shows alert when saving with empty name", async () => {
-    const { getByText } = renderNewProfile()
-
-    fireEvent.press(getByText("Create Profile"))
-
-    await waitFor(() => {
-      expect(mockShowAlert).toHaveBeenCalledWith("Missing Name", "Please enter a profile name.", "warning")
+      expect(getByTestId("profile-sentence").props.children).toBe("When charging, track every 5 s, any movement.")
+      expect(queryByText("Sync interval")).toBeNull()
     })
   })
 
-  it("saves with speed condition when threshold is valid", async () => {
-    const { getByText, getByDisplayValue } = renderNewProfile()
+  describe("condition", () => {
+    it("comes first, in sentence case, with what watching it costs on each row", () => {
+      const { getByText, getAllByText, getByTestId } = renderNew()
 
-    const nameInput = getByDisplayValue("")
-    fireEvent.changeText(nameInput, "Speed Test")
+      expect(getByText("Android Auto")).toBeTruthy()
+      expect(getByText("Speed above")).toBeTruthy()
+      expect(getByText("Phone is plugged in · costs nothing to watch")).toBeTruthy()
+      expect(getAllByText(/fixes keep flowing to measure it, even below the movement threshold/)).toHaveLength(2)
+      expect(getByTestId("condition-charging").props.accessibilityState.checked).toBe(true)
+    })
 
-    // Select speed_above condition - defaults to 30 km/h threshold
-    fireEvent.press(getByText("Speed Above"))
+    it("reveals the speed field under a speed condition only, in the user's unit", () => {
+      const { getByTestId, queryByTestId, getByText } = renderNew()
+      expect(queryByTestId("speed-input")).toBeNull()
 
-    fireEvent.press(getByText("Create Profile"))
+      fireEvent.press(getByTestId("condition-speed_below"))
 
-    await waitFor(() => {
-      expect(mockCreateProfile).toHaveBeenCalled()
-      expect(mockGoBack).toHaveBeenCalled()
+      expect(getByTestId("speed-input").props.value).toBe("30")
+      expect(getByText("At least 1 km/h. Applies while your average speed is below it.")).toBeTruthy()
+      expect(getByText("km/h")).toBeTruthy()
+    })
+
+    it("keeps delays the user changed across a condition switch and resets untouched ones", () => {
+      const { getByTestId } = renderNew()
+
+      fireEvent.press(getByTestId("condition-stationary"))
+      expect(getByTestId("activation-delay-input").props.value).toBe("60")
+
+      fireEvent.changeText(getByTestId("activation-delay-input"), "90")
+      fireEvent.press(getByTestId("condition-charging"))
+      expect(getByTestId("activation-delay-input").props.value).toBe("90")
     })
   })
 
-  // --- Successful save ---
+  describe("stationary", () => {
+    it("blocks the movement threshold with the reason instead of hiding it, and drops the deactivation delay", () => {
+      const { getByTestId, getByText, queryByTestId } = renderNew()
 
-  it("creates profile and navigates back on valid save", async () => {
-    const { getByText, getByDisplayValue } = renderNewProfile()
+      fireEvent.press(getByTestId("condition-stationary"))
 
-    const nameInput = getByDisplayValue("")
-    fireEvent.changeText(nameInput, "My Profile")
+      expect(getByText("Not used while still · a point is recorded every interval")).toBeTruthy()
+      expect(getByText("0 m")).toBeTruthy()
+      expect(queryByTestId("distance-input")).toBeNull()
+      expect(queryByTestId("deactivation-delay-input")).toBeNull()
+      expect(getByText(/How long every fix must read as still first/)).toBeTruthy()
+    })
 
-    fireEvent.press(getByText("Create Profile"))
+    it("warns above 60 s without blocking Save", () => {
+      const { getByTestId, getByText, queryByText } = renderNew()
+      fireEvent.press(getByTestId("condition-stationary"))
+      expect(queryByText(/may leave the first/)).toBeNull()
 
-    await waitFor(() => {
-      expect(mockCreateProfile).toHaveBeenCalled()
-      expect(mockGoBack).toHaveBeenCalled()
+      fireEvent.changeText(getByTestId("interval-input"), "300")
+
+      expect(getByText("Longer than 60 s may leave the first 5 min of a trip unrecorded")).toBeTruthy()
+      expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
     })
   })
 
-  it("does not call createProfile when validation fails", async () => {
-    const { getByText } = renderNewProfile()
+  describe("override fields", () => {
+    it("name the Tracking & sync value they replace instead of a bare default", () => {
+      mockSettings = { isOfflineMode: false, interval: 30, distance: 2, syncInterval: 300 }
+      const { getByText } = renderNew()
 
-    // Try to save with empty name
-    fireEvent.press(getByText("Create Profile"))
-
-    await waitFor(() => {
-      expect(mockShowAlert).toHaveBeenCalled()
+      expect(getByText(/^At least 1 s\. Replaces the 30 s from Tracking & sync/)).toBeTruthy()
+      expect(getByText(/^At least 0 m\. Replaces the 2 m from Tracking & sync/)).toBeTruthy()
+      expect(getByText(/^Replaces the 5 min from Tracking & sync/)).toBeTruthy()
     })
 
-    expect(mockCreateProfile).not.toHaveBeenCalled()
-  })
+    it("rejects a decimal on the field and disables Save until it is fixed", () => {
+      const { getByTestId, getByText, queryByText } = renderNew()
 
-  // --- Edit Mode ---
+      fireEvent.changeText(getByTestId("interval-input"), "1.5")
 
-  it("renders edit profile title when editing", async () => {
-    const { getByText } = renderEditProfile()
+      expect(getByText("A whole number")).toBeTruthy()
+      expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(true)
 
-    await waitFor(() => {
-      expect(getByText("Edit Profile")).toBeTruthy()
-    })
-  })
-
-  it("shows Save Changes button when editing", async () => {
-    const { getByText } = renderEditProfile()
-
-    await waitFor(() => {
-      expect(getByText("Save Changes")).toBeTruthy()
-    })
-  })
-
-  it("loads existing profile data", async () => {
-    const { getByDisplayValue } = renderEditProfile()
-
-    await waitFor(() => {
-      expect(getByDisplayValue("Existing Profile")).toBeTruthy()
-      expect(getByDisplayValue("15")).toBeTruthy() // priority
-      expect(getByDisplayValue("10")).toBeTruthy() // interval
-    })
-  })
-
-  it("loads speed threshold in km/h", async () => {
-    const { getByDisplayValue } = renderEditProfile()
-
-    // 13.89 m/s * 3.6 = 50 km/h
-    await waitFor(() => {
-      expect(getByDisplayValue("50")).toBeTruthy()
-    })
-  })
-
-  it("calls updateProfile when saving in edit mode", async () => {
-    const { getByText } = renderEditProfile()
-
-    await waitFor(() => {
-      expect(getByText("Save Changes")).toBeTruthy()
+      fireEvent.changeText(getByTestId("interval-input"), "15")
+      expect(queryByText("A whole number")).toBeNull()
+      expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(false)
     })
 
-    fireEvent.press(getByText("Save Changes"))
+    it("clamps an emptied interval to 1 s on blur and says so for a moment", () => {
+      jest.useFakeTimers()
+      const { getByTestId, getByText, queryByText } = renderNew()
 
-    await waitFor(() => {
-      expect(mockUpdateProfile).toHaveBeenCalled()
-      expect(mockGoBack).toHaveBeenCalled()
-    })
-  })
+      fireEvent.changeText(getByTestId("interval-input"), "")
+      fireEvent(getByTestId("interval-input"), "blur")
 
-  it("shows error and navigates back on load failure", async () => {
-    mockGetProfiles.mockRejectedValueOnce(new Error("DB Error"))
-
-    renderEditProfile()
-
-    await waitFor(() => {
-      expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to load profile data.", "error")
-      expect(mockGoBack).toHaveBeenCalled()
-    })
-  })
-
-  it("shows error when save fails", async () => {
-    mockCreateProfile.mockRejectedValueOnce(new Error("Save failed"))
-
-    const { getByText, getByDisplayValue } = renderNewProfile()
-
-    const nameInput = getByDisplayValue("")
-    fireEvent.changeText(nameInput, "Fail Profile")
-
-    fireEvent.press(getByText("Create Profile"))
-
-    await waitFor(() => {
-      expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to save profile.", "error")
-    })
-  })
-
-  // --- Speed condition visibility ---
-
-  it("shows speed threshold input only for speed conditions", () => {
-    const { getByText, queryByText } = renderNewProfile()
-
-    // Default is charging - no speed input
-    expect(queryByText("Speed Threshold (km/h)")).toBeNull()
-
-    // Select Speed Above
-    fireEvent.press(getByText("Speed Above"))
-    expect(getByText("Speed Threshold (km/h)")).toBeTruthy()
-
-    // Switch back to charging
-    fireEvent.press(getByText("Charging"))
-    expect(queryByText("Speed Threshold (km/h)")).toBeNull()
-  })
-
-  // --- Activation delay ---
-
-  it("shows activation delay for all conditions, and deactivation delay only for non-stationary", () => {
-    const { getByText, queryByText } = renderNewProfile()
-
-    // Charging: both delays
-    expect(getByText("Activation Delay")).toBeTruthy()
-    expect(getByText("Deactivation Delay")).toBeTruthy()
-
-    // Stationary: activation delay only (deactivation is instant via the motion sensor)
-    fireEvent.press(getByText("Stationary"))
-    expect(getByText("Activation Delay")).toBeTruthy()
-    expect(queryByText("Deactivation Delay")).toBeNull()
-  })
-
-  it("hides the movement threshold for a stationary profile and shows a note instead", () => {
-    const { getByText, queryByText } = renderNewProfile()
-
-    // Default (charging): the field is shown
-    expect(getByText("Movement Threshold")).toBeTruthy()
-
-    // Stationary: field hidden (the distance filter is forced to 0), note shown instead
-    fireEvent.press(getByText("Stationary"))
-    expect(queryByText("Movement Threshold")).toBeNull()
-    expect(getByText(/Movement threshold does not apply/)).toBeTruthy()
-  })
-
-  it("defaults stationary activation delay to 60", () => {
-    const { getByText, getByDisplayValue } = renderNewProfile()
-
-    fireEvent.press(getByText("Stationary"))
-    expect(getByDisplayValue("60")).toBeTruthy()
-  })
-
-  it("loads existing activation delay in edit mode", async () => {
-    const { getByDisplayValue } = renderEditProfile()
-
-    await waitFor(() => {
-      expect(getByDisplayValue("12")).toBeTruthy()
-    })
-  })
-
-  // --- Numeric input ---
-
-  it("updates interval via numeric input", () => {
-    const { getByDisplayValue } = renderNewProfile()
-
-    const intervalInput = getByDisplayValue("5")
-    fireEvent.changeText(intervalInput, "15")
-
-    expect(getByDisplayValue("15")).toBeTruthy()
-  })
-
-  it("updates priority via numeric input", () => {
-    const { getByDisplayValue } = renderNewProfile()
-
-    const priorityInput = getByDisplayValue("10")
-    fireEvent.changeText(priorityInput, "25")
-
-    expect(getByDisplayValue("25")).toBeTruthy()
-  })
-
-  // --- Stationary interval warning ---
-
-  describe("stationary interval warning", () => {
-    it("does not show the warning while interval is at or below 60s", () => {
-      const { getByText, queryByText, getByDisplayValue } = renderNewProfile()
-
-      fireEvent.press(getByText("Stationary"))
-      const intervalInput = getByDisplayValue("5")
-      fireEvent.changeText(intervalInput, "60")
-
-      expect(queryByText(/may miss the first \d+ minutes of a trip/)).toBeNull()
-    })
-
-    it("shows a warning when the interval exceeds 60s", () => {
-      const { getByText, getByDisplayValue } = renderNewProfile()
-
-      fireEvent.press(getByText("Stationary"))
-      const intervalInput = getByDisplayValue("5")
-      fireEvent.changeText(intervalInput, "600")
-
-      expect(getByText(/may miss the first \d+ minutes of a trip/)).toBeTruthy()
-    })
-
-    it("does not show the warning for non-stationary conditions even with large intervals", () => {
-      const { queryByText, getByDisplayValue } = renderNewProfile()
-
-      const intervalInput = getByDisplayValue("5")
-      fireEvent.changeText(intervalInput, "3600")
-
-      expect(queryByText(/may miss the first \d+ minutes of a trip/)).toBeNull()
-    })
-
-    it("loads an existing Stationary profile with interval > 60 unchanged", async () => {
-      mockGetProfiles.mockResolvedValueOnce([
-        {
-          id: 1,
-          name: "Old Stationary",
-          interval: 3600,
-          distance: 0,
-          syncInterval: 0,
-          priority: 10,
-          condition: { type: "stationary" },
-          activationDelay: 0,
-          deactivationDelay: 0,
-          enabled: true
-        }
-      ])
-
-      const { getByDisplayValue, getByText } = renderEditProfile()
-
-      await waitFor(() => {
-        expect(getByDisplayValue("3600")).toBeTruthy()
+      expect(getByTestId("interval-input").props.value).toBe("1")
+      expect(getByText("Set to 1 s")).toBeTruthy()
+      act(() => {
+        jest.advanceTimersByTime(SAVE_SUCCESS_DISPLAY_MS)
       })
-      expect(getByText(/may miss the first \d+ minutes of a trip/)).toBeTruthy()
+      expect(queryByText("Set to 1 s")).toBeNull()
+      jest.useRealTimers()
+    })
+
+    it("restores the stored priority when its box is left empty, and flags a non-number", () => {
+      const { getByTestId, getByText, queryByText } = renderNew()
+
+      fireEvent.changeText(getByTestId("priority-input"), "x")
+      expect(getByText("A whole number")).toBeTruthy()
+      expect(getByTestId("save-profile-btn").props.accessibilityState.disabled).toBe(true)
+
+      fireEvent.changeText(getByTestId("priority-input"), "")
+      fireEvent(getByTestId("priority-input"), "blur")
+      expect(getByTestId("priority-input").props.value).toBe("10")
+      expect(queryByText("A whole number")).toBeNull()
+    })
+  })
+
+  describe("save and delete", () => {
+    it("creates a profile with the condition's name when the name is blank, four taps from Create", async () => {
+      const { getByTestId } = renderNew()
+
+      fireEvent.press(getByTestId("save-profile-btn"))
+
+      await waitFor(() => expect(mockCreateProfile).toHaveBeenCalledWith(expect.objectContaining({ name: "Charging" })))
+      expect(mockShowAlert).not.toHaveBeenCalled()
+      expect(mockGoBack).toHaveBeenCalled()
+    })
+
+    it("stores a speed in m/s from the display unit", async () => {
+      const { getByTestId } = renderNew()
+
+      fireEvent.press(getByTestId("condition-speed_above"))
+      fireEvent.changeText(getByTestId("speed-input"), "50")
+      fireEvent.press(getByTestId("save-profile-btn"))
+
+      await waitFor(() =>
+        expect(mockCreateProfile).toHaveBeenCalledWith(
+          expect.objectContaining({ condition: { type: "speed_above", speedThreshold: expect.closeTo(13.89, 1) } })
+        )
+      )
+    })
+
+    it("loads an existing profile into every field and saves through updateProfile", async () => {
+      const { findByTestId, getByTestId } = renderEdit()
+
+      expect((await findByTestId("name-input")).props.value).toBe("Existing Profile")
+      expect(getByTestId("speed-input").props.value).toBe("50")
+      expect(getByTestId("interval-input").props.value).toBe("10")
+      expect(getByTestId("activation-delay-input").props.value).toBe("12")
+      expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: "Edit profile" })
+
+      fireEvent.press(getByTestId("save-profile-btn"))
+      await waitFor(() =>
+        expect(mockUpdateProfile).toHaveBeenCalledWith(expect.objectContaining({ id: 1, priority: 15 }))
+      )
+    })
+
+    it("shows an error and goes back when the profile cannot load", async () => {
+      mockGetProfiles.mockRejectedValueOnce(new Error("db"))
+      renderEdit()
+
+      await waitFor(() => expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to load profile data.", "error"))
+      expect(mockGoBack).toHaveBeenCalled()
+    })
+
+    it("offers Delete only while editing and confirms before deleting", async () => {
+      const draft = renderNew()
+      expect(draft.queryByTestId("delete-profile-btn")).toBeNull()
+
+      mockShowConfirm.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+      const { findByTestId } = renderEdit()
+      fireEvent.press(await findByTestId("delete-profile-btn"))
+      await waitFor(() => expect(mockShowConfirm).toHaveBeenCalled())
+      expect(mockDeleteProfile).not.toHaveBeenCalled()
+
+      fireEvent.press(await findByTestId("delete-profile-btn"))
+      await waitFor(() => expect(mockDeleteProfile).toHaveBeenCalledWith(1))
+      expect(mockGoBack).toHaveBeenCalled()
     })
   })
 })

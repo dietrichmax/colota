@@ -71,7 +71,7 @@ export const elevation = {
   overlay: 6
 } as const
 
-export const DEFAULT_MAP_ZOOM = 17
+export const DEFAULT_MAP_ZOOM = 15
 export const WORLD_MAP_ZOOM = 2
 export const MAX_MAP_ZOOM = 18
 export const GEOFENCE_ZOOM_PADDING = [80, 80, 80, 80] as const
@@ -89,34 +89,43 @@ export const PROFILE_CONDITIONS: {
   icon: typeof Zap
   description: string
 }[] = [
-  { type: "charging", label: "Charging", listLabel: "When charging", icon: Zap, description: "Phone is plugged in" },
+  {
+    type: "charging",
+    label: "Charging",
+    listLabel: "When charging",
+    icon: Zap,
+    description: "Phone is plugged in · costs nothing to watch"
+  },
   {
     type: "android_auto",
-    label: "Car Mode",
-    listLabel: "Android Auto / Car mode",
+    label: "Android Auto",
+    listLabel: "On Android Auto",
     icon: Car,
-    description: "Android Auto connected"
+    description: "Android Auto is connected · costs nothing to watch"
   },
   {
     type: "speed_above",
-    label: "Speed Above",
+    label: "Speed above",
     listLabel: "Speed above",
     icon: ArrowUp,
-    description: "Moving faster than threshold"
+    description:
+      "Average of the last 5 fixes is faster than the speed below · fixes keep flowing to measure it, even below the movement threshold"
   },
   {
     type: "speed_below",
-    label: "Speed Below",
+    label: "Speed below",
     listLabel: "Speed below",
     icon: ArrowDown,
-    description: "Moving slower than threshold"
+    description:
+      "Average of the last 5 fixes is slower than the speed below · fixes keep flowing to measure it, even below the movement threshold"
   },
   {
     type: "stationary",
     label: "Stationary",
     listLabel: "When stationary",
     icon: Pause,
-    description: "Not moving for ~60 seconds"
+    description:
+      "Still for the activation delay · records a point every interval, movement threshold not used · fixes keep flowing to measure it"
   }
 ]
 
