@@ -1,13 +1,7 @@
-- A notification now alerts you when tracking stops on its own, instead of appearing silently
+- A notification alerts you when tracking stops on its own
 - Auto-export now deletes old files on storage providers that rename them
 - Unplugging at a low battery no longer restarts tracking in a loop
 - Pause zones no longer take hours to engage when a tracking profile is active
-- Headings and labels read as sentences instead of shouting in capitals, and the smallest icons are easier to see
-- About shows the version and build over the privacy policy, licence and source code; the phone and toolchain details are gone, since a saved log file carries them
-- Tapping the month in Location History picks a year and a month, instead of one chevron tap per month
-- Appearance can take the app colors from your Android wallpaper
-- GeoJSON exports write one point per recording, so mapping tools can read and filter them
-- Export and import share one screen, and an import says what it will add before you confirm
-- Switching units updates every screen at once, instead of leaving the location table on the old one
-- Appearance shows the units and clock each setting produces, and names the server your map tiles come from
-- Offline maps picks up a running download when you come back, names what a delete removes and no longer retries silently
+- The tracking notification shows the state and the sync queue, never your location, zone or profile name
+- A low-battery stop says tracking resumes when charging
+- Sync now no longer uploads a location twice
