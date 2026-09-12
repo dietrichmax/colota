@@ -3,26 +3,29 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { useState, useCallback, useEffect } from "react"
+import React, { useState, useCallback, useEffect } from "react"
 import { useFocusEffect } from "@react-navigation/native"
-import { Text, StyleSheet, Switch, View, ScrollView, Pressable, DeviceEventEmitter, TextInput } from "react-native"
-import { FolderOpen, CheckCircle, Share2, AlertTriangle } from "lucide-react-native"
+import { ActivityIndicator, Text, StyleSheet, View, ScrollView, Pressable, DeviceEventEmitter } from "react-native"
+import { FolderOpen, CircleCheckBig, Share2, TriangleAlert } from "lucide-react-native"
 import {
-  Container,
-  Card,
-  SectionTitle,
-  Divider,
-  FormatSelector,
-  ChipGroup,
-  RadioDot,
-  FloatingSaveIndicator,
-  SettingRow,
   Button,
+  Card,
+  ChipGroup,
+  Container,
+  Divider,
+  FloatingSaveIndicator,
+  ExportFormatDialog,
+  ListItem,
+  NumericInput,
+  RadioRow,
+  SectionTitle,
+  SettingRow,
   TimePicker,
-  NumericInput
+  Toggle,
+  TextField
 } from "../components"
 import { useTheme } from "../hooks/useTheme"
-import { useTimeout } from "../hooks/useTimeout"
+
 import { ScreenProps } from "../types/global"
 import NativeLocationService from "../services/NativeLocationService"
 import {
@@ -34,11 +37,12 @@ import {
   isValidFilenameTemplate,
   renderFilenamePreview
 } from "../utils/exportConverters"
-import { fonts } from "../styles/typography"
+import { fontSizes, fonts, lineHeights } from "../styles/typography"
+import { FILE_FORMATS } from "../utils/fileFormats"
 import { logger } from "../utils/logger"
 import { formatExportDateTime, formatBytes } from "../utils/format"
 import { showAlert } from "../services/modalService"
-import { SAVE_SUCCESS_DISPLAY_MS } from "../constants"
+import { size, space, STATE_LAYER_ALPHA } from "../constants"
 
 type ExportInterval = "daily" | "weekly" | "monthly"
 type ExportMode = "all" | "incremental"
@@ -75,6 +79,7 @@ const WEEKDAY_OPTIONS: readonly { value: string; label: string }[] = [
 export function AutoExportScreen(_props: ScreenProps) {
   const { colors } = useTheme()
   const [enabled, setEnabled] = useState(false)
+  const [formatOpen, setFormatOpen] = useState(false)
   const [format, setFormat] = useState<ExportFormat>("geojson")
   const [interval, setInterval] = useState<ExportInterval>("daily")
   const [mode, setMode] = useState<ExportMode>("all")
@@ -97,14 +102,16 @@ export function AutoExportScreen(_props: ScreenProps) {
   const [exportFiles, setExportFiles] = useState<ExportFile[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [exportRunning, setExportRunning] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState(false)
-  const successTimeout = useTimeout()
 
   const loadStatus = useCallback(async () => {
     try {
       const status = await NativeLocationService.getAutoExportStatus()
       setEnabled(status.enabled)
+      // Only ever turns it on: the worker's flag is still false between the enqueue and the run
+      // starting, and a reload in that window would wipe the line the press just put up.
+      if (status.running) setExportRunning(true)
       setFormat((status.format as ExportFormat) || "geojson")
       setInterval((status.interval as ExportInterval) || "daily")
       setMode((status.mode as ExportMode) || "all")
@@ -161,15 +168,19 @@ export function AutoExportScreen(_props: ScreenProps) {
     const listener = DeviceEventEmitter.addListener(
       "onAutoExportComplete",
       (event: { success: boolean; fileName: string | null; rowCount: number; error: string | null }) => {
-        if (event.success) {
+        if (!event.success) {
+          setLastError(event.error)
+          showAlert("Export Failed", event.error || "Unknown error", "error")
+        } else if (event.fileName) {
           setLastFileName(event.fileName)
           setLastRowCount(event.rowCount)
           setLastError(null)
           showAlert("Export Complete", `Exported ${event.rowCount} locations to ${event.fileName}`, "success")
         } else {
-          setLastError(event.error)
-          showAlert("Export Failed", event.error || "Unknown error", "error")
+          setLastError(null)
+          showAlert("Export Complete", "No new locations to export.", "success")
         }
+        setExportRunning(false)
         loadStatus()
         loadExportFiles()
       }
@@ -177,22 +188,17 @@ export function AutoExportScreen(_props: ScreenProps) {
     return () => listener.remove()
   }, [loadStatus, loadExportFiles])
 
-  const saveSetting = useCallback(
-    async (key: string, value: string) => {
-      setSaving(true)
-      try {
-        await NativeLocationService.saveSetting(key, value)
-        setSaving(false)
-        setSaveSuccess(true)
-        successTimeout.set(() => setSaveSuccess(false), SAVE_SUCCESS_DISPLAY_MS)
-      } catch (error) {
-        setSaving(false)
-        logger.error("[AutoExportScreen] Save failed:", error)
-        showAlert("Error", "Failed to save setting. Please try again.", "error")
-      }
-    },
-    [successTimeout]
-  )
+  const saveSetting = useCallback(async (key: string, value: string) => {
+    setSaving(true)
+    try {
+      await NativeLocationService.saveSetting(key, value)
+      setSaving(false)
+    } catch (error) {
+      setSaving(false)
+      logger.error("[AutoExportScreen] Save failed:", error)
+      showAlert("Error", "Failed to save setting. Please try again.", "error")
+    }
+  }, [])
 
   const handleToggle = useCallback(
     async (value: boolean) => {
@@ -350,7 +356,7 @@ export function AutoExportScreen(_props: ScreenProps) {
     setExporting(true)
     try {
       await NativeLocationService.runAutoExportNow()
-      showAlert("Export Started", "Export is running in the background. The status will update when complete.", "info")
+      setExportRunning(true)
     } catch (error) {
       logger.error("[AutoExportScreen] Export now failed:", error)
       showAlert("Error", "Failed to start export.", "error")
@@ -377,7 +383,9 @@ export function AutoExportScreen(_props: ScreenProps) {
   if (loading)
     return (
       <Container>
-        <View />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       </Container>
     )
 
@@ -393,32 +401,29 @@ export function AutoExportScreen(_props: ScreenProps) {
         </View>
 
         {/* Enable Toggle */}
-        <Card>
+        <Card rows>
           <SettingRow
             label="Enable Auto-Export"
             hint={enabled ? "Auto-Exports are scheduled" : "Auto-Exports are disabled"}
           >
-            <Switch
-              value={enabled}
-              onValueChange={handleToggle}
-              trackColor={{ false: colors.border, true: colors.primary + "80" }}
-              thumbColor={enabled ? colors.primary : colors.border}
-            />
+            <Toggle accessibilityLabel="Enable auto-export" value={enabled} onValueChange={handleToggle} />
           </SettingRow>
         </Card>
 
         {/* Export Directory */}
         <View style={styles.section}>
-          <SectionTitle>Export Directory</SectionTitle>
+          <SectionTitle>Export directory</SectionTitle>
           <Card>
             <Pressable
-              style={({ pressed }) => [styles.directoryRow, pressed && { opacity: colors.pressedOpacity }]}
+              accessibilityRole="button"
+              android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
+              style={styles.directoryRow}
               onPress={handlePickDirectory}
             >
-              <FolderOpen size={22} color={colors.primary} />
+              <FolderOpen size={size.icon.md} color={colors.primary} />
               <View style={styles.directoryContent}>
                 <Text style={[styles.settingLabel, { color: colors.text }]}>
-                  {directoryUri ? "Directory Selected" : "Select Directory"}
+                  {directoryUri ? "Directory selected" : "Select directory"}
                 </Text>
                 <Text style={[styles.settingDescription, { color: colors.textSecondary }]} numberOfLines={1}>
                   {directoryUri
@@ -426,7 +431,7 @@ export function AutoExportScreen(_props: ScreenProps) {
                     : "Tap to choose where files are saved"}
                 </Text>
               </View>
-              {directoryUri && <CheckCircle size={18} color={colors.success} />}
+              {directoryUri && <CircleCheckBig size={size.icon.md} color={colors.success} />}
             </Pressable>
           </Card>
         </View>
@@ -434,29 +439,36 @@ export function AutoExportScreen(_props: ScreenProps) {
         {/* Format */}
         <View style={styles.section}>
           <SectionTitle>Format</SectionTitle>
-          <Card>
-            <FormatSelector selectedFormat={format} onSelectFormat={handleFormatChange} />
+          <Card rows>
+            <ListItem
+              testID="auto-export-format"
+              icon={FILE_FORMATS[format].icon}
+              label="Format"
+              sub={EXPORT_FORMATS[format].label}
+              onPress={() => setFormatOpen(true)}
+            />
           </Card>
         </View>
 
         {/* File Name */}
         <View style={styles.section}>
-          <SectionTitle>File Name</SectionTitle>
+          <SectionTitle>File name</SectionTitle>
           <Card>
-            <TextInput
-              style={[styles.templateInput, { color: colors.text, borderColor: colors.border }]}
+            <TextField
+              testID="filename-template-input"
+              accessibilityLabel="File name template"
+              mono
               value={filenameTemplateInput}
               onChangeText={handleFilenameTemplateChange}
               onBlur={handleFilenameTemplateBlur}
               placeholder={DEFAULT_FILENAME_TEMPLATE}
-              placeholderTextColor={colors.textSecondary}
               autoCapitalize="none"
               autoCorrect={false}
             />
             {FILENAME_TOKENS.map((token) => (
               <View key={token} style={styles.templateTokenRow}>
                 <Text style={[styles.templateToken, { color: colors.text }]}>{`{${token}}`}</Text>
-                <Text style={[styles.templateHint, { color: colors.textSecondary }]}>{tokenValues[token]}</Text>
+                <Text style={[styles.templateTokenValue, { color: colors.textSecondary }]}>{tokenValues[token]}</Text>
               </View>
             ))}
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
@@ -501,46 +513,36 @@ export function AutoExportScreen(_props: ScreenProps) {
                   unit="day"
                   placeholder="1"
                   min={1}
-                  colors={colors}
                   hint="1-31. Falls back to last day in shorter months."
                 />
               </>
             )}
             <Divider />
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Time (24h)</Text>
-            <TimePicker value={timeOfDay} onChange={handleTimeChange} colors={colors} />
+            <TimePicker label="Time (24h)" value={timeOfDay} onChange={handleTimeChange} />
           </Card>
         </View>
 
         {/* Export Range */}
         <View style={styles.section}>
-          <SectionTitle>Export Range</SectionTitle>
-          <Card>
+          <SectionTitle>Export range</SectionTitle>
+          <Card rows>
             {MODE_OPTIONS.map((option, i) => (
-              <View key={option.key}>
-                {i > 0 && <Divider />}
-                <Pressable
-                  style={({ pressed }) => [styles.modeRow, pressed && { opacity: colors.pressedOpacity }]}
+              <React.Fragment key={option.key}>
+                {i > 0 && <Divider tight />}
+                <RadioRow
+                  label={option.label}
+                  sub={option.description}
+                  selected={mode === option.key}
                   onPress={() => handleModeChange(option.key)}
-                >
-                  <View style={styles.modeContent}>
-                    <Text style={[styles.settingLabel, { color: mode === option.key ? colors.primary : colors.text }]}>
-                      {option.label}
-                    </Text>
-                    <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                      {option.description}
-                    </Text>
-                  </View>
-                  <RadioDot selected={mode === option.key} />
-                </Pressable>
-              </View>
+                />
+              </React.Fragment>
             ))}
           </Card>
         </View>
 
         {/* File Retention */}
         <View style={styles.section}>
-          <SectionTitle>File Retention</SectionTitle>
+          <SectionTitle>File retention</SectionTitle>
           <Card>
             <NumericInput
               label="Files to keep"
@@ -550,7 +552,6 @@ export function AutoExportScreen(_props: ScreenProps) {
               unit="files"
               placeholder="10"
               min={0}
-              colors={colors}
               hint={
                 filenameTemplate.includes("{device}")
                   ? "Set to 0 for unlimited. Counts only exports named for this device model, so other models sharing the folder are untouched."
@@ -565,21 +566,21 @@ export function AutoExportScreen(_props: ScreenProps) {
           <SectionTitle>Status</SectionTitle>
           <Card>
             <View style={styles.statusRow}>
-              <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last Export</Text>
+              <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last export</Text>
               <Text style={[styles.statusValue, { color: colors.text }]}>{formatExportDateTime(lastExport)}</Text>
             </View>
             {lastFileName && (
               <>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last File</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last file</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]} numberOfLines={1}>
                     {lastFileName}
                   </Text>
                 </View>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Locations Exported</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Locations exported</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]}>{lastRowCount}</Text>
                 </View>
               </>
@@ -588,7 +589,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.errorRow}>
-                  <AlertTriangle size={14} color={colors.error} />
+                  <TriangleAlert size={size.icon.sm} color={colors.error} />
                   <Text style={[styles.errorText, { color: colors.error }]} numberOfLines={2}>
                     {lastError}
                   </Text>
@@ -599,7 +600,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Next Export</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Next export</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]}>{formatExportDateTime(nextExport)}</Text>
                 </View>
               </>
@@ -608,7 +609,7 @@ export function AutoExportScreen(_props: ScreenProps) {
               <>
                 <Divider />
                 <View style={styles.statusRow}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Export Files</Text>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Export files</Text>
                   <Text style={[styles.statusValue, { color: colors.text }]}>{fileCount}</Text>
                 </View>
               </>
@@ -620,18 +621,26 @@ export function AutoExportScreen(_props: ScreenProps) {
         {directoryUri && (
           <View style={styles.section}>
             <Button
-              title={exporting ? "Exporting..." : "Export Now"}
+              title={exporting ? "Exporting..." : "Export now"}
               onPress={handleExportNow}
               disabled={exporting}
               loading={exporting}
             />
+            {exportRunning && (
+              <View style={styles.runningRow} testID="export-running">
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+                <Text style={[styles.runningText, { color: colors.textSecondary }]}>
+                  Export running. It continues if you leave this screen.
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
         {/* Export History */}
         {exportFiles.length > 0 && (
           <View style={styles.section}>
-            <SectionTitle>Export History</SectionTitle>
+            <SectionTitle>Export history</SectionTitle>
             <Card>
               {exportFiles.map((file, i) => (
                 <View key={file.name}>
@@ -646,10 +655,13 @@ export function AutoExportScreen(_props: ScreenProps) {
                       </Text>
                     </View>
                     <Pressable
-                      style={({ pressed }) => [styles.shareButton, pressed && { opacity: 0.5 }]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Share ${file.name}`}
+                      android_ripple={{ color: colors.primary + STATE_LAYER_ALPHA, borderless: true }}
+                      style={styles.shareButton}
                       onPress={() => handleShareFile(file)}
                     >
-                      <Share2 size={18} color={colors.primary} />
+                      <Share2 size={size.icon.md} color={colors.primary} />
                     </Pressable>
                   </View>
                 </View>
@@ -658,41 +670,65 @@ export function AutoExportScreen(_props: ScreenProps) {
           </View>
         )}
       </ScrollView>
-      <FloatingSaveIndicator saving={saving} success={saveSuccess} colors={colors} />
+      <FloatingSaveIndicator saving={saving} />
+      <ExportFormatDialog
+        visible={formatOpen}
+        title="Export format"
+        message="Every scheduled run writes this format."
+        onSelect={(next) => {
+          setFormatOpen(false)
+          handleFormatChange(next)
+        }}
+        onRequestClose={() => setFormatOpen(false)}
+      />
     </Container>
   )
 }
 
 const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  runningRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm
+  },
+  runningText: {
+    flex: 1,
+    fontSize: fontSizes.caption
+  },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 40
+    paddingHorizontal: space.lg,
+    paddingBottom: space.xxl
   },
   header: {
-    marginTop: 20,
-    marginBottom: 20
+    marginTop: space.xl,
+    marginBottom: space.xl
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 20
+    fontSize: fontSizes.body,
+    lineHeight: lineHeights.body
   },
   section: {
-    marginTop: 24
+    marginTop: space.xl
   },
   settingLabel: {
-    fontSize: 16,
+    fontSize: fontSizes.label,
     ...fonts.semiBold,
-    marginBottom: 2
+    marginBottom: space.xxs
   },
   settingDescription: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular
   },
   directoryRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 4
+    gap: space.md,
+    paddingVertical: space.xs
   },
   directoryContent: {
     flex: 1
@@ -701,96 +737,79 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4
+    paddingVertical: space.xs
   },
   statusLabel: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.regular
   },
   statusValue: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     ...fonts.semiBold,
     flexShrink: 1,
     textAlign: "right",
-    marginLeft: 12
+    marginStart: space.md
   },
   errorRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 6
+    gap: space.sm,
+    paddingVertical: space.sm
   },
   errorText: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
     flex: 1
-  },
-  modeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10
-  },
-  modeContent: {
-    flex: 1,
-    marginRight: 16
   },
   fileRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8
+    paddingVertical: space.sm
   },
   fileInfo: {
     flex: 1,
-    marginRight: 12
+    marginEnd: space.md
   },
   fileName: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold,
-    marginBottom: 2
+    marginBottom: space.xxs
   },
   fileMeta: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     ...fonts.regular
   },
   shareButton: {
-    padding: 8
+    padding: space.sm
   },
   fieldLabel: {
-    fontSize: 12,
-    ...fonts.semiBold,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginTop: 12,
-    marginBottom: 8
-  },
-  templateInput: {
-    fontSize: 15,
-    ...fonts.regular,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10
+    fontSize: fontSizes.description,
+    ...fonts.medium,
+    marginBottom: space.sm
   },
   templateHint: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.regular,
-    marginTop: 8
+    marginTop: space.sm
   },
   templateTokenRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: 8
+    gap: space.sm,
+    marginTop: space.sm
   },
   templateToken: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold,
-    marginTop: 8,
     minWidth: 72
   },
+  templateTokenValue: {
+    fontSize: fontSizes.description,
+    ...fonts.regular
+  },
   templatePreview: {
-    fontSize: 13,
+    fontSize: fontSizes.description,
     ...fonts.semiBold,
-    marginTop: 8
+    marginTop: space.sm
   }
 })

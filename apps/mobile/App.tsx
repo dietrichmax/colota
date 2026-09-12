@@ -30,8 +30,7 @@ import {
   DataManagementScreen,
   LocationHistoryScreen,
   LocationSummaryScreen,
-  ExportLocationsScreen,
-  ImportLocationsScreen,
+  ExportImportScreen,
   AboutScreen,
   TrackingProfilesScreen,
   ProfileEditorScreen,
@@ -114,14 +113,9 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     title: "Summary"
   },
   {
-    name: "Export Locations",
-    component: ExportLocationsScreen,
-    title: "Export locations"
-  },
-  {
-    name: "Import Locations",
-    component: ImportLocationsScreen,
-    title: "Import locations"
+    name: "Export & Import",
+    component: ExportImportScreen,
+    title: "Export & import"
   },
   {
     name: "Auto-Export",

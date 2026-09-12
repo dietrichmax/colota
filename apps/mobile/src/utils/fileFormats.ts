@@ -17,7 +17,6 @@ export interface FileFormat {
   extension: string
   exportable: boolean
   mimeType?: string // present for every exportable format
-  subtitle?: string // export picker only
   description: string
   importHint?: string
 }
@@ -29,8 +28,8 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     extension: ".geojson",
     exportable: true,
     mimeType: "application/geo+json",
-    subtitle: "Geographic Data",
-    description: "Mapbox, Leaflet, QGIS. Best for backups - re-imports into Colota without losing data."
+    description:
+      "QGIS, Mapbox, Leaflet. One point per recording, and the only format Colota re-imports without losing a field."
   },
   google_timeline_legacy: {
     label: "Google Timeline (legacy)",
@@ -53,7 +52,6 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     extension: ".gpx",
     exportable: true,
     mimeType: "application/gpx+xml",
-    subtitle: "GPS Exchange",
     description: "GPS Exchange Format - Garmin, Strava, sport watches, tracking apps."
   },
   kml: {
@@ -62,7 +60,6 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     extension: ".kml",
     exportable: true,
     mimeType: "application/vnd.google-earth.kml+xml",
-    subtitle: "Keyhole Markup Language",
     description: "Google Earth, Google Maps, ArcGIS.",
     importHint: "Only timestamped placemarks are read - LineString-only tracks are skipped."
   },
@@ -72,14 +69,9 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     extension: ".csv",
     exportable: true,
     mimeType: "text/csv",
-    subtitle: "Spreadsheet Format",
     description: "Comma-separated table - Excel, Google Sheets, data analysis.",
     importHint: "The header must include latitude, longitude and a time column."
   }
-}
-
-export function importDescription(f: FileFormat): string {
-  return f.importHint ? `${f.description} ${f.importHint}` : f.description
 }
 
 export const IMPORT_FORMAT_ORDER: ImportFormat[] = [
