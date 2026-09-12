@@ -16,7 +16,8 @@ import type { RootStackParamList, RootStackRoute } from "./src/types/navigation"
 
 import "./src/i18n"
 import {
-  ActivityLogScreen,
+  LoggingScreen,
+  LogPreviewScreen,
   DashboardScreen,
   SettingsScreen,
   ApiSettingsScreen,
@@ -164,8 +165,13 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
   },
   {
     name: "Logging",
-    component: ActivityLogScreen,
+    component: LoggingScreen,
     title: "Logging"
+  },
+  {
+    name: "Log Preview",
+    component: LogPreviewScreen,
+    title: "Log preview"
   },
   {
     name: "Backup & Restore",
