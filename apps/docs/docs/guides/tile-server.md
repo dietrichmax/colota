@@ -59,7 +59,7 @@ For a light/dark pair, use `bright` or `liberty` for light mode and `fiord` for 
 
 :::note[Attribution]
 
-When using the default server, the map shows **© OpenMapTiles · © OpenStreetMap contributors · © maps.mxd.codes** attribution. When a custom server is configured, attribution is read automatically from the style JSON served by your tile server.
+When using the default server, the map shows **© OpenMapTiles · © OpenStreetMap contributors · © maps.mxd.codes** attribution. With a custom server, the credits come from its style JSON or from the TileJSON a source points to. A server that publishes none is credited with its host name.
 
 :::
 

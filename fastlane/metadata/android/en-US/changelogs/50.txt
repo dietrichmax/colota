@@ -5,3 +5,4 @@
 - GeoJSON exports write one point per recording
 - Switching units updates every screen at once
 - Offline maps picks up a running download when you come back
+- Map credits show a custom tile server's own sources

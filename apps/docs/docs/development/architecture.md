@@ -349,7 +349,7 @@ The app uses [MapLibre GL Native](https://github.com/maplibre/maplibre-react-nat
 
 | Component | Purpose |
 | --- | --- |
-| `ColotaMapView` | Shared base map component wrapping MapLibre's `MapView` with OpenFreeMap vector tiles, dark mode style transformation, custom compass, and attribution |
+| `ColotaMapView` | Shared base map wrapping MapLibre's `Map` with the light or dark style URL, a custom compass and the credits dialog. Credits come from each source in the style or its TileJSON; a custom server that publishes none is credited by its host |
 | `DashboardMap` | Live tracking map with user marker, accuracy circle, today's track (its visibility is the screen's Route toggle, the map only draws it), geofence polygons with labels, follow-me until the user pans, then a centre button in the disc column. Frames the last known fix, or the zones when there is none |
 | `TrackMap` | Location history map: trip-colored track segments over a casing layer, a focused trip drawn wider while the rest dim, 48 dp point hitboxes, fit-to-day and fit-to-trip bounds. Selection and focus are props; it draws no popup or legend |
 | `CalendarPicker` | Day, month and year panes inside `DayPickerModal`, dot indicators for days with data, per-day stats spoken by the cell |

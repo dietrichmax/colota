@@ -38,7 +38,7 @@ interface AttributionLink {
   label: string
 }
 
-// Used when the style fetch fails or returns no attribution. Must cover
+// Used for the default server when its style fetch fails or returns no attribution. Must cover
 // anything legally required for the default tile sources (OSM ODbL,
 // OpenMapTiles CC-BY) so attribution is never silently hidden.
 const FALLBACK_ATTRIBUTION_LINKS: AttributionLink[] = [
@@ -72,23 +72,52 @@ export function attributionRole(url: string): string | undefined {
   return known ? ATTRIBUTION_ROLES[known] : undefined
 }
 
-function parseStyleAttribution(sources: unknown): AttributionLink[] {
-  if (!sources || typeof sources !== "object") return []
+function parseAttributionLinks(htmls: string[]): AttributionLink[] {
   const seen = new Set<string>()
   const links: AttributionLink[] = []
   const anchorRe = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([^<]+)<\/a>/gi
-  for (const src of Object.values(sources as Record<string, unknown>)) {
-    const html = (src as { attribution?: unknown })?.attribution
-    if (typeof html !== "string") continue
+  for (const html of htmls) {
     for (const match of html.matchAll(anchorRe)) {
       const url = match[1]
-      const label = match[2].trim()
+      const label = match[2]
+        .replace(/&copy;/g, "©")
+        .replace(/&amp;/g, "&")
+        .trim()
       if (!label || seen.has(url)) continue
       seen.add(url)
       links.push({ url, label })
     }
   }
   return links
+}
+
+/** MapLibre reads a source's credits from the style first, then from the TileJSON its url names. */
+async function sourceAttributions(sources: unknown, signal: AbortSignal): Promise<string[]> {
+  if (!sources || typeof sources !== "object") return []
+  const found = await Promise.all(
+    Object.values(sources as Record<string, { attribution?: unknown; url?: unknown }>).map(async (src) => {
+      if (typeof src?.attribution === "string") return src.attribution
+      if (typeof src?.url !== "string" || !/^https?:/i.test(src.url)) return null
+      const tileJson = await fetch(src.url, { signal })
+        .then((r) => r.json())
+        .catch((err) => {
+          if (err?.name === "AbortError") throw err
+          return null
+        })
+      return typeof tileJson?.attribution === "string" ? tileJson.attribution : null
+    })
+  )
+  return found.filter((html): html is string => html !== null)
+}
+
+/** The default list names the default server's sources, so a custom server is credited by its own host. */
+function fallbackAttribution(styleUrl: string): AttributionLink[] {
+  if (styleUrl === MAP_STYLE_URL_LIGHT || styleUrl === MAP_STYLE_URL_DARK) return FALLBACK_ATTRIBUTION_LINKS
+  const scheme = styleUrl.match(/^https?:\/\//i)?.[0]
+  if (!scheme) return []
+  const authority = styleUrl.slice(scheme.length).split(/[/?#]/)[0]
+  const host = authority.slice(authority.lastIndexOf("@") + 1)
+  return host ? [{ url: scheme + host, label: attributionHost(host) }] : []
 }
 
 export interface ColotaMapRef {
@@ -172,20 +201,22 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
   const mapStyle = isDark ? mapStyleDark : mapStyleLight
 
   useEffect(() => {
+    const fallback = fallbackAttribution(mapStyle)
     if (!/^https?:/i.test(mapStyle)) {
-      setAttributionLinks(FALLBACK_ATTRIBUTION_LINKS)
+      setAttributionLinks(fallback)
       return
     }
     const controller = new AbortController()
     fetch(mapStyle, { signal: controller.signal })
       .then((r) => r.json())
-      .then((loadedStyle: { sources?: unknown }) => {
-        const parsed = parseStyleAttribution(loadedStyle?.sources)
-        setAttributionLinks(parsed.length > 0 ? parsed : FALLBACK_ATTRIBUTION_LINKS)
+      .then(async (loadedStyle: { sources?: unknown }) => {
+        const links = parseAttributionLinks(await sourceAttributions(loadedStyle?.sources, controller.signal))
+        if (controller.signal.aborted) return
+        setAttributionLinks(links.length > 0 ? links : fallback)
       })
       .catch((err) => {
         if (err?.name === "AbortError") return
-        setAttributionLinks(FALLBACK_ATTRIBUTION_LINKS)
+        setAttributionLinks(fallback)
       })
     return () => controller.abort()
   }, [mapStyle])

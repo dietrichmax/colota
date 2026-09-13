@@ -1,7 +1,7 @@
 import React from "react"
-import { render, fireEvent } from "@testing-library/react-native"
-import { StyleSheet } from "react-native"
-import { HIT_SLOP_SM, size, space, MAX_MAP_ZOOM } from "../../../../constants"
+import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
+import { Linking, StyleSheet } from "react-native"
+import { HIT_SLOP_SM, size, space, MAX_MAP_ZOOM, MAP_STYLE_URL_LIGHT } from "../../../../constants"
 
 const mockSetStop = jest.fn()
 const mockCameraProps = jest.fn()
@@ -37,6 +37,7 @@ jest.mock("../../../../services/NativeLocationService", () => ({
 
 import { ColotaMapView, attributionRole } from "../ColotaMapView"
 import { MapActionButton, mapActionStyles } from "../MapActionButton"
+import NativeLocationService from "../../../../services/NativeLocationService"
 
 const padding = { top: 40, right: 64, bottom: 200, left: 16 }
 const center: [number, number] = [11.5, 48.1]
@@ -226,5 +227,110 @@ describe("attributionRole", () => {
     expect(attributionRole("https://openstreetmap.org.example.com/")).toBeUndefined()
     expect(attributionRole("https://example.com/?ref=openstreetmap.org")).toBeUndefined()
     expect(attributionRole("https://openstreetmap.org@example.com/")).toBeUndefined()
+  })
+})
+
+describe("ColotaMapView credits from the loaded style", () => {
+  const CUSTOM_STYLE = "https://tiles.example.com/styles/light.json"
+  const TILEJSON = "https://tiles.example.com/planet.json"
+  const getSetting = NativeLocationService.getSetting as jest.Mock
+  const fetchMock = globalThis.fetch as jest.Mock
+
+  function serve(lightStyleUrl: string | null, responses: Record<string, unknown>) {
+    getSetting.mockImplementation((key: string) => Promise.resolve(key === "mapStyleUrlLight" ? lightStyleUrl : null))
+    fetchMock.mockImplementation((url: string) =>
+      url in responses
+        ? Promise.resolve({ json: () => Promise.resolve(responses[url]) })
+        : Promise.reject(new Error("offline"))
+    )
+  }
+
+  function openCredits() {
+    const utils = render(<ColotaMapView initialCenter={center} />)
+    fireEvent.press(utils.getByRole("button", { name: "Show map attribution" }))
+    return utils
+  }
+
+  afterEach(() => {
+    getSetting.mockImplementation(() => Promise.resolve(null))
+    fetchMock.mockImplementation(() => new Promise(() => {}))
+  })
+
+  it("credits a custom server with the names in the TileJSON its source points to, since a style may carry none itself", async () => {
+    serve(CUSTOM_STYLE, {
+      [CUSTOM_STYLE]: { sources: { carto: { type: "vector", url: TILEJSON } }, layers: [] },
+      [TILEJSON]: {
+        attribution:
+          '&copy; <a href="https://carto.com/about-carto/">CARTO</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }
+    })
+    const { findByText, getAllByRole, queryByText } = openCredits()
+
+    expect(await findByText("CARTO")).toBeTruthy()
+    expect(getAllByRole("link")).toHaveLength(2)
+    expect(queryByText("maps.mxd.codes")).toBeNull()
+  })
+
+  it("prints the copyright sign OpenFreeMap writes as an entity inside its link", async () => {
+    serve(CUSTOM_STYLE, {
+      [CUSTOM_STYLE]: {
+        sources: {
+          planet: {
+            type: "vector",
+            attribution:
+              '<a href="https://www.openmaptiles.org/">&copy; OpenMapTiles</a> <a href="https://tiles.example.com/">Tiles &amp; Styles</a>'
+          }
+        }
+      }
+    })
+    const { findByText, getByText, queryByText } = openCredits()
+
+    expect(await findByText("Tiles & Styles")).toBeTruthy()
+    expect(getByText("© OpenMapTiles")).toBeTruthy()
+    expect(queryByText("&copy; OpenMapTiles")).toBeNull()
+  })
+
+  it.each([
+    [
+      "names no credits",
+      {
+        [CUSTOM_STYLE]: {
+          sources: { planet: { type: "vector", tiles: ["https://tiles.example.com/{z}/{x}/{y}.pbf"] } }
+        }
+      }
+    ],
+    ["cannot be read", {}]
+  ])(
+    "credits a custom server whose style %s by its host, never with the default server's sources",
+    async (_case, responses: Record<string, unknown>) => {
+      serve(CUSTOM_STYLE, responses)
+      const { findByText, getAllByRole, queryByText } = openCredits()
+
+      expect(await findByText("tiles.example.com")).toBeTruthy()
+      expect(getAllByRole("link")).toHaveLength(1)
+      expect(queryByText("© OpenStreetMap contributors")).toBeNull()
+    }
+  )
+
+  it("links a host credit to the server without the credentials its style URL carries", async () => {
+    serve("https://user:secret@tiles.example.com:8443/style.json", {})
+    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined)
+    const { findByText } = openCredits()
+
+    fireEvent.press(await findByText("tiles.example.com"))
+
+    expect(openURL).toHaveBeenCalledWith("https://tiles.example.com:8443")
+    openURL.mockRestore()
+  })
+
+  it("keeps the default server's own credits when its style cannot be read", async () => {
+    serve(null, {})
+    const { getAllByRole, getByText } = openCredits()
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(MAP_STYLE_URL_LIGHT, expect.anything()))
+    await act(() => new Promise<void>((resolve) => setTimeout(() => resolve(), 0)))
+
+    expect(getAllByRole("link")).toHaveLength(4)
+    expect(getByText("OpenFreeMap")).toBeTruthy()
   })
 })
