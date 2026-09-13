@@ -18,7 +18,7 @@ If your cert is already installed in Android's KeyChain (via Android Settings ->
 
 1. Open Colota -> Settings -> Connection -> **Client certificate**
 2. Tap **Pick from device certificates**
-3. Android's system dialog appears. Select your cert.
+3. Android's system dialog appears. Select your cert. With no certificate installed, Android closes the dialog at once and Colota says nothing was picked.
 4. The screen now reads **Valid** with the expiry date and "device credential store", plus the subject and issuer.
 
 Colota only remembers which cert you picked - the key stays in the device credential store, survives reinstalling Colota and is never backed up.

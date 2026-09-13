@@ -18,6 +18,13 @@ jest.mock("../../../index", () => {
         R.createElement(Text, null, title)
       ),
     FieldMessage: ({ children }: any) => R.createElement(Text, null, children),
+    ListItem: ({ label, sub, onPress, testID }: any) =>
+      R.createElement(
+        Pressable,
+        { onPress, testID, accessibilityRole: "button" },
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, sub)
+      ),
     StateLine: ({ label, caption, testID }: any) =>
       R.createElement(View, { testID }, R.createElement(Text, null, label), R.createElement(Text, null, caption)),
     StatRow: ({ label, value }: any) =>
@@ -100,19 +107,23 @@ describe("MtlsSection", () => {
 
       expect(await findByText("Pick from device certificates")).toBeTruthy()
       expect(
-        getByText("Key stays in the device credential store, survives reinstalling Colota, never backed up.")
+        getByText("Key stays in the device's credential store, survives a reinstall, never backed up.")
       ).toBeTruthy()
       expect(getByText("Import .p12 / .pfx")).toBeTruthy()
-      expect(getByText(/^Key moves into the Android Keystore/)).toBeTruthy()
-      expect(getByText("None. Only for a server that asks for one.")).toBeTruthy()
+      expect(
+        getByText("Key moves into the Android Keystore and the file password is discarded. Not backed up.")
+      ).toBeTruthy()
+      expect(getByText("Only for a server that asks for one")).toBeTruthy()
     })
 
-    it("says when a CA is needed at all and where it lives", async () => {
+    it("says when a CA is needed at all", async () => {
       const { findByText, getByText } = render(<MtlsSection />)
 
       expect(await findByText("Import CA (.crt / .pem)")).toBeTruthy()
-      expect(getByText(/^None\. Public CAs such as Let's Encrypt work without it\./)).toBeTruthy()
-      expect(getByText("Encrypted on this device and included in encrypted backups.")).toBeTruthy()
+      expect(getByText("Not needed for a public certificate")).toBeTruthy()
+      expect(
+        getByText("For a private or self-signed CA. CAs you installed in Android settings are not used.")
+      ).toBeTruthy()
     })
   })
 
@@ -134,6 +145,7 @@ describe("MtlsSection", () => {
       fireEvent.press(await findByText("Pick from device certificates"))
       await waitFor(() => expect(mockPickKeyChainCert).toHaveBeenCalled())
       expect(mockGetClientCertInfo).toHaveBeenCalledTimes(1)
+      expect(await findByText(/^No certificate was picked\. If the list was empty/)).toBeTruthy()
     })
   })
 
@@ -259,6 +271,7 @@ describe("MtlsSection", () => {
       )
       await waitFor(() => expect(mockClearServerCa).toHaveBeenCalled())
       expect(getByText("Valid")).toBeTruthy()
+      expect(getByText("Encrypted on this device and included in encrypted backups.")).toBeTruthy()
     })
 
     it("names the consequence of an expired CA", async () => {

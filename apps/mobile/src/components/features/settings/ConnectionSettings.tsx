@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, View, ActivityIndicator, Keyboard } from "react-native"
+import { StyleSheet, View, ActivityIndicator, Keyboard } from "react-native"
 import {
   Braces,
   CircleAlert,
@@ -24,7 +24,6 @@ import NativeLocationService from "../../../services/NativeLocationService"
 import { endpointCarriesKey, endpointExample, isEndpointAllowed } from "../../../utils/settingsValidation"
 import { isTraccarJsonFormat, isOverlandFormat } from "../../../utils/apiPayload"
 import { ensureLocalNetworkPermission } from "../../../services/LocationServicePermission"
-import { fontSizes, fonts, lineHeights } from "../../../styles/typography"
 import { useTheme } from "../../../hooks/useTheme"
 import { space } from "../../../constants"
 import { logger } from "../../../utils/logger"
@@ -275,10 +274,6 @@ export function ConnectionSettings({
 
   return (
     <View>
-      <Text style={[styles.intro, { color: colors.textSecondary }]}>
-        Where locations are sent and how the server knows it is you. Changes apply at once.
-      </Text>
-
       <SectionTitle>Server</SectionTitle>
       <Card rows>
         <StateLine
@@ -336,9 +331,7 @@ export function ConnectionSettings({
                   loading={test?.kind === "testing"}
                   testID="test-connection-btn"
                 />
-                <FieldMessage>
-                  {testBlocker ?? "Sends your latest recorded location to this endpoint with your credentials."}
-                </FieldMessage>
+                {testBlocker ? <FieldMessage>{testBlocker}</FieldMessage> : null}
               </View>
 
               {test?.kind === "testing" && (
@@ -402,12 +395,6 @@ export function ConnectionSettings({
 }
 
 const styles = StyleSheet.create({
-  intro: {
-    fontSize: fontSizes.body,
-    ...fonts.regular,
-    lineHeight: lineHeights.body,
-    marginBottom: space.lg
-  },
   groupTop: {
     marginTop: space.xl
   },

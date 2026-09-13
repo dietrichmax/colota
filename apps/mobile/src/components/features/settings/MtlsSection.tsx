@@ -4,11 +4,18 @@
  */
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Text, StyleSheet, View, ActivityIndicator } from "react-native"
-import { CircleAlert, ShieldCheck, TriangleAlert, type LucideIcon } from "lucide-react-native"
+import { StyleSheet, View, ActivityIndicator } from "react-native"
+import {
+  CircleAlert,
+  Download,
+  FileKey,
+  KeyRound,
+  ShieldCheck,
+  TriangleAlert,
+  type LucideIcon
+} from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
-import { fonts, fontSizes, lineHeights } from "../../../styles/typography"
-import { SectionTitle, Card, Divider, Button, FieldMessage, TextField, StateLine, StatRow } from "../../index"
+import { SectionTitle, Card, Divider, Button, FieldMessage, ListItem, TextField, StateLine, StatRow } from "../../index"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { showChoice, showConfirm } from "../../../services/modalService"
 import { ClientCertInfoResult } from "../../../types/global"
@@ -32,9 +39,11 @@ function errMsg(map: Record<string, string>, err: any, fallback: string): string
 type ImportState =
   { kind: "idle" } | { kind: "picked"; b64: string; password: string; importing: boolean; error: string | null }
 
-const PICK_LINE = "Key stays in the device credential store, survives reinstalling Colota, never backed up."
-const IMPORT_LINE =
-  "Key moves into the Android Keystore and never leaves the device. The file password is used once and discarded. Not backed up, import again after a restore."
+const PICK_LINE = "Key stays in the device's credential store, survives a reinstall, never backed up."
+const IMPORT_LINE = "Key moves into the Android Keystore and the file password is discarded. Not backed up."
+// Android reports an empty picker and a cancelled one the same way, so the line covers both.
+const NO_PICK_LINE =
+  "No certificate was picked. If the list was empty, install one in Android settings under Encryption & credentials first."
 
 export function MtlsSection() {
   const { colors } = useTheme()
@@ -42,6 +51,7 @@ export function MtlsSection() {
   const [caInfo, setCaInfo] = useState<ClientCertInfoResult | null>(null)
   const [importState, setImportState] = useState<ImportState>({ kind: "idle" })
   const [clientPickError, setClientPickError] = useState<string | null>(null)
+  const [pickNote, setPickNote] = useState<string | null>(null)
   const [caError, setCaError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
@@ -94,9 +104,13 @@ export function MtlsSection() {
 
   const handlePickKeyChain = useCallback(async () => {
     setClientPickError(null)
+    setPickNote(null)
     try {
       const result = await NativeLocationService.pickKeyChainCert()
-      if (!result) return
+      if (!result) {
+        setPickNote(NO_PICK_LINE)
+        return
+      }
       await refresh()
     } catch (err: any) {
       logger.error("[MtlsSection] pickKeyChainCert failed:", err)
@@ -106,6 +120,7 @@ export function MtlsSection() {
 
   const handlePickFile = useCallback(async () => {
     setClientPickError(null)
+    setPickNote(null)
     try {
       const b64 = await NativeLocationService.pickClientCertFile()
       if (!b64) return
@@ -211,20 +226,45 @@ export function MtlsSection() {
             removeTestID="remove-cert-btn"
           />
         ) : (
-          <View style={styles.block}>
-            <Text style={[styles.description, { color: colors.textSecondary }]}>
-              None. Only for a server that asks for one.
-            </Text>
-            <View>
-              <Button variant="secondary" onPress={handlePickKeyChain} title="Pick from device certificates" />
-              <FieldMessage>{PICK_LINE}</FieldMessage>
-            </View>
-            <View>
-              <Button variant="secondary" onPress={handlePickFile} title="Import .p12 / .pfx" />
-              <FieldMessage>{IMPORT_LINE}</FieldMessage>
-              {clientPickError && <FieldMessage variant="error">{clientPickError}</FieldMessage>}
-            </View>
-          </View>
+          <>
+            <StateLine
+              icon={ShieldCheck}
+              iconColor={colors.textSecondary}
+              label="None"
+              caption="Only for a server that asks for one"
+              testID="certificate-state"
+            />
+            <Divider tight />
+            <ListItem
+              testID="pick-keychain-row"
+              icon={KeyRound}
+              label="Pick from device certificates"
+              sub={PICK_LINE}
+              subLines={2}
+              accessibilityHint="Opens the system certificate picker"
+              onPress={handlePickKeyChain}
+            />
+            <Divider tight inset />
+            <ListItem
+              testID="import-p12-row"
+              icon={FileKey}
+              trailingIcon={Download}
+              label="Import .p12 / .pfx"
+              sub={IMPORT_LINE}
+              subLines={2}
+              accessibilityHint="Opens the file picker"
+              onPress={handlePickFile}
+            />
+            {clientPickError ? (
+              <View style={styles.rowError}>
+                <FieldMessage variant="error">{clientPickError}</FieldMessage>
+              </View>
+            ) : pickNote ? (
+              <View style={styles.rowError}>
+                <FieldMessage>{pickNote}</FieldMessage>
+              </View>
+            ) : null}
+          </>
         )}
       </Card>
 
@@ -237,19 +277,34 @@ export function MtlsSection() {
             onReplace={handlePickServerCa}
             onRemove={handleClearServerCa}
             removeTestID="remove-ca-btn"
+            note="Encrypted on this device and included in encrypted backups."
           />
         ) : (
-          <View style={styles.block}>
-            <Text style={[styles.description, { color: colors.textSecondary }]}>
-              None. Public CAs such as Let's Encrypt work without it. Add one only for a private or self-signed CA.
-              Certificates you installed on the device are not used.
-            </Text>
-            <View>
-              <Button variant="secondary" onPress={handlePickServerCa} title="Import CA (.crt / .pem)" />
-              <FieldMessage>Encrypted on this device and included in encrypted backups.</FieldMessage>
-              {caError && <FieldMessage variant="error">{caError}</FieldMessage>}
-            </View>
-          </View>
+          <>
+            <StateLine
+              icon={ShieldCheck}
+              iconColor={colors.textSecondary}
+              label="None"
+              caption="Not needed for a public certificate"
+              testID="ca-state"
+            />
+            <Divider tight />
+            <ListItem
+              testID="import-ca-row"
+              icon={FileKey}
+              trailingIcon={Download}
+              label="Import CA (.crt / .pem)"
+              sub="For a private or self-signed CA. CAs you installed in Android settings are not used."
+              subLines={2}
+              accessibilityHint="Opens the file picker"
+              onPress={handlePickServerCa}
+            />
+            {caError ? (
+              <View style={styles.rowError}>
+                <FieldMessage variant="error">{caError}</FieldMessage>
+              </View>
+            ) : null}
+          </>
         )}
       </Card>
     </>
@@ -270,7 +325,8 @@ function CertificateCard({
   issuer,
   onReplace,
   onRemove,
-  removeTestID
+  removeTestID,
+  note
 }: {
   state: CertificateState
   subject?: string
@@ -278,6 +334,7 @@ function CertificateCard({
   onReplace: () => void
   onRemove: () => void
   removeTestID: string
+  note?: string
 }) {
   const { colors } = useTheme()
   const tone =
@@ -301,6 +358,7 @@ function CertificateCard({
       <View style={styles.details}>
         {subject ? <StatRow label="Subject" value={shortenDn(subject)} /> : null}
         {issuer ? <StatRow label="Issuer" value={shortenDn(issuer)} /> : null}
+        {note ? <FieldMessage>{note}</FieldMessage> : null}
         <View style={styles.buttonRow}>
           <Button style={styles.flex1} variant="ghost" title="Replace" onPress={onReplace} />
           <Button style={styles.flex1} variant="danger" title="Remove" onPress={onRemove} testID={removeTestID} />
@@ -333,14 +391,12 @@ const styles = StyleSheet.create({
     paddingBottom: space.lg,
     gap: space.lg
   },
+  rowError: {
+    paddingBottom: space.lg
+  },
   details: {
     paddingTop: space.md,
     paddingBottom: space.lg
-  },
-  description: {
-    fontSize: fontSizes.description,
-    ...fonts.regular,
-    lineHeight: lineHeights.description
   },
   buttonRow: {
     flexDirection: "row",

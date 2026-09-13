@@ -4,17 +4,13 @@
  */
 
 import React from "react"
-import { Text, StyleSheet, View, ScrollView } from "react-native"
+import { StyleSheet, ScrollView } from "react-native"
 import { ScreenProps } from "../types/global"
-import { useTheme } from "../hooks/useTheme"
-import { fontSizes, fonts, lineHeights } from "../styles/typography"
 import { Container } from "../components"
 import { MtlsSection } from "../components/features/settings/MtlsSection"
 import { space } from "../constants"
 
 export function MtlsSettingsScreen({}: ScreenProps) {
-  const { colors } = useTheme()
-
   return (
     <Container>
       <ScrollView
@@ -22,13 +18,6 @@ export function MtlsSettingsScreen({}: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            For a server or reverse proxy that requires mutual TLS. Not needed for tokens or passwords. The private key
-            never leaves this device.
-          </Text>
-        </View>
-
         <MtlsSection />
       </ScrollView>
     </Container>
@@ -40,13 +29,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingTop: space.lg,
     paddingBottom: space.xxl
-  },
-  header: {
-    marginBottom: space.lg
-  },
-  subtitle: {
-    fontSize: fontSizes.body,
-    ...fonts.regular,
-    lineHeight: lineHeights.body
   }
 })

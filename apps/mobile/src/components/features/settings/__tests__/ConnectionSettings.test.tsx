@@ -253,10 +253,12 @@ describe("ConnectionSettings", () => {
       expect(getByText("Needs one recorded location to send. Start tracking first.")).toBeTruthy()
     })
 
-    it("says what it sends while enabled", () => {
-      const { getByText } = renderComponent()
+    it("shows no line under Test connection while it can run", () => {
+      const { queryByText, getByTestId } = renderComponent()
 
-      expect(getByText("Sends your latest recorded location to this endpoint with your credentials.")).toBeTruthy()
+      expect(getByTestId("test-connection-btn").props.accessibilityState.disabled).toBe(false)
+      expect(queryByText(/^Needs one recorded location/)).toBeNull()
+      expect(queryByText(/^Sends your latest recorded location/)).toBeNull()
     })
 
     it("reports Reachable with the code and the time, and persists nothing itself", async () => {
