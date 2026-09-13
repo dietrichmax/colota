@@ -1,0 +1,50 @@
+[
+  {
+    "source": "Dashboard.png",
+    "shot": "Dashboard, tracking on, map on your position, synced to a server",
+    "headline": "Your location.\nYour server.",
+    "subline": "Open source. No telemetry."
+  },
+  {
+    "source": "BackendTemplates.png",
+    "shot": "Backend template list with Traccar, OwnTracks and Reitti visible",
+    "headline": "Works with\nyour server",
+    "subline": "Traccar, OwnTracks, Reitti and more"
+  },
+  {
+    "source": "LocationHistory.png",
+    "shot": "History map tab on a day with three or four colored trips",
+    "headline": "Every day\non a map",
+    "subline": "Trips split out automatically"
+  },
+  {
+    "source": "Import.png",
+    "shot": "Importing a Google Timeline file, ideally the preview step",
+    "headline": "Bring your\nold history",
+    "subline": "Import Google Timeline, GPX, KML or CSV"
+  },
+  {
+    "source": "TrackingProfiles.png",
+    "shot": "Tracking profiles list with driving, charging and stationary profiles",
+    "headline": "GPS that adapts\nto your day",
+    "subline": "Switches when you drive, charge or stop"
+  },
+  {
+    "source": "Geofences.png",
+    "shot": "Geofences map with a home pause zone, or the dashboard paused in it",
+    "headline": "Private places\nstay private",
+    "subline": "Pause zones stop recording at home"
+  },
+  {
+    "source": "OfflineMaps.png",
+    "shot": "Offline maps with an area named and ready to download",
+    "headline": "Keeps going\nwithout signal",
+    "subline": "Points sync later. Maps work offline."
+  },
+  {
+    "source": "Backup.png",
+    "shot": "Backup & restore in dark theme with a password entered",
+    "headline": "Encrypted\nbackups",
+    "subline": "Locations, settings and geofences"
+  }
+]

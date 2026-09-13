@@ -72,6 +72,10 @@ If **Test connection** reads **Not reachable**, the sentence under it points at 
 
 **Settings > Logging** records a log file and hands it over as one file.
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Logging.png", label: "Logging" }, ]} />
+
 ### Recording a log
 
 1. Open **Settings > Logging** and turn on **Record a log file**

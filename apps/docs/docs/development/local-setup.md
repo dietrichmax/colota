@@ -139,9 +139,11 @@ colota/
 │           ├── colors.ts            # Theme color definitions
 │           ├── typography.ts        # Font family and sizes
 │           └── index.ts             # Barrel exports
-├── scripts/                         # Screenshot sync
+├── scripts/                         # Screenshot capture and store rendering
 └── screenshots/
-    └── mobile/original/             # Screenshot source of truth
+    ├── capture.yaml                 # Maestro flow that captures every screenshot
+    ├── demo-track.gpx               # Demo history for the capture
+    └── store/phone.json             # Store screenshot order and captions
 ```
 
 ## Running Tests
@@ -215,13 +217,15 @@ npx -w @colota/mobile tsc --noEmit    # TypeScript type check
 2. Run `npm run build` in `packages/shared/`
 3. Both the mobile app and docs site will pick up the changes
 
-### Syncing Screenshots
+### Screenshots
 
-App screenshots live in `screenshots/mobile/original/` (single source of truth). After adding or updating screenshots there, sync them to the docs site and Fastlane store metadata:
+Screenshots live in `apps/docs/static/img/screenshots/` and are used by the docs, the README and the store listing. Recapture them all on the `colota_a14` emulator with demo data (needs [Maestro](https://maestro.mobile.dev) and release signing):
 
 ```bash
-npm run sync:screenshots
+npm run capture:screenshots
 ```
+
+It walks the screens in `screenshots/capture.yaml` and renders the store images into Fastlane. Store captions are in `screenshots/store/phone.json`; after changing only captions, run `npm run render:store-screenshots`. To add a screenshot, add a `takeScreenshot` step to the flow and reference the file from its guide.
 
 ### Adding Documentation
 

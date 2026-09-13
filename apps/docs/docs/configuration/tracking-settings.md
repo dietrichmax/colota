@@ -6,6 +6,10 @@ sidebar_position: 2
 
 Found under **Settings → Tracking & sync → Recording**. The accuracy filter has its own group, **Accuracy filter**, at the bottom of the same screen.
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/TrackingSettings.png", label: "Tracking & sync" }, ]} />
+
 ## Available Settings
 
 | Setting                     | Description                       | Default   | Minimum |

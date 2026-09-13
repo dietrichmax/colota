@@ -11,7 +11,8 @@
     "clean": "npm run clean --workspaces --if-present",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md}\"",
-    "sync:screenshots": "python3 scripts/sync-screenshots.py",
+    "capture:screenshots": "node scripts/capture-screenshots.mjs",
+    "render:store-screenshots": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/render-store-screenshots.mjs",
     "generate:icons": "node packages/shared/logo/generate-icons.mjs"
   },
   "devDependencies": {

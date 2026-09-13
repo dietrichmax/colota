@@ -25,6 +25,10 @@ The auth credentials Colota uses to reach your tracking endpoint (Basic Auth, Be
 
 ## Creating a Backup
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Backup.png", label: "Backup & restore" }, ]} />
+
 1. Go to **Settings → Backup & restore**
 2. Enter a password (12 characters minimum) and confirm it
 3. Wait for the line under the field to read at least **OK**

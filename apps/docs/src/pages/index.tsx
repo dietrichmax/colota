@@ -105,7 +105,7 @@ const homepageScreenshots = [
   { src: "/img/screenshots/Dashboard.png", label: "Dashboard" },
   { src: "/img/screenshots/Geofences.png", label: "Geofences" },
   { src: "/img/screenshots/LocationHistory.png", label: "Location History" },
-  { src: "/img/screenshots/TrackingProfiles.png", label: "Profile Editor" },
+  { src: "/img/screenshots/ProfileEditor.png", label: "Profile Editor" },
   { src: "/img/screenshots/DarkMode.png", label: "Dark Mode" }
 ]
 
