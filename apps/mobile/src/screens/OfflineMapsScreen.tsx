@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ActivityIndicator, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native"
+import { ActivityIndicator, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native"
 import type { NativeSyntheticEvent } from "react-native"
 import { GeoJSONSource, Layer, type PressEventWithFeatures } from "@maplibre/maplibre-react-native"
 import { useFocusEffect } from "@react-navigation/native"
@@ -20,6 +20,7 @@ import {
   IconButton,
   ListItem,
   SectionTitle,
+  StateLine,
   TextField
 } from "../components"
 import { ColotaMapView, type ColotaMapRef, type RegionChangePayload } from "../components/features/map/ColotaMapView"
@@ -56,7 +57,6 @@ import {
   downloadConfirm,
   downloadLine,
   duplicateNameError,
-  INTRO_LINE,
   progressCaption,
   redownloadConfirm,
   ROW_HINT,
@@ -65,7 +65,6 @@ import {
   type Estimate,
   type RowTone
 } from "../utils/offlineArea"
-import { fonts, fontSizes, lineHeights } from "../styles/typography"
 import {
   DEFAULT_MAP_ZOOM,
   GEOFENCE_ZOOM_PADDING,
@@ -530,8 +529,6 @@ export function OfflineMapsScreen({}: ScreenProps) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>{INTRO_LINE}</Text>
-
         <View style={styles.section}>
           <SectionTitle>New area</SectionTitle>
           <Card>
@@ -557,22 +554,28 @@ export function OfflineMapsScreen({}: ScreenProps) {
               <FieldMessage variant={estimate?.large ? "warning" : "info"}>{downloadLine(estimate, name)}</FieldMessage>
             </View>
           ) : (
-            <View>
-              <View style={styles.progressHeader}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={[styles.progressLabel, { color: colors.text }]}>Downloading {download.name}</Text>
-              </View>
-              <View
-                testID="download-progress"
-                accessible
-                accessibilityRole="progressbar"
-                accessibilityLabel={`Downloading ${download.name}`}
-                accessibilityValue={{ min: 0, max: 100, now: Math.round(pct) }}
-                style={[styles.progressTrack, { backgroundColor: colors.well }]}
-              >
-                <View style={[styles.progressFill, { backgroundColor: colors.primary, width: `${pct}%` }]} />
-              </View>
-              <FieldMessage>{progressCaption(downloadProgress)}</FieldMessage>
+            <>
+              <Card rows style={styles.progressCard}>
+                <StateLine
+                  icon={<ActivityIndicator size="small" color={colors.primary} />}
+                  iconColor={colors.primary}
+                  label={download.name}
+                  caption={progressCaption(downloadProgress)}
+                  testID="download-state"
+                />
+                <View style={styles.progressBody}>
+                  <View
+                    testID="download-progress"
+                    accessible
+                    accessibilityRole="progressbar"
+                    accessibilityLabel={`Downloading ${download.name}`}
+                    accessibilityValue={{ min: 0, max: 100, now: Math.round(pct) }}
+                    style={[styles.progressTrack, { backgroundColor: colors.well }]}
+                  >
+                    <View style={[styles.progressFill, { backgroundColor: colors.primary, width: `${pct}%` }]} />
+                  </View>
+                </View>
+              </Card>
               <Button
                 testID="cancel-download-btn"
                 variant="ghost"
@@ -583,7 +586,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                 disabled={busy !== null}
                 onPress={handleCancelDownload}
               />
-            </View>
+            </>
           )}
         </View>
 
@@ -669,25 +672,14 @@ const styles = StyleSheet.create({
     paddingTop: space.lg,
     paddingBottom: space.xxl
   },
-  intro: {
-    fontSize: fontSizes.body,
-    ...fonts.regular,
-    lineHeight: lineHeights.body,
-    marginBottom: space.lg
-  },
   section: {
     marginBottom: space.xl
   },
-  progressHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.md,
-    marginTop: space.lg,
-    marginBottom: space.md
+  progressCard: {
+    marginTop: space.md
   },
-  progressLabel: {
-    fontSize: fontSizes.body,
-    ...fonts.semiBold
+  progressBody: {
+    paddingBottom: space.lg
   },
   progressTrack: { height: 6, borderRadius: radius.pill, overflow: "hidden" },
   progressFill: { height: "100%" },

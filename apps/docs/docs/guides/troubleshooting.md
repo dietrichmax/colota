@@ -76,7 +76,7 @@ If **Test connection** reads **Not reachable**, the sentence under it points at 
 
 1. Open **Settings > Logging** and turn on **Record a log file**
 2. Use the app until the problem happens again. Recording keeps going across restarts, so this can take days
-3. Come back and tap **Save log file...** - pick a folder
+3. Come back and tap **Save log file** - pick a folder
 4. Open a bug report at [github.com/dietrichmax/colota/issues](https://github.com/dietrichmax/colota/issues/new) and attach the saved `colota-log-*.txt`
 
 Step 2 is the one people skip. A log saved without reproducing the problem contains everything except the thing being reported.
@@ -85,7 +85,7 @@ The saved file is one timeline: your app version, flavor and device at the top, 
 
 ### Reading it first
 
-**Read the log** opens a preview of the most recent lines, newest first. Search filters on the message, and the chips set the lowest level shown, each carrying its own count so you can see there are four errors without selecting Errors.
+**Read the log** opens a preview of the most recent lines. Search filters on the message, and the chips set the lowest level shown, each carrying its own count so you can see there are four errors without selecting Errors.
 
 The preview shows the recorded file while recording is on, and the system log's last few minutes while it is off. It shows the most recent lines only, so a long capture holds far more than you can read here.
 

@@ -1,5 +1,6 @@
 import React from "react"
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
+import { FlatList } from "react-native"
 
 jest.mock("@react-navigation/native", () => ({
   useFocusEffect: (cb: () => (() => void) | void) => {
@@ -99,15 +100,28 @@ afterEach(() => {
 })
 
 describe("what the preview shows", () => {
-  // What the reporter just reproduced is what they came to read, and descending order needs no
-  // auto-stick, no scroll-to-end control and no measurement of variable-height rows.
-  it("puts the most recent line first", async () => {
+  // The list is inverted over newest-first data, so it reads oldest to newest and opens on the newest line.
+  it("reads oldest to newest and opens on the newest line", async () => {
     const api = renderScreen()
     await waitFor(() => expect(api.getByTestId("log-result-line")).toBeTruthy())
 
-    const messages = api.getAllByText(/SyncManager|NetworkManager/).map((n) => n.props.children)
-    expect(messages[0]).toBe("NetworkManager: connect timeout")
-    expect(messages[messages.length - 1]).toBe("SyncManager: periodic sync stopped")
+    const list = api.UNSAFE_getByType(FlatList)
+    expect(list.props.inverted).toBe(true)
+    expect(list.props.data[0].message).toBe("NetworkManager: connect timeout")
+    expect(list.props.data[list.props.data.length - 1].message).toBe("SyncManager: periodic sync stopped")
+  })
+
+  it("offers a jump to the newest line only once the reader has scrolled up", async () => {
+    const scrollToOffset = jest.spyOn(FlatList.prototype, "scrollToOffset").mockImplementation(() => {})
+    const api = renderScreen()
+    await waitFor(() => expect(api.getByTestId("log-result-line")).toBeTruthy())
+    expect(api.queryByTestId("jump-to-newest-btn")).toBeNull()
+
+    fireEvent.scroll(api.UNSAFE_getByType(FlatList), { nativeEvent: { contentOffset: { x: 0, y: 800 } } })
+    fireEvent.press(api.getByTestId("jump-to-newest-btn"))
+
+    expect(scrollToOffset).toHaveBeenCalledWith({ offset: 0, animated: true })
+    scrollToOffset.mockRestore()
   })
 
   // This previews what is being sent, so a default that hides most of the file misrepresents the

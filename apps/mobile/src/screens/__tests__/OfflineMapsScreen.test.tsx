@@ -1,6 +1,6 @@
 import React from "react"
 import { Dimensions, StyleSheet } from "react-native"
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
+import { render, fireEvent, waitFor, act, within } from "@testing-library/react-native"
 import { lightColors } from "@colota/shared"
 import { GEOFENCE_ZOOM_PADDING, MAP_ANIMATION_DURATION_MS } from "../../constants"
 
@@ -140,6 +140,8 @@ jest.mock("../../components", () => {
   return {
     Container: ({ children }: any) => R.createElement(View, null, children),
     Card: ({ children }: any) => R.createElement(View, null, children),
+    StateLine: ({ label, caption, testID }: any) =>
+      R.createElement(View, { testID }, R.createElement(Text, null, label), R.createElement(Text, null, caption)),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
     Divider: () => null,
     TextField: stubs.TextFieldStub,
@@ -390,8 +392,8 @@ describe("starting a download", () => {
       expect.any(Function),
       expect.any(Function)
     )
-    expect(api.getByText("Downloading my park")).toBeTruthy()
-    expect(api.getByText("Starting…")).toBeTruthy()
+    expect(within(api.getByTestId("download-state")).getByText("my park")).toBeTruthy()
+    expect(api.getByText("Starting download…")).toBeTruthy()
     expect(mapBox(api).borderColor).toBe(lightColors.primary)
 
     await act(async () => finish())
@@ -419,7 +421,7 @@ describe("starting a download", () => {
     await act(async () => progressOf()(status(42, { completedResourceSize: 5_347_737 })))
 
     expect(api.getByTestId("download-progress").props.accessibilityValue).toEqual({ min: 0, max: 100, now: 42 })
-    expect(api.getByText("42% · 5.1 MB so far")).toBeTruthy()
+    expect(api.getByText("Downloading · 42% · 5.1 MB so far")).toBeTruthy()
     expect(api.queryByTestId("area-my park")).toBeNull()
   })
 
@@ -442,7 +444,7 @@ describe("starting a download", () => {
     )
     expect(api.getByTestId("area-name-input").props.value).toBe("")
     expect(mockLoadOfflineAreas.mock.calls.length).toBeGreaterThan(reloads)
-    expect(api.queryByText(/Downloading my park/)).toBeNull()
+    expect(api.queryByTestId("download-state")).toBeNull()
   })
 
   // A create that fails did not create a pack, so there is nothing to clean up and nothing to retry.
@@ -542,8 +544,8 @@ describe("coming back to a download", () => {
     const api = await renderReady()
 
     expect(mockSubscribeOfflinePack).toHaveBeenCalledWith("trail", expect.any(Function), expect.any(Function))
-    expect(api.getByText("Downloading trail")).toBeTruthy()
-    expect(api.getByText("37% · 1.0 MB so far")).toBeTruthy()
+    expect(within(api.getByTestId("download-state")).getByText("trail")).toBeTruthy()
+    expect(api.getByText("Downloading · 37% · 1.0 MB so far")).toBeTruthy()
     expect(api.queryByTestId("area-trail")).toBeNull()
   })
 

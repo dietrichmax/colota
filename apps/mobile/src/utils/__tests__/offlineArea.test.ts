@@ -76,9 +76,9 @@ describe("downloadLine", () => {
 
 describe("progressCaption", () => {
   it("counts bytes only once some have landed", () => {
-    expect(progressCaption(null)).toBe("Starting…")
-    expect(progressCaption(status(42, 0))).toBe("42%")
-    expect(progressCaption(status(42, 5_347_737))).toBe("42% · 5.1 MB so far")
+    expect(progressCaption(null)).toBe("Starting download…")
+    expect(progressCaption(status(42, 0))).toBe("Downloading · 42%")
+    expect(progressCaption(status(42, 5_347_737))).toBe("Downloading · 42% · 5.1 MB so far")
   })
 })
 

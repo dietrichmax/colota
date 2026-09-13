@@ -4,10 +4,21 @@
  */
 
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native"
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent
+} from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
-import { FileSearch, RefreshCw, Search, X } from "lucide-react-native"
+import { ArrowDown, FileSearch, RefreshCw, Search, X } from "lucide-react-native"
 import { ChipGroup, Container, Divider, EmptyState, HeaderAction } from "../components"
+import { MapActionButton } from "../components/features/map/MapActionButton"
 import { useTheme } from "../hooks/useTheme"
 import { useTimeout } from "../hooks/useTimeout"
 import NativeLocationService from "../services/NativeLocationService"
@@ -71,6 +82,8 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
   const [floor, setFloor] = useState<LogFloor>(DEFAULT_LOG_FLOOR)
 
   const loadRef = useRef(false)
+  const listRef = useRef<FlatList<MergedLogEntry>>(null)
+  const [awayFromNewest, setAwayFromNewest] = useState(false)
 
   const load = useCallback(async () => {
     if (loadRef.current) return
@@ -80,7 +93,7 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
         getMergedLogs(),
         NativeLocationService.getSetting("debugFileLoggingEnabled", "false")
       ])
-      // Newest first: what the reporter just reproduced is what they came to read.
+      // Newest first into an inverted list, which reads oldest to newest and opens on the newest line.
       setEntries(merged.slice().reverse())
       setFromFile(enabled === "true")
     } catch (err) {
@@ -121,6 +134,14 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
     },
     [debounce]
   )
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setAwayFromNewest(event.nativeEvent.contentOffset.y > size.row)
+  }, [])
+
+  const jumpToNewest = useCallback(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true })
+  }, [])
 
   const clear = useCallback(() => {
     debounce.clear()
@@ -196,19 +217,40 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
       </View>
       <Divider tight />
 
-      <FlatList
-        data={shown}
-        keyExtractor={(entry) => entry.id}
-        renderItem={({ item }) => <LogLine entry={item} />}
-        contentContainerStyle={styles.list}
-        initialNumToRender={30}
-        maxToRenderPerBatch={20}
-        windowSize={11}
-        showsVerticalScrollIndicator
-        ListEmptyComponent={
-          <EmptyState icon={FileSearch} title="No lines match" hint="Try a different word, or lower the level." />
-        }
-      />
+      {shown.length === 0 ? (
+        <EmptyState icon={FileSearch} title="No lines match" hint="Try a different word, or lower the level." />
+      ) : (
+        <View style={styles.listArea}>
+          <FlatList
+            ref={listRef}
+            testID="log-list"
+            data={shown}
+            inverted
+            keyExtractor={(entry) => entry.id}
+            renderItem={({ item }) => <LogLine entry={item} />}
+            contentContainerStyle={styles.list}
+            initialNumToRender={30}
+            maxToRenderPerBatch={20}
+            windowSize={11}
+            onScroll={handleScroll}
+            scrollEventThrottle={100}
+            showsVerticalScrollIndicator
+          />
+          {awayFromNewest ? (
+            <View style={styles.jump}>
+              <MapActionButton
+                anchored={false}
+                accessibilityRole="button"
+                accessibilityLabel="Jump to the newest line"
+                onPress={jumpToNewest}
+                testID="jump-to-newest-btn"
+              >
+                <ArrowDown size={size.icon.md} color={colors.text} />
+              </MapActionButton>
+            </View>
+          ) : null}
+        </View>
+      )}
     </Container>
   )
 }
@@ -245,10 +287,18 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     paddingVertical: space.sm
   },
+  listArea: {
+    flex: 1
+  },
+  // Inverted, so the top padding is drawn under the newest line and keeps it clear of the jump button.
   list: {
-    paddingVertical: space.sm,
-    paddingBottom: space.xxl,
-    flexGrow: 1
+    paddingTop: space.xxl,
+    paddingBottom: space.sm
+  },
+  jump: {
+    position: "absolute",
+    end: space.lg,
+    bottom: space.lg
   },
   line: {
     flexDirection: "row",

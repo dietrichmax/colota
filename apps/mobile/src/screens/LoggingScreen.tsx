@@ -4,11 +4,10 @@
  */
 
 import React, { useCallback, useRef, useState } from "react"
-import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { ScrollView, StyleSheet, View } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
-import { FileSearch, Save, Trash2 } from "lucide-react-native"
+import { FileSearch, FileText, FileX, Trash2, Upload } from "lucide-react-native"
 import {
-  Button,
   Card,
   Container,
   Divider,
@@ -16,6 +15,7 @@ import {
   ListItem,
   SectionTitle,
   SettingRow,
+  SpinningLoader,
   StateLine,
   Toggle
 } from "../components"
@@ -34,13 +34,10 @@ import {
   nextStepLine,
   previewRowSub
 } from "../utils/logCapture"
-import { fonts, fontSizes, lineHeights } from "../styles/typography"
 import { LOG_SIZE_SETTLE_MS, space } from "../constants"
 import type { ScreenProps } from "../types/global"
 
 type Busy = "save" | "delete" | null
-
-const INTRO = "Start recording, reproduce the problem, then save the log file and attach it to your report."
 
 export function LoggingScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
@@ -158,8 +155,6 @@ export function LoggingScreen({ navigation }: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>{INTRO}</Text>
-
         {!loaded ? null : (
           <>
             <View style={styles.section}>
@@ -196,29 +191,30 @@ export function LoggingScreen({ navigation }: ScreenProps) {
             {bytes > 0 ? (
               <View style={styles.section}>
                 <SectionTitle>The log file</SectionTitle>
-                <View>
-                  <Button
-                    icon={Save}
-                    title="Save log file…"
-                    testID="save-log-btn"
-                    loading={busy === "save"}
-                    disabled={busy !== null}
+                <Card rows>
+                  <ListItem
+                    testID="save-log-row"
+                    icon={FileText}
+                    trailingIcon={busy === "save" ? SpinningLoader : Upload}
+                    label="Save log file"
+                    sub={busy === "save" ? "Saving…" : "To a folder you pick"}
+                    accessibilityHint="Asks you to confirm, then saves the file"
+                    disabled={busy === "save" ? false : busy !== null}
                     onPress={handleSave}
                   />
-                  <FieldMessage variant="warning">{LOG_CONTENTS_LINE}</FieldMessage>
-                </View>
-                <View>
-                  <Button
-                    icon={Trash2}
-                    variant="danger"
-                    title="Delete the log file"
-                    testID="delete-log-btn"
-                    loading={busy === "delete"}
-                    disabled={busy !== null}
+                  <Divider tight inset />
+                  <ListItem
+                    testID="delete-log-row"
+                    icon={FileX}
+                    trailingIcon={busy === "delete" ? SpinningLoader : Trash2}
+                    label="Delete the log file"
+                    sub={busy === "delete" ? "Deleting…" : deleteSub(bytes, enabled)}
+                    subLines={2}
+                    accessibilityHint="Asks you to confirm, then deletes"
+                    disabled={busy === "delete" ? false : busy !== null}
                     onPress={handleDelete}
                   />
-                  <FieldMessage>{deleteSub(bytes, enabled)}</FieldMessage>
-                </View>
+                </Card>
               </View>
             ) : null}
           </>
@@ -233,12 +229,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingTop: space.lg,
     paddingBottom: space.xxl
-  },
-  intro: {
-    fontSize: fontSizes.body,
-    ...fonts.regular,
-    lineHeight: lineHeights.body,
-    marginBottom: space.lg
   },
   section: {
     marginBottom: space.xl

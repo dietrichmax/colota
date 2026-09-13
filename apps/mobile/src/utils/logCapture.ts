@@ -69,7 +69,7 @@ export function describeCapture(enabled: boolean, bytes: number, startedAtMs: nu
  * bridge decides and nothing has ever said out loud.
  */
 export function previewRowSub(enabled: boolean): string {
-  return enabled ? "The log file's most recent lines, newest first" : "The system log's last few minutes, newest first"
+  return enabled ? "The log file's most recent lines" : "The system log's last few minutes"
 }
 
 /** The step that is missing from every bug report: leave it on while you reproduce the problem. */

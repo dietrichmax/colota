@@ -30,9 +30,6 @@ export interface Estimate {
   large: boolean
 }
 
-export const INTRO_LINE =
-  "Frame an area on the map, name it and download it. The size is an estimate from the area alone: dense cities take more, open country less."
-
 export const ROW_HINT = "Shows it on the map"
 
 export function duplicateNameError(name: string, taken: readonly string[]): string | undefined {
@@ -52,8 +49,8 @@ export function downloadLine(estimate: Estimate | null, name: string): string {
 }
 
 export function progressCaption(status: OfflinePackStatus | null): string {
-  if (!status) return "Starting…"
-  const pct = `${Math.round(status.percentage)}%`
+  if (!status) return "Starting download…"
+  const pct = `Downloading · ${Math.round(status.percentage)}%`
   return status.completedResourceSize > 0 ? `${pct} · ${formatBytes(status.completedResourceSize)} so far` : pct
 }
 

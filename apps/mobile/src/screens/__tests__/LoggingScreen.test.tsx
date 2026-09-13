@@ -73,27 +73,22 @@ jest.mock("../../components", () => {
       R.createElement(Text, { accessibilityValue: { text: variant ?? "info" } }, children),
     SettingRow: ({ label, hint, children }: any) =>
       R.createElement(View, null, R.createElement(Text, null, label), R.createElement(Text, null, hint), children),
-    ListItem: ({ label, sub, onPress, testID }: any) =>
-      R.createElement(
-        Pressable,
-        { testID, onPress },
-        R.createElement(Text, null, label),
-        R.createElement(Text, null, sub)
-      ),
-    Toggle: ({ value, onValueChange, testID, accessibilityLabel }: any) =>
-      R.createElement(Pressable, { testID, accessibilityLabel, onPress: () => onValueChange(!value) }),
-    Button: ({ title, onPress, disabled, testID, loading, variant }: any) =>
+    SpinningLoader: Object.assign(() => null, { displayName: "SpinningLoader" }),
+    ListItem: ({ label, sub, onPress, testID, disabled, trailingIcon }: any) =>
       R.createElement(
         Pressable,
         {
           testID,
           onPress,
           disabled,
-          accessibilityState: { disabled: !!disabled, busy: !!loading },
-          accessibilityValue: { text: variant ?? "primary" }
+          accessibilityState: { disabled: !!disabled },
+          accessibilityValue: { text: trailingIcon?.displayName ?? "chevron" }
         },
-        R.createElement(Text, null, title)
-      )
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, sub)
+      ),
+    Toggle: ({ value, onValueChange, testID, accessibilityLabel }: any) =>
+      R.createElement(Pressable, { testID, accessibilityLabel, onPress: () => onValueChange(!value) })
   }
 })
 
@@ -129,13 +124,6 @@ afterEach(() => {
 })
 
 describe("what the screen says on arrival", () => {
-  it("opens on the three steps, in the order a reporter does them", async () => {
-    const api = renderScreen()
-    await waitFor(() => expect(api.getByTestId("capture-state")).toBeTruthy())
-
-    expect(api.getByText(/Start recording, reproduce the problem, then save the log file/)).toBeTruthy()
-  })
-
   it("reports the capture and what it has written", async () => {
     const api = renderScreen()
 
@@ -151,7 +139,7 @@ describe("what the screen says on arrival", () => {
     const api = renderScreen()
 
     expect(api.queryByTestId("capture-state")).toBeNull()
-    expect(api.queryByTestId("save-log-btn")).toBeNull()
+    expect(api.queryByTestId("save-log-row")).toBeNull()
   })
 })
 
@@ -163,17 +151,39 @@ describe("the actions", () => {
     const api = renderScreen()
     await waitFor(() => expect(api.getByTestId("capture-state")).toBeTruthy())
 
-    expect(api.queryByTestId("save-log-btn")).toBeNull()
-    expect(api.queryByTestId("delete-log-btn")).toBeNull()
+    expect(api.queryByTestId("save-log-row")).toBeNull()
+    expect(api.queryByTestId("delete-log-row")).toBeNull()
     expect(api.getByText(/Leave this on while you reproduce the problem/)).toBeTruthy()
+  })
+
+  it("spins the running row, keeps it enabled and locks the other one", async () => {
+    mockExportFileLogToUri.mockReturnValue(new Promise(() => {}))
+    const api = renderScreen()
+    await waitFor(() => expect(api.getByTestId("save-log-row")).toBeTruthy())
+
+    await act(async () => {
+      fireEvent.press(api.getByTestId("save-log-row"))
+    })
+
+    await waitFor(() => expect(api.getByText("Saving…")).toBeTruthy())
+    const save = api.getByTestId("save-log-row")
+    expect(save.props.accessibilityValue.text).toBe("SpinningLoader")
+    expect(save.props.accessibilityState.disabled).toBe(false)
+    expect(api.getByTestId("delete-log-row").props.accessibilityValue.text).toBe("Trash2")
+    expect(api.getByTestId("delete-log-row").props.accessibilityState.disabled).toBe(true)
+
+    await act(async () => {
+      fireEvent.press(save)
+    })
+    expect(mockExportFileLogToUri).toHaveBeenCalledTimes(1)
   })
 
   it("names what leaves the device before the folder picker opens", async () => {
     const api = renderScreen()
-    await waitFor(() => expect(api.getByTestId("save-log-btn")).toBeTruthy())
+    await waitFor(() => expect(api.getByTestId("save-log-row")).toBeTruthy())
 
     await act(async () => {
-      fireEvent.press(api.getByTestId("save-log-btn"))
+      fireEvent.press(api.getByTestId("save-log-row"))
     })
 
     expect(mockShowConfirm).toHaveBeenCalledWith(
@@ -188,10 +198,10 @@ describe("the actions", () => {
   // the attached file carries no version, no flavor, no device and no JS line at all.
   it("hands native the header and the app log to merge in", async () => {
     const api = renderScreen()
-    await waitFor(() => expect(api.getByTestId("save-log-btn")).toBeTruthy())
+    await waitFor(() => expect(api.getByTestId("save-log-row")).toBeTruthy())
 
     await act(async () => {
-      fireEvent.press(api.getByTestId("save-log-btn"))
+      fireEvent.press(api.getByTestId("save-log-row"))
     })
 
     expect(mockExportFileLogToUri).toHaveBeenCalledWith("content://tree/logs", "HEADER\n", "APPLOG\n")
@@ -201,10 +211,10 @@ describe("the actions", () => {
   it("does not report a save when the picker was dismissed", async () => {
     mockPickExportDirectory.mockResolvedValue(null)
     const api = renderScreen()
-    await waitFor(() => expect(api.getByTestId("save-log-btn")).toBeTruthy())
+    await waitFor(() => expect(api.getByTestId("save-log-row")).toBeTruthy())
 
     await act(async () => {
-      fireEvent.press(api.getByTestId("save-log-btn"))
+      fireEvent.press(api.getByTestId("save-log-row"))
     })
 
     expect(mockExportFileLogToUri).not.toHaveBeenCalled()
@@ -214,10 +224,10 @@ describe("the actions", () => {
   it("says so when there was nothing recorded to write", async () => {
     mockExportFileLogToUri.mockResolvedValue(null)
     const api = renderScreen()
-    await waitFor(() => expect(api.getByTestId("save-log-btn")).toBeTruthy())
+    await waitFor(() => expect(api.getByTestId("save-log-row")).toBeTruthy())
 
     await act(async () => {
-      fireEvent.press(api.getByTestId("save-log-btn"))
+      fireEvent.press(api.getByTestId("save-log-row"))
     })
 
     expect(mockShowAlert).toHaveBeenCalledWith("Nothing to save", expect.any(String), "info")
@@ -227,10 +237,10 @@ describe("the actions", () => {
   it("alerts when the save fails", async () => {
     mockExportFileLogToUri.mockRejectedValue(new Error("Could not create document"))
     const api = renderScreen()
-    await waitFor(() => expect(api.getByTestId("save-log-btn")).toBeTruthy())
+    await waitFor(() => expect(api.getByTestId("save-log-row")).toBeTruthy())
 
     await act(async () => {
-      fireEvent.press(api.getByTestId("save-log-btn"))
+      fireEvent.press(api.getByTestId("save-log-row"))
     })
 
     expect(mockShowAlert).toHaveBeenCalledWith("Could not save the log", "Could not create document", "error")
@@ -238,10 +248,10 @@ describe("the actions", () => {
 
   it("names the size it is about to delete, and asks first", async () => {
     const api = renderScreen()
-    await waitFor(() => expect(api.getByTestId("delete-log-btn")).toBeTruthy())
+    await waitFor(() => expect(api.getByTestId("delete-log-row")).toBeTruthy())
 
     await act(async () => {
-      fireEvent.press(api.getByTestId("delete-log-btn"))
+      fireEvent.press(api.getByTestId("delete-log-row"))
     })
 
     expect(mockShowConfirm).toHaveBeenCalledWith(
@@ -253,10 +263,10 @@ describe("the actions", () => {
   it("deletes nothing when the confirmation is dismissed", async () => {
     mockShowConfirm.mockResolvedValue(false)
     const api = renderScreen()
-    await waitFor(() => expect(api.getByTestId("delete-log-btn")).toBeTruthy())
+    await waitFor(() => expect(api.getByTestId("delete-log-row")).toBeTruthy())
 
     await act(async () => {
-      fireEvent.press(api.getByTestId("delete-log-btn"))
+      fireEvent.press(api.getByTestId("delete-log-row"))
     })
 
     expect(mockClearFileLog).not.toHaveBeenCalled()
@@ -306,7 +316,7 @@ describe("the reader", () => {
     const api = renderScreen()
     await waitFor(() => expect(api.getByTestId("nav-log-preview")).toBeTruthy())
 
-    expect(api.getByText("The log file's most recent lines, newest first")).toBeTruthy()
+    expect(api.getByText("The log file's most recent lines")).toBeTruthy()
     fireEvent.press(api.getByTestId("nav-log-preview"))
     expect(mockNavigation.navigate).toHaveBeenCalledWith("Log Preview")
   })
@@ -316,6 +326,6 @@ describe("the reader", () => {
     const api = renderScreen()
     await waitFor(() => expect(api.getByTestId("nav-log-preview")).toBeTruthy())
 
-    expect(api.getByText("The system log's last few minutes, newest first")).toBeTruthy()
+    expect(api.getByText("The system log's last few minutes")).toBeTruthy()
   })
 })
