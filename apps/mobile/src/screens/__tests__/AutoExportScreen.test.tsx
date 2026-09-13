@@ -529,7 +529,7 @@ describe("AutoExportScreen", () => {
     const { getByTestId, getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText(/Set to 0 for unlimited/)).toBeTruthy()
+      expect(getByText("0 keeps every file. Counts the Colota exports in the chosen folder.")).toBeTruthy()
     })
 
     const input = getByTestId("numeric-input-Files to keep")
@@ -630,7 +630,7 @@ describe("AutoExportScreen", () => {
     const { getByText } = render(<AutoExportScreen {...mockProps} />)
 
     await waitFor(() => {
-      expect(getByText(/Counts only exports named for this device model/)).toBeTruthy()
+      expect(getByText("0 keeps every file. Counts only this device's exports in the chosen folder.")).toBeTruthy()
     })
   })
 

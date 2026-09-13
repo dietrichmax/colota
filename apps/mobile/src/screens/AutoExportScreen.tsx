@@ -554,8 +554,8 @@ export function AutoExportScreen(_props: ScreenProps) {
               min={0}
               hint={
                 filenameTemplate.includes("{device}")
-                  ? "Set to 0 for unlimited. Counts only exports named for this device model, so other models sharing the folder are untouched."
-                  : "Set to 0 for unlimited. Counts every Colota export in the folder. Add {device} to the file name to keep files per device instead."
+                  ? "0 keeps every file. Counts only this device's exports in the chosen folder."
+                  : "0 keeps every file. Counts the Colota exports in the chosen folder."
               }
             />
           </Card>

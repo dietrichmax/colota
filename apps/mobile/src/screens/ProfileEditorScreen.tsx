@@ -391,8 +391,8 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
             placeholder={String(defaultProfileDelays(type).activationDelay)}
             hint={
               isStationary
-                ? "At least 0 s. How long every fix must read as still first; 0 switches at the first still fix. Moving again ends the profile at once through the motion sensor."
-                : "At least 0 s. How long the condition must hold first. 0 switches at once, longer ignores a brief plug or unplug."
+                ? "How long every fix must read as still; 0 switches at the first still fix. Moving again ends the profile at once."
+                : "How long the condition must hold first. 0 switches at once, longer ignores a brief plug or unplug."
             }
             error={errorOf("activationDelay")}
             message={noteOf("activationDelay")}
@@ -406,7 +406,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               onBlur={() => handleBlur("deactivationDelay")}
               unit="s"
               placeholder={String(defaultProfileDelays(type).deactivationDelay)}
-              hint="At least 0 s. How long after the condition ends before Tracking & sync applies again. Longer rides out a brief gap so the profile does not flap."
+              hint="How long the profile stays on after its condition ends. Longer rides out a brief gap."
               error={errorOf("deactivationDelay")}
               message={noteOf("deactivationDelay")}
             />

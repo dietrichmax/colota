@@ -145,10 +145,11 @@ describe("ConnectionSettings", () => {
       expect(queryByTestId("nav-auth-settings")).toBeNull()
     })
 
-    it("shows the template's endpoint shape as the persistent helper", () => {
-      const { getByText } = renderComponent({ apiTemplate: "traccar" })
+    it("shows the transport rule as the helper and the template's shape as the placeholder", () => {
+      const { getByText, getByTestId } = renderComponent({ apiTemplate: "traccar" })
 
-      expect(getByText(/^Example: http:\/\/192\.168\.1\.10:5055\./)).toBeTruthy()
+      expect(getByText("https for public hosts, http only for private hosts.")).toBeTruthy()
+      expect(getByTestId("endpoint-input").props.placeholder).toMatch(/^http:\/\/192\.168\.1\.10:5055/)
     })
 
     it("lists the three server details as rows whose sub is the stored value", () => {

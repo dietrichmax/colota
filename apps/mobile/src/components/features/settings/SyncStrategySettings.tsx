@@ -284,7 +284,7 @@ export function SyncStrategySettings({
                 onBlur={() => handleNumericBlur("distance")}
                 unit={unit}
                 placeholder="2"
-                hint="0 keeps every fix. Both the interval and this distance must pass before a fix is kept; higher saves storage and sync data, not battery. Not applied in a pause zone or by a stationary profile."
+                hint="Skips a fix closer than this to the last one. 0 keeps every fix. Saves storage, not battery."
                 error={wholeNumberError(distanceInput, NUMERIC_MIN.distance, unit)}
                 message={clampNote("distance")}
               />

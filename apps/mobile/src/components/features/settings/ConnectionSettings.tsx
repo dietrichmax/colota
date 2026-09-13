@@ -270,7 +270,7 @@ export function ConnectionSettings({
   }, [testBlocker, commitDraft, draft, settings])
 
   const example = endpointExample(settings.apiTemplate, settings.dawarichMode)
-  const helper = `Example: ${example}. https for public hosts, http only on a private host (192.168.x, 10.x, 172.16-31.x, 100.64.x, localhost). %DATE, %YEAR, %MONTH, %DAY and %TIMESTAMP expand when sending.`
+  const helper = "https for public hosts, http only for private hosts."
   const ServerGlyph = SERVER_ICONS[server.icon]
 
   return (
@@ -289,10 +289,7 @@ export function ConnectionSettings({
           testID="server-state"
         />
         <Divider tight />
-        <SettingRow
-          label="Offline mode"
-          hint="On: locations stay on this device and nothing is sent. Off: they sync to the server below."
-        >
+        <SettingRow label="Offline mode" hint="Locations stay on this device and nothing is sent.">
           <Toggle
             accessibilityLabel="Offline mode"
             value={settings.isOfflineMode}

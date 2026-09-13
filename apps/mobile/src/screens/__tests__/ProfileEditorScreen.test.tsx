@@ -222,7 +222,11 @@ describe("ProfileEditorScreen", () => {
       expect(getByText("0 m")).toBeTruthy()
       expect(queryByTestId("distance-input")).toBeNull()
       expect(queryByTestId("deactivation-delay-input")).toBeNull()
-      expect(getByText(/How long every fix must read as still first/)).toBeTruthy()
+      expect(
+        getByText(
+          "How long every fix must read as still; 0 switches at the first still fix. Moving again ends the profile at once."
+        )
+      ).toBeTruthy()
     })
 
     it("warns above 60 s without blocking Save", () => {
