@@ -38,18 +38,13 @@ export function scopeSub(scope: "queued" | "synced", count: number): string {
 }
 
 /**
- * The line under the age button: the boundary the count used. How many of them have no copy on the
- * server is not here, because that count reads every matching row and is only worth taking once, on
- * the press, where `deleteCopy` says it.
+ * The sub on the Delete older locations row. How many of them have no copy on the server is not here,
+ * because that count reads every matching row and is only worth taking once, on the press, where
+ * `deleteCopy` says it.
  */
 export function olderSub(count: number, days: number, cutoffSeconds: number): string {
   if (count === 0) return `Nothing on this device is older than ${plural(days, "day")}.`
-  return `Recorded before ${formatDateWithYear(cutoffSeconds)}.`
-}
-
-/** The line under Delete all: the two things it takes that no label has ever named. */
-export function allSub(total: number): string {
-  return `All ${plural(total, "location")} and every trip split and merge you made. Geofences, profiles and settings stay.`
+  return `${plural(count, "location")} recorded before ${formatDateWithYear(cutoffSeconds)}.`
 }
 
 export interface OlderArgs {

@@ -4,13 +4,11 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from "react"
-import { Text, StyleSheet, View, ScrollView, DeviceEventEmitter } from "react-native"
-import { Archive, Clock, CloudUpload, HardDrive, MapPin, Trash2 } from "lucide-react-native"
+import { StyleSheet, View, ScrollView, DeviceEventEmitter } from "react-native"
+import { Archive, CalendarRange, Clock, CloudUpload, HardDrive, MapPin, Minimize2, Trash2 } from "lucide-react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { DatabaseStats } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
-import { useTheme } from "../hooks/useTheme"
-import { fonts, fontSizes, lineHeights } from "../styles/typography"
 import NativeLocationService from "../services/NativeLocationService"
 import { useTracking } from "../contexts/TrackingProvider"
 import {
@@ -24,6 +22,7 @@ import {
   ListItem,
   NumericInput,
   SectionTitle,
+  SpinningLoader,
   StatRow
 } from "../components"
 import {
@@ -31,11 +30,12 @@ import {
   RETENTION_PRESET_DAYS,
   RETENTION_PREVIEW_DEBOUNCE_MS,
   SAVE_SUCCESS_DISPLAY_MS,
+  size,
   space
 } from "../constants"
 import { useTimeout } from "../hooks/useTimeout"
 import { showAlert, showConfirm } from "../services/modalService"
-import { allSub, deleteCopy, olderSub, scopeSub, type DataScope } from "../utils/dataScope"
+import { deleteCopy, olderSub, scopeSub, type DataScope } from "../utils/dataScope"
 import { parseWholeNumber, wholeNumberError } from "../utils/settingsValidation"
 import { formatWhen } from "../utils/geo"
 import { logger } from "../utils/logger"
@@ -61,13 +61,13 @@ const EMPTY_STATS: DatabaseStats = {
 }
 
 export function DataManagementScreen({ navigation }: RootScreenProps<"Data Management">) {
-  const { colors } = useTheme()
-  const { settings, tracking } = useTracking()
+  const { settings } = useTracking()
   const isOfflineMode = settings.isOfflineMode
 
   const [stats, setStats] = useState<DatabaseStats>(EMPTY_STATS)
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState<"count" | "flush" | "compact" | "delete" | null>(null)
+  const [busyScope, setBusyScope] = useState<DataScope | null>(null)
   const [syncMessage, setSyncMessage] = useState<Message | null>(null)
   const [compactMessage, setCompactMessage] = useState<Message | null>(null)
 
@@ -203,6 +203,7 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
       if (busyRef.current) return
       busyRef.current = true
       setBusy("count")
+      setBusyScope(scope)
       try {
         const generation = ++statsIssued.current
         const fresh = await NativeLocationService.getStats()
@@ -241,6 +242,7 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
       } finally {
         busyRef.current = false
         setBusy(null)
+        setBusyScope(null)
       }
     },
     [days, updateStats, runPreview, applyStats]
@@ -347,15 +349,16 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
         ? `Nothing queued. Last upload ${formatWhen(Math.floor(stats.lastSyncTime / 1000))}.`
         : "Nothing queued. New locations upload on their own."
       : null
-  const syncIdle = `Uploads the ${stats.queued.toLocaleString()} queued location${stats.queued === 1 ? "" : "s"} now, whatever Sync only on says.${
-    tracking ? "" : " The tracking notification appears for a moment. Nothing is recorded."
-  }`
-  const syncLine = busy === "flush" || syncMessage ? syncMessage : { text: syncBlocker ?? syncIdle }
+  const syncIdle = `${stats.queued.toLocaleString()} queued. Uploads ${stats.queued === 1 ? "it" : "them"} now, whatever Sync only on says.`
+  const syncSub = busy === "flush" ? (syncMessage?.text ?? "") : (syncBlocker ?? syncIdle)
+  const syncResult = busy === "flush" ? null : syncMessage
+  const scopeProgress = (scope: DataScope) =>
+    busyScope === scope ? (busy === "delete" ? "Deleting…" : "Counting…") : null
 
   const ageCount = preview && preview.days === days ? preview.total : null
   // The field owns its own error; repeating it here would print the same sentence twice.
   const ageLine = ageError
-    ? "Fix the age above."
+    ? "Fix the age below."
     : days === null
       ? "Choose how old a location must be."
       : ageCount === null
@@ -365,10 +368,6 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>
-          What this device is storing, and what deleting it takes away.
-        </Text>
-
         <View style={styles.section}>
           <SectionTitle>Stored on this device</SectionTitle>
           <Card rows>
@@ -386,35 +385,43 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
               testID="stat-size"
             />
           </Card>
+        </View>
 
-          {!isOfflineMode && (
-            <View>
-              <Button
-                variant="secondary"
-                title="Sync now"
-                testID="sync-now-btn"
-                loading={busy === "flush"}
-                disabled={isProcessing || syncBlocker !== null}
-                onPress={handleManualFlush}
-              />
-              <FieldMessage variant={syncLine?.failed ? "error" : "info"}>{syncLine?.text ?? ""}</FieldMessage>
-            </View>
-          )}
-
-          <View>
-            <Button
-              variant="ghost"
-              title="Compact database"
-              testID="compact-btn"
-              loading={busy === "compact"}
-              disabled={isProcessing}
+        <View style={styles.section}>
+          <SectionTitle>Maintenance</SectionTitle>
+          <Card rows>
+            {!isOfflineMode && (
+              <>
+                <ListItem
+                  testID="sync-now-row"
+                  icon={Clock}
+                  trailingIcon={busy === "flush" ? SpinningLoader : CloudUpload}
+                  label="Sync now"
+                  sub={syncSub}
+                  subLines={2}
+                  disabled={busy === "flush" ? false : isProcessing || syncBlocker !== null}
+                  accessibilityHint="Uploads the queue now"
+                  onPress={handleManualFlush}
+                />
+                <Divider tight inset />
+              </>
+            )}
+            <ListItem
+              testID="compact-row"
+              icon={HardDrive}
+              trailingIcon={busy === "compact" ? SpinningLoader : Minimize2}
+              label="Compact database"
+              sub={busy === "compact" ? "Rewriting the database…" : "Gives unused space back. Deletes nothing."}
+              subLines={2}
+              disabled={busy === "compact" ? false : isProcessing}
+              accessibilityHint="Rewrites the database file"
               onPress={handleCompact}
             />
-            <FieldMessage>
-              {compactMessage?.text ??
-                "Rewrites the database to give unused space back. Deleting trips and points leaves gaps that only this reclaims. Nothing is deleted."}
-            </FieldMessage>
-          </View>
+          </Card>
+          {syncResult ? (
+            <FieldMessage variant={syncResult.failed ? "error" : "info"}>{syncResult.text}</FieldMessage>
+          ) : null}
+          {compactMessage ? <FieldMessage>{compactMessage.text}</FieldMessage> : null}
         </View>
 
         <View style={styles.section}>
@@ -442,11 +449,11 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
                     <ListItem
                       testID="delete-queued-row"
                       icon={Clock}
-                      trailingIcon={Trash2}
+                      trailingIcon={busyScope === "queued" ? SpinningLoader : Trash2}
                       label="Delete queued locations"
-                      sub={scopeSub("queued", stats.queued)}
+                      sub={scopeProgress("queued") ?? scopeSub("queued", stats.queued)}
                       subLines={2}
-                      disabled={isProcessing || stats.queued === 0}
+                      disabled={busyScope === "queued" ? false : isProcessing || stats.queued === 0}
                       accessibilityHint="Asks you to confirm, then deletes"
                       onPress={() => confirmAndDelete("queued", () => NativeLocationService.clearQueue())}
                     />
@@ -454,80 +461,70 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
                     <ListItem
                       testID="delete-synced-row"
                       icon={CloudUpload}
-                      trailingIcon={Trash2}
+                      trailingIcon={busyScope === "synced" ? SpinningLoader : Trash2}
                       label="Delete synced locations"
-                      sub={scopeSub("synced", stats.sent)}
+                      sub={scopeProgress("synced") ?? scopeSub("synced", stats.sent)}
                       subLines={2}
-                      disabled={isProcessing || stats.sent === 0}
+                      disabled={busyScope === "synced" ? false : isProcessing || stats.sent === 0}
                       accessibilityHint="Asks you to confirm, then deletes"
                       onPress={() => confirmAndDelete("synced", () => NativeLocationService.clearSentHistory())}
                     />
                   </>
                 )}
-              </Card>
-
-              <Card style={styles.ageCard}>
-                <ChipGroup
-                  accessibilityLabel="Age"
-                  options={[
-                    ...RETENTION_PRESET_DAYS.map((preset) => ({
-                      value: String(preset),
-                      label: preset === 365 ? "1 year" : `${preset} days`,
-                      testID: `age-${preset}`
-                    })),
-                    { value: "custom", label: "Custom", testID: "age-custom" }
-                  ]}
-                  selected={ageChoice}
-                  onSelect={handleAgeChoice}
-                />
-                {isCustom && (
-                  <View style={styles.customField}>
-                    <NumericInput
-                      label="Delete locations older than"
-                      testID="retention-days-input"
-                      value={customText}
-                      onChange={handleCustomChange}
-                      onBlur={handleCustomBlur}
-                      unit="days"
-                      placeholder={String(PLACEHOLDER_DAYS)}
-                      hint="At least 1 day."
-                      error={ageError}
-                      message={clampNote}
-                    />
-                  </View>
-                )}
-              </Card>
-
-              <View>
-                <Button
-                  variant="ghost"
-                  color={colors.error}
-                  icon={Trash2}
-                  testID="delete-older-btn"
-                  title={
-                    ageCount && ageCount > 0
-                      ? `Delete ${ageCount.toLocaleString()} location${ageCount === 1 ? "" : "s"}`
-                      : "Delete older locations"
-                  }
-                  loading={busy === "count" || busy === "delete"}
-                  disabled={isProcessing || !!ageError || days === null || !ageCount}
+                <Divider tight inset />
+                <ListItem
+                  testID="delete-older-row"
+                  icon={CalendarRange}
+                  trailingIcon={busyScope === "older" ? SpinningLoader : Trash2}
+                  label="Delete older locations"
+                  sub={scopeProgress("older") ?? ageLine}
+                  subLines={2}
+                  disabled={busyScope === "older" ? false : isProcessing || !!ageError || days === null || !ageCount}
+                  accessibilityHint="Asks you to confirm, then deletes"
                   onPress={() => confirmAndDelete("older", () => NativeLocationService.deleteOlderThan(days as number))}
                 />
-                <FieldMessage variant={ageError ? "error" : "info"}>{ageLine}</FieldMessage>
-              </View>
+                <View style={styles.ageControls}>
+                  <ChipGroup
+                    accessibilityLabel="Age"
+                    options={[
+                      ...RETENTION_PRESET_DAYS.map((preset) => ({
+                        value: String(preset),
+                        label: preset === 365 ? "1 year" : `${preset} days`,
+                        testID: `age-${preset}`
+                      })),
+                      { value: "custom", label: "Custom", testID: "age-custom" }
+                    ]}
+                    selected={ageChoice}
+                    onSelect={handleAgeChoice}
+                  />
+                  {isCustom && (
+                    <View style={styles.customField}>
+                      <NumericInput
+                        label="Delete locations older than"
+                        testID="retention-days-input"
+                        value={customText}
+                        onChange={handleCustomChange}
+                        onBlur={handleCustomBlur}
+                        unit="days"
+                        placeholder={String(PLACEHOLDER_DAYS)}
+                        hint="At least 1 day."
+                        error={ageError}
+                        message={clampNote}
+                      />
+                    </View>
+                  )}
+                </View>
+              </Card>
 
-              <View>
-                <Button
-                  variant="danger"
-                  icon={Trash2}
-                  title="Delete all locations"
-                  testID="delete-all-btn"
-                  loading={busy === "count" || busy === "delete"}
-                  disabled={isProcessing}
-                  onPress={() => confirmAndDelete("all", () => NativeLocationService.clearAllLocations())}
-                />
-                <FieldMessage>{allSub(stats.total)}</FieldMessage>
-              </View>
+              <Button
+                variant="danger"
+                icon={Trash2}
+                title="Delete all locations"
+                testID="delete-all-btn"
+                loading={busyScope === "all"}
+                disabled={isProcessing}
+                onPress={() => confirmAndDelete("all", () => NativeLocationService.clearAllLocations())}
+              />
             </>
           )}
         </View>
@@ -542,17 +539,13 @@ const styles = StyleSheet.create({
     paddingTop: space.lg,
     paddingBottom: space.xxl
   },
-  intro: {
-    fontSize: fontSizes.body,
-    ...fonts.regular,
-    lineHeight: lineHeights.body,
-    marginBottom: space.lg
-  },
   section: {
     marginBottom: space.xl
   },
-  ageCard: {
-    marginTop: space.md
+  ageControls: {
+    marginTop: -space.xs,
+    paddingStart: size.icon.md + space.lg,
+    paddingBottom: space.lg
   },
   customField: {
     marginTop: space.lg

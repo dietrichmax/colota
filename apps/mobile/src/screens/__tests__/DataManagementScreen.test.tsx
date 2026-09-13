@@ -76,9 +76,8 @@ jest.mock("../../hooks/useTimeout", () => {
 const fireLongTimers = () => mockLongTimers.forEach((t) => t.later?.())
 
 let mockSettings: Settings = { ...DEFAULT_SETTINGS }
-let mockTracking = true
 jest.mock("../../contexts/TrackingProvider", () => ({
-  useTracking: () => ({ settings: mockSettings, tracking: mockTracking })
+  useTracking: () => ({ settings: mockSettings })
 }))
 
 const mockGetStats = jest.fn()
@@ -140,7 +139,7 @@ jest.mock("../../components", () => {
       R.createElement(View, null, R.createElement(Text, null, title), R.createElement(Text, null, hint)),
     FieldMessage: ({ children, variant }: any) =>
       R.createElement(Text, { accessibilityValue: { text: variant ?? "info" } }, children),
-    Button: ({ title, onPress, disabled, testID, variant, color }: any) =>
+    Button: ({ title, onPress, disabled, testID, variant, color, loading }: any) =>
       R.createElement(
         Pressable,
         {
@@ -148,7 +147,7 @@ jest.mock("../../components", () => {
           onPress,
           disabled,
           accessibilityRole: "button",
-          accessibilityState: { disabled: !!disabled },
+          accessibilityState: { disabled: !!disabled, busy: !!loading },
           accessibilityValue: { text: `${variant ?? "primary"}${color ? "/error" : ""}` }
         },
         R.createElement(Text, null, title)
@@ -162,11 +161,12 @@ jest.mock("../../components", () => {
           disabled,
           accessibilityRole: "button",
           accessibilityState: { disabled: !!disabled },
-          accessibilityValue: { text: trailingIcon ? "trash" : "chevron" }
+          accessibilityValue: { text: trailingIcon?.displayName ?? "chevron" }
         },
         R.createElement(Text, null, label),
         R.createElement(Text, null, sub)
       ),
+    SpinningLoader: Object.assign(() => null, { displayName: "SpinningLoader" }),
     ChipGroup: ({ options, selected, onSelect }: any) =>
       R.createElement(
         View,
@@ -217,7 +217,6 @@ describe("DataManagementScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockSettings = { ...DEFAULT_SETTINGS, endpoint: "https://api.example.com/track" }
-    mockTracking = true
     mockGetStats.mockResolvedValue(stats())
     mockCountOlderThan.mockResolvedValue({ total: 3120, cutoffSeconds: CUTOFF })
     mockCountUnsentOlderThan.mockResolvedValue(96)
@@ -278,14 +277,17 @@ describe("DataManagementScreen", () => {
       ).toBeTruthy()
     })
 
-    it("names the trip splits and merges under Delete all, which no label, hint or dialog named", async () => {
+    it("names the trip splits and merges in the Delete all confirmation", async () => {
       const api = renderScreen()
+      await api.findByText("12,480")
 
-      expect(
-        await api.findByText(
-          "All 12,480 locations and every trip split and merge you made. Geofences, profiles and settings stay."
+      fireEvent.press(api.getByTestId("delete-all-btn"))
+
+      await waitFor(() =>
+        expect(mockShowConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({ message: expect.stringContaining("every manual trip split and merge you made") })
         )
-      ).toBeTruthy()
+      )
     })
 
     it("explains a disabled row in the same slot rather than leaving it blank", async () => {
@@ -350,16 +352,30 @@ describe("DataManagementScreen", () => {
       expect(mockShowAlert).not.toHaveBeenCalled()
     })
 
-    it("runs the native delete behind the age button once an age is chosen and confirmed", async () => {
+    it("runs the native delete behind the age row once an age is chosen and confirmed", async () => {
       const api = renderScreen()
       await api.findByText("12,480")
       fireEvent.press(api.getByTestId("age-90"))
-      await api.findByText("Delete 3,120 locations")
+      await api.findByText(/^3,120 locations recorded before /)
 
-      fireEvent.press(api.getByTestId("delete-older-btn"))
+      fireEvent.press(api.getByTestId("delete-older-row"))
 
       await waitFor(() => expect(mockDeleteOlderThan).toHaveBeenCalledWith(90))
       expect(mockShowAlert).not.toHaveBeenCalled()
+    })
+
+    it("spins the pressed delete row and leaves Delete all alone", async () => {
+      mockShowConfirm.mockReturnValue(new Promise(() => {}))
+      const api = renderScreen()
+      await api.findByText("12,480")
+
+      fireEvent.press(api.getByTestId("delete-queued-row"))
+
+      expect(await api.findByText("Counting…")).toBeTruthy()
+      const row = api.getByTestId("delete-queued-row")
+      expect(row.props.accessibilityValue.text).toBe("SpinningLoader")
+      expect(row.props.accessibilityState.disabled).toBe(false)
+      expect(api.getByTestId("delete-all-btn").props.accessibilityState.busy).toBe(false)
     })
 
     it("reports a failure instead of leaving the screen looking successful", async () => {
@@ -381,12 +397,12 @@ describe("DataManagementScreen", () => {
       expect(mockClearQueue).toHaveBeenCalled()
     })
 
-    it("spends the one filled danger button on Delete all and keeps the age delete a text button", async () => {
+    it("spends the one filled danger button on Delete all and makes the age delete a trash row", async () => {
       const api = renderScreen()
       await api.findByText("12,480")
 
       expect(api.getByTestId("delete-all-btn").props.accessibilityValue.text).toBe("danger")
-      expect(api.getByTestId("delete-older-btn").props.accessibilityValue.text).toBe("ghost/error")
+      expect(api.getByTestId("delete-older-row").props.accessibilityValue.text).toBe("Trash2")
     })
   })
 
@@ -399,7 +415,7 @@ describe("DataManagementScreen", () => {
 
       expect(mockCountOlderThan).not.toHaveBeenCalled()
       expect(api.getByText("Choose how old a location must be.")).toBeTruthy()
-      expect(api.getByTestId("delete-older-btn").props.accessibilityState.disabled).toBe(true)
+      expect(api.getByTestId("delete-older-row").props.accessibilityState.disabled).toBe(true)
     })
 
     it("counts once an age is chosen, and names the boundary it counted at", async () => {
@@ -408,7 +424,7 @@ describe("DataManagementScreen", () => {
 
       fireEvent.press(api.getByTestId("age-90"))
 
-      expect(await api.findByText("Delete 3,120 locations")).toBeTruthy()
+      expect(await api.findByText(/^3,120 locations recorded before /)).toBeTruthy()
       expect(mockCountOlderThan).toHaveBeenCalledWith(90)
     })
 
@@ -418,11 +434,11 @@ describe("DataManagementScreen", () => {
       await api.findByText("12,480")
 
       fireEvent.press(api.getByTestId("age-90"))
-      await api.findByText("Delete 3,120 locations")
+      await api.findByText(/^3,120 locations recorded before /)
 
       expect(mockCountUnsentOlderThan).not.toHaveBeenCalled()
 
-      fireEvent.press(api.getByTestId("delete-older-btn"))
+      fireEvent.press(api.getByTestId("delete-older-row"))
 
       await waitFor(() => expect(mockCountUnsentOlderThan).toHaveBeenCalledWith(90))
       expect(mockShowConfirm).toHaveBeenCalledWith(
@@ -434,12 +450,12 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
       await api.findByText("12,480")
       fireEvent.press(api.getByTestId("age-90"))
-      await api.findByText("Delete 3,120 locations")
+      await api.findByText(/^3,120 locations recorded before /)
 
       mockCountOlderThan.mockResolvedValue({ total: 40, cutoffSeconds: CUTOFF })
       fireEvent.press(api.getByTestId("age-365"))
 
-      expect(await api.findByText("Delete 40 locations")).toBeTruthy()
+      expect(await api.findByText(/^40 locations recorded before /)).toBeTruthy()
       expect(mockCountOlderThan).toHaveBeenLastCalledWith(365)
     })
 
@@ -451,7 +467,7 @@ describe("DataManagementScreen", () => {
       fireEvent.press(api.getByTestId("age-90"))
 
       expect(await api.findByText("Nothing on this device is older than 90 days.")).toBeTruthy()
-      expect(api.getByTestId("delete-older-btn").props.accessibilityState.disabled).toBe(true)
+      expect(api.getByTestId("delete-older-row").props.accessibilityState.disabled).toBe(true)
     })
 
     it("rejects a decimal instead of silently deleting by its integer part", async () => {
@@ -462,9 +478,8 @@ describe("DataManagementScreen", () => {
       fireEvent.changeText(api.getByTestId("retention-days-input"), "1.5")
 
       expect(await api.findByText("A whole number")).toBeTruthy()
-      // The field owns the error; the button points at it rather than printing it twice.
-      expect(api.getByText("Fix the age above.")).toBeTruthy()
-      expect(api.getByTestId("delete-older-btn").props.accessibilityState.disabled).toBe(true)
+      expect(api.getByText("Fix the age below.")).toBeTruthy()
+      expect(api.getByTestId("delete-older-row").props.accessibilityState.disabled).toBe(true)
     })
 
     it("restores the last settled age on blur, never the minimum, so an emptied box cannot arm a one-day delete", async () => {
@@ -505,14 +520,14 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
       await api.findByText("12,480")
       fireEvent.press(api.getByTestId("age-90"))
-      await api.findByText("Delete 3,120 locations")
+      await api.findByText(/^3,120 locations recorded before /)
 
       await act(async () => {
         mockRefocus?.()
       })
 
-      expect(api.getByText("Delete 3,120 locations")).toBeTruthy()
-      expect(api.getByTestId("delete-older-btn").props.accessibilityState.disabled).toBe(false)
+      expect(api.getByText(/^3,120 locations recorded before /)).toBeTruthy()
+      expect(api.getByTestId("delete-older-row").props.accessibilityState.disabled).toBe(false)
     })
 
     // Nothing has settled, so there is nothing to fall back to and nothing may be armed.
@@ -524,7 +539,7 @@ describe("DataManagementScreen", () => {
       fireEvent(api.getByTestId("retention-days-input"), "blur")
 
       expect(api.getByTestId("retention-days-input").props.value).toBe("")
-      expect(api.getByTestId("delete-older-btn").props.accessibilityState.disabled).toBe(true)
+      expect(api.getByTestId("delete-older-row").props.accessibilityState.disabled).toBe(true)
       expect(mockCountOlderThan).not.toHaveBeenCalled()
     })
   })
@@ -535,15 +550,17 @@ describe("DataManagementScreen", () => {
       mockLongArms = 0
     })
 
-    it("says what it overrides, and that a flush records nothing", async () => {
-      mockTracking = false
+    it("says how many are queued and what it overrides", async () => {
       const api = renderScreen()
 
-      expect(
-        await api.findByText(
-          "Uploads the 412 queued locations now, whatever Sync only on says. The tracking notification appears for a moment. Nothing is recorded."
-        )
-      ).toBeTruthy()
+      expect(await api.findByText("412 queued. Uploads them now, whatever Sync only on says.")).toBeTruthy()
+    })
+
+    it("agrees with itself at one queued location", async () => {
+      mockGetStats.mockResolvedValue(stats({ queued: 1 }))
+      const api = renderScreen()
+
+      expect(await api.findByText("1 queued. Uploads it now, whatever Sync only on says.")).toBeTruthy()
     })
 
     it("is disabled with the reason when no server is configured, since native does nothing", async () => {
@@ -551,14 +568,14 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
 
       expect(await api.findByText("No server configured. Set one on Connection.")).toBeTruthy()
-      expect(api.getByTestId("sync-now-btn").props.accessibilityState.disabled).toBe(true)
+      expect(api.getByTestId("sync-now-row").props.accessibilityState.disabled).toBe(true)
     })
 
     it("reports the run from the progress event and never claims success after failures", async () => {
       const api = renderScreen()
       await api.findByText("12,480")
 
-      fireEvent.press(api.getByTestId("sync-now-btn"))
+      fireEvent.press(api.getByTestId("sync-now-row"))
       await waitFor(() => expect(mockManualFlush).toHaveBeenCalled())
 
       // Native's real shape: ticks while it works, then one event carrying `remaining` to end the pass.
@@ -576,7 +593,7 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
       await api.findByText("12,480")
 
-      fireEvent.press(api.getByTestId("sync-now-btn"))
+      fireEvent.press(api.getByTestId("sync-now-row"))
       await waitFor(() => expect(mockManualFlush).toHaveBeenCalled())
       act(() => {
         DeviceEventEmitter.emit("onSyncProgress", { sent: 500, failed: 0, total: 500, remaining: 120 })
@@ -592,7 +609,7 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
       await api.findByText("12,480")
 
-      fireEvent.press(api.getByTestId("sync-now-btn"))
+      fireEvent.press(api.getByTestId("sync-now-row"))
       await waitFor(() => expect(mockManualFlush).toHaveBeenCalled())
       act(() => {
         DeviceEventEmitter.emit("onSyncProgress", { sent: 500, failed: 0, total: 5000, remaining: 4500 })
@@ -600,14 +617,14 @@ describe("DataManagementScreen", () => {
 
       expect(await api.findByText("Sent 500 of 5,000. 4,500 still queued; press again.")).toBeTruthy()
       expect(api.queryByText("No answer from the tracking service. The queue is unchanged.")).toBeNull()
-      await waitFor(() => expect(api.getByTestId("sync-now-btn").props.accessibilityState.disabled).toBe(false))
+      await waitFor(() => expect(api.getByTestId("sync-now-row").props.accessibilityState.disabled).toBe(false))
     })
 
     it("says the queue emptied when it did, and nothing about pressing again", async () => {
       const api = renderScreen()
       await api.findByText("12,480")
 
-      fireEvent.press(api.getByTestId("sync-now-btn"))
+      fireEvent.press(api.getByTestId("sync-now-row"))
       await waitFor(() => expect(mockManualFlush).toHaveBeenCalled())
       mockGetStats.mockResolvedValue(stats({ queued: 0 }))
       act(() => {
@@ -625,7 +642,7 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
       await api.findByText("12,480")
 
-      fireEvent.press(api.getByTestId("sync-now-btn"))
+      fireEvent.press(api.getByTestId("sync-now-row"))
       await waitFor(() => expect(mockManualFlush).toHaveBeenCalled())
       act(() => {
         DeviceEventEmitter.emit("onSyncProgress", { sent: 0, failed: 412, total: 412, remaining: 412 })
@@ -641,7 +658,7 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
       await api.findByText("12,480")
 
-      fireEvent.press(api.getByTestId("sync-now-btn"))
+      fireEvent.press(api.getByTestId("sync-now-row"))
       await waitFor(() => expect(mockLongArms).toBe(1))
 
       act(() => {
@@ -656,7 +673,7 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
       await api.findByText("12,480")
 
-      fireEvent.press(api.getByTestId("sync-now-btn"))
+      fireEvent.press(api.getByTestId("sync-now-row"))
       await waitFor(() => expect(mockManualFlush).toHaveBeenCalled())
       await act(async () => {
         fireLongTimers()
@@ -664,13 +681,26 @@ describe("DataManagementScreen", () => {
 
       const line = await api.findByText("No answer from the tracking service. Check the queued count above.")
       expect(line.props.accessibilityValue.text).toBe("error")
-      await waitFor(() => expect(api.getByTestId("sync-now-btn").props.accessibilityState.disabled).toBe(false))
+      await waitFor(() => expect(api.getByTestId("sync-now-row").props.accessibilityState.disabled).toBe(false))
+    })
+
+    it("keeps the running row enabled with a spinner instead of greying it out", async () => {
+      mockManualFlush.mockReturnValue(new Promise(() => {}))
+      const api = renderScreen()
+      await api.findByText("12,480")
+
+      fireEvent.press(api.getByTestId("sync-now-row"))
+
+      expect(await api.findByText("Sent 0 of 412.")).toBeTruthy()
+      const row = api.getByTestId("sync-now-row")
+      expect(row.props.accessibilityValue.text).toBe("SpinningLoader")
+      expect(row.props.accessibilityState.disabled).toBe(false)
     })
 
     it("stops listening for progress once the screen is gone", async () => {
       const api = renderScreen()
       await api.findByText("12,480")
-      fireEvent.press(api.getByTestId("sync-now-btn"))
+      fireEvent.press(api.getByTestId("sync-now-row"))
       await waitFor(() => expect(mockManualFlush).toHaveBeenCalled())
       const during = DeviceEventEmitter.listenerCount("onSyncProgress")
 
@@ -684,7 +714,7 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
       await api.findByText("12,480")
 
-      expect(api.queryByTestId("sync-now-btn")).toBeNull()
+      expect(api.queryByTestId("sync-now-row")).toBeNull()
       expect(api.queryByTestId("delete-queued-row")).toBeNull()
       expect(api.getByTestId("delete-all-btn")).toBeTruthy()
     })
@@ -756,14 +786,23 @@ describe("DataManagementScreen", () => {
   })
 
   describe("compact", () => {
-    it("says it deletes nothing and that the deletes already do this", async () => {
+    it("says it is rewriting while it runs, on a row that stays enabled", async () => {
+      mockVacuumDatabase.mockReturnValue(new Promise(() => {}))
+      const api = renderScreen()
+      await api.findByText("12,480")
+
+      fireEvent.press(api.getByTestId("compact-row"))
+
+      expect(await api.findByText("Rewriting the database…")).toBeTruthy()
+      const row = api.getByTestId("compact-row")
+      expect(row.props.accessibilityValue.text).toBe("SpinningLoader")
+      expect(row.props.accessibilityState.disabled).toBe(false)
+    })
+
+    it("says it gives space back and deletes nothing", async () => {
       const api = renderScreen()
 
-      expect(
-        await api.findByText(
-          "Rewrites the database to give unused space back. Deleting trips and points leaves gaps that only this reclaims. Nothing is deleted."
-        )
-      ).toBeTruthy()
+      expect(await api.findByText("Gives unused space back. Deletes nothing.")).toBeTruthy()
     })
 
     it("measures both sizes at the same moment, and says nothing rather than claiming a non-event", async () => {
@@ -771,7 +810,7 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
       await api.findByText("12,480")
 
-      fireEvent.press(api.getByTestId("compact-btn"))
+      fireEvent.press(api.getByTestId("compact-row"))
 
       expect(await api.findByText("Nothing to release")).toBeTruthy()
     })
@@ -782,7 +821,7 @@ describe("DataManagementScreen", () => {
 
       // Queued only once the mount read has landed, so the sizes pair with the two reads compact takes.
       mockGetStats.mockResolvedValueOnce(stats()).mockResolvedValue(stats({ databaseSizeMB: 3.0 }))
-      fireEvent.press(api.getByTestId("compact-btn"))
+      fireEvent.press(api.getByTestId("compact-row"))
 
       expect(await api.findByText(/^Released 43\d KB$/)).toBeTruthy()
     })
@@ -795,6 +834,6 @@ describe("DataManagementScreen", () => {
     expect(await api.findByText("Nothing stored")).toBeTruthy()
     expect(api.queryByTestId("delete-all-btn")).toBeNull()
     expect(api.getByText("20 KB")).toBeTruthy()
-    expect(api.getByTestId("compact-btn")).toBeTruthy()
+    expect(api.getByTestId("compact-row")).toBeTruthy()
   })
 })

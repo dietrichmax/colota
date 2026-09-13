@@ -81,7 +81,7 @@ The UI simplifies to remove sync-related elements that don't apply:
 - Tracking profiles and geofences
 - Data export (CSV, GeoJSON, GPX, KML) - both manual and auto-export
 - Database statistics (Total locations, Storage)
-- Data cleanup (Delete older than, Delete all locations, Compact database)
+- Data cleanup (Delete older locations, Delete all locations, Compact database)
 
 ### Disabling Offline Mode
 

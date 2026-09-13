@@ -150,7 +150,7 @@ To change: **Settings > Tracking & sync > Sync only on**.
 ## Database growing too large
 
 - Use **Delete synced locations** to remove what your server already holds
-- Use **Delete older than** for an age cutoff, which ignores sync state
+- Use **Delete older locations** for an age cutoff, which ignores sync state
 - Back up or export first if you want to keep it
 - Use **Compact database** to reclaim space after deleting trips or points, which leave gaps nothing else reclaims
 

@@ -1,4 +1,4 @@
-import { allSub, deleteCopy, olderSub, scopeSub } from "../dataScope"
+import { deleteCopy, olderSub, scopeSub } from "../dataScope"
 import { formatDateWithYear, loadDisplayPreferences } from "../geo"
 
 const mockGetSetting = jest.fn()
@@ -40,8 +40,8 @@ describe("scopeSub", () => {
 })
 
 describe("olderSub", () => {
-  it("names the boundary the count used", () => {
-    expect(olderSub(3120, 90, CUTOFF)).toBe(`Recorded before ${formatDateWithYear(CUTOFF)}.`)
+  it("names the count and the boundary it used", () => {
+    expect(olderSub(3120, 90, CUTOFF)).toBe(`3,120 locations recorded before ${formatDateWithYear(CUTOFF)}.`)
   })
 
   // Counting those reads every matching row, so the confirmation is the only place worth taking it.
@@ -52,15 +52,6 @@ describe("olderSub", () => {
   it("says nothing matches rather than offering a delete of zero", () => {
     expect(olderSub(0, 90, CUTOFF)).toBe("Nothing on this device is older than 90 days.")
     expect(olderSub(0, 1, CUTOFF)).toBe("Nothing on this device is older than 1 day.")
-  })
-})
-
-describe("allSub", () => {
-  it("names the trip splits and merges, which no label, hint or dialog has ever named", () => {
-    // clearAllLocations empties boundary_overrides as well as locations and the queue.
-    expect(allSub(12480)).toBe(
-      "All 12,480 locations and every trip split and merge you made. Geofences, profiles and settings stay."
-    )
   })
 })
 
