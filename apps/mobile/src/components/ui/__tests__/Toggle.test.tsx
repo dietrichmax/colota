@@ -1,6 +1,8 @@
 import React from "react"
+import { Platform } from "react-native"
 import { render, fireEvent } from "@testing-library/react-native"
 import { lightColors } from "@colota/shared"
+import { SWITCH_TRACK_ALPHA } from "../../../constants"
 
 jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
@@ -8,61 +10,63 @@ jest.mock("../../../hooks/useTheme", () => ({
 
 import { Toggle } from "../Toggle"
 
+// Switch sends different props per platform; these are the ones Android receives.
+beforeEach(() => {
+  jest.replaceProperty(Platform, "OS", "android")
+})
+
+afterEach(() => {
+  jest.restoreAllMocks()
+})
+
+function renderToggle(props: { value: boolean; disabled?: boolean; onValueChange?: (value: boolean) => void }) {
+  return render(
+    <Toggle testID="t" onValueChange={jest.fn()} accessibilityLabel="Offline mode" {...props} />
+  ).getByTestId("t")
+}
+
 describe("Toggle", () => {
-  it("puts the thumb on the container, not on its own colour at half alpha", () => {
-    const { getByTestId } = render(
-      <Toggle testID="t" value={true} onValueChange={jest.fn()} accessibilityLabel="Offline mode" />
-    )
+  it("paints on as a primary thumb on the container, the same for every switch", () => {
+    const el = renderToggle({ value: true })
 
-    // RN resolves trackColor and thumbColor into these before they reach the platform. The track
-    // was the accent at 50 percent, which left the thumb 2.4:1 against its own bar; the container
-    // takes that to 4.1 in light and 6.6 in dark.
-    const el = getByTestId("t")
-    expect(el.props.onTintColor).toBe(lightColors.primaryContainer)
+    expect(el.props.trackTintColor).toBe(lightColors.primaryContainer)
     expect(el.props.thumbTintColor).toBe(lightColors.primary)
   })
 
-  it("leaves the off state to Android, so the thumb is not the colour of its own track", () => {
-    // Tinting both with colors.border made them identical at 1.00:1, so an off switch was a
-    // uniform pill with no visible thumb. Undefined clears the colour filter and restores the
-    // platform drawable, which also fixes how a disabled switch renders.
-    const { getByTestId } = render(
-      <Toggle testID="t" value={false} onValueChange={jest.fn()} accessibilityLabel="Offline mode" />
-    )
+  it("paints off from the app theme, not the system's night mode", () => {
+    const el = renderToggle({ value: false })
 
-    const el = getByTestId("t")
-    expect(el.props.thumbTintColor).toBeUndefined()
-    expect(el.props.tintColor).toBeUndefined()
+    expect(el.props.trackTintColor).toBe(lightColors.border + SWITCH_TRACK_ALPHA)
+    expect(el.props.thumbTintColor).toBe(lightColors.textSecondary)
   })
 
-  it("gives every switch the same hue, because being on is not a warning", () => {
-    // The geofence pause toggle used to paint warning. It was the only one, it was not applied
-    // to the three sibling toggles that also stop GPS, and orange reads as a fault rather than
-    // as the setting working.
-    const { getByTestId } = render(
-      <Toggle testID="t" value={true} onValueChange={jest.fn()} accessibilityLabel="Pause" />
-    )
+  it("hands native both tracks, because a tap swaps the track before JS re-renders", () => {
+    const el = renderToggle({ value: false })
 
-    const el = getByTestId("t")
-    expect(el.props.onTintColor).toBe(lightColors.primaryContainer)
-    expect(el.props.thumbTintColor).toBe(lightColors.primary)
+    expect(el.props.trackColorForTrue).toBe(lightColors.primaryContainer)
+    expect(el.props.trackColorForFalse).toBe(lightColors.border + SWITCH_TRACK_ALPHA)
+  })
+
+  it("keeps its position's track when disabled, so a disabled switch still reads as on or off", () => {
+    const on = renderToggle({ value: true, disabled: true })
+    const off = renderToggle({ value: false, disabled: true })
+
+    expect(on.props.enabled).toBe(false)
+    expect(on.props.thumbTintColor).toBe(lightColors.textDisabled)
+    expect(on.props.trackTintColor).toBe(lightColors.primaryContainer)
+    expect(off.props.thumbTintColor).toBe(lightColors.textDisabled)
+    expect(off.props.trackTintColor).toBe(lightColors.border + SWITCH_TRACK_ALPHA)
   })
 
   it("reports the change so a caller can persist it", () => {
     const onValueChange = jest.fn()
-    const { getByTestId } = render(
-      <Toggle testID="t" value={false} onValueChange={onValueChange} accessibilityLabel="Offline mode" />
-    )
+    const el = renderToggle({ value: false, onValueChange })
 
-    fireEvent(getByTestId("t"), "valueChange", true)
+    fireEvent(el, "valueChange", true)
     expect(onValueChange).toHaveBeenCalledWith(true)
   })
 
   it("carries the label so Voice Access can resolve the row by its visible words", () => {
-    const { getByTestId } = render(
-      <Toggle testID="t" value={false} onValueChange={jest.fn()} accessibilityLabel="Offline mode" />
-    )
-
-    expect(getByTestId("t").props.accessibilityLabel).toBe("Offline mode")
+    expect(renderToggle({ value: false }).props.accessibilityLabel).toBe("Offline mode")
   })
 })

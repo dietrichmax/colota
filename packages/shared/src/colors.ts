@@ -29,7 +29,7 @@ export interface ThemeColors {
   background: string
   backgroundElevated: string
   card: string
-  /** One tonal step above `card` for what floats over content: docks, dialogs, banners, map discs. Never a list card. */
+  /** What floats over content: docks, dialogs, banners, map discs. A step above `card` in brand dark only. Never a list card. */
   surfaceRaised: string
   surface: string
 

@@ -1,10 +1,12 @@
 import { lightColors, darkColors, type ThemeColors } from "@colota/shared"
+import { buildDynamicColors, PALETTE_STEPS, type SystemPalette } from "../styles/dynamicColors"
+import { SWITCH_TRACK_ALPHA } from "../constants"
 
 /**
  * Contrast is the one colour rule a machine can settle, so it is settled here rather than in a
  * status page nobody runs.
  *
- * Ten pairs fail today and are pinned at their measured ratio in DEFERRED. A pin is a number, not
+ * Five wallpaper pairs fail today and are pinned at their measured ratio in DEFERRED. A pin is a number, not
  * an exemption: a pair that gets worse fails, and a pair that gets fixed fails too, because its
  * pin is then stale and has to be deleted. Adding a pin is a deliberate line in a diff.
  *
@@ -15,6 +17,8 @@ import { lightColors, darkColors, type ThemeColors } from "@colota/shared"
  *
  * textDisabled and placeholder are absent on purpose: WCAG exempts disabled controls and
  * placeholder text is not the field's accessible name.
+ *
+ * The wallpaper themes use a grey palette at Android's tones: a ratio depends on luminance alone.
  */
 
 /** WCAG 2.2: 4.5 for text under 18pt, 3.0 for a UI component or meaningful graphic. */
@@ -44,6 +48,7 @@ const PAIRS: Pair[] = [
   ["textOnPrimary", "primary", TEXT],
   ["textOnPrimary", "error", TEXT],
   ["onPrimaryContainer", "primaryContainer", TEXT],
+  ["primary", "primaryContainer", UI],
   ["primary", "background", TEXT],
   ["primary", "card", TEXT],
   ["primaryDark", "background", TEXT],
@@ -62,10 +67,19 @@ const PAIRS: Pair[] = [
   ["primary", "well", UI]
 ]
 
-/** Empty on purpose: every pair clears its floor. A pin here is a palette decision not yet taken. */
+/** The brand themes defer nothing. A pin here is a palette decision not yet taken. */
 const DEFERRED: Record<string, Record<string, number>> = {
   light: {},
-  dark: {}
+  dark: {},
+  "wallpaper light": {
+    "error on background": 4.41,
+    "info on background": 4.44
+  },
+  "wallpaper dark": {
+    "error on card": 4.32,
+    "info on card": 4.33,
+    "border on well": 2.95
+  }
 }
 
 function luminance(hex: string): number {
@@ -79,9 +93,33 @@ function ratio(fg: string, bg: string): number {
   return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100
 }
 
+function over(fg: string, alpha: string, bg: string): string {
+  const a = parseInt(alpha, 16) / 255
+  const channels = [1, 3, 5].map((i) =>
+    Math.round(parseInt(fg.slice(i, i + 2), 16) * a + parseInt(bg.slice(i, i + 2), 16) * (1 - a))
+  )
+  return `#${channels.map((c) => c.toString(16).padStart(2, "0")).join("")}`
+}
+
+/** The grey at CIE L* `tone`; Android's step N sits at L* 100 - N/10. */
+function greyAtTone(tone: number): string {
+  const y = tone > 8 ? Math.pow((tone + 16) / 116, 3) : tone / 903.3
+  const encoded = y <= 0.0031308 ? 12.92 * y : 1.055 * Math.pow(y, 1 / 2.4) - 0.055
+  const channel = Math.round(encoded * 255)
+    .toString(16)
+    .padStart(2, "0")
+  return `#${channel}${channel}${channel}`.toUpperCase()
+}
+
+const greyPalette = Object.fromEntries(
+  PALETTE_STEPS.map((step) => [step, greyAtTone(100 - Number(step.split("_")[1]) / 10)])
+) as SystemPalette
+
 const THEMES: [name: string, colors: ThemeColors][] = [
   ["light", lightColors],
-  ["dark", darkColors]
+  ["dark", darkColors],
+  ["wallpaper light", buildDynamicColors(greyPalette, false)],
+  ["wallpaper dark", buildDynamicColors(greyPalette, true)]
 ]
 
 describe("contrast", () => {
@@ -90,6 +128,14 @@ describe("contrast", () => {
     expect(ratio("#767676", "#FFFFFF")).toBeCloseTo(4.54, 1)
     expect(ratio("#000000", "#FFFFFF")).toBe(21)
     expect(ratio("#FFFFFF", "#FFFFFF")).toBe(1)
+  })
+
+  it("builds the wallpaper palette at Android's tones, so its ratios are the device's", () => {
+    expect(greyAtTone(50)).toBe("#777777")
+    expect(greyPalette.neutral1_0).toBe("#FFFFFF")
+    expect(greyPalette.neutral1_50).toBe("#F1F1F1")
+    expect(greyPalette.neutral2_500).toBe("#777777")
+    expect(greyPalette.neutral1_900).toBe("#1B1B1B")
   })
 
   for (const [themeName, colors] of THEMES) {
@@ -129,6 +175,25 @@ describe("contrast", () => {
         }
 
         expect(stale).toEqual([])
+      })
+
+      it("keeps the switch thumb 3:1 on its track and on the row behind it, because the thumb is the state", () => {
+        const failures: string[] = []
+        for (const ground of ["card", "background"] as const) {
+          const offTrack = over(colors.border, SWITCH_TRACK_ALPHA, colors[ground])
+          const checks: [name: string, fg: string, bg: string][] = [
+            ["off thumb on its track", colors.textSecondary, offTrack],
+            ["off thumb on the row", colors.textSecondary, colors[ground]],
+            ["on thumb on its track", colors.primary, colors.primaryContainer],
+            ["on thumb on the row", colors.primary, colors[ground]]
+          ]
+          for (const [name, fg, bg] of checks) {
+            const measured = ratio(fg, bg)
+            if (measured < UI) failures.push(`${name} on ${ground} is ${measured}`)
+          }
+        }
+
+        expect(failures).toEqual([])
       })
 
       it("defers nothing that is not in the pair list, so a pin cannot hide an unchecked pairing", () => {

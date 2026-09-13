@@ -35,9 +35,8 @@ class BuildConfigModuleTest {
     // The theme reads exactly these steps. One dropped here is an undefined colour in a style prop
     // on the JS side, so the set is asserted rather than sampled.
     private val expectedSteps = setOf(
-        "accent1_100", "accent1_200", "accent1_300", "accent1_600", "accent1_700", "accent1_800",
-        "accent1_900",
-        "neutral1_0", "neutral1_50", "neutral1_600", "neutral1_700", "neutral1_800", "neutral1_900",
+        "accent1_100", "accent1_200", "accent1_300", "accent1_600", "accent1_700", "accent1_900",
+        "neutral1_0", "neutral1_50", "neutral1_700", "neutral1_800", "neutral1_900",
         "neutral2_100", "neutral2_200", "neutral2_300", "neutral2_400", "neutral2_500",
         "neutral2_600", "neutral2_700", "neutral2_800"
     )

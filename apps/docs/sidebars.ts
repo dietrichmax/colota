@@ -21,7 +21,8 @@ const sidebars: SidebarsConfig = {
         "configuration/server-settings",
         "configuration/field-mapping",
         "configuration/authentication",
-        "configuration/mtls"
+        "configuration/mtls",
+        "configuration/appearance"
       ]
     },
     {

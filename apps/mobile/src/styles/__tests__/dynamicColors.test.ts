@@ -8,11 +8,9 @@ const palette: SystemPalette = {
   accent1_300: "#8AB4F8",
   accent1_600: "#2B5CB8",
   accent1_700: "#12459E",
-  accent1_800: "#002E6B",
   accent1_900: "#001B3F",
   neutral1_0: "#FFFFFF",
   neutral1_50: "#F3F3F6",
-  neutral1_600: "#5B5C63",
   neutral1_700: "#43444B",
   neutral1_800: "#2C2D33",
   neutral1_900: "#1A1B1F",
@@ -82,7 +80,7 @@ describe("buildDynamicColors", () => {
 
     expect(light.primaryContainer).toBe(palette.accent1_100)
     expect(light.onPrimaryContainer).toBe(palette.accent1_900)
-    expect(dark.primaryContainer).toBe(palette.accent1_800)
+    expect(dark.primaryContainer).toBe(palette.accent1_700)
     expect(dark.onPrimaryContainer).toBe(palette.accent1_100)
   })
 

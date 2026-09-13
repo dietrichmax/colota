@@ -51,6 +51,9 @@ export const size = {
  */
 export const STATE_LAYER_ALPHA = "1A"
 
+/** The off switch track is `border` at half, which keeps the thumb 3:1 on it in every theme. */
+export const SWITCH_TRACK_ALPHA = "80"
+
 export const HIT_SLOP_SM = { top: 6, right: 6, bottom: 6, left: 6 } as const
 export const HIT_SLOP_MD = { top: 8, right: 8, bottom: 8, left: 8 } as const
 export const HIT_SLOP_LG = { top: 12, right: 12, bottom: 12, left: 12 } as const
