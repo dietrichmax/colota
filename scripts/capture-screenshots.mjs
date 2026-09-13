@@ -26,7 +26,6 @@ const PERMISSIONS = [
   "ACCESS_BACKGROUND_LOCATION",
   "POST_NOTIFICATIONS"
 ]
-const POINT_STEP = 15
 const TRAVEL_POINTS = 12
 const TRAVEL_FROM = 0.25
 const TRAVEL_METERS = 2000
@@ -138,9 +137,8 @@ function demoTimeline(track) {
   const shift = Date.UTC(year, month - 1, day - 1) - localMidnight(track[0].time)
   const iso = (ms) => new Date(ms + offsetMs).toISOString().replace("Z", offset)
 
-  const sampled = sampleTrack(track)
-  const rawSignals = sampled.map((p, i) => {
-    const prev = sampled[i - 1]
+  const rawSignals = track.map((p, i) => {
+    const prev = track[i - 1]
     const seconds = prev ? (p.time - prev.time) / 1000 : 0
     return {
       position: {
@@ -168,14 +166,9 @@ function travelPoints(track) {
   )
 }
 
-function sampleTrack(track) {
-  return track.filter((_, i) => i % POINT_STEP === 0 || i === track.length - 1)
-}
-
 function splitPoint(track) {
-  const sampled = sampleTrack(track)
-  const gap = sampled.findIndex((p, i) => i > 0 && p.time - sampled[i - 1].time >= TRIP_GAP_MS)
-  const trip = sampled.slice(0, gap === -1 ? sampled.length : gap)
+  const gap = track.findIndex((p, i) => i > 0 && p.time - track[i - 1].time >= TRIP_GAP_MS)
+  const trip = track.slice(0, gap === -1 ? track.length : gap)
   const mercX = (p) => (p.lon + 180) / 360
   const mercY = (p) => {
     const rad = (p.lat * Math.PI) / 180
