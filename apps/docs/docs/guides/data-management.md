@@ -55,7 +55,7 @@ Deleting locally does not remove anything already uploaded to your server.
 
 ## Imported locations and the queue
 
-Locations brought in via [Data Import](data-import.md) are marked as already synced by default, so they **do not show up in the queue counter** and don't get re-uploaded to your backend. If you used the **Import + Queue for Sync** button on the import dialog instead (the "migration" path), the imported rows do land in the queue and the next sync drains them - the counters here will reflect that until they finish uploading.
+Locations brought in via [Data Import](data-import.md) are marked as already synced by default, so they **do not show up in the queue counter** and don't get re-uploaded to your backend. If you switched on **Also queue for upload** on the import preview instead (the "migration" path), the imported rows do land in the queue and the next sync drains them - the counters here will reflect that until they finish uploading.
 
 ## Storage Reference
 

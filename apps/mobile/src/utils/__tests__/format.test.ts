@@ -51,6 +51,10 @@ describe("formatBytes", () => {
     expect(formatBytes(1.2 * 1024 ** 3, { decimals: 0, locale: "en-US" })).toBe("1 GB")
   })
 
+  it("never groups digits, so 1000 MB cannot read as one megabyte", () => {
+    expect(formatBytes(1000.4 * 1024 * 1024, { decimals: 0, locale: "de-DE" })).toBe("1000 MB")
+  })
+
   // Callers convert megabytes, which can leave a fraction of a byte.
   it("rounds a fraction of a byte instead of printing it", () => {
     expect(formatBytes(524.288, { locale: "en-US" })).toBe("524 B")

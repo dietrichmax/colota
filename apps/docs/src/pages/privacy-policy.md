@@ -62,7 +62,7 @@ Authentication credentials (if configured) are encrypted.
 
 ### Importing Data
 
-You can import location history from external files (GeoJSON, Google Timeline, GPX, KML, CSV) into the local database. The file is read from a location you select via the Android document picker; nothing leaves your device during import. If you opt in to "Import + Queue for Sync", imported rows are enqueued for replication to your sync backend like any other location data.
+You can import location history from external files (GeoJSON, Google Timeline, GPX, KML, CSV) into the local database. The file is read from a location you select via the Android document picker; nothing leaves your device during import. If you switch on "Also queue for upload", imported rows are enqueued for replication to your sync backend like any other location data.
 
 ### Client Certificates and Trusted CAs
 

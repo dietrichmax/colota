@@ -137,9 +137,9 @@ To change: **Settings > Tracking & sync > Sync only on**.
 
 ## Auto-export not working
 
-- Verify a directory is selected in **Settings > Auto-export**
+- Verify a directory is selected in **Settings > Export & import > Automatic export**
 - Check that the toggle is enabled
-- The first export fires at the configured time, not on enable. Tap **Export Now** to confirm the pipeline works without waiting
+- The first export fires at the configured time, not on enable. Tap **Export now** to confirm the pipeline works without waiting
 - Doze mode can delay an alarm by up to ~15 minutes - if exports are running but a few minutes late, that's expected
 - If you see a "Directory permission lost" notification, re-select the export directory
 - Check that the selected directory still exists and is accessible

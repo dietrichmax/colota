@@ -133,7 +133,7 @@ Native-only modules in the `importer/` package. Format-specific parsers all retu
 | `JsonReadHelpers` | Shared `JsonReader` extensions (`readNullableInt`, `readNullableDouble`) plus `parseIso8601Seconds` backed by pre-built immutable `DateTimeFormatter` instances (thread-safe and ~10× faster than `SimpleDateFormat`, which matters for Timeline files with 100k+ timestamps). |
 | `ImportFormat` / `ImportRow` / `UnsupportedFormatException` | Shared data types. `ImportRow` is the normalised location shape produced by every parser before dedup; format-specific quirks (E7 coords, ISO timestamps, degree-suffix strings) are resolved before construction so the orchestrator never sees them. |
 
-The on-disk format is **never** authoritative for sync decisions: imported rows go in with `sent = 1` by default (no re-upload), and only the explicit "Import + Queue for Sync" button flips that to `sent = 0` + queue rows. See [Data Import](../guides/data-import.md) for the user-facing semantics.
+The on-disk format is **never** authoritative for sync decisions: imported rows go in with `sent = 1` by default (no re-upload), and only the **Also queue for upload** switch on the import preview flips that to `sent = 0` + queue rows. See [Data Import](../guides/data-import.md) for the user-facing semantics.
 
 ### LocationProvider Abstraction
 

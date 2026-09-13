@@ -3,13 +3,13 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-/** B, KB, MB or GB in the device locale's separators, with one decimal unless `decimals` says otherwise. */
+/** B, KB, MB or GB in the device locale's decimal separator, ungrouped, with one decimal unless `decimals` says otherwise. */
 export const formatBytes = (
   bytes: number,
   { decimals = 1, locale }: { decimals?: number; locale?: string } = {}
 ): string => {
   const scaled = (n: number) =>
-    n.toLocaleString(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+    n.toLocaleString(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: false })
   if (bytes < 1024) return `${Math.round(bytes)} B`
   if (bytes < 1024 ** 2) return `${scaled(bytes / 1024)} KB`
   if (bytes < 1024 ** 3) return `${scaled(bytes / 1024 ** 2)} MB`

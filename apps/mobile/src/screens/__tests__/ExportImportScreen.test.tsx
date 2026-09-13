@@ -88,10 +88,17 @@ jest.mock("../../components", () => {
       R.createElement(View, null, R.createElement(Text, null, label), R.createElement(Text, null, hint), children),
     Toggle: ({ value, onValueChange, testID }: any) =>
       R.createElement(Pressable, { testID, onPress: () => onValueChange(!value) }),
-    ListItem: ({ label, sub, testID, onPress, disabled }: any) =>
+    SpinningLoader: Object.assign(() => null, { displayName: "SpinningLoader" }),
+    ListItem: ({ label, sub, testID, onPress, disabled, trailingIcon }: any) =>
       R.createElement(
         Pressable,
-        { testID, onPress, disabled, accessibilityState: { disabled: !!disabled } },
+        {
+          testID,
+          onPress,
+          disabled,
+          accessibilityState: { disabled: !!disabled },
+          accessibilityValue: { text: trailingIcon?.displayName ?? "chevron" }
+        },
         R.createElement(Text, null, label),
         R.createElement(Text, null, sub)
       ),
@@ -317,7 +324,7 @@ describe("ExportImportScreen", () => {
       expect(mockNavigation.navigate).toHaveBeenCalledWith("Backup & Restore")
     })
 
-    it("says the file is being read and blocks a second pick while it is", async () => {
+    it("shows a spinner on the row while the file is read, and ignores a second pick", async () => {
       mockPickImportSource.mockResolvedValue({ uri: "content://file" })
       mockImportLocationsFromFile.mockReturnValue(new Promise(() => {}))
       const api = renderScreen()
@@ -326,7 +333,12 @@ describe("ExportImportScreen", () => {
       fireEvent.press(api.getByTestId("import-file-row"))
 
       expect(await api.findByText("Reading the file…")).toBeTruthy()
-      expect(api.getByTestId("import-file-row").props.accessibilityState.disabled).toBe(true)
+      const row = api.getByTestId("import-file-row")
+      expect(row.props.accessibilityValue.text).toBe("SpinningLoader")
+      expect(row.props.accessibilityState.disabled).toBe(false)
+
+      fireEvent.press(row)
+      expect(mockPickImportSource).toHaveBeenCalledTimes(1)
     })
 
     // Opening Backup & Restore blurs this screen without unmounting it.

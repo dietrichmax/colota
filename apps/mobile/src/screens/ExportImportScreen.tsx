@@ -18,6 +18,7 @@ import {
   LoadingOverlay,
   SectionTitle,
   SettingRow,
+  SpinningLoader,
   StateLine,
   StatRow,
   Toggle
@@ -316,12 +317,12 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
               <ListItem
                 testID="import-file-row"
                 icon={FileText}
-                trailingIcon={Download}
+                trailingIcon={busy === "parse" ? SpinningLoader : Download}
                 label="Import a file"
                 sub={importRowSub(busy === "parse")}
                 subLines={2}
                 accessibilityHint="Opens the file picker"
-                disabled={busy !== null}
+                disabled={busy === "parse" ? false : busy !== null}
                 onPress={handleChooseFile}
               />
             </Card>

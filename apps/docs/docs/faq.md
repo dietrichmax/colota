@@ -48,7 +48,7 @@ Yes. Go to **Settings → Offline maps** to download map areas to your device. P
 
 ### Can I export my location history?
 
-Yes. Go to **Settings → Export locations** to export in CSV, GeoJSON, GPX or KML, or export a single day's trips from the **History** tab. **Settings → Auto-export** writes the same formats to a folder you pick on a daily, weekly or monthly schedule. See [Data Export](/docs/guides/data-export) for details.
+Yes. Go to **Settings → Export & import** to export in CSV, GeoJSON, GPX or KML, or export a single day's trips from the **History** tab. Its **Automatic export** row writes the same formats to a folder you pick on a daily, weekly or monthly schedule. See [Data Export](/docs/guides/data-export) for details.
 
 ### Can I import location history from another app?
 
