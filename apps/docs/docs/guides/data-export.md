@@ -32,8 +32,8 @@ Each recording is written as its own feature so mapping tools can read one row a
 ### Bulk Export
 
 1. Go to **Settings → Export & import**
-2. Select a format
-3. Tap **Export** and share the file via Android's share menu
+2. Tap **Export all locations** and pick a format
+3. Share the file via Android's share menu
 
 Bulk export always covers your full history. To export a subset, use the trip export below.
 

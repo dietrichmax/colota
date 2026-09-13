@@ -88,10 +88,10 @@ jest.mock("../../components", () => {
       R.createElement(View, null, R.createElement(Text, null, label), R.createElement(Text, null, hint), children),
     Toggle: ({ value, onValueChange, testID }: any) =>
       R.createElement(Pressable, { testID, onPress: () => onValueChange(!value) }),
-    ListItem: ({ label, sub, testID, onPress }: any) =>
+    ListItem: ({ label, sub, testID, onPress, disabled }: any) =>
       R.createElement(
         Pressable,
-        { testID, onPress },
+        { testID, onPress, disabled, accessibilityState: { disabled: !!disabled } },
         R.createElement(Text, null, label),
         R.createElement(Text, null, sub)
       ),
@@ -102,18 +102,20 @@ jest.mock("../../components", () => {
         R.createElement(Text, null, title)
       ),
     LoadingOverlay: ({ visible, title }: any) => (visible ? R.createElement(Text, null, title) : null),
-    ExportFormatDialog: ({ visible, onSelect }: any) =>
+    ExportFormatDialog: ({ visible, onSelect, message }: any) =>
       visible
         ? R.createElement(
             Pressable,
             { testID: "pick-geojson", onPress: () => onSelect("geojson") },
-            R.createElement(Text, null, "Export format")
+            R.createElement(Text, null, "Export format"),
+            R.createElement(Text, null, message)
           )
         : null
   }
 })
 
 import { ExportImportScreen } from "../ExportImportScreen"
+import { exportLine, readableFormats } from "../../utils/locationTransfer"
 
 const stats = (over: Record<string, number> = {}) => ({ total: 12483, databaseSizeMB: 3.42, ...over })
 
@@ -147,7 +149,7 @@ const renderScreen = () => render(<ExportImportScreen navigation={mockNavigation
 const stage = async (api: ReturnType<typeof renderScreen>, over: Record<string, unknown> = {}) => {
   mockPickImportSource.mockResolvedValue({ uri: "content://file" })
   mockImportLocationsFromFile.mockResolvedValue(preview(over))
-  fireEvent.press(api.getByTestId("import-file-btn"))
+  fireEvent.press(api.getByTestId("import-file-row"))
   await waitFor(() => expect(mockImportLocationsFromFile).toHaveBeenCalled())
 }
 
@@ -172,9 +174,9 @@ describe("ExportImportScreen", () => {
       const api = renderScreen()
 
       expect(await api.findByText("12,483")).toBeTruthy()
-      expect(api.getByText("3.42 MB")).toBeTruthy()
-      expect(api.getByTestId("export-all-btn")).toBeTruthy()
-      expect(api.getByTestId("import-file-btn")).toBeTruthy()
+      expect(api.getByText("3 MB")).toBeTruthy()
+      expect(api.getByTestId("export-all-row")).toBeTruthy()
+      expect(api.getByTestId("import-file-row")).toBeTruthy()
       expect(api.queryByTestId("import-commit-btn")).toBeNull()
       expect(mockPickImportSource).not.toHaveBeenCalled()
     })
@@ -185,15 +187,24 @@ describe("ExportImportScreen", () => {
 
       // Both figures wait, rather than one of them claiming zero.
       expect(api.getAllByText("…")).toHaveLength(2)
-      expect(api.queryByText("Nothing to export yet.")).toBeNull()
+      expect(api.queryByText("Nothing to export yet")).toBeNull()
     })
 
-    // The import half has no format control, so the sentence saying so has to be unconditionally true.
-    it("offers no format control for an import", async () => {
+    // There is no format picker; the parser detects the format.
+    it("names the formats an import reads on the row that starts one", async () => {
       const api = renderScreen()
       await api.findByText("12,483")
 
-      expect(api.getByText(/there is nothing to choose/)).toBeTruthy()
+      expect(api.getByText(readableFormats())).toBeTruthy()
+    })
+
+    it("shows no standing caption between the cards", async () => {
+      const api = renderScreen()
+      await api.findByText("12,483")
+
+      expect(api.queryByText(/is not kept here/)).toBeNull()
+      expect(api.queryByText(/12,483 locations/)).toBeNull()
+      expect(api.queryByText(/An import cannot be undone/)).toBeNull()
     })
 
     it("carries the auto-export state on the row that opens it", async () => {
@@ -206,8 +217,8 @@ describe("ExportImportScreen", () => {
       mockGetStats.mockResolvedValue(stats({ total: 0 }))
       const api = renderScreen()
 
-      expect(await api.findByText("Nothing to export yet.")).toBeTruthy()
-      expect(api.getByTestId("export-all-btn").props.accessibilityState.disabled).toBe(true)
+      expect(await api.findByText("Nothing to export yet")).toBeTruthy()
+      expect(api.getByTestId("export-all-row").props.accessibilityState.disabled).toBe(true)
     })
   })
 
@@ -216,7 +227,8 @@ describe("ExportImportScreen", () => {
       const api = renderScreen()
       await api.findByText("12,483")
 
-      fireEvent.press(api.getByTestId("export-all-btn"))
+      fireEvent.press(api.getByTestId("export-all-row"))
+      expect(api.getByText(exportLine(12483))).toBeTruthy()
       fireEvent.press(api.getByTestId("pick-geojson"))
 
       await waitFor(() => expect(mockExportToFile).toHaveBeenCalledWith("geojson"))
@@ -229,7 +241,7 @@ describe("ExportImportScreen", () => {
       const api = renderScreen()
       await api.findByText("12,483")
 
-      fireEvent.press(api.getByTestId("export-all-btn"))
+      fireEvent.press(api.getByTestId("export-all-row"))
       fireEvent.press(api.getByTestId("pick-geojson"))
 
       const line = await api.findByText(/no app took it/)
@@ -247,7 +259,7 @@ describe("ExportImportScreen", () => {
       expect(await api.findByText("3,481 new locations")).toBeTruthy()
       expect(api.getByText("Skipping 12,415 duplicates and 12 unusable rows.")).toBeTruthy()
       expect(api.getByTestId("import-commit-btn")).toBeTruthy()
-      expect(api.queryByTestId("import-file-btn")).toBeNull()
+      expect(api.queryByTestId("import-file-row")).toBeNull()
     })
 
     // The reasoning moved off the card into the confirmation, so it has to actually arrive there.
@@ -294,6 +306,73 @@ describe("ExportImportScreen", () => {
       expect(mockCommitImport).not.toHaveBeenCalled()
     })
 
+    it("offers the backup with the staged file, not before", async () => {
+      const api = renderScreen()
+      await api.findByText("12,483")
+      expect(api.queryByTestId("nav-backup-restore")).toBeNull()
+
+      await stage(api)
+      fireEvent.press(await api.findByTestId("nav-backup-restore"))
+
+      expect(mockNavigation.navigate).toHaveBeenCalledWith("Backup & Restore")
+    })
+
+    it("says the file is being read and blocks a second pick while it is", async () => {
+      mockPickImportSource.mockResolvedValue({ uri: "content://file" })
+      mockImportLocationsFromFile.mockReturnValue(new Promise(() => {}))
+      const api = renderScreen()
+      await api.findByText("12,483")
+
+      fireEvent.press(api.getByTestId("import-file-row"))
+
+      expect(await api.findByText("Reading the file…")).toBeTruthy()
+      expect(api.getByTestId("import-file-row").props.accessibilityState.disabled).toBe(true)
+    })
+
+    // Opening Backup & Restore blurs this screen without unmounting it.
+    it("keeps the staged file across a trip to Backup & Restore", async () => {
+      const api = renderScreen()
+      await api.findByText("12,483")
+      await stage(api)
+
+      fireEvent.press(await api.findByTestId("nav-backup-restore"))
+      await act(async () => {
+        mockRefocus?.()
+      })
+      fireEvent.press(api.getByTestId("import-commit-btn"))
+
+      await waitFor(() => expect(mockCommitImport).toHaveBeenCalledWith(false))
+      expect(mockCancelImport).not.toHaveBeenCalled()
+    })
+
+    // Native drops a staged file after 15 minutes.
+    it("drops the card and says so when the staged file has expired", async () => {
+      mockCommitImport.mockRejectedValue({ code: "E_IMPORT_NO_PENDING" })
+      const api = renderScreen()
+      await api.findByText("12,483")
+      await stage(api)
+
+      fireEvent.press(api.getByTestId("import-commit-btn"))
+
+      expect(await api.findByText("The file you picked expired. Choose it again.")).toBeTruthy()
+      expect(api.queryByTestId("import-commit-btn")).toBeNull()
+      expect(api.getByTestId("import-file-row")).toBeTruthy()
+    })
+
+    // A running parse holds the import lock, so leaving the screen has to release it.
+    it("cancels a parse still running when the screen closes", async () => {
+      mockPickImportSource.mockResolvedValue({ uri: "content://file" })
+      mockImportLocationsFromFile.mockReturnValue(new Promise(() => {}))
+      const api = renderScreen()
+      await api.findByText("12,483")
+
+      fireEvent.press(api.getByTestId("import-file-row"))
+      await waitFor(() => expect(mockImportLocationsFromFile).toHaveBeenCalled())
+      api.unmount()
+
+      expect(mockCancelImport).toHaveBeenCalled()
+    })
+
     it("hides the queue switch when there is no server to queue to", async () => {
       const api = renderScreen()
       await api.findByText("12,483")
@@ -323,7 +402,7 @@ describe("ExportImportScreen", () => {
       fireEvent.press(api.getByTestId("import-discard-btn"))
 
       await waitFor(() => expect(mockCancelImport).toHaveBeenCalled())
-      expect(api.getByTestId("import-file-btn")).toBeTruthy()
+      expect(api.getByTestId("import-file-row")).toBeTruthy()
     })
 
     // The stash sits in native memory on a 15 minute timer, so leaving the screen has to free it.
@@ -343,7 +422,7 @@ describe("ExportImportScreen", () => {
       const api = renderScreen()
       await api.findByText("12,483")
 
-      fireEvent.press(api.getByTestId("import-file-btn"))
+      fireEvent.press(api.getByTestId("import-file-row"))
 
       expect(await api.findByText("Another import is already running.")).toBeTruthy()
     })

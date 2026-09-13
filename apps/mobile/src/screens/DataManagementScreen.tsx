@@ -39,6 +39,7 @@ import { allSub, deleteCopy, olderSub, scopeSub, type DataScope } from "../utils
 import { parseWholeNumber, wholeNumberError } from "../utils/settingsValidation"
 import { formatWhen } from "../utils/geo"
 import { logger } from "../utils/logger"
+import { formatBytes } from "../utils/format"
 
 /** Only a placeholder in the custom field. Nothing is selected until the user selects it. */
 const PLACEHOLDER_DAYS = 90
@@ -326,7 +327,9 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
       const after = await NativeLocationService.getStats()
       applyStats(after, afterGeneration)
       const freed = before - after.databaseSizeMB
-      setCompactMessage({ text: freed > 0.01 ? `Released ${freed.toFixed(2)} MB` : "Nothing to release" })
+      setCompactMessage({
+        text: freed > 0.01 ? `Released ${formatBytes(freed * 1024 * 1024, { decimals: 0 })}` : "Nothing to release"
+      })
       compactTimeout.set(() => setCompactMessage(null), SAVE_SUCCESS_DISPLAY_MS)
     } catch (err) {
       logger.error("[DataManagementScreen] Compact failed:", err)
@@ -379,7 +382,7 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
             <StatRow
               icon={HardDrive}
               label="Database size"
-              value={loaded ? `${stats.databaseSizeMB.toFixed(2)} MB` : "…"}
+              value={loaded ? formatBytes(stats.databaseSizeMB * 1024 * 1024, { decimals: 0 }) : "…"}
               testID="stat-size"
             />
           </Card>

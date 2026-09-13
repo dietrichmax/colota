@@ -41,11 +41,11 @@ describe("loggingRowSub", () => {
 })
 
 describe("dataRowSub", () => {
-  it("formats exactly as the ledger it opens, two decimals and a grouped count", () => {
-    expect(dataRowSub(12480, 3.4213)).toBe("12,480 locations · 3.42 MB")
+  it("formats exactly as the ledger it opens, whole megabytes and a grouped count", () => {
+    expect(dataRowSub(12480, 3.4213)).toBe("12,480 locations · 3 MB")
   })
 
-  it("words the zero rather than printing 0 locations · 0.00 MB", () => {
+  it("words the zero count even when the database has a size", () => {
     expect(dataRowSub(0, 0.02)).toBe("No locations recorded")
   })
 })

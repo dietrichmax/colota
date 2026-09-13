@@ -148,7 +148,7 @@ describe("BackupRestoreScreen", () => {
       const api = renderScreen()
 
       expect(await api.findByText(/^You last backed up /)).toBeTruthy()
-      expect(api.getByText("Database: 12,481 locations, 8.42 MB")).toBeTruthy()
+      expect(api.getByText("Database: 12,481 locations, 8 MB")).toBeTruthy()
     })
 
     it("says so when there has never been a backup", async () => {

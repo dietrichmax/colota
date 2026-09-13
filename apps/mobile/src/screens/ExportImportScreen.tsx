@@ -3,10 +3,10 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import React, { useCallback, useRef, useState } from "react"
-import { DeviceEventEmitter, ScrollView, StyleSheet, Text, View } from "react-native"
+import React, { useCallback, useEffect, useRef, useState } from "react"
+import { DeviceEventEmitter, ScrollView, StyleSheet, View } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
-import { Archive, CalendarRange, Clock, Download, HardDrive, MapPin, Upload } from "lucide-react-native"
+import { Archive, CalendarRange, Clock, Download, FileText, HardDrive, MapPin, Upload } from "lucide-react-native"
 import {
   Button,
   Card,
@@ -27,6 +27,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import ImportService, { type ImportPreview } from "../services/ImportService"
 import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
+import { formatBytes } from "../utils/format"
 import { type ExportFormat } from "../utils/exportConverters"
 import { FILE_FORMATS } from "../utils/fileFormats"
 import {
@@ -37,14 +38,14 @@ import {
   emptyPreviewCopy,
   exportLine,
   exportResultLine,
+  exportRowSub,
   importErrorMessage,
-  importSourceLine,
+  importRowSub,
   previewHeadline,
   queueHint,
   SHARE_FAILED_LINE,
   skippedLine
 } from "../utils/locationTransfer"
-import { fonts, fontSizes, lineHeights } from "../styles/typography"
 import { space } from "../constants"
 import type { ScreenProps } from "../types/global"
 
@@ -68,8 +69,8 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
   const [queued, setQueued] = useState(false)
 
   // A ref, not the state, because two presses inside one render both read the same state value.
-  const busyRef = useRef(false)
-  // The staged file lives in a native stash on a 15 minute timer. Leaving the screen frees it now.
+  const busyRef = useRef<Busy>(null)
+  // Released on unmount, not on blur, so opening Backup & Restore from the preview keeps the staged file.
   const stagedRef = useRef(false)
 
   const read = useCallback(async () => {
@@ -90,27 +91,33 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
     useCallback(() => {
       read()
       const sub = DeviceEventEmitter.addListener("onLocationUpdate", read)
-      return () => {
-        sub.remove()
-        if (stagedRef.current) {
-          stagedRef.current = false
-          ImportService.cancelImport().catch(() => {})
-        }
-      }
+      return () => sub.remove()
     }, [read])
   )
 
-  const discard = useCallback(() => {
+  useEffect(
+    () => () => {
+      if (stagedRef.current || busyRef.current === "parse") ImportService.cancelImport().catch(() => {})
+    },
+    []
+  )
+
+  const dropStaged = useCallback(() => {
     stagedRef.current = false
     setPreview(null)
     setQueued(false)
-    ImportService.cancelImport().catch(() => {})
   }, [])
+
+  const discard = useCallback(() => {
+    dropStaged()
+    setImportMessage(null)
+    ImportService.cancelImport().catch(() => {})
+  }, [dropStaged])
 
   const handleExport = useCallback(async (format: ExportFormat) => {
     setFormatOpen(false)
-    if (busyRef.current) return
-    busyRef.current = true
+    if (busyRef.current !== null) return
+    busyRef.current = "export"
     setBusy("export")
     setExportMessage(null)
     try {
@@ -132,13 +139,13 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
       logger.error("[ExportImportScreen] Export failed:", err)
       showAlert("Export failed", "The file could not be written. Try again in a moment.", "error")
     } finally {
-      busyRef.current = false
+      busyRef.current = null
       setBusy(null)
     }
   }, [])
 
   const handleChooseFile = useCallback(async () => {
-    if (busyRef.current) return
+    if (busyRef.current !== null) return
     let source: { uri: string } | null = null
     try {
       source = await ImportService.pickImportSource()
@@ -147,9 +154,9 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
       showAlert("Could not open the picker", "The system file picker did not open.", "error")
       return
     }
-    if (!source) return
+    if (!source || busyRef.current !== null) return
 
-    busyRef.current = true
+    busyRef.current = "parse"
     setBusy("parse")
     setImportMessage(null)
     try {
@@ -166,32 +173,33 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
       logger.error("[ExportImportScreen] Parse failed:", err)
       setImportMessage({ text: importErrorMessage((err as { code?: string }).code), failed: true })
     } finally {
-      busyRef.current = false
+      busyRef.current = null
       setBusy(null)
     }
   }, [])
 
   const handleCommit = useCallback(async () => {
-    if (busyRef.current || !preview) return
+    if (busyRef.current !== null || !preview) return
     if (!(await showConfirm({ ...commitConfirm(preview, queued), destructive: false }))) return
 
-    busyRef.current = true
+    busyRef.current = "commit"
     setBusy("commit")
     try {
       const inserted = await ImportService.commitImport(queued)
-      stagedRef.current = false
-      setPreview(null)
-      setQueued(false)
+      dropStaged()
       setImportMessage({ text: `Imported ${inserted.toLocaleString()} locations.` })
       await read()
     } catch (err) {
       logger.error("[ExportImportScreen] Commit failed:", err)
-      setImportMessage({ text: importErrorMessage((err as { code?: string }).code), failed: true })
+      const code = (err as { code?: string }).code
+      // The native stash expired, so the staged card can only fail again.
+      if (code === "E_IMPORT_NO_PENDING") dropStaged()
+      setImportMessage({ text: importErrorMessage(code), failed: true })
     } finally {
-      busyRef.current = false
+      busyRef.current = null
       setBusy(null)
     }
-  }, [preview, queued, read])
+  }, [preview, queued, read, dropStaged])
 
   const skipped = preview ? skippedLine(preview) : undefined
   const headline = preview ? previewHeadline(preview) : null
@@ -200,10 +208,6 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>
-          What leaves this device as a file, and what comes back in from one.
-        </Text>
-
         <View style={styles.section}>
           <SectionTitle>On this device</SectionTitle>
           <Card rows>
@@ -217,40 +221,32 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
             <StatRow
               icon={HardDrive}
               label="Database size"
-              value={loaded ? `${stats.databaseSizeMB.toFixed(2)} MB` : "…"}
+              value={loaded ? formatBytes(stats.databaseSizeMB * 1024 * 1024, { decimals: 0 }) : "…"}
               testID="stat-size"
             />
           </Card>
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Send to a file</SectionTitle>
-          <View>
-            <Button
-              variant="secondary"
-              icon={Upload}
-              title="Export all locations"
-              testID="export-all-btn"
-              loading={busy === "export"}
+          <SectionTitle>Export</SectionTitle>
+          <Card rows>
+            {/* Before the first stats read the total is 0, which would read as nothing to export. */}
+            <ListItem
+              testID="export-all-row"
+              icon={MapPin}
+              trailingIcon={Upload}
+              label="Export all locations"
+              sub={loaded ? exportRowSub(stats.total) : undefined}
+              accessibilityHint="Picks a format, then hands the file to another app"
               disabled={busy !== null || stats.total === 0}
               onPress={() => setFormatOpen(true)}
             />
-            {/* Nothing definitive until the first read lands, or the line claims an empty database
-                for as long as the count takes. */}
-            {exportMessage || loaded ? (
-              <FieldMessage variant={exportMessage?.failed ? "error" : "info"}>
-                {exportMessage?.text ?? exportLine(stats.total)}
-              </FieldMessage>
-            ) : null}
-          </View>
-
-          <Card rows style={styles.afterButton}>
+            <Divider tight inset />
             <ListItem
               testID="nav-location-history"
               icon={CalendarRange}
               label="Export a day or a trip"
-              sub="History exports one day, or the trips you pick."
-              subLines={2}
+              sub="From History"
               onPress={() => navigation.navigate("Location History")}
             />
             <Divider tight inset />
@@ -263,24 +259,16 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
               onPress={() => navigation.navigate("Auto-Export")}
             />
           </Card>
+          {exportMessage ? (
+            <FieldMessage variant={exportMessage.failed ? "error" : "info"}>{exportMessage.text}</FieldMessage>
+          ) : null}
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Bring in from a file</SectionTitle>
-          <Card rows>
-            <ListItem
-              testID="nav-backup-restore"
-              icon={Archive}
-              label="Back up first"
-              sub={backupFirstSub()}
-              subLines={2}
-              onPress={() => navigation.navigate("Backup & Restore")}
-            />
-          </Card>
-
+          <SectionTitle>Import</SectionTitle>
           {preview && headline ? (
             <>
-              <Card rows style={styles.afterButton}>
+              <Card rows>
                 <StateLine
                   icon={PreviewIcon}
                   iconColor={colors.primary}
@@ -301,6 +289,15 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
                     </SettingRow>
                   </>
                 )}
+                <Divider tight />
+                <ListItem
+                  testID="nav-backup-restore"
+                  icon={Archive}
+                  label="Back up first"
+                  sub={backupFirstSub()}
+                  subLines={2}
+                  onPress={() => navigation.navigate("Backup & Restore")}
+                />
               </Card>
               {skipped ? <FieldMessage>{skipped}</FieldMessage> : null}
               <Button
@@ -315,28 +312,30 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
               <Button variant="ghost" title="Discard" testID="import-discard-btn" onPress={discard} />
             </>
           ) : (
-            <View>
-              <Button
-                variant="secondary"
-                icon={Download}
-                title="Choose a file"
-                testID="import-file-btn"
-                loading={busy === "parse"}
+            <Card rows>
+              <ListItem
+                testID="import-file-row"
+                icon={FileText}
+                trailingIcon={Download}
+                label="Import a file"
+                sub={importRowSub(busy === "parse")}
+                subLines={2}
+                accessibilityHint="Opens the file picker"
                 disabled={busy !== null}
                 onPress={handleChooseFile}
               />
-              <FieldMessage variant={importMessage?.failed ? "warning" : "info"}>
-                {importMessage?.text ?? importSourceLine()}
-              </FieldMessage>
-            </View>
+            </Card>
           )}
+          {importMessage ? (
+            <FieldMessage variant={importMessage.failed ? "warning" : "info"}>{importMessage.text}</FieldMessage>
+          ) : null}
         </View>
       </ScrollView>
 
       <ExportFormatDialog
         visible={formatOpen}
         title="Export format"
-        message={`All ${stats.total.toLocaleString()} locations, oldest first.`}
+        message={exportLine(stats.total)}
         onSelect={handleExport}
         onRequestClose={() => setFormatOpen(false)}
       />
@@ -359,16 +358,7 @@ const styles = StyleSheet.create({
     paddingTop: space.lg,
     paddingBottom: space.xxl
   },
-  intro: {
-    fontSize: fontSizes.body,
-    ...fonts.regular,
-    lineHeight: lineHeights.body,
-    marginBottom: space.lg
-  },
   section: {
     marginBottom: space.xl
-  },
-  afterButton: {
-    marginTop: space.md
   }
 })

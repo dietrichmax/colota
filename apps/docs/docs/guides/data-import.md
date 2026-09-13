@@ -40,10 +40,10 @@ The exported file is saved to your phone's `Downloads` folder.
 ## How to Import
 
 1. Go to **Settings → Export & import**
-2. Tap **Choose File** and pick the file you want to import
+2. Tap **Import a file** and pick the file you want to import. A CSV needs a header with latitude, longitude and a time column
 3. Wait for the parse to finish (large Google Timeline files can take 10+ seconds)
-4. Review the preview: format, points found, duplicates that will be skipped, invalid rows, date range
-5. Choose **Import** (or **Import + Queue for Sync** - see below)
+4. Review the preview: new locations, format and date range, and any duplicates or unusable rows being skipped
+5. Optionally switch on **Also queue for upload** (see below), then tap **Import N locations** and confirm
 
 ### How duplicates are handled
 
@@ -64,9 +64,9 @@ Rows are dropped silently as "invalid" when any of the following hold:
 
 The preview shows the invalid count so you can decide whether to proceed.
 
-## Import vs Import + Queue for Sync
+## Import or import and queue
 
-If you've configured an optional sync backend in **Settings → Connection**, the confirm dialog offers two import buttons. The choice only affects whether the imported rows are also pushed out to that backend; either way the points land in Colota's local history.
+If you've configured an optional sync backend in **Settings → Connection**, the preview shows an **Also queue for upload** switch. It only affects whether the imported rows are also pushed out to that backend; either way the points land in Colota's local history.
 
 ### Import
 
@@ -74,13 +74,13 @@ If you've configured an optional sync backend in **Settings → Connection**, th
 - **The sync engine will not push them to your backend.**
 - Use this when the backend already holds these points - for example, you're re-importing your own Colota export, or repopulating local history after a "Delete synced locations".
 
-### Import + Queue for Sync
+### Import and queue
 
 - Rows are written into Colota with `sent=0` and enqueued for upload.
 - The next sync cycle replicates them to your configured backend.
 - Use this when the points are new to your backend - for example, you imported a Google Timeline archive and want the backend copy to mirror it too.
 
-This button is **only shown when a sync endpoint is configured and offline mode is off**. If it's missing, configure sync in **Settings → Connection** first.
+The switch **only appears when a sync endpoint is configured and offline mode is off**. If it's missing, configure sync in **Settings → Connection** first.
 
 :::warning[Queueing fans the points out to your backend - irreversible there]
 
@@ -92,7 +92,7 @@ Once queued, the rows are uploaded as soon as the next sync runs. Removing them 
 
 - Imported rows show up immediately on the **Dashboard** and **Location History** screens.
 - Trip detection re-runs on demand the next time you open a screen that uses it (the trip computation is derived from the locations table on the fly).
-- If you imported with **Import + Queue for Sync**, the queue counter in **Data management** reflects the new pending rows; the next sync cycle replicates them to your configured backend.
+- If you imported with **Also queue for upload** on, the queue counter in **Data management** reflects the new pending rows; the next sync cycle replicates them to your configured backend.
 
 ## Edge Cases
 
@@ -100,4 +100,3 @@ Once queued, the rows are uploaded as soon as the next sync runs. Removing them 
 - **GPX without `<time>`** elements are skipped. Same reason - the locations table requires a timestamp.
 - **CSV without lat/lon/time columns** is rejected with a clear error rather than silently producing zero rows.
 - **Very large files** (500 MB+ Google Timeline exports) parse without loading the full document into memory. Expect the preview phase to take some seconds; the actual commit is fast once you confirm.
-- **The Import + Queue button is greyed out** if you're in offline mode or have no sync endpoint configured - this is intentional, the queue has no destination in that state.

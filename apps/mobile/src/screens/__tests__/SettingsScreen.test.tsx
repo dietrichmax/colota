@@ -298,7 +298,7 @@ describe("SettingsScreen", () => {
     it("prints the cadence, the appearance and the ledger's own numbers", async () => {
       const api = renderScreen()
 
-      expect(await api.findByText("12,480 locations · 3.42 MB")).toBeTruthy()
+      expect(await api.findByText("12,480 locations · 3 MB")).toBeTruthy()
       expect(api.getByText("Every 5 s, any movement · syncs each fix")).toBeTruthy()
       expect(api.getByText("Dark · Metric · 24h")).toBeTruthy()
     })
@@ -339,7 +339,7 @@ describe("SettingsScreen", () => {
       mockGetAutoExportStatus.mockRejectedValue(new Error("bridge"))
       const api = renderScreen()
 
-      expect(await api.findByText("12,480 locations · 3.42 MB")).toBeTruthy()
+      expect(await api.findByText("12,480 locations · 3 MB")).toBeTruthy()
       expect(api.getByText("File logging on · 2.4 MB")).toBeTruthy()
       expect(api.getByText("No saved areas")).toBeTruthy()
       // The export status never landed, so the row falls back to the nouns inside the screen.
@@ -359,7 +359,7 @@ describe("SettingsScreen", () => {
 
     it("re-reads only the two cheap values on a sync event, not the pack walk", async () => {
       const api = renderScreen()
-      await api.findByText("12,480 locations · 3.42 MB")
+      await api.findByText("12,480 locations · 3 MB")
       const packWalks = mockLoadOfflineAreas.mock.calls.length
 
       mockGetStats.mockResolvedValue({
@@ -375,7 +375,7 @@ describe("SettingsScreen", () => {
         DeviceEventEmitter.emit("onLocationUpdate", {})
       })
 
-      expect(await api.findByText("12,481 locations · 3.42 MB")).toBeTruthy()
+      expect(await api.findByText("12,481 locations · 3 MB")).toBeTruthy()
       expect(mockLoadOfflineAreas.mock.calls.length).toBe(packWalks)
     })
 

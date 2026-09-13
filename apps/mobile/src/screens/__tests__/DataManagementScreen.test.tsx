@@ -235,7 +235,7 @@ describe("DataManagementScreen", () => {
       const api = renderScreen()
 
       expect(await api.findByText("12,480")).toBeTruthy()
-      expect(api.getByText("3.42 MB")).toBeTruthy()
+      expect(api.getByText("3 MB")).toBeTruthy()
     })
 
     it("carries no Sent, Queued or Today figure, because those parts never sum to the total", async () => {
@@ -784,7 +784,7 @@ describe("DataManagementScreen", () => {
       mockGetStats.mockResolvedValueOnce(stats()).mockResolvedValue(stats({ databaseSizeMB: 3.0 }))
       fireEvent.press(api.getByTestId("compact-btn"))
 
-      expect(await api.findByText(/^Released 0\.4\d MB$/)).toBeTruthy()
+      expect(await api.findByText(/^Released 43\d KB$/)).toBeTruthy()
     })
   })
 
@@ -794,7 +794,7 @@ describe("DataManagementScreen", () => {
 
     expect(await api.findByText("Nothing stored")).toBeTruthy()
     expect(api.queryByTestId("delete-all-btn")).toBeNull()
-    expect(api.getByText("0.02 MB")).toBeTruthy()
+    expect(api.getByText("20 KB")).toBeTruthy()
     expect(api.getByTestId("compact-btn")).toBeTruthy()
   })
 })

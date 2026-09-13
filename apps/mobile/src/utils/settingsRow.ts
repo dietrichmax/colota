@@ -31,7 +31,7 @@ export function loggingRowSub(enabled: boolean, bytes: number): string {
 /** Formatted exactly as the ledger it opens, so the row and the screen cannot disagree. */
 export function dataRowSub(total: number, databaseSizeMB: number): string {
   if (total === 0) return "No locations recorded"
-  return `${total.toLocaleString()} locations · ${databaseSizeMB.toFixed(2)} MB`
+  return `${total.toLocaleString()} locations · ${formatBytes(databaseSizeMB * 1024 * 1024, { decimals: 0 })}`
 }
 
 /** The build a user is running, as `versionLine` and `buildLine` name it after the version. */

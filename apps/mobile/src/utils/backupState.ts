@@ -5,6 +5,7 @@
 
 import type { BackupManifest, PasswordStrengthResult } from "../services/BackupService"
 import { formatDateWithYear } from "./geo"
+import { formatBytes } from "./format"
 
 /**
  * What a backup holds and what restoring one replaces, in the words the screen prints.
@@ -35,7 +36,7 @@ export function backupState(
   lastBackupAtMs: number | null,
   stats: { total: number; databaseSizeMB: number }
 ): BackupStateLine {
-  const caption = `Database: ${plural(stats.total, "location")}, ${stats.databaseSizeMB.toFixed(2)} MB`
+  const caption = `Database: ${plural(stats.total, "location")}, ${formatBytes(stats.databaseSizeMB * 1024 * 1024, { decimals: 0 })}`
   const when = whenBackedUp(lastBackupAtMs)
   if (when) return { label: `You last backed up ${when}`, caption, tone: "ok" }
   if (stats.total === 0) return { label: "You have never backed up", caption, tone: "empty" }

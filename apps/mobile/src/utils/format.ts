@@ -3,11 +3,17 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-/** Formats a byte count as B / KB / MB. */
-export const formatBytes = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+/** B, KB, MB or GB in the device locale's separators, with one decimal unless `decimals` says otherwise. */
+export const formatBytes = (
+  bytes: number,
+  { decimals = 1, locale }: { decimals?: number; locale?: string } = {}
+): string => {
+  const scaled = (n: number) =>
+    n.toLocaleString(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+  if (bytes < 1024) return `${Math.round(bytes)} B`
+  if (bytes < 1024 ** 2) return `${scaled(bytes / 1024)} KB`
+  if (bytes < 1024 ** 3) return `${scaled(bytes / 1024 ** 2)} MB`
+  return `${scaled(bytes / 1024 ** 3)} GB`
 }
 
 /**

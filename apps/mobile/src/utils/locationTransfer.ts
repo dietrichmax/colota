@@ -36,10 +36,15 @@ export function readableFormats(): string {
   return [...new Set(labels)].join(", ")
 }
 
-/** The line under the export button: the scope, and what happens to the file. */
+/** The format dialog's message, and the result line when an export finds nothing. */
 export function exportLine(total: number): string {
   if (total === 0) return "Nothing to export yet."
   return `All ${plural(total, "location")} in one file, oldest first. The file goes to the app you pick and is not kept here.`
+}
+
+/** The sub on the Export all locations row. */
+export function exportRowSub(total: number): string {
+  return total === 0 ? "Nothing to export yet" : "Every location in one file"
 }
 
 /** After a run. Nothing here claims the file was saved, because nothing saved it. */
@@ -50,12 +55,12 @@ export function exportResultLine(rowCount: number, format: string): string {
 /** A share the system never started. Logged and swallowed before, so it read as a success. */
 export const SHARE_FAILED_LINE = "The file was written but no app took it. Try again and pick a different app."
 
-/** The line under Choose a file. There is no format control, because the parser decides. */
-export function importSourceLine(): string {
-  return `Reads ${readableFormats()}. The format is read from the file, so there is nothing to choose. ${FILE_FORMATS.csv.importHint}`
+/** The sub on the Import a file row. */
+export function importRowSub(reading: boolean): string {
+  return reading ? "Reading the file…" : readableFormats()
 }
 
-/** The sub on the row above the import verb. The only route back is a whole-database restore. */
+/** The sub on the Back up first row in the staged preview. */
 export function backupFirstSub(): string {
   return "An import cannot be undone. A backup is the only way back."
 }
@@ -133,8 +138,12 @@ export function emptyPreviewCopy(preview: ImportPreview): string {
 /** Native error codes, worded from what each one means rather than from a hand-kept list. */
 export function importErrorMessage(code: string | undefined): string {
   switch (code) {
-    case "E_IMPORT_UNSUPPORTED":
-      return `Colota did not recognise this file. It reads ${readableFormats()}, and it refuses an XML file that declares a DOCTYPE.`
+    case "E_IMPORT_UNSUPPORTED": {
+      // A CSV with a bad header is refused here, before any preview exists.
+      const hint = FILE_FORMATS.csv.importHint
+      const csv = hint ? ` In a CSV, ${hint.charAt(0).toLowerCase()}${hint.slice(1)}` : ""
+      return `Colota did not recognise this file. It reads ${readableFormats()}, and it refuses an XML file that declares a DOCTYPE.${csv}`
+    }
     case "E_BUSY":
       return "Another import is already running."
     case "E_IMPORT_NO_PENDING":

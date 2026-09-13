@@ -9,8 +9,9 @@ import {
   emptyPreviewCopy,
   exportLine,
   exportResultLine,
+  exportRowSub,
   importErrorMessage,
-  importSourceLine,
+  importRowSub,
   previewHeadline,
   queueHint,
   readableFormats,
@@ -73,16 +74,23 @@ describe("exportLine", () => {
   })
 })
 
-describe("importSourceLine", () => {
-  it("says the format is not a choice, because the parser decides from the file", () => {
-    const line = importSourceLine()
-    expect(line).toContain("The format is read from the file, so there is nothing to choose.")
+describe("exportRowSub", () => {
+  it("describes the file without repeating the count", () => {
+    expect(exportRowSub(12483)).toBe("Every location in one file")
   })
 
-  // The CSV caveat is the one thing a user has to prepare by hand, so it comes from the table
-  // verbatim rather than being rewritten here.
-  it("carries the CSV header caveat from the shared table", () => {
-    expect(importSourceLine()).toContain(FILE_FORMATS.csv.importHint as string)
+  it("says there is nothing to export on an empty database", () => {
+    expect(exportRowSub(0)).toBe("Nothing to export yet")
+  })
+})
+
+describe("importRowSub", () => {
+  it("lists the formats from the shared table, since the parser decides and there is no picker", () => {
+    expect(importRowSub(false)).toBe(readableFormats())
+  })
+
+  it("says the file is being read while the parse runs", () => {
+    expect(importRowSub(true)).toBe("Reading the file…")
   })
 })
 
@@ -187,6 +195,13 @@ describe("importErrorMessage", () => {
     const line = importErrorMessage("E_IMPORT_UNSUPPORTED")
     expect(line).toContain(readableFormats())
     expect(line).toContain("DOCTYPE")
+  })
+
+  // A CSV with a bad header is refused before any preview exists.
+  it("names the CSV header the parser needs when it refuses a file", () => {
+    expect(importErrorMessage("E_IMPORT_UNSUPPORTED")).toContain(
+      "In a CSV, the header must include latitude, longitude and a time column."
+    )
   })
 
   // The old string claimed a lock over backup and restore that the import mutex does not hold.

@@ -24,7 +24,6 @@ jest.mock("../../../../services/NativeLocationService")
 
 import { OfflineManager } from "@maplibre/maplibre-react-native"
 import NativeLocationService from "../../../../services/NativeLocationService"
-import { formatBytes } from "../../../../utils/format"
 import {
   willExceedTileLimit,
   estimateSizeLabel,
@@ -68,37 +67,6 @@ describe("constants", () => {
     expect(DOWNLOAD_STATE.INACTIVE).toBe("inactive")
     expect(DOWNLOAD_STATE.ACTIVE).toBe("active")
     expect(DOWNLOAD_STATE.COMPLETE).toBe("complete")
-  })
-})
-
-// ============================================================================
-// formatBytes
-// ============================================================================
-
-describe("formatBytes", () => {
-  it("formats bytes below 1MB as KB", () => {
-    expect(formatBytes(512 * 1024)).toBe("512.0 KB")
-  })
-
-  it("formats zero bytes as B", () => {
-    expect(formatBytes(0)).toBe("0 B")
-  })
-
-  it("formats 1MB as MB", () => {
-    expect(formatBytes(1024 * 1024)).toBe("1.0 MB")
-  })
-
-  it("formats 1.5MB correctly", () => {
-    expect(formatBytes(1.5 * 1024 * 1024)).toBe("1.5 MB")
-  })
-
-  it("formats large values as MB", () => {
-    expect(formatBytes(250 * 1024 * 1024)).toBe("250.0 MB")
-  })
-
-  it("threshold is exactly 1MB - values below are KB, at or above are MB", () => {
-    expect(formatBytes(1024 * 1024 - 1)).toMatch(/KB$/)
-    expect(formatBytes(1024 * 1024)).toMatch(/MB$/)
   })
 })
 

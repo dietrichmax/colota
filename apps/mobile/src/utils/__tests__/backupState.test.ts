@@ -33,7 +33,7 @@ describe("backupState", () => {
   it("says when the last backup was, and what a new one would hold", () => {
     const line = backupState(Date.parse(MADE_AT), { total: 12481, databaseSizeMB: 8.42 })
     expect(line.label).toBe(`You last backed up ${formatDateWithYear(MADE_SECONDS)}`)
-    expect(line.caption).toBe("Database: 12,481 locations, 8.42 MB")
+    expect(line.caption).toBe("Database: 12,481 locations, 8 MB")
     expect(line.tone).toBe("ok")
   })
 
