@@ -55,7 +55,7 @@ export function passwordLine(
   failed: boolean
 ): { text: string; variant: "info" | "warning" } {
   if (failed) return { text: "Could not check this password. Try again.", variant: "warning" }
-  if (strength.score >= 2) return { text: `${strength.label}. ${Math.round(strength.bits)} bits.`, variant: "info" }
+  if (strength.score >= 2) return { text: `${strength.label}.`, variant: "info" }
   // Native's own label, so the reason can never disagree with the gate and no length lives in JS.
   const advice = strength.score === 0 ? "Make it longer." : "Make it longer or less predictable."
   return { text: strength.label ? `${strength.label}. ${advice}` : advice, variant: "warning" }
@@ -74,7 +74,7 @@ export function submitBlockedReason(
   return null
 }
 
-/** What a new archive would contain. Stated once, where the button that writes it lives. */
+/** What a new archive would contain, stated at the top of the backup form. */
 export function backupScopeLine(total: number): string {
   return `Writes ${plural(total, "location")}, your geofences, profiles, settings and your stored server credentials to a file you pick.`
 }
@@ -98,8 +98,6 @@ export const RESTORE_IDLE_LINE = "Replaces everything on this device. Nothing is
 export const PICKED_NOT_OPENED_CAPTION = "Not opened yet."
 
 export const OPEN_FILE_LINE = "Checks the password and reads what the file holds. Nothing on this device changes."
-
-export const PASSWORD_HINT_LINE = "Several unrelated words work better than one short, clever one."
 
 /** The opened archive, as a state line. */
 export function archiveLine(manifest: BackupManifest): { label: string; caption: string } {

@@ -1,5 +1,5 @@
 import React from "react"
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native"
+import { render, fireEvent, waitFor, act, within } from "@testing-library/react-native"
 
 jest.mock("@react-navigation/native", () => ({
   useFocusEffect: (cb: () => (() => void) | void) => {
@@ -73,7 +73,7 @@ jest.mock("../../components", () => {
   return {
     Container: ({ children }: any) => R.createElement(View, null, children),
     SectionTitle: ({ children }: any) => R.createElement(Text, null, children),
-    Card: ({ children }: any) => R.createElement(View, null, children),
+    Card: ({ children, testID }: any) => R.createElement(View, { testID }, children),
     Divider: () => R.createElement(View, null),
     StateLine: ({ label, caption, testID }: any) =>
       R.createElement(View, { testID }, R.createElement(Text, null, label), R.createElement(Text, null, caption)),
@@ -99,6 +99,19 @@ jest.mock("../../components", () => {
         },
         R.createElement(Text, null, title)
       ),
+    ListItem: ({ label, sub, testID, onPress, disabled, trailingIcon }: any) =>
+      R.createElement(
+        Pressable,
+        {
+          testID,
+          onPress,
+          disabled,
+          accessibilityState: { disabled: !!disabled },
+          accessibilityValue: { text: trailingIcon?.displayName ?? "chevron" }
+        },
+        R.createElement(Text, null, label),
+        R.createElement(Text, null, sub)
+      ),
     LoadingOverlay: ({ visible, title }: any) => (visible ? R.createElement(Text, null, title) : null)
   }
 })
@@ -118,7 +131,7 @@ const typeGoodPassword = (api: ReturnType<typeof renderScreen>) => {
 }
 
 const openArchive = async (api: ReturnType<typeof renderScreen>) => {
-  fireEvent.press(api.getByTestId("choose-backup-btn"))
+  fireEvent.press(api.getByTestId("choose-backup-row"))
   await waitFor(() => expect(api.getByTestId("picked-file")).toBeTruthy())
   fireEvent.changeText(api.getByTestId("restore-password"), "the password")
   fireEvent.press(api.getByTestId("open-backup-btn"))
@@ -159,25 +172,46 @@ describe("BackupRestoreScreen", () => {
     })
 
     // The restore half must not open on a red button.
-    it("starts restore on a secondary button, not a destructive one", async () => {
+    it("starts restore on a row that picks a file, not a destructive button", async () => {
       const api = renderScreen()
       await api.findByText(/^You last backed up /)
 
-      expect(api.getByTestId("choose-backup-btn").props.accessibilityValue.text).toBe("secondary")
+      expect(api.getByTestId("choose-backup-row").props.accessibilityValue.text).toBe("Download")
       expect(api.queryByTestId("restore-btn")).toBeNull()
+    })
+
+    it("says what a backup holds inside the form, once", async () => {
+      mockGetClientCertInfo.mockResolvedValue({ subject: "phone" })
+      const api = renderScreen()
+      await api.findByText(/^Writes 12,481 locations, your geofences/)
+
+      const form = api.getByTestId("backup-form")
+      expect(within(form).getByText(/^Writes 12,481 locations/)).toBeTruthy()
+      expect(within(form).getByText(/client certificate is not included/)).toBeTruthy()
+      expect(api.getAllByText(/^Writes 12,481 locations/)).toHaveLength(1)
     })
   })
 
   describe("making a backup", () => {
-    it("says why Create backup is disabled instead of leaving it dead", async () => {
+    it("says under Create backup why it is disabled, one reason at a time", async () => {
       const api = renderScreen()
       await api.findByText(/^You last backed up /)
+      const disabled = () => api.getByTestId("create-backup-btn").props.accessibilityState.disabled
 
       expect(api.getByText("Choose a password first.")).toBeTruthy()
-      expect(api.getByTestId("create-backup-btn").props.accessibilityState.disabled).toBe(true)
+      expect(disabled()).toBe(true)
 
       fireEvent.changeText(api.getByTestId("backup-password"), "correct horse battery staple")
-      await waitFor(() => expect(api.getByText("Type the password a second time.")).toBeTruthy())
+      expect(await api.findByText("Type the password a second time.")).toBeTruthy()
+      expect(api.queryByText("Choose a password first.")).toBeNull()
+
+      fireEvent.changeText(api.getByTestId("backup-password-confirm"), "correct horse")
+      expect(api.getAllByText("The two passwords do not match.").length).toBeGreaterThan(0)
+      expect(disabled()).toBe(true)
+
+      fireEvent.changeText(api.getByTestId("backup-password-confirm"), "correct horse battery staple")
+      await waitFor(() => expect(disabled()).toBe(false))
+      expect(api.queryByText("The two passwords do not match.")).toBeNull()
     })
 
     it("blocks a weak password on the score native returned", async () => {
@@ -187,7 +221,8 @@ describe("BackupRestoreScreen", () => {
 
       typeGoodPassword(api)
 
-      await waitFor(() => expect(api.getByText("This password is too easy to guess.")).toBeTruthy())
+      await waitFor(() => expect(api.getByText("Weak. Make it longer or less predictable.")).toBeTruthy())
+      expect(api.getByText("This password is too easy to guess.")).toBeTruthy()
       expect(api.getByTestId("create-backup-btn").props.accessibilityState.disabled).toBe(true)
     })
 
@@ -243,12 +278,13 @@ describe("BackupRestoreScreen", () => {
       const api = renderScreen()
       await api.findByText(/^You last backed up /)
 
-      fireEvent.press(api.getByTestId("choose-backup-btn"))
+      fireEvent.press(api.getByTestId("choose-backup-row"))
       await waitFor(() => expect(api.getByTestId("picked-file")).toBeTruthy())
       fireEvent.changeText(api.getByTestId("restore-password"), "wrong")
       fireEvent.press(api.getByTestId("open-backup-btn"))
 
       expect(await api.findByText(/That password did not open this file/)).toBeTruthy()
+      expect(api.queryByText(/^Checks the password/)).toBeNull()
       expect(mockRestoreBackup).not.toHaveBeenCalled()
       // The file stays picked, so retrying is one press.
       expect(api.getByTestId("picked-file")).toBeTruthy()
@@ -258,11 +294,12 @@ describe("BackupRestoreScreen", () => {
       const api = renderScreen()
       await api.findByText(/^You last backed up /)
 
-      fireEvent.press(api.getByTestId("choose-backup-btn"))
+      fireEvent.press(api.getByTestId("choose-backup-row"))
       await waitFor(() => expect(api.getByTestId("picked-file")).toBeTruthy())
 
       expect(api.queryByTestId("restore-btn")).toBeNull()
       expect(api.getByText("Not opened yet.")).toBeTruthy()
+      expect(api.getByText(/^Checks the password and reads what the file holds/)).toBeTruthy()
     })
 
     it("names the archive's date once it is open, and offers the replace", async () => {

@@ -13,6 +13,7 @@ import {
   Container,
   Divider,
   FieldMessage,
+  ListItem,
   LoadingOverlay,
   SectionTitle,
   StateLine,
@@ -33,7 +34,6 @@ import {
   NO_RECOVERY_LINE,
   OPEN_FILE_LINE,
   passwordLine,
-  PASSWORD_HINT_LINE,
   PICKED_NOT_OPENED_CAPTION,
   restoreCaveat,
   restoreConfirm,
@@ -221,10 +221,6 @@ export function BackupRestoreScreen({}: ScreenProps) {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>
-          One encrypted file holding everything this device has recorded and everything it is set up to do.
-        </Text>
-
         {loaded && (
           <Card rows style={styles.section}>
             <StateLine
@@ -240,9 +236,21 @@ export function BackupRestoreScreen({}: ScreenProps) {
         )}
 
         <View style={styles.section}>
-          <SectionTitle>Make a backup</SectionTitle>
-          <Card>
+          <SectionTitle>Backup</SectionTitle>
+          <Card testID="backup-form">
             <View style={styles.fields}>
+              {loaded ? (
+                <View>
+                  <Text style={[styles.description, { color: colors.textSecondary }]}>
+                    {backupScopeLine(stats.total)}
+                  </Text>
+                  {excludes ? (
+                    <Text style={[styles.description, styles.descriptionNext, { color: colors.textSecondary }]}>
+                      {excludes}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
               <View>
                 <TextField
                   label="Password"
@@ -254,9 +262,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
                   autoCorrect={false}
                   disabled={busy !== null}
                 />
-                <FieldMessage variant={password.length > 0 ? pwLine.variant : "info"}>
-                  {password.length > 0 ? pwLine.text : PASSWORD_HINT_LINE}
-                </FieldMessage>
+                {password.length > 0 ? <FieldMessage variant={pwLine.variant}>{pwLine.text}</FieldMessage> : null}
               </View>
               <View>
                 <TextField
@@ -283,27 +289,32 @@ export function BackupRestoreScreen({}: ScreenProps) {
             disabled={busy !== null || blocked !== null}
             onPress={onCreateBackup}
           />
-          <FieldMessage variant={backupMessage?.tone === "error" ? "error" : "info"}>
-            {backupMessage?.text ?? blocked ?? backupScopeLine(stats.total)}
-          </FieldMessage>
-          {!backupMessage && !blocked && excludes ? <FieldMessage>{excludes}</FieldMessage> : null}
+          {backupMessage ? (
+            <FieldMessage variant={backupMessage.tone === "error" ? "error" : "info"}>
+              {backupMessage.text}
+            </FieldMessage>
+          ) : blocked ? (
+            <FieldMessage>{blocked}</FieldMessage>
+          ) : null}
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Restore from a backup</SectionTitle>
+          <SectionTitle>Restore</SectionTitle>
 
           {!picked && (
-            <View>
-              <Button
-                variant="secondary"
-                icon={Download}
-                title="Choose a backup file"
-                testID="choose-backup-btn"
+            <Card rows>
+              <ListItem
+                testID="choose-backup-row"
+                icon={FileLock}
+                trailingIcon={Download}
+                label="Choose a backup file"
+                sub={RESTORE_IDLE_LINE}
+                subLines={2}
+                accessibilityHint="Opens the file picker"
                 disabled={busy !== null}
                 onPress={onChooseFile}
               />
-              <FieldMessage>{RESTORE_IDLE_LINE}</FieldMessage>
-            </View>
+            </Card>
           )}
 
           {picked && !manifest && (
@@ -329,6 +340,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
                     error={restoreMessage?.tone === "error" ? restoreMessage.text : undefined}
                     disabled={busy !== null}
                   />
+                  {restoreMessage?.tone !== "error" && <FieldMessage>{OPEN_FILE_LINE}</FieldMessage>}
                 </View>
               </Card>
               <Button
@@ -345,7 +357,6 @@ export function BackupRestoreScreen({}: ScreenProps) {
                 testID="repick-backup-btn"
                 onPress={onChooseFile}
               />
-              <FieldMessage>{OPEN_FILE_LINE}</FieldMessage>
             </>
           )}
 
@@ -359,8 +370,12 @@ export function BackupRestoreScreen({}: ScreenProps) {
                   caption={archiveLine(manifest).caption}
                   testID="archive-state"
                 />
+                {caveat ? (
+                  <View style={styles.caveat}>
+                    <FieldMessage variant="warning">{caveat}</FieldMessage>
+                  </View>
+                ) : null}
               </Card>
-              {caveat && <FieldMessage variant="warning">{caveat}</FieldMessage>}
               <Button
                 variant="danger"
                 title="Replace all data"
@@ -396,12 +411,6 @@ const styles = StyleSheet.create({
     paddingTop: space.lg,
     paddingBottom: space.xxl
   },
-  intro: {
-    fontSize: fontSizes.body,
-    ...fonts.regular,
-    lineHeight: lineHeights.body,
-    marginBottom: space.lg
-  },
   section: {
     marginBottom: space.xl
   },
@@ -410,5 +419,16 @@ const styles = StyleSheet.create({
   },
   pickedField: {
     paddingTop: space.lg
+  },
+  description: {
+    fontSize: fontSizes.description,
+    ...fonts.regular,
+    lineHeight: lineHeights.description
+  },
+  descriptionNext: {
+    marginTop: space.sm
+  },
+  caveat: {
+    paddingBottom: space.lg
   }
 })

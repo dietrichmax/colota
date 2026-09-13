@@ -98,7 +98,7 @@ describe("passwordLine", () => {
   it("prints the verdict native computed, and the advice that fits it", () => {
     expect(passwordLine(strength(0, 0, "Too short"), false).text).toBe("Too short. Make it longer.")
     expect(passwordLine(strength(1, 38, "Weak"), false).text).toBe("Weak. Make it longer or less predictable.")
-    expect(passwordLine(strength(2, 55, "OK"), false).text).toBe("OK. 55 bits.")
+    expect(passwordLine(strength(2, 55, "OK"), false).text).toBe("OK.")
   })
 })
 
