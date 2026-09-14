@@ -4,13 +4,12 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from "react"
-import { Text, StyleSheet, View, ScrollView, ActivityIndicator } from "react-native"
+import { StyleSheet, View, ScrollView, ActivityIndicator } from "react-native"
 import { X } from "lucide-react-native"
 import { AuthConfig, AuthType, DEFAULT_AUTH_CONFIG, ScreenProps } from "../types/global"
 import { useTheme } from "../hooks/useTheme"
 import { useAutoSave } from "../hooks/useAutoSave"
 import { useTracking } from "../contexts/TrackingProvider"
-import { fonts, fontSizes, lineHeights } from "../styles/typography"
 import {
   SectionTitle,
   FloatingSaveIndicator,
@@ -28,21 +27,15 @@ import { logger } from "../utils/logger"
 import { size, space } from "../constants"
 
 const METHODS: { value: AuthType; label: string; sub: string }[] = [
-  {
-    value: "none",
-    label: "None",
-    sub: "No Authorization header. Use with a key in the address, a custom header or a client certificate."
-  },
-  {
-    value: "basic",
-    label: "Basic auth",
-    sub: "Sends Authorization: Basic with the username and password encoded, not encrypted. Only safe over https."
-  },
-  { value: "bearer", label: "Bearer token", sub: "Sends Authorization: Bearer with the token." }
+  { value: "none", label: "None", sub: "No Authorization header" },
+  { value: "basic", label: "Basic auth", sub: "Username and password, only safe over https" },
+  { value: "bearer", label: "Bearer token", sub: "An API token or JWT" }
 ]
 
-const SECRET_SET = "Set · encrypted on this device, in encrypted backups. Type to replace."
-const SECRET_UNSET = "Not set · encrypted once saved."
+const SECRET_SET = "Saved encrypted. Type to replace."
+const SECRET_UNSET = "Not set"
+const REMOVED_ON_SWITCH = "Choosing another method removes these credentials."
+const HEADERS_HINT = "Sent with every request, like CF-Access-Client-Id for Cloudflare Access."
 const DUPLICATE_HEADER = "Also used above. Only the last value is sent."
 const SENSITIVE_HEADER = /authorization|cookie|token|key|secret/i
 
@@ -171,6 +164,9 @@ export function AuthSettingsScreen({}: ScreenProps) {
   }
 
   const secretHint = (stored: string) => (stored !== "" ? SECRET_SET : SECRET_UNSET)
+  const holdsCredentials =
+    (config.authType === "basic" && (config.username !== "" || config.password !== "")) ||
+    (config.authType === "bearer" && config.bearerToken !== "")
 
   return (
     <Container>
@@ -179,11 +175,6 @@ export function AuthSettingsScreen({}: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>
-          How each request proves who it is from. Stored encrypted on this device and in encrypted backups. A setup link
-          you share carries it in the clear.
-        </Text>
-
         <SectionTitle>Method</SectionTitle>
         <Card rows>
           <View accessibilityRole="radiogroup" style={styles.group}>
@@ -247,65 +238,63 @@ export function AuthSettingsScreen({}: ScreenProps) {
               </React.Fragment>
             ))}
           </View>
-          <Divider tight />
-          <View style={styles.footer}>
-            <FieldMessage>Choosing a method removes the credentials stored for the others.</FieldMessage>
-          </View>
+          {holdsCredentials && (
+            <>
+              <Divider tight />
+              <View style={styles.footer}>
+                <FieldMessage>{REMOVED_ON_SWITCH}</FieldMessage>
+              </View>
+            </>
+          )}
         </Card>
 
         <SectionTitle style={styles.groupTop}>Custom headers</SectionTitle>
         <Card rows>
-          {localHeaders.length === 0 ? (
-            <Text style={[styles.description, { color: colors.textSecondary }]}>
-              None. A custom header is sent with every request.
-            </Text>
-          ) : (
-            localHeaders.map((header, index) => {
-              const name = header.key.trim()
-              const isDuplicate = name !== "" && localHeaders.slice(0, index).some((h) => h.key.trim() === name)
-              return (
-                <View key={header.id}>
-                  {index > 0 && <Divider tight />}
-                  <View style={styles.headerRow}>
-                    <View style={styles.headerInputs}>
-                      <TextField
-                        accessibilityLabel="Header name"
-                        testID={`header-key-${header.id}`}
-                        mono
-                        error={isDuplicate ? DUPLICATE_HEADER : undefined}
-                        value={header.key}
-                        onChangeText={(v) => updateHeaderField(header.id, "key", v)}
-                        placeholder="Name"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                      />
-                      <TextField
-                        accessibilityLabel="Header value"
-                        testID={`header-value-${header.id}`}
-                        value={header.value}
-                        onChangeText={(v) => updateHeaderField(header.id, "value", v)}
-                        placeholder="Value"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        secure={SENSITIVE_HEADER.test(name)}
-                      />
-                    </View>
-                    <IconButton
-                      icon={X}
-                      tone="danger"
-                      testID={`remove-header-${header.id}`}
-                      accessibilityLabel={name ? `Remove header ${name}` : "Remove header"}
-                      onPress={() => removeHeader(header.id)}
+          {localHeaders.map((header, index) => {
+            const name = header.key.trim()
+            const isDuplicate = name !== "" && localHeaders.slice(0, index).some((h) => h.key.trim() === name)
+            return (
+              <View key={header.id}>
+                {index > 0 && <Divider tight />}
+                <View style={styles.headerRow}>
+                  <View style={styles.headerInputs}>
+                    <TextField
+                      accessibilityLabel="Header name"
+                      testID={`header-key-${header.id}`}
+                      mono
+                      error={isDuplicate ? DUPLICATE_HEADER : undefined}
+                      value={header.key}
+                      onChangeText={(v) => updateHeaderField(header.id, "key", v)}
+                      placeholder="Name"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TextField
+                      accessibilityLabel="Header value"
+                      testID={`header-value-${header.id}`}
+                      value={header.value}
+                      onChangeText={(v) => updateHeaderField(header.id, "value", v)}
+                      placeholder="Value"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      secure={SENSITIVE_HEADER.test(name)}
                     />
                   </View>
+                  <IconButton
+                    icon={X}
+                    tone="danger"
+                    testID={`remove-header-${header.id}`}
+                    accessibilityLabel={name ? `Remove header ${name}` : "Remove header"}
+                    onPress={() => removeHeader(header.id)}
+                  />
                 </View>
-              )
-            })
-          )}
-          <Divider tight />
-          <View style={styles.footer}>
+              </View>
+            )
+          })}
+          {localHeaders.length > 0 && <Divider tight />}
+          <View style={[styles.footer, localHeaders.length === 0 && styles.footerFirst]}>
             <Button title="+ Add header" onPress={addHeader} variant="secondary" testID="add-header-btn" />
-            <FieldMessage>Example: CF-Access-Client-Id for Cloudflare Access.</FieldMessage>
+            {localHeaders.length === 0 && <FieldMessage>{HEADERS_HINT}</FieldMessage>}
           </View>
         </Card>
       </ScrollView>
@@ -326,12 +315,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center"
   },
-  intro: {
-    fontSize: fontSizes.body,
-    ...fonts.regular,
-    lineHeight: lineHeights.body,
-    marginBottom: space.lg
-  },
   group: {
     marginTop: -space.sm
   },
@@ -349,12 +332,9 @@ const styles = StyleSheet.create({
     paddingTop: space.xs,
     paddingBottom: space.lg
   },
-  description: {
-    fontSize: fontSizes.description,
-    ...fonts.regular,
-    lineHeight: lineHeights.description,
-    paddingTop: space.lg,
-    paddingBottom: space.md
+  // With no header rows above, the button's own sm margin plus this matches the lg below the caption.
+  footerFirst: {
+    paddingTop: space.sm
   },
   headerRow: {
     flexDirection: "row",

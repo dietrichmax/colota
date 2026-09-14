@@ -105,12 +105,8 @@ describe("AuthSettingsScreen", () => {
       const { getByTestId, getByText, queryByText } = renderScreen()
 
       await waitFor(() => expect(getByTestId("auth-none").props.accessibilityState.checked).toBe(true))
-      expect(
-        getByText(
-          "Sends Authorization: Basic with the username and password encoded, not encrypted. Only safe over https."
-        )
-      ).toBeTruthy()
-      expect(getByText("Sends Authorization: Bearer with the token.")).toBeTruthy()
+      expect(getByText("Username and password, only safe over https")).toBeTruthy()
+      expect(getByText("An API token or JWT")).toBeTruthy()
       expect(queryByText("Username")).toBeNull()
       expect(queryByText("Token")).toBeNull()
 
@@ -142,11 +138,16 @@ describe("AuthSettingsScreen", () => {
       })
     })
 
-    it("names the storage on the card, not in a footer paragraph", async () => {
+    it("warns that switching removes credentials only while the chosen method holds some", async () => {
+      const empty = renderScreen()
+      await waitFor(() => expect(empty.getByTestId("auth-none")).toBeTruthy())
+      expect(empty.queryByText("Choosing another method removes these credentials.")).toBeNull()
+      empty.unmount()
+
+      mockAuthConfig = { ...DEFAULT_AUTH_CONFIG, authType: "bearer", bearerToken: "t" }
       const { findByText } = renderScreen()
 
-      expect(await findByText("Choosing a method removes the credentials stored for the others.")).toBeTruthy()
-      expect(await findByText(/Stored encrypted on this device and in encrypted backups/)).toBeTruthy()
+      expect(await findByText("Choosing another method removes these credentials.")).toBeTruthy()
     })
   })
 
@@ -158,14 +159,14 @@ describe("AuthSettingsScreen", () => {
       await waitFor(() => expect(getByTestId("bearer-token")).toBeTruthy())
 
       expect(queryByDisplayValue("my-secret-token")).toBeNull()
-      expect(getByText("Set · encrypted on this device, in encrypted backups. Type to replace.")).toBeTruthy()
+      expect(getByText("Saved encrypted. Type to replace.")).toBeTruthy()
     })
 
     it("says when nothing is stored yet", async () => {
       mockAuthConfig = { ...DEFAULT_AUTH_CONFIG, authType: "basic", username: "max" }
       const { findByText, getByDisplayValue } = renderScreen()
 
-      expect(await findByText("Not set · encrypted once saved.")).toBeTruthy()
+      expect(await findByText("Not set")).toBeTruthy()
       expect(getByDisplayValue("max")).toBeTruthy()
     })
 
@@ -195,10 +196,13 @@ describe("AuthSettingsScreen", () => {
   })
 
   describe("custom headers", () => {
-    it("says none are set and what a header does", async () => {
-      const { findByText } = renderScreen()
+    it("says what a header is for until the first one is added", async () => {
+      const { findByText, getByTestId, queryByText } = renderScreen()
+      const hint = "Sent with every request, like CF-Access-Client-Id for Cloudflare Access."
 
-      expect(await findByText("None. A custom header is sent with every request.")).toBeTruthy()
+      expect(await findByText(hint)).toBeTruthy()
+      fireEvent.press(getByTestId("add-header-btn"))
+      expect(queryByText(hint)).toBeNull()
     })
 
     it("adds a row and saves it once a name exists", async () => {
