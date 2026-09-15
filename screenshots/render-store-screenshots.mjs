@@ -10,7 +10,7 @@ const FONTS = join(ROOT, "apps", "mobile", "android", "app", "src", "main", "ass
 const OUT = resolve(
   process.argv[2] ?? join(ROOT, "fastlane", "metadata", "android", "en-US", "images", "phoneScreenshots")
 )
-const slides = JSON.parse(readFileSync(join(ROOT, "screenshots", "store", "phone.json"), "utf8"))
+const slides = JSON.parse(readFileSync(join(ROOT, "screenshots", "store.json"), "utf8"))
 
 const W = 1080
 const H = 1920

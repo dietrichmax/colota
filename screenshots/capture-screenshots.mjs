@@ -281,6 +281,6 @@ rmSync(work, { recursive: true, force: true })
 
 run("node", [
   "--no-warnings=MODULE_TYPELESS_PACKAGE_JSON",
-  join(ROOT, "scripts", "render-store-screenshots.mjs"),
+  join(SCREENSHOTS, "render-store-screenshots.mjs"),
   ...process.argv.slice(2)
 ])

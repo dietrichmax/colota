@@ -139,11 +139,12 @@ colota/
 │           ├── colors.ts            # Theme color definitions
 │           ├── typography.ts        # Font family and sizes
 │           └── index.ts             # Barrel exports
-├── scripts/                         # Screenshot capture and store rendering
 └── screenshots/
     ├── capture.yaml                 # Maestro flow that captures every screenshot
+    ├── capture-screenshots.mjs      # Runs the capture, then the store render
     ├── demo-track.gpx               # Demo history for the capture
-    └── store/phone.json             # Store screenshot order and captions
+    ├── render-store-screenshots.mjs # Frames the store images into Fastlane
+    └── store.json                   # Store screenshot order and captions
 ```
 
 ## Running Tests
@@ -225,7 +226,7 @@ Screenshots live in `apps/docs/static/img/screenshots/` and are used by the docs
 npm run capture:screenshots
 ```
 
-It walks the screens in `screenshots/capture.yaml` and renders the store images into Fastlane. Store captions are in `screenshots/store/phone.json`; after changing only captions, run `npm run render:store-screenshots`. To add a screenshot, add a `takeScreenshot` step to the flow and reference the file from its guide.
+It walks the screens in `screenshots/capture.yaml` and renders the store images into Fastlane. Store captions are in `screenshots/store.json`; after changing only captions, run `npm run render:store-screenshots`. To add a screenshot, add a `takeScreenshot` step to the flow and reference the file from its guide.
 
 ### Adding Documentation
 
