@@ -35,33 +35,20 @@ Colota sends your location to your own server over HTTP(S). It works offline, su
 
 <table>
   <tr>
-    <td><img src="screenshots/mobile/original/Dashboard.png" alt="Dashboard" width="200"/></td>
-    <td><img src="screenshots/mobile/original/LocationHistory.png" alt="Location History (Map)" width="200"/></td>
-    <td><img src="screenshots/mobile/original/TripDetails.png" alt="Trip Details" width="200"/></td>
-    <td><img src="screenshots/mobile/original/Trips.png" alt="Trips" width="200"/></td>
+    <td><img src="apps/docs/static/img/screenshots/Dashboard.png" alt="Dashboard" width="200"/></td>
+    <td><img src="apps/docs/static/img/screenshots/LocationHistory.png" alt="Location History" width="200"/></td>
+    <td><img src="apps/docs/static/img/screenshots/TrackingProfiles.png" alt="Tracking Profiles" width="200"/></td>
+    <td><img src="apps/docs/static/img/screenshots/DarkMode.png" alt="Dark Mode" width="200"/></td>
   </tr>
   <tr>
     <td align="center">Dashboard</td>
-    <td align="center">Location History (Map)</td>
-    <td align="center">Trip Details</td>
-    <td align="center">Trips</td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td><img src="screenshots/mobile/original/Settings.png" alt="Settings" width="200"/></td>
-    <td><img src="screenshots/mobile/original/TrackingProfiles.png" alt="TrackingProfiles" width="200"/></td>
-    <td><img src="screenshots/mobile/original/Authentication.png" alt="Authentication" width="200"/></td>
-    <td><img src="screenshots/mobile/original/DarkMode.png" alt="Dark Mode" width="200"/></td>
-  </tr>
-  <tr>
-    <td align="center">Settings</td>
-    <td align="center">TrackingProfiles</td>
-    <td align="center">Authentication</td>
+    <td align="center">Location History</td>
+    <td align="center">Tracking Profiles</td>
     <td align="center">Dark Mode</td>
   </tr>
 </table>
+
+More screens in the [documentation](https://colota.app/docs/introduction#screenshots).
 
 ## Quick Start
 

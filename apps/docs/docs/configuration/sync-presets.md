@@ -6,6 +6,10 @@ sidebar_position: 1
 
 Colota includes built-in presets that configure interval, movement threshold, sync interval and retry interval together. Each row on the screen prints its fix rate, its sync cadence and what it costs.
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/SyncPresets.png", label: "Sync presets" }, ]} />
+
 | Preset          | Interval | Distance | Sync interval | Retry interval | Cost                             |
 | --------------- | -------- | -------- | ------------- | -------------- | -------------------------------- |
 | **Instant**     | 5 s      | 0 m      | Each fix      | 30 s           | Most battery, finest track       |

@@ -28,6 +28,8 @@ A tracking profile is a rule: while a condition holds, such as charging, Android
 
 The editor's first line reads the rule back as you build it, for example "When charging, track every 5 s, any movement and sync each fix." Tap a profile in the list to edit it; Delete is at the bottom of the editor.
 
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ProfileEditor.png", label: "Profile editor" }, ]} />
+
 ## The list
 
 The list opens with a line that says which profile is in force and its values, "No profile active · Tracking & sync applies: …" while tracking runs without one, or "Profiles apply while tracking runs" while tracking is off. Below it every profile is one row in evaluation order, reading as a sentence: condition, then what it records, then how it syncs, for example "When charging · Every 5 s, any movement · syncs each fix". The row in force opens with "Active". The switch beside a row enables or disables it without opening it; a disabled profile is never in force.

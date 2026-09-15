@@ -39,6 +39,10 @@ The exported file is saved to your phone's `Downloads` folder.
 
 ## How to Import
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/Import.png", label: "Import preview" }, ]} />
+
 1. Go to **Settings → Export & import**
 2. Tap **Import a file** and pick the file you want to import. A CSV needs a header with latitude, longitude and a time column
 3. Wait for the parse to finish (large Google Timeline files can take 10+ seconds)

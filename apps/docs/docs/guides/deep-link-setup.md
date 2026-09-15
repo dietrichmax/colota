@@ -18,11 +18,17 @@ Fill in the settings you want to configure. Only the fields you set will be incl
 
 You can also generate a setup link straight from an existing installation, without the browser generator. Open **Settings → Share setup**, tick which categories to include - Tracking, Sync, API, Geofences, Tracking profiles and Credentials - and tap **Share** to send the `colota://setup` link through any app.
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ShareSetup.png", label: "Share setup" }, ]} />
+
 Credentials are off by default. Enabling them puts your username, password, bearer token or custom headers into the link in plain text, so only share it over a trusted channel.
 
 Geofences and tracking profiles can also be shared on their own from the [Geofences](geofencing.md#sharing-zones) and Tracking profiles screens.
 
 ## How It Works
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/SetupImport.png", label: "Import configuration" }, ]} />
 
 1. User taps the link or scans a QR code
 2. Colota opens and shows a confirmation screen listing all settings that will be applied

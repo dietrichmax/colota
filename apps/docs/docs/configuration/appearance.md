@@ -6,6 +6,10 @@ sidebar_position: 7
 
 Found under **Settings → Appearance**. A choice applies as soon as you tap it. The map style URLs are saved when you leave the field.
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/AppearanceSettings.png", label: "Appearance" }, ]} />
+
 | Setting          | Options                   | Default                  |
 | ---------------- | ------------------------- | ------------------------ |
 | Theme            | System / Light / Dark     | System                   |

@@ -12,6 +12,10 @@ Configure in **Settings -> Connection -> Client certificate**. The screen opens 
 
 Two ways to provide a client certificate.
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/MtlsSettings.png", label: "Client certificate" }, ]} />
+
 ### Option A: pick from device certificates (recommended)
 
 If your cert is already installed in Android's KeyChain (via Android Settings -> Encryption & credentials):

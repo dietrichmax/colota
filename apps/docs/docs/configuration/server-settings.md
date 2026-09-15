@@ -6,6 +6,10 @@ sidebar_position: 3
 
 Found under **Settings → Connection**. The Server card opens with a line that says what sync is doing now (Synced, Not synced yet, Sync failing with the server's own sentence, No network, No server, Offline mode), then the settings that produced it. The Server details card below it opens Request format, Authentication and Client certificate, each row showing its stored value.
 
+import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
+
+<ScreenshotGallery screenshots={[ { src: "/img/screenshots/ConnectionSettings.png", label: "Connection" }, ]} />
+
 | Setting         | Description                            | Default         | Range       |
 | --------------- | -------------------------------------- | --------------- | ----------- |
 | Server endpoint | HTTP(S) URL of your server             | Empty (offline) | --          |
