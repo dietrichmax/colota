@@ -14,7 +14,6 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent
 } from "react-native"
-import { BatteryCharging, BatteryFull } from "lucide-react-native"
 import { fontSizes, fonts, lineHeights, type } from "../../../styles/typography"
 import { LocationCoords, ThemeColors } from "../../../types/global"
 import { formatTime, getSpeedUnit, getTimeFormat } from "../../../utils/geo"
@@ -34,14 +33,15 @@ interface TableRow extends LocationCoords {
 }
 
 const COLUMN_WIDTHS = {
-  delta: 56,
+  delta: 88,
   lat: 88,
   lon: 88,
   acc: 56,
   speed: 72,
   alt: 56,
   bear: 56,
-  batt: 80,
+  batt: 56,
+  power: 96,
   sync: 72,
   note: 176
 }
@@ -49,12 +49,18 @@ const COLUMN_WIDTHS = {
 // "10:17:10 PM" is three characters wider than "22:17:10".
 const TIME_WIDTH = { "24h": 88, "12h": 112 } as const
 const ROW_LENGTH = size.touch + StyleSheet.hairlineWidth
-const BATTERY_CHARGING = 2
-const BATTERY_FULL = 3
+const POWER_WORDS: Record<number, string> = { 1: "Unplugged", 2: "Charging", 3: "Full" }
 
 function val(v?: number | null, decimals = 0): string {
   if (v == null) return "-"
   return decimals > 0 ? v.toFixed(decimals) : String(Math.round(v))
+}
+
+function gap(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`
+  return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`
 }
 
 function timeOf(item: TableRow): string {
@@ -99,14 +105,7 @@ const DataRow = React.memo(
     speedUnit,
     hasEndpoint
   }: RowProps & { speedUnit: { factor: number; unit: string }; hasEndpoint: boolean }) => {
-    const BatteryGlyph =
-      item.battery_status === BATTERY_CHARGING
-        ? BatteryCharging
-        : item.battery_status === BATTERY_FULL
-          ? BatteryFull
-          : null
-    const batteryWord =
-      item.battery_status === BATTERY_CHARGING ? "charging" : item.battery_status === BATTERY_FULL ? "full" : null
+    const power = POWER_WORDS[item.battery_status ?? 0]
     const battery = item.battery != null ? `${item.battery}%` : "-"
     const syncWord = item.sent ? "Sent" : "Queued"
     const facts = [
@@ -117,7 +116,7 @@ const DataRow = React.memo(
       item.speed != null ? `speed ${(item.speed * speedUnit.factor).toFixed(1)} ${speedUnit.unit}` : null,
       item.altitude != null ? `altitude ${val(item.altitude)} m` : null,
       item.bearing != null ? `bearing ${val(item.bearing)}` : null,
-      item.battery != null ? `battery ${battery}${batteryWord ? ` ${batteryWord}` : ""}` : null,
+      item.battery != null ? `battery ${battery}${power ? ` ${power.toLowerCase()}` : ""}` : null,
       hasEndpoint ? syncWord : null,
       item.note ? `note ${item.note}` : null,
       "show on map"
@@ -134,7 +133,7 @@ const DataRow = React.memo(
         onPress={() => item.id != null && onSelectPoint(item.id)}
       >
         <Text style={[mono, { width: COLUMN_WIDTHS.delta }]} numberOfLines={1}>
-          {item.delta != null ? `+${item.delta}` : ""}
+          {item.delta != null ? gap(item.delta) : ""}
         </Text>
         <Text style={[mono, { width: COLUMN_WIDTHS.lat }]} numberOfLines={1}>
           {val(item.latitude, 5)}
@@ -154,16 +153,12 @@ const DataRow = React.memo(
         <Text style={[mono, { width: COLUMN_WIDTHS.bear }]} numberOfLines={1}>
           {val(item.bearing)}
         </Text>
-        <View
-          style={[styles.batteryCell, { width: COLUMN_WIDTHS.batt }]}
-          accessibilityRole="text"
-          accessibilityLabel={batteryWord ? `${battery} ${batteryWord}` : battery}
-        >
-          <Text style={[styles.mono, { color: content }]} numberOfLines={1}>
-            {battery}
-          </Text>
-          {BatteryGlyph && <BatteryGlyph size={size.icon.sm} color={colors.textSecondary} />}
-        </View>
+        <Text style={[mono, { width: COLUMN_WIDTHS.batt }]} numberOfLines={1}>
+          {battery}
+        </Text>
+        <Text style={[styles.caption, { width: COLUMN_WIDTHS.power, color: content }]} numberOfLines={1}>
+          {power ?? "-"}
+        </Text>
         {hasEndpoint && (
           <Text style={[styles.caption, { width: COLUMN_WIDTHS.sync, color: content }]} numberOfLines={1}>
             {syncWord}
@@ -232,6 +227,7 @@ export function LocationTable({ locations, colors, hasEndpoint, selectedPointId,
     COLUMN_WIDTHS.alt +
     COLUMN_WIDTHS.bear +
     COLUMN_WIDTHS.batt +
+    COLUMN_WIDTHS.power +
     (hasEndpoint ? COLUMN_WIDTHS.sync : 0) +
     COLUMN_WIDTHS.note
 
@@ -267,7 +263,7 @@ export function LocationTable({ locations, colors, hasEndpoint, selectedPointId,
         <View style={{ width: dataWidth }}>
           <View style={styles.headerRow}>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.delta }]} numberOfLines={2}>
-              Δs
+              Since last fix
             </Text>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.lat }]} numberOfLines={2}>
               Lat
@@ -289,6 +285,9 @@ export function LocationTable({ locations, colors, hasEndpoint, selectedPointId,
             </Text>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.batt }]} numberOfLines={2}>
               Batt %
+            </Text>
+            <Text style={[header, { width: COLUMN_WIDTHS.power }]} numberOfLines={2}>
+              Power
             </Text>
             {hasEndpoint && (
               <Text style={[header, { width: COLUMN_WIDTHS.sync }]} numberOfLines={2}>
@@ -356,12 +355,5 @@ const styles = StyleSheet.create({
     lineHeight: lineHeights.caption,
     ...fonts.regular,
     paddingHorizontal: space.md
-  },
-  batteryCell: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: space.xs,
-    paddingEnd: space.md
   }
 })

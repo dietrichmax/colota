@@ -102,7 +102,7 @@ describe("LocationTable", () => {
     expect(timePane.getByText("Time")).toBeTruthy()
     expect(timePane.getAllByText(/^\d\d:\d\d:\d\d$/)).toHaveLength(3)
     expect(dataPane.queryByText("Time")).toBeNull()
-    for (const heading of ["Δs", "Lat", "Lon", "Acc m", "Alt m", "Bear", "Batt %", "Note"]) {
+    for (const heading of ["Since last fix", "Lat", "Lon", "Acc m", "Alt m", "Bear", "Batt %", "Power", "Note"]) {
       expect(dataPane.getByText(heading)).toBeTruthy()
     }
   })
@@ -118,9 +118,27 @@ describe("LocationTable", () => {
     const dataRows = within(getByTestId("table-data-pane")).getAllByLabelText(rowLabel)
     expect(dataRows).toHaveLength(3)
     expect(within(dataRows[0]).getByText("48.30000")).toBeTruthy()
-    expect(within(dataRows[0]).getByText("+30")).toBeTruthy()
+    expect(within(dataRows[0]).getByText("30s")).toBeTruthy()
     expect(within(dataRows[2]).getByText("48.10000")).toBeTruthy()
-    expect(within(dataRows[2]).queryByText(/^\+/)).toBeNull()
+    expect(within(dataRows[2]).queryByText(/^\d+s$/)).toBeNull()
+  })
+
+  it("writes the time since the last fix in units, always two past a minute, so a long pause fits its column and a lone m never reads as metres", () => {
+    const at = (id: number, timestamp: number): LocationCoords => ({
+      id,
+      latitude: 48,
+      longitude: 11,
+      accuracy: 5,
+      timestamp
+    })
+    const { getByTestId } = renderTable({
+      locations: [at(1, 1000), at(2, 1045), at(3, 1345), at(4, 5245), at(5, 188845)]
+    })
+
+    const gaps = within(getByTestId("table-data-pane"))
+      .getAllByLabelText(rowLabel)
+      .map((row) => within(row).queryByText(/^\d+[dhms]( \d+[hms])?$/)?.props.children ?? null)
+    expect(gaps).toEqual(["2d 3h", "1h 5m", "5m 0s", "45s", null])
   })
 
   it("names the speed unit in the header so the cells stay bare numbers", () => {
@@ -147,19 +165,42 @@ describe("LocationTable", () => {
     expect(withServer.getAllByText("Queued")).toHaveLength(1)
   })
 
-  it("draws a battery glyph only while charging or full and speaks the word for a screen reader", () => {
-    const { getAllByTestId, getByTestId, getByLabelText, queryByLabelText } = renderTable()
-
-    expect(getAllByTestId("icon-BatteryCharging")).toHaveLength(1)
-    expect(getAllByTestId("icon-BatteryFull")).toHaveLength(1)
-    expect(getByLabelText("80% charging")).toBeTruthy()
-    expect(getByLabelText("100% full")).toBeTruthy()
-    expect(getByLabelText("79%")).toBeTruthy()
-    expect(queryByLabelText(/discharging/i)).toBeNull()
+  it("names the power state in words in its own column, because an unlabelled battery glyph left users guessing", () => {
+    const { getByTestId, queryByTestId } = renderTable()
 
     const dataRows = within(getByTestId("table-data-pane")).getAllByLabelText(rowLabel)
+    expect(within(dataRows[0]).getByText("Full")).toBeTruthy()
+    expect(within(dataRows[1]).getByText("Unplugged")).toBeTruthy()
+    expect(within(dataRows[2]).getByText("Charging")).toBeTruthy()
+    expect(queryByTestId("icon-BatteryCharging")).toBeNull()
+    expect(queryByTestId("icon-BatteryFull")).toBeNull()
+
     expect(dataRows[2].props.accessibilityLabel).toContain("battery 80% charging")
-    expect(dataRows[1].props.accessibilityLabel).not.toContain("charging")
+    expect(dataRows[1].props.accessibilityLabel).toContain("battery 79% unplugged")
+  })
+
+  it("shows a dash when the power state was not recorded, so an unknown never passes for unplugged", () => {
+    const { getByTestId } = renderTable({
+      locations: [
+        {
+          id: 1,
+          latitude: 48,
+          longitude: 11,
+          accuracy: 5,
+          altitude: 500,
+          speed: 5,
+          bearing: 90,
+          timestamp: 1000,
+          battery: 50,
+          battery_status: 0
+        }
+      ]
+    })
+
+    const [row] = within(getByTestId("table-data-pane")).getAllByLabelText(rowLabel)
+    expect(within(row).getByText("-")).toBeTruthy()
+    expect(within(row).queryByText(/Unplugged|Charging|Full/)).toBeNull()
+    expect(row.props.accessibilityLabel).toContain("battery 50%, ")
   })
 
   it("hands the point id to the screen from either pane so the map can open it", () => {
