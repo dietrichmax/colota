@@ -1,8 +1,8 @@
-- Every screen redesigned: labels read as sentences and each row shows its value
-- Appearance can take the app colors from your Android wallpaper
-- Tapping the month in Location History picks a year and a month
-- Export and import share one screen, and an import says what it adds first
+- New design on every screen, and settings show their current value
+- Appearance can use your wallpaper colors (Android 12+)
+- Export and import share one screen, and an import shows what it adds first
+- Restoring a backup checks the file and password before replacing anything
+- A setup link says what it will change before you apply it
 - GeoJSON exports write one point per recording
-- Switching units updates every screen at once
-- Offline maps picks up a running download when you come back
+- Offline maps shows a running download when you return
 - Map credits show a custom tile server's own sources
