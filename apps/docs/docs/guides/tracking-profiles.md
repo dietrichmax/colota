@@ -36,13 +36,15 @@ The list opens with a line that says which profile is in force and its values, "
 
 ## Condition Types
 
-| Condition | Trigger | Cost |
-| --- | --- | --- |
-| **Charging** | Phone is plugged in to a power source | Nothing to watch |
-| **Android Auto** | Android Auto is connected | Nothing to watch |
-| **Speed above** | Average speed exceeds the speed you set (km/h or mph) | Fixes keep flowing to measure it, even below the movement threshold |
-| **Speed below** | Average speed drops below the speed you set (km/h or mph) | Fixes keep flowing to measure it, even below the movement threshold |
-| **Stationary** | Still for the activation delay (60 s by default) | Fixes keep flowing to measure it; movement threshold not used |
+| Condition        | Trigger                                                   |
+| ---------------- | --------------------------------------------------------- |
+| **Charging**     | Phone is plugged in to a power source                     |
+| **Android Auto** | Android Auto is connected                                 |
+| **Speed above**  | Average speed exceeds the speed you set (km/h or mph)     |
+| **Speed below**  | Average speed drops below the speed you set (km/h or mph) |
+| **Stationary**   | Still for the activation delay (60 s by default)          |
+
+A stationary profile records less often, but GPS stays on. To stop GPS while you stay somewhere, use a [geofence](geofencing) with WiFi pause or motionless pause.
 
 Speed conditions use a rolling average of the last 5 GPS readings to avoid triggering on momentary speed spikes. The stationary condition uses a fixed speed threshold (0.3 m/s) that has to hold across 60 seconds of fixes, so unlike speed-below it does not flap on GPS noise near zero. The window is measured over the fixes themselves, so a stretch with no fixes at all is not counted as stillness and the profile waits for the stream instead of switching on.
 

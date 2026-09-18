@@ -179,13 +179,13 @@ describe("ProfileEditorScreen", () => {
   })
 
   describe("condition", () => {
-    it("comes first, in sentence case, with what watching it costs on each row", () => {
-      const { getByText, getAllByText, getByTestId } = renderNew()
+    it("comes first, in sentence case, with what each condition means on its row", () => {
+      const { getByText, getByTestId } = renderNew()
 
       expect(getByText("Android Auto")).toBeTruthy()
       expect(getByText("Speed above")).toBeTruthy()
-      expect(getByText("Phone is plugged in · costs nothing to watch")).toBeTruthy()
-      expect(getAllByText(/fixes keep flowing to measure it, even below the movement threshold/)).toHaveLength(2)
+      expect(getByText("Phone is plugged in")).toBeTruthy()
+      expect(getByText("Average speed is above the speed you set")).toBeTruthy()
       expect(getByTestId("condition-charging").props.accessibilityState.checked).toBe(true)
     })
 

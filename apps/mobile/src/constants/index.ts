@@ -97,38 +97,35 @@ export const PROFILE_CONDITIONS: {
     label: "Charging",
     listLabel: "When charging",
     icon: Zap,
-    description: "Phone is plugged in · costs nothing to watch"
+    description: "Phone is plugged in"
   },
   {
     type: "android_auto",
     label: "Android Auto",
     listLabel: "On Android Auto",
     icon: Car,
-    description: "Android Auto is connected · costs nothing to watch"
+    description: "Android Auto is connected"
   },
   {
     type: "speed_above",
     label: "Speed above",
     listLabel: "Speed above",
     icon: ArrowUp,
-    description:
-      "Average of the last 5 fixes is faster than the speed below · fixes keep flowing to measure it, even below the movement threshold"
+    description: "Average speed is above the speed you set"
   },
   {
     type: "speed_below",
     label: "Speed below",
     listLabel: "Speed below",
     icon: ArrowDown,
-    description:
-      "Average of the last 5 fixes is slower than the speed below · fixes keep flowing to measure it, even below the movement threshold"
+    description: "Average speed is below the speed you set"
   },
   {
     type: "stationary",
     label: "Stationary",
     listLabel: "When stationary",
     icon: Pause,
-    description:
-      "Still for the activation delay · records a point every interval, movement threshold not used · fixes keep flowing to measure it"
+    description: "Phone stays still for the activation delay"
   }
 ]
 
