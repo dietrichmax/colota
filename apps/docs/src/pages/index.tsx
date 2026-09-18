@@ -52,31 +52,31 @@ function HomepageHeader() {
 
 const features = [
   {
-    title: "Self-Hosted & Private",
+    title: "Self-hosted and private",
     description: "No cloud, no analytics, no telemetry. Send data to your own server or any HTTPS endpoint. AGPL-3.0."
   },
   {
-    title: "Bring Your History",
+    title: "Bring your history",
     description:
       "Import from Google Maps Timeline, GPX, KML, GeoJSON or CSV. Move years of data off Google without losing it."
   },
   {
-    title: "Works Offline",
+    title: "Works offline",
     description:
       "Locations queue locally and sync when connectivity returns. Download map areas for trips out of coverage."
   },
   {
-    title: "On-Device History",
+    title: "On-device history",
     description:
       "Browse every trip on the phone itself, even without a backend configured. Elevation profiles, per-trip stats and a calendar with activity dots."
   },
   {
-    title: "Tracking Profiles",
+    title: "Tracking profiles",
     description:
       "Multiple GPS configs that auto-switch on charging, Android Auto, speed or stationary detection. One profile for hiking, another for the commute."
   },
   {
-    title: "Sync, Backup, Export",
+    title: "Sync, backup and export",
     description:
       "Instant, batched, Wi-Fi-only or offline-first sync. Encrypted backups for moving to a new phone. Export as CSV, GeoJSON, GPX or KML."
   }

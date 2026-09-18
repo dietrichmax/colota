@@ -20,7 +20,7 @@
 
 .heroScreenshot img {
   width: 100%;
-  border-radius: 20px;
+  border-radius: var(--colota-radius-lg);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
@@ -83,14 +83,7 @@
   padding: var(--colota-card-padding);
   border-radius: var(--colota-card-radius);
   background: var(--colota-card-bg);
-  border: 1px solid var(--colota-border);
   height: 100%;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.featureCard:hover {
-  border-color: var(--ifm-color-primary);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .featureCard h3 {
@@ -112,9 +105,8 @@
 }
 
 .integrationsLabel {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--ifm-font-color-secondary);
   margin-bottom: 1rem;
 }
@@ -129,16 +121,14 @@
 .integrationBadge {
   padding: 0.35rem 0.85rem;
   border-radius: 999px;
-  border: 1px solid var(--colota-border);
   font-size: 0.875rem;
   color: var(--ifm-font-color-base);
-  background: var(--colota-card-bg);
+  background: var(--colota-well);
   text-decoration: none;
-  transition: border-color 0.2s, color 0.2s;
+  transition: color 0.2s;
 }
 
 .integrationBadge:hover {
-  border-color: var(--ifm-color-primary);
   color: var(--ifm-color-primary);
   text-decoration: none;
 }

@@ -5,7 +5,7 @@
  */
 
 import React from "react"
-import { lightColors, darkColors, fontFamily } from "@colota/shared"
+import { lightColors, darkColors, fontFamily, radius } from "@colota/shared"
 import type { ThemeColors } from "@colota/shared"
 
 function colorVars(colors: ThemeColors) {
@@ -20,8 +20,10 @@ function colorVars(colors: ThemeColors) {
     --ifm-link-color: ${colors.link};
     --ifm-font-family-base: '${fontFamily}', system-ui, -apple-system, sans-serif;
     --colota-card-bg: ${colors.card};
+    --colota-well: ${colors.well};
     --colota-border: ${colors.border};
-    --colota-card-radius: 12px;
+    --colota-card-radius: ${radius.md}px;
+    --colota-radius-lg: ${radius.lg}px;
     --colota-card-padding: 16px;
   `
 }
@@ -30,10 +32,11 @@ const themeStyles = `
   :root { ${colorVars(lightColors)} }
   [data-theme='dark'] { ${colorVars(darkColors)} }
   .hero--primary {
+    --ifm-hero-text-color: #fff;
     background: linear-gradient(135deg, ${lightColors.primary} 0%, ${lightColors.primaryDark} 100%);
   }
   [data-theme='dark'] .hero--primary {
-    background: linear-gradient(135deg, ${darkColors.primaryDark} 0%, ${darkColors.background} 100%);
+    background: linear-gradient(135deg, ${darkColors.primaryContainer} 0%, ${darkColors.background} 100%);
   }
 `
 
