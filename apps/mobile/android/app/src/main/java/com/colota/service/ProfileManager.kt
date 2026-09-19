@@ -15,7 +15,8 @@ import kotlinx.coroutines.*
  *
  * When a profile's conditions match, its GPS interval / sync settings override
  * the default config. When conditions stop matching, a configurable deactivation
- * delay (hysteresis) prevents rapid switching before reverting to defaults.
+ * delay (hysteresis) prevents rapid switching before handing over to the next
+ * matching profile or the defaults.
  *
  * @param profileHelper CRUD access to profile database
  * @param scope Coroutine scope for deactivation delay timers
@@ -45,28 +46,24 @@ class ProfileManager(
     @Volatile var defaultDistance: Float = 0f
     @Volatile var defaultSyncInterval: Int = 0
 
-    // Active profile: mutated only inside @Synchronized methods.
-    // @Volatile because getActiveProfileName() is read externally without the lock.
+    // @Volatile: getActiveProfileName() reads it without the lock.
     @Volatile private var activeProfile: ProfileHelper.CachedProfile? = null
-    // Accessed only inside @Synchronized methods — the intrinsic lock covers visibility.
+    // Guarded by the @Synchronized methods.
     private var deactivationJob: Job? = null
     private var activationJob: Job? = null
     private var pendingActivationProfileId: Int? = null
+    private var deferredActivationProfileId: Int? = null
 
-    // Condition flags: written from broadcast callbacks, each write immediately followed by
-    // @Synchronized evaluate() which reads them. @Volatile makes the write visible to readers
-    // already holding the lock on another thread.
+    // Written outside the lock, read by evaluate() under it.
     @Volatile private var isCharging = false
     @Volatile private var isCarMode = false
     @Volatile var isStationary = false
         private set
-    // The run of consecutive sub-threshold fixes, timed by location.time.
-    // Written/read from location + motion callbacks without synchronization.
+    // The current still run, timed by location.time and written without the lock.
     @Volatile private var runStartedAtMs = 0L
     @Volatile private var lastSampleAtMs = 0L
     @Volatile private var lastSampleGapMs = 0L
 
-    // Speed rolling average buffer
     private val speedBuffer = ArrayDeque<Float>()
     private val speedLock = Any()
 
@@ -114,21 +111,18 @@ class ProfileManager(
     fun getNeededConditionTypes(): Set<String> =
         profileHelper.getEnabledProfiles().mapTo(HashSet()) { it.conditionType }
 
-    /**
-     * Re-evaluates all enabled profiles against current conditions.
-     * Must handle concurrent calls from location updates, broadcasts, and service actions.
-     */
     @Synchronized
     fun evaluate() {
         val profiles = profileHelper.getEnabledProfiles()
 
-        // If the active profile was disabled or deleted, deactivate immediately (no delay)
+        // A disabled or deleted profile skips its deactivation delay.
         if (activeProfile != null && profiles.none { it.id == activeProfile!!.id }) {
             cancelDeactivation()
             deactivateToDefault()
         }
 
-        if (pendingActivationProfileId != null && profiles.none { it.id == pendingActivationProfileId }) {
+        val waitingProfileId = pendingActivationProfileId ?: deferredActivationProfileId
+        if (waitingProfileId != null && profiles.none { it.id == waitingProfileId }) {
             cancelActivation()
         }
 
@@ -136,17 +130,14 @@ class ProfileManager(
             return
         }
 
-        // Find highest-priority matching profile (list already sorted by priority DESC)
+        // getEnabledProfiles is sorted by priority DESC, id ASC.
         val matchingProfile = profiles.firstOrNull { matchesCondition(it) }
 
         when {
-            // A profile matches — activate it (or keep if already active)
             matchingProfile != null -> {
-                cancelDeactivation()
-
                 if (activeProfile?.id == matchingProfile.id) {
+                    cancelDeactivation()
                     cancelActivation()
-                    // Same profile still matches — re-apply only if config changed
                     val active = activeProfile!!
                     if (active.intervalMs != matchingProfile.intervalMs ||
                         active.minUpdateDistance != matchingProfile.minUpdateDistance ||
@@ -156,12 +147,13 @@ class ProfileManager(
                     return
                 }
 
-                // Stationary spends its activation delay reaching the stationary state, so it
-                // applies immediately here; the generic delay would double-count it.
-                val activationDelay =
-                    if (matchingProfile.conditionType == ProfileConstants.CONDITION_STATIONARY) 0
-                    else matchingProfile.activationDelaySeconds
-                if (activationDelay <= 0) {
+                val active = activeProfile
+                if (active != null && ranksAbove(profiles, active.id, matchingProfile.id)) {
+                    holdForDeactivation(active, matchingProfile)
+                    return
+                }
+
+                if (isActivationSatisfied(matchingProfile)) {
                     cancelActivation()
                     activateProfile(matchingProfile)
                 } else {
@@ -169,17 +161,51 @@ class ProfileManager(
                 }
             }
 
-            // No profile matches — schedule deactivation if one was active
             activeProfile != null -> {
                 cancelActivation()
                 scheduleDeactivation(activeProfile!!)
             }
 
-            // Pending activation's condition dropped before its delay elapsed
             else -> {
                 cancelActivation()
             }
         }
+    }
+
+    /** The active profile stopped matching and a lower one matches: each delay runs on its own condition. */
+    private fun holdForDeactivation(active: ProfileHelper.CachedProfile, next: ProfileHelper.CachedProfile) {
+        if (active.deactivationDelaySeconds <= 0) {
+            cancelDeactivation()
+            handOver(next)
+            return
+        }
+        scheduleDeactivation(active)
+        if (!isActivationSatisfied(next)) scheduleActivation(next)
+        else if (deferredActivationProfileId != next.id) cancelActivation()
+    }
+
+    private fun handOver(next: ProfileHelper.CachedProfile?) {
+        if (next != null && isActivationSatisfied(next)) {
+            cancelActivation()
+            activateProfile(next)
+        } else {
+            deactivateToDefault()
+            if (next != null) scheduleActivation(next)
+        }
+    }
+
+    /**
+     * True for a delay of 0, for one that ran out while a higher profile finished its deactivation delay, and for
+     * Stationary, which spends its activation delay reaching the stationary state.
+     */
+    private fun isActivationSatisfied(profile: ProfileHelper.CachedProfile): Boolean =
+        profile.conditionType == ProfileConstants.CONDITION_STATIONARY ||
+            profile.activationDelaySeconds <= 0 ||
+            deferredActivationProfileId == profile.id
+
+    private fun ranksAbove(profiles: List<ProfileHelper.CachedProfile>, higherId: Int, lowerId: Int): Boolean {
+        val higher = profiles.indexOfFirst { it.id == higherId }
+        return higher >= 0 && higher < profiles.indexOfFirst { it.id == lowerId }
     }
 
     private fun matchesCondition(profile: ProfileHelper.CachedProfile): Boolean {
@@ -229,14 +255,12 @@ class ProfileManager(
     }
 
     private fun activateProfile(profile: ProfileHelper.CachedProfile) {
+        cancelDeactivation()
         activeProfile = profile
 
         AppLogger.i(TAG, "Activated profile: ${profile.name} (interval=${profile.intervalMs}ms, sync=${profile.syncIntervalSeconds}s)")
 
-        // Notify JS
         LocationServiceModule.sendProfileSwitchEvent(profile.name, profile.id)
-
-        // Apply config
         onConfigSwitch(ProfileConfig(
             interval = profile.intervalMs,
             distance = profile.minUpdateDistance,
@@ -261,15 +285,15 @@ class ProfileManager(
     }
 
     /**
-     * Called from the deactivation coroutine. Re-checks under lock that the
-     * profile being deactivated is still the active one — prevents a race
-     * where evaluate() activated a new profile between ensureActive() and
-     * acquiring the synchronized lock.
+     * Runs when the deactivation delay ends. The re-check covers evaluate() switching profile between
+     * ensureActive() and the lock. The top match then takes over if its activation delay has passed, else the defaults.
      */
     @Synchronized
     private fun deactivateIfStillActive(scheduledProfileId: Int) {
         if (activeProfile?.id != scheduledProfileId) return
-        deactivateToDefault()
+        val next = profileHelper.getEnabledProfiles().firstOrNull { matchesCondition(it) }
+        if (next?.id == scheduledProfileId) return
+        handOver(next)
     }
 
     private fun cancelDeactivation() {
@@ -293,22 +317,28 @@ class ProfileManager(
     }
 
     /**
-     * Called from the activation coroutine. Re-resolves the highest-priority match
-     * under the lock and activates only if the scheduled profile is still the winner —
-     * the condition may have lapsed or a higher-priority profile may have arrived
-     * during the delay.
+     * Runs when the activation delay ends and applies the profile only if it is still the best match.
+     * A higher profile inside its deactivation delay keeps the slot until that delay ends.
      */
     @Synchronized
     private fun activateIfStillMatching(scheduledProfileId: Int) {
-        // Superseded by a newer activation between the delay and the lock: leave its
-        // job/pending fields intact rather than orphaning the newer timer.
+        // Superseded by a newer timer after the delay: leave its fields alone.
         if (pendingActivationProfileId != scheduledProfileId) return
         activationJob = null
         pendingActivationProfileId = null
 
-        val matching = profileHelper.getEnabledProfiles().firstOrNull { matchesCondition(it) }
+        val profiles = profileHelper.getEnabledProfiles()
+        val matching = profiles.firstOrNull { matchesCondition(it) }
         if (matching?.id != scheduledProfileId) return
         if (activeProfile?.id == scheduledProfileId) return
+        val active = activeProfile
+        if (active != null && deactivationJob?.isActive == true &&
+            ranksAbove(profiles, active.id, scheduledProfileId)
+        ) {
+            deferredActivationProfileId = scheduledProfileId
+            AppLogger.d(TAG, "'${matching.name}' waits for '${active.name}' to finish its deactivation delay")
+            return
+        }
         activateProfile(matching)
     }
 
@@ -316,6 +346,7 @@ class ProfileManager(
         activationJob?.cancel()
         activationJob = null
         pendingActivationProfileId = null
+        deferredActivationProfileId = null
     }
 
     /** Only the fix that completes the window can conclude stillness; a stopped stream never does. */
@@ -384,10 +415,7 @@ class ProfileManager(
 
         AppLogger.i(TAG, "Deactivated profile: ${previousProfile.name} - reverting to defaults")
 
-        // Notify JS
         LocationServiceModule.sendProfileSwitchEvent(null, null)
-
-        // Revert to default config
         onConfigSwitch(ProfileConfig(
             interval = defaultInterval,
             distance = defaultDistance,

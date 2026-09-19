@@ -1,0 +1,1 @@
+- A tracking profile keeps its deactivation delay when a lower-priority profile starts to match

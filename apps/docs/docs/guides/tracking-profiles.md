@@ -75,7 +75,7 @@ Each profile overrides the default tracking configuration with:
 - **Sync interval** - How often to sync with the server (Instant, 1 min, 5 min, 15 min, or Custom)
 - **Priority** - Determines which profile wins when multiple conditions match simultaneously (higher wins; equal numbers go to the older profile)
 - **Activation Delay** - How long the condition must keep matching before the profile is applied (seconds, default 0 = immediate). Prevents activating on brief spikes, e.g. a momentary speed reading. For the Stationary condition it instead sets how long the device must be still before the profile activates (default 60s).
-- **Deactivation Delay** - How long to wait after the condition stops matching before reverting to default settings (seconds). Prevents rapid toggling when conditions fluctuate.
+- **Deactivation Delay** - How long the profile stays active after its condition stops matching, also when a lower-priority profile matches (seconds). Prevents rapid toggling when conditions fluctuate.
 
 When creating a new profile, the tracking interval, movement threshold and sync interval are pre-filled with your current Tracking & sync values, and each field says which value it replaces. The values a profile hands back to are the ones the service loaded when tracking started; a Tracking & sync change applies at the next restart.
 
@@ -107,9 +107,9 @@ Note that Stationary has the highest priority so it takes over from Walking when
 - When tracking starts, all enabled profiles are evaluated against current conditions
 - The highest-priority matching profile's settings override the defaults
 - If a profile has an activation delay, its condition must keep matching for that long before it is applied; if the condition drops first, or a higher-priority profile takes over, the activation is cancelled
-- When the condition no longer matches, a deactivation delay timer starts
-- If the condition matches again before the delay expires, the timer is cancelled
-- After the delay expires, settings revert to the defaults configured in the Settings screen
+- When the condition no longer matches, a deactivation delay timer starts, also when a lower-priority profile matches
+- If the condition matches again before the delay expires, the timer is cancelled. A higher-priority profile that matches still takes over as soon as its own activation delay has passed
+- After the delay expires, the highest-priority matching profile takes over once its activation delay has passed. Until then, or if nothing matches, settings revert to the defaults configured in the Settings screen
 - Profile changes made in the editor take effect immediately on the running service
 - **Tracking & sync** shows the active profile above the Recording and Sync interval groups with the values in force. The rows below are the defaults the profile is overriding
 

@@ -655,7 +655,7 @@ class ProfileManagerTest {
     }
 
     @Test
-    fun `applies new tracking interval when switching between profiles`() = runTest {
+    fun `applies new tracking interval when switching between profiles`() = testScope.runTest {
         val charging = chargingProfile(id = 1, intervalMs = 10000, priority = 10)
         val carMode = carModeProfile(id = 2, intervalMs = 3000, priority = 20)
         every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
@@ -674,10 +674,286 @@ class ProfileManagerTest {
         assertEquals(5f, switchedDistance, 0.01f)
         assertEquals(60, switchedSyncInterval)
 
-        // Disable car mode - charging still active, falls back immediately
+        // Disable car mode - charging applies once car mode's deactivation delay has run
         manager.onCarModeStateChanged(false)
+        advanceTimeBy(31_000)
         assertEquals("Charging", switchedProfileName)
         assertEquals(10000L, switchedInterval)
+    }
+
+    // --- Handing over to a lower-priority profile ---
+
+    /** A deactivation delay exists to ride out a brief drop, so a lower match must not cut it short. */
+    @Test
+    fun `a lower-priority match waits out the active profile's deactivation delay`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10)
+        val carMode = carModeProfile(id = 2, priority = 20)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+        manager.onCarModeStateChanged(true)
+        val switches = switchCount
+
+        manager.onCarModeStateChanged(false)
+        advanceTimeBy(29_000)
+        assertEquals("Car Mode", switchedProfileName)
+        assertEquals(switches, switchCount)
+
+        advanceTimeBy(2_000)
+        assertEquals("Charging", switchedProfileName)
+        assertEquals("one switch, no defaults in between", switches + 1, switchCount)
+    }
+
+    /** Android Auto can end a moment before the cable comes out; the target is whatever matches when the delay ends. */
+    @Test
+    fun `the handover goes to what still matches when the delay ends`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10)
+        val carMode = carModeProfile(id = 2, priority = 20)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.onChargingStateChanged(true)
+        manager.onCarModeStateChanged(true)
+        val switches = switchCount
+
+        manager.onCarModeStateChanged(false)
+        advanceTimeBy(1_000)
+        manager.onChargingStateChanged(false)
+        advanceTimeBy(30_000)
+
+        assertNull(switchedProfileName)
+        assertEquals(5000L, switchedInterval)
+        assertEquals("Charging never applied", switches + 1, switchCount)
+    }
+
+    @Test
+    fun `a higher-priority match still takes over at once during the delay`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10)
+        val carMode = carModeProfile(id = 2, priority = 20)
+        val fast = speedAboveProfile(id = 3, threshold = 10f, priority = 30)
+        every { profileHelper.getEnabledProfiles() } returns listOf(fast, carMode, charging)
+
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+        manager.onCarModeStateChanged(true)
+        manager.onCarModeStateChanged(false)
+
+        repeat(ProfileConstants.SPEED_BUFFER_SIZE) {
+            manager.onLocationUpdate(mockLocation(15f))
+        }
+        assertEquals("Fast", switchedProfileName)
+
+        manager.clearSpeedBuffer()
+        advanceTimeBy(29_000)
+        assertEquals("Fast runs its own delay, not Car Mode's", "Fast", switchedProfileName)
+        advanceTimeBy(2_000)
+        assertEquals("Charging", switchedProfileName)
+    }
+
+    /** A higher profile that activates on its timer ends the old delay, so its own delay runs when it stops matching. */
+    @Test
+    fun `a higher profile activated by its timer gets its own deactivation delay`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10)
+        val carMode = carModeProfile(id = 2, priority = 20)
+        val fast = speedAboveProfile(id = 3, threshold = 10f, priority = 30, activationDelay = 10)
+        every { profileHelper.getEnabledProfiles() } returns listOf(fast, carMode, charging)
+
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+        manager.onCarModeStateChanged(true)
+        manager.onCarModeStateChanged(false)
+        advanceTimeBy(1_000)
+        repeat(ProfileConstants.SPEED_BUFFER_SIZE) {
+            manager.onLocationUpdate(mockLocation(15f))
+        }
+        advanceTimeBy(11_000)
+        assertEquals("Fast", switchedProfileName)
+
+        manager.clearSpeedBuffer()
+        advanceTimeBy(29_000)
+        assertEquals("Fast", switchedProfileName)
+        advanceTimeBy(2_000)
+        assertEquals("Charging", switchedProfileName)
+    }
+
+    /** An activation delay counts continuous matching, so a timer from an earlier match must not carry over. */
+    @Test
+    fun `a higher profile that stops matching has to wait out its full activation delay again`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10)
+        val carMode = carModeProfile(id = 2, priority = 20)
+        val fast = speedAboveProfile(id = 3, threshold = 10f, priority = 30, activationDelay = 10)
+        every { profileHelper.getEnabledProfiles() } returns listOf(fast, carMode, charging)
+
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+        manager.onCarModeStateChanged(true)
+        manager.onCarModeStateChanged(false)
+        repeat(ProfileConstants.SPEED_BUFFER_SIZE) {
+            manager.onLocationUpdate(mockLocation(15f))
+        }
+        advanceTimeBy(2_000)
+        manager.clearSpeedBuffer()
+        advanceTimeBy(6_000)
+        repeat(ProfileConstants.SPEED_BUFFER_SIZE) {
+            manager.onLocationUpdate(mockLocation(15f))
+        }
+
+        advanceTimeBy(9_000)
+        assertEquals("only 9s of the second match", "Car Mode", switchedProfileName)
+        advanceTimeBy(2_000)
+        assertEquals("Fast", switchedProfileName)
+    }
+
+    @Test
+    fun `a flapping higher profile does not stretch the deactivation delay`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10)
+        val carMode = carModeProfile(id = 2, priority = 20)
+        val fast = speedAboveProfile(id = 3, threshold = 10f, priority = 30, activationDelay = 10)
+        every { profileHelper.getEnabledProfiles() } returns listOf(fast, carMode, charging)
+
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+        manager.onCarModeStateChanged(true)
+        manager.onCarModeStateChanged(false)
+        repeat(5) {
+            advanceTimeBy(1_000)
+            repeat(ProfileConstants.SPEED_BUFFER_SIZE) {
+                manager.onLocationUpdate(mockLocation(15f))
+            }
+            advanceTimeBy(4_000)
+            manager.clearSpeedBuffer()
+        }
+
+        advanceTimeBy(4_000)
+        assertEquals("Car Mode", switchedProfileName)
+        advanceTimeBy(2_000)
+        assertEquals("Car Mode's delay counts from when its own condition stopped", "Charging", switchedProfileName)
+    }
+
+    @Test
+    fun `a ready lower profile that stops matching has to earn its activation delay again`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10, activationDelay = 10)
+        val carMode = carModeProfile(id = 2, priority = 20)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.onCarModeStateChanged(true)
+        manager.onChargingStateChanged(true)
+
+        manager.onCarModeStateChanged(false)
+        advanceTimeBy(12_000)
+        manager.onChargingStateChanged(false)
+        advanceTimeBy(13_000)
+        manager.onChargingStateChanged(true)
+
+        advanceTimeBy(6_000)
+        assertNull("replugged 6s ago, not ready", switchedProfileName)
+        advanceTimeBy(5_000)
+        assertEquals("Charging", switchedProfileName)
+    }
+
+    @Test
+    fun `a lower profile ready before the delay ends takes over when it ends`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10, activationDelay = 10)
+        val carMode = carModeProfile(id = 2, priority = 20)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+        manager.onCarModeStateChanged(true)
+        manager.onChargingStateChanged(true)
+        val switches = switchCount
+
+        manager.onCarModeStateChanged(false)
+        advanceTimeBy(29_000)
+        assertEquals("Car Mode", switchedProfileName)
+
+        advanceTimeBy(2_000)
+        assertEquals("Charging", switchedProfileName)
+        assertEquals(switches + 1, switchCount)
+    }
+
+    /** The lower profile's activation delay starts when the active profile stops matching and runs alongside, not after. */
+    @Test
+    fun `a lower profile not yet ready follows the defaults on its own clock`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10, activationDelay = 45)
+        val carMode = carModeProfile(id = 2, priority = 20)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.onCarModeStateChanged(true)
+        manager.onChargingStateChanged(true)
+        val switches = switchCount
+
+        manager.onCarModeStateChanged(false)
+        advanceTimeBy(31_000)
+        assertNull(switchedProfileName)
+        assertEquals(5000L, switchedInterval)
+
+        advanceTimeBy(13_000)
+        assertNull(switchedProfileName)
+
+        advanceTimeBy(2_000)
+        assertEquals("activation counted from 0s, not from 30s", "Charging", switchedProfileName)
+        assertEquals(switches + 2, switchCount)
+    }
+
+    @Test
+    fun `the active profile matching again cancels the handover`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10, activationDelay = 10)
+        val carMode = carModeProfile(id = 2, priority = 20)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+        manager.onCarModeStateChanged(true)
+        val switches = switchCount
+
+        manager.onCarModeStateChanged(false)
+        advanceTimeBy(5_000)
+        manager.onCarModeStateChanged(true)
+        advanceTimeBy(60_000)
+
+        assertEquals("Car Mode", switchedProfileName)
+        assertEquals(switches, switchCount)
+    }
+
+    @Test
+    fun `a zero deactivation delay hands over at once`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10)
+        val carMode = carModeProfile(id = 2, priority = 20).copy(deactivationDelaySeconds = 0)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+        manager.onChargingStateChanged(true)
+        manager.onCarModeStateChanged(true)
+        val switches = switchCount
+
+        manager.onCarModeStateChanged(false)
+        assertEquals("Charging", switchedProfileName)
+        assertEquals(switches + 1, switchCount)
+    }
+
+    @Test
+    fun `a zero deactivation delay falls back to defaults while the lower profile is not ready`() = testScope.runTest {
+        val charging = chargingProfile(id = 1, priority = 10, activationDelay = 10)
+        val carMode = carModeProfile(id = 2, priority = 20).copy(deactivationDelaySeconds = 0)
+        every { profileHelper.getEnabledProfiles() } returns listOf(carMode, charging)
+
+        val manager = createManager()
+        manager.defaultInterval = 5000L
+        manager.onCarModeStateChanged(true)
+        manager.onChargingStateChanged(true)
+
+        manager.onCarModeStateChanged(false)
+        assertNull(switchedProfileName)
+        assertEquals(5000L, switchedInterval)
+
+        advanceTimeBy(11_000)
+        assertEquals("Charging", switchedProfileName)
     }
 
     // --- Immediate deactivation when profile disabled/deleted ---
