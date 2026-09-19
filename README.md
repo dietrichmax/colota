@@ -84,7 +84,7 @@ See the [Contributing Guide](https://colota.app/docs/contributing) for details o
 
 ## License
 
-[AGPL-3.0](LICENSE) - Copyright (C) 2026 Max Dietrich
+[AGPL-3.0](LICENSE) - Copyright (C) 2026 Max Dietrich and contributors
 
 ## Support
 

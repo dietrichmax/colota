@@ -173,7 +173,7 @@ const config: Config = {
           ]
         }
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Max Dietrich. Licensed under AGPL-3.0. <a href="/privacy-policy">Privacy Policy</a>`
+      copyright: `Copyright © ${new Date().getFullYear()} Max Dietrich and contributors. Licensed under AGPL-3.0. <a href="/privacy-policy">Privacy Policy</a>`
     },
     prism: {
       theme: prismThemes.github,
