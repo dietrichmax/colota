@@ -16,6 +16,7 @@ const mockGetProfiles = jest.fn().mockResolvedValue([])
 const mockDeleteProfile = jest.fn().mockResolvedValue(true)
 const mockNavigate = jest.fn()
 const mockShowAlert = jest.fn()
+let mockCurrentEndpoint = ""
 
 jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
@@ -38,7 +39,7 @@ jest.mock("../../services/modalService", () => ({
 
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
-    settings: { ...require("../../types/global").DEFAULT_SETTINGS },
+    settings: { ...require("../../types/global").DEFAULT_SETTINGS, endpoint: mockCurrentEndpoint },
     setSettings: mockSetSettings
   })
 }))
@@ -123,6 +124,7 @@ function renderScreen(configParam?: string) {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  mockCurrentEndpoint = ""
 })
 
 describe("SetupImportScreen", () => {
@@ -151,7 +153,7 @@ describe("SetupImportScreen", () => {
 
     it("parses valid endpoint config", () => {
       const { getByText } = renderScreen(encode({ endpoint: "https://my-server.com/api" }))
-      expect(getByText("Endpoint")).toBeTruthy()
+      expect(getByText("Sends locations to")).toBeTruthy()
       expect(getByText("https://my-server.com/api")).toBeTruthy()
     })
 
@@ -202,9 +204,57 @@ describe("SetupImportScreen", () => {
 
     it("shows singular 'setting' for single entry", () => {
       const { getByText } = renderScreen(encode({ endpoint: "https://test.com" }))
-      // Text is split across nodes: "A setup link wants to apply " + "1" + " setting"
-      expect(getByText(/1/)).toBeTruthy()
-      expect(getByText(/setting$/)).toBeTruthy()
+      expect(getByText(/apply 1 setting\./)).toBeTruthy()
+    })
+  })
+
+  // The confirmation is the only thing between a phishing link and the user's location stream.
+  describe("endpoint confirmation", () => {
+    it("prints the host on its own line, so a lookalike prefix cannot stand in for it", () => {
+      const endpoint = "https://my-server.com.evil.example/api/locations"
+      const { getByText } = renderScreen(encode({ endpoint }))
+
+      expect(getByText("my-server.com.evil.example")).toBeTruthy()
+      expect(getByText(endpoint)).toBeTruthy()
+    })
+
+    it("never cuts the address to one line, because the cut would hide where locations go", () => {
+      const endpoint = `https://my-server.com.${"a".repeat(80)}.evil.example/api`
+      const { getByText } = renderScreen(encode({ endpoint }))
+
+      expect(getByText(endpoint).props.numberOfLines).toBeUndefined()
+      expect(getByText(endpoint.slice(8, -4)).props.numberOfLines).toBeUndefined()
+    })
+
+    it("refuses an address whose host hides behind user@, which reads as the trusted host", () => {
+      const { getByText, queryByText } = renderScreen(
+        encode({ endpoint: "https://my-server.com@evil.example/api", interval: 10 })
+      )
+
+      expect(getByText(/must be a plain host/)).toBeTruthy()
+      expect(queryByText("Sends locations to")).toBeNull()
+    })
+
+    it("says which server the link replaces when one is already configured", () => {
+      mockCurrentEndpoint = "https://my-server.com/api"
+      const { getByText } = renderScreen(encode({ endpoint: "https://evil.example/api" }))
+
+      expect(getByText("Replaces your current server, my-server.com")).toBeTruthy()
+    })
+
+    it("stays quiet on a first setup and on a link that carries the configured address", () => {
+      const first = renderScreen(encode({ endpoint: "https://my-server.com/api" }))
+      expect(first.queryByText(/Replaces your current server/)).toBeNull()
+      first.unmount()
+
+      mockCurrentEndpoint = "https://my-server.com/api"
+      const same = renderScreen(encode({ endpoint: "https://my-server.com/api" }))
+      expect(same.queryByText(/Replaces your current server/)).toBeNull()
+    })
+
+    it("tells the user to apply a link only from a trusted source", () => {
+      const { getByText } = renderScreen(encode({ endpoint: "https://my-server.com/api" }))
+      expect(getByText(/only if you trust where it came from/)).toBeTruthy()
     })
   })
 
@@ -761,13 +811,25 @@ describe("SetupImportScreen", () => {
     })
   })
 
-  describe("rejected entries", () => {
-    it("says the setting was not applied and why, instead of only turning the row red", () => {
-      const { getByText } = renderScreen(encode({ endpoint: "notaurl", interval: 10 }))
+  // A link is written by someone else: once its address fails a check, none of it has earned an Apply button.
+  describe("rejected link", () => {
+    it("offers no way to apply the rest of a link whose address was rejected", () => {
+      const { getByText, queryByText } = renderScreen(encode({ endpoint: "notaurl", interval: 10 }))
 
-      // The value column carries a reason for a rejected entry, so it cannot double as the value.
-      expect(getByText("Not applied")).toBeTruthy()
-      expect(getByText("HTTP not allowed for public hosts")).toBeTruthy()
+      expect(getByText("Invalid configuration")).toBeTruthy()
+      expect(getByText(/HTTP not allowed for public hosts\. Nothing from this link will be applied\./)).toBeTruthy()
+      expect(queryByText("Apply configuration")).toBeNull()
+      expect(queryByText("10s")).toBeNull()
+    })
+
+    it("writes nothing when the user leaves a rejected link", () => {
+      const { getByText } = renderScreen(encode({ endpoint: "https://my-server.com@evil.example/api", interval: 10 }))
+
+      fireEvent.press(getByText("Go back"))
+
+      expect(mockSetSettings).not.toHaveBeenCalled()
+      expect(mockSaveAuthConfig).not.toHaveBeenCalled()
+      expect(mockNavigate).toHaveBeenCalledWith("Dashboard")
     })
   })
 })

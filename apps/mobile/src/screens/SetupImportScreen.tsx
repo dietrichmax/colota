@@ -19,13 +19,19 @@ import {
   StatRow,
   Toggle
 } from "../components"
-import { fontSizes, fonts, lineHeights } from "../styles/typography"
+import { fontSizes, fonts, lineHeights, type } from "../styles/typography"
 import { Check, CircleAlert } from "lucide-react-native"
 import NativeLocationService from "../services/NativeLocationService"
 import { showAlert } from "../services/modalService"
 import { logger } from "../utils/logger"
 import { type Settings } from "../types/global"
-import { validateConfig, detectPreset, type ConfigEntry, type ValidationResult } from "../utils/setupConfig"
+import {
+  validateConfig,
+  detectPreset,
+  setupEndpointHost,
+  type ConfigEntry,
+  type ValidationResult
+} from "../utils/setupConfig"
 import { decodeConfig } from "../utils/setupLink"
 import { space } from "../constants"
 
@@ -135,6 +141,20 @@ export function SetupImportScreen({ route, navigation }: any) {
     }
   }
 
+  // The endpoint decides where every location goes, so it is never cut to one line like a StatRow value.
+  const renderEndpoint = (entry: ConfigEntry) => {
+    const current = currentSettings.endpoint
+    const currentHost = current && current !== entry.value ? (setupEndpointHost(current) ?? current) : null
+    return (
+      <View style={styles.endpoint}>
+        <Text style={[styles.endpointLabel, { color: colors.textSecondary }]}>Sends locations to</Text>
+        <Text style={[styles.endpointHost, { color: colors.text }]}>{setupEndpointHost(entry.value)}</Text>
+        <Text style={[type.mono, { color: colors.textSecondary }]}>{entry.value}</Text>
+        {currentHost && <FieldMessage variant="warning">Replaces your current server, {currentHost}</FieldMessage>}
+      </View>
+    )
+  }
+
   const renderSection = (title: string, entries: ConfigEntry[]) => {
     if (entries.length === 0) return null
     return (
@@ -144,9 +164,7 @@ export function SetupImportScreen({ route, navigation }: any) {
           {entries.map((entry, i) => (
             <React.Fragment key={entry.label}>
               {i > 0 && <Divider tight />}
-              {/* A rejected entry carries a reason where a value would be, so it gets both. */}
-              <StatRow label={entry.label} value={entry.rejected ? "Not applied" : entry.value} />
-              {entry.rejected && <FieldMessage variant="error">{entry.value}</FieldMessage>}
+              {entry.label === "Endpoint" ? renderEndpoint(entry) : <StatRow label={entry.label} value={entry.value} />}
             </React.Fragment>
           ))}
         </Card>
@@ -182,7 +200,8 @@ export function SetupImportScreen({ route, navigation }: any) {
     <Container>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          A setup link wants to apply {result.entries.length} setting{result.entries.length !== 1 ? "s" : ""}
+          A setup link wants to apply {result.entries.length} setting{result.entries.length !== 1 ? "s" : ""}. Apply it
+          only if you trust where it came from.
         </Text>
 
         {renderSection("Tracking", trackingEntries)}
@@ -236,6 +255,19 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: space.xl
+  },
+  endpoint: {
+    paddingVertical: space.sm,
+    gap: space.xxs
+  },
+  endpointLabel: {
+    fontSize: fontSizes.body,
+    ...fonts.regular
+  },
+  endpointHost: {
+    fontSize: fontSizes.body,
+    ...fonts.semiBold,
+    lineHeight: lineHeights.body
   },
   actions: {
     marginTop: space.xl

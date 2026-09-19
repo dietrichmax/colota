@@ -31,7 +31,7 @@ Geofences and tracking profiles can also be shared on their own from the [Geofen
 <ScreenshotGallery screenshots={[ { src: "/img/screenshots/SetupImport.png", label: "Import configuration" }, ]} />
 
 1. User taps the link or scans a QR code
-2. Colota opens and shows a confirmation screen listing all settings that will be applied
+2. Colota opens and shows a confirmation screen listing all settings that will be applied. The server address is shown in full with its host on a separate line. A link that replaces a configured server names the server it replaces.
 3. Sensitive values (passwords, tokens) are masked in the preview
 4. User taps **Apply Configuration** to save or **Cancel** to discard
 5. Settings are persisted and the app navigates to the Dashboard
@@ -48,7 +48,7 @@ The `config` parameter is a base64-encoded JSON object. Only include the setting
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `endpoint` | string | Server URL to send location data to |
+| `endpoint` | string | Server URL to send location data to. A host written as `user@host` or containing a backslash rejects the whole link. |
 | `interval` | number | GPS polling interval in seconds (must be > 0) |
 | `distance` | number | Minimum movement in meters before recording a new location |
 | `syncInterval` | number | Batch sync interval in seconds (0 = instant) |
@@ -147,3 +147,5 @@ print(f'colota://setup?config={encoded}')
 
 - The configuration URL is not encrypted. Avoid putting sensitive tokens in QR codes displayed in public.
 - All settings are shown to the user for confirmation before being applied.
+- A link whose server address is rejected cannot be applied at all. The screen shows the reason and offers only **Go back**.
+- Any app, web page or message can open a `colota://setup` link. Apply one only if you trust where it came from, and read the host under **Sends locations to** before applying.

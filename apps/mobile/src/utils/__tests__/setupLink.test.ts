@@ -6,7 +6,7 @@ import {
   type SetupShareParts,
   type SetupShareSelection
 } from "../setupLink"
-import { validateConfig } from "../setupConfig"
+import { validateConfig, setupEndpointHost } from "../setupConfig"
 import type { Settings, AuthConfig, Geofence, TrackingProfile } from "../../types/global"
 
 const settings = {
@@ -138,5 +138,35 @@ describe("setupLink", () => {
     const asReceived = encoded.replace(/\+/g, " ")
     expect(asReceived).not.toBe(encoded) // proves the payload's base64 actually contained a '+'
     expect(decodeConfig(asReceived)).toEqual(config)
+  })
+})
+
+// The import screen prints this host as the thing the user is trusting, so it has to be the host native sends to.
+describe("setupEndpointHost", () => {
+  it("reads the authority and keeps the port", () => {
+    expect(setupEndpointHost("https://example.com/api")).toBe("example.com")
+    expect(setupEndpointHost("http://192.168.1.10:8080/api?x=1")).toBe("192.168.1.10:8080")
+  })
+
+  it("ignores an @ in the path, which a looser parser reads as userinfo and reports the wrong host", () => {
+    expect(setupEndpointHost("https://evil.example/x@my-server.com")).toBe("evil.example")
+  })
+
+  it("gives no host when userinfo or a backslash lets two parsers disagree on it", () => {
+    expect(setupEndpointHost("https://my-server.com@evil.example/api")).toBeNull()
+    expect(setupEndpointHost("https://my-server.com\\@evil.example/api")).toBeNull()
+    expect(setupEndpointHost("https://evil.example\\.my-server.com/api")).toBeNull()
+  })
+
+  it("rejects the whole link with such an endpoint, so the settings riding along are not applied either", () => {
+    const result = validateConfig({
+      endpoint: "https://my-server.com@evil.example/api",
+      interval: 10,
+      auth: { type: "bearer", bearerToken: "abcdefghijkl" }
+    })
+    expect(result.valid).toBe(false)
+    expect(result.config).toEqual({ settings: {}, auth: null, geofences: [], profiles: [] })
+    expect(result.entries).toEqual([])
+    expect(result.error).toMatch(/plain host.*Nothing from this link will be applied/)
   })
 })

@@ -1,1 +1,2 @@
 - A tracking profile keeps its deactivation delay when a lower-priority profile starts to match
+- Setup links show the full server address with its host on its own line, name the server they replace and are rejected as a whole when the address hides its host

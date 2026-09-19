@@ -37,7 +37,6 @@ export interface ConfigEntry {
   label: string
   value: string
   category: "tracking" | "api" | "auth" | "geofence" | "profile"
-  rejected?: boolean
 }
 
 export interface ValidationResult {
@@ -68,6 +67,13 @@ export function detectPreset(settings: Partial<Settings>): SyncPreset {
   return "custom"
 }
 
+/** The host a setup link's endpoint sends to, or null when userinfo or a backslash would let parsers disagree on it. */
+export function setupEndpointHost(endpoint: string): string | null {
+  const authority = /^https?:\/\/([^/?#]*)/i.exec(endpoint)?.[1]
+  if (!authority || /[@\\\s]/.test(authority)) return null
+  return authority
+}
+
 export function validateConfig(raw: unknown): ValidationResult {
   if (!raw || typeof raw !== "object") {
     return {
@@ -86,12 +92,22 @@ export function validateConfig(raw: unknown): ValidationResult {
   // --- API settings (endpoint) ---
 
   if ("endpoint" in obj && typeof obj.endpoint === "string" && obj.endpoint.length > 0) {
-    if (isEndpointAllowed(obj.endpoint)) {
-      settings.endpoint = obj.endpoint
-      entries.push({ label: "Endpoint", value: obj.endpoint, category: "api" })
-    } else {
-      entries.push({ label: "Endpoint", value: "HTTP not allowed for public hosts", category: "api", rejected: true })
+    const rejection = !isEndpointAllowed(obj.endpoint)
+      ? "HTTP not allowed for public hosts"
+      : setupEndpointHost(obj.endpoint) === null
+        ? "The server address must be a plain host, without user@ or a backslash"
+        : null
+    // A link is written by someone else, so one rejected address rejects all of it rather than applying the rest.
+    if (rejection) {
+      return {
+        valid: false,
+        config: { settings: {}, auth: null, geofences: [], profiles: [] },
+        entries: [],
+        error: `${rejection}. Nothing from this link will be applied.`
+      }
     }
+    settings.endpoint = obj.endpoint
+    entries.push({ label: "Endpoint", value: obj.endpoint, category: "api" })
   }
 
   // --- Tracking settings ---
