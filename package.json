@@ -16,7 +16,7 @@
     "generate:icons": "node packages/shared/logo/generate-icons.mjs"
   },
   "devDependencies": {
-    "prettier": "3.9.7",
+    "prettier": "3.9.8",
     "typescript": "6.0.3"
   },
   "engines": {
