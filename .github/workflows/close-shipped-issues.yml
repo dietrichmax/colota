@@ -1,0 +1,30 @@
+name: Close Shipped Issues
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  close:
+    name: Close issues fixed in this release
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Close each issue waiting on a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          gh issue list --label fixed-pending-release --state open --limit 100 --json number --jq '.[].number' > issues.txt
+          while read -r issue || [ -n "$issue" ]; do
+            gh issue close "$issue" --comment "Shipped in $TAG." --reason completed
+            gh issue edit "$issue" --remove-label fixed-pending-release
+          done < issues.txt
