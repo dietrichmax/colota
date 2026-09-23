@@ -10,6 +10,7 @@ import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
 import com.Colota.util.TimedCache
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
@@ -22,7 +23,8 @@ import java.util.concurrent.ConcurrentHashMap
 class SyncManager(
     private val dbHelper: DatabaseHelper,
     private val networkManager: NetworkManager,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val clock: () -> Long = System::currentTimeMillis
 ) {
     companion object {
         private const val TAG = "SyncManager"
@@ -64,6 +66,8 @@ class SyncManager(
     /** Queue rows an instant send is posting; a pass skips them instead of posting them a second time. */
     private val instantInFlight: MutableSet<Long> = ConcurrentHashMap.newKeySet()
 
+    private val intervalChanged = Channel<Unit>(Channel.CONFLATED)
+
     fun updateConfig(
         endpoint: String,
         syncIntervalSeconds: Int,
@@ -77,7 +81,9 @@ class SyncManager(
         overlandBatchSize: Int = 50,
     ) {
         this.endpoint = endpoint
+        val intervalDiffers = syncIntervalSeconds != this.syncIntervalSeconds
         this.syncIntervalSeconds = syncIntervalSeconds
+        if (intervalDiffers) intervalChanged.trySend(Unit)
         this.retryIntervalSeconds = retryIntervalSeconds
         this.isOfflineMode = isOfflineMode
         this.syncCondition = syncCondition
@@ -91,9 +97,11 @@ class SyncManager(
     fun startPeriodicSync() {
         AppLogger.d(TAG, "Starting periodic sync: interval=${syncIntervalSeconds}s, endpoint=${if (endpoint.isBlank()) "NONE" else AppLogger.maskSensitiveUrlValues(endpoint)}")
         syncJob = scope.launch {
+            var resumingWait = false
             while (isActive) {
-                val baseDelay = calculateNextSyncDelay()
-                delay(baseDelay * 1000L)
+                val baseDelay = calculateNextSyncDelay(resumingWait)
+                resumingWait = withTimeoutOrNull(baseDelay * 1000L) { intervalChanged.receive() } != null
+                if (resumingWait) continue
 
                 val queued = getCachedQueuedCount()
                 val allowed = isSyncAllowed()
@@ -454,7 +462,7 @@ class SyncManager(
         }
     }
 
-    private fun calculateNextSyncDelay(): Long {
+    private fun calculateNextSyncDelay(resumingWait: Boolean): Long {
         if (syncIntervalSeconds <= 0) {
             return if (getCachedQueuedCount() > 0) {
                 retryIntervalSeconds.toLong()
@@ -463,7 +471,7 @@ class SyncManager(
             }
         }
 
-        val now = System.currentTimeMillis()
+        val now = clock()
         if (!syncInitialized) {
             lastSyncTime = now
             syncInitialized = true
@@ -473,11 +481,13 @@ class SyncManager(
         val elapsedSeconds = (now - lastSyncTime) / 1000
         val remaining = syncIntervalSeconds - elapsedSeconds
 
-        return if (remaining <= 0) {
-            lastSyncTime = now
-            syncIntervalSeconds.toLong()
-        } else {
-            remaining
+        return when {
+            remaining > 0 -> remaining
+            resumingWait -> 0L
+            else -> {
+                lastSyncTime = now
+                syncIntervalSeconds.toLong()
+            }
         }
     }
 }

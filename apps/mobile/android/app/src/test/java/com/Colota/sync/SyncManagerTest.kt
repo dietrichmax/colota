@@ -930,6 +930,94 @@ class SyncManagerTest {
     }
 
     // ========================================================================
+    // Interval change mid-wait (a profile switch swaps the sync interval)
+    // ========================================================================
+
+    private var ticks = 0
+
+    private fun startPeriodicSyncOnVirtualClock(intervalSeconds: Int, queuedCount: Int = 0): SyncManager {
+        val manager = SyncManager(dbHelper, networkManager, scope, clock = { scope.testScheduler.currentTime })
+        manager.switchInterval(intervalSeconds)
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        every { dbHelper.getQueuedCount() } returns queuedCount
+        every { dbHelper.getQueuedLocations(50) } returns emptyList()
+        every { AppLogger.d("SyncManager", match { it.startsWith("Sync tick:") }) } answers { ticks += 1 }
+        manager.startPeriodicSync()
+        return manager
+    }
+
+    private fun SyncManager.switchInterval(seconds: Int) = updateConfig(
+        endpoint = "https://example.com",
+        syncIntervalSeconds = seconds,
+        retryIntervalSeconds = 30,
+        isOfflineMode = false,
+        syncCondition = "any",
+        syncSsid = "",
+        authHeaders = emptyMap()
+    )
+
+    @Test
+    fun `a shorter interval applies to the wait already running instead of after it`() = scope.runTest {
+        val manager = startPeriodicSyncOnVirtualClock(300)
+
+        advanceTimeBy(10_000)
+        manager.switchInterval(60)
+
+        advanceTimeBy(49_000)
+        assertEquals("60 s from the start of the wait has not passed yet", 0, ticks)
+        advanceTimeBy(2_000)
+        assertEquals("the profile's 60 s is honoured, not the 300 s the wait began with", 1, ticks)
+        advanceTimeBy(60_000)
+        assertEquals("the new interval sets the cadence from then on", 2, ticks)
+        manager.stopPeriodicSync()
+    }
+
+    @Test
+    fun `a shorter interval already served by the running wait syncs at once`() = scope.runTest {
+        val manager = startPeriodicSyncOnVirtualClock(300)
+
+        advanceTimeBy(200_000)
+        manager.switchInterval(60)
+        runCurrent()
+
+        assertEquals("200 s have passed, more than the new 60 s, so no further wait is owed", 1, ticks)
+        advanceTimeBy(59_000)
+        assertEquals(1, ticks)
+        advanceTimeBy(2_000)
+        assertEquals(2, ticks)
+        manager.stopPeriodicSync()
+    }
+
+    @Test
+    fun `a longer interval extends the wait already running`() = scope.runTest {
+        val manager = startPeriodicSyncOnVirtualClock(60)
+
+        advanceTimeBy(30_000)
+        manager.switchInterval(300)
+
+        advanceTimeBy(269_000)
+        assertEquals("the old 60 s must not fire once more before the new interval takes over", 0, ticks)
+        advanceTimeBy(2_000)
+        assertEquals(1, ticks)
+        manager.stopPeriodicSync()
+    }
+
+    @Test
+    fun `an interval change during a backoff does not cut the backoff short`() = scope.runTest {
+        val manager = startPeriodicSyncOnVirtualClock(10, queuedCount = 5)
+
+        advanceTimeBy(20_000)
+        verify(exactly = 1) { dbHelper.getQueuedLocations(50) }
+        manager.switchInterval(5)
+
+        advanceTimeBy(24_000)
+        verify(exactly = 1) { dbHelper.getQueuedLocations(50) }
+        advanceTimeBy(2_000)
+        verify(exactly = 2) { dbHelper.getQueuedLocations(50) }
+        manager.stopPeriodicSync()
+    }
+
+    // ========================================================================
     // Async exception isolation (fix: one bad item must not kill the chunk)
     // ========================================================================
 
