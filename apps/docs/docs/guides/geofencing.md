@@ -16,7 +16,7 @@ Create zones where location recording stops automatically. These "pause zones" s
 
 1. Go to the **Geofences** tab
 2. Tap **+** in the top bar
-3. Give the zone a name and a radius, then tap **Location** and pick a point on the map
+3. Give the zone a name and a radius, then tap **Location** and pick a point on the map. The dot marks where you are; while tracking, the locate button places the zone at your position
 4. Set the pause options, then tap **Save geofence**
 
 Tap any zone in the list, or its circle on the map, to reopen the editor. Every field can be changed there, **Location** included. The zone you are paused in reads **Paused here** in the list.
