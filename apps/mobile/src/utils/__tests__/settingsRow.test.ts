@@ -45,6 +45,10 @@ describe("dataRowSub", () => {
     expect(dataRowSub(12480, 3.4213)).toBe("12,480 locations · 3 MB")
   })
 
+  it("words a single location in the singular", () => {
+    expect(dataRowSub(1, 3.4213)).toBe("1 location · 3 MB")
+  })
+
   it("words the zero count even when the database has a size", () => {
     expect(dataRowSub(0, 0.02)).toBe("No locations recorded")
   })

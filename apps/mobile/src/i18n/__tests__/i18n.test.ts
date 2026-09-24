@@ -74,3 +74,20 @@ describe("catalog", () => {
     expect(empty).toEqual([])
   })
 })
+
+describe("plurals without Intl.PluralRules", () => {
+  const original = Intl.PluralRules
+
+  afterEach(() => {
+    Object.defineProperty(Intl, "PluralRules", { value: original, configurable: true, writable: true })
+  })
+
+  it("still picks the English one and other forms, because Hermes ships no PluralRules and Node does", async () => {
+    Object.defineProperty(Intl, "PluralRules", { value: undefined, configurable: true, writable: true })
+    const hermesLike = i18next.createInstance()
+    await hermesLike.init({ lng: "en", resources: { en: { translation: en } }, keySeparator: false })
+
+    expect(hermesLike.t("settings.offlineMaps.areas", { count: 1, n: "1" })).toBe("1 area")
+    expect(hermesLike.t("settings.offlineMaps.areas", { count: 2, n: "2" })).toBe("2 areas")
+  })
+})

@@ -8,8 +8,11 @@ import en from "./locales/en.json"
 export const SUPPORTED_LANGUAGES = ["en"] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
-/** A key missing from the English catalog fails tsc. */
-export type TranslationKey = keyof typeof en
+type CatalogKey = keyof typeof en
+type PluralBase<K> = K extends `${infer Base}_${"zero" | "one" | "two" | "few" | "many" | "other"}` ? Base : never
+
+/** A key missing from the English catalog fails tsc. A plural is called by its base with `count`. */
+export type TranslationKey = CatalogKey | PluralBase<CatalogKey>
 
 export const FALLBACK_LANGUAGE: SupportedLanguage = "en"
 
