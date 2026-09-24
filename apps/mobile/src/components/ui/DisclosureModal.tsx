@@ -9,6 +9,7 @@ import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts, lineHeights, type } from "../../styles/typography"
 import { radius } from "@colota/shared"
 import { size, space, STATE_LAYER_ALPHA, elevation } from "../../constants"
+import { useTranslation } from "../../i18n/useTranslation"
 
 interface DisclosureModalProps {
   icon: React.ReactNode
@@ -27,6 +28,7 @@ interface DisclosureModalProps {
  */
 export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registerCallback }: DisclosureModalProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const [visible, setVisible] = useState(false)
   const resolveRef = useRef<((value: boolean) => void) | null>(null)
 
@@ -83,7 +85,7 @@ export function DisclosureModal({ icon, title, paragraphs, confirmLabel, registe
               style={styles.button}
               onPress={handleNotNow}
             >
-              <Text style={[styles.buttonText, { color: colors.textSecondary }]}>Not now</Text>
+              <Text style={[styles.buttonText, { color: colors.textSecondary }]}>{t("disclosure.notNow")}</Text>
             </Pressable>
 
             <Pressable

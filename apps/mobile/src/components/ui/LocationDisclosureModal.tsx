@@ -9,6 +9,7 @@ import { size } from "../../constants"
 import { useTheme } from "../../hooks/useTheme"
 import { registerDisclosureCallback } from "../../services/LocationServicePermission"
 import { DisclosureModal } from "./DisclosureModal"
+import { useTranslation } from "../../i18n/useTranslation"
 
 /**
  * Prominent in-app disclosure modal for location data collection.
@@ -16,17 +17,14 @@ import { DisclosureModal } from "./DisclosureModal"
  */
 export function LocationDisclosureModal() {
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   return (
     <DisclosureModal
       icon={<MapPin size={size.icon.lg} color={colors.primary} />}
-      title="Location data collection"
-      paragraphs={[
-        "Colota collects location data to enable GPS tracking and sending your position to your configured server, even when the app is closed or not in use.",
-        "This data is sent only to the server you set up. No data is shared with third parties.",
-        "While tracking runs, a persistent notification shows its status. Battery optimization should be disabled for reliable background operation."
-      ]}
-      confirmLabel="Agree"
+      title={t("disclosure.location.title")}
+      paragraphs={[t("disclosure.location.p1"), t("disclosure.location.p2"), t("disclosure.location.p3")]}
+      confirmLabel={t("disclosure.location.confirm")}
       registerCallback={registerDisclosureCallback}
     />
   )

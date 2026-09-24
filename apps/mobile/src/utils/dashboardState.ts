@@ -51,14 +51,10 @@ export interface StateInput {
   now?: Date
 }
 
-const STOPPED_BY_BATTERY = "Battery fell below 5%"
-const NO_FIX_YET = "No fix yet"
-const LOCATION_OFF = "Location services are off"
-
 function pauseCaption(zoneName: string, pauseReason: string | null): string {
-  if (pauseReason === "wifi") return `${zoneName} WiFi · resumes when you leave`
-  if (pauseReason === "motionless") return "No movement · resumes when you move"
-  return "Inside zone · resumes when you leave"
+  if (pauseReason === "wifi") return t("state.pause.wifi", { zone: zoneName })
+  if (pauseReason === "motionless") return t("state.pause.motionless")
+  return t("state.pause.zone")
 }
 
 export function describeState(input: StateInput): StateDescription {
@@ -66,12 +62,12 @@ export function describeState(input: StateInput): StateDescription {
 
   if (!tracking) {
     if (input.stoppedByBattery) {
-      return { icon: "alert", tone: "error", label: "Tracking stopped", caption: STOPPED_BY_BATTERY }
+      return { icon: "alert", tone: "error", label: t("state.stopped"), caption: t("state.stoppedByBattery") }
     }
     return {
       icon: "dashed",
       tone: "secondary",
-      label: "Ready",
+      label: t("state.ready"),
       caption: formatLastFix(input.lastKnown?.timestamp ?? null, input.now)
     }
   }
@@ -80,7 +76,7 @@ export function describeState(input: StateInput): StateDescription {
     return {
       icon: "pause",
       tone: "secondary",
-      label: `Paused in ${activeZoneName}`,
+      label: t("state.pausedIn", { zone: activeZoneName }),
       caption: pauseCaption(activeZoneName, pauseReason)
     }
   }
@@ -89,8 +85,8 @@ export function describeState(input: StateInput): StateDescription {
     return {
       icon: "loader",
       tone: "primary",
-      label: "Searching for GPS",
-      caption: locationEnabled ? NO_FIX_YET : LOCATION_OFF
+      label: t("state.searching"),
+      caption: locationEnabled ? t("state.noFixYet") : t("state.locationOff")
     }
   }
 
@@ -98,7 +94,7 @@ export function describeState(input: StateInput): StateDescription {
   return {
     icon: "circleDot",
     tone: "success",
-    label: activeProfileName ? `Tracking · ${activeProfileName}` : "Tracking",
+    label: activeProfileName ? t("state.trackingProfile", { profile: activeProfileName }) : t("state.tracking"),
     caption: `±${accuracy} ${shortDistanceUnit()} · ${formatTime(coords.timestamp)}`
   }
 }
@@ -165,6 +161,6 @@ export function intervalText(intervalSeconds: number, syncIntervalSeconds: numbe
 }
 
 export function formatLastFix(timestampSeconds: number | null, now: Date = new Date()): string {
-  if (timestampSeconds === null) return "No fixes yet"
-  return `Last fix ${formatWhen(timestampSeconds, now)}`
+  if (timestampSeconds === null) return t("state.noFixes")
+  return t("state.lastFix", { when: formatWhen(timestampSeconds, now) })
 }

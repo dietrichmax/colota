@@ -16,9 +16,11 @@ import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { describeServer, endpointHost, type ServerTone } from "../../../utils/serverState"
 import { formatCount } from "../../../utils/format"
 import { radius } from "@colota/shared"
+import { useTranslation } from "../../../i18n/useTranslation"
 
 export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { settings } = useTracking()
   const isOffline = settings.isOfflineMode
 
@@ -56,14 +58,14 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
     }, [endpoint, isOffline])
   )
 
-  const tone = (t: ServerTone) =>
-    t === "success"
+  const tone = (value: ServerTone) =>
+    value === "success"
       ? colors.success
-      : t === "error"
+      : value === "error"
         ? colors.error
-        : t === "warning"
+        : value === "warning"
           ? colors.warning
-          : t === "light"
+          : value === "light"
             ? colors.textLight
             : colors.textSecondary
 
@@ -77,12 +79,12 @@ export function ConnectionStatus({ endpoint, navigation }: ConnectionStatusProps
     lastSyncTime: stats?.lastSyncTime ?? 0,
     lastSyncError: stats?.lastSyncError ?? ""
   })
-  const word = known ? server.word : "Checking"
+  const word = known ? server.word : t("dashboard.checking")
   const dotColor = known ? tone(server.tone) : colors.textLight
 
-  const hostLabel = isOffline ? "Offline mode" : endpoint ? endpointHost(endpoint) : "Server"
+  const hostLabel = isOffline ? t("dashboard.offlineMode") : endpoint ? endpointHost(endpoint) : t("dashboard.server")
   const queued = stats?.queued ?? 0
-  const queueLabel = queued > 0 ? `${formatCount(queued)} queued` : ""
+  const queueLabel = queued > 0 ? t("server.queued", { count: queued, n: formatCount(queued) }) : ""
   const spokenStatus = [word, queueLabel].filter(Boolean).join(" · ")
   // A healthy server says nothing; the word is for a screen reader, which cannot see the dot.
   const statusLabel = known && server.tone === "success" ? queueLabel : spokenStatus

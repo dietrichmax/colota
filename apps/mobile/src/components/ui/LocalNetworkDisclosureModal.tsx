@@ -9,6 +9,7 @@ import { size } from "../../constants"
 import { useTheme } from "../../hooks/useTheme"
 import { registerLocalNetworkDisclosureCallback } from "../../services/LocationServicePermission"
 import { DisclosureModal } from "./DisclosureModal"
+import { useTranslation } from "../../i18n/useTranslation"
 
 /**
  * Disclosure modal for the local network permission.
@@ -16,16 +17,14 @@ import { DisclosureModal } from "./DisclosureModal"
  */
 export function LocalNetworkDisclosureModal() {
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   return (
     <DisclosureModal
       icon={<Wifi size={size.icon.lg} color={colors.primary} />}
-      title="Local network access"
-      paragraphs={[
-        "Your server is on the local network. Colota needs local network access permission to reach it.",
-        "This permission is only used to connect to your self-hosted server. No device scanning or discovery is performed."
-      ]}
-      confirmLabel="Continue"
+      title={t("disclosure.network.title")}
+      paragraphs={[t("disclosure.network.p1"), t("disclosure.network.p2")]}
+      confirmLabel={t("disclosure.network.confirm")}
       registerCallback={registerLocalNetworkDisclosureCallback}
     />
   )

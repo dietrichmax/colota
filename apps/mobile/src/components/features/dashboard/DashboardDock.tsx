@@ -17,6 +17,7 @@ import { StatRow } from "../../ui/StatRow"
 import { ConnectionStatus } from "./ConnectionStatus"
 import { StateLine } from "../../ui/StateLine"
 import { WelcomeCard } from "./WelcomeCard"
+import { useTranslation } from "../../../i18n/useTranslation"
 
 type DashboardDockProps = {
   tracking: boolean
@@ -75,6 +76,7 @@ export function DashboardDock({
   onNavigateToRequestFormat
 }: DashboardDockProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   if (firstRun) {
     return (
@@ -117,7 +119,7 @@ export function DashboardDock({
     <MapDock maxHeight={maxHeight}>
       <StateLine icon={icon} iconColor={iconColor} label={state.label} caption={state.caption} testID="dock-state" />
       <Divider tight inset />
-      <StatRow icon={Timer} label="Interval" value={intervalText} testID="dock-interval" />
+      <StatRow icon={Timer} label={t("dashboard.interval")} value={intervalText} testID="dock-interval" />
       {!isOfflineMode && (
         <>
           <Divider tight inset />

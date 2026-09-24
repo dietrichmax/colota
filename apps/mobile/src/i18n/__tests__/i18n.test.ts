@@ -91,3 +91,15 @@ describe("plurals without Intl.PluralRules", () => {
     expect(hermesLike.t("settings.offlineMaps.areas", { count: 2, n: "2" })).toBe("2 areas")
   })
 })
+
+describe("prominent disclosure wording", () => {
+  // Google Play reviewed this text for the background location declaration; an edit has to be deliberate.
+  it("keeps the English location disclosure exactly as submitted", () => {
+    expect([en["disclosure.location.p1"], en["disclosure.location.p2"], en["disclosure.location.p3"]]).toEqual([
+      "Colota collects location data to enable GPS tracking and sending your position to your configured server, even when the app is closed or not in use.",
+      "This data is sent only to the server you set up. No data is shared with third parties.",
+      "While tracking runs, a persistent notification shows its status. Battery optimization should be disabled for reliable background operation."
+    ])
+    expect(en["disclosure.location.confirm"]).toBe("Agree")
+  })
+})

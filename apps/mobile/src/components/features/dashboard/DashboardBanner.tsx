@@ -11,6 +11,8 @@ import { useTheme } from "../../../hooks/useTheme"
 import { fontSizes, fonts, lineHeights } from "../../../styles/typography"
 import { elevation, size, space } from "../../../constants"
 import { Button } from "../../ui/Button"
+import { useTranslation } from "../../../i18n/useTranslation"
+import type { TranslationKey } from "../../../i18n/options"
 
 export type BannerCondition = "permission" | "background" | "locationOff" | "battery"
 
@@ -25,17 +27,18 @@ type Props = {
 
 const CONTENT: Record<
   BannerCondition,
-  { icon: LucideIcon; tone: "error" | "warning"; text: string; action: string | null }
+  { icon: LucideIcon; tone: "error" | "warning"; textKey: TranslationKey; actionKey: TranslationKey | null }
 > = {
-  permission: { icon: CircleAlert, tone: "error", text: "Location permission missing", action: "Grant" },
-  background: { icon: CircleAlert, tone: "error", text: "Background location not allowed", action: "Grant" },
-  locationOff: { icon: TriangleAlert, tone: "warning", text: "Location services are off", action: "Settings" },
-  battery: { icon: BatteryWarning, tone: "error", text: "Battery critically low. Charge to track.", action: null }
+  permission: { icon: CircleAlert, tone: "error", textKey: "banner.permission", actionKey: "banner.grant" },
+  background: { icon: CircleAlert, tone: "error", textKey: "banner.background", actionKey: "banner.grant" },
+  locationOff: { icon: TriangleAlert, tone: "warning", textKey: "banner.locationOff", actionKey: "banner.settings" },
+  battery: { icon: BatteryWarning, tone: "error", textKey: "banner.battery", actionKey: null }
 }
 
 export function DashboardBanner({ condition, onAction, top, left, right, onLayout }: Props) {
   const { colors } = useTheme()
-  const { icon: Icon, tone, text, action } = CONTENT[condition]
+  const { t } = useTranslation()
+  const { icon: Icon, tone, textKey, actionKey } = CONTENT[condition]
 
   return (
     <View
@@ -46,9 +49,9 @@ export function DashboardBanner({ condition, onAction, top, left, right, onLayou
       testID="dashboard-banner"
     >
       <Icon size={size.icon.md} color={colors[tone]} />
-      <Text style={[styles.text, { color: colors.text }]}>{text}</Text>
-      {action !== null && (
-        <Button title={action} variant="ghost" shape="rounded" color={colors.primary} onPress={onAction} />
+      <Text style={[styles.text, { color: colors.text }]}>{t(textKey)}</Text>
+      {actionKey !== null && (
+        <Button title={t(actionKey)} variant="ghost" shape="rounded" color={colors.primary} onPress={onAction} />
       )}
     </View>
   )

@@ -21,6 +21,7 @@ import { intervalText, pickBannerCondition } from "../utils/dashboardState"
 import { size, space } from "../constants"
 import { Square, Play } from "lucide-react-native"
 import { logger } from "../utils/logger"
+import { useTranslation } from "../i18n/useTranslation"
 
 export function DashboardScreen({ navigation }: ScreenProps) {
   const {
@@ -35,6 +36,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
   } = useTracking()
   const coords = useCoords()
   const { colors, isDark } = useTheme()
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const { height: windowHeight } = useWindowDimensions()
   const isFocused = useIsFocused()
@@ -62,10 +64,10 @@ export function DashboardScreen({ navigation }: ScreenProps) {
     const locationOn = await NativeLocationService.isLocationEnabled()
     if (!locationOn) {
       const openSettings = await showConfirm({
-        title: "Please enable Location Services",
-        message: "Location Services are disabled. Tracking will not work until they are enabled in Settings.",
-        confirmText: "Location settings",
-        cancelText: "Start anyway"
+        title: t("dashboard.locationOff.title"),
+        message: t("dashboard.locationOff.message"),
+        confirmText: t("dashboard.locationOff.confirm"),
+        cancelText: t("dashboard.locationOff.cancel")
       })
       if (openSettings) {
         await NativeLocationService.openLocationSettings()
@@ -274,7 +276,7 @@ export function DashboardScreen({ navigation }: ScreenProps) {
             onPress={tracking ? handleStop : handleStart}
             loading={!settingsHydrated}
             disabled={!tracking && isBatteryCritical}
-            title={tracking ? "Stop tracking" : "Start tracking"}
+            title={tracking ? t("dashboard.stop") : t("dashboard.start")}
           />
         </View>
 

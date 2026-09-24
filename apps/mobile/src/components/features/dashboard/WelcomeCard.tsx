@@ -13,6 +13,8 @@ import { Button } from "../../ui/Button"
 import { Card } from "../../ui/Card"
 import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { radius } from "@colota/shared"
+import { t } from "../../../i18n/t"
+import { useTranslation } from "../../../i18n/useTranslation"
 
 interface WelcomeCardProps {
   settings: Settings
@@ -76,6 +78,7 @@ export function WelcomeCard({
   onNavigateToTrackingSync,
   onNavigateToRequestFormat
 }: WelcomeCardProps) {
+  useTranslation()
   const {
     settings: { isOfflineMode }
   } = useTracking()
@@ -83,14 +86,14 @@ export function WelcomeCard({
 
   return (
     <Card variant="elevated">
-      <Text style={[styles.title, { color: colors.text }]}>Welcome to Colota</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Get started by completing these steps:</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{t("welcome.title")}</Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t("welcome.subtitle")}</Text>
 
       <View style={styles.checklist}>
-        <ChecklistItem label="1. Start tracking" completed={tracking} colors={colors} onPress={onStartTracking} />
+        <ChecklistItem label={t("welcome.step1")} completed={tracking} colors={colors} onPress={onStartTracking} />
         {!isOfflineMode && (
           <ChecklistItem
-            label="2. Configure your server endpoint"
+            label={t("welcome.step2")}
             completed={hasEndpoint}
             colors={colors}
             onPress={onNavigateToConnection}
@@ -106,7 +109,7 @@ export function WelcomeCard({
             android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
             style={styles.linkTarget}
           >
-            <Text style={[styles.link, { color: colors.link }]}>Request format</Text>
+            <Text style={[styles.link, { color: colors.link }]}>{t("welcome.requestFormat")}</Text>
           </Pressable>
         )}
         <Pressable
@@ -115,11 +118,11 @@ export function WelcomeCard({
           android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
           style={styles.linkTarget}
         >
-          <Text style={[styles.link, { color: colors.link }]}>Tracking presets</Text>
+          <Text style={[styles.link, { color: colors.link }]}>{t("welcome.presets")}</Text>
         </Pressable>
       </View>
 
-      <Button title="Got it" variant="secondary" onPress={onDismiss} />
+      <Button title={t("welcome.dismiss")} variant="secondary" onPress={onDismiss} />
     </Card>
   )
 }
