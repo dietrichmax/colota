@@ -9,8 +9,10 @@ import { Card, Container, RadioRow } from "../components"
 import { API_TEMPLATES, ApiTemplateName } from "../types/global"
 import { space } from "../constants"
 import type { RootScreenProps } from "../types/navigation"
+import { useTranslation } from "../i18n/useTranslation"
+import type { TranslationKey } from "../i18n/options"
 
-type TemplateOption = { value: ApiTemplateName; label: string; description: string }
+type TemplateOption = { value: ApiTemplateName; label: string | null; descriptionKey: TranslationKey }
 
 /**
  * Eight options, each needing a sentence, is past the point where inline radio rows fit a form
@@ -18,15 +20,16 @@ type TemplateOption = { value: ApiTemplateName; label: string; description: stri
  * Settings does for Default browser or Digital assistant app.
  */
 const OPTIONS: TemplateOption[] = [
-  { value: "custom", label: "Custom", description: "Your own field names, mapped by hand" },
+  { value: "custom", label: null, descriptionKey: "template.custom.description" },
   ...Object.entries(API_TEMPLATES).map(([key, template]) => ({
     value: key as ApiTemplateName,
     label: template.label,
-    description: template.description
+    descriptionKey: template.descriptionKey
   }))
 ]
 
 export function BackendTemplateScreen({ navigation, route }: RootScreenProps<"Backend Template">) {
+  const { t } = useTranslation()
   const selected = route.params.selected
 
   const choose = useCallback(
@@ -45,8 +48,8 @@ export function BackendTemplateScreen({ navigation, route }: RootScreenProps<"Ba
               <RadioRow
                 key={option.value}
                 testID={`template-${option.value}`}
-                label={option.label}
-                sub={option.description}
+                label={option.label ?? t("common.custom")}
+                sub={t(option.descriptionKey)}
                 selected={selected === option.value}
                 onPress={() => choose(option.value)}
               />

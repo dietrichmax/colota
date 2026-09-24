@@ -1,3 +1,4 @@
+import { t } from "../../i18n/t"
 import React from "react"
 import { render, fireEvent } from "@testing-library/react-native"
 
@@ -37,7 +38,7 @@ describe("BackendTemplateScreen", () => {
 
     Object.values(API_TEMPLATES).forEach((template) => {
       expect(getByText(template.label)).toBeTruthy()
-      expect(getByText(template.description)).toBeTruthy()
+      expect(getByText(t(template.descriptionKey))).toBeTruthy()
     })
   })
 

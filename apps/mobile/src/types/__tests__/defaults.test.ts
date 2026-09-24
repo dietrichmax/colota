@@ -148,9 +148,22 @@ describe("API_TEMPLATES", () => {
     expect(API_TEMPLATES[name].customFields.length).toBeGreaterThan(0)
   })
 
-  it.each(templateNames)("%s has label and description", (name) => {
+  it("describes each template with its own sentence, so no row borrows another template's line", () => {
+    const described = Object.fromEntries(templateNames.map((name) => [name, t(API_TEMPLATES[name].descriptionKey)]))
+
+    expect(described).toEqual({
+      dawarich: "OwnTracks-compatible format for Dawarich",
+      geopulse: "Native Colota format for GeoPulse",
+      overland: "Overland-compatible batch endpoint (GeoJSON Features)",
+      owntracks: "Standard OwnTracks HTTP format",
+      phonetrack: "Nextcloud PhoneTrack logging format",
+      reitti: "OwnTracks-compatible format for Reitti",
+      traccar: "Traccar OsmAnd protocol (HTTP GET)"
+    })
+  })
+
+  it.each(templateNames)("%s has a label", (name) => {
     expect(API_TEMPLATES[name].label).toBeTruthy()
-    expect(API_TEMPLATES[name].description).toBeTruthy()
   })
 
   it.each(templateNames)(

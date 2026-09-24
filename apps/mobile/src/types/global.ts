@@ -118,7 +118,7 @@ export type DawarichMode = "single" | "batch"
 export interface ApiTemplate {
   name: ApiTemplateName
   label: string
-  description: string
+  descriptionKey: TranslationKey
   fieldMap: FieldMap
   customFields: CustomField[]
   httpMethod?: HttpMethod
@@ -134,7 +134,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
     endpointExample: "https://dawarich.example/api/v1/owntracks/points?api_key=YOUR_KEY",
     batchEndpointExample: "https://dawarich.example/api/v1/overland/batches?api_key=YOUR_KEY",
     label: "Dawarich",
-    description: "OwnTracks-compatible format for Dawarich",
+    descriptionKey: "template.dawarich.description",
     fieldMap: {
       lat: "lat",
       lon: "lon",
@@ -152,7 +152,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
     name: "geopulse",
     endpointExample: "https://geopulse.example/api/colota",
     label: "GeoPulse",
-    description: "Native Colota format for GeoPulse",
+    descriptionKey: "template.geopulse.description",
     fieldMap: {
       lat: "lat",
       lon: "lon",
@@ -170,7 +170,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
     name: "overland",
     endpointExample: "https://overland.example/",
     label: "Overland",
-    description: "Overland-compatible batch endpoint (GeoJSON Features)",
+    descriptionKey: "template.overland.description",
     fieldMap: {
       lat: "lat",
       lon: "lon",
@@ -188,7 +188,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
     name: "owntracks",
     endpointExample: "https://owntracks.example/pub",
     label: "OwnTracks",
-    description: "Standard OwnTracks HTTP format",
+    descriptionKey: "template.owntracks.description",
     fieldMap: {
       lat: "lat",
       lon: "lon",
@@ -209,7 +209,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
     name: "phonetrack",
     endpointExample: "https://nextcloud.example/apps/phonetrack/log/owntracks/SESSION_TOKEN/DEVICE_NAME",
     label: "PhoneTrack",
-    description: "Nextcloud PhoneTrack logging format",
+    descriptionKey: "template.phonetrack.description",
     fieldMap: {
       lat: "lat",
       lon: "lon",
@@ -227,7 +227,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
     name: "reitti",
     endpointExample: "https://reitti.example/api/location",
     label: "Reitti",
-    description: "OwnTracks-compatible format for Reitti",
+    descriptionKey: "template.reitti.description",
     fieldMap: {
       lat: "lat",
       lon: "lon",
@@ -245,7 +245,7 @@ export const API_TEMPLATES: Record<Exclude<ApiTemplateName, "custom">, ApiTempla
     name: "traccar",
     endpointExample: "http://192.168.1.10:5055",
     label: "Traccar",
-    description: "Traccar OsmAnd protocol (HTTP GET)",
+    descriptionKey: "template.traccar.description",
     httpMethod: "GET",
     fieldMap: {
       lat: "lat",

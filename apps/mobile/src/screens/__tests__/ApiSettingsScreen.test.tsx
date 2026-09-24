@@ -150,7 +150,20 @@ describe("ApiSettingsScreen", () => {
 
       expect(getByTestId("nav-backend-template")).toBeTruthy()
       expect(getByText("Dawarich")).toBeTruthy()
-      expect(getByText(API_TEMPLATES.dawarich.description)).toBeTruthy()
+      expect(getByText("OwnTracks-compatible format for Dawarich")).toBeTruthy()
+    })
+
+    it("shows the endpoint Dawarich expects, since its two modes post to different paths", () => {
+      const { getByText } = renderWithTemplate("dawarich")
+
+      expect(getByText(`Endpoint: ${API_TEMPLATES.dawarich.endpointExample}`)).toBeTruthy()
+    })
+
+    it("says what each mapped field carries, so a self-hoster can match it to the server's names", () => {
+      const { getByText } = renderScreen()
+
+      expect(getByText("Latitude coordinate")).toBeTruthy()
+      expect(getByText("Direction of travel (0-360°)")).toBeTruthy()
     })
 
     it("opens the picker rather than switching in place", () => {
@@ -216,14 +229,15 @@ describe("ApiSettingsScreen", () => {
       })
 
       // Verify we start on Dawarich (description visible)
-      expect(getByText(API_TEMPLATES.dawarich.description)).toBeTruthy()
+      expect(getByText("OwnTracks-compatible format for Dawarich")).toBeTruthy()
 
       // Edit the "cog" field (bear) to something else
       const cogInput = getByDisplayValue("cog")
       fireEvent.changeText(cogInput, "heading")
 
       // Template description should disappear (switched to Custom)
-      expect(queryByText(API_TEMPLATES.dawarich.description)).toBeNull()
+      expect(queryByText("OwnTracks-compatible format for Dawarich")).toBeNull()
+      expect(getByText("Your own field names, mapped by hand")).toBeTruthy()
     })
   })
 

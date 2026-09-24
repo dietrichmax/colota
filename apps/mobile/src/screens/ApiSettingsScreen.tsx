@@ -43,25 +43,14 @@ import {
 } from "../utils/apiPayload"
 import { HIT_SLOP_LG, space, STATE_LAYER_ALPHA } from "../constants"
 import { radius } from "@colota/shared"
+import { useTranslation } from "../i18n/useTranslation"
+import type { TranslationKey } from "../i18n/options"
 
 type LocalCustomField = CustomField & { id: number }
 
-/** Field descriptions for UI display */
-const FIELD_DESCRIPTIONS: Record<keyof FieldMap, string> = {
-  lat: "Latitude coordinate",
-  lon: "Longitude coordinate",
-  acc: "GPS accuracy in meters",
-  alt: "Altitude in meters",
-  vel: "Speed in m/s",
-  batt: "Battery level percentage",
-  bs: "Battery charging status",
-  tst: "Timestamp",
-  bear: "Direction of travel (0-360°)"
-}
-
-const HTTP_METHOD_OPTIONS: { value: HttpMethod; label: string; sub: string }[] = [
-  { value: "POST", label: "POST", sub: "Sends the fields as a JSON body" },
-  { value: "GET", label: "GET", sub: "Sends the fields as URL query parameters" }
+const HTTP_METHOD_OPTIONS: { value: HttpMethod; subKey: TranslationKey }[] = [
+  { value: "POST", subKey: "requestFormat.method.post.sub" },
+  { value: "GET", subKey: "requestFormat.method.get.sub" }
 ]
 
 /**
@@ -85,6 +74,7 @@ function getReferenceCustomFields(template: ApiTemplateName): CustomField[] {
 export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Request Format">) {
   const { settings, setSettings, restartTracking } = useTracking()
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   const nextIdRef = useRef(0)
   const assignId = () => nextIdRef.current++
@@ -101,7 +91,9 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
   const isGetMethod = localHttpMethod === "GET"
   const showDawarichChip = localTemplate === "dawarich"
   const batchDisabled = isInstantSync || isGetMethod
-  const batchDisabledReason = isInstantSync ? "Needs a sync interval above Instant" : "Needs the POST method, not GET"
+  const batchDisabledReason = isInstantSync
+    ? t("requestFormat.dawarich.batch.needsInterval")
+    : t("requestFormat.dawarich.batch.needsPost")
   const copiedTimeout = useTimeout()
   const {
     saving,
@@ -480,23 +472,19 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Customize field names sent to your server
-          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t("requestFormat.intro")}</Text>
         </View>
 
         {/* Template Selector */}
         <View style={styles.section}>
-          <SectionTitle>Backend template</SectionTitle>
+          <SectionTitle>{t("screen.backendTemplate")}</SectionTitle>
           <Card rows>
             <ListItem
               testID="nav-backend-template"
-              label={localTemplate === "custom" ? "Custom" : API_TEMPLATES[localTemplate].label}
-              sub={
-                localTemplate === "custom"
-                  ? "Your own field names, mapped by hand"
-                  : API_TEMPLATES[localTemplate].description
-              }
+              label={localTemplate === "custom" ? t("common.custom") : API_TEMPLATES[localTemplate].label}
+              sub={t(
+                localTemplate === "custom" ? "template.custom.description" : API_TEMPLATES[localTemplate].descriptionKey
+              )}
               onPress={() => navigation.navigate("Backend Template", { selected: localTemplate })}
             />
           </Card>
@@ -506,14 +494,14 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
         {/* Overland template is POST-only by spec; no need to expose the choice */}
         {localTemplate !== "overland" && (
           <View style={styles.section}>
-            <SectionTitle>HTTP method</SectionTitle>
+            <SectionTitle>{t("requestFormat.section.httpMethod")}</SectionTitle>
             <View accessibilityRole="radiogroup" style={styles.radioGroup}>
-              {HTTP_METHOD_OPTIONS.map(({ value, label, sub }) => (
+              {HTTP_METHOD_OPTIONS.map(({ value, subKey }) => (
                 <RadioRow
                   key={value}
                   testID={`http-method-${value.toLowerCase()}`}
-                  label={label}
-                  sub={sub}
+                  label={value}
+                  sub={t(subKey)}
                   selected={localHttpMethod === value}
                   onPress={() => handleHttpMethodChange(value)}
                 />
@@ -525,19 +513,19 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
         {/* Dawarich Mode Selector (Dawarich template only) */}
         {showDawarichChip && (
           <View style={styles.section}>
-            <SectionTitle>Dawarich mode</SectionTitle>
+            <SectionTitle>{t("requestFormat.section.dawarichMode")}</SectionTitle>
             <View accessibilityRole="radiogroup" style={styles.radioGroup}>
               <RadioRow
                 testID="dawarich-mode-single"
-                label="Single point"
-                sub="Sends one request per location"
+                label={t("requestFormat.dawarich.single")}
+                sub={t("requestFormat.dawarich.single.sub")}
                 selected={localDawarichMode === "single"}
                 onPress={() => handleDawarichModeChange("single")}
               />
               <RadioRow
                 testID="dawarich-mode-batch"
-                label="Batch"
-                sub={batchDisabled ? batchDisabledReason : "Sends queued locations in one request"}
+                label={t("requestFormat.dawarich.batch")}
+                sub={batchDisabled ? batchDisabledReason : t("requestFormat.dawarich.batch.sub")}
                 disabled={batchDisabled}
                 selected={localDawarichMode === "batch"}
                 onPress={() => handleDawarichModeChange("batch")}
@@ -545,8 +533,8 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
             </View>
             <Text style={[styles.templateHint, { color: colors.textSecondary }]}>
               {localDawarichMode === "batch"
-                ? `Endpoint: ${API_TEMPLATES.dawarich.batchEndpointExample}`
-                : `Endpoint: ${API_TEMPLATES.dawarich.endpointExample}`}
+                ? t("requestFormat.dawarich.endpoint", { url: API_TEMPLATES.dawarich.batchEndpointExample })
+                : t("requestFormat.dawarich.endpoint", { url: API_TEMPLATES.dawarich.endpointExample })}
             </Text>
           </View>
         )}
@@ -554,7 +542,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
         {/* Field Mapping Section */}
         <View style={styles.fieldsSection}>
           <View style={styles.sectionHeader}>
-            <SectionTitle>Field mappings</SectionTitle>
+            <SectionTitle>{t("requestFormat.section.fieldMappings")}</SectionTitle>
             {hasModifications && (
               <Pressable
                 onPress={handleResetAll}
@@ -563,7 +551,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
                 android_ripple={{ color: colors.primaryDark + STATE_LAYER_ALPHA, borderless: true }}
                 style={styles.resetAllButton}
               >
-                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>Reset all</Text>
+                <Text style={[styles.resetAllText, { color: colors.primaryDark }]}>{t("requestFormat.resetAll")}</Text>
               </Pressable>
             )}
           </View>
@@ -583,12 +571,14 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
                         <Text style={[styles.fieldLabel, { color: colors.text }]}>{key.toUpperCase()}</Text>
                         {isFieldModified && (
                           <View style={[styles.modifiedBadge, { backgroundColor: colors.primary }]}>
-                            <Text style={[styles.modifiedText, { color: colors.textOnPrimary }]}>Modified</Text>
+                            <Text style={[styles.modifiedText, { color: colors.textOnPrimary }]}>
+                              {t("requestFormat.modified")}
+                            </Text>
                           </View>
                         )}
                       </View>
                       <Text style={[styles.fieldDescription, { color: colors.textSecondary }]} numberOfLines={1}>
-                        {FIELD_DESCRIPTIONS[key]}
+                        {t(`requestFormat.field.${key}`)}
                       </Text>
                     </View>
 
@@ -611,7 +601,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
                           <IconButton
                             icon={RotateCcw}
                             testID={`reset-${key}`}
-                            accessibilityLabel={`Reset ${key} to the default`}
+                            accessibilityLabel={t("requestFormat.resetField", { key })}
                             onPress={() => handleResetField(key)}
                           />
                         )}
@@ -629,14 +619,12 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
         {/* Custom Fields Section */}
         <View style={styles.fieldsSection}>
           <View style={styles.sectionHeader}>
-            <SectionTitle>Custom fields</SectionTitle>
+            <SectionTitle>{t("requestFormat.section.customFields")}</SectionTitle>
           </View>
 
           <View style={[styles.fieldsCard, { backgroundColor: colors.card }]}>
             {localCustomFields.length === 0 ? (
-              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-                No custom fields. Add static key-value pairs to include in every payload.
-              </Text>
+              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>{t("requestFormat.custom.empty")}</Text>
             ) : (
               localCustomFields.map((field, index) => {
                 const isDuplicate = duplicateFieldNames.has(field.key.trim())
@@ -644,25 +632,25 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
                   <View key={field.id}>
                     <View style={styles.customFieldRow}>
                       <TextField
-                        accessibilityLabel="Custom field key"
+                        accessibilityLabel={t("requestFormat.custom.keyLabel")}
                         testID={`custom-key-${field.id}`}
                         style={styles.customFieldInput}
                         mono
                         error={isDuplicate}
                         value={field.key}
                         onChangeText={(text) => handleCustomFieldChange(field.id, "key", text)}
-                        placeholder="Key"
+                        placeholder={t("requestFormat.custom.keyPlaceholder")}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
                       <TextField
-                        accessibilityLabel="Custom field value"
+                        accessibilityLabel={t("requestFormat.custom.valueLabel")}
                         testID={`custom-value-${field.id}`}
                         style={styles.customFieldInput}
                         mono
                         value={field.value}
                         onChangeText={(text) => handleCustomFieldChange(field.id, "value", text)}
-                        placeholder="Value"
+                        placeholder={t("requestFormat.custom.valuePlaceholder")}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
@@ -670,7 +658,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
                         icon={X}
                         tone="danger"
                         testID={`remove-custom-${field.id}`}
-                        accessibilityLabel="Remove this custom field"
+                        accessibilityLabel={t("requestFormat.custom.remove")}
                         onPress={() => handleRemoveCustomField(field.id)}
                       />
                     </View>
@@ -680,7 +668,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
               })
             )}
 
-            <Button title="+ Add Field" onPress={handleAddCustomField} variant="secondary" />
+            <Button title={t("requestFormat.custom.add")} onPress={handleAddCustomField} variant="secondary" />
           </View>
         </View>
 
@@ -690,14 +678,18 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
             style={[styles.warningBanner, { backgroundColor: colors.error + "15", borderColor: colors.error + "40" }]}
           >
             <Text style={[styles.warningText, { color: colors.error }]}>
-              Duplicate field names: {[...duplicateFieldNames].join(", ")}. Resolve duplicates to save changes.
+              {t("requestFormat.duplicates", { names: [...duplicateFieldNames].join(", ") })}
             </Text>
           </View>
         )}
 
         {/* Example payload preview */}
         <View style={styles.exampleSection}>
-          <SectionTitle>{localHttpMethod === "GET" ? "Example request" : "Example payload"}</SectionTitle>
+          <SectionTitle>
+            {localHttpMethod === "GET"
+              ? t("requestFormat.section.exampleRequest")
+              : t("requestFormat.section.examplePayload")}
+          </SectionTitle>
           <View
             style={[
               styles.exampleCard,
@@ -716,7 +708,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
               style={styles.copyButton}
             >
               <Text style={[styles.copyButtonText, { color: copied ? colors.success : colors.primaryDark }]}>
-                {copied ? "Copied!" : "Copy"}
+                {copied ? t("requestFormat.copied") : t("requestFormat.copy")}
               </Text>
             </Pressable>
           </View>
@@ -724,9 +716,7 @@ export function ApiSettingsScreen({ navigation, route }: RootScreenProps<"Reques
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.textLight }]}>
-            Changes apply to new location data immediately
-          </Text>
+          <Text style={[styles.footerText, { color: colors.textLight }]}>{t("requestFormat.footer")}</Text>
         </View>
       </ScrollView>
 
