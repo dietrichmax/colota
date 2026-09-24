@@ -30,21 +30,24 @@ import {
   backupExcludesLine,
   backupScopeLine,
   backupState,
-  BACKUP_WRITTEN_LINE,
-  NO_RECOVERY_LINE,
-  OPEN_FILE_LINE,
+  backupWrittenLine,
+  noRecoveryLine,
+  openFileLine,
   passwordLine,
-  PICKED_NOT_OPENED_CAPTION,
+  pickedNotOpenedCaption,
   restoreCaveat,
   restoreConfirm,
   restoreErrorMessage,
-  RESTORE_IDLE_LINE,
+  restoreIdleLine,
   restoreOutcome,
   submitBlockedReason
 } from "../utils/backupState"
 import { fonts, fontSizes, lineHeights } from "../styles/typography"
 import { space } from "../constants"
 import type { ScreenProps } from "../types/global"
+import { useTranslation } from "../i18n/useTranslation"
+// Handlers use the non-hook t, so no callback list carries it.
+import { t as translate } from "../i18n/t"
 
 type Busy = "backup" | "open" | "restore" | null
 type Picked = { uri: string; displayName: string }
@@ -55,6 +58,7 @@ const EMPTY_STATS = { total: 0, databaseSizeMB: 0 }
 
 export function BackupRestoreScreen({}: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   const [stats, setStats] = useState(EMPTY_STATS)
   const [lastBackupAt, setLastBackupAt] = useState<number | null>(null)
@@ -113,9 +117,9 @@ export function BackupRestoreScreen({}: ScreenProps) {
     if (busyRef.current || blocked) return
     if (
       !(await showConfirm({
-        title: "You cannot reset this password",
-        message: `${NO_RECOVERY_LINE} Store it somewhere you can reach without this phone.`,
-        confirmText: "I have stored it",
+        title: translate("backup.noReset.title"),
+        message: `${noRecoveryLine()} ${translate("backup.noReset.store")}`,
+        confirmText: translate("backup.noReset.confirm"),
         destructive: false
       }))
     ) {
@@ -136,7 +140,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
       setPassword("")
       setConfirm("")
       setStrength(EMPTY_STRENGTH)
-      setBackupMessage({ text: BACKUP_WRITTEN_LINE })
+      setBackupMessage({ text: backupWrittenLine() })
     } catch (e) {
       logger.error("[BackupRestoreScreen] backup failed", e)
       const err = e as { code?: string; message?: string }
@@ -151,7 +155,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
     if (busyRef.current) return
     const source = await BackupService.pickBackupSource()
     if (!source) return
-    setPicked({ uri: source.uri, displayName: source.displayName ?? "the file you chose" })
+    setPicked({ uri: source.uri, displayName: source.displayName ?? translate("backup.pickedFallback") })
     setManifest(null)
     setRestorePassword("")
     setRestoreMessage(null)
@@ -203,7 +207,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
       title: outcome.title,
       message: outcome.message,
       variant: outcome.variant === "warning" ? "warning" : "success",
-      buttons: [{ text: "Restart app", style: "primary" }]
+      buttons: [{ text: translate("backup.restart"), style: "primary" }]
     })
     // The row lives in the settings table, so it arrived from inside the archive and is one backup stale.
     const madeAt = Date.parse(manifest.createdAt)
@@ -236,7 +240,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
         )}
 
         <View style={styles.section}>
-          <SectionTitle>Backup</SectionTitle>
+          <SectionTitle>{t("backup.section.backup")}</SectionTitle>
           <Card testID="backup-form">
             <View style={styles.fields}>
               {loaded ? (
@@ -253,7 +257,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
               ) : null}
               <View>
                 <TextField
-                  label="Password"
+                  label={t("backup.password")}
                   secure
                   testID="backup-password"
                   value={password}
@@ -266,24 +270,24 @@ export function BackupRestoreScreen({}: ScreenProps) {
               </View>
               <View>
                 <TextField
-                  label="Confirm password"
+                  label={t("backup.confirmPassword")}
                   secure
                   testID="backup-password-confirm"
                   value={confirm}
                   onChangeText={setConfirm}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  error={confirm.length > 0 && confirm !== password ? "The two passwords do not match." : undefined}
+                  error={confirm.length > 0 && confirm !== password ? t("backup.blocked.mismatch") : undefined}
                   disabled={busy !== null}
                 />
-                {!(confirm.length > 0 && confirm !== password) && <FieldMessage>{NO_RECOVERY_LINE}</FieldMessage>}
+                {!(confirm.length > 0 && confirm !== password) && <FieldMessage>{noRecoveryLine()}</FieldMessage>}
               </View>
             </View>
           </Card>
           <Button
             variant="primary"
             icon={Upload}
-            title="Create backup"
+            title={t("backup.create")}
             testID="create-backup-btn"
             loading={busy === "backup"}
             disabled={busy !== null || blocked !== null}
@@ -299,7 +303,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Restore</SectionTitle>
+          <SectionTitle>{t("backup.section.restore")}</SectionTitle>
 
           {!picked && (
             <Card rows>
@@ -307,10 +311,10 @@ export function BackupRestoreScreen({}: ScreenProps) {
                 testID="choose-backup-row"
                 icon={FileLock}
                 trailingIcon={Download}
-                label="Choose a backup file"
-                sub={RESTORE_IDLE_LINE}
+                label={t("backup.choose")}
+                sub={restoreIdleLine()}
                 subLines={2}
-                accessibilityHint="Opens the file picker"
+                accessibilityHint={t("backup.choose.hint")}
                 disabled={busy !== null}
                 onPress={onChooseFile}
               />
@@ -324,13 +328,13 @@ export function BackupRestoreScreen({}: ScreenProps) {
                   icon={FileLock}
                   iconColor={colors.textSecondary}
                   label={picked.displayName}
-                  caption={PICKED_NOT_OPENED_CAPTION}
+                  caption={pickedNotOpenedCaption()}
                   testID="picked-file"
                 />
                 <Divider tight />
                 <View style={styles.pickedField}>
                   <TextField
-                    label="Backup password"
+                    label={t("backup.restorePassword")}
                     secure
                     testID="restore-password"
                     value={restorePassword}
@@ -340,12 +344,12 @@ export function BackupRestoreScreen({}: ScreenProps) {
                     error={restoreMessage?.tone === "error" ? restoreMessage.text : undefined}
                     disabled={busy !== null}
                   />
-                  {restoreMessage?.tone !== "error" && <FieldMessage>{OPEN_FILE_LINE}</FieldMessage>}
+                  {restoreMessage?.tone !== "error" && <FieldMessage>{openFileLine()}</FieldMessage>}
                 </View>
               </Card>
               <Button
                 variant="secondary"
-                title="Open this file"
+                title={t("backup.open")}
                 testID="open-backup-btn"
                 loading={busy === "open"}
                 disabled={busy !== null || restorePassword.length === 0}
@@ -353,7 +357,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
               />
               <Button
                 variant="ghost"
-                title="Choose a different file"
+                title={t("backup.chooseDifferent")}
                 testID="repick-backup-btn"
                 onPress={onChooseFile}
               />
@@ -378,7 +382,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
               </Card>
               <Button
                 variant="danger"
-                title="Replace all data"
+                title={t("backup.replaceAll")}
                 testID="restore-btn"
                 loading={busy === "restore"}
                 disabled={busy !== null}
@@ -386,7 +390,7 @@ export function BackupRestoreScreen({}: ScreenProps) {
               />
               <Button
                 variant="ghost"
-                title="Choose a different file"
+                title={t("backup.chooseDifferent")}
                 testID="repick-backup-btn"
                 onPress={onChooseFile}
               />
@@ -398,8 +402,8 @@ export function BackupRestoreScreen({}: ScreenProps) {
 
       <LoadingOverlay
         visible={busy === "backup" || busy === "open" || busy === "restore"}
-        title={busy === "backup" ? "Writing the backup" : busy === "open" ? "Opening the backup" : "Restoring"}
-        message={busy === "restore" ? "Keep Colota open until this finishes." : ""}
+        title={busy === "backup" ? t("backup.writing") : busy === "open" ? t("backup.opening") : t("backup.restoring")}
+        message={busy === "restore" ? t("backup.keepOpen") : ""}
       />
     </Container>
   )

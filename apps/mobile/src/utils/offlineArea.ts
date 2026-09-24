@@ -12,6 +12,7 @@ import type {
 } from "../components/features/map/OfflinePackManager"
 import { formatBytes } from "./format"
 import { formatDateWithYear } from "./geo"
+import { t } from "../i18n/t"
 
 /**
  * What an offline area holds and what a download takes, in the words the screen prints.
@@ -30,28 +31,32 @@ export interface Estimate {
   large: boolean
 }
 
-export const ROW_HINT = "Shows it on the map"
+export const rowHint = () => t("offline.rowHint")
 
 export function duplicateNameError(name: string, taken: readonly string[]): string | undefined {
   const trimmed = name.trim()
-  return trimmed && taken.includes(trimmed) ? `An area named "${trimmed}" already exists.` : undefined
+  return trimmed && taken.includes(trimmed) ? t("offline.duplicate", { name: trimmed }) : undefined
 }
 
 export function estimateSentence(estimate: Estimate): string {
-  return estimate.large ? `At least ${estimate.label}.` : `${estimate.label} estimated.`
+  return estimate.large
+    ? t("offline.atLeast", { size: estimate.label })
+    : t("offline.estimated", { size: estimate.label })
 }
 
 /** The line under Download area: why it is disabled, or what pressing it takes. */
 export function downloadLine(estimate: Estimate | null, name: string): string {
-  if (!estimate) return "Waiting for the map."
-  const size = estimate.large ? `${estimateSentence(estimate)} Zoom in to download less.` : estimateSentence(estimate)
-  return name.trim() ? size : `${size} Name the area to download it.`
+  if (!estimate) return t("offline.waiting")
+  const size = estimate.large ? `${estimateSentence(estimate)} ${t("offline.zoomIn")}` : estimateSentence(estimate)
+  return name.trim() ? size : `${size} ${t("offline.nameIt")}`
 }
 
 export function progressCaption(status: OfflinePackStatus | null): string {
-  if (!status) return "Starting download…"
-  const pct = `Downloading · ${Math.round(status.percentage)}%`
-  return status.completedResourceSize > 0 ? `${pct} · ${formatBytes(status.completedResourceSize)} so far` : pct
+  if (!status) return t("offline.starting")
+  const pct = t("offline.downloadingPct", { pct: Math.round(status.percentage) })
+  return status.completedResourceSize > 0
+    ? `${pct} · ${t("offline.soFar", { size: formatBytes(status.completedResourceSize) })}`
+    : pct
 }
 
 export type RowTone = "active" | "attention" | "plain"
@@ -72,19 +77,19 @@ export function describeArea(
   entry: OfflineAreaBounds | undefined,
   currentStyleUrl: string | null
 ): AreaRow {
-  if (area.isActive) return { icon: Loader, tone: "active", sub: "Downloading…" }
-  if (area.sizeBytes === null) return { icon: CircleAlert, tone: "attention", sub: "Could not read this area" }
+  if (area.isActive) return { icon: Loader, tone: "active", sub: t("offline.downloading") }
+  if (area.sizeBytes === null) return { icon: CircleAlert, tone: "attention", sub: t("offline.unreadable") }
   if (!area.isComplete) {
     return {
       icon: CircleAlert,
       tone: "attention",
-      sub: area.sizeBytes > 0 ? `Incomplete · ${formatBytes(area.sizeBytes)}` : "Incomplete"
+      sub: area.sizeBytes > 0 ? `${t("offline.incomplete")} · ${formatBytes(area.sizeBytes)}` : t("offline.incomplete")
     }
   }
   const when = entry?.downloadedAt ? ` · ${formatDateWithYear(Math.floor(entry.downloadedAt / 1000))}` : ""
   const size = `${formatBytes(area.sizeBytes)}${when}`
   const stale = !!entry?.styleUrl && !!currentStyleUrl && entry.styleUrl !== currentStyleUrl
-  if (stale) return { icon: TriangleAlert, tone: "attention", sub: `Map style changed · ${size}` }
+  if (stale) return { icon: TriangleAlert, tone: "attention", sub: `${t("offline.styleChanged")} · ${size}` }
   return { icon: Map, tone: "plain", sub: size }
 }
 
@@ -94,38 +99,39 @@ export interface ConfirmCopy {
   confirmText: string
 }
 
-const CAP_SENTENCE = "The estimate stops counting at 100,000 tiles and the download does not."
-const METERED_SENTENCE = "You are on mobile data, not WiFi."
-
 function sizeClause(estimate: Estimate, metered: boolean): string {
-  const size = estimate.large ? `${estimateSentence(estimate)} ${CAP_SENTENCE}` : estimateSentence(estimate)
-  return metered ? `${size} ${METERED_SENTENCE}` : size
+  const size = estimate.large ? `${estimateSentence(estimate)} ${t("offline.cap")}` : estimateSentence(estimate)
+  return metered ? `${size} ${t("offline.metered")}` : size
 }
 
 export function downloadConfirm(name: string, estimate: Estimate, metered: boolean): ConfirmCopy {
-  return { title: `Download "${name}"?`, message: sizeClause(estimate, metered), confirmText: "Download" }
+  return {
+    title: t("offline.download.title", { name }),
+    message: sizeClause(estimate, metered),
+    confirmText: t("offline.download.confirm")
+  }
 }
 
 export function redownloadConfirm(name: string, estimate: Estimate, metered: boolean): ConfirmCopy {
   return {
-    title: `Download "${name}" again?`,
-    message: `Replaces its tiles with a fresh download. ${sizeClause(estimate, metered)}`,
-    confirmText: "Download again"
+    title: t("offline.redownload.title", { name }),
+    message: `${t("offline.redownload.lead")} ${sizeClause(estimate, metered)}`,
+    confirmText: t("offline.redownload.confirm")
   }
 }
 
 /** Names the bytes, and the ambient tile cache the last delete takes with it. */
 export function deleteAreaConfirm(name: string, sizeBytes: number | null, isLast: boolean): ConfirmCopy {
-  const what = sizeBytes
-    ? `Removes ${formatBytes(sizeBytes)} of map tiles from this device.`
-    : "Removes its map tiles from this device."
-  const last = isLast ? " It is the last saved area, so the map's online tile cache is cleared too." : ""
-  return { title: `Delete "${name}"?`, message: `${what}${last}`, confirmText: "Delete" }
+  const what = sizeBytes ? t("offline.delete.size", { size: formatBytes(sizeBytes) }) : t("offline.delete.noSize")
+  const last = isLast ? ` ${t("offline.delete.last")}` : ""
+  return { title: t("offline.delete.title", { name }), message: `${what}${last}`, confirmText: t("common.delete") }
 }
 
 export function storageMessage(estimate: Estimate, availableMB: number): string {
-  const needed = estimate.large ? `At least ${estimate.label}` : estimate.label
-  return `${needed} is needed and the device has ${availableMB.toFixed(1)} MB free.`
+  const free = availableMB.toFixed(1)
+  return estimate.large
+    ? t("offline.storage.atLeast", { size: estimate.label, free })
+    : t("offline.storage", { size: estimate.label, free })
 }
 
 export function cornersOf(bounds: Bounds): { ne: [number, number]; sw: [number, number] } {

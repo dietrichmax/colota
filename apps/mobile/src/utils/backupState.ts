@@ -6,6 +6,7 @@
 import type { BackupManifest, PasswordStrengthResult } from "../services/BackupService"
 import { formatDateWithYear } from "./geo"
 import { formatBytes } from "./format"
+import { t } from "../i18n/t"
 
 /**
  * What a backup holds and what restoring one replaces, in the words the screen prints.
@@ -20,7 +21,7 @@ import { formatBytes } from "./format"
  * make any claim that one exists a lie.
  */
 
-const plural = (n: number, noun: string) => `${n.toLocaleString()} ${noun}${n === 1 ? "" : "s"}`
+const locations = (n: number) => t("backup.locations", { count: n, n: n.toLocaleString() })
 
 const whenBackedUp = (ms: number | null): string | null =>
   ms && ms > 0 ? formatDateWithYear(Math.floor(ms / 1000)) : null
@@ -36,17 +37,20 @@ export function backupState(
   lastBackupAtMs: number | null,
   stats: { total: number; databaseSizeMB: number }
 ): BackupStateLine {
-  const caption = `Database: ${plural(stats.total, "location")}, ${formatBytes(stats.databaseSizeMB * 1024 * 1024, { decimals: 0 })}`
+  const caption = t("backup.caption", {
+    locations: locations(stats.total),
+    size: formatBytes(stats.databaseSizeMB * 1024 * 1024, { decimals: 0 })
+  })
   const when = whenBackedUp(lastBackupAtMs)
-  if (when) return { label: `You last backed up ${when}`, caption, tone: "ok" }
-  if (stats.total === 0) return { label: "You have never backed up", caption, tone: "empty" }
-  return { label: "You have never backed up", caption, tone: "none" }
+  if (when) return { label: t("backup.last", { when }), caption, tone: "ok" }
+  if (stats.total === 0) return { label: t("backup.never"), caption, tone: "empty" }
+  return { label: t("backup.never"), caption, tone: "none" }
 }
 
 /** The Settings hub row. */
 export function backupRowSub(lastBackupAtMs: number | null): string {
   const when = whenBackedUp(lastBackupAtMs)
-  return when ? `Last backed up ${when}` : "Never backed up"
+  return when ? t("backup.row.last", { when }) : t("backup.row.never")
 }
 
 /** The line under the password field, from the score native computed rather than a second guess. */
@@ -54,11 +58,14 @@ export function passwordLine(
   strength: PasswordStrengthResult,
   failed: boolean
 ): { text: string; variant: "info" | "warning" } {
-  if (failed) return { text: "Could not check this password. Try again.", variant: "warning" }
-  if (strength.score >= 2) return { text: `${strength.label}.`, variant: "info" }
+  if (failed) return { text: t("backup.password.checkFailed"), variant: "warning" }
+  if (strength.score >= 2) return { text: t("backup.password.label", { label: strength.label }), variant: "info" }
   // Native's own label, so the reason can never disagree with the gate and no length lives in JS.
-  const advice = strength.score === 0 ? "Make it longer." : "Make it longer or less predictable."
-  return { text: strength.label ? `${strength.label}. ${advice}` : advice, variant: "warning" }
+  const advice = strength.score === 0 ? t("backup.password.longer") : t("backup.password.longerOrLess")
+  return {
+    text: strength.label ? t("backup.password.labelAdvice", { label: strength.label, advice }) : advice,
+    variant: "warning"
+  }
 }
 
 /** Why Create backup is disabled, in the words of the rule that blocks it. */
@@ -67,16 +74,16 @@ export function submitBlockedReason(
   confirm: string,
   strength: PasswordStrengthResult
 ): string | null {
-  if (password.length === 0) return "Choose a password first."
-  if (strength.score < 2) return "This password is too easy to guess."
-  if (confirm.length === 0) return "Type the password a second time."
-  if (password !== confirm) return "The two passwords do not match."
+  if (password.length === 0) return t("backup.blocked.choose")
+  if (strength.score < 2) return t("backup.blocked.weak")
+  if (confirm.length === 0) return t("backup.blocked.confirm")
+  if (password !== confirm) return t("backup.blocked.mismatch")
   return null
 }
 
 /** What a new archive would contain, stated at the top of the backup form. */
 export function backupScopeLine(total: number): string {
-  return `Writes ${plural(total, "location")}, your geofences, profiles, settings and your stored server credentials to a file you pick.`
+  return t("backup.scope", { count: total, n: total.toLocaleString() })
 }
 
 /**
@@ -85,34 +92,37 @@ export function backupScopeLine(total: number): string {
  */
 export function backupExcludesLine(hasClientCert: boolean): string | null {
   if (!hasClientCert) return null
-  return "Your client certificate is not included. Its private key cannot leave this device's keystore."
+  return t("backup.excludesCert")
 }
 
 /** The archive is encrypted and there is no reset, which is the one thing worth saying twice. */
-export const NO_RECOVERY_LINE = "Nobody can open this file without the password, and there is no way to reset it."
+export const noRecoveryLine = () => t("backup.noRecovery")
 
-export const BACKUP_WRITTEN_LINE = "Backup written. Keep it somewhere you can reach without this phone."
+export const backupWrittenLine = () => t("backup.written")
 
-export const RESTORE_IDLE_LINE = "Replaces everything on this device. Nothing is merged."
+export const restoreIdleLine = () => t("backup.restoreIdle")
 
-export const PICKED_NOT_OPENED_CAPTION = "Not opened yet."
+export const pickedNotOpenedCaption = () => t("backup.pickedNotOpened")
 
-export const OPEN_FILE_LINE = "Checks the password and reads what the file holds. Nothing on this device changes."
+export const openFileLine = () => t("backup.openFile")
+
+const madeOn = (manifest: BackupManifest) => {
+  const seconds = Date.parse(manifest.createdAt) / 1000
+  return Number.isFinite(seconds) ? formatDateWithYear(Math.floor(seconds)) : t("backup.unknownDate")
+}
 
 /** The opened archive, as a state line. */
 export function archiveLine(manifest: BackupManifest): { label: string; caption: string } {
-  const seconds = Date.parse(manifest.createdAt) / 1000
-  const made = Number.isFinite(seconds) ? formatDateWithYear(Math.floor(seconds)) : "an unknown date"
   return {
-    label: `Backup from ${made}`,
-    caption: `Colota ${manifest.appVersion} · opened with your password`
+    label: t("backup.from", { date: madeOn(manifest) }),
+    caption: t("backup.openedWith", { version: manifest.appVersion })
   }
 }
 
 /** At most one caveat, so restraint is a signature rather than a discipline. */
 export function restoreCaveat(certConfigured: boolean): string | null {
   if (!certConfigured) return null
-  return "Your client certificate stays as it is. A backup carries none, and a restore does not replace it."
+  return t("backup.restoreCaveat")
 }
 
 export interface ConfirmCopy {
@@ -123,12 +133,10 @@ export interface ConfirmCopy {
 
 /** Names the count it replaces and the date it replaces them with. */
 export function restoreConfirm(total: number, manifest: BackupManifest): ConfirmCopy {
-  const seconds = Date.parse(manifest.createdAt) / 1000
-  const made = Number.isFinite(seconds) ? formatDateWithYear(Math.floor(seconds)) : "an unknown date"
   return {
-    title: `Replace all ${plural(total, "location")}?`,
-    message: `Replaces everything on this device with the backup from ${made}: locations, geofences, tracking profiles, trip splits, settings, the upload queue and your stored server credentials. Nothing is merged and nothing is kept. Recording stops and stays off until you turn it back on. The file and the password have already been checked, so your data is replaced in one step at the end, and that step cannot be undone.`,
-    confirmText: "Replace"
+    title: t("backup.replace.title", { count: total, n: total.toLocaleString() }),
+    message: t("backup.replace.message", { date: madeOn(manifest) }),
+    confirmText: t("backup.replace.confirm")
   }
 }
 
@@ -150,30 +158,28 @@ export function restoreOutcome(code: string | undefined, nativeMessage?: string)
     case undefined:
       return {
         kind: "restored",
-        title: "Your data is restored",
-        message: "Recording is off. Turn it back on when you are ready.",
+        title: t("backup.restored.title"),
+        message: t("backup.restored.message"),
         variant: "success"
       }
     case "E_BACKUP_SECRETS_PARTIAL":
       return {
         kind: "restored",
-        title: "Your data is restored",
-        message:
-          "Your server credentials could not be applied. Enter them again on Connection. Recording is off until you turn it back on.",
+        title: t("backup.restored.title"),
+        message: t("backup.restored.secrets"),
         variant: "warning"
       }
     case "E_BACKUP_RESTORED_INCOMPLETE":
       return {
         kind: "restored",
-        title: "Your data is restored",
-        message:
-          "Something failed after the swap, so some settings may not have been applied. Check Connection and Tracking. Recording is off until you turn it back on.",
+        title: t("backup.restored.title"),
+        message: t("backup.restored.incomplete"),
         variant: "warning"
       }
     default:
       return {
         kind: "failed",
-        title: "Restore failed",
+        title: t("backup.restoreFailed"),
         message: restoreErrorMessage(code, nativeMessage),
         variant: "error"
       }
@@ -181,44 +187,44 @@ export function restoreOutcome(code: string | undefined, nativeMessage?: string)
 }
 
 /** Every pre-swap failure ends the same way, because on every one of them it is true. */
-const UNCHANGED = "Nothing on this device was changed."
+const unchanged = (sentence: string) => `${sentence} ${t("backup.unchanged")}`
 
 export function restoreErrorMessage(code: string | undefined, nativeMessage?: string): string {
   switch (code) {
     case "E_BACKUP_WRONG_PASSWORD":
-      return `That password did not open this file. ${UNCHANGED}`
+      return unchanged(t("backup.err.wrongPassword"))
     case "E_BACKUP_BAD_MAGIC":
     case "E_BACKUP_UNSUPPORTED_VERSION":
-      return `This is not a Colota backup. ${UNCHANGED}`
+      return unchanged(t("backup.err.notBackup"))
     case "E_BACKUP_TRUNCATED":
-      return `This file is incomplete, so it was probably never finished being written. ${UNCHANGED}`
+      return unchanged(t("backup.err.truncated"))
     case "E_BACKUP_TAMPERED":
     case "E_BACKUP_INTEGRITY_FAIL":
-      return `This file is damaged and cannot be trusted. ${UNCHANGED}`
+      return unchanged(t("backup.err.tampered"))
     case "E_BACKUP_MIGRATION_FAILED":
-      return `The file is intact but this version of Colota could not read its database. ${UNCHANGED}`
+      return unchanged(t("backup.err.migration"))
     case "E_BACKUP_UNSUPPORTED_SCHEMA":
-      return `This backup was made by a newer version of Colota. Update the app first. ${UNCHANGED}`
+      return unchanged(t("backup.err.newer"))
     case "E_BACKUP_MISSING_ENTRY":
-      return `This file is missing part of a backup. ${UNCHANGED}`
+      return unchanged(t("backup.err.missingEntry"))
     case "E_BACKUP_NO_SPACE":
-      return `There is not enough free space to unpack this backup. ${UNCHANGED}`
+      return unchanged(t("backup.err.noSpace"))
     case "E_BUSY":
-      return "Another backup or restore is already running."
+      return t("backup.err.busy")
     case "E_PASSWORD_EMPTY":
-      return "Type the backup's password first."
+      return t("backup.err.passwordEmpty")
     default:
-      return nativeMessage ? `${nativeMessage} ${UNCHANGED}` : `The backup could not be restored. ${UNCHANGED}`
+      return unchanged(nativeMessage || t("backup.err.restoreGeneric"))
   }
 }
 
 export function backupErrorMessage(code: string | undefined, nativeMessage?: string): string {
   switch (code) {
     case "E_BUSY":
-      return "Another backup or restore is already running."
+      return t("backup.err.busy")
     case "E_PASSWORD_EMPTY":
-      return "Choose a password first."
+      return t("backup.blocked.choose")
     default:
-      return nativeMessage ?? "The backup could not be written. Try a different location."
+      return nativeMessage ?? t("backup.err.writeGeneric")
   }
 }

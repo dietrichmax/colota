@@ -59,7 +59,7 @@ import {
   duplicateNameError,
   progressCaption,
   redownloadConfirm,
-  ROW_HINT,
+  rowHint,
   storageMessage,
   type Bounds,
   type Estimate,
@@ -74,6 +74,9 @@ import {
   WORLD_MAP_ZOOM
 } from "../constants"
 import type { ScreenProps } from "../types/global"
+import { useTranslation } from "../i18n/useTranslation"
+// Handlers use the non-hook t, so no callback or effect list carries it.
+import { t as translate } from "../i18n/t"
 
 const MAP_VIEWPORT_SHARE = 0.5
 const WORLD_CENTER: [number, number] = [0, 20]
@@ -86,11 +89,6 @@ type Fix = { latitude: number; longitude: number; accuracy: number }
 type Download = { name: string; bounds: Bounds | null }
 type Busy = { kind: "start" | "stop" | "delete" | "redownload"; name: string }
 
-const NO_CONNECTION = {
-  title: "No connection",
-  message: "Downloading map tiles needs a network. Saved areas still work."
-} as const
-
 function estimateFor(bounds: Bounds): Estimate {
   const { ne, sw } = cornersOf(bounds)
   return { label: estimateSizeLabel(ne, sw), bytes: estimateSizeBytes(ne, sw), large: willExceedTileLimit(ne, sw) }
@@ -98,6 +96,7 @@ function estimateFor(bounds: Bounds): Estimate {
 
 export function OfflineMapsScreen({}: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { height: viewportHeight } = useWindowDimensions()
   const mapHeight = Math.round(viewportHeight * MAP_VIEWPORT_SHARE)
   const coords = useCoords()
@@ -315,7 +314,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
         logger.error("[OfflineMapsScreen] Failed to start download:", err)
         activePackNameRef.current = null
         setDownload(null)
-        showAlert("Could not start the download", "Nothing was downloaded. Try again.", "error")
+        showAlert(translate("offline.startFailed.title"), translate("offline.startFailed.message"), "error")
         return
       }
       createPendingRef.current = false
@@ -345,7 +344,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
     setBusy({ kind: "start", name: trimmed })
     try {
       if (!(await NativeLocationService.isNetworkAvailable())) {
-        showAlert(NO_CONNECTION.title, NO_CONNECTION.message, "warning")
+        showAlert(translate("offline.noConnection.title"), translate("offline.noConnection.message"), "warning")
         return
       }
       const fresh = await loadOfflineAreas()
@@ -353,14 +352,14 @@ export function OfflineMapsScreen({}: ScreenProps) {
       if (fresh.some((a) => a.name === trimmed)) return
       const availableMB = await NativeLocationService.getAvailableStorageMB()
       if (availableMB > 0 && estimate.bytes / BYTES_PER_MB > availableMB * STORAGE_HEADROOM) {
-        showAlert("Not enough storage", storageMessage(estimate, availableMB), "warning")
+        showAlert(translate("offline.noStorage"), storageMessage(estimate, availableMB), "warning")
         return
       }
       const metered = !(await NativeLocationService.isUnmeteredConnection())
       if (!(await showConfirm({ ...downloadConfirm(trimmed, estimate, metered), destructive: false }))) return
     } catch (err) {
       logger.error("[OfflineMapsScreen] Failed to start download:", err)
-      showAlert("Could not start the download", "Nothing was downloaded. Try again.", "error")
+      showAlert(translate("offline.startFailed.title"), translate("offline.startFailed.message"), "error")
       return
     } finally {
       busyRef.current = false
@@ -385,7 +384,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
       await removeOfflineAreaBounds(packName)
     } catch (err) {
       logger.error("[OfflineMapsScreen] Failed to stop the download:", err)
-      showAlert("Could not stop the download", "The download may still be running. Try again.", "error")
+      showAlert(translate("offline.stopFailed.title"), translate("offline.stopFailed.message"), "error")
     } finally {
       busyRef.current = false
       setBusy(null)
@@ -405,7 +404,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
         await removeOfflineAreaBounds(area.name)
       } catch (err) {
         logger.error("[OfflineMapsScreen] Failed to stop the download:", err)
-        showAlert("Could not stop the download", "The download may still be running. Try again.", "error")
+        showAlert(translate("offline.stopFailed.title"), translate("offline.stopFailed.message"), "error")
       } finally {
         busyRef.current = false
         setBusy(null)
@@ -424,14 +423,14 @@ export function OfflineMapsScreen({}: ScreenProps) {
       try {
         if (!area.bounds) {
           showAlert(
-            "Cannot download again",
-            "This area's extent could not be read. Delete it and download it again.",
+            translate("offline.cannotRedownload.title"),
+            translate("offline.cannotRedownload.message"),
             "warning"
           )
           return
         }
         if (!(await NativeLocationService.isNetworkAvailable())) {
-          showAlert(NO_CONNECTION.title, NO_CONNECTION.message, "warning")
+          showAlert(translate("offline.noConnection.title"), translate("offline.noConnection.message"), "warning")
           return
         }
         const metered = !(await NativeLocationService.isUnmeteredConnection())
@@ -441,11 +440,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
         go = true
       } catch (err) {
         logger.error("[OfflineMapsScreen] Failed to download again:", err)
-        showAlert(
-          "Could not download again",
-          "The old tiles could not be removed, so nothing was downloaded. Try again.",
-          "error"
-        )
+        showAlert(translate("offline.redownloadFailed.title"), translate("offline.redownloadFailed.message"), "error")
       } finally {
         busyRef.current = false
         setBusy(null)
@@ -469,7 +464,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
         await removeOfflineAreaBounds(area.name)
       } catch (err) {
         logger.error("[OfflineMapsScreen] Failed to delete area:", err)
-        showAlert("Could not delete the area", "Its tiles are still on the device. Try again.", "error")
+        showAlert(translate("offline.deleteFailed.title"), translate("offline.deleteFailed.message"), "error")
       } finally {
         busyRef.current = false
         setBusy(null)
@@ -530,12 +525,12 @@ export function OfflineMapsScreen({}: ScreenProps) {
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.section}>
-          <SectionTitle>New area</SectionTitle>
+          <SectionTitle>{t("offline.section.new")}</SectionTitle>
           <Card>
             <TextField
               testID="area-name-input"
-              label="Name"
-              placeholder="Home area, Trail…"
+              label={t("offline.name")}
+              placeholder={t("offline.name.placeholder")}
               value={name}
               onChangeText={setName}
               error={nameError}
@@ -546,7 +541,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
             <View>
               <Button
                 testID="download-btn"
-                title="Download area"
+                title={t("offline.downloadArea")}
                 loading={busy?.kind === "start"}
                 disabled={downloadDisabled}
                 onPress={handleDownload}
@@ -568,7 +563,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                     testID="download-progress"
                     accessible
                     accessibilityRole="progressbar"
-                    accessibilityLabel={`Downloading ${download.name}`}
+                    accessibilityLabel={t("offline.downloadingName", { name: download.name })}
                     accessibilityValue={{ min: 0, max: 100, now: Math.round(pct) }}
                     style={[styles.progressTrack, { backgroundColor: colors.well }]}
                   >
@@ -581,7 +576,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                 variant="ghost"
                 color={colors.error}
                 icon={X}
-                title="Cancel download"
+                title={t("offline.cancel")}
                 loading={busy?.kind === "stop"}
                 disabled={busy !== null}
                 onPress={handleCancelDownload}
@@ -592,7 +587,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
 
         {areas !== null && listAreas.length > 0 && (
           <View style={styles.section}>
-            <SectionTitle>Saved areas</SectionTitle>
+            <SectionTitle>{t("offline.section.saved")}</SectionTitle>
             <Card rows>
               {listAreas.map((area, i) => {
                 const row = describeArea(area, entryFor(area.name), currentStyleUrl)
@@ -607,14 +602,14 @@ export function OfflineMapsScreen({}: ScreenProps) {
                       label={area.name}
                       sub={row.sub}
                       subLines={2}
-                      accessibilityHint={ROW_HINT}
+                      accessibilityHint={rowHint()}
                       onPress={() => area.bounds && fitToArea(area.bounds)}
                       trailing={
                         area.isActive ? (
                           <IconButton
                             icon={X}
                             tone="danger"
-                            accessibilityLabel={`Stop downloading ${area.name}`}
+                            accessibilityLabel={t("offline.stopName", { name: area.name })}
                             loading={mine("stop")}
                             disabled={busy !== null}
                             onPress={() => handleCancelArea(area)}
@@ -625,7 +620,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                             <IconButton
                               icon={RefreshCw}
                               tone="primary"
-                              accessibilityLabel={`Download ${area.name} again`}
+                              accessibilityLabel={t("offline.againName", { name: area.name })}
                               loading={mine("redownload")}
                               disabled={download !== null || busy !== null}
                               onPress={() => handleRedownload(area)}
@@ -634,7 +629,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
                             <IconButton
                               icon={Trash2}
                               tone="danger"
-                              accessibilityLabel={`Delete ${area.name}`}
+                              accessibilityLabel={t("offline.deleteName", { name: area.name })}
                               loading={mine("delete")}
                               disabled={busy !== null}
                               onPress={() => handleDelete(area)}
@@ -652,11 +647,7 @@ export function OfflineMapsScreen({}: ScreenProps) {
         )}
 
         {areas !== null && listAreas.length === 0 && download === null && (
-          <EmptyState
-            title="No saved areas yet"
-            hint="Download map tiles to browse your tracks offline while hiking or camping"
-            style={styles.empty}
-          />
+          <EmptyState title={t("offline.empty.title")} hint={t("offline.empty.hint")} style={styles.empty} />
         )}
       </ScrollView>
     </Container>

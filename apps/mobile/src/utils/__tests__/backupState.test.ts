@@ -196,6 +196,17 @@ describe("restoreOutcome", () => {
 })
 
 describe("restoreErrorMessage", () => {
+  // An unknown code still has to end on the reassurance, with or without native's own sentence.
+  it("falls back to native's sentence, or a generic one when native says nothing", () => {
+    expect(restoreErrorMessage(undefined)).toBe("The backup could not be restored. Nothing on this device was changed.")
+    expect(restoreErrorMessage("E_OTHER", "")).toBe(
+      "The backup could not be restored. Nothing on this device was changed."
+    )
+    expect(restoreErrorMessage("E_OTHER", "Disk read failed.")).toBe(
+      "Disk read failed. Nothing on this device was changed."
+    )
+  })
+
   // Every pre-swap failure is provably one where nothing was replaced, so every one says so.
   it("ends every pre-swap failure with the same promise", () => {
     for (const code of [
