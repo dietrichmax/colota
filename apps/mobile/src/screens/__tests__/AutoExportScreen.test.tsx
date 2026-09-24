@@ -1075,4 +1075,30 @@ describe("AutoExportScreen", () => {
       expect(mockShowAlert).toHaveBeenCalledWith("Export Failed", "Directory permission lost", "error")
     })
   })
+
+  const renderAndEmit = async (event: Record<string, unknown>) => {
+    const { getByText } = render(<AutoExportScreen {...mockProps} />)
+    await waitFor(() => expect(getByText("Automatically export your location data on a schedule")).toBeTruthy())
+    await act(async () => {
+      DeviceEventEmitter.emit("onAutoExportComplete", event)
+    })
+  }
+
+  it("words a one-row export in the singular", async () => {
+    await renderAndEmit({ success: true, fileName: "colota_export_2026-03-10.csv", rowCount: 1, error: null })
+
+    await waitFor(() =>
+      expect(mockShowAlert).toHaveBeenCalledWith(
+        "Export Complete",
+        "Exported 1 location to colota_export_2026-03-10.csv",
+        "success"
+      )
+    )
+  })
+
+  it("still says something when a failed export carries no reason", async () => {
+    await renderAndEmit({ success: false, fileName: null, rowCount: 0, error: null })
+
+    await waitFor(() => expect(mockShowAlert).toHaveBeenCalledWith("Export Failed", "Unknown error", "error"))
+  })
 })
