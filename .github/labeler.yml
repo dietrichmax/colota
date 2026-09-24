@@ -48,6 +48,15 @@ docs:
           - '**/*.md'
 
 # ============================
+# Translations (catalogs and native strings)
+# ============================
+i18n:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'apps/mobile/src/i18n/**'
+          - 'apps/mobile/android/app/src/main/res/values*/strings.xml'
+
+# ============================
 # Shared package (types, theme)
 # ============================
 shared:
