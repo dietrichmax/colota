@@ -222,7 +222,11 @@ describe("TripDetailScreen - split from the map", () => {
     splitAt(getByTestId, "select-point-last")
 
     // Says why instead of doing nothing
-    expect(showAlert).toHaveBeenCalledWith("Cannot Split Here", expect.any(String), "info")
+    expect(showAlert).toHaveBeenCalledWith(
+      "Cannot Split Here",
+      expect.stringMatching(/^This trip is too short to split/),
+      "info"
+    )
     expect(showConfirm).not.toHaveBeenCalled()
     expect(NativeLocationService.addBoundaryOverrides).not.toHaveBeenCalled()
   })

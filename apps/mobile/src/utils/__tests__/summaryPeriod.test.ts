@@ -24,6 +24,8 @@ describe("periodRange", () => {
       title: "Last week"
     })
     expect(periodRange("week", 3, now).title).toMatch(/Aug 17 - Aug 23/)
+    // Past last week the title is the span, so the caption names the week by its Monday instead.
+    expect(periodRange("week", 3, now).caption).toMatch(/^Week of Aug 17$/)
   })
 
   it("steps months whole, so a range never straddles two of them", () => {

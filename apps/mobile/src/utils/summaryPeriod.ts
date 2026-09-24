@@ -4,6 +4,7 @@
  */
 
 import type { DailyStat } from "../types/global"
+import { t } from "../i18n/t"
 
 export type Period = "week" | "month"
 
@@ -47,8 +48,8 @@ export function periodRange(period: Period, offset: number, now: Date): PeriodRa
     const start = startOfWeek(now)
     start.setDate(start.getDate() - offset * 7)
     const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6)
-    const title = offset === 0 ? "This week" : offset === 1 ? "Last week" : span(start, end, now)
-    const caption = offset < 2 ? span(start, end, now) : `Week of ${shortDate(start, false)}`
+    const title = offset === 0 ? t("summary.thisWeek") : offset === 1 ? t("summary.lastWeek") : span(start, end, now)
+    const caption = offset < 2 ? span(start, end, now) : t("summary.weekOf", { date: shortDate(start, false) })
     return { firstDay: dayKeyOf(start), lastDay: dayKeyOf(end), title, caption }
   }
   const start = new Date(now.getFullYear(), now.getMonth() - offset, 1)
@@ -57,7 +58,7 @@ export function periodRange(period: Period, offset: number, now: Date): PeriodRa
     month: "long",
     ...(start.getFullYear() !== now.getFullYear() && { year: "numeric" })
   })
-  const title = offset === 0 ? "This month" : offset === 1 ? "Last month" : named
+  const title = offset === 0 ? t("summary.thisMonth") : offset === 1 ? t("summary.lastMonth") : named
   const caption = offset < 2 ? named : span(start, end, now)
   return { firstDay: dayKeyOf(start), lastDay: dayKeyOf(end), title, caption }
 }

@@ -11,6 +11,7 @@ import {
   SPLIT_BLOCKED_TOO_SHORT,
   SPLIT_BLOCKED_TRIP_TOO_SHORT
 } from "../trips"
+import { t } from "../../i18n/t"
 import { formatDuration, formatTime, formatDate, computeTotalDistance } from "../geo"
 import { BOUNDARY_ACTION_MERGE, BOUNDARY_ACTION_SPLIT, type TripBoundaryOverride } from "../../types/global"
 
@@ -223,7 +224,7 @@ describe("manual trip boundary overrides", () => {
     expect(split).toHaveLength(2)
     expect(split[1].locationCount).toBe(2)
     // Re-indexed contiguously, so the UI never shows a gap in trip numbering
-    expect(split.map((t) => t.index)).toEqual([1, 2])
+    expect(split.map((trip) => trip.index)).toEqual([1, 2])
   })
 
   it("drops a one-point segment even though a split forces it", () => {
@@ -667,5 +668,15 @@ describe("formatDate", () => {
     const ts1 = Math.floor(new Date("2024-01-15T12:00:00Z").getTime() / 1000)
     const ts2 = Math.floor(new Date("2024-06-20T12:00:00Z").getTime() / 1000)
     expect(formatDate(ts1)).not.toBe(formatDate(ts2))
+  })
+})
+
+describe("split refusal wording", () => {
+  it("says why a split was refused in words, since the map cannot show it on the point", () => {
+    expect(t(SPLIT_BLOCKED_TRIP_TOO_SHORT)).toBe(
+      "This trip is too short to split. Splitting makes two trips, and each one needs at least two points."
+    )
+    expect(t(SPLIT_BLOCKED_ALREADY_BOUNDARY)).toBe("This point already starts a trip.")
+    expect(t(SPLIT_BLOCKED_TOO_SHORT)).toMatch(/^A split needs at least two points on each side/)
   })
 })

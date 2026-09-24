@@ -6,6 +6,7 @@
 import { computeTotalDistance, haversine } from "./geo"
 import { BOUNDARY_ACTION_MERGE, BOUNDARY_ACTION_SPLIT } from "../types/global"
 import type { Trip, LocationCoords, BoundaryAction, TripBoundaryOverride } from "../types/global"
+import type { TranslationKey } from "../i18n/options"
 
 export const TRIP_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"]
 
@@ -90,13 +91,10 @@ export function segmentTrips(
   return filtered.map((s, i) => ({ ...s.trip, index: i + 1 }))
 }
 
-export const SPLIT_BLOCKED_NOT_A_TRIP =
-  "This point is not part of a trip. Colota leaves out runs that never travel more than 100 m."
-export const SPLIT_BLOCKED_ALREADY_BOUNDARY = "This point already starts a trip."
-export const SPLIT_BLOCKED_TRIP_TOO_SHORT =
-  "This trip is too short to split. Splitting makes two trips, and each one needs at least two points."
-export const SPLIT_BLOCKED_TOO_SHORT =
-  "A split needs at least two points on each side, so the first two and last two points of a trip cannot start a new one."
+export const SPLIT_BLOCKED_NOT_A_TRIP: TranslationKey = "split.notATrip"
+export const SPLIT_BLOCKED_ALREADY_BOUNDARY: TranslationKey = "split.alreadyBoundary"
+export const SPLIT_BLOCKED_TRIP_TOO_SHORT: TranslationKey = "split.tripTooShort"
+export const SPLIT_BLOCKED_TOO_SHORT: TranslationKey = "split.tooShort"
 
 /** First and last index of the run of points containing index, bounded by the trip boundaries. */
 function runBounds(
@@ -130,7 +128,7 @@ export function splitBlockedReason(
   index: number,
   overrides?: Map<string, BoundaryAction>,
   gapThresholdSeconds: number = DEFAULT_GAP_SECONDS
-): string | null {
+): TranslationKey | null {
   if (index < 0 || index >= locations.length) return SPLIT_BLOCKED_ALREADY_BOUNDARY
   const ts = (i: number) => locations[i].timestamp ?? 0
   const splits = (i: number) => boundarySplits(ts(i), ts(i + 1), overrides, gapThresholdSeconds)

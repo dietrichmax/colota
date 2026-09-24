@@ -33,6 +33,7 @@ import NativeLocationService from "../services/NativeLocationService"
 import { BOUNDARY_ACTION_SPLIT } from "../types/global"
 import type { Trip, BoundaryAction } from "../types/global"
 import type { RootScreenProps } from "../types/navigation"
+import { useTranslation } from "../i18n/useTranslation"
 
 const MAX_BARS = 120
 
@@ -57,6 +58,7 @@ const DOCK_MAP_SHARE = 0.6
 
 export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip Detail">) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const { height: viewportHeight } = useWindowDimensions()
   const mapHeight = Math.round(viewportHeight * MAP_VIEWPORT_SHARE)
@@ -73,7 +75,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
 
   const stats = useMemo(() => computeTripStats(trip.locations), [trip])
   const duration = trip.endTime - trip.startTime
-  const displayName = `Trip ${trip.index}`
+  const displayName = t("history.trip", { index: trip.index })
 
   const [exportOpen, setExportOpen] = useState(false)
   const [chartActiveIndex, setChartActiveIndex] = useState<number | null>(null)
@@ -110,7 +112,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
     }
   }, [])
 
-  const currentIdx = trips.findIndex((t) => t.index === trip.index)
+  const currentIdx = trips.findIndex((candidate) => candidate.index === trip.index)
   const prevTrip = currentIdx > 0 ? trips[currentIdx - 1] : null
   const nextTrip = currentIdx >= 0 && currentIdx < trips.length - 1 ? trips[currentIdx + 1] : null
 
@@ -129,22 +131,25 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
     [navigation]
   )
 
-  const handlePointNoteChange = useCallback(async (id: number, note: string | null) => {
-    try {
-      await NativeLocationService.updateLocationNote(id, note)
-      setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
-    } catch (error) {
-      logger.error("[TripDetail] Note update failed:", error)
-      showAlert("Save Failed", "Unable to save note. Please try again.", "error")
-    }
-  }, [])
+  const handlePointNoteChange = useCallback(
+    async (id: number, note: string | null) => {
+      try {
+        await NativeLocationService.updateLocationNote(id, note)
+        setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
+      } catch (error) {
+        logger.error("[TripDetail] Note update failed:", error)
+        showAlert(t("history.note.failed.title"), t("history.note.failed.message"), "error")
+      }
+    },
+    [t]
+  )
 
   const splittingRef = useRef(false)
   const handlePointSplit = useCallback(
     async (id: number) => {
       if (splittingRef.current) return
       if (!boundariesLoaded) {
-        showAlert("Cannot Split Here", "Still loading this trip's edits. Try again in a moment.", "info")
+        showAlert(t("tripDetail.cannotSplit"), t("tripDetail.stillLoading"), "info")
         return
       }
       // A trip's locations are a contiguous run of the day, so the preceding point is the one
@@ -152,16 +157,15 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
       const idx = trip.locations.findIndex((l) => l.id === id)
       const blocked = splitBlockedReason(trip.locations, idx, boundaryOverrides)
       if (blocked) {
-        showAlert("Cannot Split Here", blocked, "info")
+        showAlert(t("tripDetail.cannotSplit"), t(blocked), "info")
         return
       }
       const at = trip.locations[idx].timestamp
       const confirmed = await showConfirm({
         // The confirm covers the popup, so name the point in it
-        title: at ? `Start a new trip at ${formatTime(at, true)}?` : "Split Trip?",
-        message:
-          "Everything from this point onwards becomes a separate trip. Your location data is not changed, and you can undo this by merging the two trips again.",
-        confirmText: "Split"
+        title: at ? t("tripDetail.split.titleAt", { time: formatTime(at, true) }) : t("tripDetail.split.title"),
+        message: t("tripDetail.split.message"),
+        confirmText: t("tripDetail.split.confirm")
       })
       if (!confirmed) return
       splittingRef.current = true
@@ -178,12 +182,12 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         navigation.goBack()
       } catch (error) {
         logger.error("[TripDetail] Split failed:", error)
-        showAlert("Split Failed", "Unable to split the trip here. Please try again.", "error")
+        showAlert(t("tripDetail.split.failed.title"), t("tripDetail.split.failed.message"), "error")
       } finally {
         splittingRef.current = false
       }
     },
-    [trip, boundaryOverrides, boundariesLoaded, navigation]
+    [trip, boundaryOverrides, boundariesLoaded, navigation, t]
   )
 
   const handleExport = useCallback(
@@ -199,23 +203,24 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         await NativeLocationService.shareFile(
           filePath,
           EXPORT_FORMATS[format].mimeType,
-          `Colota ${displayName} - ${dateStr}`
+          t("history.shareSubject", { label: displayName, date: dateStr })
         )
       } catch (error) {
         logger.error("[TripDetail] Export failed:", error)
-        showAlert("Export Failed", "Unable to export. Please try again.", "error")
+        showAlert(t("history.exportFailed.title"), t("history.exportFailed.message"), "error")
       }
     },
-    [trip, displayName]
+    [trip, displayName, t]
   )
 
   const handleDelete = useCallback(async () => {
     const confirmed = await showConfirm({
-      title: `Delete ${displayName}?`,
-      message: `This permanently removes ${trip.locationCount} location point${
-        trip.locationCount === 1 ? "" : "s"
-      } from this device. Unsent points will not be uploaded.`,
-      confirmText: "Delete",
+      title: t("tripDetail.delete.title", { name: displayName }),
+      message: t("tripDetail.delete.message", {
+        count: trip.locationCount,
+        n: trip.locationCount.toLocaleString()
+      }),
+      confirmText: t("common.delete"),
       destructive: true
     })
     if (!confirmed) return
@@ -225,18 +230,23 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
       navigation.goBack()
     } catch (error) {
       logger.error("[TripDetail] Delete failed:", error)
-      showAlert("Delete Failed", "Unable to delete trip. Please try again.", "error")
+      showAlert(t("history.delete.failed.title"), t("tripDetail.delete.failed"), "error")
       setDeleting(false)
     }
-  }, [trip, displayName, navigation])
+  }, [trip, displayName, navigation, t])
 
   const headerRight = useCallback(
     () => (
       <View style={styles.headerActions}>
-        <HeaderAction icon={Upload} label="Export trip" onPress={() => setExportOpen(true)} testID="export-trip-btn" />
+        <HeaderAction
+          icon={Upload}
+          label={t("tripDetail.export")}
+          onPress={() => setExportOpen(true)}
+          testID="export-trip-btn"
+        />
         <HeaderAction
           icon={Trash2}
-          label="Delete trip"
+          label={t("tripDetail.deleteTrip")}
           color={colors.error}
           disabled={deleting}
           onPress={handleDelete}
@@ -244,7 +254,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         />
       </View>
     ),
-    [handleDelete, deleting, colors.error]
+    [handleDelete, deleting, colors.error, t]
   )
 
   useLayoutEffect(() => {
@@ -295,8 +305,8 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         leading={<TripSwatch index={trip.index} />}
         onPrevious={() => goToTrip(prevTrip)}
         onNext={() => goToTrip(nextTrip)}
-        previousLabel="Previous trip"
-        nextLabel="Next trip"
+        previousLabel={t("tripDetail.previous")}
+        nextLabel={t("tripDetail.next")}
         previousDisabled={!prevTrip}
         nextDisabled={!nextTrip}
         testID="trip"
@@ -336,23 +346,31 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.section}>
           <Card rows>
-            <StatRow icon={Route} label="Distance" value={formatDistance(trip.distance)} />
+            <StatRow icon={Route} label={t("tripDetail.distance")} value={formatDistance(trip.distance)} />
             <Divider tight inset />
-            <StatRow icon={Clock} label="Duration" value={formatDuration(duration)} />
+            <StatRow icon={Clock} label={t("tripDetail.duration")} value={formatDuration(duration)} />
             <Divider tight inset />
-            <StatRow icon={Gauge} label="Avg speed" value={formatSpeed(stats.avgSpeed)} />
+            <StatRow icon={Gauge} label={t("tripDetail.avgSpeed")} value={formatSpeed(stats.avgSpeed)} />
             <Divider tight inset />
-            <StatRow icon={MapPin} label="Points" value={String(trip.locationCount)} />
+            <StatRow icon={MapPin} label={t("tripDetail.points")} value={String(trip.locationCount)} />
             {stats.elevationGain > 0 && (
               <>
                 <Divider tight inset />
-                <StatRow icon={TrendingUp} label="Elev. gain" value={`${Math.round(stats.elevationGain)}m`} />
+                <StatRow
+                  icon={TrendingUp}
+                  label={t("tripDetail.elevGain")}
+                  value={`${Math.round(stats.elevationGain)}m`}
+                />
               </>
             )}
             {stats.elevationLoss > 0 && (
               <>
                 <Divider tight inset />
-                <StatRow icon={TrendingDown} label="Elev. loss" value={`${Math.round(stats.elevationLoss)}m`} />
+                <StatRow
+                  icon={TrendingDown}
+                  label={t("tripDetail.elevLoss")}
+                  value={`${Math.round(stats.elevationLoss)}m`}
+                />
               </>
             )}
           </Card>
@@ -362,13 +380,18 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         {speedProfile.length > 2 && (
           <View style={styles.section}>
             <View style={styles.chartTitleRow}>
-              <SectionTitle>Speed</SectionTitle>
-              <Text style={[styles.chartRange, { color: colors.textSecondary }]}>max {formatSpeed(maxSpeed)}</Text>
+              <SectionTitle>{t("tripDetail.speed")}</SectionTitle>
+              <Text style={[styles.chartRange, { color: colors.textSecondary }]}>
+                {t("tripDetail.maxSpeed", { value: formatSpeed(maxSpeed) })}
+              </Text>
             </View>
             <Card style={styles.chartCard}>
               <View
                 accessibilityRole="image"
-                accessibilityLabel={`Speed over the trip, average ${formatSpeed(stats.avgSpeed)}, maximum ${formatSpeed(maxSpeed)}`}
+                accessibilityLabel={t("tripDetail.speedChart", {
+                  avg: formatSpeed(stats.avgSpeed),
+                  max: formatSpeed(maxSpeed)
+                })}
               >
                 <InteractiveLineChart
                   data={speedProfile}
@@ -395,7 +418,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
         {elevationProfile.length > 2 && elevationRange > 0 && (
           <View style={styles.section}>
             <View style={styles.chartTitleRow}>
-              <SectionTitle>Elevation</SectionTitle>
+              <SectionTitle>{t("tripDetail.elevation")}</SectionTitle>
               <Text style={[styles.chartRange, { color: colors.textSecondary }]}>
                 {Math.round(minElevation)}m - {Math.round(maxElevation)}m
               </Text>
@@ -423,7 +446,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
       </ScrollView>
       <ExportFormatDialog
         visible={exportOpen}
-        title={`Export ${displayName}`}
+        title={t("tripDetail.exportTitle", { name: displayName })}
         message={`${formatDate(trip.startTime)} · ${formatDistance(trip.distance)} · ${formatDuration(duration)}`}
         onSelect={(format) => {
           setExportOpen(false)

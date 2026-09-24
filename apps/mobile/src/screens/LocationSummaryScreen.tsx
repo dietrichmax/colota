@@ -16,16 +16,14 @@ import { formatDistance, formatDuration } from "../utils/geo"
 import { logger } from "../utils/logger"
 import { space } from "../constants"
 import { dateOfDayKey, daysInRange, periodRange, periodTotals, rangeBounds, type Period } from "../utils/summaryPeriod"
+import { useTranslation } from "../i18n/useTranslation"
+import type { TranslationKey } from "../i18n/options"
 
 // A year or all time would walk every row in the database; they return with a native daily rollup.
-const PERIODS: Array<{ value: Period; label: string }> = [
-  { value: "week", label: "Week" },
-  { value: "month", label: "Month" }
+const PERIODS: Array<{ value: Period; labelKey: TranslationKey }> = [
+  { value: "week", labelKey: "summary.week" },
+  { value: "month", labelKey: "summary.month" }
 ]
-
-function count(n: number, noun: string): string {
-  return `${n} ${noun}${n === 1 ? "" : "s"}`
-}
 
 function dayLabel(day: string): string {
   return dateOfDayKey(day).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
@@ -33,6 +31,7 @@ function dayLabel(day: string): string {
 
 export function LocationSummaryScreen({ navigation }: { navigation: any }) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const [period, setPeriod] = useState<Period>("week")
   const [offset, setOffset] = useState(0)
   // One read per shown period: the native daily stats walk every row in their window, so all
@@ -89,8 +88,8 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
         caption={range.caption}
         onPrevious={() => setOffset((o) => o + 1)}
         onNext={() => setOffset((o) => Math.max(0, o - 1))}
-        previousLabel={`Previous ${period}`}
-        nextLabel={`Next ${period}`}
+        previousLabel={t(`summary.previous.${period}`)}
+        nextLabel={t(`summary.next.${period}`)}
         nextDisabled={offset === 0}
         testID="period"
       />
@@ -98,7 +97,7 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
         {PERIODS.map((p) => (
           <Tab
             key={p.value}
-            label={p.label}
+            label={t(p.labelKey)}
             active={period === p.value}
             onPress={() => choosePeriod(p.value)}
             colors={colors}
@@ -111,17 +110,17 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : days.length === 0 ? (
-        <EmptyState icon={CalendarX} title="Nothing recorded" hint={range.caption} />
+        <EmptyState icon={CalendarX} title={t("summary.empty")} hint={range.caption} />
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           <Card rows testID="period-ledger">
-            <StatRow icon={Route} label="Distance" value={formatDistance(totals.distanceMeters)} />
+            <StatRow icon={Route} label={t("summary.distance")} value={formatDistance(totals.distanceMeters)} />
             <Divider tight inset />
-            <StatRow icon={MapPin} label="Trips" value={String(totals.trips)} />
+            <StatRow icon={MapPin} label={t("summary.trips")} value={String(totals.trips)} />
             <Divider tight inset />
-            <StatRow icon={Calendar} label="Active days" value={String(totals.activeDays)} />
+            <StatRow icon={Calendar} label={t("summary.activeDays")} value={String(totals.activeDays)} />
             <Divider tight inset />
-            <StatRow icon={TrendingUp} label="Avg / day" value={formatDistance(totals.avgPerDay)} />
+            <StatRow icon={TrendingUp} label={t("summary.avgPerDay")} value={formatDistance(totals.avgPerDay)} />
           </Card>
           {
             <Card rows testID="period-days">
@@ -131,9 +130,9 @@ export function LocationSummaryScreen({ navigation }: { navigation: any }) {
                   <ListItem
                     icon={Calendar}
                     label={dayLabel(day.day)}
-                    sub={`${formatDistance(day.distanceMeters)} · ${count(day.tripCount, "trip")} · ${count(day.count, "point")} · ${formatDuration(day.endTime - day.startTime)}`}
+                    sub={`${formatDistance(day.distanceMeters)} · ${t("history.trips", { count: day.tripCount, n: day.tripCount })} · ${t("history.points", { count: day.count, n: day.count.toLocaleString() })} · ${formatDuration(day.endTime - day.startTime)}`}
                     onPress={() => openDay(day.day)}
-                    accessibilityHint="Opens the day in Location History"
+                    accessibilityHint={t("summary.opensDay")}
                     testID={`day-${day.day}`}
                   />
                 </React.Fragment>
