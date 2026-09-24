@@ -2,6 +2,7 @@ import React from "react"
 import { render, fireEvent } from "@testing-library/react-native"
 import { EXPORT_FORMAT_KEYS, EXPORT_FORMATS } from "../../../utils/exportConverters"
 import { ExportFormatDialog } from "../ExportFormatDialog"
+import { t } from "../../../i18n/t"
 
 jest.mock("../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
@@ -27,7 +28,7 @@ describe("ExportFormatDialog", () => {
     expect(getByText("Wed, Sep 3 · 3 trips · 12.4 km")).toBeTruthy()
     for (const key of EXPORT_FORMAT_KEYS) {
       expect(getByText(EXPORT_FORMATS[key].label)).toBeTruthy()
-      expect(getByText(EXPORT_FORMATS[key].description)).toBeTruthy()
+      expect(getByText(t(EXPORT_FORMATS[key].descriptionKey))).toBeTruthy()
     }
   })
 

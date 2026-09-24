@@ -81,6 +81,12 @@ describe("deleteCopy", () => {
     expect(copy.message).toMatch(/96 of them have never been uploaded, so no copy of those survives/)
   })
 
+  it("words a single unsent match in the singular", () => {
+    const copy = deleteCopy("older", 1, { days: 1, cutoffSeconds: CUTOFF, unsent: 1 })
+    expect(copy.title).toBe("Delete 1 location older than 1 day?")
+    expect(copy.message).toMatch(/1 of them has never been uploaded, so no copy of it survives/)
+  })
+
   it("drops the unsent clause from the age case when there is none, leaving one space between sentences", () => {
     const copy = deleteCopy("older", 3120, { days: 90, cutoffSeconds: CUTOFF, unsent: 0 })
     expect(copy.message).not.toMatch(/never been uploaded/)

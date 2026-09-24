@@ -4,6 +4,7 @@
  */
 
 import { formatDateWithYear } from "./geo"
+import { t } from "../i18n/t"
 
 /**
  * What each delete on Data management takes, in the words the control and its confirmation use.
@@ -23,18 +24,15 @@ export interface DeleteCopy {
   confirmText: string
 }
 
-const plural = (n: number, noun: string) => `${n.toLocaleString()} ${noun}${n === 1 ? "" : "s"}`
+const count = (key: "data.locations" | "data.days" | "data.queuedLocations" | "data.syncedLocations", n: number) =>
+  t(key, { count: n, n: n.toLocaleString() })
 
 /** The sub under a delete row, or the message under a delete button: what this press would take. */
-export function scopeSub(scope: "queued" | "synced", count: number): string {
+export function scopeSub(scope: "queued" | "synced", n: number): string {
   if (scope === "queued") {
-    return count === 0
-      ? "Nothing queued."
-      : `${plural(count, "location")} waiting to upload. Nothing else holds a copy, and they leave History too.`
+    return n === 0 ? t("data.queued.none") : t("data.queued.some", { count: n, n: n.toLocaleString() })
   }
-  return count === 0
-    ? "Nothing has been uploaded yet."
-    : `${plural(count, "location")} already on your server. Imported locations count as synced.`
+  return n === 0 ? t("data.synced.none") : t("data.synced.some", { count: n, n: n.toLocaleString() })
 }
 
 /**
@@ -42,9 +40,9 @@ export function scopeSub(scope: "queued" | "synced", count: number): string {
  * because that count reads every matching row and is only worth taking once, on the press, where
  * `deleteCopy` says it.
  */
-export function olderSub(count: number, days: number, cutoffSeconds: number): string {
-  if (count === 0) return `Nothing on this device is older than ${plural(days, "day")}.`
-  return `${plural(count, "location")} recorded before ${formatDateWithYear(cutoffSeconds)}.`
+export function olderSub(n: number, days: number, cutoffSeconds: number): string {
+  if (n === 0) return t("data.older.none", { days: count("data.days", days) })
+  return t("data.older.some", { locations: count("data.locations", n), date: formatDateWithYear(cutoffSeconds) })
 }
 
 export interface OlderArgs {
@@ -55,39 +53,34 @@ export interface OlderArgs {
 }
 
 /** The confirmation for one delete. Every count comes from a read taken immediately before the dialog. */
-export function deleteCopy(scope: DataScope, count: number, older?: OlderArgs): DeleteCopy {
+export function deleteCopy(scope: DataScope, n: number, older?: OlderArgs): DeleteCopy {
   switch (scope) {
     case "queued":
       return {
-        title: `Delete ${plural(count, "queued location")}?`,
-        message:
-          "These are the locations themselves, not their pending uploads. Once deleted, no copy survives anywhere and they leave History too. Points already handed to your server during a running sync may still arrive. This cannot be undone.",
-        confirmText: "Delete"
+        title: t("data.delete.queued.title", { locations: count("data.queuedLocations", n) }),
+        message: t("data.delete.queued.message"),
+        confirmText: t("common.delete")
       }
     case "synced":
       return {
-        title: `Delete ${plural(count, "synced location")}?`,
-        message: `Removes ${plural(count, "location")} from this device, not an upload record. Those days leave History, notes included, and locations you imported count as synced. Copies already on your server stay there. This cannot be undone.`,
-        confirmText: "Delete"
+        title: t("data.delete.synced.title", { locations: count("data.syncedLocations", n) }),
+        message: t("data.delete.synced.message", { locations: count("data.locations", n) }),
+        confirmText: t("common.delete")
       }
     case "older": {
       const { days = 0, cutoffSeconds = 0, unsent = 0 } = older ?? ({} as OlderArgs)
-      const never =
-        unsent === 0
-          ? ""
-          : ` ${unsent.toLocaleString()} of them have never been uploaded, so no copy of those survives.`
+      const never = unsent === 0 ? "" : ` ${t("data.delete.never", { count: unsent, n: unsent.toLocaleString() })}`
       return {
-        title: `Delete ${plural(count, "location")} older than ${plural(days, "day")}?`,
-        message: `Removes every location recorded before ${formatDateWithYear(cutoffSeconds)} from this device.${never} Those days leave History. Copies already on your server stay there. This cannot be undone.`,
-        confirmText: "Delete"
+        title: t("data.delete.older.title", { locations: count("data.locations", n), days: count("data.days", days) }),
+        message: t("data.delete.older.message", { date: formatDateWithYear(cutoffSeconds), never }),
+        confirmText: t("common.delete")
       }
     }
     case "all":
       return {
-        title: `Delete all ${plural(count, "location")}?`,
-        message:
-          "Removes every location on this device, its upload queue and every manual trip split and merge you made. History becomes empty. Your settings, geofences and profiles stay, and copies already on your server are not touched. This cannot be undone.",
-        confirmText: "Delete all"
+        title: t("data.delete.all.title", { locations: count("data.locations", n) }),
+        message: t("data.delete.all.message"),
+        confirmText: t("data.delete.all.confirm")
       }
   }
 }

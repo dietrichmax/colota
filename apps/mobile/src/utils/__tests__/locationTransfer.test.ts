@@ -1,5 +1,5 @@
 import type { ImportPreview } from "../../services/ImportService"
-import { FILE_FORMATS, IMPORT_FORMAT_ORDER } from "../fileFormats"
+import { IMPORT_FORMAT_ORDER, fileFormatLabel } from "../fileFormats"
 import { formatDateWithYear } from "../geo"
 import {
   autoExportSub,
@@ -52,7 +52,7 @@ describe("readableFormats", () => {
 
   it("folds the legacy Timeline parser into its sibling rather than naming one noun twice", () => {
     expect(IMPORT_FORMAT_ORDER).toContain("google_timeline_legacy")
-    expect(FILE_FORMATS.google_timeline_legacy.label).toBe("Google Timeline (legacy)")
+    expect(fileFormatLabel("google_timeline_legacy")).toBe("Google Timeline (legacy)")
     expect(readableFormats().match(/Google Timeline/g)).toHaveLength(1)
   })
 })
@@ -239,8 +239,12 @@ describe("autoExportSub", () => {
 describe("transferRowSub", () => {
   // The auto-export row left the hub, so this row is the only place its failure can surface.
   it("carries the auto-export state when there is one", () => {
-    // Only the first word is lowered, or the format name comes out as "geojson".
+    // The interval takes its in-sentence form; the format name keeps its own case.
     expect(transferRowSub(auto())).toBe("Auto-export daily · GeoJSON · 10 files kept")
+    expect(transferRowSub(auto({ interval: "weekly", lastError: "write" }))).toBe(
+      "Auto-export weekly · GeoJSON · 10 files kept · last export failed"
+    )
+    expect(transferRowSub(auto({ running: true }))).toBe("Auto-export export running")
     expect(transferRowSub(auto({ enabled: false, lastError: "permission" }))).toBe(
       "Auto-export stopped, folder access lost"
     )

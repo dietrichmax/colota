@@ -14,6 +14,7 @@ import { Button } from "./Button"
 import { DialogShell } from "./DialogShell"
 import { Divider } from "./Divider"
 import { ListItem } from "./ListItem"
+import { t } from "../../i18n/t"
 
 type ExportFormatDialogProps = {
   visible: boolean
@@ -31,7 +32,7 @@ export function ExportFormatDialog({ visible, title, message, onSelect, onReques
       visible={visible}
       title={title}
       onRequestClose={onRequestClose}
-      footer={<Button variant="ghost" title="Cancel" onPress={onRequestClose} testID="export-cancel" />}
+      footer={<Button variant="ghost" title={t("common.cancel")} onPress={onRequestClose} testID="export-cancel" />}
     >
       <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
       <View style={styles.rows}>
@@ -40,7 +41,7 @@ export function ExportFormatDialog({ visible, title, message, onSelect, onReques
             {i > 0 && <Divider tight />}
             <ListItem
               label={EXPORT_FORMATS[key].label}
-              sub={EXPORT_FORMATS[key].description}
+              sub={t(EXPORT_FORMATS[key].descriptionKey)}
               trailingIcon={Upload}
               onPress={() => onSelect(key)}
               testID={`export-${key}`}

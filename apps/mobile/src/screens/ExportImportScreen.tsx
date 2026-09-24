@@ -44,11 +44,12 @@ import {
   importRowSub,
   previewHeadline,
   queueHint,
-  SHARE_FAILED_LINE,
+  shareFailedLine,
   skippedLine
 } from "../utils/locationTransfer"
 import { space } from "../constants"
 import type { ScreenProps } from "../types/global"
+import { useTranslation } from "../i18n/useTranslation"
 
 type AutoExportStatus = Awaited<ReturnType<typeof NativeLocationService.getAutoExportStatus>>
 type Busy = "export" | "parse" | "commit" | null
@@ -58,6 +59,7 @@ const EMPTY = { total: 0, databaseSizeMB: 0 }
 
 export function ExportImportScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   const [stats, setStats] = useState(EMPTY)
   const [loaded, setLoaded] = useState(false)
@@ -115,35 +117,38 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
     ImportService.cancelImport().catch(() => {})
   }, [dropStaged])
 
-  const handleExport = useCallback(async (format: ExportFormat) => {
-    setFormatOpen(false)
-    if (busyRef.current !== null) return
-    busyRef.current = "export"
-    setBusy("export")
-    setExportMessage(null)
-    try {
-      const result = await NativeLocationService.exportToFile(format)
-      if (!result) {
-        setExportMessage({ text: exportLine(0) })
-        return
-      }
-      // Dismissed before the share sheet, which would otherwise sit over this overlay.
-      setBusy(null)
+  const handleExport = useCallback(
+    async (format: ExportFormat) => {
+      setFormatOpen(false)
+      if (busyRef.current !== null) return
+      busyRef.current = "export"
+      setBusy("export")
+      setExportMessage(null)
       try {
-        await NativeLocationService.shareFile(result.filePath, result.mimeType, `Colota export`)
-        setExportMessage({ text: exportResultLine(result.rowCount, format) })
-      } catch (shareError) {
-        logger.warn("[ExportImportScreen] Share failed:", shareError)
-        setExportMessage({ text: SHARE_FAILED_LINE, failed: true })
+        const result = await NativeLocationService.exportToFile(format)
+        if (!result) {
+          setExportMessage({ text: exportLine(0) })
+          return
+        }
+        // Dismissed before the share sheet, which would otherwise sit over this overlay.
+        setBusy(null)
+        try {
+          await NativeLocationService.shareFile(result.filePath, result.mimeType, t("transfer.shareSubject"))
+          setExportMessage({ text: exportResultLine(result.rowCount, format) })
+        } catch (shareError) {
+          logger.warn("[ExportImportScreen] Share failed:", shareError)
+          setExportMessage({ text: shareFailedLine(), failed: true })
+        }
+      } catch (err) {
+        logger.error("[ExportImportScreen] Export failed:", err)
+        showAlert(t("transfer.exportFailed.title"), t("transfer.exportFailed.message"), "error")
+      } finally {
+        busyRef.current = null
+        setBusy(null)
       }
-    } catch (err) {
-      logger.error("[ExportImportScreen] Export failed:", err)
-      showAlert("Export failed", "The file could not be written. Try again in a moment.", "error")
-    } finally {
-      busyRef.current = null
-      setBusy(null)
-    }
-  }, [])
+    },
+    [t]
+  )
 
   const handleChooseFile = useCallback(async () => {
     if (busyRef.current !== null) return
@@ -152,7 +157,7 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
       source = await ImportService.pickImportSource()
     } catch (err) {
       logger.error("[ExportImportScreen] pickImportSource failed:", err)
-      showAlert("Could not open the picker", "The system file picker did not open.", "error")
+      showAlert(t("transfer.picker.title"), t("transfer.picker.message"), "error")
       return
     }
     if (!source || busyRef.current !== null) return
@@ -177,7 +182,7 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
       busyRef.current = null
       setBusy(null)
     }
-  }, [])
+  }, [t])
 
   const handleCommit = useCallback(async () => {
     if (busyRef.current !== null || !preview) return
@@ -188,7 +193,7 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
     try {
       const inserted = await ImportService.commitImport(queued)
       dropStaged()
-      setImportMessage({ text: `Imported ${inserted.toLocaleString()} locations.` })
+      setImportMessage({ text: t("transfer.imported", { count: inserted, n: inserted.toLocaleString() }) })
       await read()
     } catch (err) {
       logger.error("[ExportImportScreen] Commit failed:", err)
@@ -200,7 +205,7 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
       busyRef.current = null
       setBusy(null)
     }
-  }, [preview, queued, read, dropStaged])
+  }, [preview, queued, read, dropStaged, t])
 
   const skipped = preview ? skippedLine(preview) : undefined
   const headline = preview ? previewHeadline(preview) : null
@@ -210,18 +215,18 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.section}>
-          <SectionTitle>On this device</SectionTitle>
+          <SectionTitle>{t("transfer.section.device")}</SectionTitle>
           <Card rows>
             <StatRow
               icon={MapPin}
-              label="Locations"
+              label={t("data.stat.locations")}
               value={loaded ? stats.total.toLocaleString() : "…"}
               testID="stat-locations"
             />
             <Divider tight inset />
             <StatRow
               icon={HardDrive}
-              label="Database size"
+              label={t("data.stat.size")}
               value={loaded ? formatBytes(stats.databaseSizeMB * 1024 * 1024, { decimals: 0 }) : "…"}
               testID="stat-size"
             />
@@ -229,16 +234,16 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Export</SectionTitle>
+          <SectionTitle>{t("transfer.section.export")}</SectionTitle>
           <Card rows>
             {/* Before the first stats read the total is 0, which would read as nothing to export. */}
             <ListItem
               testID="export-all-row"
               icon={MapPin}
               trailingIcon={Upload}
-              label="Export all locations"
+              label={t("transfer.exportAllRow")}
               sub={loaded ? exportRowSub(stats.total) : undefined}
-              accessibilityHint="Picks a format, then hands the file to another app"
+              accessibilityHint={t("transfer.exportAll.hint")}
               disabled={busy !== null || stats.total === 0}
               onPress={() => setFormatOpen(true)}
             />
@@ -246,15 +251,15 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
             <ListItem
               testID="nav-location-history"
               icon={CalendarRange}
-              label="Export a day or a trip"
-              sub="From History"
+              label={t("transfer.exportDayRow")}
+              sub={t("transfer.fromHistory")}
               onPress={() => navigation.navigate("Location History")}
             />
             <Divider tight inset />
             <ListItem
               testID="nav-auto-export"
               icon={Clock}
-              label="Automatic export"
+              label={t("transfer.autoRow")}
               sub={autoExportSub(autoExport)}
               subLines={2}
               onPress={() => navigation.navigate("Auto-Export")}
@@ -266,7 +271,7 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Import</SectionTitle>
+          <SectionTitle>{t("transfer.section.import")}</SectionTitle>
           {preview && headline ? (
             <>
               <Card rows>
@@ -280,11 +285,11 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
                 {preview.canQueueForSync && (
                   <>
                     <Divider tight />
-                    <SettingRow label="Also queue for upload" hint={queueHint(preview.newRows)}>
+                    <SettingRow label={t("transfer.alsoQueue")} hint={queueHint(preview.newRows)}>
                       <Toggle
                         value={queued}
                         onValueChange={setQueued}
-                        accessibilityLabel="Also queue for upload"
+                        accessibilityLabel={t("transfer.alsoQueue")}
                         testID="queue-toggle"
                       />
                     </SettingRow>
@@ -294,7 +299,7 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
                 <ListItem
                   testID="nav-backup-restore"
                   icon={Archive}
-                  label="Back up first"
+                  label={t("data.backupFirst")}
                   sub={backupFirstSub()}
                   subLines={2}
                   onPress={() => navigation.navigate("Backup & Restore")}
@@ -310,7 +315,7 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
                 disabled={busy !== null}
                 onPress={handleCommit}
               />
-              <Button variant="ghost" title="Discard" testID="import-discard-btn" onPress={discard} />
+              <Button variant="ghost" title={t("transfer.discard")} testID="import-discard-btn" onPress={discard} />
             </>
           ) : (
             <Card rows>
@@ -318,10 +323,10 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
                 testID="import-file-row"
                 icon={FileText}
                 trailingIcon={busy === "parse" ? SpinningLoader : Download}
-                label="Import a file"
+                label={t("transfer.importRow")}
                 sub={importRowSub(busy === "parse")}
                 subLines={2}
-                accessibilityHint="Opens the file picker"
+                accessibilityHint={t("transfer.importRow.hint")}
                 disabled={busy === "parse" ? false : busy !== null}
                 onPress={handleChooseFile}
               />
@@ -335,18 +340,18 @@ export function ExportImportScreen({ navigation }: ScreenProps) {
 
       <ExportFormatDialog
         visible={formatOpen}
-        title="Export format"
+        title={t("transfer.formatTitle")}
         message={exportLine(stats.total)}
         onSelect={handleExport}
         onRequestClose={() => setFormatOpen(false)}
       />
       <LoadingOverlay
         visible={busy === "export" || busy === "commit"}
-        title={busy === "export" ? "Exporting" : "Importing"}
+        title={busy === "export" ? t("transfer.exporting") : t("transfer.importing")}
         message={
           busy === "commit" && preview
-            ? `${preview.newRows.toLocaleString()} locations. Recording waits until this finishes.`
-            : `${stats.total.toLocaleString()} locations.`
+            ? t("transfer.committing", { count: preview.newRows, n: preview.newRows.toLocaleString() })
+            : t("transfer.totalLocations", { count: stats.total, n: stats.total.toLocaleString() })
         }
       />
     </Container>

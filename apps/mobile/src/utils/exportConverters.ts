@@ -5,6 +5,7 @@
 
 import { type LucideIcon } from "lucide-react-native"
 import { FILE_FORMATS, IMPORT_FORMAT_ORDER } from "./fileFormats"
+import type { TranslationKey } from "../i18n/options"
 
 // Trip-aware serialization lives natively in ExportConverters.kt (convertTrips,
 // reached via NativeLocationService.exportTripsToFile). This module now only
@@ -18,7 +19,7 @@ export const EXPORT_FORMAT_KEYS: ExportFormat[] = IMPORT_FORMAT_ORDER.filter(
 
 export interface ExportFormatConfig {
   label: string
-  description: string
+  descriptionKey: TranslationKey
   icon: LucideIcon
   extension: string
   mimeType: string
@@ -29,7 +30,7 @@ export const EXPORT_FORMATS: Record<ExportFormat, ExportFormatConfig> = EXPORT_F
     const f = FILE_FORMATS[key]
     acc[key] = {
       label: f.label,
-      description: f.description,
+      descriptionKey: f.descriptionKey,
       icon: f.icon,
       extension: f.extension,
       mimeType: f.mimeType!

@@ -6,19 +6,19 @@
 import { Activity, Database, Globe, Map, MapPin, Table2 } from "lucide-react-native"
 import type { LucideIcon } from "lucide-react-native"
 import type { ImportFormat } from "../services/ImportService"
+import type { TranslationKey } from "../i18n/options"
+import { t } from "../i18n/t"
 
-// Single source of truth for per-format metadata, shared by the export and import
-// screens. `description` is the general blurb shown in both menus;
-// `importHint` is an optional import-only caveat appended to
-// it on the import screen (where parsing constraints actually matter).
+// Single source of truth for per-format metadata, shared by the export and import screens.
 export interface FileFormat {
+  /** A product name, never translated; `legacy` wraps it in the catalog's "(legacy)". */
   label: string
+  legacy?: boolean
   icon: LucideIcon
   extension: string
   exportable: boolean
   mimeType?: string // present for every exportable format
-  description: string
-  importHint?: string
+  descriptionKey: TranslationKey
 }
 
 export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
@@ -28,23 +28,22 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     extension: ".geojson",
     exportable: true,
     mimeType: "application/geo+json",
-    description:
-      "QGIS, Mapbox, Leaflet. One point per recording, and the only format Colota re-imports without losing a field."
+    descriptionKey: "formats.geojson.description"
   },
   google_timeline_legacy: {
-    label: "Google Timeline (legacy)",
+    label: "Google Timeline",
+    legacy: true,
     icon: Database,
     extension: "Records.json",
     exportable: false,
-    description:
-      "Older bulk Location History export from Google Takeout. Google removed this from Takeout in late 2024; use this for archived files."
+    descriptionKey: "formats.google_timeline_legacy.description"
   },
   google_timeline_new: {
     label: "Google Timeline",
     icon: MapPin,
     extension: ".json",
     exportable: false,
-    description: "On-device export from Android Settings -> Location -> Location services -> Timeline."
+    descriptionKey: "formats.google_timeline_new.description"
   },
   gpx: {
     label: "GPX",
@@ -52,7 +51,7 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     extension: ".gpx",
     exportable: true,
     mimeType: "application/gpx+xml",
-    description: "GPS Exchange Format - Garmin, Strava, sport watches, tracking apps."
+    descriptionKey: "formats.gpx.description"
   },
   kml: {
     label: "KML",
@@ -60,8 +59,7 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     extension: ".kml",
     exportable: true,
     mimeType: "application/vnd.google-earth.kml+xml",
-    description: "Google Earth, Google Maps, ArcGIS.",
-    importHint: "Only timestamped placemarks are read - LineString-only tracks are skipped."
+    descriptionKey: "formats.kml.description"
   },
   csv: {
     label: "CSV",
@@ -69,8 +67,7 @@ export const FILE_FORMATS: Record<ImportFormat, FileFormat> = {
     extension: ".csv",
     exportable: true,
     mimeType: "text/csv",
-    description: "Comma-separated table - Excel, Google Sheets, data analysis.",
-    importHint: "The header must include latitude, longitude and a time column."
+    descriptionKey: "formats.csv.description"
   }
 }
 
@@ -82,3 +79,9 @@ export const IMPORT_FORMAT_ORDER: ImportFormat[] = [
   "google_timeline_legacy",
   "csv"
 ]
+
+/** The name a format is shown by: the product name, with "(legacy)" from the catalog where it applies. */
+export function fileFormatLabel(format: ImportFormat): string {
+  const entry = FILE_FORMATS[format]
+  return entry.legacy ? t("formats.legacyLabel", { name: entry.label }) : entry.label
+}

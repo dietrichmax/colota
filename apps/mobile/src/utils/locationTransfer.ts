@@ -4,9 +4,9 @@
  */
 
 import type { ImportPreview } from "../services/ImportService"
-import { FILE_FORMATS, IMPORT_FORMAT_ORDER } from "./fileFormats"
-import { plural } from "./format"
+import { FILE_FORMATS, IMPORT_FORMAT_ORDER, fileFormatLabel } from "./fileFormats"
 import { formatDateWithYear } from "./geo"
+import { t } from "../i18n/t"
 
 /**
  * What moving locations across this device's file boundary takes and leaves, in the words the
@@ -28,51 +28,64 @@ type AutoExportState = {
   retentionCount: number
 }
 
-const formatLabel = (format: string) => FILE_FORMATS[format as keyof typeof FILE_FORMATS]?.label ?? format.toUpperCase()
+const formatLabel = (format: string) =>
+  Object.prototype.hasOwnProperty.call(FILE_FORMATS, format)
+    ? fileFormatLabel(format as keyof typeof FILE_FORMATS)
+    : format.toUpperCase()
+
+const counted = (
+  key: "transfer.newLocations" | "transfer.duplicates" | "transfer.unusableRows" | "transfer.files",
+  n: number
+) => t(key, { count: n, n: n.toLocaleString() })
 
 /** The formats a file can be read as, from the one table, with the legacy Timeline name folded in. */
 export function readableFormats(): string {
-  const labels = IMPORT_FORMAT_ORDER.map((format) => FILE_FORMATS[format].label.replace(" (legacy)", ""))
+  const labels = IMPORT_FORMAT_ORDER.map((format) => FILE_FORMATS[format].label)
   return [...new Set(labels)].join(", ")
 }
 
 /** The format dialog's message, and the result line when an export finds nothing. */
 export function exportLine(total: number): string {
-  if (total === 0) return "Nothing to export yet."
-  return `All ${plural(total, "location")} in one file, oldest first. The file goes to the app you pick and is not kept here.`
+  if (total === 0) return t("transfer.nothingToExport")
+  return t("transfer.exportAll", { count: total, n: total.toLocaleString() })
 }
 
 /** The sub on the Export all locations row. */
 export function exportRowSub(total: number): string {
-  return total === 0 ? "Nothing to export yet" : "Every location in one file"
+  return total === 0 ? t("transfer.nothingToExportRow") : t("transfer.everyLocation")
 }
 
 /** After a run. Nothing here claims the file was saved, because nothing saved it. */
 export function exportResultLine(rowCount: number, format: string): string {
-  return `Exported ${plural(rowCount, "location")} as ${formatLabel(format)} and handed the file over.`
+  return t("transfer.exported", { count: rowCount, n: rowCount.toLocaleString(), format: formatLabel(format) })
 }
 
 /** A share the system never started. Logged and swallowed before, so it read as a success. */
-export const SHARE_FAILED_LINE = "The file was written but no app took it. Try again and pick a different app."
+export function shareFailedLine(): string {
+  return t("transfer.shareFailed")
+}
 
 /** The sub on the Import a file row. */
 export function importRowSub(reading: boolean): string {
-  return reading ? "Reading the file…" : readableFormats()
+  return reading ? t("transfer.reading") : readableFormats()
 }
 
 /** The sub on the Back up first row in the staged preview. */
 export function backupFirstSub(): string {
-  return "An import cannot be undone. A backup is the only way back."
+  return t("transfer.backupFirst")
 }
 
 /** The staged file, as a state line: the number that matters, then what it came from and when. */
 export function previewHeadline(preview: ImportPreview): { label: string; caption: string } {
   const span =
     preview.dateRangeStartSec != null && preview.dateRangeEndSec != null
-      ? ` · ${formatDateWithYear(preview.dateRangeStartSec)} to ${formatDateWithYear(preview.dateRangeEndSec)}`
+      ? ` · ${t("transfer.span", {
+          from: formatDateWithYear(preview.dateRangeStartSec),
+          to: formatDateWithYear(preview.dateRangeEndSec)
+        })}`
       : ""
   return {
-    label: `${plural(preview.newRows, "new location")}`,
+    label: counted("transfer.newLocations", preview.newRows),
     caption: `${formatLabel(preview.format)}${span}`
   }
 }
@@ -83,19 +96,22 @@ export function previewHeadline(preview: ImportPreview): { label: string; captio
  */
 export function skippedLine(preview: ImportPreview): string | undefined {
   const parts: string[] = []
-  if (preview.duplicates > 0) parts.push(plural(preview.duplicates, "duplicate"))
-  if (preview.invalid > 0) parts.push(plural(preview.invalid, "unusable row"))
+  if (preview.duplicates > 0) parts.push(counted("transfer.duplicates", preview.duplicates))
+  if (preview.invalid > 0) parts.push(counted("transfer.unusableRows", preview.invalid))
   if (parts.length === 0) return undefined
-  return `Skipping ${parts.join(" and ")}.`
+  const joined = parts.length === 2 ? t("transfer.and", { first: parts[0], second: parts[1] }) : parts[0]
+  return t("transfer.skipping", { parts: joined })
 }
 
 /** The sub under the queue switch. One upload per row is the part that surprises people. */
 export function queueHint(newRows: number): string {
-  return `Sends ${plural(newRows, "location")} to your server too.`
+  return t("transfer.queueHint", { count: newRows, n: newRows.toLocaleString() })
 }
 
 export function commitLabel(newRows: number, queued: boolean): string {
-  return queued ? `Import and queue ${newRows.toLocaleString()}` : `Import ${plural(newRows, "location")}`
+  return queued
+    ? t("transfer.importQueue", { count: newRows, n: newRows.toLocaleString() })
+    : t("transfer.importCount", { count: newRows, n: newRows.toLocaleString() })
 }
 
 export interface ConfirmCopy {
@@ -110,62 +126,72 @@ export interface ConfirmCopy {
  * the file they picked.
  */
 export function commitConfirm(preview: ImportPreview, queued: boolean): ConfirmCopy {
-  const rejected = preview.invalid > 0 ? " A rejected row had no usable time or coordinates." : ""
-  const shared = `Nothing already stored is changed or removed. Duplicates are counted inside the file and against what is stored, and a duplicate is skipped rather than merged.${rejected} Recording pauses while these are written, and an import cannot be undone one point at a time.`
+  const rejected = preview.invalid > 0 ? ` ${t("transfer.confirm.rejected")}` : ""
+  const shared = t("transfer.confirm.shared", { rejected })
   if (!queued) {
     return {
-      title: `Import ${plural(preview.newRows, "location")}?`,
-      message: `${shared} They are marked as already uploaded, so Delete synced locations in Data management would take them too.`,
-      confirmText: "Import"
+      title: t("transfer.confirm.title", { count: preview.newRows, n: preview.newRows.toLocaleString() }),
+      message: t("transfer.confirm.synced", { shared }),
+      confirmText: t("transfer.confirm.import")
     }
   }
   return {
-    title: `Import and queue ${preview.newRows.toLocaleString()} locations?`,
-    message: `${shared} Every one becomes an upload to your server, and Colota cannot recall what your server has already taken.`,
-    confirmText: "Import and queue"
+    title: t("transfer.confirm.queueTitle", { count: preview.newRows, n: preview.newRows.toLocaleString() }),
+    message: t("transfer.confirm.queued", { shared }),
+    confirmText: t("transfer.confirm.importQueue")
   }
 }
 
 /** A parse that staged nothing. Three different reasons that all read as "nothing found" before. */
 export function emptyPreviewCopy(preview: ImportPreview): string {
-  if (preview.totalParsed === 0 && preview.invalid === 0) return "No locations were found in this file."
-  if (preview.totalParsed === 0) {
-    return `No usable locations. ${preview.invalid.toLocaleString()} rows had no usable time or coordinates.`
-  }
-  return `Nothing new. ${preview.duplicates.toLocaleString()} points were skipped as duplicates, counted both inside the file and against what is already stored.`
+  if (preview.totalParsed === 0 && preview.invalid === 0) return t("transfer.empty.none")
+  if (preview.totalParsed === 0)
+    return t("transfer.empty.unusable", { count: preview.invalid, n: preview.invalid.toLocaleString() })
+  return t("transfer.empty.duplicates", { count: preview.duplicates, n: preview.duplicates.toLocaleString() })
 }
 
 /** Native error codes, worded from what each one means rather than from a hand-kept list. */
 export function importErrorMessage(code: string | undefined): string {
   switch (code) {
-    case "E_IMPORT_UNSUPPORTED": {
+    case "E_IMPORT_UNSUPPORTED":
       // A CSV with a bad header is refused here, before any preview exists.
-      const hint = FILE_FORMATS.csv.importHint
-      const csv = hint ? ` In a CSV, ${hint.charAt(0).toLowerCase()}${hint.slice(1)}` : ""
-      return `Colota did not recognise this file. It reads ${readableFormats()}, and it refuses an XML file that declares a DOCTYPE.${csv}`
-    }
+      return `${t("transfer.err.unsupported", { formats: readableFormats() })} ${t("transfer.err.unsupportedCsv")}`
     case "E_BUSY":
-      return "Another import is already running."
+      return t("transfer.err.busy")
     case "E_IMPORT_NO_PENDING":
-      return "The file you picked expired. Choose it again."
+      return t("transfer.err.expired")
     case "E_IMPORT_SYNC_UNAVAILABLE":
-      return "There is no server to queue to. Import without queueing, or set one up on Connection first."
+      return t("transfer.err.noServer")
     default:
-      return "The file could not be read."
+      return t("transfer.err.unreadable")
   }
+}
+
+const INTERVALS = ["daily", "weekly", "monthly"] as const
+const isInterval = (value: string): value is (typeof INTERVALS)[number] =>
+  (INTERVALS as readonly string[]).includes(value)
+
+/** "Daily · GeoJSON · 3 files kept"; `clause` gives the interval its in-sentence form. */
+function scheduleLine(status: AutoExportState, clause: boolean): string {
+  const interval = isInterval(status.interval)
+    ? t(clause ? `autoExport.interval.${status.interval}.clause` : `autoExport.interval.${status.interval}`)
+    : status.interval
+  const parts = [interval, formatLabel(status.format)]
+  if (status.retentionCount > 0)
+    parts.push(t("autoExport.sub.kept", { files: counted("transfer.files", status.retentionCount) }))
+  if (status.lastError) parts.push(t("autoExport.sub.lastFailed"))
+  return parts.join(" · ")
 }
 
 /** The Automatic export row, and the hub row that now carries its state. */
 export function autoExportSub(status: AutoExportState | null): string {
-  if (!status) return "Not set up yet"
-  if (status.uri === null) return "No folder chosen"
+  if (!status) return t("autoExport.sub.notSetUp")
+  if (status.uri === null) return t("autoExport.sub.noFolder")
   if (!status.enabled) {
-    return status.lastError ? "Stopped, folder access lost" : "Off"
+    return status.lastError ? t("autoExport.sub.stopped") : t("autoExport.sub.off")
   }
-  if (status.running) return "Export running"
-  const interval = status.interval.charAt(0).toUpperCase() + status.interval.slice(1)
-  const kept = status.retentionCount > 0 ? ` · ${plural(status.retentionCount, "file")} kept` : ""
-  return `${interval} · ${formatLabel(status.format)}${kept}${status.lastError ? " · last export failed" : ""}`
+  if (status.running) return t("autoExport.sub.running")
+  return scheduleLine(status, false)
 }
 
 /**
@@ -174,10 +200,9 @@ export function autoExportSub(status: AutoExportState | null): string {
  */
 export function transferRowSub(status: AutoExportState | null): string {
   if (status && status.uri !== null && status.enabled) {
-    // Only the first word is lowered. Lowering the whole line would print "geojson".
-    const state = autoExportSub(status)
-    return `Auto-export ${state.charAt(0).toLowerCase()}${state.slice(1)}`
+    if (status.running) return t("transfer.row.autoRunning")
+    return t("transfer.row.auto", { summary: scheduleLine(status, true) })
   }
-  if (status?.lastError && !status.enabled) return "Auto-export stopped, folder access lost"
-  return `${readableFormats()} in, and out`
+  if (status?.lastError && !status.enabled) return t("transfer.row.autoStopped")
+  return t("transfer.row.formats", { formats: readableFormats() })
 }

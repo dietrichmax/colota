@@ -40,6 +40,7 @@ import { parseWholeNumber, wholeNumberError } from "../utils/settingsValidation"
 import { formatWhen } from "../utils/geo"
 import { logger } from "../utils/logger"
 import { formatBytes } from "../utils/format"
+import { useTranslation } from "../i18n/useTranslation"
 
 /** Only a placeholder in the custom field. Nothing is selected until the user selects it. */
 const PLACEHOLDER_DAYS = 90
@@ -61,6 +62,7 @@ const EMPTY_STATS: DatabaseStats = {
 }
 
 export function DataManagementScreen({ navigation }: RootScreenProps<"Data Management">) {
+  const { t } = useTranslation()
   const { settings } = useTracking()
   const isOfflineMode = settings.isOfflineMode
 
@@ -121,8 +123,10 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
   // The bridge parameter is a Kotlin Int, so an age past its range would arrive coerced and could
   // put the cutoff in the future, where every row matches.
   const ageError = isCustom
-    ? (wholeNumberError(customText, 1, "day") ??
-      (customDays !== null && customDays > MAX_RETENTION_DAYS ? `At most ${MAX_RETENTION_DAYS} days` : undefined))
+    ? (wholeNumberError(customText, 1, t("unit.day")) ??
+      (customDays !== null && customDays > MAX_RETENTION_DAYS
+        ? t("data.atMost", { n: MAX_RETENTION_DAYS })
+        : undefined))
     : undefined
 
   /** One count per settled age, from the same cutoff arithmetic the delete uses. */
@@ -192,7 +196,7 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
     // delete stays disarmed, which is the right resting state for a delete argument.
     if (restored === null) return
     setCustomText(String(restored))
-    setClampNote(`Set to ${restored} day${restored === 1 ? "" : "s"}`)
+    setClampNote(t("data.setTo", { count: restored, n: restored }))
     clampTimeout.set(() => setClampNote(undefined), SAVE_SUCCESS_DISPLAY_MS)
     runPreview(restored)
   }
@@ -221,7 +225,7 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
           older = { days, unsent, cutoffSeconds }
         }
         if (count === 0) {
-          showAlert("Nothing to delete", "That count came back empty. The figures above are current.", "info")
+          showAlert(t("data.nothingToDelete.title"), t("data.nothingToDelete.message"), "info")
           return
         }
 
@@ -234,18 +238,14 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
         runPreview(days)
       } catch (err) {
         logger.error(`[DataManagementScreen] Failed to delete ${scope} locations:`, err)
-        showAlert(
-          "Delete failed",
-          "The database reported an error. Check the figures above before trying again.",
-          "error"
-        )
+        showAlert(t("data.deleteFailed.title"), t("data.deleteFailed.message"), "error")
       } finally {
         busyRef.current = false
         setBusy(null)
         setBusyScope(null)
       }
     },
-    [days, updateStats, runPreview, applyStats]
+    [days, updateStats, runPreview, applyStats, t]
   )
 
   const handleManualFlush = useCallback(async () => {
@@ -253,7 +253,7 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
     busyRef.current = true
     const queuedBefore = stats.queued
     setBusy("flush")
-    setSyncMessage({ text: `Sent 0 of ${queuedBefore.toLocaleString()}.` })
+    setSyncMessage({ text: t("data.sync.progress", { sent: 0, total: queuedBefore.toLocaleString() }) })
 
     const finish = async (message: Message) => {
       flushTimeout.clear()
@@ -269,10 +269,7 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
     // over a large queue outlives the window while still reporting, and declaring it dead would
     // remove the listener and re-enable the button over a run that is still uploading.
     const armFallback = () =>
-      flushTimeout.set(
-        () => finish({ text: "No answer from the tracking service. Check the queued count above.", failed: true }),
-        MANUAL_FLUSH_TIMEOUT_MS
-      )
+      flushTimeout.set(() => finish({ text: t("data.sync.noAnswer"), failed: true }), MANUAL_FLUSH_TIMEOUT_MS)
 
     const sub = DeviceEventEmitter.addListener(
       "onSyncProgress",
@@ -281,15 +278,21 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
         // batches, so the running count reaching the queue it started with is not the signal.
         if (event.remaining === undefined) {
           armFallback()
-          setSyncMessage({ text: `Sent ${event.sent.toLocaleString()} of ${queuedBefore.toLocaleString()}.` })
+          setSyncMessage({
+            text: t("data.sync.progress", { sent: event.sent.toLocaleString(), total: queuedBefore.toLocaleString() })
+          })
           return
         }
         // `remaining` is a fresh count of the queue. `failed` counts attempts inside the pass and can
         // exceed it, since a row that failed twice is one row, so it never stands in for the queue.
-        const sent = `Sent ${event.sent.toLocaleString()} of ${queuedBefore.toLocaleString()}.`
-        const left = event.remaining > 0 ? ` ${event.remaining.toLocaleString()} still queued; press again.` : ""
+        const sent = t("data.sync.progress", {
+          sent: event.sent.toLocaleString(),
+          total: queuedBefore.toLocaleString()
+        })
+        const left =
+          event.remaining > 0 ? ` ${t("data.sync.stillQueued", { n: event.remaining.toLocaleString() })}` : ""
         if (event.failed > 0) {
-          finish({ text: `${sent} Some uploads failed.${left}`, failed: true })
+          finish({ text: `${sent} ${t("data.sync.someFailed")}${left}`, failed: true })
         } else {
           finish({ text: `${sent}${left}` })
         }
@@ -309,9 +312,9 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
       busyRef.current = false
       setBusy(null)
       setSyncMessage(null)
-      showAlert("Sync failed", "Check your connection settings and try again.", "error")
+      showAlert(t("data.sync.failed.title"), t("data.sync.failed.message"), "error")
     }
-  }, [stats.queued, settings.endpoint, updateStats, flushTimeout])
+  }, [stats.queued, settings.endpoint, updateStats, flushTimeout, t])
 
   const handleCompact = useCallback(async () => {
     if (busyRef.current) return
@@ -330,57 +333,60 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
       applyStats(after, afterGeneration)
       const freed = before - after.databaseSizeMB
       setCompactMessage({
-        text: freed > 0.01 ? `Released ${formatBytes(freed * 1024 * 1024, { decimals: 0 })}` : "Nothing to release"
+        text:
+          freed > 0.01
+            ? t("data.compact.released", { size: formatBytes(freed * 1024 * 1024, { decimals: 0 }) })
+            : t("data.compact.nothing")
       })
       compactTimeout.set(() => setCompactMessage(null), SAVE_SUCCESS_DISPLAY_MS)
     } catch (err) {
       logger.error("[DataManagementScreen] Compact failed:", err)
-      showAlert("Could not compact", "The database is busy. Try again in a moment.", "error")
+      showAlert(t("data.compact.failed.title"), t("data.compact.failed.message"), "error")
     } finally {
       busyRef.current = false
       setBusy(null)
     }
-  }, [compactTimeout, applyStats])
+  }, [compactTimeout, applyStats, t])
 
   const syncBlocker = !settings.endpoint
-    ? "No server configured. Set one on Connection."
+    ? t("data.sync.noServer")
     : stats.queued === 0
       ? stats.lastSyncTime > 0
-        ? `Nothing queued. Last upload ${formatWhen(Math.floor(stats.lastSyncTime / 1000))}.`
-        : "Nothing queued. New locations upload on their own."
+        ? t("data.sync.nothingLast", { when: formatWhen(Math.floor(stats.lastSyncTime / 1000)) })
+        : t("data.sync.nothingAuto")
       : null
-  const syncIdle = `${stats.queued.toLocaleString()} queued. Uploads ${stats.queued === 1 ? "it" : "them"} now, whatever Sync only on says.`
+  const syncIdle = t("data.syncIdle", { count: stats.queued, n: stats.queued.toLocaleString() })
   const syncSub = busy === "flush" ? (syncMessage?.text ?? "") : (syncBlocker ?? syncIdle)
   const syncResult = busy === "flush" ? null : syncMessage
   const scopeProgress = (scope: DataScope) =>
-    busyScope === scope ? (busy === "delete" ? "Deleting…" : "Counting…") : null
+    busyScope === scope ? (busy === "delete" ? t("data.deleting") : t("data.counting")) : null
 
   const ageCount = preview && preview.days === days ? preview.total : null
   // The field owns its own error; repeating it here would print the same sentence twice.
   const ageLine = ageError
-    ? "Fix the age below."
+    ? t("data.age.fix")
     : days === null
-      ? "Choose how old a location must be."
+      ? t("data.age.choose")
       : ageCount === null
-        ? "Counting…"
+        ? t("data.counting")
         : olderSub(ageCount, days, preview?.cutoffSeconds ?? 0)
 
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.section}>
-          <SectionTitle>Stored on this device</SectionTitle>
+          <SectionTitle>{t("data.section.stored")}</SectionTitle>
           <Card rows>
             <StatRow
               icon={MapPin}
-              label="Locations"
+              label={t("data.stat.locations")}
               value={loaded ? stats.total.toLocaleString() : "…"}
               testID="stat-locations"
             />
             <Divider tight inset />
             <StatRow
               icon={HardDrive}
-              label="Database size"
+              label={t("data.stat.size")}
               value={loaded ? formatBytes(stats.databaseSizeMB * 1024 * 1024, { decimals: 0 }) : "…"}
               testID="stat-size"
             />
@@ -388,7 +394,7 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Maintenance</SectionTitle>
+          <SectionTitle>{t("data.section.maintenance")}</SectionTitle>
           <Card rows>
             {!isOfflineMode && (
               <>
@@ -396,11 +402,11 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
                   testID="sync-now-row"
                   icon={Clock}
                   trailingIcon={busy === "flush" ? SpinningLoader : CloudUpload}
-                  label="Sync now"
+                  label={t("data.syncNow")}
                   sub={syncSub}
                   subLines={2}
                   disabled={busy === "flush" ? false : isProcessing || syncBlocker !== null}
-                  accessibilityHint="Uploads the queue now"
+                  accessibilityHint={t("data.syncNow.hint")}
                   onPress={handleManualFlush}
                 />
                 <Divider tight inset />
@@ -410,11 +416,11 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
               testID="compact-row"
               icon={HardDrive}
               trailingIcon={busy === "compact" ? SpinningLoader : Minimize2}
-              label="Compact database"
-              sub={busy === "compact" ? "Rewriting the database…" : "Gives unused space back. Deletes nothing."}
+              label={t("data.compact")}
+              sub={busy === "compact" ? t("data.compact.running") : t("data.compact.sub")}
               subLines={2}
               disabled={busy === "compact" ? false : isProcessing}
-              accessibilityHint="Rewrites the database file"
+              accessibilityHint={t("data.compact.hint")}
               onPress={handleCompact}
             />
           </Card>
@@ -425,12 +431,12 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Delete locations</SectionTitle>
+          <SectionTitle>{t("data.section.delete")}</SectionTitle>
           {/* Until the first count lands the screen knows nothing, and "Nothing stored" over a full
               database is both a lie and a whole subtree that mounts only to be torn down again. */}
           {!loaded ? null : stats.total === 0 ? (
             <Card rows style={styles.emptyCard}>
-              <EmptyState title="Nothing stored" hint="This device has no locations yet." style={styles.empty} />
+              <EmptyState title={t("data.empty.title")} hint={t("data.empty.hint")} style={styles.empty} />
             </Card>
           ) : (
             <>
@@ -438,8 +444,8 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
                 <ListItem
                   testID="nav-backup-restore"
                   icon={Archive}
-                  label="Back up first"
-                  sub="A backup is the only way to bring any of this back."
+                  label={t("data.backupFirst")}
+                  sub={t("data.backupFirst.sub")}
                   subLines={2}
                   onPress={() => navigation.navigate("Backup & Restore")}
                 />
@@ -450,11 +456,11 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
                       testID="delete-queued-row"
                       icon={Clock}
                       trailingIcon={busyScope === "queued" ? SpinningLoader : Trash2}
-                      label="Delete queued locations"
+                      label={t("data.deleteQueued")}
                       sub={scopeProgress("queued") ?? scopeSub("queued", stats.queued)}
                       subLines={2}
                       disabled={busyScope === "queued" ? false : isProcessing || stats.queued === 0}
-                      accessibilityHint="Asks you to confirm, then deletes"
+                      accessibilityHint={t("data.confirmThenDelete")}
                       onPress={() => confirmAndDelete("queued", () => NativeLocationService.clearQueue())}
                     />
                     <Divider tight inset />
@@ -462,11 +468,11 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
                       testID="delete-synced-row"
                       icon={CloudUpload}
                       trailingIcon={busyScope === "synced" ? SpinningLoader : Trash2}
-                      label="Delete synced locations"
+                      label={t("data.deleteSynced")}
                       sub={scopeProgress("synced") ?? scopeSub("synced", stats.sent)}
                       subLines={2}
                       disabled={busyScope === "synced" ? false : isProcessing || stats.sent === 0}
-                      accessibilityHint="Asks you to confirm, then deletes"
+                      accessibilityHint={t("data.confirmThenDelete")}
                       onPress={() => confirmAndDelete("synced", () => NativeLocationService.clearSentHistory())}
                     />
                   </>
@@ -476,23 +482,23 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
                   testID="delete-older-row"
                   icon={CalendarRange}
                   trailingIcon={busyScope === "older" ? SpinningLoader : Trash2}
-                  label="Delete older locations"
+                  label={t("data.deleteOlder")}
                   sub={scopeProgress("older") ?? ageLine}
                   subLines={2}
                   disabled={busyScope === "older" ? false : isProcessing || !!ageError || days === null || !ageCount}
-                  accessibilityHint="Asks you to confirm, then deletes"
+                  accessibilityHint={t("data.confirmThenDelete")}
                   onPress={() => confirmAndDelete("older", () => NativeLocationService.deleteOlderThan(days as number))}
                 />
                 <View style={styles.ageControls}>
                   <ChipGroup
-                    accessibilityLabel="Age"
+                    accessibilityLabel={t("data.age")}
                     options={[
                       ...RETENTION_PRESET_DAYS.map((preset) => ({
                         value: String(preset),
-                        label: preset === 365 ? "1 year" : `${preset} days`,
+                        label: preset === 365 ? t("data.age.year") : t("data.age.days", { count: preset, n: preset }),
                         testID: `age-${preset}`
                       })),
-                      { value: "custom", label: "Custom", testID: "age-custom" }
+                      { value: "custom", label: t("common.custom"), testID: "age-custom" }
                     ]}
                     selected={ageChoice}
                     onSelect={handleAgeChoice}
@@ -500,14 +506,14 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
                   {isCustom && (
                     <View style={styles.customField}>
                       <NumericInput
-                        label="Delete locations older than"
+                        label={t("data.olderThan")}
                         testID="retention-days-input"
                         value={customText}
                         onChange={handleCustomChange}
                         onBlur={handleCustomBlur}
-                        unit="days"
+                        unit={t("unit.days")}
                         placeholder={String(PLACEHOLDER_DAYS)}
-                        hint="At least 1 day."
+                        hint={t("data.olderThan.hint")}
                         error={ageError}
                         message={clampNote}
                       />
@@ -519,7 +525,7 @@ export function DataManagementScreen({ navigation }: RootScreenProps<"Data Manag
               <Button
                 variant="danger"
                 icon={Trash2}
-                title="Delete all locations"
+                title={t("data.deleteAll")}
                 testID="delete-all-btn"
                 loading={busyScope === "all"}
                 disabled={isProcessing}
