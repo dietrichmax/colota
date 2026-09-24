@@ -5,6 +5,7 @@ import {
   formatLastFix,
   intervalText,
   pickBannerCondition,
+  recordingPhrase,
   recordingSummary,
   syncIntervalLabel,
   syncSummary,
@@ -250,6 +251,8 @@ describe("trackingSummary", () => {
 
   it("exposes the two halves so a caption can carry one of them", () => {
     expect(recordingSummary(5, 20)).toBe("Every 5 s after 20 m")
+    expect(recordingPhrase(5, 20)).toBe("every 5 s after 20 m")
+    expect(recordingPhrase(30, 0)).toBe("every 30 s, any movement")
     expect(syncSummary(0)).toBe("syncs each fix")
     expect(syncSummary(900)).toBe("syncs every 15 min")
     expect(formatDuration(90)).toBe("90 s")

@@ -32,7 +32,7 @@ import { useTheme } from "../../../hooks/useTheme"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { shortDistanceUnit, inputToMeters, metersToInput } from "../../../utils/geo"
 import { syncSummary, trackingSummary } from "../../../utils/dashboardState"
-import { recordingClause } from "../../../utils/profileRow"
+import { recordingPhrase } from "../../../utils/profileRow"
 import { parseWholeNumber, wholeNumberError } from "../../../utils/settingsValidation"
 import { isOverlandFormat } from "../../../utils/apiPayload"
 import NativeLocationService from "../../../services/NativeLocationService"
@@ -58,8 +58,6 @@ const SYNC_CONDITION_OPTIONS: { value: SyncCondition; labelKey: TranslationKey; 
   { value: "wifi_ssid", labelKey: "trackingSync.condition.wifiSsid", subKey: "trackingSync.condition.wifiSsid.sub" },
   { value: "vpn", labelKey: "trackingSync.condition.vpn", subKey: "trackingSync.condition.vpn.sub" }
 ]
-
-const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1)
 
 export function SyncStrategySettings({
   settings,
@@ -232,7 +230,7 @@ export function SyncStrategySettings({
               icon={UserRoundPen}
               iconColor={colors.textSecondary}
               label={t("trackingSync.profileActive", { name: activeProfile.name })}
-              caption={t("trackingSync.inForce", { clause: lowerFirst(recordingClause(activeProfile)) })}
+              caption={t("trackingSync.inForce", { clause: recordingPhrase(activeProfile) })}
               testID="profile-override-recording"
             />
             <Divider tight />

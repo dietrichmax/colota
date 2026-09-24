@@ -128,6 +128,16 @@ export function recordingSummary(intervalSeconds: number, distanceMeters: number
   })
 }
 
+/** "every 30 s after 2 m": the recording clause inside a sentence, where it does not open it. */
+export function recordingPhrase(intervalSeconds: number, distanceMeters: number): string {
+  const duration = formatDuration(intervalSeconds)
+  if (distanceMeters === 0) return t("tracking.phrase.anyMovement", { duration })
+  return t("tracking.phrase.after", {
+    duration,
+    distance: `${metersToInput(distanceMeters)} ${shortDistanceUnit()}`
+  })
+}
+
 /** "syncs each fix" or "syncs every 5 min", lower case so a caption can carry it. */
 export function syncSummary(syncIntervalSeconds: number): string {
   return syncIntervalSeconds === 0

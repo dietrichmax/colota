@@ -40,6 +40,7 @@ import {
   space
 } from "../constants"
 import type { RootScreenProps } from "../types/navigation"
+import { useTranslation } from "../i18n/useTranslation"
 
 type Draft = Omit<TrackingProfile, "id" | "createdAt">
 type NumericKey = "interval" | "distance" | "activationDelay" | "deactivationDelay" | "speed"
@@ -51,6 +52,7 @@ const isSpeedType = (type: ProfileConditionType) => type === "speed_above" || ty
 
 export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Profile Editor">) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { settings } = useTracking()
   const profileId = route?.params?.profileId as number | undefined
   const isEditing = !!profileId
@@ -80,8 +82,8 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const noteTimer = useTimeout()
 
   useLayoutEffect(() => {
-    navigation.setOptions({ headerTitle: isEditing ? "Edit profile" : "New profile" })
-  }, [navigation, isEditing])
+    navigation.setOptions({ headerTitle: isEditing ? t("profileEditor.titleEdit") : t("profileEditor.titleNew") })
+  }, [navigation, isEditing, t])
 
   useEffect(() => {
     if (!profileId) return
@@ -113,15 +115,15 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
       })
       .catch((err) => {
         logger.error("[ProfileEditor] Failed to load profile:", err)
-        showAlert("Error", "Failed to load profile data.", "error")
+        showAlert(t("common.error"), t("profileEditor.loadFailed"), "error")
         navigation.goBack()
       })
-  }, [profileId, navigation])
+  }, [profileId, navigation, t])
 
   const type = profile.condition.type
   const isSpeed = isSpeedType(type)
   const isStationary = type === "stationary"
-  const conditionLabel = conditionOf(profile).label
+  const conditionLabel = t(conditionOf(profile).labelKey)
 
   const store = useCallback((key: NumericKey, value: number) => {
     setProfile((prev) => {
@@ -132,7 +134,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   }, [])
 
   const minOf = (key: NumericKey) => (key === "interval" || key === "speed" ? 1 : 0)
-  const unitOf = (key: NumericKey) => (key === "distance" ? distanceUnit : key === "speed" ? speedUnit : "s")
+  const unitOf = (key: NumericKey) => (key === "distance" ? distanceUnit : key === "speed" ? speedUnit : t("unit.s"))
 
   const handleNumeric = (key: NumericKey, value: string) => {
     setText((prev) => ({ ...prev, [key]: value }))
@@ -147,7 +149,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     const num = parseWholeNumber(text[key])
     if (num !== null && num >= min) return
     setText((prev) => ({ ...prev, [key]: String(min) }))
-    setNote({ key, text: `Set to ${min} ${unitOf(key)}` })
+    setNote({ key, text: t("validation.setTo", { value: min, unit: unitOf(key) }) })
     noteTimer.set(() => setNote(null), SAVE_SUCCESS_DISPLAY_MS)
     store(key, min)
   }
@@ -155,7 +157,8 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const errorOf = (key: NumericKey) => wholeNumberError(text[key], minOf(key), unitOf(key))
   const noteOf = (key: NumericKey) => (note?.key === key ? note.text : undefined)
 
-  const priorityError = text.priority !== "" && parseWholeNumber(text.priority) === null ? "A whole number" : undefined
+  const priorityError =
+    text.priority !== "" && parseWholeNumber(text.priority) === null ? t("validation.wholeNumber") : undefined
   const handlePriority = (value: string) => {
     setText((prev) => ({ ...prev, priority: value }))
     const num = parseWholeNumber(value)
@@ -197,9 +200,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
   const handleDelete = useCallback(async () => {
     if (!profileId) return
     const confirmed = await showConfirm({
-      title: "Delete profile",
-      message: `Delete "${profile.name || conditionLabel}"?`,
-      confirmText: "Delete",
+      title: t("profileEditor.delete.title"),
+      message: t("profileEditor.delete.message", { name: profile.name || conditionLabel }),
+      confirmText: t("common.delete"),
       destructive: true
     })
     if (!confirmed) return
@@ -208,9 +211,9 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
       navigation.goBack()
     } catch (err) {
       logger.error("[ProfileEditor] Delete failed:", err)
-      showAlert("Error", "Failed to delete profile.", "error")
+      showAlert(t("common.error"), t("profileEditor.deleteFailed"), "error")
     }
-  }, [profileId, profile.name, conditionLabel, navigation])
+  }, [profileId, profile.name, conditionLabel, navigation, t])
 
   const hasFieldError =
     !!priorityError ||
@@ -232,11 +235,11 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
       navigation.goBack()
     } catch (err) {
       logger.error("[ProfileEditor] Save failed:", err)
-      showAlert("Error", "Failed to save profile.", "error")
+      showAlert(t("common.error"), t("profileEditor.saveFailed"), "error")
     } finally {
       setSaving(false)
     }
-  }, [profile, conditionLabel, isEditing, profileId, navigation])
+  }, [profile, conditionLabel, isEditing, profileId, navigation, t])
 
   const syncDefault = syncIntervalLabel(settings.syncInterval)
 
@@ -251,7 +254,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           {profileSentence(profile, settings.isOfflineMode)}
         </Text>
 
-        <SectionTitle>Condition</SectionTitle>
+        <SectionTitle>{t("profileEditor.section.condition")}</SectionTitle>
         <Card rows>
           <View accessibilityRole="radiogroup" style={styles.group}>
             {PROFILE_CONDITIONS.map((opt) => (
@@ -259,22 +262,25 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
                 <RadioRow
                   testID={`condition-${opt.type}`}
                   icon={opt.icon}
-                  label={opt.label}
-                  sub={opt.description}
+                  label={t(opt.labelKey)}
+                  sub={t(opt.descriptionKey)}
                   selected={type === opt.type}
                   onPress={() => setConditionType(opt.type)}
                 />
                 {isSpeedType(opt.type) && type === opt.type && (
                   <View style={styles.reveal}>
                     <NumericInput
-                      label="Speed"
+                      label={t("profileEditor.speed")}
                       testID="speed-input"
                       value={text.speed}
                       onChange={(v) => handleNumeric("speed", v)}
                       onBlur={() => handleBlur("speed")}
                       unit={speedUnit}
                       placeholder={String(DEFAULT_SPEED_INPUT)}
-                      hint={`At least 1 ${speedUnit}. Applies while your average speed is ${opt.type === "speed_above" ? "above" : "below"} it.`}
+                      hint={t(
+                        opt.type === "speed_above" ? "profileEditor.speed.hintAbove" : "profileEditor.speed.hintBelow",
+                        { unit: speedUnit }
+                      )}
                       error={errorOf("speed")}
                       message={noteOf("speed")}
                     />
@@ -285,25 +291,22 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           </View>
         </Card>
 
-        <SectionTitle style={styles.groupTop}>Profile</SectionTitle>
+        <SectionTitle style={styles.groupTop}>{t("profileEditor.section.profile")}</SectionTitle>
         <Card rows style={styles.cardTop}>
           <View style={styles.field}>
             <TextField
               testID="name-input"
-              label="Name"
+              label={t("profileEditor.name")}
               placeholder={conditionLabel}
               value={profile.name}
               onChangeText={(val) => setProfile((prev) => ({ ...prev, name: val }))}
             />
-            <FieldMessage>Shown on the Dashboard while active. Blank uses the condition&apos;s name.</FieldMessage>
+            <FieldMessage>{t("profileEditor.name.hint")}</FieldMessage>
           </View>
           <Divider tight />
-          <SettingRow
-            label="Priority"
-            hint="Higher wins when two profiles match at once. Equal numbers go to the older profile."
-          >
+          <SettingRow label={t("profileEditor.priority")} hint={t("profileEditor.priority.hint")}>
             <TextField
-              accessibilityLabel="Priority"
+              accessibilityLabel={t("profileEditor.priority")}
               testID="priority-input"
               figure
               style={styles.numInput}
@@ -317,44 +320,45 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           </SettingRow>
         </Card>
 
-        <SectionTitle style={styles.groupTop}>Tracking while active</SectionTitle>
+        <SectionTitle style={styles.groupTop}>{t("profileEditor.section.tracking")}</SectionTitle>
         <Card rows style={styles.cardTop}>
           <NumericInput
-            label="Tracking interval"
+            label={t("profileEditor.interval")}
             testID="interval-input"
             value={text.interval}
             onChange={(v) => handleNumeric("interval", v)}
             onBlur={() => handleBlur("interval")}
-            unit="s"
+            unit={t("unit.s")}
             placeholder={String(settings.interval)}
-            hint={`At least 1 s. Replaces the ${formatDuration(settings.interval)} from Tracking & sync while this profile is active. Shorter keeps the GPS awake more of the time and records more points.`}
+            hint={t("profileEditor.interval.hint", { duration: formatDuration(settings.interval) })}
             error={errorOf("interval")}
             message={noteOf("interval")}
           />
           {isStationary && profile.interval > STATIONARY_MAX_INTERVAL_SECONDS && (
             <FieldMessage variant="warning" style={styles.warning}>
-              Longer than {STATIONARY_MAX_INTERVAL_SECONDS} s may leave the first {formatDuration(profile.interval)} of
-              a trip unrecorded
+              {t("profileEditor.stationaryLong", {
+                max: STATIONARY_MAX_INTERVAL_SECONDS,
+                duration: formatDuration(profile.interval)
+              })}
             </FieldMessage>
           )}
           {isStationary ? (
-            <SettingRow
-              disabled
-              label="Movement threshold"
-              hint="Not used while still · a point is recorded every interval"
-            >
+            <SettingRow disabled label={t("trackingSync.distance")} hint={t("profileEditor.distance.stationary")}>
               <Text style={[styles.figure, { color: colors.textDisabled }]}>0 {distanceUnit}</Text>
             </SettingRow>
           ) : (
             <NumericInput
-              label="Movement threshold"
+              label={t("trackingSync.distance")}
               testID="distance-input"
               value={text.distance}
               onChange={(v) => handleNumeric("distance", v)}
               onBlur={() => handleBlur("distance")}
               unit={distanceUnit}
               placeholder={String(metersToInput(settings.distance))}
-              hint={`At least 0 ${distanceUnit}. Replaces the ${metersToInput(settings.distance)} ${distanceUnit} from Tracking & sync. 0 records any movement, larger skips small drift.`}
+              hint={t("profileEditor.distance.hint", {
+                unit: distanceUnit,
+                distance: `${metersToInput(settings.distance)} ${distanceUnit}`
+              })}
               error={errorOf("distance")}
               message={noteOf("distance")}
             />
@@ -364,8 +368,8 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
               <Divider tight />
               <View style={styles.pickerTop}>
                 <SyncIntervalPicker
-                  label="Sync interval"
-                  hint={`Replaces the ${syncDefault} from Tracking & sync while this profile is active · shorter means more wake-ups`}
+                  label={t("syncInterval.field")}
+                  hint={t("profileEditor.sync.hint", { interval: syncDefault })}
                   value={profile.syncInterval}
                   min={0}
                   pullUp={false}
@@ -378,34 +382,30 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
           )}
         </Card>
 
-        <SectionTitle style={styles.groupTop}>Switching</SectionTitle>
+        <SectionTitle style={styles.groupTop}>{t("profileEditor.section.switching")}</SectionTitle>
         <Card rows style={styles.cardTop}>
           <NumericInput
-            label="Activation delay"
+            label={t("profileEditor.activation")}
             testID="activation-delay-input"
             value={text.activationDelay}
             onChange={(v) => handleNumeric("activationDelay", v)}
             onBlur={() => handleBlur("activationDelay")}
-            unit="s"
+            unit={t("unit.s")}
             placeholder={String(defaultProfileDelays(type).activationDelay)}
-            hint={
-              isStationary
-                ? "How long every fix must read as still; 0 switches at the first still fix. Moving again ends the profile at once."
-                : "How long the condition must hold first. 0 switches at once, longer ignores a brief plug or unplug."
-            }
+            hint={isStationary ? t("profileEditor.activation.hintStationary") : t("profileEditor.activation.hint")}
             error={errorOf("activationDelay")}
             message={noteOf("activationDelay")}
           />
           {!isStationary && (
             <NumericInput
-              label="Deactivation delay"
+              label={t("profileEditor.deactivation")}
               testID="deactivation-delay-input"
               value={text.deactivationDelay}
               onChange={(v) => handleNumeric("deactivationDelay", v)}
               onBlur={() => handleBlur("deactivationDelay")}
-              unit="s"
+              unit={t("unit.s")}
               placeholder={String(defaultProfileDelays(type).deactivationDelay)}
-              hint="How long the profile stays on after its condition ends. Longer rides out a brief gap."
+              hint={t("profileEditor.deactivation.hint")}
               error={errorOf("deactivationDelay")}
               message={noteOf("deactivationDelay")}
             />
@@ -414,7 +414,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
 
         <Button
           testID="save-profile-btn"
-          title={isEditing ? "Save changes" : "Create profile"}
+          title={isEditing ? t("profileEditor.save") : t("profileEditor.create")}
           icon={Check}
           loading={saving}
           disabled={hasFieldError}
@@ -424,7 +424,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
         {isEditing && (
           <Button
             testID="delete-profile-btn"
-            title="Delete profile"
+            title={t("profileEditor.delete.title")}
             icon={Trash2}
             variant="danger"
             onPress={handleDelete}

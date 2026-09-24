@@ -18,9 +18,11 @@ import { logger } from "../utils/logger"
 import { buildProfilesLink } from "../utils/setupLink"
 import { conditionOf, describeProfileState, profileRowSub } from "../utils/profileRow"
 import { space } from "../constants"
+import { useTranslation } from "../i18n/useTranslation"
 
 export function TrackingProfilesScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { settings, activeProfileId, tracking } = useTracking()
   const activeProfile = useActiveProfile(activeProfileId)
   const [profiles, setProfiles] = useState<SavedTrackingProfile[]>([])
@@ -45,10 +47,10 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         await ProfileService.updateProfile({ id, enabled })
         await loadProfiles()
       } catch {
-        showAlert("Error", "Failed to update profile.", "error")
+        showAlert(t("common.error"), t("profiles.updateFailed"), "error")
       }
     },
-    [loadProfiles]
+    [loadProfiles, t]
   )
 
   const handleShareProfiles = useCallback(async () => {
@@ -57,9 +59,9 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
       await Share.share({ message: buildProfilesLink(profiles) })
     } catch (err) {
       logger.error("[TrackingProfilesScreen] Failed to share profiles:", err)
-      showAlert("Error", "Failed to share profiles.", "error")
+      showAlert(t("common.error"), t("profiles.shareFailed"), "error")
     }
-  }, [profiles])
+  }, [profiles, t])
 
   const openEditor = useCallback(
     (profileId?: number) => navigation.navigate("Profile Editor", profileId === undefined ? {} : { profileId }),
@@ -73,15 +75,20 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         {hasProfiles && (
           <HeaderAction
             icon={Share2}
-            label="Share all profiles"
+            label={t("profiles.share")}
             onPress={handleShareProfiles}
             testID="share-profiles-btn"
           />
         )}
-        <HeaderAction icon={Plus} label="Create profile" onPress={() => openEditor()} testID="add-profile-btn" />
+        <HeaderAction
+          icon={Plus}
+          label={t("profileEditor.create")}
+          onPress={() => openEditor()}
+          testID="add-profile-btn"
+        />
       </View>
     ),
-    [hasProfiles, handleShareProfiles, openEditor]
+    [hasProfiles, handleShareProfiles, openEditor, t]
   )
   useLayoutEffect(() => {
     navigation.setOptions({ headerRight: renderHeaderActions })
@@ -94,10 +101,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {hasProfiles ? (
           <>
-            <Text style={[styles.intro, { color: colors.textSecondary }]}>
-              Checked top to bottom while tracking runs. The first profile whose condition holds replaces the Tracking &
-              sync values.
-            </Text>
+            <Text style={[styles.intro, { color: colors.textSecondary }]}>{t("profiles.intro")}</Text>
             <Card rows>
               <StateLine
                 icon={state.icon}
@@ -122,7 +126,7 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
                       onPress={() => openEditor(profile.id)}
                       trailing={
                         <Toggle
-                          accessibilityLabel={`Use ${profile.name}`}
+                          accessibilityLabel={t("profiles.use", { name: profile.name })}
                           testID={`profile-toggle-${profile.id}`}
                           value={profile.enabled}
                           onValueChange={(enabled) => toggleEnabled(profile.id, enabled)}
@@ -137,9 +141,9 @@ export function TrackingProfilesScreen({ navigation }: ScreenProps) {
         ) : (
           <EmptyState
             icon={UserRoundPen}
-            title="No profiles yet"
-            hint="A profile changes how you track while a condition holds, such as charging or driving"
-            action={{ label: "Create profile", onPress: () => openEditor() }}
+            title={t("profiles.empty.title")}
+            hint={t("profiles.empty.hint")}
+            action={{ label: t("profileEditor.create"), onPress: () => openEditor() }}
             style={styles.empty}
           />
         )}

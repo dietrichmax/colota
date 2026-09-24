@@ -6,6 +6,7 @@ import {
   profileStateLabel,
   recordingClause
 } from "../profileRow"
+import i18next from "i18next"
 import { loadDisplayPreferences } from "../geo"
 import type { SavedTrackingProfile } from "../../types/global"
 
@@ -76,6 +77,22 @@ describe("profileRowSub", () => {
     expect(profileRowSub(driving, true, false)).toBe(
       "Active · speed above 50 km/h · Every 2 s after 10 m · syncs every 1 min"
     )
+  })
+
+  it("takes the in-sentence form from its own key, so a language that capitalises nouns keeps them", async () => {
+    i18next.addResourceBundle("xx", "translation", {
+      "condition.charging.list": "Ladevorgang läuft",
+      "condition.charging.clause": "Ladevorgang läuft",
+      "profile.row.active": "Aktiv · {{condition}}"
+    })
+    await i18next.changeLanguage("xx")
+    try {
+      // Lower-casing the opener would give "ladevorgang läuft", which German does not allow.
+      expect(profileRowSub(commute, true, true)).toMatch(/^Aktiv · Ladevorgang läuft · /)
+    } finally {
+      await i18next.changeLanguage("en")
+      i18next.removeResourceBundle("xx", "translation")
+    }
   })
 
   it("says while still for a stationary profile, since its distance is forced to 0", () => {

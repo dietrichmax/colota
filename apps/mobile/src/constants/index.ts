@@ -85,50 +85,31 @@ export const LOADING_INDICATOR_DELAY_MS = 200
 // Doze batches motion sensors past this; longer Stationary intervals risk missed trip starts.
 export const STATIONARY_MAX_INTERVAL_SECONDS = 60
 
-/** `label` names the condition, `listLabel` opens a row's sentence, `description` says what watching it costs. */
 export const PROFILE_CONDITIONS: {
   type: ProfileConditionType
-  label: string
-  listLabel: string
+  labelKey: TranslationKey
+  /** Opens a row or the rule sentence: "When charging". */
+  listKey: TranslationKey
+  /** The same clause inside a sentence, where the case may differ: "when charging". */
+  clauseKey: TranslationKey
   icon: typeof Zap
-  description: string
-}[] = [
-  {
-    type: "charging",
-    label: "Charging",
-    listLabel: "When charging",
-    icon: Zap,
-    description: "Phone is plugged in"
-  },
-  {
-    type: "android_auto",
-    label: "Android Auto",
-    listLabel: "On Android Auto",
-    icon: Car,
-    description: "Android Auto is connected"
-  },
-  {
-    type: "speed_above",
-    label: "Speed above",
-    listLabel: "Speed above",
-    icon: ArrowUp,
-    description: "Average speed is above the speed you set"
-  },
-  {
-    type: "speed_below",
-    label: "Speed below",
-    listLabel: "Speed below",
-    icon: ArrowDown,
-    description: "Average speed is below the speed you set"
-  },
-  {
-    type: "stationary",
-    label: "Stationary",
-    listLabel: "When stationary",
-    icon: Pause,
-    description: "Phone stays still for the activation delay"
-  }
-]
+  descriptionKey: TranslationKey
+}[] = (
+  [
+    ["charging", Zap],
+    ["android_auto", Car],
+    ["speed_above", ArrowUp],
+    ["speed_below", ArrowDown],
+    ["stationary", Pause]
+  ] as const
+).map(([type, icon]) => ({
+  type,
+  labelKey: `condition.${type}`,
+  listKey: `condition.${type}.list`,
+  clauseKey: `condition.${type}.clause`,
+  icon,
+  descriptionKey: `condition.${type}.description`
+}))
 
 export function defaultProfileDelays(conditionType: ProfileConditionType): {
   activationDelay: number
