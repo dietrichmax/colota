@@ -13,6 +13,8 @@ import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { formatDistance, formatDuration, formatSpeed, formatTime, spokenDistance } from "../../../utils/geo"
 import { computeTripStats, getTripColor } from "../../../utils/trips"
 import type { Trip } from "../../../types/global"
+import { t } from "../../../i18n/t"
+import { useTranslation } from "../../../i18n/useTranslation"
 
 type TripRowProps = {
   trip: Trip
@@ -29,8 +31,8 @@ function spokenDuration(seconds: number): string {
   const hours = Math.floor(s / 3600)
   const minutes = Math.floor((s % 3600) / 60)
   const parts: string[] = []
-  if (hours > 0) parts.push(`${hours} ${hours === 1 ? "hour" : "hours"}`)
-  parts.push(`${minutes} ${minutes === 1 ? "minute" : "minutes"}`)
+  if (hours > 0) parts.push(t("trip.hours", { count: hours, n: hours }))
+  parts.push(t("trip.minutes", { count: minutes, n: minutes }))
   return parts.join(" ")
 }
 
@@ -41,6 +43,7 @@ export function TripSwatch({ index }: { index: number }) {
 
 export function TripRow({ trip, index, selected, selecting, onPress, onLongPress, testID }: TripRowProps) {
   const { colors } = useTheme()
+  useTranslation()
   const duration = trip.endTime - trip.startTime
   const avgSpeed = useMemo(() => computeTripStats(trip.locations).avgSpeed, [trip.locations])
   const start = formatTime(trip.startTime)
@@ -56,8 +59,14 @@ export function TripRow({ trip, index, selected, selecting, onPress, onLongPress
     <Pressable
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={`Trip ${index}, ${start} to ${end}, ${spokenDistance(trip.distance)}, ${spokenDuration(duration)}`}
-      accessibilityHint={selecting ? undefined : "Opens trip details"}
+      accessibilityLabel={t("trip.a11y", {
+        index,
+        start,
+        end,
+        distance: spokenDistance(trip.distance),
+        duration: spokenDuration(duration)
+      })}
+      accessibilityHint={selecting ? undefined : t("trip.opensDetails")}
       accessibilityState={{ selected }}
       android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
       onPress={onPress}

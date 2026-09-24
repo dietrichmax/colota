@@ -8,6 +8,7 @@ import { Route, RouteOff } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
 import { size } from "../../../constants"
+import { useTranslation } from "../../../i18n/useTranslation"
 
 interface Props {
   onPress: () => void
@@ -17,6 +18,7 @@ interface Props {
 
 export function TrackToggleButton({ onPress, active, anchored = true }: Props) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   return (
     <MapActionButton
@@ -24,7 +26,7 @@ export function TrackToggleButton({ onPress, active, anchored = true }: Props) {
       style={anchored && mapActionStyles.left}
       anchored={anchored}
       accessibilityRole="button"
-      accessibilityLabel={active ? "Hide today's track" : "Show today's track"}
+      accessibilityLabel={active ? t("map.hideTrack") : t("map.showTrack")}
       accessibilityState={{ selected: active }}
     >
       {active ? (

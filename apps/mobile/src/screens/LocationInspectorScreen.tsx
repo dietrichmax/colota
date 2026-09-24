@@ -61,18 +61,19 @@ import {
 } from "../utils/inspectorDay"
 import { showAlert, showChoice, showConfirm } from "../services/modalService"
 import type { RootScreenProps } from "../types/navigation"
+import { useTranslation } from "../i18n/useTranslation"
+import { t as translate } from "../i18n/t"
 import { LOADING_INDICATOR_DELAY_MS, size, space } from "../constants"
 
 type TabType = "map" | "trips" | "data"
 
-// setOptions cannot unset a key, so leaving selection writes the SCREEN_CONFIG title back.
-const SCREEN_TITLE = "Location history"
 const NO_SELECTION = new Set<number>()
 
 type ExportRequest = { title: string; message: string; resolve: (format: ExportFormat | null) => void }
 
 export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Location History">) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { settings, tracking } = useTracking()
   const insets = useSafeAreaInsets()
   const { height: windowHeight } = useWindowDimensions()
@@ -112,7 +113,7 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     () => segmentTrips(trackLocations, undefined, boundaryOverrides),
     [trackLocations, boundaryOverrides]
   )
-  const dayDistanceMeters = useMemo(() => trips.reduce((sum, t) => sum + t.distance, 0), [trips])
+  const dayDistanceMeters = useMemo(() => trips.reduce((sum, trip) => sum + trip.distance, 0), [trips])
   const dayStats: DayStats | null =
     trackLocations.length === 0
       ? null
@@ -201,7 +202,8 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       setFocusedTripIndex(null)
       setFitVersion((v) => v + 1)
       setLoading(false)
-      showAlert("Load Failed", "Unable to load this day. Please try again.", "error")
+      // The non-hook t, so a language change never refetches the day and drops the selection.
+      showAlert(translate("history.loadFailed.title"), translate("history.loadFailed.message"), "error")
     }
   }, [mapDate, prefetchMonth])
 
@@ -257,9 +259,9 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   // Trip Detail renders what it is handed, so notes saved this visit have to travel with it.
   const openTrip = useCallback(
     (index: number) => {
-      const trip = trips.find((t) => t.index === index)
+      const trip = trips.find((candidate) => candidate.index === index)
       if (!trip) return
-      const withSessionNotes = (t: Trip) => ({ ...t, locations: withNotes(t.locations) })
+      const withSessionNotes = (value: Trip) => ({ ...value, locations: withNotes(value.locations) })
       navigation.navigate("Trip Detail", { trip: withSessionNotes(trip), trips: trips.map(withSessionNotes) })
     },
     [navigation, trips, withNotes]
@@ -271,27 +273,31 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       try {
         const dateStr = mapDate.toISOString().slice(0, 10)
         const isSingle = tripsToExport.length === 1
-        const label = isSingle ? `Trip ${tripsToExport[0].index}` : "Trips"
+        const label = isSingle ? t("history.trip", { index: tripsToExport[0].index }) : t("history.tripsLabel")
         const fileName = `colota_${isSingle ? `trip${tripsToExport[0].index}` : "trips"}_${dateStr}${
           EXPORT_FORMATS[format].extension
         }`
         const filePath = await NativeLocationService.exportTripsToFile(
-          tripsToExport.map((t) => ({
-            index: t.index,
-            color: getTripColor(t.index),
-            startTs: t.startTime,
-            endTs: t.endTime
+          tripsToExport.map((trip) => ({
+            index: trip.index,
+            color: getTripColor(trip.index),
+            startTs: trip.startTime,
+            endTs: trip.endTime
           })),
           format,
           fileName
         )
-        await NativeLocationService.shareFile(filePath, EXPORT_FORMATS[format].mimeType, `Colota ${label} - ${dateStr}`)
+        await NativeLocationService.shareFile(
+          filePath,
+          EXPORT_FORMATS[format].mimeType,
+          t("history.shareSubject", { label, date: dateStr })
+        )
       } catch (error) {
         logger.error("[LocationHistory] Trip export failed:", error)
-        showAlert("Export Failed", "Unable to export. Please try again.", "error")
+        showAlert(t("history.exportFailed.title"), t("history.exportFailed.message"), "error")
       }
     },
-    [mapDate]
+    [mapDate, t]
   )
 
   const [exportRequest, setExportRequest] = useState<ExportRequest | null>(null)
@@ -310,40 +316,42 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
 
   const handleExportDay = useCallback(async () => {
     const format = await chooseExportFormat(
-      "Export day",
+      t("history.exportDay"),
       exportMessage(dayTitle(mapDate), trips.length, dayDistanceMeters)
     )
     if (format) await exportTrips(format, trips)
-  }, [mapDate, trips, dayDistanceMeters, exportTrips, chooseExportFormat])
+  }, [mapDate, trips, dayDistanceMeters, exportTrips, chooseExportFormat, t])
 
-  const selectedTrips = useMemo(() => trips.filter((t) => selected.has(t.index)), [trips, selected])
+  const selectedTrips = useMemo(() => trips.filter((trip) => selected.has(trip.index)), [trips, selected])
   const canMerge = isAdjacentSelection(selected)
 
   const handleExportSelected = useCallback(async () => {
     if (selectedTrips.length === 0) return
-    const distance = selectedTrips.reduce((sum, t) => sum + t.distance, 0)
+    const distance = selectedTrips.reduce((sum, trip) => sum + trip.distance, 0)
     const format = await chooseExportFormat(
-      selectedTrips.length === 1 ? `Export Trip ${selectedTrips[0].index}` : `Export ${selectedTrips.length} trips`,
+      selectedTrips.length === 1
+        ? t("history.exportTrip", { index: selectedTrips[0].index })
+        : t("history.exportTrips", { count: selectedTrips.length, n: selectedTrips.length }),
       exportMessage(dayTitle(mapDate), selectedTrips.length, distance)
     )
     if (format) await exportTrips(format, selectedTrips)
-  }, [selectedTrips, mapDate, exportTrips, chooseExportFormat])
+  }, [selectedTrips, mapDate, exportTrips, chooseExportFormat, t])
 
   const handleMergeSelected = useCallback(async () => {
     if (editingTripsRef.current) return
     editingTripsRef.current = true
     try {
       if (!canMerge) {
-        showAlert("Merge trips", "Select two or more trips that follow each other.", "info")
+        showAlert(t("history.merge.title"), t("history.merge.adjacent"), "info")
         return
       }
       const sorted = [...selectedTrips].sort((a, b) => a.index - b.index)
       const first = sorted[0].index
       const last = sorted[sorted.length - 1].index
       const confirmed = await showConfirm({
-        title: `Merge ${sorted.length} trips?`,
-        message: `${sorted.length === 2 ? `Trips ${first} and ${last}` : `Trips ${first}-${last}`} will be combined into one.`,
-        confirmText: "Merge"
+        title: t("history.merge.confirmTitle", { count: sorted.length, n: sorted.length }),
+        message: t(sorted.length === 2 ? "history.merge.confirmPair" : "history.merge.confirmRange", { first, last }),
+        confirmText: t("history.merge.confirm")
       })
       if (!confirmed) return
       // Each displayed pair can span more than one gap: trips dropped by the extent filter still
@@ -357,55 +365,57 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Trip merge failed:", error)
-        showAlert("Merge Failed", "Unable to merge the selected trips. Please try again.", "error")
+        showAlert(t("history.merge.failed.title"), t("history.merge.failed.message"), "error")
       }
     } finally {
       editingTripsRef.current = false
     }
-  }, [canMerge, selectedTrips, trackLocations, boundaryOverrides, exitSelection, refreshAfterEdit])
+  }, [canMerge, selectedTrips, trackLocations, boundaryOverrides, exitSelection, refreshAfterEdit, t])
 
   const handleDeleteSelected = useCallback(async () => {
     if (selectedTrips.length === 0 || editingTripsRef.current) return
     editingTripsRef.current = true
     try {
-      const totalPoints = selectedTrips.reduce((n, t) => n + t.locationCount, 0)
+      const totalPoints = selectedTrips.reduce((n, trip) => n + trip.locationCount, 0)
       const confirmed = await showConfirm({
         title:
           selectedTrips.length === 1
-            ? `Delete Trip ${selectedTrips[0].index}?`
-            : `Delete ${selectedTrips.length} trips?`,
-        message: `Removes ${totalPoints} location point${
-          totalPoints === 1 ? "" : "s"
-        } from this device only. Already-synced points remain on your server. Unsent points will not be uploaded.`,
-        confirmText: "Delete",
+            ? t("history.deleteTrip.title", { index: selectedTrips[0].index })
+            : t("history.deleteTrips.title", { count: selectedTrips.length, n: selectedTrips.length }),
+        message: t("history.deleteTrips.message", { count: totalPoints, n: totalPoints.toLocaleString() }),
+        confirmText: t("common.delete"),
         destructive: true
       })
       if (!confirmed) return
       try {
         await NativeLocationService.deleteLocationsInRanges(
-          selectedTrips.map((t) => ({ start: t.startTime, end: t.endTime }))
+          selectedTrips.map((trip) => ({ start: trip.startTime, end: trip.endTime }))
         )
         exitSelection()
         await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Trip delete failed:", error)
-        showAlert("Delete Failed", "Unable to delete selection. Please try again.", "error")
+        showAlert(t("history.delete.failed.title"), t("history.deleteTrips.failed"), "error")
       }
     } finally {
       editingTripsRef.current = false
     }
-  }, [selectedTrips, exitSelection, refreshAfterEdit])
+  }, [selectedTrips, exitSelection, refreshAfterEdit, t])
 
   const handleMoreSelection = useCallback(async () => {
     const choice = await showChoice({
-      title: "Selection",
-      message: `${selected.size} of ${trips.length} trips selected`,
+      title: t("history.selection.title"),
+      message: t("history.selection.message", { count: trips.length, n: selected.size, total: trips.length }),
       variant: "info",
-      buttons: [{ text: "Select all" }, { text: "Clear selection" }, { text: "Cancel", style: "secondary" }]
+      buttons: [
+        { text: t("history.selection.all") },
+        { text: t("history.selection.clear") },
+        { text: t("common.cancel"), style: "secondary" }
+      ]
     })
-    if (choice === 0) setSelected(new Set(trips.map((t) => t.index)))
+    if (choice === 0) setSelected(new Set(trips.map((trip) => trip.index)))
     else if (choice === 1) exitSelection()
-  }, [selected.size, trips, exitSelection])
+  }, [selected.size, trips, exitSelection, t])
 
   const toggleTrip = useCallback((index: number) => {
     setSelected((prev) => {
@@ -420,10 +430,10 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
 
   // The title carries the count, and a title change is silent for a screen reader.
   useEffect(() => {
-    if (selecting) AccessibilityInfo.announceForAccessibility(`${selected.size} selected`)
-    else if (wasSelectingRef.current) AccessibilityInfo.announceForAccessibility("Selection cleared")
+    if (selecting) AccessibilityInfo.announceForAccessibility(t("history.selection.count", { n: selected.size }))
+    else if (wasSelectingRef.current) AccessibilityInfo.announceForAccessibility(t("history.selection.cleared"))
     wasSelectingRef.current = selecting
-  }, [selecting, selected.size])
+  }, [selecting, selected.size, t])
 
   useEffect(() => {
     if (!selecting) return
@@ -435,8 +445,15 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   }, [selecting, exitSelection])
 
   const renderExitSelection = useCallback(
-    () => <HeaderAction icon={X} label="Exit selection" onPress={exitSelection} testID="exit-selection-btn" />,
-    [exitSelection]
+    () => (
+      <HeaderAction
+        icon={X}
+        label={t("history.action.exitSelection")}
+        onPress={exitSelection}
+        testID="exit-selection-btn"
+      />
+    ),
+    [exitSelection, t]
   )
 
   const renderSelectionActions = useCallback(
@@ -444,15 +461,15 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       <View style={styles.headerRow}>
         <HeaderAction
           icon={Upload}
-          label="Export selected trips"
+          label={t("history.action.exportSelected")}
           onPress={handleExportSelected}
           testID="export-selected-btn"
         />
         {selected.size > 1 && (
           <HeaderAction
             icon={Merge}
-            label="Merge trips"
-            hint={canMerge ? undefined : "Select two or more trips that follow each other"}
+            label={t("history.merge.title")}
+            hint={canMerge ? undefined : t("history.merge.adjacentHint")}
             color={canMerge ? colors.text : colors.textDisabled}
             onPress={handleMergeSelected}
             testID="merge-btn"
@@ -460,15 +477,21 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         )}
         <HeaderAction
           icon={Trash2}
-          label="Delete trips"
+          label={t("history.action.deleteTrips")}
           color={colors.error}
           onPress={handleDeleteSelected}
           testID="delete-trips-btn"
         />
-        <HeaderAction icon={EllipsisVertical} label="More" onPress={handleMoreSelection} testID="more-btn" />
+        <HeaderAction
+          icon={EllipsisVertical}
+          label={t("history.action.more")}
+          onPress={handleMoreSelection}
+          testID="more-btn"
+        />
       </View>
     ),
     [
+      t,
       colors,
       canMerge,
       selected.size,
@@ -482,26 +505,33 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
   const renderDayActions = useCallback(
     () => (
       <View style={styles.headerRow}>
-        {!isToday && <HeaderAction icon={CalendarCheck} label="Go to today" onPress={goToToday} testID="today-btn" />}
+        {!isToday && (
+          <HeaderAction icon={CalendarCheck} label={t("history.action.today")} onPress={goToToday} testID="today-btn" />
+        )}
         {trips.length > 0 && (
-          <HeaderAction icon={Upload} label="Export day" onPress={handleExportDay} testID="export-day-btn" />
+          <HeaderAction
+            icon={Upload}
+            label={t("history.exportDay")}
+            onPress={handleExportDay}
+            testID="export-day-btn"
+          />
         )}
         <HeaderAction
           icon={ChartNoAxesColumn}
-          label="Location summary"
+          label={t("history.action.summary")}
           onPress={() => navigation.navigate("Location Summary")}
           testID="summary-btn"
         />
       </View>
     ),
-    [isToday, trips.length, goToToday, handleExportDay, navigation]
+    [isToday, trips.length, goToToday, handleExportDay, navigation, t]
   )
 
   useLayoutEffect(() => {
     if (selecting) {
       navigation.setOptions({
         headerLeft: renderExitSelection,
-        headerTitle: `${selected.size} selected`,
+        headerTitle: t("history.selection.count", { n: selected.size }),
         headerStyle: { backgroundColor: colors.card },
         headerRight: renderSelectionActions
       })
@@ -509,11 +539,12 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     }
     navigation.setOptions({
       headerLeft: undefined,
-      headerTitle: SCREEN_TITLE,
+      // setOptions cannot unset a key, so leaving selection writes the SCREEN_CONFIG title back.
+      headerTitle: t("screen.locationHistory"),
       headerStyle: undefined,
       headerRight: renderDayActions
     })
-  }, [navigation, colors, selecting, selected.size, renderExitSelection, renderSelectionActions, renderDayActions])
+  }, [navigation, colors, selecting, selected.size, renderExitSelection, renderSelectionActions, renderDayActions, t])
 
   const handlePointDelete = useCallback(
     async (id: number) => {
@@ -521,10 +552,9 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       const point = trackLocations.find((l) => l.id === id)
       const at = point?.timestamp ? formatTime(point.timestamp, true) : null
       const confirmed = await showConfirm({
-        title: at ? `Delete the point at ${at}?` : "Delete Point?",
-        message:
-          "Removes this point from this device only. If it has already synced it stays on your server, and if it has not it will never be uploaded.",
-        confirmText: "Delete",
+        title: at ? t("history.deletePoint.titleAt", { time: at }) : t("history.deletePoint.title"),
+        message: t("history.deletePoint.message"),
+        confirmText: t("common.delete"),
         destructive: true
       })
       if (!confirmed) return
@@ -534,23 +564,26 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
         await refreshAfterEdit()
       } catch (error) {
         logger.error("[LocationHistory] Point delete failed:", error)
-        showAlert("Delete Failed", "Unable to delete point. Please try again.", "error")
+        showAlert(t("history.delete.failed.title"), t("history.deletePoint.failed"), "error")
       } finally {
         deletingPointRef.current = false
       }
     },
-    [trackLocations, refreshAfterEdit]
+    [trackLocations, refreshAfterEdit, t]
   )
 
-  const handlePointNoteChange = useCallback(async (id: number, note: string | null) => {
-    try {
-      await NativeLocationService.updateLocationNote(id, note)
-      setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
-    } catch (error) {
-      logger.error("[LocationHistory] Note update failed:", error)
-      showAlert("Save Failed", "Unable to save note. Please try again.", "error")
-    }
-  }, [])
+  const handlePointNoteChange = useCallback(
+    async (id: number, note: string | null) => {
+      try {
+        await NativeLocationService.updateLocationNote(id, note)
+        setNoteOverrides((prev) => ({ ...prev, [id]: note ?? undefined }))
+      } catch (error) {
+        logger.error("[LocationHistory] Note update failed:", error)
+        showAlert(t("history.note.failed.title"), t("history.note.failed.message"), "error")
+      }
+    },
+    [t]
+  )
 
   const focusTripFromDock = useCallback((index: number | null) => {
     setFocusedTripIndex(index)
@@ -585,15 +618,15 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
     empty.action === "lastDay" && lastDay
       ? {
           icon: RotateCcwClock,
-          label: "Last day with data",
+          label: t("history.lastDay"),
           sub: lastDaySub(lastDay),
           onPress: () => changeDay(dateFromKey(lastDay.day))
         }
       : empty.action === "dashboard"
         ? {
             icon: CirclePause,
-            label: "Open Dashboard",
-            sub: "Tracking is off",
+            label: t("history.openDashboard"),
+            sub: t("history.trackingOff"),
             onPress: () => navigation.navigate("Dashboard")
           }
         : undefined
@@ -654,9 +687,24 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
       />
 
       <View style={[styles.tabBar, { backgroundColor: colors.background }]}>
-        <Tab label="Map" active={activeTab === "map"} onPress={() => changeTab("map")} colors={colors} />
-        <Tab label="Trips" active={activeTab === "trips"} onPress={() => changeTab("trips")} colors={colors} />
-        <Tab label="Data" active={activeTab === "data"} onPress={() => changeTab("data")} colors={colors} />
+        <Tab
+          label={t("history.tab.map")}
+          active={activeTab === "map"}
+          onPress={() => changeTab("map")}
+          colors={colors}
+        />
+        <Tab
+          label={t("history.tab.trips")}
+          active={activeTab === "trips"}
+          onPress={() => changeTab("trips")}
+          colors={colors}
+        />
+        <Tab
+          label={t("history.tab.data")}
+          active={activeTab === "data"}
+          onPress={() => changeTab("data")}
+          colors={colors}
+        />
       </View>
       <Divider tight />
 
@@ -700,9 +748,12 @@ export function LocationHistoryScreen({ navigation, route }: RootScreenProps<"Lo
           ) : trips.length === 0 ? (
             <EmptyState
               icon={Route}
-              title="No trips"
-              hint={`${trackLocations.length} points were recorded but none spread more than 100 m`}
-              action={{ label: "Show points", onPress: () => changeTab("data") }}
+              title={t("history.noTrips.title")}
+              hint={t("history.noTrips.hint", {
+                count: trackLocations.length,
+                n: trackLocations.length.toLocaleString()
+              })}
+              action={{ label: t("history.noTrips.show"), onPress: () => changeTab("data") }}
             />
           ) : (
             <TripList

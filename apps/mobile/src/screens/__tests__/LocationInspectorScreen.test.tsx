@@ -463,6 +463,15 @@ describe("lenses", () => {
     expect(getByTestId("LocationTable")).toBeTruthy()
   })
 
+  it("says a single point was recorded in the singular", async () => {
+    withDay(DAY_POINTS.slice(0, 1), [])
+    const { getByText, getByTestId } = render(<LocationHistoryScreen {...createProps()} />)
+    await settled(getByTestId)
+
+    fireEvent.press(getByText("Trips"))
+    expect(getByText("1 point was recorded but none spread more than 100 m")).toBeTruthy()
+  })
+
   it("changing day drops the selected point and the focused trip", async () => {
     withDay()
     const { getByTestId } = render(<LocationHistoryScreen {...createProps()} />)
@@ -684,6 +693,24 @@ describe("selection", () => {
     )
     expect(showConfirm).toHaveBeenCalledWith(expect.objectContaining({ destructive: true, confirmText: "Delete" }))
     await waitFor(() => expect(lastOptions(props).headerTitle).toBe("Location history"))
+  })
+
+  it("counts the points a trip delete removes, in the singular for one", async () => {
+    withDay()
+    ;(showConfirm as jest.Mock).mockResolvedValueOnce(false)
+    const props = createProps()
+    await selectTrips(props, [3])
+
+    fireEvent.press(headerRight(props).getByLabelText("Delete trips"))
+
+    await waitFor(() =>
+      expect(showConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Delete Trip 3?",
+          message: expect.stringMatching(/^Removes 1 location point from/)
+        })
+      )
+    )
   })
 
   it("keeps the selection when a delete fails, so the user can retry", async () => {

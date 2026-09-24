@@ -32,6 +32,9 @@ import { Divider } from "../../ui/Divider"
 import { ListItem } from "../../ui/ListItem"
 import { Button } from "../../ui/Button"
 import { logger } from "../../../utils/logger"
+import { t } from "../../../i18n/t"
+import { useTranslation } from "../../../i18n/useTranslation"
+import type { TranslationKey } from "../../../i18n/options"
 
 interface AttributionLink {
   url: string
@@ -49,11 +52,11 @@ const FALLBACK_ATTRIBUTION_LINKS: AttributionLink[] = [
 ]
 
 /** What each known source contributes; a custom tile server's own credits show without a role. */
-const ATTRIBUTION_ROLES: Record<string, string> = {
-  "openstreetmap.org": "Map data",
-  "openmaptiles.org": "Tile schema and base styles",
-  "openfreemap.org": "Planet tiles, rebuilt weekly",
-  "maps.mxd.codes": "Tile hosting and the Colota styles"
+const ATTRIBUTION_ROLES: Record<string, TranslationKey> = {
+  "openstreetmap.org": "map.role.osm",
+  "openmaptiles.org": "map.role.omt",
+  "openfreemap.org": "map.role.ofm",
+  "maps.mxd.codes": "map.role.mxd"
 }
 
 /** The credits come from the style JSON, so key on the host itself and not on a link that names one. */
@@ -69,7 +72,7 @@ function attributionHost(url: string): string {
 export function attributionRole(url: string): string | undefined {
   const host = attributionHost(url)
   const known = Object.keys(ATTRIBUTION_ROLES).find((name) => host === name || host.endsWith(`.${name}`))
-  return known ? ATTRIBUTION_ROLES[known] : undefined
+  return known ? t(ATTRIBUTION_ROLES[known]) : undefined
 }
 
 function parseAttributionLinks(htmls: string[]): AttributionLink[] {
@@ -162,6 +165,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
   const cameraRef = useRef<CameraRef>(null)
   const mapViewRef = useRef<MapRef>(null)
   const { colors, mode } = useTheme()
+  useTranslation()
   const isDark = mode === "dark"
 
   const [mapStyleLight, setMapStyleLight] = useState(MAP_STYLE_URL_LIGHT)
@@ -308,7 +312,7 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
           onPress={handleCompassPress}
           style={compassStyle}
           accessibilityRole="button"
-          accessibilityLabel="Reset map to north"
+          accessibilityLabel={t("map.north")}
         >
           <View style={{ transform: [{ rotate: `${-heading}deg` }] }}>
             <Compass size={size.icon.md} color={colors.textLight} />
@@ -322,16 +326,16 @@ export const ColotaMapView = forwardRef<ColotaMapRef, Props>(function ColotaMapV
             onPress={() => setAttributionOpen(true)}
             style={attributionStyle}
             accessibilityRole="button"
-            accessibilityLabel="Show map attribution"
+            accessibilityLabel={t("map.showAttribution")}
           >
             <Info size={size.icon.md} color={colors.textLight} />
           </MapActionButton>
 
           <DialogShell
             visible={attributionOpen}
-            title="Map credits"
+            title={t("map.credits")}
             onRequestClose={() => setAttributionOpen(false)}
-            footer={<Button title="Close" variant="ghost" onPress={() => setAttributionOpen(false)} />}
+            footer={<Button title={t("common.close")} variant="ghost" onPress={() => setAttributionOpen(false)} />}
           >
             <View style={styles.attributionRows}>
               {attributionLinks.map((link, i) => (

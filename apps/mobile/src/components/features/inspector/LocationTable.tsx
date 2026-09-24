@@ -19,6 +19,7 @@ import { LocationCoords, ThemeColors } from "../../../types/global"
 import { formatTime, getSpeedUnit, getTimeFormat } from "../../../utils/geo"
 import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { Divider } from "../../ui/Divider"
+import { t } from "../../../i18n/t"
 
 interface Props {
   locations: LocationCoords[]
@@ -49,7 +50,7 @@ const COLUMN_WIDTHS = {
 // "10:17:10 PM" is three characters wider than "22:17:10".
 const TIME_WIDTH = { "24h": 88, "12h": 112 } as const
 const ROW_LENGTH = size.touch + StyleSheet.hairlineWidth
-const POWER_WORDS: Record<number, string> = { 1: "Unplugged", 2: "Charging", 3: "Full" }
+const isPowerStatus = (status: number): status is 1 | 2 | 3 => status >= 1 && status <= 3
 
 function val(v?: number | null, decimals = 0): string {
   if (v == null) return "-"
@@ -79,7 +80,7 @@ const TimeCell = React.memo(({ item, colors, selected, onSelectPoint }: RowProps
     style={[styles.row, selected && { backgroundColor: colors.primaryContainer }]}
     android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
     accessibilityRole="button"
-    accessibilityLabel={`${timeOf(item)}, show on map`}
+    accessibilityLabel={t("table.timeShowOnMap", { time: timeOf(item) })}
     accessibilityState={{ selected }}
     onPress={() => item.id != null && onSelectPoint(item.id)}
   >
@@ -105,21 +106,29 @@ const DataRow = React.memo(
     speedUnit,
     hasEndpoint
   }: RowProps & { speedUnit: { factor: number; unit: string }; hasEndpoint: boolean }) => {
-    const power = POWER_WORDS[item.battery_status ?? 0]
+    const status = item.battery_status ?? 0
+    const powerKey = isPowerStatus(status) ? status : undefined
+    const power = powerKey ? t(`table.power.${powerKey}`) : undefined
     const battery = item.battery != null ? `${item.battery}%` : "-"
-    const syncWord = item.sent ? "Sent" : "Queued"
+    const syncWord = item.sent ? t("point.sent") : t("point.queued")
     const facts = [
       timeOf(item),
-      item.delta != null ? `${item.delta} seconds after the previous point` : null,
+      item.delta != null ? t("table.fact.delta", { count: item.delta, n: item.delta }) : null,
       `${val(item.latitude, 5)}, ${val(item.longitude, 5)}`,
-      `accuracy ${val(item.accuracy)} m`,
-      item.speed != null ? `speed ${(item.speed * speedUnit.factor).toFixed(1)} ${speedUnit.unit}` : null,
-      item.altitude != null ? `altitude ${val(item.altitude)} m` : null,
-      item.bearing != null ? `bearing ${val(item.bearing)}` : null,
-      item.battery != null ? `battery ${battery}${power ? ` ${power.toLowerCase()}` : ""}` : null,
+      t("table.fact.accuracy", { value: val(item.accuracy) }),
+      item.speed != null
+        ? t("table.fact.speed", { value: (item.speed * speedUnit.factor).toFixed(1), unit: speedUnit.unit })
+        : null,
+      item.altitude != null ? t("table.fact.altitude", { value: val(item.altitude) }) : null,
+      item.bearing != null ? t("table.fact.bearing", { value: val(item.bearing) }) : null,
+      item.battery != null
+        ? powerKey
+          ? t("table.fact.batteryPower", { level: battery, power: t(`table.power.${powerKey}.clause`) })
+          : t("table.fact.battery", { level: battery })
+        : null,
       hasEndpoint ? syncWord : null,
-      item.note ? `note ${item.note}` : null,
-      "show on map"
+      item.note ? t("table.fact.note", { note: item.note }) : null,
+      t("table.showOnMap")
     ].filter(Boolean)
     const content = selected ? colors.onPrimaryContainer : colors.text
     const mono = [styles.mono, styles.numeric, { color: content }]
@@ -240,7 +249,7 @@ export function LocationTable({ locations, colors, hasEndpoint, selectedPointId,
       >
         <View style={styles.headerRow}>
           <Text style={[header, { width: TIME_WIDTH[getTimeFormat()] }]} numberOfLines={2}>
-            Time
+            {t("table.col.time")}
           </Text>
         </View>
         <Divider tight />
@@ -263,39 +272,39 @@ export function LocationTable({ locations, colors, hasEndpoint, selectedPointId,
         <View style={{ width: dataWidth }}>
           <View style={styles.headerRow}>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.delta }]} numberOfLines={2}>
-              Since last fix
+              {t("table.col.since")}
             </Text>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.lat }]} numberOfLines={2}>
-              Lat
+              {t("table.col.lat")}
             </Text>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.lon }]} numberOfLines={2}>
-              Lon
+              {t("table.col.lon")}
             </Text>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.acc }]} numberOfLines={2}>
-              Acc m
+              {t("table.col.acc")}
             </Text>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.speed }]} numberOfLines={2}>
-              {`Speed ${speedUnit.unit}`}
+              {t("table.col.speed", { unit: speedUnit.unit })}
             </Text>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.alt }]} numberOfLines={2}>
-              Alt m
+              {t("table.col.alt")}
             </Text>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.bear }]} numberOfLines={2}>
-              Bear
+              {t("table.col.bear")}
             </Text>
             <Text style={[numericHeader, { width: COLUMN_WIDTHS.batt }]} numberOfLines={2}>
-              Batt %
+              {t("table.col.batt")}
             </Text>
             <Text style={[header, { width: COLUMN_WIDTHS.power }]} numberOfLines={2}>
-              Power
+              {t("table.col.power")}
             </Text>
             {hasEndpoint && (
               <Text style={[header, { width: COLUMN_WIDTHS.sync }]} numberOfLines={2}>
-                Sync
+                {t("table.col.sync")}
               </Text>
             )}
             <Text style={[header, { width: COLUMN_WIDTHS.note }]} numberOfLines={2}>
-              Note
+              {t("table.col.note")}
             </Text>
           </View>
           <Divider tight />

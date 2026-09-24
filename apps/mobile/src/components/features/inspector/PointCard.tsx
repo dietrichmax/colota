@@ -16,6 +16,7 @@ import { Divider } from "../../ui/Divider"
 import { IconButton } from "../../ui/IconButton"
 import { ListItem } from "../../ui/ListItem"
 import { StatRow } from "../../ui/StatRow"
+import { useTranslation } from "../../../i18n/useTranslation"
 
 export type PointCardProps = {
   point: LocationCoords
@@ -31,14 +32,15 @@ export type PointCardProps = {
 
 export function PointCard({ point, note, hasEndpoint, onSplit, onDelete, onClose, onSaveNote }: PointCardProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   const editNote = async () => {
     const next = await showPrompt({
-      title: "Note",
-      placeholder: "Add a note",
+      title: t("point.note"),
+      placeholder: t("point.addNote"),
       initialValue: note ?? "",
       multiline: true,
-      cancelText: "Close"
+      cancelText: t("common.close")
     })
     if (next !== null) onSaveNote(next ? next : null)
   }
@@ -53,23 +55,23 @@ export function PointCard({ point, note, hasEndpoint, onSplit, onDelete, onClose
           {formatTime(point.timestamp ?? 0, true)}
         </Text>
         {onSplit && (
-          <IconButton icon={Split} accessibilityLabel="Start a new trip here" onPress={onSplit} testID="point-split" />
+          <IconButton icon={Split} accessibilityLabel={t("point.split")} onPress={onSplit} testID="point-split" />
         )}
         {onDelete && (
           <IconButton
             icon={Trash2}
             tone="danger"
-            accessibilityLabel="Delete point"
+            accessibilityLabel={t("point.delete")}
             onPress={onDelete}
             testID="point-delete"
           />
         )}
-        <IconButton icon={X} accessibilityLabel="Close" onPress={onClose} testID="point-close" />
+        <IconButton icon={X} accessibilityLabel={t("common.close")} onPress={onClose} testID="point-close" />
       </View>
       {point.speed !== undefined && (
         <>
           <Divider tight inset />
-          <StatRow icon={Gauge} label="Speed" value={formatSpeed(point.speed)} testID="point-speed" />
+          <StatRow icon={Gauge} label={t("point.speed")} value={formatSpeed(point.speed)} testID="point-speed" />
         </>
       )}
       {point.accuracy !== undefined && (
@@ -77,7 +79,7 @@ export function PointCard({ point, note, hasEndpoint, onSplit, onDelete, onClose
           <Divider tight inset />
           <StatRow
             icon={Crosshair}
-            label="Accuracy"
+            label={t("point.accuracy")}
             value={`±${Math.round(point.accuracy)} m`}
             testID="point-accuracy"
           />
@@ -86,20 +88,30 @@ export function PointCard({ point, note, hasEndpoint, onSplit, onDelete, onClose
       {point.altitude !== undefined && (
         <>
           <Divider tight inset />
-          <StatRow icon={Mountain} label="Altitude" value={`${Math.round(point.altitude)} m`} testID="point-altitude" />
+          <StatRow
+            icon={Mountain}
+            label={t("point.altitude")}
+            value={`${Math.round(point.altitude)} m`}
+            testID="point-altitude"
+          />
         </>
       )}
       {hasEndpoint && (
         <>
           <Divider tight inset />
-          <StatRow icon={CloudUpload} label="Sync" value={point.sent ? "Sent" : "Queued"} testID="point-sync" />
+          <StatRow
+            icon={CloudUpload}
+            label={t("point.sync")}
+            value={point.sent ? t("point.sent") : t("point.queued")}
+            testID="point-sync"
+          />
         </>
       )}
       <Divider tight inset />
       <ListItem
         icon={NotebookPen}
-        label="Note"
-        sub={note ? note : "Add a note"}
+        label={t("point.note")}
+        sub={note ? note : t("point.addNote")}
         onPress={editNote}
         testID="point-note"
       />

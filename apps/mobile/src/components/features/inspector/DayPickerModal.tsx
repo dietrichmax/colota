@@ -9,6 +9,7 @@ import { useTheme } from "../../../hooks/useTheme"
 import { DialogShell } from "../../ui/DialogShell"
 import { Button } from "../../ui/Button"
 import { CalendarPicker } from "./CalendarPicker"
+import { t } from "../../../i18n/t"
 
 interface DayPickerModalProps {
   visible: boolean
@@ -46,7 +47,9 @@ export function DayPickerModal({
       visible={visible}
       onRequestClose={onRequestClose}
       gutter="picker"
-      footer={<Button variant="ghost" title="Close" onPress={onRequestClose} testID="day-picker-close-btn" />}
+      footer={
+        <Button variant="ghost" title={t("common.close")} onPress={onRequestClose} testID="day-picker-close-btn" />
+      }
     >
       <CalendarPicker
         date={date}

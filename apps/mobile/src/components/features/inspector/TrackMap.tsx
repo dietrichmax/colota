@@ -22,6 +22,7 @@ import {
   type TrackLocation
 } from "../map/mapUtils"
 import { DEFAULT_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, WORLD_MAP_ZOOM, size, space } from "../../../constants"
+import { t } from "../../../i18n/t"
 
 const FOCUSED_FILTER: ["==", ["get", "focused"], true] = ["==", ["get", "focused"], true]
 const START_FILTER: ["==", ["get", "kind"], "start"] = ["==", ["get", "kind"], "start"]
@@ -232,10 +233,10 @@ export function TrackMap({
 
   const terminalsGeoJSON = useMemo(() => {
     const terminalTrips = trips
-      ? trips.map((t) => ({
-          index: t.index,
-          color: getTripColor(t.index),
-          locations: locations.slice(t.startIndex, t.startIndex + t.locationCount)
+      ? trips.map((trip) => ({
+          index: trip.index,
+          color: getTripColor(trip.index),
+          locations: locations.slice(trip.startIndex, trip.startIndex + trip.locationCount)
         }))
       : [{ index: 0, color: trackColor, locations }]
     return buildTripTerminalsGeoJSON(terminalTrips, focusedTripIndex)
@@ -382,7 +383,7 @@ export function TrackMap({
           anchored={false}
           style={[styles.fitDay, { bottom: controlsBottom + size.iconColumn + space.lg, right: controlsEnd }]}
           accessibilityRole="button"
-          accessibilityLabel="Fit the day"
+          accessibilityLabel={t("trackMap.fit")}
         >
           <LocateFixed size={size.icon.md} color={colors.textLight} />
         </MapActionButton>

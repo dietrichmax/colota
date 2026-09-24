@@ -9,6 +9,7 @@ import { LocateFixed } from "lucide-react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { MapActionButton, mapActionStyles } from "./MapActionButton"
 import { size, space } from "../../../constants"
+import { useTranslation } from "../../../i18n/useTranslation"
 
 interface Props {
   onPress: () => void
@@ -18,6 +19,7 @@ interface Props {
 
 export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) => {
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   if (!visible) return null
 
@@ -26,7 +28,7 @@ export const MapCenterButton: React.FC<Props> = ({ onPress, visible, style }) =>
       onPress={onPress}
       style={[mapActionStyles.right, styles.position, style]}
       accessibilityRole="button"
-      accessibilityLabel="Centre map on my position"
+      accessibilityLabel={t("map.centre")}
     >
       <LocateFixed size={size.icon.md} color={colors.textLight} />
     </MapActionButton>

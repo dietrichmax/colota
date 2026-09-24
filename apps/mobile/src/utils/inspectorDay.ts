@@ -6,6 +6,7 @@
 import type { DailyStat } from "../types/global"
 import { formatDistance } from "./geo"
 import { pad2 } from "./format"
+import { t } from "../i18n/t"
 
 export type MonthData = {
   days: ReadonlySet<string>
@@ -63,15 +64,14 @@ export async function findLastDayWithData(
   return null
 }
 
-function count(n: number, noun: string): string {
-  return `${n} ${noun}${n === 1 ? "" : "s"}`
-}
+const points = (n: number) => t("history.points", { count: n, n: n.toLocaleString() })
+const trips = (n: number) => t("history.trips", { count: n, n })
 
 export function lastDaySub({ day, stat }: LastDay): string {
   const date = dateFromKey(day).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
   if (!stat) return date
-  if (stat.tripCount === 0) return `${date} · ${count(stat.count, "point")}`
-  return `${date} · ${count(stat.tripCount, "trip")} · ${formatDistance(stat.distanceMeters)}`
+  if (stat.tripCount === 0) return `${date} · ${points(stat.count)}`
+  return `${date} · ${trips(stat.tripCount)} · ${formatDistance(stat.distanceMeters)}`
 }
 
 export type EmptyDayAction = "lastDay" | "dashboard"
@@ -89,23 +89,27 @@ export function emptyDayVariant(input: {
   hasLastDay: boolean
 }): EmptyDayVariant {
   if (!input.isToday) {
-    return { title: "Nothing recorded", hint: input.longDate, action: input.hasLastDay ? "lastDay" : null }
+    return {
+      title: t("history.empty.nothingRecorded"),
+      hint: input.longDate,
+      action: input.hasLastDay ? "lastDay" : null
+    }
   }
   if (input.tracking) {
-    return { title: "No locations yet", hint: "Tracking is on. The first fix lands here.", action: null }
+    return { title: t("history.empty.noLocationsYet"), hint: t("history.empty.noLocationsYet.hint"), action: null }
   }
   if (input.hasLastDay) {
-    return { title: "No locations today", hint: "Tracking is off.", action: "dashboard" }
+    return { title: t("history.empty.noLocationsToday"), hint: t("history.empty.trackingOff"), action: "dashboard" }
   }
   return {
-    title: "Nothing recorded yet",
-    hint: "Start tracking on the Dashboard and today's track appears here.",
+    title: t("history.empty.nothingYet"),
+    hint: t("history.empty.nothingYet.hint"),
     action: "dashboard"
   }
 }
 
 export function exportMessage(dateLabel: string, tripCount: number, distanceMeters: number): string {
-  return `${dateLabel} · ${count(tripCount, "trip")} · ${formatDistance(distanceMeters)}`
+  return `${dateLabel} · ${trips(tripCount)} · ${formatDistance(distanceMeters)}`
 }
 
 export function isAdjacentSelection(indices: Iterable<number>): boolean {

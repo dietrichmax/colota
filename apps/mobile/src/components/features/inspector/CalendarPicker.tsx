@@ -13,6 +13,7 @@ import { pad2 } from "../../../utils/format"
 import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { radius } from "@colota/shared"
 import { IconButton } from "../../ui/IconButton"
+import { t } from "../../../i18n/t"
 
 interface CalendarPickerProps {
   date: Date
@@ -24,8 +25,8 @@ interface CalendarPickerProps {
   onPrefetchMonth?: (year: number, month: number) => void
 }
 
-const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-const WEEK_LENGTH = WEEKDAYS.length
+const WEEKDAY_KEYS = [1, 2, 3, 4, 5, 6, 7] as const
+const WEEK_LENGTH = WEEKDAY_KEYS.length
 const MONTH_LABELS = Array.from({ length: 12 }, (_, m) =>
   new Date(2000, m, 1).toLocaleDateString(undefined, { month: "short" })
 )
@@ -48,22 +49,21 @@ function formatDateKey(year: number, month: number, day: number): string {
   return `${year}-${pad2(month + 1)}-${pad2(day)}`
 }
 
-function plural(count: number, noun: string): string {
-  return `${count} ${count === 1 ? noun : `${noun}s`}`
-}
+const points = (n: number) => t("history.points", { count: n, n: n.toLocaleString() })
+const trips = (n: number) => t("history.trips", { count: n, n })
 
 export function dayCellLabel(cellDate: Date, stat: DailyStat | undefined, isToday: boolean): string {
   const weekday = cellDate.toLocaleDateString(undefined, { weekday: "long" })
   const month = cellDate.toLocaleDateString(undefined, { month: "long" })
-  const parts = [`${weekday} ${cellDate.getDate()} ${month}`]
+  const parts = [t("calendar.cellDate", { weekday, day: cellDate.getDate(), month })]
   if (!stat || stat.count === 0) {
-    parts.push("no data")
+    parts.push(t("calendar.noData"))
   } else if (stat.tripCount === 0) {
-    parts.push("no trips", plural(stat.count, "point"))
+    parts.push(t("day.noTrips"), points(stat.count))
   } else {
-    parts.push(plural(stat.tripCount, "trip"), spokenDistance(stat.distanceMeters), plural(stat.count, "point"))
+    parts.push(trips(stat.tripCount), spokenDistance(stat.distanceMeters), points(stat.count))
   }
-  if (isToday) parts.push("today")
+  if (isToday) parts.push(t("calendar.today"))
   return parts.join(", ")
 }
 
@@ -198,7 +198,11 @@ export function CalendarPicker({
 
   const headerLabel = pane === "months" ? pickerYearLabel : monthLabel
   const headerHint =
-    pane === "days" ? "Opens the year picker" : pane === "years" ? "Closes the year picker" : "Back to the year picker"
+    pane === "days"
+      ? t("calendar.opensYears")
+      : pane === "years"
+        ? t("calendar.closesYears")
+        : t("calendar.backToYears")
 
   return (
     <View testID="calendar-picker">
@@ -208,7 +212,7 @@ export function CalendarPicker({
             testID="prev-month-btn"
             icon={ChevronLeft}
             onPress={() => navigateMonth(-1)}
-            accessibilityLabel="Previous month"
+            accessibilityLabel={t("calendar.previousMonth")}
           />
         ) : (
           <View style={styles.monthNavSpacer} />
@@ -233,7 +237,7 @@ export function CalendarPicker({
             testID="next-month-btn"
             icon={ChevronRight}
             onPress={() => navigateMonth(1)}
-            accessibilityLabel="Next month"
+            accessibilityLabel={t("calendar.nextMonth")}
             disabled={isFutureMonth}
           />
         ) : (
@@ -301,9 +305,9 @@ export function CalendarPicker({
       {pane === "days" && (
         <>
           <View style={styles.weekRow}>
-            {WEEKDAYS.map((day) => (
+            {WEEKDAY_KEYS.map((day) => (
               <Text key={day} style={[styles.weekdayText, { color: colors.textSecondary }]}>
-                {day}
+                {t(`calendar.weekday.${day}`)}
               </Text>
             ))}
           </View>

@@ -18,6 +18,7 @@ import { MapDock } from "../../ui/MapDock"
 import { StateLine } from "../../ui/StateLine"
 import { PointCard, type PointCardProps } from "./PointCard"
 import { TripRow, TripSwatch } from "./TripRow"
+import { t } from "../../../i18n/t"
 
 export type DockEmptyAction = {
   icon: LucideIcon
@@ -55,7 +56,7 @@ function TripChip({ trip, selected, onPress }: TripChipProps) {
     <Pressable
       testID={`dock-trip-${trip.index}`}
       accessibilityRole="button"
-      accessibilityLabel={`Trip ${trip.index}, starts ${start}`}
+      accessibilityLabel={t("dock.tripStarts", { index: trip.index, time: start })}
       accessibilityState={{ selected }}
       android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
       hitSlop={HIT_SLOP_MD}
@@ -91,7 +92,7 @@ function Legend({ trips, focusedTripIndex, onFocusTrip }: Extract<DockContent, {
         <StateLine
           icon={Route}
           iconColor={colors.textSecondary}
-          label={`${trips.length} ${trips.length === 1 ? "trip" : "trips"}`}
+          label={t("history.trips", { count: trips.length, n: trips.length })}
           caption={`${formatTime(first.startTime)} - ${formatTime(last.endTime)} · ${formatDistance(distance)}`}
           testID="dock-legend"
         />
@@ -125,12 +126,12 @@ function DockBody({ content }: { content: DockContent }) {
       return <Legend {...content} />
     case "points": {
       const { count, startTime, endTime } = content
-      const points = `${count} ${count === 1 ? "point" : "points"}`
+      const points = t("history.points", { count, n: count.toLocaleString() })
       return (
         <StateLine
           icon={MapPin}
           iconColor={colors.textSecondary}
-          label="No trips"
+          label={t("history.noTrips.title")}
           caption={`${points} · ${formatTime(startTime)} - ${formatTime(endTime)}`}
           testID="dock-points"
         />
