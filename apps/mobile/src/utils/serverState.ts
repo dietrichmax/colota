@@ -6,6 +6,7 @@
 import { formatWhen } from "./geo"
 import { formatCount } from "./format"
 import type { CertificateState } from "./certificateState"
+import { t } from "../i18n/t"
 
 export type ServerIcon = "cloudOff" | "cloud" | "wifiOff" | "alert" | "dashed" | "check"
 export type ServerTone = "secondary" | "warning" | "error" | "light" | "success"
@@ -32,8 +33,10 @@ export interface ServerState {
   rowSub: string
 }
 
-function count(n: number, noun: string): string {
-  return `${formatCount(n)} ${noun}`
+type CountKey = "server.queued" | "server.queuedOnDevice" | "server.savedToday" | "server.today"
+
+function count(n: number, key: CountKey): string {
+  return t(key, { count: n, n: formatCount(n) })
 }
 
 /** The host of an endpoint for a row label, or the text itself when it is not a URL yet. */
@@ -45,72 +48,76 @@ export function endpointHost(endpoint: string): string {
   }
 }
 
-function certificateClause(certificate: CertificateState | null | undefined): string {
+function certificateClause(certificate: CertificateState | null | undefined): string | null {
   if (certificate?.state === "expiring")
-    return ` · client certificate expires in ${certificate.days} ${certificate.days === 1 ? "day" : "days"}`
-  if (certificate?.state === "expired") return " · client certificate expired"
-  return ""
+    return t("server.cert.expiresIn", { count: certificate.days, n: certificate.days })
+  if (certificate?.state === "expired") return t("server.cert.expired")
+  return null
 }
+
+const clauses = (...parts: (string | null | false)[]) => parts.filter(Boolean).join(" · ")
 
 /** One derivation of the server relationship for the Connection card, the dock and the Settings row. First match wins. */
 export function describeServer(input: ServerStateInput): ServerState {
   const now = input.now ?? new Date()
-  const queued = count(input.queued, "queued")
-  const lastSync = input.lastSyncTime > 0 ? formatWhen(Math.floor(input.lastSyncTime / 1000), now) : "never"
+  const queued = count(input.queued, "server.queued")
+  const when = input.lastSyncTime > 0 ? formatWhen(Math.floor(input.lastSyncTime / 1000), now) : null
+  const lastSync = when ? t("server.lastSync", { when }) : t("server.lastSyncNever")
+  const lastSuccess = when ? t("server.lastSuccess", { when }) : t("server.lastSuccessNever")
   const cert = certificateClause(input.certificate)
 
   if (input.offline) {
     return {
       icon: "cloudOff",
       tone: "secondary",
-      word: "Offline mode",
-      caption: `${count(input.today, "saved today")} · nothing is sent`,
-      rowSub: `Offline - saved locally · ${count(input.today, "today")}`
+      word: t("server.word.offline"),
+      caption: clauses(count(input.today, "server.savedToday"), t("server.nothingSent")),
+      rowSub: clauses(t("server.savedLocally"), count(input.today, "server.today"))
     }
   }
   if (!input.endpoint) {
     return {
       icon: "cloud",
       tone: "warning",
-      word: "No server",
-      caption: `${queued} on this device`,
-      rowSub: "No server configured"
+      word: t("server.word.noServer"),
+      caption: count(input.queued, "server.queuedOnDevice"),
+      rowSub: t("server.noServerConfigured")
     }
   }
   const server = endpointHost(input.endpoint)
-  const rowQueue = input.queued > 0 ? ` · ${queued}` : ""
+  const rowQueue = input.queued > 0 && queued
   if (!input.deviceOnline) {
     return {
       icon: "wifiOff",
       tone: "secondary",
-      word: "No network",
-      caption: `${queued} · last sync ${lastSync}${cert}`,
-      rowSub: `${server}${rowQueue} · no network`
+      word: t("server.word.noNetwork"),
+      caption: clauses(queued, lastSync, cert),
+      rowSub: clauses(server, rowQueue, t("server.noNetworkClause"))
     }
   }
   if (input.lastSyncError !== "") {
     return {
       icon: "alert",
       tone: "error",
-      word: "Sync failing",
-      caption: `${input.lastSyncError} · ${queued} · last success ${lastSync}${cert}`,
-      rowSub: `${server}${rowQueue} · sync failing`
+      word: t("server.word.failing"),
+      caption: clauses(input.lastSyncError, queued, lastSuccess, cert),
+      rowSub: clauses(server, rowQueue, t("server.syncFailingClause"))
     }
   }
-  if (input.lastSyncTime === 0) {
+  if (!when) {
     return {
       icon: "dashed",
       tone: "light",
-      word: "Not synced yet",
-      caption: `${queued}${cert}`,
-      rowSub: `${server}${rowQueue}`
+      word: t("server.word.notSynced"),
+      caption: clauses(queued, cert),
+      rowSub: clauses(server, rowQueue)
     }
   }
   return {
     icon: "check",
     tone: "success",
-    word: "Synced",
-    caption: `Last sync ${lastSync} · ${input.queued > 0 ? queued : "queue empty"}${cert}`,
-    rowSub: `${server}${rowQueue} · last sync ${lastSync}`
+    word: t("server.word.synced"),
+    caption: clauses(t("server.lastSyncStart", { when }), input.queued > 0 ? queued : t("server.queueEmpty"), cert),
+    rowSub: clauses(server, rowQueue, lastSync)
   }
 }

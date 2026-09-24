@@ -330,6 +330,20 @@ describe("ConnectionSettings", () => {
       expect(onSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ isOfflineMode: true }))
     })
 
+    it("counts a single unsent location in the singular", async () => {
+      mockGetStats.mockResolvedValue({ queued: 1, sent: 50, total: 51, today: 5, databaseSizeMB: 1 })
+      mockShowChoice.mockResolvedValue(2)
+      const api = renderComponent()
+
+      fireEvent(toggle(api), "valueChange", true)
+
+      await waitFor(() =>
+        expect(mockShowChoice).toHaveBeenCalledWith(
+          expect.objectContaining({ message: "You have 1 location waiting to sync. What would you like to do?" })
+        )
+      )
+    })
+
     it("does not enable offline when Cancel is chosen", async () => {
       mockGetStats.mockResolvedValue({ queued: 10, sent: 50, total: 60, today: 5, databaseSizeMB: 1 })
       mockShowChoice.mockResolvedValue(2)

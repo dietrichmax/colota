@@ -17,20 +17,23 @@ import { describeServer } from "../utils/serverState"
 import { describeCertificate } from "../utils/certificateState"
 import { logger } from "../utils/logger"
 import { space } from "../constants"
+import { t } from "../i18n/t"
+import { useTranslation } from "../i18n/useTranslation"
 
-const AUTH_WORDS = { none: "None", basic: "Basic auth", bearer: "Bearer token" } as const
+const AUTH_KEYS = { none: "auth.none", basic: "auth.basic", bearer: "auth.bearer" } as const
 
 export function authSummary(auth: AuthConfig | null): string {
   if (!auth) return ""
   const headers = Object.keys(auth.customHeaders).length
-  return headers > 0
-    ? `${AUTH_WORDS[auth.authType]} · ${headers} ${headers === 1 ? "header" : "headers"}`
-    : AUTH_WORDS[auth.authType]
+  const method = t(AUTH_KEYS[auth.authType])
+  return headers > 0 ? `${method} · ${t("connection.headers", { count: headers, n: headers })}` : method
 }
 
 export function ConnectionScreen({ navigation }: ScreenProps) {
   const { settings, setSettings, updateSettingsLocal, restartTracking } = useTracking()
   const { saving, message: saveMessage, isError: saveIsError, immediateSaveAndRestart } = useAutoSave()
+  // Subscribes to language changes; the strings below come from the non-hook t().
+  useTranslation()
 
   const [stats, setStats] = useState<DatabaseStats | null>(null)
   const [deviceOnline, setDeviceOnline] = useState(true)
@@ -92,7 +95,7 @@ export function ConnectionScreen({ navigation }: ScreenProps) {
     lastSyncError: stats?.lastSyncError ?? "",
     certificate
   })
-  const template = settings.apiTemplate === "custom" ? "Custom" : API_TEMPLATES[settings.apiTemplate].label
+  const template = settings.apiTemplate === "custom" ? t("common.custom") : API_TEMPLATES[settings.apiTemplate].label
   const requestSummary = `${template} · ${settings.httpMethod ?? "POST"}`
 
   return (

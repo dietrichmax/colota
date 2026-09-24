@@ -42,6 +42,7 @@ import {
   Toggle
 } from "../../index"
 import { showChoice } from "../../../services/modalService"
+import { useTranslation } from "../../../i18n/useTranslation"
 
 interface ConnectionSettingsProps {
   settings: Settings
@@ -69,12 +70,6 @@ const SERVER_ICONS: Record<ServerIcon, LucideIcon> = {
   check: CircleCheckBig
 }
 
-const SCHEME_ERROR = "Starts with http:// or https:// and names a host."
-const PUBLIC_HTTP_ERROR = "http is refused for a public host. Use https."
-const PRIVATE_HTTP_WARNING = "Not encrypted: plain http on a private host."
-const KEY_WARNING =
-  "This address carries a key. It is stored with settings, not encrypted, and included in setup links. Use a header where the server allows it."
-
 export function ConnectionSettings({
   settings,
   onSettingsLocal,
@@ -87,6 +82,7 @@ export function ConnectionSettings({
   navigation
 }: ConnectionSettingsProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const [draft, setDraft] = useState(settings.endpoint)
   const [validation, setValidation] = useState<Validation>({ warnings: [] })
   const [test, setTest] = useState<TestState | null>(null)
@@ -95,14 +91,14 @@ export function ConnectionSettings({
     setDraft(settings.endpoint)
   }, [settings.endpoint])
 
-  const tone = (t: ServerTone) =>
-    t === "success"
+  const tone = (value: ServerTone) =>
+    value === "success"
       ? colors.success
-      : t === "error"
+      : value === "error"
         ? colors.error
-        : t === "warning"
+        : value === "warning"
           ? colors.warning
-          : t === "light"
+          : value === "light"
             ? colors.textLight
             : colors.textSecondary
 
@@ -118,13 +114,16 @@ export function ConnectionSettings({
           if (stats.queued > 0) {
             const hasEndpoint = !!settings.endpoint
             const buttons = [
-              ...(hasEndpoint ? [{ text: "Sync first", style: "primary" as const }] : []),
-              { text: "Keep in queue", style: "secondary" as const },
-              { text: "Cancel", style: "secondary" as const }
+              ...(hasEndpoint ? [{ text: t("connection.offline.syncFirst"), style: "primary" as const }] : []),
+              { text: t("connection.offline.keep"), style: "secondary" as const },
+              { text: t("common.cancel"), style: "secondary" as const }
             ]
             const choice = await showChoice({
-              title: "Unsent locations",
-              message: `You have ${stats.queued} locations waiting to sync. What would you like to do?`,
+              title: t("connection.offline.unsent.title"),
+              message: t("connection.offline.unsent.message", {
+                count: stats.queued,
+                n: stats.queued.toLocaleString()
+              }),
               buttons
             })
             const action = hasEndpoint
@@ -148,7 +147,7 @@ export function ConnectionSettings({
       }
       apply({ ...settings, isOfflineMode: enabled })
     },
-    [settings, onSettingsLocal, onSettingsChange]
+    [settings, onSettingsLocal, onSettingsChange, t]
   )
 
   const handleDraftChange = (text: string) => {
@@ -171,28 +170,28 @@ export function ConnectionSettings({
     }
     if (text === "") return store([])
     if (!isEndpointAllowed(text)) {
-      setValidation({ error: SCHEME_ERROR, warnings: [] })
+      setValidation({ error: t("connection.endpoint.scheme"), warnings: [] })
       return false
     }
-    const warnings = endpointCarriesKey(text) ? [KEY_WARNING] : []
+    const warnings = endpointCarriesKey(text) ? [t("connection.endpoint.key")] : []
     if (text.startsWith("http://")) {
       const isPrivate = await NativeLocationService.isPrivateEndpoint(text)
       if (!isPrivate) {
-        setValidation({ error: PUBLIC_HTTP_ERROR, warnings: [] })
+        setValidation({ error: t("connection.endpoint.publicHttp"), warnings: [] })
         return false
       }
-      return store([PRIVATE_HTTP_WARNING, ...warnings])
+      return store([t("connection.endpoint.privateHttp"), ...warnings])
     }
     return store(warnings)
-  }, [draft, settings, onSettingsLocal, onSettingsChange])
+  }, [draft, settings, onSettingsLocal, onSettingsChange, t])
 
   const draftPasses = draft.trim() !== "" && isEndpointAllowed(draft.trim()) && !validation.error
   const testBlocker = !draft.trim()
-    ? "Enter a server endpoint to test."
+    ? t("connection.test.noEndpoint")
     : !draftPasses
-      ? "Fix the address above to test."
+      ? t("connection.test.fixAddress")
       : !hasFix
-        ? "Needs one recorded location to send. Start tracking first."
+        ? t("connection.test.needsFix")
         : null
 
   const handleTestEndpoint = useCallback(async () => {
@@ -204,7 +203,7 @@ export function ConnectionSettings({
     try {
       const recentLocation = await NativeLocationService.getMostRecentLocation()
       if (!recentLocation) {
-        setTest({ kind: "done", ok: false, status: 0, at: Date.now(), message: "No recorded location to send." })
+        setTest({ kind: "done", ok: false, status: 0, at: Date.now(), message: t("connection.test.noLocation") })
         return
       }
 
@@ -236,7 +235,7 @@ export function ConnectionSettings({
             ok: false,
             status: 0,
             at: Date.now(),
-            message: "Local network permission required to reach this server"
+            message: t("connection.test.localNetwork")
           })
           return
         }
@@ -259,22 +258,30 @@ export function ConnectionSettings({
         ok: result.ok,
         status: result.status,
         at: Date.now(),
-        message: result.ok ? undefined : result.errorMessage || `Server returned ${result.status}`
+        message: result.ok
+          ? undefined
+          : result.errorMessage || t("connection.test.serverReturned", { status: result.status })
       })
     } catch (err: any) {
-      const msg = err?.message || "Unknown error"
+      const msg = err?.message || t("common.unknownError")
       logger.warn("[ConnectionSettings] Test failed:", err?.name, msg)
-      setTest({ kind: "done", ok: false, status: 0, at: Date.now(), message: `Connection failed: ${msg}` })
+      setTest({
+        kind: "done",
+        ok: false,
+        status: 0,
+        at: Date.now(),
+        message: t("connection.test.failed", { message: msg })
+      })
     }
-  }, [testBlocker, commitDraft, draft, settings])
+  }, [testBlocker, commitDraft, draft, settings, t])
 
   const example = endpointExample(settings.apiTemplate, settings.dawarichMode)
-  const helper = "https for public hosts, http only for private hosts."
+  const helper = t("connection.endpoint.helper")
   const ServerGlyph = SERVER_ICONS[server.icon]
 
   return (
     <View>
-      <SectionTitle>Server</SectionTitle>
+      <SectionTitle>{t("connection.section.server")}</SectionTitle>
       <Card rows>
         <StateLine
           icon={ServerGlyph}
@@ -284,9 +291,9 @@ export function ConnectionSettings({
           testID="server-state"
         />
         <Divider tight />
-        <SettingRow label="Offline mode" hint="Locations stay on this device and nothing is sent.">
+        <SettingRow label={t("connection.offline")} hint={t("connection.offline.hint")}>
           <Toggle
-            accessibilityLabel="Offline mode"
+            accessibilityLabel={t("connection.offline")}
             value={settings.isOfflineMode}
             onValueChange={handleOfflineModeChange}
           />
@@ -300,7 +307,7 @@ export function ConnectionSettings({
             <View style={styles.block}>
               <View>
                 <TextField
-                  label="Server endpoint"
+                  label={t("connection.endpoint")}
                   testID="endpoint-input"
                   mono
                   value={draft}
@@ -325,7 +332,7 @@ export function ConnectionSettings({
               <View>
                 <Button
                   icon={Radio}
-                  title="Test connection"
+                  title={t("connection.test")}
                   onPress={handleTestEndpoint}
                   disabled={testBlocker !== null}
                   loading={test?.kind === "testing"}
@@ -338,8 +345,8 @@ export function ConnectionSettings({
                 <StateLine
                   icon={<ActivityIndicator size="small" color={colors.textLight} />}
                   iconColor={colors.textLight}
-                  label="Testing"
-                  caption="Sending your latest location"
+                  label={t("connection.test.testing")}
+                  caption={t("connection.test.sending")}
                   testID="test-result"
                 />
               )}
@@ -348,8 +355,8 @@ export function ConnectionSettings({
                   <StateLine
                     icon={test.ok ? CircleCheckBig : CircleAlert}
                     iconColor={test.ok ? colors.success : colors.error}
-                    label={test.ok ? "Reachable" : "Not reachable"}
-                    caption={`${test.status > 0 ? `HTTP ${test.status}` : "No response"} · ${formatTime(Math.floor(test.at / 1000))}`}
+                    label={test.ok ? t("connection.test.reachable") : t("connection.test.notReachable")}
+                    caption={`${test.status > 0 ? t("connection.test.http", { status: test.status }) : t("connection.test.noResponse")} · ${formatTime(Math.floor(test.at / 1000))}`}
                     testID="test-result"
                   />
                   {!test.ok && test.message ? <FieldMessage variant="error">{test.message}</FieldMessage> : null}
@@ -362,12 +369,12 @@ export function ConnectionSettings({
 
       {!settings.isOfflineMode && (
         <>
-          <SectionTitle style={styles.groupTop}>Server details</SectionTitle>
+          <SectionTitle style={styles.groupTop}>{t("connection.section.details")}</SectionTitle>
           <Card rows>
             <ListItem
               testID="nav-request-format"
               icon={Braces}
-              label="Request format"
+              label={t("screen.requestFormat")}
               sub={requestSummary}
               onPress={() => navigation.navigate("Request Format")}
             />
@@ -375,7 +382,7 @@ export function ConnectionSettings({
             <ListItem
               testID="nav-auth-settings"
               icon={KeyRound}
-              label="Authentication"
+              label={t("screen.authSettings")}
               sub={authSummary}
               onPress={() => navigation.navigate("Auth Settings")}
             />
@@ -383,7 +390,7 @@ export function ConnectionSettings({
             <ListItem
               testID="nav-mtls-settings"
               icon={ShieldCheck}
-              label="Client certificate"
+              label={t("screen.mtlsSettings")}
               sub={certificateSummary}
               onPress={() => navigation.navigate("mTLS Settings")}
             />

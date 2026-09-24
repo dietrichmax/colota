@@ -49,6 +49,13 @@ describe("describeServer", () => {
     expect(s.rowSub).toBe("tracks.example.org · 3 queued · no network")
   })
 
+  it("says never rather than a time when nothing has synced yet", () => {
+    expect(describeServer({ ...base, deviceOnline: false, lastSyncTime: 0 }).caption).toBe("0 queued · last sync never")
+    expect(describeServer({ ...base, lastSyncError: "HTTP 500", lastSyncTime: 0 }).caption).toBe(
+      "HTTP 500 · 0 queued · last success never"
+    )
+  })
+
   it("puts the server's own sentence first when sync is failing, then the queue and the last success", () => {
     const s = describeServer({ ...base, lastSyncError: "HTTP 401 Unauthorized", queued: 38 })
     expect(s.word).toBe("Sync failing")
@@ -86,6 +93,13 @@ describe("describeServer", () => {
       certificate: { state: "expiring", days: 12, word: "Expires in 12 days", caption: "", rowSub: "" }
     })
     expect(expiring.caption).toMatch(/ · client certificate expires in 12 days$/)
+
+    const lastDay = describeServer({
+      ...base,
+      certificate: { state: "expiring", days: 1, word: "Expires in 1 day", caption: "", rowSub: "" }
+    })
+    // The last day is the warning most worth reading right, so it takes the singular.
+    expect(lastDay.caption).toMatch(/ · client certificate expires in 1 day$/)
 
     const expired = describeServer({
       ...base,
