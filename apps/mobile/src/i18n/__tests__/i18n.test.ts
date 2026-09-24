@@ -12,6 +12,7 @@ import i18next from "i18next"
 import NativeLocationService from "../../services/NativeLocationService"
 import { initI18n, SUPPORTED_LANGUAGES, t } from "../index"
 import en from "../locales/en.json"
+import type { TranslationKey } from "../options"
 
 const mockGetBuildConfig = NativeLocationService.getBuildConfig as jest.Mock
 
@@ -53,7 +54,7 @@ describe("initI18n", () => {
     mockGetBuildConfig.mockReturnValue({ APP_LANGUAGE: "en" })
     initI18n()
 
-    expect(t("appearance.doesNotExist")).toBe("appearance.doesNotExist")
+    expect(t("appearance.doesNotExist" as TranslationKey)).toBe("appearance.doesNotExist")
   })
 })
 

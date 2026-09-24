@@ -4,6 +4,7 @@
  */
 
 import { Alert } from "react-native"
+import { t } from "../i18n/t"
 
 export type AlertVariant = "info" | "error" | "warning" | "success"
 
@@ -43,7 +44,7 @@ export function showAlert(title: string, message: string, variant: AlertVariant 
     title,
     message,
     variant,
-    buttons: [{ text: "OK", style: "primary" }],
+    buttons: [{ text: t("common.ok"), style: "primary" }],
     resolve: () => {}
   })
 }
@@ -94,7 +95,7 @@ export function showConfirm(options: {
   cancelText?: string
   destructive?: boolean
 }): Promise<boolean> {
-  const { title, message, confirmText = "OK", cancelText = "Cancel", destructive = false } = options
+  const { title, message, confirmText = t("common.ok"), cancelText = t("common.cancel"), destructive = false } = options
 
   return new Promise((resolve) => {
     if (!_handler) {
@@ -138,8 +139,8 @@ export function showPrompt(options: {
     placeholder,
     initialValue,
     multiline,
-    confirmText = "Save",
-    cancelText = "Cancel"
+    confirmText = t("common.save"),
+    cancelText = t("common.cancel")
   } = options
 
   return new Promise((resolve) => {

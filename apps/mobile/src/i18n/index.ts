@@ -9,22 +9,18 @@ import { logger } from "../utils/logger"
 import { I18N_OPTIONS, FALLBACK_LANGUAGE, SUPPORTED_LANGUAGES, type SupportedLanguage } from "./options"
 
 export { SUPPORTED_LANGUAGES }
+export { t } from "./t"
 
-/** Matches "de-DE" and "de" alike, since the device tag carries a region and the catalogs do not. */
+/** The device tag carries a region, the catalogs do not. */
 function resolveLanguage(tag: string | undefined): SupportedLanguage {
   const base = (tag ?? "").split("-")[0].toLowerCase()
   return (SUPPORTED_LANGUAGES as readonly string[]).includes(base) ? (base as SupportedLanguage) : FALLBACK_LANGUAGE
 }
 
-/** Languages whose plurals need more than one/other, so they cannot ride the English fallback. */
+/** Plurals beyond one/other, which the English fallback gets wrong. */
 const COMPLEX_PLURAL_LANGUAGES: readonly string[] = ["pl", "ru", "cs", "ar", "uk", "hr", "lt", "sk"]
 
-/**
- * Hermes implements most of Intl but not PluralRules, and i18next then applies English one/other
- * rules without saying so. Correct while only en ships, wrong for Polish or Russian, so warn now
- * and fail only once a supported language depends on it: throwing outright would kill every Hermes
- * build at bundle evaluation, which no test can catch because Node has PluralRules.
- */
+// Hermes has no PluralRules; an unconditional throw would kill every build at bundle evaluation.
 function checkPluralRules(): void {
   if (typeof Intl !== "undefined" && typeof Intl.PluralRules !== "undefined") return
 
@@ -49,12 +45,5 @@ export function initI18n(): SupportedLanguage {
   return language
 }
 
-// Runs on first import, not from a call in App.tsx: ES imports hoist, so a call there would execute
-// only after every screen module had evaluated. No screen resolves a key at module scope yet, so this
-// starts mattering the day the screen-config and preset constants become keys.
+// On import, because a call in App.tsx would run after every screen module has evaluated.
 initI18n()
-
-/** The non-React entry point, for a caller with no hook available. `utils/appearance` uses it. */
-export function t(key: string, options?: Record<string, unknown>): string {
-  return i18next.t(key, options) as string
-}

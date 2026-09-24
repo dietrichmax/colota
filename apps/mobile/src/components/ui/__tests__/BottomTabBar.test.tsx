@@ -1,5 +1,6 @@
 import React from "react"
-import { render } from "@testing-library/react-native"
+import { act, render } from "@testing-library/react-native"
+import i18next from "i18next"
 
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 })
@@ -66,5 +67,23 @@ describe("BottomTabBar", () => {
     const { TrackMark } = require("../TrackMark")
 
     expect(getByLabelText("History").findByType(TrackMark)).toBeTruthy()
+  })
+
+  it("relabels the tabs when the language changes, because the list holds keys and not English", () => {
+    i18next.addResourceBundle("xx", "translation", { "tab.history": "Verlauf" })
+    const { getByText, getByLabelText } = renderBar("Dashboard")
+
+    act(() => {
+      i18next.changeLanguage("xx")
+    })
+    try {
+      expect(getByText("Verlauf")).toBeTruthy()
+      expect(getByLabelText("Verlauf")).toBeTruthy()
+    } finally {
+      act(() => {
+        i18next.changeLanguage("en")
+      })
+      i18next.removeResourceBundle("xx", "translation")
+    }
   })
 })

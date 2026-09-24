@@ -4,7 +4,7 @@
  */
 
 import { MAP_STYLE_URL_LIGHT, MAP_STYLE_URL_DARK } from "../constants"
-import { t } from "../i18n"
+import { t } from "../i18n/t"
 import type { ThemePreference } from "../hooks/useTheme"
 import { formatTimeIn, type TimeFormat, type UnitSystem } from "./geo"
 import { endpointHost } from "./serverState"

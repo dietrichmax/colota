@@ -1,4 +1,5 @@
-import { registerModalHandler, showPrompt, type ModalRequest } from "../modalService"
+import i18next from "i18next"
+import { registerModalHandler, showAlert, showConfirm, showPrompt, type ModalRequest } from "../modalService"
 
 describe("showPrompt", () => {
   let last: ModalRequest | null = null
@@ -27,5 +28,43 @@ describe("showPrompt", () => {
     const cleared = showPrompt({ title: "Note" })
     last!.resolve(1, "   ")
     await expect(cleared).resolves.toBe("")
+  })
+})
+
+describe("default button labels", () => {
+  let last: ModalRequest | null = null
+
+  beforeEach(() => {
+    last = null
+    registerModalHandler((request) => {
+      last = request
+    })
+  })
+
+  afterEach(async () => {
+    await i18next.changeLanguage("en")
+    i18next.removeResourceBundle("xx", "translation")
+  })
+
+  it("reads the catalog on each call, so a dialog opened after a language change is not left in English", async () => {
+    i18next.addResourceBundle("xx", "translation", {
+      "common.ok": "Gut",
+      "common.cancel": "Zurück",
+      "common.save": "Sichern"
+    })
+    await i18next.changeLanguage("xx")
+
+    showAlert("Title", "Message")
+    expect(last!.buttons.map((b) => b.text)).toEqual(["Gut"])
+    showConfirm({ title: "Title", message: "Message" })
+    expect(last!.buttons.map((b) => b.text)).toEqual(["Zurück", "Gut"])
+    showPrompt({ title: "Title" })
+    expect(last!.buttons.map((b) => b.text)).toEqual(["Zurück", "Sichern"])
+  })
+
+  it("keeps a caller's own labels over the defaults", () => {
+    showConfirm({ title: "Title", message: "Message", confirmText: "Delete", cancelText: "Keep" })
+
+    expect(last!.buttons.map((b) => b.text)).toEqual(["Keep", "Delete"])
   })
 })

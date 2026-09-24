@@ -11,21 +11,23 @@ import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { size, space, STATE_LAYER_ALPHA, elevation } from "../../constants"
 import type { RootStackRoute } from "../../types/navigation"
+import { useTranslation } from "../../i18n/useTranslation"
+import type { TranslationKey } from "../../i18n/options"
 
 type TabIcon = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
 
 interface Tab {
   name: string
-  label: string
+  labelKey: TranslationKey
   icon: TabIcon
   route: RootStackRoute
 }
 
 const TABS: Tab[] = [
-  { name: "dashboard", label: "Dashboard", icon: House, route: "Dashboard" },
-  { name: "history", label: "History", icon: TrackMark, route: "Location History" },
-  { name: "geofences", label: "Geofences", icon: CircleDot, route: "Geofences" },
-  { name: "settings", label: "Settings", icon: Settings, route: "Settings" }
+  { name: "dashboard", labelKey: "tab.dashboard", icon: House, route: "Dashboard" },
+  { name: "history", labelKey: "tab.history", icon: TrackMark, route: "Location History" },
+  { name: "geofences", labelKey: "tab.geofences", icon: CircleDot, route: "Geofences" },
+  { name: "settings", labelKey: "tab.settings", icon: Settings, route: "Settings" }
 ]
 
 /** Routes where the tab bar is visible. The one list; App.tsx reads it rather than repeating it. */
@@ -43,6 +45,7 @@ interface BottomTabBarProps {
 export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
+  const { t } = useTranslation()
 
   if (!currentRoute || !TAB_ROUTES.has(currentRoute)) return null
 
@@ -64,7 +67,7 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
             key={tab.name}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={tab.label}
+            accessibilityLabel={t(tab.labelKey)}
             android_ripple={{ color: colors.text + STATE_LAYER_ALPHA }}
             style={styles.tab}
             onPress={() => onNavigate(tab.route)}
@@ -72,7 +75,7 @@ export function BottomTabBar({ currentRoute, onNavigate }: BottomTabBarProps) {
             {/* The set has no filled variants, so weight is what marks the active glyph. */}
             <tab.icon size={size.icon.lg} color={color} strokeWidth={active ? ACTIVE_STROKE : undefined} />
             <Text numberOfLines={2} style={[styles.label, active && fonts.semiBold, { color }]}>
-              {tab.label}
+              {t(tab.labelKey)}
             </Text>
           </Pressable>
         )

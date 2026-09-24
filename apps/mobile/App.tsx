@@ -15,6 +15,8 @@ import { ErrorBoundary } from "./src/components/ui/ErrorBoundary"
 import type { RootStackParamList, RootStackRoute } from "./src/types/navigation"
 
 import "./src/i18n"
+import { useTranslation } from "./src/i18n/useTranslation"
+import type { TranslationKey } from "./src/i18n/options"
 import {
   LoggingScreen,
   LogPreviewScreen,
@@ -55,148 +57,149 @@ registerTileServerUserAgent()
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
 
-type ScreenConfig = { name: RootStackRoute; component: React.ComponentType<any>; title: string }
+type ScreenConfig = { name: RootStackRoute; component: React.ComponentType<any>; titleKey: TranslationKey }
 
 const SCREEN_CONFIG: readonly ScreenConfig[] = [
   {
     name: "Dashboard",
     component: DashboardScreen,
-    title: "Dashboard"
+    titleKey: "screen.dashboard"
   },
   {
     name: "Settings",
     component: SettingsScreen,
-    title: "Settings"
+    titleKey: "screen.settings"
   },
   {
     name: "Request Format",
     component: ApiSettingsScreen,
-    title: "Request format"
+    titleKey: "screen.requestFormat"
   },
   {
     name: "Backend Template",
     component: BackendTemplateScreen,
-    title: "Backend template"
+    titleKey: "screen.backendTemplate"
   },
   {
     name: "Auth Settings",
     component: AuthSettingsScreen,
-    title: "Authentication"
+    titleKey: "screen.authSettings"
   },
   {
     name: "mTLS Settings",
     component: MtlsSettingsScreen,
-    title: "Client certificate"
+    titleKey: "screen.mtlsSettings"
   },
   {
     name: "Geofences",
     component: GeofenceScreen,
-    title: "Geofences"
+    titleKey: "screen.geofences"
   },
   {
     name: "Geofence Editor",
     component: GeofenceEditorScreen,
-    title: "Geofence editor"
+    titleKey: "screen.geofenceEditor"
   },
   {
     name: "Place Zone",
     component: PlaceZoneScreen,
-    title: "Place zone"
+    titleKey: "screen.placeZone"
   },
   {
     name: "Location History",
     component: LocationHistoryScreen,
-    title: "Location history"
+    titleKey: "screen.locationHistory"
   },
   {
     name: "Location Summary",
     component: LocationSummaryScreen,
-    title: "Summary"
+    titleKey: "screen.locationSummary"
   },
   {
     name: "Export & Import",
     component: ExportImportScreen,
-    title: "Export & import"
+    titleKey: "screen.exportImport"
   },
   {
     name: "Auto-Export",
     component: AutoExportScreen,
-    title: "Auto-export"
+    titleKey: "screen.autoExport"
   },
   {
     name: "Data Management",
     component: DataManagementScreen,
-    title: "Data management"
+    titleKey: "screen.dataManagement"
   },
   {
     name: "Tracking Profiles",
     component: TrackingProfilesScreen,
-    title: "Tracking profiles"
+    titleKey: "screen.trackingProfiles"
   },
   {
     name: "Profile Editor",
     component: ProfileEditorScreen,
-    title: "Profile editor"
+    titleKey: "screen.profileEditor"
   },
   {
     name: "About Colota",
     component: AboutScreen,
-    title: "About"
+    titleKey: "screen.aboutColota"
   },
   {
     name: "Setup Import",
     component: SetupImportScreen,
-    title: "Import configuration"
+    titleKey: "screen.setupImport"
   },
   {
     name: "Share Setup",
     component: ShareSetupScreen,
-    title: "Share setup"
+    titleKey: "screen.shareSetup"
   },
   {
     name: "Trip Detail",
     component: TripDetailScreen,
-    title: "Trip detail"
+    titleKey: "screen.tripDetail"
   },
   {
     name: "Offline Maps",
     component: OfflineMapsScreen,
-    title: "Offline maps"
+    titleKey: "screen.offlineMaps"
   },
   {
     name: "Logging",
     component: LoggingScreen,
-    title: "Logging"
+    titleKey: "screen.logging"
   },
   {
     name: "Log Preview",
     component: LogPreviewScreen,
-    title: "Log preview"
+    titleKey: "screen.logPreview"
   },
   {
     name: "Backup & Restore",
     component: BackupRestoreScreen,
-    title: "Backup & restore"
+    titleKey: "screen.backupRestore"
   },
   {
     name: "Appearance",
     component: AppearanceScreen,
-    title: "Appearance"
+    titleKey: "screen.appearance"
   },
   {
     name: "Connection",
     component: ConnectionScreen,
-    title: "Connection"
+    titleKey: "screen.connection"
   },
   {
     name: "Tracking & Sync",
     component: TrackingSyncScreen,
-    title: "Tracking & sync"
+    titleKey: "screen.trackingSync"
   }
 ]
 
 function AppNavigator() {
   const { colors, isDark } = useTheme()
+  const { t } = useTranslation()
   const [currentRoute, setCurrentRoute] = useState<string | undefined>("Dashboard")
   const screenOptions = useMemo(
     () => ({
@@ -289,7 +292,7 @@ function AppNavigator() {
                   name={screen.name}
                   component={screen.component}
                   options={{
-                    headerTitle: screen.title,
+                    headerTitle: t(screen.titleKey),
                     ...(TAB_ROUTES.has(screen.name) && { headerBackVisible: false })
                   }}
                 />
