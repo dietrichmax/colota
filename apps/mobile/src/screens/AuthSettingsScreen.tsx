@@ -25,18 +25,15 @@ import {
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
 import { size, space } from "../constants"
+import { useTranslation } from "../i18n/useTranslation"
+import type { TranslationKey } from "../i18n/options"
 
-const METHODS: { value: AuthType; label: string; sub: string }[] = [
-  { value: "none", label: "None", sub: "No Authorization header" },
-  { value: "basic", label: "Basic auth", sub: "Username and password, only safe over https" },
-  { value: "bearer", label: "Bearer token", sub: "An API token or JWT" }
+const METHODS: { value: AuthType; labelKey: TranslationKey; subKey: TranslationKey }[] = [
+  { value: "none", labelKey: "auth.none", subKey: "auth.none.sub" },
+  { value: "basic", labelKey: "auth.basic", subKey: "auth.basic.sub" },
+  { value: "bearer", labelKey: "auth.bearer", subKey: "auth.bearer.sub" }
 ]
 
-const SECRET_SET = "Saved encrypted. Type to replace."
-const SECRET_UNSET = "Not set"
-const REMOVED_ON_SWITCH = "Choosing another method removes these credentials."
-const HEADERS_HINT = "Sent with every request, like CF-Access-Client-Id for Cloudflare Access."
-const DUPLICATE_HEADER = "Also used above. Only the last value is sent."
 const SENSITIVE_HEADER = /authorization|cookie|token|key|secret/i
 
 type LocalHeader = { key: string; value: string; id: number }
@@ -54,6 +51,7 @@ export function withMethod(config: AuthConfig, authType: AuthType): AuthConfig {
 
 export function AuthSettingsScreen({}: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { restartTracking, settings } = useTracking()
 
   const [config, setConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG)
@@ -163,7 +161,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
     )
   }
 
-  const secretHint = (stored: string) => (stored !== "" ? SECRET_SET : SECRET_UNSET)
+  const secretHint = (stored: string) => (stored !== "" ? t("auth.secretSet") : t("auth.secretUnset"))
   const holdsCredentials =
     (config.authType === "basic" && (config.username !== "" || config.password !== "")) ||
     (config.authType === "bearer" && config.bearerToken !== "")
@@ -175,37 +173,37 @@ export function AuthSettingsScreen({}: ScreenProps) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <SectionTitle>Method</SectionTitle>
+        <SectionTitle>{t("auth.section.method")}</SectionTitle>
         <Card rows>
           <View accessibilityRole="radiogroup" style={styles.group}>
-            {METHODS.map(({ value, label, sub }) => (
+            {METHODS.map(({ value, labelKey, subKey }) => (
               <React.Fragment key={value}>
                 <RadioRow
                   testID={`auth-${value}`}
-                  label={label}
-                  sub={sub}
+                  label={t(labelKey)}
+                  sub={t(subKey)}
                   selected={config.authType === value}
                   onPress={() => handleMethod(value)}
                 />
                 {value === "basic" && config.authType === "basic" && (
                   <View style={styles.reveal}>
                     <TextField
-                      label="Username"
+                      label={t("auth.username")}
                       testID="basic-username"
                       value={config.username}
                       onChangeText={(v) => saveSoon({ username: v })}
-                      placeholder="Username"
+                      placeholder={t("auth.username")}
                       autoCapitalize="none"
                       autoCorrect={false}
                       autoComplete="username"
                     />
                     <View>
                       <TextField
-                        label="Password"
+                        label={t("auth.password")}
                         testID="basic-password"
                         value={passwordDraft}
                         onChangeText={(v) => handleSecret("password", v)}
-                        placeholder="Password"
+                        placeholder={t("auth.password")}
                         autoCapitalize="none"
                         autoCorrect={false}
                         autoComplete="password"
@@ -219,12 +217,12 @@ export function AuthSettingsScreen({}: ScreenProps) {
                   <View style={styles.reveal}>
                     <View>
                       <TextField
-                        label="Token"
+                        label={t("auth.token")}
                         testID="bearer-token"
                         mono
                         value={tokenDraft}
                         onChangeText={(v) => handleSecret("bearerToken", v)}
-                        placeholder="Paste the token"
+                        placeholder={t("auth.token.placeholder")}
                         autoCapitalize="none"
                         autoCorrect={false}
                         autoComplete="off"
@@ -242,13 +240,13 @@ export function AuthSettingsScreen({}: ScreenProps) {
             <>
               <Divider tight />
               <View style={styles.footer}>
-                <FieldMessage>{REMOVED_ON_SWITCH}</FieldMessage>
+                <FieldMessage>{t("auth.removedOnSwitch")}</FieldMessage>
               </View>
             </>
           )}
         </Card>
 
-        <SectionTitle style={styles.groupTop}>Custom headers</SectionTitle>
+        <SectionTitle style={styles.groupTop}>{t("auth.section.headers")}</SectionTitle>
         <Card rows>
           {localHeaders.map((header, index) => {
             const name = header.key.trim()
@@ -259,22 +257,22 @@ export function AuthSettingsScreen({}: ScreenProps) {
                 <View style={styles.headerRow}>
                   <View style={styles.headerInputs}>
                     <TextField
-                      accessibilityLabel="Header name"
+                      accessibilityLabel={t("auth.header.nameLabel")}
                       testID={`header-key-${header.id}`}
                       mono
-                      error={isDuplicate ? DUPLICATE_HEADER : undefined}
+                      error={isDuplicate ? t("auth.duplicateHeader") : undefined}
                       value={header.key}
                       onChangeText={(v) => updateHeaderField(header.id, "key", v)}
-                      placeholder="Name"
+                      placeholder={t("auth.header.namePlaceholder")}
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
                     <TextField
-                      accessibilityLabel="Header value"
+                      accessibilityLabel={t("auth.header.valueLabel")}
                       testID={`header-value-${header.id}`}
                       value={header.value}
                       onChangeText={(v) => updateHeaderField(header.id, "value", v)}
-                      placeholder="Value"
+                      placeholder={t("auth.header.valuePlaceholder")}
                       autoCapitalize="none"
                       autoCorrect={false}
                       secure={SENSITIVE_HEADER.test(name)}
@@ -284,7 +282,7 @@ export function AuthSettingsScreen({}: ScreenProps) {
                     icon={X}
                     tone="danger"
                     testID={`remove-header-${header.id}`}
-                    accessibilityLabel={name ? `Remove header ${name}` : "Remove header"}
+                    accessibilityLabel={name ? t("auth.header.remove", { name }) : t("auth.header.removeUnnamed")}
                     onPress={() => removeHeader(header.id)}
                   />
                 </View>
@@ -293,8 +291,8 @@ export function AuthSettingsScreen({}: ScreenProps) {
           })}
           {localHeaders.length > 0 && <Divider tight />}
           <View style={[styles.footer, localHeaders.length === 0 && styles.footerFirst]}>
-            <Button title="+ Add header" onPress={addHeader} variant="secondary" testID="add-header-btn" />
-            {localHeaders.length === 0 && <FieldMessage>{HEADERS_HINT}</FieldMessage>}
+            <Button title={t("auth.header.add")} onPress={addHeader} variant="secondary" testID="add-header-btn" />
+            {localHeaders.length === 0 && <FieldMessage>{t("auth.headersHint")}</FieldMessage>}
           </View>
         </Card>
       </ScrollView>

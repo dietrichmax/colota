@@ -57,7 +57,7 @@ describe("describeCertificate", () => {
     const s = describeCertificate(cert(-3), NOW)
     expect(s.word).toBe("Expired")
     expect(s.caption).toMatch(/^Expired .* · the server will refuse it$/)
-    expect(describeCertificate(cert(-3), NOW, "server certificate checks will fail").caption).toMatch(
+    expect(describeCertificate(cert(-3), NOW, "cert.failure.ca").caption).toMatch(
       /server certificate checks will fail$/
     )
   })

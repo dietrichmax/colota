@@ -6,6 +6,8 @@
 import { CERT_EXPIRY_WARNING_DAYS } from "../constants"
 import type { ClientCertInfoResult } from "../types/global"
 import { formatDateWithYear } from "./geo"
+import { t } from "../i18n/t"
+import type { TranslationKey } from "../i18n/options"
 
 export type CertificateStateKind = "none" | "valid" | "expiring" | "expired" | "unreadable"
 
@@ -22,8 +24,8 @@ export interface CertificateState {
 const DAY_MS = 24 * 60 * 60 * 1000
 
 function source(info: { source?: "keychain" | "p12" }): string {
-  if (info.source === "keychain") return " · device credential store"
-  if (info.source === "p12") return " · imported .p12"
+  if (info.source === "keychain") return ` · ${t("cert.source.keychain")}`
+  if (info.source === "p12") return ` · ${t("cert.source.p12")}`
   return ""
 }
 
@@ -31,12 +33,14 @@ function source(info: { source?: "keychain" | "p12" }): string {
 export function describeCertificate(
   info: ClientCertInfoResult | null,
   now: Date = new Date(),
-  failureCaption = "the server will refuse it"
+  failureKey: TranslationKey = "cert.failure.client"
 ): CertificateState {
-  if (!info || !info.configured) return { state: "none", days: 0, word: "Not set", caption: "", rowSub: "Not set" }
+  if (!info || !info.configured) {
+    return { state: "none", days: 0, word: t("cert.notSet"), caption: "", rowSub: t("cert.notSet") }
+  }
   if (info.error || !info.notAfter || !info.subject) {
-    const caption = info.error ?? "Missing certificate fields"
-    return { state: "unreadable", days: 0, word: "Cannot be read", caption, rowSub: "Cannot be read" }
+    const caption = info.error ?? t("cert.missingFields")
+    return { state: "unreadable", days: 0, word: t("cert.unreadable"), caption, rowSub: t("cert.unreadable") }
   }
   const days = Math.floor((info.notAfter - now.getTime()) / DAY_MS)
   const until = formatDateWithYear(Math.floor(info.notAfter / 1000))
@@ -44,15 +48,15 @@ export function describeCertificate(
     return {
       state: "expired",
       days,
-      word: "Expired",
-      caption: `Expired ${until} · ${failureCaption}`,
-      rowSub: "Expired"
+      word: t("cert.expired"),
+      caption: t("cert.expiredOn", { date: until, consequence: t(failureKey) }),
+      rowSub: t("cert.expired")
     }
   }
-  const caption = `Until ${until}${source(info)}`
+  const caption = `${t("cert.until", { date: until })}${source(info)}`
   if (days < CERT_EXPIRY_WARNING_DAYS) {
-    const word = `Expires in ${days} ${days === 1 ? "day" : "days"}`
+    const word = t("cert.expiresIn", { count: days, n: days })
     return { state: "expiring", days, word, caption, rowSub: word }
   }
-  return { state: "valid", days, word: "Valid", caption, rowSub: `Valid until ${until}` }
+  return { state: "valid", days, word: t("cert.valid"), caption, rowSub: t("cert.validUntil", { date: until }) }
 }

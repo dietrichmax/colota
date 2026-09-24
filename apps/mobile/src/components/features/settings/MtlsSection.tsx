@@ -22,31 +22,31 @@ import { ClientCertInfoResult } from "../../../types/global"
 import { describeCertificate, type CertificateState } from "../../../utils/certificateState"
 import { logger } from "../../../utils/logger"
 import { space } from "../../../constants"
+import { t } from "../../../i18n/t"
+import { useTranslation } from "../../../i18n/useTranslation"
+import type { TranslationKey } from "../../../i18n/options"
 
-const CLIENT_CERT_ERR: Record<string, string> = {
-  E_CERT_PASSWORD: "Incorrect password",
-  E_CERT_INVALID: "Not a valid PKCS12 file"
+const CLIENT_CERT_ERR: Record<string, TranslationKey> = {
+  E_CERT_PASSWORD: "mtls.err.password",
+  E_CERT_INVALID: "mtls.err.invalid"
 }
-const SERVER_CA_ERR: Record<string, string> = {
-  E_CA_READ: "Could not read the selected file. Try a smaller file or pick again.",
-  E_CA_INVALID: "Not a valid X.509 certificate. Make sure you're picking the CA cert (PEM or DER)."
+const SERVER_CA_ERR: Record<string, TranslationKey> = {
+  E_CA_READ: "mtls.err.caRead",
+  E_CA_INVALID: "mtls.err.caInvalid"
 }
 
-function errMsg(map: Record<string, string>, err: any, fallback: string): string {
-  return map[err?.code] ?? err?.message ?? fallback
+function errMsg(map: Record<string, TranslationKey>, err: any, fallback: TranslationKey): string {
+  const key = map[err?.code]
+  return key ? t(key) : (err?.message ?? t(fallback))
 }
 
 type ImportState =
   { kind: "idle" } | { kind: "picked"; b64: string; password: string; importing: boolean; error: string | null }
 
-const PICK_LINE = "Key stays in the device's credential store, survives a reinstall, never backed up."
-const IMPORT_LINE = "Key moves into the Android Keystore and the file password is discarded. Not backed up."
-// Android reports an empty picker and a cancelled one the same way, so the line covers both.
-const NO_PICK_LINE =
-  "No certificate was picked. If the list was empty, install one in Android settings under Encryption & credentials first."
-
 export function MtlsSection() {
   const { colors } = useTheme()
+  // Subscribes to language changes; the strings below come from the non-hook t().
+  useTranslation()
   const [certInfo, setCertInfo] = useState<ClientCertInfoResult | null>(null)
   const [caInfo, setCaInfo] = useState<ClientCertInfoResult | null>(null)
   const [importState, setImportState] = useState<ImportState>({ kind: "idle" })
@@ -82,15 +82,15 @@ export function MtlsSection() {
       await refresh()
     } catch (err: any) {
       logger.error("[MtlsSection] importServerCa failed:", err)
-      setCaError(errMsg(SERVER_CA_ERR, err, "Could not import the CA"))
+      setCaError(errMsg(SERVER_CA_ERR, err, "mtls.err.caImport"))
     }
   }, [refresh])
 
   const handleClearServerCa = useCallback(async () => {
     const confirmed = await showConfirm({
-      title: "Remove trusted CA?",
-      message: "Connections to a server signed by it will fail until you import it again.",
-      confirmText: "Remove",
+      title: t("mtls.removeCa.title"),
+      message: t("mtls.removeCa.message"),
+      confirmText: t("common.remove"),
       destructive: true
     })
     if (!confirmed) return
@@ -108,13 +108,14 @@ export function MtlsSection() {
     try {
       const result = await NativeLocationService.pickKeyChainCert()
       if (!result) {
-        setPickNote(NO_PICK_LINE)
+        // Android reports an empty picker and a cancelled one the same way, so the line covers both.
+        setPickNote(t("mtls.noPick"))
         return
       }
       await refresh()
     } catch (err: any) {
       logger.error("[MtlsSection] pickKeyChainCert failed:", err)
-      setClientPickError(err?.message || "Could not read the selected certificate")
+      setClientPickError(err?.message || t("mtls.err.readCert"))
     }
   }, [refresh])
 
@@ -127,7 +128,7 @@ export function MtlsSection() {
       setImportState({ kind: "picked", b64, password: "", importing: false, error: null })
     } catch (err: any) {
       logger.error("[MtlsSection] pick failed:", err)
-      setClientPickError(err?.message || "Could not read the selected file")
+      setClientPickError(err?.message || t("mtls.err.readFile"))
     }
   }, [])
 
@@ -139,18 +140,18 @@ export function MtlsSection() {
       setImportState({ kind: "idle" })
       await refresh()
     } catch (err: any) {
-      setImportState({ ...importState, importing: false, error: errMsg(CLIENT_CERT_ERR, err, "Import failed") })
+      setImportState({ ...importState, importing: false, error: errMsg(CLIENT_CERT_ERR, err, "mtls.err.importFailed") })
     }
   }, [importState, refresh])
 
   const handleReplace = useCallback(async () => {
     const choice = await showChoice({
-      title: "Replace certificate",
-      message: "The current certificate is replaced as soon as the new one is read.",
+      title: t("mtls.replace.title"),
+      message: t("mtls.replace.message"),
       buttons: [
-        { text: "Pick from device", style: "primary" },
-        { text: "Import .p12", style: "secondary" },
-        { text: "Cancel", style: "secondary" }
+        { text: t("mtls.replace.pick"), style: "primary" },
+        { text: t("mtls.replace.import"), style: "secondary" },
+        { text: t("common.cancel"), style: "secondary" }
       ]
     })
     if (choice === 0) handlePickKeyChain()
@@ -159,9 +160,9 @@ export function MtlsSection() {
 
   const handleRemove = useCallback(async () => {
     const confirmed = await showConfirm({
-      title: "Remove client certificate?",
-      message: "Requests to a server that requires it will fail until you add one again.",
-      confirmText: "Remove",
+      title: t("mtls.remove.title"),
+      message: t("mtls.remove.message"),
+      confirmText: t("common.remove"),
       destructive: true
     })
     if (!confirmed) return
@@ -183,34 +184,35 @@ export function MtlsSection() {
 
   return (
     <>
-      <SectionTitle>Client certificate</SectionTitle>
+      <SectionTitle>{t("mtls.section.client")}</SectionTitle>
       <Card rows>
         {importState.kind === "picked" ? (
           <View style={styles.block}>
             <View>
               <TextField
-                label="File password"
+                label={t("mtls.password")}
                 testID="p12-password"
                 value={importState.password}
                 onChangeText={(v) => setImportState({ ...importState, password: v, error: null })}
-                placeholder="Leave empty if the file has none"
+                placeholder={t("mtls.password.placeholder")}
                 autoCapitalize="none"
                 autoCorrect={false}
                 secure
                 disabled={importState.importing}
                 error={importState.error ?? undefined}
               />
-              {!importState.error && (
-                <FieldMessage>
-                  Used once to unwrap the key, then discarded. Leave empty if the file has none.
-                </FieldMessage>
-              )}
+              {!importState.error && <FieldMessage>{t("mtls.password.hint")}</FieldMessage>}
             </View>
             <View style={styles.buttonRow}>
-              <Button style={styles.flex1} onPress={handleImport} title="Import" loading={importState.importing} />
+              <Button
+                style={styles.flex1}
+                onPress={handleImport}
+                title={t("mtls.import")}
+                loading={importState.importing}
+              />
               <Button
                 variant="ghost"
-                title="Cancel"
+                title={t("common.cancel")}
                 onPress={() => setImportState({ kind: "idle" })}
                 disabled={importState.importing}
               />
@@ -230,18 +232,18 @@ export function MtlsSection() {
             <StateLine
               icon={ShieldCheck}
               iconColor={colors.textSecondary}
-              label="None"
-              caption="Only for a server that asks for one"
+              label={t("mtls.none")}
+              caption={t("mtls.client.none.caption")}
               testID="certificate-state"
             />
             <Divider tight />
             <ListItem
               testID="pick-keychain-row"
               icon={KeyRound}
-              label="Pick from device certificates"
-              sub={PICK_LINE}
+              label={t("mtls.pick")}
+              sub={t("mtls.pick.sub")}
               subLines={2}
-              accessibilityHint="Opens the system certificate picker"
+              accessibilityHint={t("mtls.pick.hint")}
               onPress={handlePickKeyChain}
             />
             <Divider tight inset />
@@ -249,10 +251,10 @@ export function MtlsSection() {
               testID="import-p12-row"
               icon={FileKey}
               trailingIcon={Download}
-              label="Import .p12 / .pfx"
-              sub={IMPORT_LINE}
+              label={t("mtls.importP12")}
+              sub={t("mtls.import.sub")}
               subLines={2}
-              accessibilityHint="Opens the file picker"
+              accessibilityHint={t("mtls.filePicker.hint")}
               onPress={handlePickFile}
             />
             {clientPickError ? (
@@ -268,24 +270,24 @@ export function MtlsSection() {
         )}
       </Card>
 
-      <SectionTitle style={styles.groupTop}>Trusted server CA</SectionTitle>
+      <SectionTitle style={styles.groupTop}>{t("mtls.section.ca")}</SectionTitle>
       <Card rows>
         {caInfo.configured ? (
           <CertificateCard
-            state={describeCertificate(caInfo, undefined, "server certificate checks will fail")}
+            state={describeCertificate(caInfo, undefined, "cert.failure.ca")}
             subject={caInfo.subject}
             onReplace={handlePickServerCa}
             onRemove={handleClearServerCa}
             removeTestID="remove-ca-btn"
-            note="Encrypted on this device and included in encrypted backups."
+            note={t("mtls.ca.note")}
           />
         ) : (
           <>
             <StateLine
               icon={ShieldCheck}
               iconColor={colors.textSecondary}
-              label="None"
-              caption="Not needed for a public certificate"
+              label={t("mtls.none")}
+              caption={t("mtls.ca.none.caption")}
               testID="ca-state"
             />
             <Divider tight />
@@ -293,10 +295,10 @@ export function MtlsSection() {
               testID="import-ca-row"
               icon={FileKey}
               trailingIcon={Download}
-              label="Import CA (.crt / .pem)"
-              sub="For a private or self-signed CA. CAs you installed in Android settings are not used."
+              label={t("mtls.importCa")}
+              sub={t("mtls.importCa.sub")}
               subLines={2}
-              accessibilityHint="Opens the file picker"
+              accessibilityHint={t("mtls.filePicker.hint")}
               onPress={handlePickServerCa}
             />
             {caError ? (
@@ -356,12 +358,18 @@ function CertificateCard({
       />
       <Divider tight />
       <View style={styles.details}>
-        {subject ? <StatRow label="Subject" value={shortenDn(subject)} /> : null}
-        {issuer ? <StatRow label="Issuer" value={shortenDn(issuer)} /> : null}
+        {subject ? <StatRow label={t("mtls.subject")} value={shortenDn(subject)} /> : null}
+        {issuer ? <StatRow label={t("mtls.issuer")} value={shortenDn(issuer)} /> : null}
         {note ? <FieldMessage>{note}</FieldMessage> : null}
         <View style={styles.buttonRow}>
-          <Button style={styles.flex1} variant="ghost" title="Replace" onPress={onReplace} />
-          <Button style={styles.flex1} variant="danger" title="Remove" onPress={onRemove} testID={removeTestID} />
+          <Button style={styles.flex1} variant="ghost" title={t("common.replace")} onPress={onReplace} />
+          <Button
+            style={styles.flex1}
+            variant="danger"
+            title={t("common.remove")}
+            onPress={onRemove}
+            testID={removeTestID}
+          />
         </View>
       </View>
     </>

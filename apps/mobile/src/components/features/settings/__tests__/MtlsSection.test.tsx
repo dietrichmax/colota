@@ -174,6 +174,29 @@ describe("MtlsSection", () => {
       expect(getByText("File password")).toBeTruthy()
     })
 
+    it.each([
+      [
+        "a known code, which beats the bridge's own sentence",
+        { code: "E_CERT_INVALID", message: "raw" },
+        "Not a valid PKCS12 file"
+      ],
+      [
+        "the bridge's sentence for an unknown code",
+        { code: "E_OTHER", message: "Keystore is locked" },
+        "Keystore is locked"
+      ],
+      ["the fallback when the bridge says nothing", {}, "Import failed"]
+    ])("words a failed import with %s", async (_, error, shown) => {
+      mockPickClientCertFile.mockResolvedValueOnce("BASE64")
+      mockImportClientCert.mockRejectedValueOnce(error)
+      const { findByText } = render(<MtlsSection />)
+
+      fireEvent.press(await findByText("Import .p12 / .pfx"))
+      fireEvent.press(await findByText("Import"))
+
+      expect(await findByText(shown)).toBeTruthy()
+    })
+
     it("Cancel returns to the empty state", async () => {
       mockPickClientCertFile.mockResolvedValueOnce("BASE64")
       const { findByText, queryByText } = render(<MtlsSection />)
@@ -258,6 +281,20 @@ describe("MtlsSection", () => {
       fireEvent.press(await findByText("Import CA (.crt / .pem)"))
 
       expect(await findByText(/^Not a valid X\.509 certificate/)).toBeTruthy()
+    })
+
+    it.each([
+      ["a known code", { code: "E_CA_READ" }, "Could not read the selected file. Try a smaller file or pick again."],
+      ["the bridge's sentence for an unknown code", { code: "E_OTHER", message: "Disk full" }, "Disk full"],
+      ["the fallback when the bridge says nothing", {}, "Could not import the CA"]
+    ])("words a failed CA import with %s", async (_, error, shown) => {
+      mockPickServerCaFile.mockResolvedValueOnce("BASE64")
+      mockImportServerCa.mockRejectedValueOnce(error)
+      const { findByText } = render(<MtlsSection />)
+
+      fireEvent.press(await findByText("Import CA (.crt / .pem)"))
+
+      expect(await findByText(shown)).toBeTruthy()
     })
 
     it("reads Valid when loaded and removes only after the confirm", async () => {
