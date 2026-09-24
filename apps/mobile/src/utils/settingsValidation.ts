@@ -4,6 +4,7 @@
  */
 
 import { API_TEMPLATES, type ApiTemplateName, type DawarichMode } from "../types/global"
+import { t } from "../i18n/t"
 
 export const CUSTOM_ENDPOINT_EXAMPLE = "https://your-server.example/api"
 
@@ -63,7 +64,7 @@ export function parseWholeNumber(text: string): number | null {
 export function wholeNumberError(text: string, min: number, unit: string): string | undefined {
   if (text === "") return undefined
   const value = parseWholeNumber(text)
-  if (value === null) return "A whole number"
-  if (value < min) return `At least ${min} ${unit}`
+  if (value === null) return t("validation.wholeNumber")
+  if (value < min) return t("validation.atLeast", { min, unit })
   return undefined
 }

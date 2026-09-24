@@ -8,18 +8,12 @@ import { View, Text, StyleSheet } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTimeout } from "../../../hooks/useTimeout"
 import { fontSizes, fonts, lineHeights } from "../../../styles/typography"
-import {
-  SAVE_SUCCESS_DISPLAY_MS,
-  SYNC_INTERVAL_LABELS,
-  SYNC_INTERVAL_PRESETS,
-  SYNC_INTERVAL_SUBS,
-  size,
-  space
-} from "../../../constants"
+import { SAVE_SUCCESS_DISPLAY_MS, SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_SUB_KEYS, size, space } from "../../../constants"
 import { NumericInput } from "../../ui/NumericInput"
 import { RadioRow } from "../../ui/RadioRow"
-import { formatDuration } from "../../../utils/dashboardState"
+import { formatDuration, syncIntervalLabel } from "../../../utils/dashboardState"
 import { parseWholeNumber, wholeNumberError } from "../../../utils/settingsValidation"
+import { useTranslation } from "../../../i18n/useTranslation"
 
 type SyncIntervalPickerProps = {
   /** A heading above the group; the settings screen titles the card instead and passes neither. */
@@ -60,6 +54,7 @@ export function SyncIntervalPicker({
   testIDPrefix = "sync-interval"
 }: SyncIntervalPickerProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const [customOpen, setCustomOpen] = useState(false)
   const [input, setInput] = useState(value.toString())
   const [clampMessage, setClampMessage] = useState<string | undefined>()
@@ -79,7 +74,7 @@ export function SyncIntervalPicker({
     notify(seconds)
   }
 
-  const fieldHint = `${min > 0 ? `At least ${min} s. ` : ""}Longer means fewer requests and a later server.`
+  const fieldHint = min > 0 ? t("syncInterval.field.hintMin", { min }) : t("syncInterval.field.hint")
 
   return (
     <View>
@@ -91,8 +86,8 @@ export function SyncIntervalPicker({
           <RadioRow
             key={seconds}
             testID={`${testIDPrefix}-${seconds}`}
-            label={SYNC_INTERVAL_LABELS[seconds]}
-            sub={SYNC_INTERVAL_SUBS[seconds]}
+            label={syncIntervalLabel(seconds)}
+            sub={t(SYNC_INTERVAL_SUB_KEYS[seconds])}
             selected={!isCustom && value === seconds}
             onPress={() => {
               setCustomOpen(false)
@@ -102,13 +97,13 @@ export function SyncIntervalPicker({
         ))}
         <RadioRow
           testID={`${testIDPrefix}-custom`}
-          label="Custom"
+          label={t("common.custom")}
           sub={
             isCustom
               ? value === 0
-                ? "Syncs each fix"
-                : `Syncs every ${formatDuration(value)}`
-              : "Set your own interval"
+                ? t("syncInterval.custom.eachFix")
+                : t("syncInterval.custom.every", { duration: formatDuration(value) })
+              : t("syncInterval.custom.sub")
           }
           selected={isCustom}
           onPress={() => {
@@ -120,7 +115,7 @@ export function SyncIntervalPicker({
         {isCustom && (
           <View style={styles.customField}>
             <NumericInput
-              label="Sync interval"
+              label={t("syncInterval.field")}
               value={input}
               onChange={(next) => {
                 setInput(next)
@@ -132,14 +127,14 @@ export function SyncIntervalPicker({
                 const parsed = parseWholeNumber(input)
                 if (parsed !== null && parsed >= min) return
                 setInput(min.toString())
-                setClampMessage(`Set to ${min} s`)
+                setClampMessage(t("validation.setTo", { value: min, unit: t("unit.s") }))
                 clampTimer.set(() => setClampMessage(undefined), SAVE_SUCCESS_DISPLAY_MS)
                 report(min, onClamp)
               }}
-              unit="s"
+              unit={t("unit.s")}
               placeholder="300"
               hint={fieldHint}
-              error={wholeNumberError(input, min, "s")}
+              error={wholeNumberError(input, min, t("unit.s"))}
               message={clampMessage}
             />
           </View>

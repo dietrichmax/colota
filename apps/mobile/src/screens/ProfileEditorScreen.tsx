@@ -28,13 +28,12 @@ import {
 import { Check, Trash2 } from "lucide-react-native"
 import { logger } from "../utils/logger"
 import { shortDistanceUnit, inputToMeters, metersToInput, getSpeedUnit, speedToInput, inputToSpeed } from "../utils/geo"
-import { formatDuration } from "../utils/dashboardState"
+import { formatDuration, syncIntervalLabel } from "../utils/dashboardState"
 import { conditionOf, profileSentence } from "../utils/profileRow"
 import { parseWholeNumber, wholeNumberError } from "../utils/settingsValidation"
 import {
   PROFILE_CONDITIONS,
   SAVE_SUCCESS_DISPLAY_MS,
-  SYNC_INTERVAL_LABELS,
   STATIONARY_MAX_INTERVAL_SECONDS,
   defaultProfileDelays,
   size,
@@ -239,7 +238,7 @@ export function ProfileEditorScreen({ navigation, route }: RootScreenProps<"Prof
     }
   }, [profile, conditionLabel, isEditing, profileId, navigation])
 
-  const syncDefault = SYNC_INTERVAL_LABELS[settings.syncInterval] ?? formatDuration(settings.syncInterval)
+  const syncDefault = syncIntervalLabel(settings.syncInterval)
 
   return (
     <Container>

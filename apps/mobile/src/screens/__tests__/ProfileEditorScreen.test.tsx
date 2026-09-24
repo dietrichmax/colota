@@ -57,7 +57,8 @@ jest.mock("../../contexts/TrackingProvider", () => ({
 jest.mock("../../components/features/settings/SyncIntervalPicker", () => {
   const R = require("react")
   const { View, Text, Pressable } = require("react-native")
-  const { SYNC_INTERVAL_PRESETS, SYNC_INTERVAL_LABELS } = require("../../constants")
+  const { SYNC_INTERVAL_PRESETS } = require("../../constants")
+  const { syncIntervalLabel } = require("../../utils/dashboardState")
   return {
     SyncIntervalPicker: ({ label, hint, value, onSelect }: any) =>
       R.createElement(
@@ -74,7 +75,7 @@ jest.mock("../../components/features/settings/SyncIntervalPicker", () => {
               onPress: () => onSelect(seconds),
               accessibilityState: { checked: value === seconds }
             },
-            R.createElement(Text, null, SYNC_INTERVAL_LABELS[seconds])
+            R.createElement(Text, null, syncIntervalLabel(seconds))
           )
         )
       )

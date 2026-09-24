@@ -9,6 +9,7 @@
 
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import type { RootStackParamList } from "./navigation"
+import type { TranslationKey } from "../i18n/options"
 
 export interface ScreenProps {
   navigation: NativeStackNavigationProp<RootStackParamList>
@@ -270,9 +271,9 @@ export interface TrackingPresetConfig {
   distance: number
   syncInterval: number
   retryInterval: number
-  label: string
+  labelKey: TranslationKey
   /** What the preset costs, read beside the numbers it prices. */
-  cost: string
+  costKey: TranslationKey
 }
 
 export const TRACKING_PRESETS = {
@@ -281,24 +282,24 @@ export const TRACKING_PRESETS = {
     distance: 0,
     syncInterval: 0,
     retryInterval: 30,
-    label: "Instant",
-    cost: "most battery, finest track"
+    labelKey: "tracking.preset.instant",
+    costKey: "tracking.preset.instant.cost"
   },
   balanced: {
     interval: 30,
     distance: 2,
     syncInterval: 300,
     retryInterval: 300,
-    label: "Balanced",
-    cost: "moderate battery, fewer wake-ups"
+    labelKey: "tracking.preset.balanced",
+    costKey: "tracking.preset.balanced.cost"
   },
   powersaver: {
     interval: 60,
     distance: 2,
     syncInterval: 900,
     retryInterval: 900,
-    label: "Power saver",
-    cost: "least battery, coarser track"
+    labelKey: "tracking.preset.powersaver",
+    costKey: "tracking.preset.powersaver.cost"
   }
 } as const satisfies Record<string, TrackingPresetConfig>
 

@@ -4,6 +4,7 @@
  */
 
 import { formatTime, formatWhen, metersToInput, shortDistanceUnit } from "./geo"
+import { t } from "../i18n/t"
 
 export type BannerCondition = "permission" | "background" | "locationOff" | "battery"
 
@@ -103,25 +104,35 @@ export function describeState(input: StateInput): StateDescription {
 }
 
 export function formatDuration(seconds: number): string {
-  if (seconds >= 3600 && seconds % 3600 === 0) return `${seconds / 3600} h`
-  if (seconds >= 60 && seconds % 60 === 0) return `${seconds / 60} min`
-  return `${seconds} s`
+  if (seconds >= 3600 && seconds % 3600 === 0) return `${seconds / 3600} ${t("unit.h")}`
+  if (seconds >= 60 && seconds % 60 === 0) return `${seconds / 60} ${t("unit.min")}`
+  return `${seconds} ${t("unit.s")}`
+}
+
+/** "Instant" for 0, the duration otherwise: the sync-interval rows and the profile editor's default. */
+export function syncIntervalLabel(seconds: number): string {
+  return seconds === 0 ? t("syncInterval.instant") : formatDuration(seconds)
 }
 
 export function formatInterval(seconds: number): string {
-  return `Every ${formatDuration(seconds)}`
+  return t("tracking.every", { duration: formatDuration(seconds) })
 }
 
 /** "Every 30 s after 2 m", or ", any movement" when no distance gates a fix. */
 export function recordingSummary(intervalSeconds: number, distanceMeters: number): string {
-  const gate =
-    distanceMeters === 0 ? ", any movement" : ` after ${metersToInput(distanceMeters)} ${shortDistanceUnit()}`
-  return `${formatInterval(intervalSeconds)}${gate}`
+  const duration = formatDuration(intervalSeconds)
+  if (distanceMeters === 0) return t("tracking.recording.anyMovement", { duration })
+  return t("tracking.recording.after", {
+    duration,
+    distance: `${metersToInput(distanceMeters)} ${shortDistanceUnit()}`
+  })
 }
 
 /** "syncs each fix" or "syncs every 5 min", lower case so a caption can carry it. */
 export function syncSummary(syncIntervalSeconds: number): string {
-  return syncIntervalSeconds === 0 ? "syncs each fix" : `syncs every ${formatDuration(syncIntervalSeconds)}`
+  return syncIntervalSeconds === 0
+    ? t("tracking.sync.eachFix")
+    : t("tracking.sync.every", { duration: formatDuration(syncIntervalSeconds) })
 }
 
 /** The one line a preset row, the Custom row and the Settings row all print for a configuration. */
@@ -136,7 +147,10 @@ export function trackingSummary(
 }
 
 export function intervalText(intervalSeconds: number, syncIntervalSeconds: number): string {
-  const sync = syncIntervalSeconds === 0 ? "Instant sync" : `Sync ${formatDuration(syncIntervalSeconds)}`
+  const sync =
+    syncIntervalSeconds === 0
+      ? t("tracking.interval.instantSync")
+      : t("tracking.interval.sync", { duration: formatDuration(syncIntervalSeconds) })
   return `${formatInterval(intervalSeconds)} · ${sync}`
 }
 

@@ -36,6 +36,8 @@ import { recordingClause } from "../../../utils/profileRow"
 import { parseWholeNumber, wholeNumberError } from "../../../utils/settingsValidation"
 import { isOverlandFormat } from "../../../utils/apiPayload"
 import NativeLocationService from "../../../services/NativeLocationService"
+import { useTranslation } from "../../../i18n/useTranslation"
+import type { TranslationKey } from "../../../i18n/options"
 
 interface SyncStrategySettingsProps {
   settings: Settings
@@ -50,15 +52,11 @@ type NumericKey = "interval" | "distance" | "accuracyThreshold"
 
 const NUMERIC_MIN: Record<NumericKey, number> = { interval: 1, distance: 0, accuracyThreshold: 1 }
 
-const SYNC_CONDITION_OPTIONS: { value: SyncCondition; label: string; sub: string }[] = [
-  {
-    value: "any",
-    label: "Any network",
-    sub: "Mobile data and Wi-Fi · syncs never wait, counts against your data plan"
-  },
-  { value: "wifi_any", label: "Wi-Fi or Ethernet", sub: "Unmetered networks only · fixes wait on mobile data" },
-  { value: "wifi_ssid", label: "Specific Wi-Fi network", sub: "One network by name · fixes wait elsewhere" },
-  { value: "vpn", label: "VPN", sub: "Only while a VPN is up · fixes wait otherwise" }
+const SYNC_CONDITION_OPTIONS: { value: SyncCondition; labelKey: TranslationKey; subKey: TranslationKey }[] = [
+  { value: "any", labelKey: "trackingSync.condition.any", subKey: "trackingSync.condition.any.sub" },
+  { value: "wifi_any", labelKey: "trackingSync.condition.wifiAny", subKey: "trackingSync.condition.wifiAny.sub" },
+  { value: "wifi_ssid", labelKey: "trackingSync.condition.wifiSsid", subKey: "trackingSync.condition.wifiSsid.sub" },
+  { value: "vpn", labelKey: "trackingSync.condition.vpn", subKey: "trackingSync.condition.vpn.sub" }
 ]
 
 const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1)
@@ -71,6 +69,7 @@ export function SyncStrategySettings({
   activeProfile = null
 }: SyncStrategySettingsProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const unit = shortDistanceUnit()
   const [intervalInput, setIntervalInput] = useState(settings.interval.toString())
   const [distanceInput, setDistanceInput] = useState(metersToInput(settings.distance ?? 0).toString())
@@ -137,7 +136,7 @@ export function SyncStrategySettings({
     const num = parseWholeNumber(inputOf(key))
     if (num !== null && num >= min) return
     setInput(key, min.toString())
-    noteClamp(key, `Set to ${min} ${key === "interval" ? "s" : unit}`)
+    noteClamp(key, t("validation.setTo", { value: min, unit: key === "interval" ? t("unit.s") : unit }))
     const next = { ...settings, [key]: toStored(key, min) }
     onSettingsChange(next)
     onImmediateSave(next)
@@ -193,7 +192,7 @@ export function SyncStrategySettings({
     if (num !== null && num >= OVERLAND_BATCH_MIN && num <= OVERLAND_BATCH_MAX) return
     const clamped = num === null || num < OVERLAND_BATCH_MIN ? OVERLAND_BATCH_MIN : OVERLAND_BATCH_MAX
     setOverlandBatchSizeInput(clamped.toString())
-    noteClamp("batch", `Set to ${clamped} points`)
+    noteClamp("batch", t("trackingSync.batch.setTo", { count: clamped, n: clamped }))
     const next = { ...settings, overlandBatchSize: clamped }
     onSettingsChange(next)
     onImmediateSave(next)
@@ -202,39 +201,38 @@ export function SyncStrategySettings({
   const batchError = (() => {
     if (overlandBatchSizeInput === "") return undefined
     const num = parseWholeNumber(overlandBatchSizeInput)
-    if (num === null) return "A whole number"
-    if (num < OVERLAND_BATCH_MIN || num > OVERLAND_BATCH_MAX) return `${OVERLAND_BATCH_MIN} to ${OVERLAND_BATCH_MAX}`
+    if (num === null) return t("validation.wholeNumber")
+    if (num < OVERLAND_BATCH_MIN || num > OVERLAND_BATCH_MAX)
+      return t("trackingSync.batch.range", { min: OVERLAND_BATCH_MIN, max: OVERLAND_BATCH_MAX })
     return undefined
   })()
 
   const presetSub = (preset: SelectablePreset) => {
     const config = TRACKING_PRESETS[preset]
-    return `${trackingSummary(config.interval, config.distance, config.syncInterval, settings.isOfflineMode)} · ${config.cost}`
+    return `${trackingSummary(config.interval, config.distance, config.syncInterval, settings.isOfflineMode)} · ${t(config.costKey)}`
   }
 
   const thresholdShown = `${metersToInput(settings.accuracyThreshold)} ${unit}`
   const filterHint = settings.filterInaccurateLocations
-    ? `Drops fixes the chip rates worse than ${thresholdShown}. Stricter leaves gaps indoors.`
-    : `Every fix is kept. When on, fixes worse than ${thresholdShown} are dropped.`
+    ? t("trackingSync.filter.on", { threshold: thresholdShown })
+    : t("trackingSync.filter.off", { threshold: thresholdShown })
 
   const ssidTyped = settings.syncSsid
   const offerCurrentSsid = currentSsid !== "" && currentSsid.toLowerCase() !== ssidTyped.toLowerCase()
 
   return (
     <View>
-      <Text style={[styles.intro, { color: colors.textSecondary }]}>
-        How often a fix is recorded and when it syncs. Changes apply at once and restart tracking.
-      </Text>
+      <Text style={[styles.intro, { color: colors.textSecondary }]}>{t("trackingSync.intro")}</Text>
 
-      <SectionTitle>Recording</SectionTitle>
+      <SectionTitle>{t("trackingSync.section.recording")}</SectionTitle>
       <Card rows>
         {activeProfile && (
           <>
             <StateLine
               icon={UserRoundPen}
               iconColor={colors.textSecondary}
-              label={`${activeProfile.name} is active`}
-              caption={`In force: ${lowerFirst(recordingClause(activeProfile))}`}
+              label={t("trackingSync.profileActive", { name: activeProfile.name })}
+              caption={t("trackingSync.inForce", { clause: lowerFirst(recordingClause(activeProfile)) })}
               testID="profile-override-recording"
             />
             <Divider tight />
@@ -245,7 +243,7 @@ export function SyncStrategySettings({
             <RadioRow
               key={preset}
               testID={`preset-${preset}`}
-              label={TRACKING_PRESETS[preset].label}
+              label={t(TRACKING_PRESETS[preset].labelKey)}
               sub={presetSub(preset)}
               selected={settings.syncPreset === preset}
               onPress={() => handlePresetSelect(preset)}
@@ -253,11 +251,11 @@ export function SyncStrategySettings({
           ))}
           <RadioRow
             testID="preset-custom"
-            label="Custom"
+            label={t("common.custom")}
             sub={
               isCustomPreset
                 ? trackingSummary(settings.interval, settings.distance, settings.syncInterval, settings.isOfflineMode)
-                : "Your own interval and movement threshold"
+                : t("trackingSync.custom.sub")
             }
             selected={isCustomPreset}
             onPress={handleCustomSelect}
@@ -266,25 +264,25 @@ export function SyncStrategySettings({
           {isCustomPreset && (
             <View style={styles.reveal}>
               <NumericInput
-                label="Interval"
+                label={t("trackingSync.interval")}
                 value={intervalInput}
                 onChange={(val) => handleNumericChange("interval", val)}
                 onBlur={() => handleNumericBlur("interval")}
-                unit="s"
+                unit={t("unit.s")}
                 placeholder="30"
-                hint="At least 1 s. Shorter keeps the GPS awake more of the time and records more points."
-                error={wholeNumberError(intervalInput, NUMERIC_MIN.interval, "s")}
+                hint={t("trackingSync.interval.hint")}
+                error={wholeNumberError(intervalInput, NUMERIC_MIN.interval, t("unit.s"))}
                 message={clampNote("interval")}
               />
 
               <NumericInput
-                label="Movement threshold"
+                label={t("trackingSync.distance")}
                 value={distanceInput}
                 onChange={(val) => handleNumericChange("distance", val)}
                 onBlur={() => handleNumericBlur("distance")}
                 unit={unit}
                 placeholder="2"
-                hint="Skips a fix closer than this to the last one. 0 keeps every fix. Saves storage, not battery."
+                hint={t("trackingSync.distance.hint")}
                 error={wholeNumberError(distanceInput, NUMERIC_MIN.distance, unit)}
                 message={clampNote("distance")}
               />
@@ -295,15 +293,15 @@ export function SyncStrategySettings({
 
       {!settings.isOfflineMode && (
         <>
-          <SectionTitle style={styles.groupTop}>Sync interval</SectionTitle>
+          <SectionTitle style={styles.groupTop}>{t("trackingSync.section.syncInterval")}</SectionTitle>
           <Card rows>
             {activeProfile && (
               <>
                 <StateLine
                   icon={UserRoundPen}
                   iconColor={colors.textSecondary}
-                  label={`${activeProfile.name} is active`}
-                  caption={`In force: ${syncSummary(activeProfile.syncInterval)}`}
+                  label={t("trackingSync.profileActive", { name: activeProfile.name })}
+                  caption={t("trackingSync.inForce", { clause: syncSummary(activeProfile.syncInterval) })}
                   testID="profile-override-sync"
                 />
                 <Divider tight />
@@ -322,13 +320,13 @@ export function SyncStrategySettings({
                 <Divider tight />
                 <View style={styles.batch}>
                   <NumericInput
-                    label="Batch size"
+                    label={t("trackingSync.batch")}
                     value={overlandBatchSizeInput}
                     onChange={handleBatchChange}
                     onBlur={handleBatchBlur}
-                    unit="points"
+                    unit={t("unit.points")}
                     placeholder="50"
-                    hint={`${OVERLAND_BATCH_MIN} to ${OVERLAND_BATCH_MAX} points per request. Larger means fewer requests and bigger payloads.`}
+                    hint={t("trackingSync.batch.hint", { min: OVERLAND_BATCH_MIN, max: OVERLAND_BATCH_MAX })}
                     error={batchError}
                     message={clampNote("batch")}
                   />
@@ -337,15 +335,15 @@ export function SyncStrategySettings({
             )}
           </Card>
 
-          <SectionTitle style={styles.groupTop}>Sync only on</SectionTitle>
+          <SectionTitle style={styles.groupTop}>{t("trackingSync.section.syncOn")}</SectionTitle>
           <Card rows>
             <View accessibilityRole="radiogroup" style={styles.group}>
-              {SYNC_CONDITION_OPTIONS.map(({ value, label, sub }) => (
+              {SYNC_CONDITION_OPTIONS.map(({ value, labelKey, subKey }) => (
                 <React.Fragment key={value}>
                   <RadioRow
                     testID={`sync-condition-${value}`}
-                    label={label}
-                    sub={sub}
+                    label={t(labelKey)}
+                    sub={t(subKey)}
                     selected={settings.syncCondition === value}
                     onPress={() => {
                       const next = { ...settings, syncCondition: value }
@@ -357,7 +355,7 @@ export function SyncStrategySettings({
                   {value === "wifi_ssid" && settings.syncCondition === "wifi_ssid" && (
                     <View style={[styles.reveal, offerCurrentSsid ? styles.revealButtonTail : styles.revealTail]}>
                       <TextField
-                        label="Network name"
+                        label={t("trackingSync.ssid")}
                         testID="sync-ssid-input"
                         mono
                         value={ssidTyped}
@@ -366,15 +364,15 @@ export function SyncStrategySettings({
                           onSettingsChange(next)
                           onDebouncedSave(next)
                         }}
-                        placeholder="As shown in Wi-Fi settings"
+                        placeholder={t("trackingSync.ssid.placeholder")}
                         autoCapitalize="none"
                         autoCorrect={false}
-                        error={ssidTyped.trim() === "" ? "Nothing syncs until a network is named" : undefined}
+                        error={ssidTyped.trim() === "" ? t("trackingSync.ssid.empty") : undefined}
                       />
                       {offerCurrentSsid && (
                         <Button
                           variant="secondary"
-                          title={`Use ${currentSsid}`}
+                          title={t("trackingSync.ssid.use", { ssid: currentSsid })}
                           testID="sync-ssid-use"
                           onPress={() => {
                             const next = { ...settings, syncSsid: currentSsid }
@@ -392,11 +390,11 @@ export function SyncStrategySettings({
         </>
       )}
 
-      <SectionTitle style={styles.groupTop}>Accuracy filter</SectionTitle>
+      <SectionTitle style={styles.groupTop}>{t("trackingSync.section.accuracy")}</SectionTitle>
       <Card rows>
-        <SettingRow label="Filter inaccurate locations" hint={filterHint}>
+        <SettingRow label={t("trackingSync.filter")} hint={filterHint}>
           <Toggle
-            accessibilityLabel="Filter inaccurate locations"
+            accessibilityLabel={t("trackingSync.filter")}
             value={settings.filterInaccurateLocations}
             onValueChange={(value) => {
               const next = { ...settings, filterInaccurateLocations: value }
@@ -409,13 +407,13 @@ export function SyncStrategySettings({
         {settings.filterInaccurateLocations && (
           <View style={styles.filterField}>
             <NumericInput
-              label="Accuracy threshold"
+              label={t("trackingSync.threshold")}
               value={accuracyThresholdInput}
               onChange={(val) => handleNumericChange("accuracyThreshold", val)}
               onBlur={() => handleNumericBlur("accuracyThreshold")}
               unit={unit}
               placeholder="50"
-              hint={`At least 1 ${unit}. The chip's own estimate, often optimistic; lower drops more fixes.`}
+              hint={t("trackingSync.threshold.hint", { unit })}
               error={wholeNumberError(accuracyThresholdInput, NUMERIC_MIN.accuracyThreshold, unit)}
               message={clampNote("accuracyThreshold")}
             />

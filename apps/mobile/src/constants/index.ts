@@ -4,6 +4,7 @@
  */
 
 import type { ProfileConditionType } from "../types/global"
+import type { TranslationKey } from "../i18n/options"
 import { Zap, Car, ArrowUp, ArrowDown, Pause } from "lucide-react-native"
 
 // Timing
@@ -141,18 +142,11 @@ export function defaultProfileDelays(conditionType: ProfileConditionType): {
 // Sync Interval
 export const SYNC_INTERVAL_PRESETS: readonly number[] = [0, 60, 300, 900]
 
-export const SYNC_INTERVAL_LABELS: Record<number, string> = {
-  0: "Instant",
-  60: "1 min",
-  300: "5 min",
-  900: "15 min"
-}
-
-export const SYNC_INTERVAL_SUBS: Record<number, string> = {
-  0: "Each fix is its own request · radio never idles",
-  60: "One request a minute · fixes wait in between",
-  300: "One request every 5 min · fewer wake-ups",
-  900: "One request every 15 min · the server hears you up to 15 min late"
+export const SYNC_INTERVAL_SUB_KEYS: Record<number, TranslationKey> = {
+  0: "syncInterval.sub.0",
+  60: "syncInterval.sub.60",
+  300: "syncInterval.sub.300",
+  900: "syncInterval.sub.900"
 }
 
 // Overland batch envelope (Dawarich + batch mode, Overland template)

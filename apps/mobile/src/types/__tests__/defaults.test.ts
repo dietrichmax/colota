@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS, DEFAULT_FIELD_MAP, TRACKING_PRESETS, API_TEMPLATES, Settings } from "../global"
+import { t } from "../../i18n/t"
 
 describe("DEFAULT_FIELD_MAP", () => {
   const requiredKeys = ["lat", "lon", "acc"]
@@ -114,15 +115,15 @@ describe("TRACKING_PRESETS", () => {
   })
 
   it.each(presetNames)("%s has a label", (name) => {
-    expect(TRACKING_PRESETS[name].label).toBeTruthy()
+    expect(t(TRACKING_PRESETS[name].labelKey)).toBeTruthy()
   })
 
   it.each(presetNames)("%s names its cost, which the row prints beside the numbers it prices", (name) => {
-    expect(TRACKING_PRESETS[name].cost).toMatch(/battery/)
+    expect(t(TRACKING_PRESETS[name].costKey)).toMatch(/battery/)
   })
 
   it("labels read in sentence case, like every other row", () => {
-    expect(TRACKING_PRESETS.powersaver.label).toBe("Power saver")
+    expect(t(TRACKING_PRESETS.powersaver.labelKey)).toBe("Power saver")
   })
 
   it("instant has shortest interval", () => {

@@ -6,6 +6,7 @@ import {
   intervalText,
   pickBannerCondition,
   recordingSummary,
+  syncIntervalLabel,
   syncSummary,
   trackingSummary,
   type StateInput
@@ -252,6 +253,17 @@ describe("trackingSummary", () => {
     expect(syncSummary(0)).toBe("syncs each fix")
     expect(syncSummary(900)).toBe("syncs every 15 min")
     expect(formatDuration(90)).toBe("90 s")
+  })
+})
+
+describe("syncIntervalLabel", () => {
+  it("names zero Instant, because a sync interval of 0 s means each fix goes out on its own", () => {
+    expect(syncIntervalLabel(0)).toBe("Instant")
+  })
+
+  it("prints any other interval as its duration, so a custom value reads like the presets", () => {
+    expect(syncIntervalLabel(60)).toBe("1 min")
+    expect(syncIntervalLabel(90)).toBe("90 s")
   })
 })
 

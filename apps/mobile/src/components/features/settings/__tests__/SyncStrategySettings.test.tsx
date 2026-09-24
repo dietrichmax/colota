@@ -543,5 +543,14 @@ describe("SyncStrategySettings", () => {
       )
       expect(getByText("Set to 500 points")).toBeTruthy()
     })
+
+    it("words the clamp to the minimum in the singular, since the floor of 1 is the note most users see", () => {
+      const { getByDisplayValue, getByText } = renderComponent({ ...overland, overlandBatchSize: 50 })
+
+      fireEvent.changeText(getByDisplayValue("50"), "0")
+      fireEvent(getByDisplayValue("0"), "blur")
+
+      expect(getByText("Set to 1 point")).toBeTruthy()
+    })
   })
 })
