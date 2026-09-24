@@ -26,12 +26,15 @@ import { shortDistanceUnit, inputToMeters, metersToInput } from "../utils/geo"
 import { parsePositiveInt, isPositiveInt } from "../utils/settingsValidation"
 import type { RootScreenProps } from "../types/navigation"
 import { size, space } from "../constants"
+import { useTranslation } from "../i18n/useTranslation"
+import { t as translate } from "../i18n/t"
 
 declare function requestIdleCallback(callback: () => void): number
 declare function cancelIdleCallback(handle: number): void
 
 export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geofence Editor">) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const geofenceId = route?.params?.geofenceId as number | undefined
   const isEditing = !!geofenceId
 
@@ -127,7 +130,8 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         .catch((err) => {
           if (cancelled) return
           logger.error("[GeofenceEditor] Failed to load geofence:", err)
-          showAlert("Error", "Failed to load geofence data.", "error")
+          // The non-hook t, so a language change never re-runs the load over unsaved edits.
+          showAlert(translate("common.error"), translate("geofenceEditor.loadFailed"), "error")
           navigation.goBack()
         })
     })
@@ -151,11 +155,11 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
-      showAlert("Missing Name", "Please enter a name.", "warning")
+      showAlert(t("geofenceEditor.missingName.title"), t("geofenceEditor.missingName.message"), "warning")
       return
     }
     if (radius <= 0) {
-      showAlert("Invalid Radius", "Please enter a valid radius.", "warning")
+      showAlert(t("geofenceEditor.invalidRadius.title"), t("geofenceEditor.invalidRadius.message"), "warning")
       return
     }
     const effectiveHeartbeat = parsePositiveInt(heartbeatIntervalStr, 15)
@@ -179,7 +183,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
         })
       } else {
         if (!coord) {
-          showAlert("No location", "Place the zone on the map first.", "warning")
+          showAlert(t("geofenceEditor.noLocation.title"), t("geofenceEditor.noLocation.message"), "warning")
           setSaving(false)
           return
         }
@@ -201,7 +205,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
       navigation.goBack()
     } catch (err) {
       logger.error("[GeofenceEditor] Save failed:", err)
-      showAlert("Error", "Failed to save geofence.", "error")
+      showAlert(t("common.error"), t("geofenceEditor.saveFailed"), "error")
     } finally {
       setSaving(false)
     }
@@ -217,15 +221,16 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
     heartbeatIntervalStr,
     isEditing,
     geofenceId,
-    navigation
+    navigation,
+    t
   ])
 
   const handleDelete = useCallback(async () => {
     if (!geofenceId) return
     const confirmed = await showConfirm({
-      title: "Delete geofence",
-      message: `Delete "${name}"?`,
-      confirmText: "Delete",
+      title: t("geofenceEditor.delete.title"),
+      message: t("geofenceEditor.delete.message", { name }),
+      confirmText: t("common.delete"),
       destructive: true
     })
     if (!confirmed) return
@@ -235,29 +240,29 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
       navigation.goBack()
     } catch (err) {
       logger.error("[GeofenceEditor] Delete failed:", err)
-      showAlert("Error", "Failed to delete geofence.", "error")
+      showAlert(t("common.error"), t("geofenceEditor.deleteFailed"), "error")
     }
-  }, [geofenceId, name, navigation])
+  }, [geofenceId, name, navigation, t])
 
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <SectionTitle>General</SectionTitle>
+        <SectionTitle>{t("geofenceEditor.section.general")}</SectionTitle>
         <Card rows style={styles.card}>
-          <SettingRow label="Name">
+          <SettingRow label={t("geofenceEditor.name")}>
             <TextField
               testID="geofence-name-input"
-              accessibilityLabel="Name"
+              accessibilityLabel={t("geofenceEditor.name")}
               style={styles.nameInput}
               value={name}
               onChangeText={setName}
-              placeholder="Home, Work..."
+              placeholder={t("geofenceEditor.name.placeholder")}
             />
           </SettingRow>
-          <SettingRow label={`Radius (${shortDistanceUnit()})`}>
+          <SettingRow label={t("geofenceEditor.radius", { unit: shortDistanceUnit() })}>
             <TextField
               testID="geofence-radius-input"
-              accessibilityLabel="Radius"
+              accessibilityLabel={t("geofenceEditor.radius.a11y")}
               figure
               style={styles.numInput}
               value={radiusStr}
@@ -268,11 +273,11 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           </SettingRow>
           <ListItem
             testID="place-zone-row"
-            label="Location"
-            sub={coord ? `${coord.lat.toFixed(5)}, ${coord.lon.toFixed(5)}` : "Not placed yet"}
+            label={t("geofenceEditor.location")}
+            sub={coord ? `${coord.lat.toFixed(5)}, ${coord.lon.toFixed(5)}` : t("geofenceEditor.location.notPlaced")}
             onPress={() =>
               navigation.navigate("Place Zone", {
-                name: name.trim() || "New zone",
+                name: name.trim() || t("geofenceEditor.newZone"),
                 radius,
                 lat: coord?.lat,
                 lon: coord?.lon
@@ -281,20 +286,20 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           />
         </Card>
 
-        <SectionTitle>GPS pause options</SectionTitle>
+        <SectionTitle>{t("geofenceEditor.section.pause")}</SectionTitle>
         <Card rows style={[styles.card, styles.cardTail]}>
-          <SettingRow label="Don't record in zone" hint="Pause saving and syncing">
+          <SettingRow label={t("geofenceEditor.pause")} hint={t("geofenceEditor.pause.hint")}>
             <Toggle
-              accessibilityLabel="Don't record in zone"
+              accessibilityLabel={t("geofenceEditor.pause")}
               testID="pause-tracking-toggle"
               value={pauseTracking}
               onValueChange={setPauseTracking}
             />
           </SettingRow>
 
-          <SettingRow label="WiFi/Ethernet pause" hint="Stop GPS on unmetered networks" disabled={!pauseTracking}>
+          <SettingRow label={t("geofenceEditor.wifi")} hint={t("geofenceEditor.wifi.hint")} disabled={!pauseTracking}>
             <Toggle
-              accessibilityLabel="WiFi/Ethernet pause"
+              accessibilityLabel={t("geofenceEditor.wifi")}
               testID="pause-wifi-toggle"
               value={pauseOnWifi}
               onValueChange={setPauseOnWifi}
@@ -302,9 +307,13 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
             />
           </SettingRow>
 
-          <SettingRow label="Motionless pause" hint="Stop GPS after no motion for a set time" disabled={!pauseTracking}>
+          <SettingRow
+            label={t("geofenceEditor.motionless")}
+            hint={t("geofenceEditor.motionless.hint")}
+            disabled={!pauseTracking}
+          >
             <Toggle
-              accessibilityLabel="Motionless pause"
+              accessibilityLabel={t("geofenceEditor.motionless")}
               testID="pause-motionless-toggle"
               value={pauseOnMotionless}
               onValueChange={setPauseOnMotionless}
@@ -314,10 +323,10 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 
           {pauseTracking && pauseOnMotionless && (
             <View style={styles.nestedSetting}>
-              <SettingRow label="Timeout (min)" hint="Minutes without motion before GPS stops">
+              <SettingRow label={t("geofenceEditor.timeout")} hint={t("geofenceEditor.timeout.hint")}>
                 <TextField
                   testID="motionless-timeout-input"
-                  accessibilityLabel="Timeout in minutes"
+                  accessibilityLabel={t("geofenceEditor.timeout.a11y")}
                   figure
                   style={styles.numInput}
                   value={motionlessTimeoutStr}
@@ -327,18 +336,18 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
                 />
               </SettingRow>
               {!isPositiveInt(motionlessTimeoutStr) && (
-                <FieldMessage variant="error">Must be at least 1 minute</FieldMessage>
+                <FieldMessage variant="error">{t("geofenceEditor.atLeastMinute")}</FieldMessage>
               )}
             </View>
           )}
 
           <SettingRow
-            label="Stationary heartbeat"
-            hint="Periodic point at the zone center while paused"
+            label={t("geofenceEditor.heartbeat")}
+            hint={t("geofenceEditor.heartbeat.hint")}
             disabled={!pauseTracking}
           >
             <Toggle
-              accessibilityLabel="Stationary heartbeat"
+              accessibilityLabel={t("geofenceEditor.heartbeat")}
               testID="heartbeat-toggle"
               value={heartbeatEnabled}
               onValueChange={setHeartbeatEnabled}
@@ -348,10 +357,13 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
 
           {pauseTracking && heartbeatEnabled && (
             <View style={styles.nestedSetting}>
-              <SettingRow label="Interval (min)" hint="How often to record a point">
+              <SettingRow
+                label={t("geofenceEditor.heartbeatInterval")}
+                hint={t("geofenceEditor.heartbeatInterval.hint")}
+              >
                 <TextField
                   testID="heartbeat-interval-input"
-                  accessibilityLabel="Interval in minutes"
+                  accessibilityLabel={t("geofenceEditor.heartbeatInterval.a11y")}
                   figure
                   style={styles.numInput}
                   value={heartbeatIntervalStr}
@@ -361,7 +373,7 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
                 />
               </SettingRow>
               {!isPositiveInt(heartbeatIntervalStr) && (
-                <FieldMessage variant="error">Must be at least 1 minute</FieldMessage>
+                <FieldMessage variant="error">{t("geofenceEditor.atLeastMinute")}</FieldMessage>
               )}
             </View>
           )}
@@ -369,14 +381,14 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           {pauseTracking && pauseOnWifi && pauseOnMotionless && (
             <View style={[styles.combinedNote, { borderTopColor: colors.divider }]}>
               <Text style={[styles.combinedNoteText, { color: colors.textSecondary }]}>
-                GPS resumes only when both WiFi is disconnected and motion is detected
+                {t("geofenceEditor.combined")}
               </Text>
             </View>
           )}
         </Card>
 
         <Button
-          title="Save geofence"
+          title={t("geofenceEditor.save")}
           loading={saving}
           onPress={handleSave}
           disabled={
@@ -387,7 +399,9 @@ export function GeofenceEditorScreen({ navigation, route }: RootScreenProps<"Geo
           }
           icon={Check}
         />
-        {isEditing && <Button title="Delete geofence" onPress={handleDelete} variant="danger" icon={Trash2} />}
+        {isEditing && (
+          <Button title={t("geofenceEditor.delete.title")} onPress={handleDelete} variant="danger" icon={Trash2} />
+        )}
       </ScrollView>
     </Container>
   )

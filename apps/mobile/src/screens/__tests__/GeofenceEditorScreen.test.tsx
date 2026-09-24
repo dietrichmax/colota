@@ -287,6 +287,15 @@ describe("GeofenceEditorScreen", () => {
     })
   })
 
+  it("refuses to save a zone with no name and says why", async () => {
+    const { getByText, getByDisplayValue } = renderNew()
+
+    fireEvent.changeText(getByDisplayValue("New Zone"), " ")
+    fireEvent.press(getByText("Save geofence"))
+
+    await waitFor(() => expect(mockShowAlert).toHaveBeenCalledWith("Missing Name", "Please enter a name.", "warning"))
+  })
+
   it("saves a moved zone, which delete-and-recreate was the only way to do before", async () => {
     const { getByText } = renderEditAt(40.7, -74)
 

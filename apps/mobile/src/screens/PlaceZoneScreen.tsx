@@ -17,6 +17,7 @@ import { MapActionButton, mapActionStyles } from "../components/features/map/Map
 import { buildGeofencesGeoJSON } from "../components/features/map/mapUtils"
 import { fontSizes, fonts } from "../styles/typography"
 import { DEFAULT_MAP_ZOOM, MAP_ANIMATION_DURATION_MS, WORLD_MAP_ZOOM, size, space } from "../constants"
+import { useTranslation } from "../i18n/useTranslation"
 import { formatShortDistance } from "../utils/geo"
 import { logger } from "../utils/logger"
 import { RootScreenProps } from "../types/navigation"
@@ -26,6 +27,7 @@ const WORLD_CENTER: [number, number] = [0, 0]
 
 export function PlaceZoneScreen({ navigation, route }: RootScreenProps<"Place Zone">) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { tracking } = useTracking()
   const coords = useCoords()
   const mapRef = useRef<ColotaMapRef>(null)
@@ -116,7 +118,7 @@ export function PlaceZoneScreen({ navigation, route }: RootScreenProps<"Place Zo
           <MapActionButton
             style={[mapActionStyles.right, styles.locate]}
             accessibilityRole="button"
-            accessibilityLabel="Place zone at my position"
+            accessibilityLabel={t("placeZone.here")}
             onPress={handlePlaceAtFix}
             testID="place-at-fix-btn"
           >
@@ -128,10 +130,13 @@ export function PlaceZoneScreen({ navigation, route }: RootScreenProps<"Place Zo
       <View style={styles.footer}>
         <Text style={[styles.readout, { color: picked ? colors.text : colors.textSecondary }]}>
           {picked
-            ? `${picked.lat.toFixed(5)}, ${picked.lon.toFixed(5)} · ${formatShortDistance(radius)} radius`
-            : "Tap the map to place the zone"}
+            ? t("placeZone.readout", {
+                coord: `${picked.lat.toFixed(5)}, ${picked.lon.toFixed(5)}`,
+                radius: formatShortDistance(radius)
+              })
+            : t("placeZone.tap")}
         </Text>
-        <Button title="Use this location" onPress={handleConfirm} disabled={!picked} />
+        <Button title={t("placeZone.use")} onPress={handleConfirm} disabled={!picked} />
       </View>
     </Container>
   )

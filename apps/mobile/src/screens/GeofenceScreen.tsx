@@ -22,6 +22,7 @@ import {
   size,
   space
 } from "../constants"
+import { useTranslation } from "../i18n/useTranslation"
 import { MapActionButton } from "../components/features/map/MapActionButton"
 import { ColotaMapView, ColotaMapRef } from "../components/features/map/ColotaMapView"
 import { buildGeofencesGeoJSON, geofenceBounds } from "../components/features/map/mapUtils"
@@ -43,6 +44,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
   const { tracking } = useTracking()
   const coords = useCoords()
   const { colors } = useTheme()
+  const { t } = useTranslation()
 
   const [geofences, setGeofences] = useState<Geofence[] | null>(null)
   const [currentPauseZone, setCurrentPauseZone] = useState<string | null>(null)
@@ -153,9 +155,9 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
       await Share.share({ message: buildGeofencesLink(geofences) })
     } catch (err) {
       logger.error("[GeofenceScreen] Failed to share geofences:", err)
-      showAlert("Error", "Failed to share geofences.", "error")
+      showAlert(t("common.error"), t("geofences.shareFailed"), "error")
     }
-  }, [geofences])
+  }, [geofences, t])
 
   const openEditor = useCallback(
     (geofenceId?: number) => {
@@ -171,15 +173,20 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
         {hasZones && (
           <HeaderAction
             icon={Share2}
-            label="Share all geofences"
+            label={t("geofences.share")}
             onPress={handleShareGeofences}
             testID="share-geofences-btn"
           />
         )}
-        <HeaderAction icon={Plus} label="Create geofence" onPress={() => openEditor()} testID="add-geofence-btn" />
+        <HeaderAction
+          icon={Plus}
+          label={t("geofences.create")}
+          onPress={() => openEditor()}
+          testID="add-geofence-btn"
+        />
       </View>
     ),
-    [hasZones, handleShareGeofences, openEditor]
+    [hasZones, handleShareGeofences, openEditor, t]
   )
   useLayoutEffect(() => {
     navigation.setOptions({ headerRight: renderHeaderActions })
@@ -235,7 +242,7 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
             anchored={false}
             style={[styles.disc, { bottom: controlsBottom + size.iconColumn + space.lg, right: edgeEnd }]}
             accessibilityRole="button"
-            accessibilityLabel={hasZones ? "Fit geofences" : "Centre map on my position"}
+            accessibilityLabel={hasZones ? t("geofences.fit") : t("geofences.centre")}
             onPress={handleFit}
             testID="fit-geofences-btn"
           >
@@ -266,9 +273,9 @@ export function GeofenceScreen({ navigation }: ScreenProps) {
         ) : (
           <EmptyState
             icon={MapPinHouse}
-            title="No geofences yet"
-            hint="A geofence stops recording while you are inside it."
-            action={{ label: "Create geofence", onPress: () => openEditor() }}
+            title={t("geofences.empty.title")}
+            hint={t("geofences.empty.hint")}
+            action={{ label: t("geofences.create"), onPress: () => openEditor() }}
             style={styles.empty}
           />
         )}
