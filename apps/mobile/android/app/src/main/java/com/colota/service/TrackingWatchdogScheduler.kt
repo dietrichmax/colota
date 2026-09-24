@@ -19,6 +19,9 @@ object TrackingWatchdogScheduler {
     /** Above the ~9min Doze floor for allow-while-idle, and matches the default heartbeat. */
     const val INTERVAL_MS = 15 * 60_000L
 
+    /** Nothing wakes the app when Location comes back on; Doze still batches this to ~9 min. */
+    const val LOCATION_OFF_RETRY_MS = 5 * 60_000L
+
     private val alarm = AlarmScheduler(
         tag = "TrackingWatchdog",
         requestCode = 9303,
@@ -26,6 +29,8 @@ object TrackingWatchdogScheduler {
     )
 
     fun schedule(context: Context) = alarm.schedule(context, INTERVAL_MS)
+
+    fun scheduleLocationOffRetry(context: Context) = alarm.schedule(context, LOCATION_OFF_RETRY_MS)
 
     fun cancel(context: Context) = alarm.cancel(context)
 }

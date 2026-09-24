@@ -346,10 +346,22 @@ class LocationForegroundService : Service() {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             )
         } catch (e: Exception) {
-            AppLogger.e(TAG, "Cannot start foreground service (${deniedStartCause(e)})", e)
+            val locationOff = e is SecurityException && !deviceInfoHelper.isLocationEnabled()
+            AppLogger.e(TAG, "Cannot start foreground service (${if (locationOff) "location services are off" else deniedStartCause(e)})", e)
             // The user's intent survives a denied start; the watchdog retries it out of process.
             // An explicit start is intent too, even before the bridge's async flag write lands.
-            if (shouldBeTracking || !isLightweight) TrackingWatchdogScheduler.schedule(this)
+            if (shouldBeTracking || !isLightweight) {
+                if (locationOff) {
+                    // Nothing wakes a dead app when Location comes back on, so the user is told and the retry is short.
+                    TrackingWatchdogScheduler.scheduleLocationOffRetry(this)
+                    notificationManager.notify(
+                        NotificationHelper.STOPPED_NOTIFICATION_ID,
+                        notificationHelper.buildStoppedNotification(NotificationHelper.STOP_REASON_LOCATION_OFF, unexpected = true)
+                    )
+                } else {
+                    TrackingWatchdogScheduler.schedule(this)
+                }
+            }
             stopSelf()
             return START_NOT_STICKY
         }

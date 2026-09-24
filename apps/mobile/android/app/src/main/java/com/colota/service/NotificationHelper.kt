@@ -50,6 +50,8 @@ class NotificationHelper(
         const val NOTIFICATION_ID = 1
         const val STOPPED_NOTIFICATION_ID = 2
         const val STOP_REASON_BATTERY = "Battery fell below 5% · resumes when charging"
+        const val STOP_REASON_LOCATION_OFF =
+            "Location services are off · tap to resume now, or it resumes by itself within 10 min of turning them on"
         /** ic_launcher_background, copied because unit tests run without app resources. */
         const val ICON_COLOR = 0xFF0D9387.toInt()
     }
@@ -121,7 +123,8 @@ class NotificationHelper(
             .setContentTitle(collapsedTitle("Tracking stopped"))
             .setContentText(collapsedText("Tracking stopped", reason))
             .setStyle(NotificationCompat.BigTextStyle().setBigContentTitle("Tracking stopped").bigText(reason))
-            .setSmallIcon(android.R.drawable.ic_lock_power_off)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(ICON_COLOR)
             .setOngoing(false)
             .setAutoCancel(true)
             // Silences the watchdog's 15-minute re-post while this one still shows. Dismissing it

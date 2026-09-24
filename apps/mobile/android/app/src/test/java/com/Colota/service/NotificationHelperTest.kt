@@ -160,6 +160,14 @@ class NotificationHelperTest {
         }
 
         @Test
+        fun `the stopped notification carries the same icon and color`() {
+            val n = helper.buildStoppedNotification("killed", unexpected = true)
+
+            assertEquals(R.drawable.ic_notification, n.smallIcon.resId)
+            assertEquals(0xFF0D9387.toInt(), n.color)
+        }
+
+        @Test
         fun `the header time is the last fix received`() {
             val s = input(hasFix = true, lastFixMs = FIX)
             helper.update(s)

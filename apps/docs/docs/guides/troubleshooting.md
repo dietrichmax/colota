@@ -22,6 +22,7 @@ sidebar_position: 4
 - **Xiaomi, Huawei, Oppo, Vivo, OnePlus**: allow Autostart for Colota in the phone's own security or battery app
 - Disable battery optimization for Colota (**Settings > Apps > Colota > Battery > Unrestricted**)
 - Open the app once if you have not used it for months. Android resets permissions for unused apps
+- **Location services were off during the reboot**: Android 14 and newer block the automatic start until location services are on. Colota posts a "Tracking stopped" notification instead. Tap it to resume right away, or turn location services on and tracking resumes by itself within about 10 minutes
 
 ## Tracking stopped on low battery and didn't resume
 

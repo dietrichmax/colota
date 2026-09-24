@@ -2,3 +2,4 @@
 - Setup links show the full server address with its host on its own line, name the server they replace and are rejected as a whole when the address hides its host
 - Placing a geofence shows where you are and the locate button puts the zone there
 - A tracking profile's sync interval takes effect as soon as the profile switches
+- Tracking that cannot restart after a reboot because location services are off shows a tap-to-resume notification and resumes by itself within about 10 minutes of turning them on

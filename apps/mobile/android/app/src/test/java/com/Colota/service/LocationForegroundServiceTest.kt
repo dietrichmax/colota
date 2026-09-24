@@ -113,6 +113,7 @@ class LocationForegroundServiceTest {
         mockkObject(GeofenceHeartbeatScheduler)
         mockkObject(TrackingWatchdogScheduler)
         every { TrackingWatchdogScheduler.schedule(any()) } just Runs
+        every { TrackingWatchdogScheduler.scheduleLocationOffRetry(any()) } just Runs
         every { TrackingWatchdogScheduler.cancel(any()) } just Runs
         every { GeofenceHeartbeatScheduler.schedule(any(), any()) } just Runs
         every { GeofenceHeartbeatScheduler.cancel(any()) } just Runs
@@ -3434,6 +3435,13 @@ class LocationForegroundServiceTest {
         every { dbHelper.getAllSettings() } returns mapOf(SettingsKeys.TRACKING_ENABLED to "false")
     }
 
+    /** The stubbed android.jar reports SDK 0, so ServiceCompat calls the two-argument overload. */
+    private fun refuseStartForeground() {
+        val refused = SecurityException("Starting FGS with type location")
+        every { service.startForeground(any<Int>(), any()) } throws refused
+        every { service.startForeground(any<Int>(), any(), any<Int>()) } throws refused
+    }
+
     private fun intentFor(action: String?): Intent = mockk(relaxed = true) {
         every { this@mockk.action } returns action
         every { getStringExtra(any()) } returns null
@@ -3514,6 +3522,40 @@ class LocationForegroundServiceTest {
         advanceUntilIdle()
 
         coVerify { syncManager.manualFlush() }
+        verify { service.stopSelf() }
+    }
+
+    /** Android refuses the location type to a boot start while Location is off; without this the user sees nothing. */
+    @Test
+    fun `a start refused while location services are off posts the resume notification and retries sooner`() = runServiceTest {
+        makeCold()
+        every { deviceInfoHelper.isLocationEnabled() } returns false
+        refuseStartForeground()
+        val stopped = mockk<android.app.Notification>(relaxed = true)
+        every { notificationHelper.buildStoppedNotification(NotificationHelper.STOP_REASON_LOCATION_OFF, true) } returns stopped
+
+        val result = service.onStartCommand(intentFor(null), 0, 1)
+        advanceUntilIdle()
+
+        assertEquals(android.app.Service.START_NOT_STICKY, result)
+        verify { androidNotificationManager.notify(NotificationHelper.STOPPED_NOTIFICATION_ID, stopped) }
+        verify { TrackingWatchdogScheduler.scheduleLocationOffRetry(any()) }
+        verify(exactly = 0) { TrackingWatchdogScheduler.schedule(any()) }
+        verify { service.stopSelf() }
+    }
+
+    /** Other refusals are not the user's to fix, so only the watchdog handles them. */
+    @Test
+    fun `a start refused with location services on posts no notification`() = runServiceTest {
+        makeCold()
+        refuseStartForeground()
+
+        service.onStartCommand(intentFor(null), 0, 1)
+        advanceUntilIdle()
+
+        verify(exactly = 0) { androidNotificationManager.notify(NotificationHelper.STOPPED_NOTIFICATION_ID, any()) }
+        verify { TrackingWatchdogScheduler.schedule(any()) }
+        verify(exactly = 0) { TrackingWatchdogScheduler.scheduleLocationOffRetry(any()) }
         verify { service.stopSelf() }
     }
 
