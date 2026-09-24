@@ -21,24 +21,24 @@ function HomepageHeader() {
             Your data, your server, your rules.
           </p>
           <div className={styles.buttons}>
-            <Link className="button button--secondary button--lg" to="/docs/introduction">
-              Get Started
+            <Link className="button button--secondary button--lg" href="https://f-droid.org/packages/com.Colota/">
+              Get it on F-Droid
             </Link>
-            <Link
-              className={clsx("button button--lg", styles.outlineButton)}
-              href="https://play.google.com/store/apps/details?id=com.Colota&hl=en-US"
-            >
-              Google Play
+            <Link className={clsx("button button--lg", styles.outlineButton)} to="/docs/introduction">
+              Get Started
             </Link>
           </div>
           <div className={styles.downloadLinks}>
             <span className={styles.downloadLabel}>Also available on</span>
-            <Link className={styles.downloadLink} href="https://f-droid.org/packages/com.Colota/">
-              F-Droid
-            </Link>{" "}
-            and
             <Link className={styles.downloadLink} href="https://apt.izzysoft.de/packages/com.Colota/">
               IzzyOnDroid
+            </Link>{" "}
+            and
+            <Link
+              className={styles.downloadLink}
+              href="https://play.google.com/store/apps/details?id=com.Colota&hl=en-US"
+            >
+              Google Play
             </Link>
           </div>
         </div>
