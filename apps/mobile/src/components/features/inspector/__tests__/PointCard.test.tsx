@@ -15,7 +15,10 @@ jest.mock("../../../../hooks/useTheme", () => ({
   useTheme: () => ({ colors: require("@colota/shared").lightColors })
 }))
 
+let mockFeet = false
 jest.mock("../../../../utils/geo", () => ({
+  metersToInput: (m: number) => (mockFeet ? m * 3.28084 : m),
+  shortDistanceUnit: () => (mockFeet ? "ft" : "m"),
   formatSpeed: (mps: number) => `${(mps * 3.6).toFixed(1)} km/h`,
   formatTime: (ts: number, seconds?: boolean) => {
     const h = Math.floor(ts / 3600)
@@ -70,6 +73,18 @@ describe("PointCard", () => {
     expect(queryByLabelText("Delete point")).toBeNull()
     expect(getByLabelText("Start a new trip here")).toBeTruthy()
     expect(getByLabelText("Close")).toBeTruthy()
+  })
+
+  // An imperial user reads feet everywhere else, so metres here would be a second unit on one screen.
+  it("prints accuracy and altitude in the unit the user chose", () => {
+    mockFeet = true
+    try {
+      const { getByLabelText } = renderCard()
+      expect(getByLabelText("Accuracy, ±28 ft")).toBeTruthy()
+      expect(getByLabelText("Altitude, 1353 ft")).toBeTruthy()
+    } finally {
+      mockFeet = false
+    }
   })
 
   it("lists speed, accuracy, altitude and sync with a seam before each, and the note row last", () => {

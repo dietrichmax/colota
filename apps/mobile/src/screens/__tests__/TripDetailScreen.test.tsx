@@ -123,6 +123,7 @@ import NativeLocationService from "../../services/NativeLocationService"
 import { showConfirm, showAlert, showPrompt } from "../../services/modalService"
 import { BOUNDARY_ACTION_SPLIT } from "../../types/global"
 import { space, size } from "../../constants"
+import { loadDisplayPreferences } from "../../utils/geo"
 
 function makeTrip(pointCount: number): Trip {
   const locations = Array.from({ length: pointCount }, (_, i) => ({
@@ -380,5 +381,27 @@ describe("TripDetailScreen - header and stepper", () => {
     const bar = headerRight(props)
     expect(bar.getByLabelText("Export trip")).toBeTruthy()
     expect(bar.getByLabelText("Delete trip")).toBeTruthy()
+  })
+})
+
+describe("TripDetailScreen - elevation", () => {
+  afterEach(async () => {
+    ;(NativeLocationService.getSetting as jest.Mock).mockResolvedValue("")
+    await loadDisplayPreferences()
+  })
+
+  // The speed and distance rows already follow the unit setting, so metres here would mix two units on one card.
+  it("prints the elevation range in the unit the user chose", async () => {
+    ;(NativeLocationService.getSetting as jest.Mock).mockImplementation((key: string) =>
+      Promise.resolve(key === "unitSystem" ? "imperial" : "")
+    )
+    await loadDisplayPreferences()
+    const trip = makeTrip(6)
+    trip.locations = trip.locations.map((l, i) => ({ ...l, altitude: 100 + i * 60 }))
+
+    const { getByText } = render(<TripDetailScreen {...makeProps(trip)} />)
+    await act(async () => {})
+
+    expect(getByText(/^\d+ ft - \d+ ft$/)).toBeTruthy()
   })
 })

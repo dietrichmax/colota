@@ -20,6 +20,7 @@ import { formatTime, getSpeedUnit, getTimeFormat } from "../../../utils/geo"
 import { size, space, STATE_LAYER_ALPHA } from "../../../constants"
 import { Divider } from "../../ui/Divider"
 import { t } from "../../../i18n/t"
+import { formatDecimal } from "../../../utils/format"
 
 interface Props {
   locations: LocationCoords[]
@@ -58,10 +59,11 @@ function val(v?: number | null, decimals = 0): string {
 }
 
 function gap(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`
-  return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`
+  const [d, h, m, s] = [t("unit.compact.d"), t("unit.compact.h"), t("unit.compact.min"), t("unit.compact.s")]
+  if (seconds < 60) return `${seconds}${s}`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}${m} ${seconds % 60}${s}`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}${h} ${Math.floor((seconds % 3600) / 60)}${m}`
+  return `${Math.floor(seconds / 86400)}${d} ${Math.floor((seconds % 86400) / 3600)}${h}`
 }
 
 function timeOf(item: TableRow): string {
@@ -117,7 +119,7 @@ const DataRow = React.memo(
       `${val(item.latitude, 5)}, ${val(item.longitude, 5)}`,
       t("table.fact.accuracy", { value: val(item.accuracy) }),
       item.speed != null
-        ? t("table.fact.speed", { value: (item.speed * speedUnit.factor).toFixed(1), unit: speedUnit.unit })
+        ? t("table.fact.speed", { value: formatDecimal(item.speed * speedUnit.factor, 1), unit: speedUnit.unit })
         : null,
       item.altitude != null ? t("table.fact.altitude", { value: val(item.altitude) }) : null,
       item.bearing != null ? t("table.fact.bearing", { value: val(item.bearing) }) : null,
@@ -154,7 +156,7 @@ const DataRow = React.memo(
           {val(item.accuracy)}
         </Text>
         <Text style={[mono, { width: COLUMN_WIDTHS.speed }]} numberOfLines={1}>
-          {item.speed != null ? (item.speed * speedUnit.factor).toFixed(1) : "-"}
+          {item.speed != null ? formatDecimal(item.speed * speedUnit.factor, 1) : "-"}
         </Text>
         <Text style={[mono, { width: COLUMN_WIDTHS.alt }]} numberOfLines={1}>
           {val(item.altitude)}

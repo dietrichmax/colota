@@ -20,9 +20,20 @@ import {
   type Geofence,
   type TrackingProfile,
   type ProfileConditionType,
-  type AuthType
+  type AuthType,
+  type SyncCondition
 } from "../types/global"
 import { t } from "../i18n/t"
+import type { TranslationKey } from "../i18n/options"
+import { formatDuration, syncIntervalLabel } from "./dashboardState"
+import { formatShortDistance } from "./geo"
+
+const SYNC_CONDITION_KEYS: Record<SyncCondition, TranslationKey> = {
+  any: "trackingSync.condition.any",
+  wifi_any: "trackingSync.condition.wifiAny",
+  wifi_ssid: "trackingSync.condition.wifiSsid",
+  vpn: "trackingSync.condition.vpn"
+}
 
 export type ImportGeofence = Omit<Geofence, "id" | "createdAt">
 export type ImportProfile = Omit<TrackingProfile, "id" | "createdAt">
@@ -120,7 +131,7 @@ export function validateConfig(raw: unknown): ValidationResult {
     entries.push({
       field: "interval",
       label: t("setup.field.interval"),
-      value: `${obj.interval}${t("unit.s")}`,
+      value: formatDuration(obj.interval),
       category: "tracking"
     })
   }
@@ -130,7 +141,7 @@ export function validateConfig(raw: unknown): ValidationResult {
     entries.push({
       field: "distanceThreshold",
       label: t("setup.field.distanceThreshold"),
-      value: `${obj.distance}m`,
+      value: formatShortDistance(obj.distance),
       category: "tracking"
     })
   }
@@ -140,7 +151,7 @@ export function validateConfig(raw: unknown): ValidationResult {
     entries.push({
       field: "syncInterval",
       label: t("setup.field.syncInterval"),
-      value: obj.syncInterval === 0 ? t("syncInterval.instant") : `${obj.syncInterval}${t("unit.s")}`,
+      value: syncIntervalLabel(obj.syncInterval),
       category: "tracking"
     })
   }
@@ -150,7 +161,7 @@ export function validateConfig(raw: unknown): ValidationResult {
     entries.push({
       field: "retryInterval",
       label: t("setup.field.retryInterval"),
-      value: `${obj.retryInterval}${t("unit.s")}`,
+      value: formatDuration(obj.retryInterval),
       category: "tracking"
     })
   }
@@ -160,7 +171,7 @@ export function validateConfig(raw: unknown): ValidationResult {
     entries.push({
       field: "accuracyThreshold",
       label: t("setup.field.accuracyThreshold"),
-      value: `${obj.accuracyThreshold}m`,
+      value: formatShortDistance(obj.accuracyThreshold),
       category: "tracking"
     })
   }
@@ -190,7 +201,9 @@ export function validateConfig(raw: unknown): ValidationResult {
     entries.push({
       field: "syncCondition",
       label: t("setup.field.syncCondition"),
-      value: obj.syncCondition,
+      value: Object.prototype.hasOwnProperty.call(SYNC_CONDITION_KEYS, obj.syncCondition)
+        ? t(SYNC_CONDITION_KEYS[obj.syncCondition as SyncCondition])
+        : obj.syncCondition,
       category: "tracking"
     })
   }
@@ -208,7 +221,15 @@ export function validateConfig(raw: unknown): ValidationResult {
     VALID_API_TEMPLATES.includes(obj.apiTemplate as ApiTemplateName)
   ) {
     settings.apiTemplate = obj.apiTemplate as ApiTemplateName
-    entries.push({ field: "apiTemplate", label: t("setup.field.apiTemplate"), value: obj.apiTemplate, category: "api" })
+    entries.push({
+      field: "apiTemplate",
+      label: t("setup.field.apiTemplate"),
+      value:
+        obj.apiTemplate === "custom"
+          ? t("common.custom")
+          : API_TEMPLATES[obj.apiTemplate as Exclude<ApiTemplateName, "custom">].label,
+      category: "api"
+    })
   }
 
   if (
@@ -229,7 +250,7 @@ export function validateConfig(raw: unknown): ValidationResult {
     entries.push({
       field: "dawarichMode",
       label: t("setup.field.dawarichMode"),
-      value: obj.dawarichMode,
+      value: t(`requestFormat.dawarich.${obj.dawarichMode as DawarichMode}`),
       category: "api"
     })
   }
@@ -293,7 +314,12 @@ export function validateConfig(raw: unknown): ValidationResult {
 
     if ("type" in authObj && typeof authObj.type === "string" && VALID_AUTH_TYPES.includes(authObj.type as AuthType)) {
       auth.authType = authObj.type as AuthType
-      entries.push({ field: "authType", label: t("setup.field.authType"), value: authObj.type, category: "auth" })
+      entries.push({
+        field: "authType",
+        label: t("setup.field.authType"),
+        value: t(`auth.${authObj.type as AuthType}`),
+        category: "auth"
+      })
     }
 
     if ("username" in authObj && typeof authObj.username === "string" && authObj.username.length > 0) {
@@ -369,7 +395,7 @@ export function validateConfig(raw: unknown): ValidationResult {
         heartbeatEnabled: typeof g.heartbeatEnabled === "boolean" ? g.heartbeatEnabled : false,
         heartbeatIntervalMinutes: typeof g.heartbeatIntervalMinutes === "number" ? g.heartbeatIntervalMinutes : 15
       })
-      entries.push({ field: "geofence", label: g.name, value: `${g.radius}m`, category: "geofence" })
+      entries.push({ field: "geofence", label: g.name, value: formatShortDistance(g.radius), category: "geofence" })
     }
   }
 
@@ -420,7 +446,7 @@ export function validateConfig(raw: unknown): ValidationResult {
         enabled: typeof p.enabled === "boolean" ? p.enabled : true,
         condition
       })
-      entries.push({ field: "profile", label: p.name, value: `${p.interval}${t("unit.s")}`, category: "profile" })
+      entries.push({ field: "profile", label: p.name, value: formatDuration(p.interval), category: "profile" })
     }
   }
 

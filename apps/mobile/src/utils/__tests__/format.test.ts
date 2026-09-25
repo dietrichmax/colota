@@ -1,4 +1,4 @@
-import { formatBytes, formatCount } from "../format"
+import { formatBytes, formatCount, formatDecimal, formatExportDateTime } from "../format"
 
 describe("formatCount", () => {
   it("keeps counts that fit a stat column exact to the digit", () => {
@@ -58,5 +58,19 @@ describe("formatBytes", () => {
   // Callers convert megabytes, which can leave a fraction of a byte.
   it("rounds a fraction of a byte instead of printing it", () => {
     expect(formatBytes(524.288, { locale: "en-US" })).toBe("524 B")
+  })
+})
+
+describe("formatDecimal", () => {
+  // Distances, speeds and sizes share it, so every number in the app takes the device's separator.
+  it("uses the locale's decimal separator and never groups thousands", () => {
+    expect(formatDecimal(1234.56, 1, "en-US")).toBe("1234.6")
+    expect(formatDecimal(1234.56, 1, "de-DE")).toBe("1234,6")
+  })
+})
+
+describe("formatExportDateTime", () => {
+  it("says Never for an export that has not run, rather than printing 1970", () => {
+    expect(formatExportDateTime(0)).toBe("Never")
   })
 })

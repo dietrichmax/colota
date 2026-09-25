@@ -10,7 +10,7 @@ import type {
   OfflineAreaInfo,
   OfflinePackStatus
 } from "../components/features/map/OfflinePackManager"
-import { formatBytes } from "./format"
+import { formatBytes, formatDecimal } from "./format"
 import { formatDateWithYear } from "./geo"
 import { t } from "../i18n/t"
 
@@ -128,7 +128,7 @@ export function deleteAreaConfirm(name: string, sizeBytes: number | null, isLast
 }
 
 export function storageMessage(estimate: Estimate, availableMB: number): string {
-  const free = availableMB.toFixed(1)
+  const free = formatDecimal(availableMB, 1)
   return estimate.large
     ? t("offline.storage.atLeast", { size: estimate.label, free })
     : t("offline.storage", { size: estimate.label, free })

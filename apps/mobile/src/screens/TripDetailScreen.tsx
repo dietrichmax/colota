@@ -24,7 +24,7 @@ import { ExportFormatDialog } from "../components/ui/ExportFormatDialog"
 import { InspectorDock } from "../components/features/inspector/InspectorDock"
 import { InteractiveLineChart } from "../components/features/inspector/InteractiveLineChart"
 import { getTripColor, computeTripStats, buildBoundaryOverrideMap, splitBlockedReason } from "../utils/trips"
-import { formatDate, formatDistance, formatDuration, formatSpeed, formatTime } from "../utils/geo"
+import { formatDate, formatDistance, formatDuration, formatShortDistance, formatSpeed, formatTime } from "../utils/geo"
 import { EXPORT_FORMATS, type ExportFormat } from "../utils/exportConverters"
 import { size, space } from "../constants"
 import { showAlert, showConfirm } from "../services/modalService"
@@ -359,7 +359,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
                 <StatRow
                   icon={TrendingUp}
                   label={t("tripDetail.elevGain")}
-                  value={`${Math.round(stats.elevationGain)}m`}
+                  value={formatShortDistance(stats.elevationGain)}
                 />
               </>
             )}
@@ -369,7 +369,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
                 <StatRow
                   icon={TrendingDown}
                   label={t("tripDetail.elevLoss")}
-                  value={`${Math.round(stats.elevationLoss)}m`}
+                  value={formatShortDistance(stats.elevationLoss)}
                 />
               </>
             )}
@@ -398,7 +398,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
                   color={colors.primary}
                   textColor={colors.text}
                   backgroundColor={colors.card}
-                  formatValue={(v) => formatSpeed(v).replace(/\.\d+/, "")}
+                  formatValue={(v) => formatSpeed(v, 0)}
                   activeIndex={chartActiveIndex}
                   onActiveIndexChange={setChartActiveIndex}
                 />
@@ -420,7 +420,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
             <View style={styles.chartTitleRow}>
               <SectionTitle>{t("tripDetail.elevation")}</SectionTitle>
               <Text style={[styles.chartRange, { color: colors.textSecondary }]}>
-                {Math.round(minElevation)}m - {Math.round(maxElevation)}m
+                {formatShortDistance(minElevation)} - {formatShortDistance(maxElevation)}
               </Text>
             </View>
             <Card style={styles.chartCard}>
@@ -429,7 +429,7 @@ export function TripDetailScreen({ route, navigation }: RootScreenProps<"Trip De
                 color={colors.primary}
                 textColor={colors.text}
                 backgroundColor={colors.card}
-                formatValue={(v) => `${Math.round(v)}m`}
+                formatValue={formatShortDistance}
                 activeIndex={chartActiveIndex}
                 onActiveIndexChange={setChartActiveIndex}
               />

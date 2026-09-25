@@ -17,6 +17,7 @@ const mockDeleteProfile = jest.fn().mockResolvedValue(true)
 const mockNavigate = jest.fn()
 const mockShowAlert = jest.fn()
 let mockCurrentEndpoint = ""
+let mockUnitSystem = "metric"
 
 jest.mock("../../services/NativeLocationService", () => ({
   __esModule: true,
@@ -29,7 +30,8 @@ jest.mock("../../services/NativeLocationService", () => ({
     deleteGeofence: (...args: any[]) => mockDeleteGeofence(...args),
     createProfile: (...args: any[]) => mockCreateProfile(...args),
     getProfiles: (...args: any[]) => mockGetProfiles(...args),
-    deleteProfile: (...args: any[]) => mockDeleteProfile(...args)
+    deleteProfile: (...args: any[]) => mockDeleteProfile(...args),
+    getSetting: (key: string) => Promise.resolve(key === "unitSystem" ? mockUnitSystem : "")
   }
 }))
 
@@ -104,6 +106,7 @@ jest.mock("../../utils/logger", () => ({
 }))
 
 import { SetupImportScreen } from "../SetupImportScreen"
+import { loadDisplayPreferences } from "../../utils/geo"
 
 // --- Helpers ---
 
@@ -122,9 +125,11 @@ function renderScreen(configParam?: string) {
 
 // --- Tests ---
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks()
   mockCurrentEndpoint = ""
+  mockUnitSystem = "metric"
+  await loadDisplayPreferences()
 })
 
 describe("SetupImportScreen", () => {
@@ -159,20 +164,40 @@ describe("SetupImportScreen", () => {
 
     it("parses tracking settings", () => {
       const { getByText } = renderScreen(encode({ interval: 10, distance: 5, syncInterval: 0 }))
-      expect(getByText("10s")).toBeTruthy()
+      expect(getByText("10 s")).toBeTruthy()
       expect(getByText("5m")).toBeTruthy()
       expect(getByText("Instant")).toBeTruthy()
     })
 
+    // The user judges the link by these values, so they read as the settings screens print them, not as stored ids.
+    it("prints durations, the sync condition and the auth method the way the settings screens do", () => {
+      const { getByText } = renderScreen(
+        encode({ syncInterval: 300, syncCondition: "wifi_any", auth: { type: "basic", username: "u" } })
+      )
+      expect(getByText("5 min")).toBeTruthy()
+      expect(getByText("Wi-Fi or Ethernet")).toBeTruthy()
+      expect(getByText("Basic auth")).toBeTruthy()
+    })
+
+    it("prints distances in the unit the user chose", async () => {
+      mockUnitSystem = "imperial"
+      await loadDisplayPreferences()
+      const { getByText } = renderScreen(encode({ distance: 100 }))
+      expect(getByText("328 ft")).toBeTruthy()
+    })
+
     it("parses API settings", () => {
       const { getByText } = renderScreen(encode({ apiTemplate: "owntracks", httpMethod: "POST" }))
-      expect(getByText("owntracks")).toBeTruthy()
+      expect(getByText("OwnTracks")).toBeTruthy()
       expect(getByText("POST")).toBeTruthy()
     })
 
     it("parses auth settings with masked token", () => {
-      const { getByText } = renderScreen(encode({ auth: { type: "bearer", bearerToken: "abcdefghijkl" } }))
-      expect(getByText("bearer")).toBeTruthy()
+      const { getByText, getAllByText } = renderScreen(
+        encode({ auth: { type: "bearer", bearerToken: "abcdefghijkl" } })
+      )
+      // The method's value and the token row's label read the same.
+      expect(getAllByText("Bearer token")).toHaveLength(2)
       // Token should be masked: first 4 + dots + last 4
       expect(getByText(/abcd.*ijkl/)).toBeTruthy()
     })

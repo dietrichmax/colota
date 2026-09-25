@@ -15,6 +15,8 @@ jest.mock("../../../../hooks/useTheme", () => ({
 }))
 
 jest.mock("../../../../utils/geo", () => ({
+  metersToInput: (m: number) => m,
+  shortDistanceUnit: () => "m",
   formatDistance: (m: number) => `${(m / 1000).toFixed(1)} km`,
   spokenDistance: (m: number) => `${(m / 1000).toFixed(1)} kilometres`,
   formatDuration: (s: number) => `${Math.round(s / 60)}min`,

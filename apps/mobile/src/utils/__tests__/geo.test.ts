@@ -9,6 +9,7 @@ import {
   inputToMeters,
   metersToInput,
   getSpeedUnit,
+  spokenDistance,
   speedToInput,
   inputToSpeed,
   loadDisplayPreferences,
@@ -198,6 +199,25 @@ describe("getSpeedUnit", () => {
   it("returns mph for imperial", async () => {
     await setPreferences("imperial", "")
     expect(getSpeedUnit()).toEqual({ factor: 2.23694, unit: "mph" })
+  })
+
+  // Callers list it in dependency arrays, so a new object per call would re-run their effects.
+  it("hands back the same object while the unit stays the same", async () => {
+    await setPreferences("metric", "")
+    expect(getSpeedUnit()).toBe(getSpeedUnit())
+  })
+})
+
+describe("spokenDistance", () => {
+  afterEach(async () => {
+    await setPreferences("", "")
+  })
+
+  it("spells the unit out, since a screen reader reads km as letters", async () => {
+    await setPreferences("metric", "")
+    expect(spokenDistance(12345)).toBe("12.3 kilometres")
+    await setPreferences("imperial", "")
+    expect(spokenDistance(12345)).toBe("7.7 miles")
   })
 })
 

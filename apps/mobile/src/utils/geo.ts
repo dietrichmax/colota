@@ -4,6 +4,8 @@
  */
 
 import NativeLocationService from "../services/NativeLocationService"
+import { formatDecimal } from "./format"
+import { t } from "../i18n/t"
 
 const EARTH_RADIUS_METERS = 6_371_000
 const FEET_PER_METER = 3.28084
@@ -93,19 +95,29 @@ function usesMiles(): boolean {
 // -- Formatting functions --
 
 /** Format m/s into a human-readable speed string. */
-export function formatSpeed(metersPerSecond: number): string {
+export function formatSpeed(metersPerSecond: number, decimals = 1): string {
   if (usesMiles()) {
     const mph = metersPerSecond * MPH_PER_MPS
-    return `${mph.toFixed(1)} mph`
+    return `${formatDecimal(mph, decimals)} ${t("unit.mph")}`
   }
   const kmh = metersPerSecond * 3.6
-  return `${kmh.toFixed(1)} km/h`
+  return `${formatDecimal(kmh, decimals)} ${t("unit.kmh")}`
 }
 
 /** Return the speed unit info (used by TrackMap). */
-// Module-level so the identity tracks the unit, and a caller can read it during render.
-const MPH = Object.freeze({ factor: MPH_PER_MPS, unit: "mph" })
-const KMH = Object.freeze({ factor: 3.6, unit: "km/h" })
+// Module-level so the identity tracks the unit; the getter resolves the label at read time.
+const MPH = Object.freeze({
+  factor: MPH_PER_MPS,
+  get unit() {
+    return t("unit.mph")
+  }
+})
+const KMH = Object.freeze({
+  factor: 3.6,
+  get unit() {
+    return t("unit.kmh")
+  }
+})
 
 export function getSpeedUnit(): { factor: number; unit: string } {
   return usesMiles() ? MPH : KMH
@@ -116,14 +128,15 @@ export function formatDuration(seconds: number): string {
   const s = Math.max(0, seconds)
   const hours = Math.floor(s / 3600)
   const minutes = Math.floor((s % 3600) / 60)
-  if (hours > 0) return `${hours}h ${minutes}min`
-  return `${minutes}min`
+  if (hours > 0) return `${hours}${t("unit.h")} ${minutes}${t("unit.min")}`
+  return `${minutes}${t("unit.min")}`
 }
 
 /** Format a Unix-seconds timestamp as a localized time string. */
 /** The unit spelled out, for a screen reader. */
 export function spokenDistance(meters: number): string {
-  return formatDistance(meters).replace(/ km$/, " kilometres").replace(/ mi$/, " miles")
+  if (usesMiles()) return t("unit.mi.spoken", { n: formatDecimal(meters / 1609.344, 1) })
+  return t("unit.km.spoken", { n: formatDecimal(meters / 1000, 1) })
 }
 
 /** The app's clock, with the format passed in, so a sample of a format cannot drift from it. */
@@ -152,19 +165,19 @@ export function formatDate(unixSeconds: number): string {
 
 /** Format meters as a long distance string (e.g. "12.3 km" / "7.6 mi"). */
 export function formatDistance(meters: number): string {
-  if (usesMiles()) return `${(meters / 1609.344).toFixed(1)} mi`
-  return `${(meters / 1000).toFixed(1)} km`
+  if (usesMiles()) return `${formatDecimal(meters / 1609.344, 1)} ${t("unit.mi")}`
+  return `${formatDecimal(meters / 1000, 1)} ${t("unit.km")}`
 }
 
 /** Format meters as a short distance string (e.g. "50m" / "164 ft"). */
 export function formatShortDistance(meters: number): string {
-  if (usesMiles()) return `${Math.round(meters * FEET_PER_METER)} ft`
-  return `${Math.round(meters)}m`
+  if (usesMiles()) return `${Math.round(meters * FEET_PER_METER)} ${t("unit.ft")}`
+  return `${Math.round(meters)}${t("unit.m")}`
 }
 
 /** Returns the short distance unit label for input fields ("m" or "ft"). */
 export function shortDistanceUnit(): string {
-  return usesMiles() ? "ft" : "m"
+  return usesMiles() ? t("unit.ft") : t("unit.m")
 }
 
 /** A stored speed in m/s as the whole number the speed field shows, in the user's unit. */

@@ -10,7 +10,7 @@ import { useTheme } from "../../../hooks/useTheme"
 import { showPrompt } from "../../../services/modalService"
 import { fontSizes, fonts } from "../../../styles/typography"
 import { size, space } from "../../../constants"
-import { formatSpeed, formatTime } from "../../../utils/geo"
+import { formatSpeed, formatTime, metersToInput, shortDistanceUnit } from "../../../utils/geo"
 import type { LocationCoords } from "../../../types/global"
 import { Divider } from "../../ui/Divider"
 import { IconButton } from "../../ui/IconButton"
@@ -80,7 +80,7 @@ export function PointCard({ point, note, hasEndpoint, onSplit, onDelete, onClose
           <StatRow
             icon={Crosshair}
             label={t("point.accuracy")}
-            value={`±${Math.round(point.accuracy)} m`}
+            value={`±${Math.round(metersToInput(point.accuracy))} ${shortDistanceUnit()}`}
             testID="point-accuracy"
           />
         </>
@@ -91,7 +91,7 @@ export function PointCard({ point, note, hasEndpoint, onSplit, onDelete, onClose
           <StatRow
             icon={Mountain}
             label={t("point.altitude")}
-            value={`${Math.round(point.altitude)} m`}
+            value={`${Math.round(metersToInput(point.altitude))} ${shortDistanceUnit()}`}
             testID="point-altitude"
           />
         </>

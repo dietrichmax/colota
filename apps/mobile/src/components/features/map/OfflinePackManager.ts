@@ -7,7 +7,8 @@ import { OfflineManager, type OfflinePack } from "@maplibre/maplibre-react-nativ
 import { MAP_STYLE_URL_LIGHT as MAP_STYLE_URL } from "../../../constants"
 import NativeLocationService from "../../../services/NativeLocationService"
 import { logger } from "../../../utils/logger"
-import { formatBytes } from "../../../utils/format"
+import { formatBytes, formatDecimal } from "../../../utils/format"
+import { t } from "../../../i18n/t"
 
 const MIN_ZOOM = 8
 const MAX_ZOOM = 14 // mxd.codes / OpenFreeMap caps vector tiles at z14
@@ -113,9 +114,9 @@ export function estimateSizeBytes(ne: [number, number], sw: [number, number]): n
 /** Returns a human-readable estimated download size string (e.g. "~45 MB"). */
 export function estimateSizeLabel(ne: [number, number], sw: [number, number]): string {
   const mb = estimateSizeBytes(ne, sw) / (1024 * 1024)
-  if (mb < 1) return `~${(mb * 1024).toFixed(0)} KB`
-  if (mb >= 1000) return `~${(mb / 1024).toFixed(1)} GB`
-  return `~${mb.toFixed(0)} MB`
+  if (mb < 1) return `~${formatDecimal(mb * 1024, 0)} ${t("unit.KB")}`
+  if (mb >= 1000) return `~${formatDecimal(mb / 1024, 1)} ${t("unit.GB")}`
+  return `~${formatDecimal(mb, 0)} ${t("unit.MB")}`
 }
 
 /** Finds a pack by its stored metadata.name (packs are identified by UUID in v11). */
