@@ -733,6 +733,18 @@ class NativeLocationService {
     return BuildConfigModule
   }
 
+  /** `picked` is "" while the app follows the system; `effective` is the language it runs in. Null when unreadable. */
+  static async getAppLanguage(): Promise<{ picked: string; effective: string } | null> {
+    if (!BuildConfigModule) return null
+    return this.safeExecute(() => BuildConfigModule.getAppLanguage(), null, "Failed to read the app language")
+  }
+
+  /** "" follows the system. Resolves with the tag of the language the app now runs in. */
+  static async setAppLanguage(tag: string): Promise<string> {
+    if (!BuildConfigModule) throw new Error("BuildConfigModule not available")
+    return BuildConfigModule.setAppLanguage(tag)
+  }
+
   /**
    * The wallpaper-derived tonal steps, or null below API 31 and whenever the map is not the
    * complete set the theme reads.

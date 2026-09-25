@@ -287,7 +287,7 @@ For backups, two `internal` methods support the export/import flow without expos
 | `PayloadBuilder` | Builds outgoing JSON payloads (field-mapped, Overland batch envelope, Traccar JSON) and extracts envelope custom fields |
 | `ServiceConfig` | Centralized configuration data class |
 | `TimedCache` | Generic TTL cache used for queue count, device info, profiles, and network state |
-| `BuildConfigModule` | Exposes the version name, version code, flavor and device language to JS, plus `getSystemPalette` - the Android 12+ wallpaper tonal steps as `#RRGGBB` hex, null below API 31 |
+| `BuildConfigModule` | Exposes the version name, version code, flavor and device language to JS, plus `getSystemPalette` - the Android 12+ wallpaper tonal steps as `#RRGGBB` hex, null below API 31 - and the in-app language through AppCompat's per-app locale API: `getAppLanguage` (the pick and the language in use) and `setAppLanguage`. `MainActivity` handles `locale` and `layoutDirection` itself, so a switch does not recreate it, and native text is read through `util/AppLanguage`, because below Android 13 AppCompat localises activities only |
 | `AppLogger` | Centralized logger - always active, all tags prefixed with `Colota.` for logcat filtering |
 | `AutoExportWorker` | WorkManager `CoroutineWorker` enqueued by `AutoExportAlarmReceiver` - performs the export (chunked writes to a per-run temp file, foreground service, retries, retention cleanup), verifies the copy by bytes written and re-arms the next alarm in `finally` |
 | `AutoExportAlarmReceiver` | Broadcast receiver fired by AlarmManager at the configured time - hands off to `AutoExportWorker` because the receiver's 10s budget can't run an export |

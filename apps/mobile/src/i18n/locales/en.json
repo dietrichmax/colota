@@ -43,6 +43,7 @@
   "screen.logPreview": "Log preview",
   "screen.backupRestore": "Backup & restore",
   "screen.appearance": "Appearance",
+  "screen.language": "Language",
   "screen.connection": "Connection",
   "screen.trackingSync": "Tracking & sync",
   "tab.dashboard": "Dashboard",
@@ -1238,5 +1239,7 @@
   "error.unexpected": "An unexpected error occurred",
   "error.retry": "Try again",
   "about.copyright": "Copyright © 2026 Max Dietrich and contributors. Colota is free software, with no warranty; the License row above has the terms.",
-  "log.delete.subCarries": "Removes {{size}}. Recording carries on into a new file."
+  "log.delete.subCarries": "Removes {{size}}. Recording carries on into a new file.",
+  "language.system": "System default",
+  "language.changeFailed": "Could not change the language."
 }

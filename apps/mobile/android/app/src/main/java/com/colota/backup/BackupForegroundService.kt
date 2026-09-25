@@ -15,6 +15,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.Colota.util.AppLanguage
 import com.Colota.R
 import com.Colota.util.AppLogger
 
@@ -53,6 +54,8 @@ class BackupForegroundService : Service() {
         }
     }
 
+    private val strings: Context get() = AppLanguage.context(this)
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -63,10 +66,10 @@ class BackupForegroundService : Service() {
         }
 
         ensureChannel()
-        val message = intent.getStringExtra(EXTRA_MESSAGE) ?: getString(R.string.backup_working)
+        val message = intent.getStringExtra(EXTRA_MESSAGE) ?: strings.getString(R.string.backup_working)
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_save)
-            .setContentTitle(getString(R.string.backup_title))
+            .setContentTitle(strings.getString(R.string.backup_title))
             .setContentText(message)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -100,9 +103,9 @@ class BackupForegroundService : Service() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             CHANNEL_ID,
-            getString(R.string.channel_backup),
+            strings.getString(R.string.channel_backup),
             NotificationManager.IMPORTANCE_LOW,
-        ).apply { description = getString(R.string.channel_backup_description) }
+        ).apply { description = strings.getString(R.string.channel_backup_description) }
         nm.createNotificationChannel(channel)
     }
 }

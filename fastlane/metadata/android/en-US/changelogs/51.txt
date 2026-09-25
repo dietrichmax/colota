@@ -4,3 +4,4 @@
 - A tracking profile's sync interval takes effect as soon as the profile switches
 - Tracking that cannot restart after a reboot because location services are off shows a tap-to-resume notification and resumes by itself within about 10 minutes of turning them on
 - Elevation and a point's accuracy and altitude follow the Units setting, and distances and speeds use your device's decimal separator
+- A Language setting under Appearance picks the app language; translations can now be contributed

@@ -6,16 +6,10 @@
 import i18next from "i18next"
 import NativeLocationService from "../services/NativeLocationService"
 import { logger } from "../utils/logger"
-import { I18N_OPTIONS, FALLBACK_LANGUAGE, SUPPORTED_LANGUAGES, type SupportedLanguage } from "./options"
+import { I18N_OPTIONS, SUPPORTED_LANGUAGES, resolveLanguage, type SupportedLanguage } from "./options"
 
 export { SUPPORTED_LANGUAGES }
 export { t } from "./t"
-
-/** The device tag carries a region, the catalogs do not. */
-function resolveLanguage(tag: string | undefined): SupportedLanguage {
-  const base = (tag ?? "").split("-")[0].toLowerCase()
-  return (SUPPORTED_LANGUAGES as readonly string[]).includes(base) ? (base as SupportedLanguage) : FALLBACK_LANGUAGE
-}
 
 /** Plurals beyond one/other, which the English fallback gets wrong. */
 const COMPLEX_PLURAL_LANGUAGES: readonly string[] = ["pl", "ru", "cs", "ar", "uk", "hr", "lt", "sk"]

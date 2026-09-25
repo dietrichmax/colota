@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import com.Colota.util.AppLanguage
 import com.Colota.R
 import com.Colota.data.DatabaseHelper
 import com.Colota.data.SettingsKeys
@@ -38,13 +39,15 @@ class BatteryRecoveryWorker(
         private const val FOREGROUND_NOTIFICATION_ID = 9003
     }
 
+    private val strings: Context get() = AppLanguage.context(appContext)
+
     override suspend fun getForegroundInfo(): ForegroundInfo {
         ensureNotificationChannel()
         val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(NotificationHelper.ICON_COLOR)
-            .setContentTitle(appContext.getString(R.string.battery_recovery_title))
-            .setContentText(appContext.getString(R.string.battery_recovery_text))
+            .setContentTitle(strings.getString(R.string.battery_recovery_title))
+            .setContentText(strings.getString(R.string.battery_recovery_text))
             .setOngoing(true)
             .build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -116,10 +119,10 @@ class BatteryRecoveryWorker(
             val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                appContext.getString(R.string.channel_battery_recovery),
+                strings.getString(R.string.channel_battery_recovery),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = appContext.getString(R.string.channel_battery_recovery_description)
+                description = strings.getString(R.string.channel_battery_recovery_description)
             }
             nm.createNotificationChannel(channel)
         }

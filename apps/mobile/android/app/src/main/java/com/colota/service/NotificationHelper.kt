@@ -11,6 +11,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
+import com.Colota.util.AppLanguage
 import com.Colota.MainActivity
 import com.Colota.R
 
@@ -54,6 +55,8 @@ class NotificationHelper(
 
     private var lastKey: String? = null
 
+    private val strings: Context get() = AppLanguage.context(context)
+
     /** From Android 12 the collapsed row shows the app name only when there is no title. */
     private val headerless = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
@@ -69,20 +72,20 @@ class NotificationHelper(
     fun createChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            context.getString(R.string.channel_tracking),
+            strings.getString(R.string.channel_tracking),
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = context.getString(R.string.channel_tracking_description)
+            description = strings.getString(R.string.channel_tracking_description)
             setShowBadge(false)
         }
         notificationManager.createNotificationChannel(channel)
 
         val stoppedChannel = NotificationChannel(
             STOPPED_CHANNEL_ID,
-            context.getString(R.string.channel_stopped),
+            strings.getString(R.string.channel_stopped),
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = context.getString(R.string.channel_stopped_description)
+            description = strings.getString(R.string.channel_stopped_description)
             setShowBadge(true)
         }
         notificationManager.createNotificationChannel(stoppedChannel)
@@ -126,8 +129,8 @@ class NotificationHelper(
             PendingIntent.FLAG_IMMUTABLE
         )
 
-        val title = context.getString(R.string.stopped_title)
-        val text = context.getString(reason.text)
+        val title = strings.getString(R.string.stopped_title)
+        val text = strings.getString(reason.text)
         return NotificationCompat.Builder(
             context,
             if (unexpected) STOPPED_CHANNEL_ID else CHANNEL_ID
@@ -165,9 +168,9 @@ class NotificationHelper(
     }
 
     private fun str(@StringRes id: Int, vararg args: Any): String =
-        if (args.isEmpty()) context.getString(id) else context.getString(id, *args)
+        if (args.isEmpty()) strings.getString(id) else strings.getString(id, *args)
 
-    private fun count(id: Int, n: Int): String = context.resources.getQuantityString(id, n, n)
+    private fun count(id: Int, n: Int): String = strings.resources.getQuantityString(id, n, n)
 
     private fun pauseDetail(input: StatusInput): String = when {
         input.isWifiPaused -> str(R.string.status_pause_wifi)

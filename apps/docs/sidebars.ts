@@ -64,7 +64,12 @@ const sidebars: SidebarsConfig = {
     {
       type: "category",
       label: "Development",
-      items: ["development/architecture", "development/local-setup", "development/permissions"]
+      items: [
+        "development/architecture",
+        "development/local-setup",
+        "development/permissions",
+        "development/translations"
+      ]
     },
     {
       type: "doc",

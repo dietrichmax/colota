@@ -55,6 +55,7 @@ i18n:
       - any-glob-to-any-file:
           - 'apps/mobile/src/i18n/**'
           - 'apps/mobile/android/app/src/main/res/values*/strings.xml'
+          - 'apps/mobile/android/app/src/main/res/xml/locales_config.xml'
 
 # ============================
 # Shared package (types, theme)

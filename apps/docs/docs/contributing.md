@@ -19,4 +19,6 @@ sidebar_position: 8
 4. Test on a real device
 5. Open a Pull Request
 
+To translate Colota, see [Translations](/docs/development/translations).
+
 [Architecture](/docs/development/architecture) covers the native modules and the tracking flow.

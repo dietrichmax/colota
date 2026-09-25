@@ -10,15 +10,16 @@ import ScreenshotGallery from '@site/src/components/ScreenshotGallery'
 
 <ScreenshotGallery screenshots={[ { src: "/img/screenshots/AppearanceSettings.png", label: "Appearance" }, ]} />
 
-| Setting          | Options                   | Default                  |
-| ---------------- | ------------------------- | ------------------------ |
-| Theme            | System / Light / Dark     | System                   |
-| Wallpaper colors | On/Off                    | Off                      |
-| Units            | Metric / Imperial         | From the device language |
-| Time format      | 24h / 12h                 | From the device language |
-| Map tile server  | Light and dark style URLs | maps.mxd.codes           |
+| Setting          | Options                           | Default                  |
+| ---------------- | --------------------------------- | ------------------------ |
+| Theme            | System / Light / Dark             | System                   |
+| Wallpaper colors | On/Off                            | Off                      |
+| Units            | Metric / Imperial                 | From the device language |
+| Time format      | 24h / 12h                         | From the device language |
+| Language         | System default / each translation | System default           |
+| Map tile server  | Light and dark style URLs         | maps.mxd.codes           |
 
-Appearance settings are included in a [backup](/docs/guides/backup-restore).
+Appearance settings are included in a [backup](/docs/guides/backup-restore), except Language, which Android stores with the app.
 
 ## Theme
 
@@ -43,6 +44,16 @@ The distance fields in tracking settings follow this choice. See [Tracking Setti
 ## Time Format
 
 The row's hint shows the current time in the chosen format. Until you pick one, Colota follows the clock format of the device language.
+
+## Language
+
+Tap **Language** to pick the app's language. **System default** follows the phone's language and falls back to English when Colota has no translation for it. Each language is listed in its own words. Screens switch at once; the tracking notification follows on its next update.
+
+On Android 13 and later the same choice is under **Android Settings → Apps → Colota → Language**.
+
+Messages from the tracking service, such as a failed Test connection, stay in English.
+
+To add a language, see [Translations](/docs/development/translations).
 
 ## Map Tile Server
 

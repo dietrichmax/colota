@@ -6,6 +6,12 @@
 package com.Colota.bridge
 
 import android.content.Context
+import android.os.Looper
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import com.Colota.R
+import com.Colota.util.AppLanguage
 import androidx.test.core.app.ApplicationProvider
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.BridgeReactContext
@@ -16,6 +22,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -23,7 +30,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -54,6 +63,9 @@ class BuildConfigModuleTest {
     @After
     fun tearDown() {
         unmockkStatic(Arguments::class)
+        // AppCompat keeps the choice in a static, which would leak into the next test.
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+        AppLanguage.use(ApplicationProvider.getApplicationContext(), "")
     }
 
     @Test
@@ -78,6 +90,53 @@ class BuildConfigModuleTest {
         module.getSystemPalette(capturingPromise())
 
         assertNull(resolved)
+    }
+
+    @Test
+    fun `a picked language reads back as picked and in use`() {
+        Robolectric.buildActivity(AppCompatActivity::class.java).apply { get().setTheme(R.style.AppTheme) }.setup()
+
+        module.setAppLanguage("de", capturingPromise())
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals("de-US", resolved)
+
+        module.getAppLanguage(capturingPromise())
+        assertEquals("de-US", (resolved as WritableMap).getString("picked"))
+        assertEquals("de-US", (resolved as WritableMap).getString("effective"))
+    }
+
+    // An en-US phone picking English must keep miles and the 12-hour clock, which a bare "en" would drop.
+    @Test
+    fun `a pick keeps the phone's region`() {
+        Robolectric.buildActivity(AppCompatActivity::class.java).apply { get().setTheme(R.style.AppTheme) }.setup()
+
+        module.setAppLanguage("en", capturingPromise())
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals("en-US", resolved)
+    }
+
+    @Test
+    fun `an empty tag hands the language back to the phone`() {
+        Robolectric.buildActivity(AppCompatActivity::class.java).apply { get().setTheme(R.style.AppTheme) }.setup()
+        module.setAppLanguage("de", capturingPromise())
+        module.setAppLanguage("", capturingPromise())
+        shadowOf(Looper.getMainLooper()).idle()
+
+        module.getAppLanguage(capturingPromise())
+        assertEquals("", (resolved as WritableMap).getString("picked"))
+        assertEquals(Locale.getDefault().toLanguageTag(), (resolved as WritableMap).getString("effective"))
+    }
+
+    // Services and workers read native text through this, and below 13 nothing else carries the choice to them.
+    @Test
+    @Config(sdk = [30])
+    fun `below Android 13 native text follows the pick at once`() {
+        val app: Context = ApplicationProvider.getApplicationContext()
+        module.setAppLanguage("de", capturingPromise())
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals("de", AppLanguage.context(app).resources.configuration.locales[0].language)
     }
 
     private fun capturingPromise(): Promise {

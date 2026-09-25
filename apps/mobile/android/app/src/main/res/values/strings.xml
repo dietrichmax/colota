@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Colota</string>
+    <string name="app_name" translatable="false">Colota</string>
     <string name="shortcut_start_short">Start</string>
     <string name="shortcut_start_long">Start Tracking</string>
     <string name="shortcut_stop_short">Stop</string>

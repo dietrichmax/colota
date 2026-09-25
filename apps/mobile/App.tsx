@@ -2,12 +2,12 @@
  * Copyright (C) 2026 Max Dietrich
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
-import React, { useMemo, useState, useCallback } from "react"
+import React, { useMemo, useState, useCallback, useEffect } from "react"
 import { NavigationContainer, NavigationContainerRef, DefaultTheme, DarkTheme } from "@react-navigation/native"
 import { LucideProvider } from "lucide-react-native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { SafeAreaProvider } from "react-native-safe-area-context"
-import { View, StatusBar, Platform, StyleSheet } from "react-native"
+import { View, StatusBar, Platform, StyleSheet, AppState } from "react-native"
 import { ThemeProvider, useTheme } from "./src/hooks/useTheme"
 import { fonts } from "./src/styles/typography"
 import { TrackingProvider } from "./src/contexts/TrackingProvider"
@@ -16,6 +16,7 @@ import type { RootStackParamList, RootStackRoute } from "./src/types/navigation"
 
 import "./src/i18n"
 import { useTranslation } from "./src/i18n/useTranslation"
+import { syncLanguage } from "./src/i18n/language"
 import type { TranslationKey } from "./src/i18n/options"
 import {
   LoggingScreen,
@@ -42,6 +43,7 @@ import {
   TripDetailScreen,
   OfflineMapsScreen,
   AppearanceScreen,
+  LanguageScreen,
   ConnectionScreen,
   TrackingSyncScreen,
   BackupRestoreScreen
@@ -186,6 +188,11 @@ const SCREEN_CONFIG: readonly ScreenConfig[] = [
     titleKey: "screen.appearance"
   },
   {
+    name: "Language",
+    component: LanguageScreen,
+    titleKey: "screen.language"
+  },
+  {
     name: "Connection",
     component: ConnectionScreen,
     titleKey: "screen.connection"
@@ -201,6 +208,14 @@ function AppNavigator() {
   const { colors, isDark } = useTheme()
   const { t } = useTranslation()
   const [currentRoute, setCurrentRoute] = useState<string | undefined>("Dashboard")
+
+  // Android's own App languages page and a phone-language change never pass through the picker.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") syncLanguage()
+    })
+    return () => sub.remove()
+  }, [])
   const screenOptions = useMemo(
     () => ({
       headerStyle: {

@@ -1,5 +1,5 @@
 import React from "react"
-import { render, fireEvent, waitFor } from "@testing-library/react-native"
+import { act, render, fireEvent, waitFor } from "@testing-library/react-native"
 
 // --- Mocks ---
 
@@ -20,6 +20,17 @@ jest.mock("../../hooks/useTheme", () => ({
   })
 }))
 
+jest.mock("@react-navigation/native", () => ({
+  useFocusEffect: (cb: () => (() => void) | void) => {
+    const R = require("react")
+    R.useEffect(() => {
+      const cleanup = cb()
+      return typeof cleanup === "function" ? cleanup : undefined
+    }, [cb])
+  }
+}))
+
+const mockGetAppLanguage = jest.fn().mockResolvedValue({ picked: "", effective: "de-DE" })
 const mockSaveSetting = jest.fn().mockResolvedValue(undefined)
 const mockGetSetting = jest.fn().mockResolvedValue(null)
 
@@ -28,7 +39,8 @@ jest.mock("../../services/NativeLocationService", () => ({
   default: {
     saveSetting: (key: string, value: string) => mockSaveSetting(key, value),
     getSetting: (key: string) => mockGetSetting(key),
-    getBuildConfig: () => ({ APP_LANGUAGE: "en-GB" })
+    getBuildConfig: () => ({ APP_LANGUAGE: "en-GB" }),
+    getAppLanguage: () => mockGetAppLanguage()
   }
 }))
 
@@ -291,5 +303,26 @@ describe("AppearanceScreen", () => {
     fireEvent.press(custom.getByTestId("map-tile-server-toggle"))
 
     await waitFor(() => expect(custom.getByTestId("map-style-reset-btn")).toBeTruthy())
+  })
+
+  it("opens the Language screen from a row that names the current choice", async () => {
+    const { getByTestId, findByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+
+    expect(await findByText("System default")).toBeTruthy()
+    fireEvent.press(getByTestId("nav-language"))
+    expect(mockNavigation.navigate).toHaveBeenCalledWith("Language")
+  })
+
+  // Android's App languages page changes the choice while Colota sits in the background.
+  it("re-reads the language row when the app comes back to the foreground", async () => {
+    const { AppState } = require("react-native")
+    const { findByText } = render(<AppearanceScreen navigation={mockNavigation} />)
+    expect(await findByText("System default")).toBeTruthy()
+
+    mockGetAppLanguage.mockResolvedValueOnce({ picked: "en", effective: "en" })
+    const onChange = (AppState.addEventListener as jest.Mock).mock.calls.at(-1)[1]
+    await act(async () => onChange("active"))
+
+    expect(await findByText("English")).toBeTruthy()
   })
 })

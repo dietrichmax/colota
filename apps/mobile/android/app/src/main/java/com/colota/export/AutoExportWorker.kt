@@ -20,6 +20,7 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import com.Colota.util.AppLanguage
 import com.Colota.R
 import com.Colota.bridge.LocationServiceModule
 import com.Colota.data.DatabaseHelper
@@ -57,12 +58,14 @@ class AutoExportWorker(
             private set
     }
 
+    private val strings: Context get() = AppLanguage.context(appContext)
+
     override suspend fun getForegroundInfo(): ForegroundInfo {
         ensureNotificationChannel()
         val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_save)
-            .setContentTitle(appContext.getString(R.string.auto_export_title))
-            .setContentText(appContext.getString(R.string.auto_export_running))
+            .setContentTitle(strings.getString(R.string.auto_export_title))
+            .setContentText(strings.getString(R.string.auto_export_running))
             .setOngoing(true)
             .build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -92,7 +95,7 @@ class AutoExportWorker(
     private suspend fun executeWork(isManualRun: Boolean): Result {
         if (runAttemptCount >= MAX_RETRIES) {
             AppLogger.e(TAG, "Auto-export failed after $MAX_RETRIES attempts, giving up")
-            showNotification(appContext.getString(R.string.auto_export_failed), appContext.getString(R.string.auto_export_gave_up))
+            showNotification(strings.getString(R.string.auto_export_failed), strings.getString(R.string.auto_export_gave_up))
             return Result.failure()
         }
 
@@ -163,7 +166,7 @@ class AutoExportWorker(
             if (rowCount == 0) {
                 tempFile.delete()
                 AppLogger.i(TAG, "No locations to export")
-                showNotification(appContext.getString(R.string.auto_export_title), appContext.getString(R.string.auto_export_nothing_new))
+                showNotification(strings.getString(R.string.auto_export_title), strings.getString(R.string.auto_export_nothing_new))
                 cleanupOldExports(dirUri, config)
                 if (isManualRun) LocationServiceModule.sendAutoExportEvent(true, null, 0, null)
                 return Result.success()
@@ -187,8 +190,8 @@ class AutoExportWorker(
             AppLogger.i(TAG, "Auto-export complete: $savedName ($rowCount locations)")
             config.saveLastResult(db, savedName, rowCount)
             showNotification(
-                appContext.getString(R.string.auto_export_complete),
-                appContext.resources.getQuantityString(R.plurals.auto_export_done, rowCount, rowCount, savedName),
+                strings.getString(R.string.auto_export_complete),
+                strings.resources.getQuantityString(R.plurals.auto_export_done, rowCount, rowCount, savedName),
                 dirUri
             )
             LocationServiceModule.sendAutoExportEvent(true, savedName, rowCount, null)
@@ -200,7 +203,7 @@ class AutoExportWorker(
                 tempFile, config, db, e,
                 error = "Directory permission lost",
                 logMessage = "Auto-export failed - permission denied",
-                userMessage = appContext.getString(R.string.auto_export_permission_lost),
+                userMessage = strings.getString(R.string.auto_export_permission_lost),
                 retry = false
             )
         } catch (e: IllegalArgumentException) {
@@ -208,7 +211,7 @@ class AutoExportWorker(
                 tempFile, config, db, e,
                 error = "Invalid configuration: ${e.message}",
                 logMessage = "Auto-export failed - invalid configuration",
-                userMessage = appContext.getString(R.string.auto_export_invalid_config, e.message.orEmpty()),
+                userMessage = strings.getString(R.string.auto_export_invalid_config, e.message.orEmpty()),
                 retry = false
             )
         } catch (e: DirectoryAccessException) {
@@ -216,7 +219,7 @@ class AutoExportWorker(
                 tempFile, config, db, e,
                 error = "Directory access failed: ${e.message}",
                 logMessage = "Auto-export failed - directory access issue",
-                userMessage = appContext.getString(R.string.auto_export_directory_failed, e.message.orEmpty()),
+                userMessage = strings.getString(R.string.auto_export_directory_failed, e.message.orEmpty()),
                 retry = false
             )
         } catch (e: SQLException) {
@@ -224,7 +227,7 @@ class AutoExportWorker(
                 tempFile, config, db, e,
                 error = "Read failed: ${e.message}",
                 logMessage = "Auto-export failed - database read, will retry",
-                userMessage = appContext.getString(R.string.auto_export_read_failed),
+                userMessage = strings.getString(R.string.auto_export_read_failed),
                 retry = true
             )
         } catch (e: IOException) {
@@ -232,7 +235,7 @@ class AutoExportWorker(
                 tempFile, config, db, e,
                 error = "IO error: ${e.message}",
                 logMessage = "Auto-export failed - IO error, will retry",
-                userMessage = appContext.getString(R.string.auto_export_save_failed),
+                userMessage = strings.getString(R.string.auto_export_save_failed),
                 retry = true
             )
         } catch (e: Exception) {
@@ -240,7 +243,7 @@ class AutoExportWorker(
                 tempFile, config, db, e,
                 error = "Export failed: ${e.message}",
                 logMessage = "Auto-export failed",
-                userMessage = appContext.getString(R.string.auto_export_save_failed),
+                userMessage = strings.getString(R.string.auto_export_save_failed),
                 retry = true
             )
         }
@@ -259,7 +262,7 @@ class AutoExportWorker(
         tempFile.delete()
         AppLogger.e(TAG, logMessage, e)
         config.saveLastError(db, error)
-        showNotification(appContext.getString(R.string.auto_export_failed), userMessage)
+        showNotification(strings.getString(R.string.auto_export_failed), userMessage)
         LocationServiceModule.sendAutoExportEvent(false, null, 0, error)
         return if (retry) Result.retry() else Result.failure()
     }
@@ -353,10 +356,10 @@ class AutoExportWorker(
             val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                appContext.getString(R.string.channel_auto_export),
+                strings.getString(R.string.channel_auto_export),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = appContext.getString(R.string.channel_auto_export_description)
+                description = strings.getString(R.string.channel_auto_export_description)
             }
             nm.createNotificationChannel(channel)
         }

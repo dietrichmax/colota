@@ -11,6 +11,7 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import com.Colota.util.AppLanguage
 import com.Colota.R
 import com.Colota.service.NotificationHelper
 import com.Colota.util.AppLogger
@@ -53,13 +54,13 @@ class TrackingControlReceiver : BroadcastReceiver() {
     private fun handleStart(context: Context) {
         AppLogger.d(TAG, "Broadcast: start tracking")
         TrackingControl.start(context, "Started via automation intent")
-        toastOnMain(context, context.getString(R.string.toast_tracking_started))
+        toastOnMain(context, AppLanguage.context(context).getString(R.string.toast_tracking_started))
     }
 
     private fun handleStop(context: Context) {
         AppLogger.d(TAG, "Broadcast: stop tracking")
         TrackingControl.stop(context, NotificationHelper.StopReason.AUTOMATION)
-        toastOnMain(context, context.getString(R.string.toast_tracking_stopped))
+        toastOnMain(context, AppLanguage.context(context).getString(R.string.toast_tracking_stopped))
     }
 
     private fun toastOnMain(context: Context, message: String) {

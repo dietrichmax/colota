@@ -8,6 +8,8 @@ import { StyleSheet, View, ScrollView } from "react-native"
 import { ScreenProps } from "../types/global"
 import { useTheme, type ThemePreference } from "../hooks/useTheme"
 import { useTranslation } from "../i18n/useTranslation"
+import { LANGUAGE_NAMES } from "../i18n/options"
+import { useLanguageChoice } from "../hooks/useLanguageChoice"
 import NativeLocationService from "../services/NativeLocationService"
 import {
   Button,
@@ -30,7 +32,7 @@ import { space } from "../constants"
 
 type StyleKey = "mapStyleUrlLight" | "mapStyleUrlDark"
 
-export function AppearanceScreen({}: ScreenProps) {
+export function AppearanceScreen({ navigation }: ScreenProps) {
   const {
     preference,
     setPreference,
@@ -53,6 +55,14 @@ export function AppearanceScreen({}: ScreenProps) {
   const [lightError, setLightError] = useState<string | undefined>()
   const [darkError, setDarkError] = useState<string | undefined>()
   const [showMapTileServer, setShowMapTileServer] = useState(false)
+  const [languageChoice] = useLanguageChoice()
+
+  const languageLabel =
+    languageChoice === null
+      ? undefined
+      : languageChoice === "system"
+        ? t("language.system")
+        : LANGUAGE_NAMES[languageChoice]
 
   const selectUnitSystem = useCallback(
     async (value: UnitSystem) => {
@@ -203,6 +213,15 @@ export function AppearanceScreen({}: ScreenProps) {
               onSelect={selectTimeFormat}
             />
           </SettingRow>
+
+          <Divider tight />
+
+          <ListItem
+            testID="nav-language"
+            label={t("screen.language")}
+            sub={languageLabel}
+            onPress={() => navigation.navigate("Language")}
+          />
 
           <Divider tight />
 

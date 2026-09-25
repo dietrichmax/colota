@@ -16,11 +16,22 @@ export type TranslationKey = CatalogKey | PluralBase<CatalogKey>
 
 export const FALLBACK_LANGUAGE: SupportedLanguage = "en"
 
+/** Each language in its own words, so a reader finds theirs whatever the app is set to. */
+export const LANGUAGE_NAMES: Record<SupportedLanguage, string> = { en: "English" }
+
+/** The device tag carries a region, the catalogs do not. */
+export function resolveLanguage(tag: string | undefined): SupportedLanguage {
+  const base = (tag ?? "").split("-")[0].toLowerCase()
+  return (SUPPORTED_LANGUAGES as readonly string[]).includes(base) ? (base as SupportedLanguage) : FALLBACK_LANGUAGE
+}
+
 /** Side-effect free so `jest.setup.js` can share it. Inline resources keep `init()` synchronous. */
 export const I18N_OPTIONS = {
   fallbackLng: FALLBACK_LANGUAGE,
   resources: { en: { translation: en } },
   interpolation: { escapeValue: false },
   returnNull: false,
+  // An emptied value in a translation shows the English, not a blank label.
+  returnEmptyString: false,
   keySeparator: false as const
 }

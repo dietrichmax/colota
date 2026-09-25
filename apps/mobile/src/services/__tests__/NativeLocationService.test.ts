@@ -90,7 +90,9 @@ jest.mock("react-native", () => ({
       VERSION_NAME: "1.0.0",
       VERSION_CODE: 1,
       FLAVOR: "gms",
-      getSystemPalette: jest.fn().mockResolvedValue(null)
+      getSystemPalette: jest.fn().mockResolvedValue(null),
+      getAppLanguage: jest.fn().mockResolvedValue({ picked: "de", effective: "de" }),
+      setAppLanguage: jest.fn().mockResolvedValue("de-DE")
     }
   }
 }))
@@ -334,6 +336,17 @@ describe("NativeLocationService", () => {
           VERSION_NAME: "1.0.0"
         })
       )
+    })
+  })
+
+  describe("app language", () => {
+    it("reads the picked language and the one in use", async () => {
+      await expect(NativeLocationService.getAppLanguage()).resolves.toEqual({ picked: "de", effective: "de" })
+    })
+
+    it("reads as nothing when native fails, so the screen shows System default and the catalog stays put", async () => {
+      ;(NativeModules.BuildConfigModule.getAppLanguage as jest.Mock).mockRejectedValueOnce(new Error("x"))
+      await expect(NativeLocationService.getAppLanguage()).resolves.toBeNull()
     })
   })
 
