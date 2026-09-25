@@ -8,6 +8,7 @@ package com.Colota.triggers
 import android.app.Activity
 import android.content.Context
 import android.os.Bundle
+import com.Colota.service.NotificationHelper
 import com.Colota.util.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +53,6 @@ class ShortcutHandlerActivity : Activity() {
 
     private fun handleStop(context: Context) {
         AppLogger.d(TAG, "Shortcut: stop tracking")
-        TrackingControl.stop(context, "Stopped via shortcut")
+        TrackingControl.stop(context, NotificationHelper.StopReason.SHORTCUT)
     }
 }

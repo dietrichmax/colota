@@ -356,7 +356,7 @@ class LocationForegroundService : Service() {
                     TrackingWatchdogScheduler.scheduleLocationOffRetry(this)
                     notificationManager.notify(
                         NotificationHelper.STOPPED_NOTIFICATION_ID,
-                        notificationHelper.buildStoppedNotification(NotificationHelper.STOP_REASON_LOCATION_OFF, unexpected = true)
+                        notificationHelper.buildStoppedNotification(NotificationHelper.StopReason.LOCATION_OFF, unexpected = true)
                     )
                 } else {
                     TrackingWatchdogScheduler.schedule(this)
@@ -393,7 +393,9 @@ class LocationForegroundService : Service() {
             ACTION_STATIONARY_HEARTBEAT -> handleStationaryHeartbeatFired()
             ACTION_GEOFENCE_HEARTBEAT -> handleGeofenceHeartbeatFired(shouldBeTracking)
             ACTION_STOP_REQUEST -> stopForegroundServiceWithReason(
-                intent?.getStringExtra(EXTRA_STOP_REASON) ?: "Stopped",
+                intent?.getStringExtra(EXTRA_STOP_REASON)
+                    ?.let { name -> NotificationHelper.StopReason.entries.firstOrNull { it.name == name } }
+                    ?: NotificationHelper.StopReason.OTHER,
                 unexpected = false
             )
             else -> handleStart()
@@ -524,7 +526,7 @@ class LocationForegroundService : Service() {
         if (deviceInfoHelper.isBatteryCritical()) {
             val (level, _) = deviceInfoHelper.getCachedBatteryStatus()
             AppLogger.d(TAG, "Battery critical ($level%) and unplugged - stopping service")
-            stopForegroundServiceWithReason(NotificationHelper.STOP_REASON_BATTERY, stoppedByBattery = true)
+            stopForegroundServiceWithReason(NotificationHelper.StopReason.BATTERY, stoppedByBattery = true)
             return
         }
 
@@ -573,10 +575,10 @@ class LocationForegroundService : Service() {
             startPauseWatchdog()
         } catch (e: SecurityException) {
             AppLogger.e(TAG, "Location permission missing", e)
-            stopForegroundServiceWithReason("Location permission missing")
+            stopForegroundServiceWithReason(NotificationHelper.StopReason.PERMISSION)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to start location updates", e)
-            stopForegroundServiceWithReason("Location provider error")
+            stopForegroundServiceWithReason(NotificationHelper.StopReason.PROVIDER)
         }
     }
 
@@ -1448,24 +1450,24 @@ class LocationForegroundService : Service() {
     /** Fired by [batteryMonitor] on a critical-battery broadcast. */
     private fun onBatteryCritical() {
         AppLogger.i(TAG, "Battery critical and unplugged - stopping (battery monitor)")
-        stopForegroundServiceWithReason(NotificationHelper.STOP_REASON_BATTERY, stoppedByBattery = true)
+        stopForegroundServiceWithReason(NotificationHelper.StopReason.BATTERY, stoppedByBattery = true)
     }
 
     private fun stopForegroundServiceWithReason(
-        reason: String,
+        reason: NotificationHelper.StopReason,
         stoppedByBattery: Boolean = false,
         unexpected: Boolean = true
     ) {
         if (isStopping) return
         isStopping = true
-        AppLogger.i(TAG, "Stopping: $reason")
+        AppLogger.i(TAG, "Stopping: ${reason.name}")
 
         // Reset profile indicator in JS UI
         if (profileManager.getActiveProfileName() != null) {
             LocationServiceModule.sendProfileSwitchEvent(null, null)
         }
 
-        LocationServiceModule.sendTrackingStoppedEvent(reason)
+        LocationServiceModule.sendTrackingStoppedEvent(reason.name)
         dbHelper.saveSetting(SettingsKeys.TRACKING_ENABLED, "false")
         dbHelper.saveSetting(SettingsKeys.STOPPED_BY_BATTERY, if (stoppedByBattery) "true" else "false")
         if (stoppedByBattery) BatteryRecoveryScheduler.schedule(this)

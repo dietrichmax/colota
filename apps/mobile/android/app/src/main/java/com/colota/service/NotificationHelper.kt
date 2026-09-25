@@ -9,6 +9,7 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.Colota.MainActivity
 import com.Colota.R
@@ -39,6 +40,18 @@ class NotificationHelper(
 
     data class Status(val title: String, val text: String)
 
+    /** Logged and sent over the bridge by name; only the notification shows the text. */
+    enum class StopReason(@StringRes val text: Int) {
+        BATTERY(R.string.stop_reason_battery),
+        LOCATION_OFF(R.string.stop_reason_location_off),
+        PERMISSION(R.string.stop_reason_permission),
+        PROVIDER(R.string.stop_reason_provider),
+        KILLED(R.string.stop_reason_killed),
+        SHORTCUT(R.string.stop_reason_shortcut),
+        AUTOMATION(R.string.stop_reason_automation),
+        OTHER(R.string.stop_reason_other)
+    }
+
     private var lastKey: String? = null
 
     /** From Android 12 the collapsed row shows the app name only when there is no title. */
@@ -49,30 +62,27 @@ class NotificationHelper(
         const val STOPPED_CHANNEL_ID = "tracking_stopped_channel"
         const val NOTIFICATION_ID = 1
         const val STOPPED_NOTIFICATION_ID = 2
-        const val STOP_REASON_BATTERY = "Battery fell below 5% · resumes when charging"
-        const val STOP_REASON_LOCATION_OFF =
-            "Location services are off · tap to resume now, or it resumes by itself within 10 min of turning them on"
-        /** ic_launcher_background, copied because unit tests run without app resources. */
+        /** ic_launcher_background. */
         const val ICON_COLOR = 0xFF0D9387.toInt()
     }
 
     fun createChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Location Tracking",
+            context.getString(R.string.channel_tracking),
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Shows active tracking status and sync queue"
+            description = context.getString(R.string.channel_tracking_description)
             setShowBadge(false)
         }
         notificationManager.createNotificationChannel(channel)
 
         val stoppedChannel = NotificationChannel(
             STOPPED_CHANNEL_ID,
-            "Tracking stopped",
+            context.getString(R.string.channel_stopped),
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "Alerts when tracking stops without you asking it to"
+            description = context.getString(R.string.channel_stopped_description)
             setShowBadge(true)
         }
         notificationManager.createNotificationChannel(stoppedChannel)
@@ -106,7 +116,7 @@ class NotificationHelper(
      * @param unexpected a stop the user did not ask for, which alerts. Anything else stays on the
      * silent tracking channel, so a caller has to opt in rather than inherit the alert.
      */
-    fun buildStoppedNotification(reason: String, unexpected: Boolean = false): Notification {
+    fun buildStoppedNotification(reason: StopReason, unexpected: Boolean = false): Notification {
         // Opening the app is the recovery path when the watchdog cannot restart the service
         // itself, so this notification has to be tappable.
         val pendingIntent = PendingIntent.getActivity(
@@ -116,13 +126,15 @@ class NotificationHelper(
             PendingIntent.FLAG_IMMUTABLE
         )
 
+        val title = context.getString(R.string.stopped_title)
+        val text = context.getString(reason.text)
         return NotificationCompat.Builder(
             context,
             if (unexpected) STOPPED_CHANNEL_ID else CHANNEL_ID
         )
-            .setContentTitle(collapsedTitle("Tracking stopped"))
-            .setContentText(collapsedText("Tracking stopped", reason))
-            .setStyle(NotificationCompat.BigTextStyle().setBigContentTitle("Tracking stopped").bigText(reason))
+            .setContentTitle(collapsedTitle(title))
+            .setContentText(collapsedText(title, text))
+            .setStyle(NotificationCompat.BigTextStyle().setBigContentTitle(title).bigText(text))
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(ICON_COLOR)
             .setOngoing(false)
@@ -142,39 +154,43 @@ class NotificationHelper(
     /** Title is the recording state, text the sending state. */
     fun buildStatus(input: StatusInput, now: Long = System.currentTimeMillis()): Status {
         val send = sendSegment(input, now)
+        val tracking = str(R.string.status_tracking)
         return when {
-            !input.locationEnabled -> Status("Location services are off", "Not recording · $send")
-            input.isPaused -> Status("Paused", "${pauseDetail(input)} · $send")
-            !input.hasFix -> Status("Searching for GPS", send)
-            input.isStationary -> Status("Tracking", "Stationary · $send")
-            else -> Status("Tracking", send)
+            !input.locationEnabled -> Status(str(R.string.status_location_off), "${str(R.string.status_not_recording)} · $send")
+            input.isPaused -> Status(str(R.string.status_paused), "${pauseDetail(input)} · $send")
+            !input.hasFix -> Status(str(R.string.status_searching), send)
+            input.isStationary -> Status(tracking, "${str(R.string.status_stationary)} · $send")
+            else -> Status(tracking, send)
         }
     }
 
+    private fun str(@StringRes id: Int, vararg args: Any): String =
+        if (args.isEmpty()) context.getString(id) else context.getString(id, *args)
+
+    private fun count(id: Int, n: Int): String = context.resources.getQuantityString(id, n, n)
+
     private fun pauseDetail(input: StatusInput): String = when {
-        input.isWifiPaused -> "Zone WiFi · resumes when you leave"
-        input.isMotionlessPaused -> "No movement · resumes when you move"
-        else -> "Inside zone · resumes when you leave"
+        input.isWifiPaused -> str(R.string.status_pause_wifi)
+        input.isMotionlessPaused -> str(R.string.status_pause_motionless)
+        else -> str(R.string.status_pause_zone)
     }
 
     private fun sendSegment(input: StatusInput, now: Long): String = when {
-        input.isOfflineMode -> "Offline mode"
+        input.isOfflineMode -> str(R.string.status_offline)
         input.queuedCount > 0 && input.lastSyncTime > 0 ->
-            "${input.queuedCount} queued · last sync ${formatTimeSinceSync(input.lastSyncTime, now)}"
-        input.queuedCount > 0 -> "${input.queuedCount} queued"
-        else -> "All sent"
+            "${count(R.plurals.status_queued, input.queuedCount)} · " +
+                str(R.string.status_last_sync, formatTimeSinceSync(input.lastSyncTime, now))
+        input.queuedCount > 0 -> count(R.plurals.status_queued, input.queuedCount)
+        else -> str(R.string.status_all_sent)
     }
 
     fun formatTimeSinceSync(lastSyncTime: Long, now: Long): String {
         val minutes = ((now - lastSyncTime) / 60_000).toInt()
         return when {
-            minutes < 1 -> "just now"
-            minutes == 1 -> "1 min ago"
-            minutes < 60 -> "$minutes min ago"
-            minutes < 120 -> "1 h ago"
-            minutes < 1440 -> "${minutes / 60} h ago"
-            minutes < 2880 -> "1 d ago"
-            else -> "${minutes / 1440} d ago"
+            minutes < 1 -> str(R.string.sync_just_now)
+            minutes < 60 -> count(R.plurals.sync_minutes_ago, minutes)
+            minutes < 1440 -> count(R.plurals.sync_hours_ago, minutes / 60)
+            else -> count(R.plurals.sync_days_ago, minutes / 1440)
         }
     }
 

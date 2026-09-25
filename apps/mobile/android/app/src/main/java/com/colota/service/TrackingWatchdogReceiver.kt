@@ -86,7 +86,7 @@ class TrackingWatchdogReceiver : BroadcastReceiver() {
             it.createChannel()
             notificationManager.notify(
                 NotificationHelper.STOPPED_NOTIFICATION_ID,
-                it.buildStoppedNotification("Tracking service was killed - tap to resume", unexpected = true)
+                it.buildStoppedNotification(NotificationHelper.StopReason.KILLED, unexpected = true)
             )
         }
     }

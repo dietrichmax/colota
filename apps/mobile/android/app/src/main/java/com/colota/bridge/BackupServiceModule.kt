@@ -9,6 +9,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.StatFs
 import android.provider.DocumentsContract
+import com.Colota.R
 import com.Colota.backup.BackupBuilder
 import com.Colota.backup.BackupError
 import com.Colota.backup.BackupException
@@ -158,7 +159,7 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
             try {
                 ensureFreeSpaceForBackup()
 
-                startForegroundOnMain("Encrypting backup...")
+                startForegroundOnMain(reactApplicationContext.getString(R.string.backup_encrypting))
 
                 pendingFile.outputStream().use { out ->
                     BackupBuilder(reactApplicationContext).build(out, passwordChars)
@@ -252,7 +253,7 @@ class BackupServiceModule(reactContext: ReactApplicationContext) :
                 val uri = Uri.parse(uriString)
                 ensureFreeSpaceForRestore(uri)
 
-                startForegroundOnMain("Restoring backup...")
+                startForegroundOnMain(reactApplicationContext.getString(R.string.backup_restoring))
 
                 // Read before pauseAllDbWriters clears it, and outside it so a straggler timeout still resumes.
                 trackingWasEnabled = DatabaseHelper.getInstance(reactApplicationContext)

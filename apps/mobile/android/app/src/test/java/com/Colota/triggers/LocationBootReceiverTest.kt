@@ -256,7 +256,7 @@ class LocationBootReceiverTest {
         callHandleBootCompleted(mockContext, Intent.ACTION_BOOT_COMPLETED)
 
         verify { BatteryRecoveryScheduler.schedule(any()) }
-        verify { anyConstructed<NotificationHelper>().buildStoppedNotification(NotificationHelper.STOP_REASON_BATTERY, true) }
+        verify { anyConstructed<NotificationHelper>().buildStoppedNotification(NotificationHelper.StopReason.BATTERY, true) }
         verify(exactly = 0) { mockContext.startForegroundService(any()) }
     }
 

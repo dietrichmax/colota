@@ -173,6 +173,8 @@ Handles all notification logic for the tracking service:
 - Small icon `drawable/ic_notification`: the launcher's monochrome pin and inner arc at 24 dp, without the outer arc and with the stroke doubled. `setColor(ICON_COLOR)`, the launcher background, colors the circle Android 12 and later draw behind it. `BatteryRecoveryWorker` and the stopped notification use the same icon and color, so the status bar shows one Colota icon whether tracking runs or has stopped; backup and auto-export keep `ic_menu_save`.
 - Deduplication to avoid unnecessary notification redraws
 - Stopped notification, posted on a deliberate stop, by the tracking watchdog when Android refuses a background restart, and by the service itself when Android refuses the location foreground type because location services are off; in both refusal cases tapping it opens the app so the reconciler can resume. Two channels back it. `location_service_channel` at `IMPORTANCE_LOW` carries the ongoing status and any stop the user asked for; `tracking_stopped_channel` at `IMPORTANCE_DEFAULT` carries the ones they did not, so a killed service is audible instead of sitting silently under the ongoing notification. `buildStoppedNotification` defaults to the silent channel and callers opt in
+- Notification text and channel names live in `res/values/strings.xml`, counts as `<plurals>`. A translation is a `values-<lang>/strings.xml`; a missing key falls back to English
+- Stop reasons are the `StopReason` enum. The log and the `onTrackingStopped` event carry its name, the notification its translated text
 
 ### DatabaseHelper
 

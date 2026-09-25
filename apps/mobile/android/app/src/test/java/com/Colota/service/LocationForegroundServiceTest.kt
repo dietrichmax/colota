@@ -2208,10 +2208,32 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `a stop the user did not ask for alerts`() {
-        invokeStopWithReason("Location permission missing", false)
+    fun `a stop request names the source it came from`() = runServiceTest {
+        val intent = intentFor(LocationForegroundService.ACTION_STOP_REQUEST)
+        every { intent.getStringExtra(LocationForegroundService.EXTRA_STOP_REASON) } returns "SHORTCUT"
 
-        verify { notificationHelper.buildStoppedNotification("Location permission missing", true) }
+        service.onStartCommand(intent, 0, 1)
+        advanceUntilIdle()
+
+        verify { notificationHelper.buildStoppedNotification(NotificationHelper.StopReason.SHORTCUT, false) }
+    }
+
+    @Test
+    fun `a stop request with an unknown reason still stops, as a plain stop`() = runServiceTest {
+        val intent = intentFor(LocationForegroundService.ACTION_STOP_REQUEST)
+        every { intent.getStringExtra(LocationForegroundService.EXTRA_STOP_REASON) } returns "Stopped via shortcut"
+
+        service.onStartCommand(intent, 0, 1)
+        advanceUntilIdle()
+
+        verify { notificationHelper.buildStoppedNotification(NotificationHelper.StopReason.OTHER, false) }
+    }
+
+    @Test
+    fun `a stop the user did not ask for alerts`() {
+        invokeStopWithReason(NotificationHelper.StopReason.PERMISSION, false)
+
+        verify { notificationHelper.buildStoppedNotification(NotificationHelper.StopReason.PERMISSION, true) }
     }
 
     @Test
@@ -2227,7 +2249,7 @@ class LocationForegroundServiceTest {
     fun `stopForBattery sends tracking stopped event`() {
         invokeOnBatteryCritical()
 
-        verify { LocationServiceModule.sendTrackingStoppedEvent("Battery fell below 5% \u00b7 resumes when charging") }
+        verify { LocationServiceModule.sendTrackingStoppedEvent("BATTERY") }
     }
 
     @Test
@@ -2262,7 +2284,7 @@ class LocationForegroundServiceTest {
 
     @Test
     fun `non-battery stop clears stopped_by_battery and does not arm recovery`() {
-        invokeStopWithReason("Location permission missing", stoppedByBattery = false)
+        invokeStopWithReason(NotificationHelper.StopReason.PERMISSION, stoppedByBattery = false)
 
         verify { dbHelper.saveSetting("stopped_by_battery", "false") }
         verify(exactly = 0) { BatteryRecoveryScheduler.schedule(any()) }
@@ -2681,13 +2703,13 @@ class LocationForegroundServiceTest {
     }
 
     private fun invokeStopWithReason(
-        reason: String,
+        reason: NotificationHelper.StopReason,
         stoppedByBattery: Boolean,
         unexpected: Boolean = true
     ) {
         val method = LocationForegroundService::class.java.getDeclaredMethod(
             "stopForegroundServiceWithReason",
-            String::class.java,
+            NotificationHelper.StopReason::class.java,
             Boolean::class.javaPrimitiveType,
             Boolean::class.javaPrimitiveType
         )
@@ -3532,7 +3554,7 @@ class LocationForegroundServiceTest {
         every { deviceInfoHelper.isLocationEnabled() } returns false
         refuseStartForeground()
         val stopped = mockk<android.app.Notification>(relaxed = true)
-        every { notificationHelper.buildStoppedNotification(NotificationHelper.STOP_REASON_LOCATION_OFF, true) } returns stopped
+        every { notificationHelper.buildStoppedNotification(NotificationHelper.StopReason.LOCATION_OFF, true) } returns stopped
 
         val result = service.onStartCommand(intentFor(null), 0, 1)
         advanceUntilIdle()

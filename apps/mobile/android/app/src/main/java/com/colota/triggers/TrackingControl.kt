@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import com.Colota.data.DatabaseHelper
 import com.Colota.service.LocationForegroundService
+import com.Colota.service.NotificationHelper
 
 /**
  * Shared start/stop tracking actions for external triggers (app shortcut,
@@ -22,10 +23,10 @@ object TrackingControl {
 
     // Route stop through the service so stopForegroundServiceWithReason runs - direct
     // stopService skips the pause-zone flag clearing and the stopped notification.
-    fun stop(context: Context, stopReason: String) {
+    fun stop(context: Context, stopReason: NotificationHelper.StopReason) {
         val stopIntent = Intent(context, LocationForegroundService::class.java).apply {
             action = LocationForegroundService.ACTION_STOP_REQUEST
-            putExtra(LocationForegroundService.EXTRA_STOP_REASON, stopReason)
+            putExtra(LocationForegroundService.EXTRA_STOP_REASON, stopReason.name)
         }
         context.startService(stopIntent)
     }

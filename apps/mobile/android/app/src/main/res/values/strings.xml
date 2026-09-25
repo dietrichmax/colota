@@ -4,4 +4,82 @@
     <string name="shortcut_start_long">Start Tracking</string>
     <string name="shortcut_stop_short">Stop</string>
     <string name="shortcut_stop_long">Stop Tracking</string>
+
+    <string name="channel_tracking">Location Tracking</string>
+    <string name="channel_tracking_description">Shows active tracking status and sync queue</string>
+    <string name="channel_stopped">Tracking stopped</string>
+    <string name="channel_stopped_description">Alerts when tracking stops without you asking it to</string>
+    <string name="channel_auto_export">Auto-Export</string>
+    <string name="channel_auto_export_description">Notifications for automatic data exports</string>
+    <string name="channel_backup">Backup &amp; Restore</string>
+    <string name="channel_backup_description">Shown while a backup or restore is in progress</string>
+    <string name="channel_battery_recovery">Battery Recovery</string>
+    <string name="channel_battery_recovery_description">Resuming tracking after a low-battery stop</string>
+
+    <string name="status_location_off">Location services are off</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_searching">Searching for GPS</string>
+    <string name="status_tracking">Tracking</string>
+    <string name="status_not_recording">Not recording</string>
+    <string name="status_stationary">Stationary</string>
+    <string name="status_pause_wifi">Zone WiFi · resumes when you leave</string>
+    <string name="status_pause_motionless">No movement · resumes when you move</string>
+    <string name="status_pause_zone">Inside zone · resumes when you leave</string>
+    <string name="status_offline">Offline mode</string>
+    <string name="status_all_sent">All sent</string>
+    <plurals name="status_queued">
+        <item quantity="one">%d queued</item>
+        <item quantity="other">%d queued</item>
+    </plurals>
+    <string name="status_last_sync">last sync %s</string>
+    <string name="sync_just_now">just now</string>
+    <plurals name="sync_minutes_ago">
+        <item quantity="one">%d min ago</item>
+        <item quantity="other">%d min ago</item>
+    </plurals>
+    <plurals name="sync_hours_ago">
+        <item quantity="one">%d h ago</item>
+        <item quantity="other">%d h ago</item>
+    </plurals>
+    <plurals name="sync_days_ago">
+        <item quantity="one">%d d ago</item>
+        <item quantity="other">%d d ago</item>
+    </plurals>
+
+    <string name="stopped_title">Tracking stopped</string>
+    <string name="stop_reason_battery" formatted="false">Battery fell below 5% · resumes when charging</string>
+    <string name="stop_reason_location_off">Location services are off · tap to resume now, or it resumes by itself within 10 min of turning them on</string>
+    <string name="stop_reason_permission">Location permission missing</string>
+    <string name="stop_reason_provider">Location provider error</string>
+    <string name="stop_reason_killed">Tracking service was killed - tap to resume</string>
+    <string name="stop_reason_shortcut">Stopped via shortcut</string>
+    <string name="stop_reason_automation">Stopped via automation intent</string>
+    <string name="stop_reason_other">Stopped</string>
+
+    <string name="toast_tracking_started">Colota tracking started</string>
+    <string name="toast_tracking_stopped">Colota tracking stopped</string>
+
+    <string name="auto_export_title">Auto-Export</string>
+    <string name="auto_export_running">Exporting location data...</string>
+    <string name="auto_export_nothing_new">No new locations to export.</string>
+    <string name="auto_export_complete">Auto-Export Complete</string>
+    <plurals name="auto_export_done">
+        <item quantity="one">Exported %1$d location to %2$s</item>
+        <item quantity="other">Exported %1$d locations to %2$s</item>
+    </plurals>
+    <string name="auto_export_failed">Auto-Export Failed</string>
+    <string name="auto_export_permission_lost">Directory permission lost. Please re-select the export directory.</string>
+    <string name="auto_export_invalid_config">Invalid export configuration: %s</string>
+    <string name="auto_export_directory_failed">Could not access export directory: %s</string>
+    <string name="auto_export_read_failed">Could not read locations. Will retry.</string>
+    <string name="auto_export_save_failed">Could not save export file. Will retry.</string>
+    <string name="auto_export_gave_up">Export failed after multiple attempts. Please check your settings.</string>
+
+    <string name="backup_title">Colota Backup</string>
+    <string name="backup_working">Working...</string>
+    <string name="backup_encrypting">Encrypting backup...</string>
+    <string name="backup_restoring">Restoring backup...</string>
+
+    <string name="battery_recovery_title">Resuming tracking</string>
+    <string name="battery_recovery_text">Charger connected - restarting location tracking</string>
 </resources>

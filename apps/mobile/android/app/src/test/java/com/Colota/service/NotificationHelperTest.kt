@@ -14,12 +14,13 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * Tests for NotificationHelper using a real instance with mocked Android deps:
+ * Tests for NotificationHelper using a real instance on the Robolectric app context:
  * - Status building
  * - Time-since-last-sync formatting
  * - Deduplication
  * - Posted notification fields (Robolectric)
  */
+@RunWith(RobolectricTestRunner::class)
 class NotificationHelperTest {
 
     companion object {
@@ -58,7 +59,7 @@ class NotificationHelperTest {
             val (helper, _) = helperFor()
             helper.createChannel()
 
-            val n = helper.buildStoppedNotification("killed", unexpected = true)
+            val n = helper.buildStoppedNotification(NotificationHelper.StopReason.KILLED, unexpected = true)
 
             assertEquals(NotificationHelper.STOPPED_CHANNEL_ID, n.channelId)
         }
@@ -68,7 +69,7 @@ class NotificationHelperTest {
             val (helper, _) = helperFor()
             helper.createChannel()
 
-            val n = helper.buildStoppedNotification("stopped via shortcut", unexpected = false)
+            val n = helper.buildStoppedNotification(NotificationHelper.StopReason.SHORTCUT, unexpected = false)
 
             assertEquals(NotificationHelper.CHANNEL_ID, n.channelId)
         }
@@ -137,12 +138,12 @@ class NotificationHelperTest {
 
         @Test
         fun `the stopped notification keeps the full reason in the expanded view`() {
-            val n = helper.buildStoppedNotification("killed", unexpected = true)
+            val n = helper.buildStoppedNotification(NotificationHelper.StopReason.KILLED, unexpected = true)
 
             assertNull(n.extras.getString(Notification.EXTRA_TITLE))
-            assertEquals("Tracking stopped · killed", n.extras.getString(Notification.EXTRA_TEXT))
+            assertEquals("Tracking stopped · Tracking service was killed - tap to resume", n.extras.getString(Notification.EXTRA_TEXT))
             assertEquals("Tracking stopped", n.extras.getString(Notification.EXTRA_TITLE_BIG))
-            assertEquals("killed", n.extras.getString(Notification.EXTRA_BIG_TEXT))
+            assertEquals("Tracking service was killed - tap to resume", n.extras.getString(Notification.EXTRA_BIG_TEXT))
         }
 
         @Test
@@ -160,8 +161,14 @@ class NotificationHelperTest {
         }
 
         @Test
+        fun `the icon color constant is the launcher background resource`() {
+            val app = RuntimeEnvironment.getApplication()
+            assertEquals(app.getColor(R.color.ic_launcher_background), NotificationHelper.ICON_COLOR)
+        }
+
+        @Test
         fun `the stopped notification carries the same icon and color`() {
-            val n = helper.buildStoppedNotification("killed", unexpected = true)
+            val n = helper.buildStoppedNotification(NotificationHelper.StopReason.KILLED, unexpected = true)
 
             assertEquals(R.drawable.ic_notification, n.smallIcon.resId)
             assertEquals(0xFF0D9387.toInt(), n.color)
@@ -188,8 +195,8 @@ class NotificationHelperTest {
 
         @Test
         fun `the stopped notification is public`() {
-            assertEquals(Notification.VISIBILITY_PUBLIC, helper.buildStoppedNotification("killed", unexpected = true).visibility)
-            assertEquals(Notification.VISIBILITY_PUBLIC, helper.buildStoppedNotification("stopped", unexpected = false).visibility)
+            assertEquals(Notification.VISIBILITY_PUBLIC, helper.buildStoppedNotification(NotificationHelper.StopReason.KILLED, unexpected = true).visibility)
+            assertEquals(Notification.VISIBILITY_PUBLIC, helper.buildStoppedNotification(NotificationHelper.StopReason.OTHER, unexpected = false).visibility)
         }
 
         @Test
@@ -215,7 +222,7 @@ class NotificationHelperTest {
     @Before
     fun setUp() {
         helper = spyk(
-            NotificationHelper(mockk(relaxed = true), mockk(relaxed = true))
+            NotificationHelper(RuntimeEnvironment.getApplication(), mockk(relaxed = true))
         )
         // Stub buildTrackingNotification to avoid PendingIntent.getActivity()
         every { helper.buildTrackingNotification(any(), any()) } returns mockk()
@@ -241,6 +248,19 @@ class NotificationHelperTest {
     @Test
     fun `a backed-up queue with no sync this run prints the depth alone`() {
         assertEquals("12 queued", status(input(hasFix = true, queuedCount = 12)).text)
+    }
+
+    @Test
+    fun `a single queued point reads 1 queued`() {
+        assertEquals("1 queued", status(input(hasFix = true, queuedCount = 1)).text)
+    }
+
+    // The worker passes the count twice, once to pick the form and once to print it, then the file name.
+    @Test
+    fun `the export result names the count in the right form and then the file`() {
+        val res = RuntimeEnvironment.getApplication().resources
+        assertEquals("Exported 1 location to f.geojson", res.getQuantityString(R.plurals.auto_export_done, 1, 1, "f.geojson"))
+        assertEquals("Exported 2 locations to f.geojson", res.getQuantityString(R.plurals.auto_export_done, 2, 2, "f.geojson"))
     }
 
     @Test
@@ -361,6 +381,13 @@ class NotificationHelperTest {
     @Test
     fun `twenty-four hours is 1 d ago`() {
         assertEquals("1 d ago", helper.formatTimeSinceSync(NOW - 86_400_000L, NOW))
+    }
+
+    @Test
+    fun `every stop reason has its own text`() {
+        val ctx = RuntimeEnvironment.getApplication()
+        val texts = NotificationHelper.StopReason.entries.map { ctx.getString(it.text) }
+        assertEquals(texts.size, texts.toSet().size)
     }
 
     @Test

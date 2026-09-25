@@ -15,6 +15,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.Colota.R
 import com.Colota.util.AppLogger
 
 // Notification-only shell; work stays in BackupServiceModule's coroutine to keep the password CharArray on heap.
@@ -62,10 +63,10 @@ class BackupForegroundService : Service() {
         }
 
         ensureChannel()
-        val message = intent.getStringExtra(EXTRA_MESSAGE) ?: "Working..."
+        val message = intent.getStringExtra(EXTRA_MESSAGE) ?: getString(R.string.backup_working)
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_save)
-            .setContentTitle("Colota Backup")
+            .setContentTitle(getString(R.string.backup_title))
             .setContentText(message)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -97,12 +98,11 @@ class BackupForegroundService : Service() {
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(CHANNEL_ID) != null) return
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Backup & Restore",
+            getString(R.string.channel_backup),
             NotificationManager.IMPORTANCE_LOW,
-        ).apply { description = "Shown while a backup or restore is in progress" }
+        ).apply { description = getString(R.string.channel_backup_description) }
         nm.createNotificationChannel(channel)
     }
 }
