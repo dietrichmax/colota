@@ -26,21 +26,25 @@ import { showAlert, showConfirm } from "../services/modalService"
 import { logger } from "../utils/logger"
 import { buildAppLog, buildExportHeader } from "../utils/logExport"
 import {
-  CAPTURE_HINT,
+  captureHint,
   deleteConfirmMessage,
   deleteSub,
   describeCapture,
-  LOG_CONTENTS_LINE,
+  logContentsLine,
   nextStepLine,
   previewRowSub
 } from "../utils/logCapture"
 import { LOG_SIZE_SETTLE_MS, space } from "../constants"
 import type { ScreenProps } from "../types/global"
+import { useTranslation } from "../i18n/useTranslation"
+// Handlers use the non-hook t, so no callback list carries it.
+import { t as translate } from "../i18n/t"
 
 type Busy = "save" | "delete" | null
 
 export function LoggingScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const settle = useTimeout()
 
   const [enabled, setEnabled] = useState(false)
@@ -78,7 +82,7 @@ export function LoggingScreen({ navigation }: ScreenProps) {
       } catch (err) {
         logger.error("[LoggingScreen] setFileLoggingEnabled failed:", err)
         setEnabled(!value)
-        showAlert("Could not change logging", "The setting was not saved. Try again.", "error")
+        showAlert(translate("logging.changeFailed.title"), translate("logging.changeFailed.message"), "error")
         return
       }
       // Native stamps the start and the first lines land off-thread, so read once it settles.
@@ -91,7 +95,13 @@ export function LoggingScreen({ navigation }: ScreenProps) {
 
   const handleSave = useCallback(async () => {
     if (busyRef.current) return
-    if (!(await showConfirm({ title: "Save the log file?", message: LOG_CONTENTS_LINE, confirmText: "Choose folder" })))
+    if (
+      !(await showConfirm({
+        title: translate("logging.save.title"),
+        message: logContentsLine(),
+        confirmText: translate("logging.save.confirm")
+      }))
+    )
       return
 
     const treeUri = await NativeLocationService.pickExportDirectory()
@@ -111,13 +121,17 @@ export function LoggingScreen({ navigation }: ScreenProps) {
       const header = buildExportHeader(buildConfig, deviceInfo, startedAt, Date.now())
       const written = await NativeLocationService.exportFileLogToUri(treeUri, header, buildAppLog())
       if (written) {
-        showAlert("Log saved", "The file is in the folder you chose. Attach it to your report.", "success")
+        showAlert(translate("logging.saved.title"), translate("logging.saved.message"), "success")
       } else {
-        showAlert("Nothing to save", "There are no recorded log entries yet.", "info")
+        showAlert(translate("logging.nothing.title"), translate("logging.nothing.message"), "info")
       }
     } catch (err) {
       logger.error("[LoggingScreen] save failed:", err)
-      showAlert("Could not save the log", err instanceof Error ? err.message : "Pick a different folder.", "error")
+      showAlert(
+        translate("logging.saveFailed.title"),
+        err instanceof Error ? err.message : translate("logging.saveFailed.message"),
+        "error"
+      )
     } finally {
       busyRef.current = false
       setBusy(null)
@@ -128,9 +142,9 @@ export function LoggingScreen({ navigation }: ScreenProps) {
     if (busyRef.current) return
     if (
       !(await showConfirm({
-        title: "Delete the log file?",
+        title: translate("logging.delete.title"),
         message: deleteConfirmMessage(bytes),
-        confirmText: "Delete",
+        confirmText: translate("common.delete"),
         destructive: true
       }))
     ) {
@@ -143,7 +157,7 @@ export function LoggingScreen({ navigation }: ScreenProps) {
       await read()
     } catch (err) {
       logger.error("[LoggingScreen] clearFileLog failed:", err)
-      showAlert("Could not delete the log", "The file is still there. Try again.", "error")
+      showAlert(translate("logging.deleteFailed.title"), translate("logging.deleteFailed.message"), "error")
     } finally {
       busyRef.current = false
       setBusy(null)
@@ -167,9 +181,9 @@ export function LoggingScreen({ navigation }: ScreenProps) {
                   testID="capture-state"
                 />
                 <Divider tight />
-                <SettingRow label="Record a log file" hint={CAPTURE_HINT}>
+                <SettingRow label={t("logging.record")} hint={captureHint()}>
                   <Toggle
-                    accessibilityLabel="Record a log file"
+                    accessibilityLabel={t("logging.record")}
                     value={enabled}
                     onValueChange={handleToggle}
                     testID="file-logging-toggle"
@@ -178,7 +192,7 @@ export function LoggingScreen({ navigation }: ScreenProps) {
                 <Divider tight />
                 <ListItem
                   icon={FileSearch}
-                  label="Read the log"
+                  label={t("logging.read")}
                   sub={previewRowSub(enabled)}
                   subLines={2}
                   onPress={() => navigation.navigate("Log Preview")}
@@ -190,15 +204,15 @@ export function LoggingScreen({ navigation }: ScreenProps) {
 
             {bytes > 0 ? (
               <View style={styles.section}>
-                <SectionTitle>The log file</SectionTitle>
+                <SectionTitle>{t("logging.section.file")}</SectionTitle>
                 <Card rows>
                   <ListItem
                     testID="save-log-row"
                     icon={FileText}
                     trailingIcon={busy === "save" ? SpinningLoader : Upload}
-                    label="Save log file"
-                    sub={busy === "save" ? "Saving…" : "To a folder you pick"}
-                    accessibilityHint="Asks you to confirm, then saves the file"
+                    label={t("logging.saveRow")}
+                    sub={busy === "save" ? t("logging.saving") : t("logging.saveRow.sub")}
+                    accessibilityHint={t("logging.saveRow.hint")}
                     disabled={busy === "save" ? false : busy !== null}
                     onPress={handleSave}
                   />
@@ -207,10 +221,10 @@ export function LoggingScreen({ navigation }: ScreenProps) {
                     testID="delete-log-row"
                     icon={FileX}
                     trailingIcon={busy === "delete" ? SpinningLoader : Trash2}
-                    label="Delete the log file"
-                    sub={busy === "delete" ? "Deleting…" : deleteSub(bytes, enabled)}
+                    label={t("logging.deleteRow")}
+                    sub={busy === "delete" ? t("logging.deleting") : deleteSub(bytes, enabled)}
                     subLines={2}
-                    accessibilityHint="Asks you to confirm, then deletes"
+                    accessibilityHint={t("data.confirmThenDelete")}
                     disabled={busy === "delete" ? false : busy !== null}
                     onPress={handleDelete}
                   />

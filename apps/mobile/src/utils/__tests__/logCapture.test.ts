@@ -1,6 +1,6 @@
 import type { MergedLogEntry } from "../logExport"
 import {
-  CAPTURE_HINT,
+  captureHint,
   countByFloor,
   DEFAULT_LOG_FLOOR,
   deleteSub,
@@ -8,7 +8,7 @@ import {
   floorOptions,
   levelLetter,
   levelWord,
-  LOG_CONTENTS_LINE,
+  logContentsLine,
   logTime,
   nextStepLine,
   passesFloor,
@@ -64,7 +64,7 @@ describe("the wording a reporter acts on", () => {
   })
 
   it("says logging survives a restart, which is the fact reporters get wrong", () => {
-    expect(CAPTURE_HINT).toContain("restarts included")
+    expect(captureHint()).toContain("restarts included")
   })
 
   /**
@@ -74,11 +74,11 @@ describe("the wording a reporter acts on", () => {
    * echoes the payload it refused puts them in the file anyway.
    */
   it("names what leaves the device, and stops short of promising an absence", () => {
-    expect(LOG_CONTENTS_LINE).toContain("geofences")
-    expect(LOG_CONTENTS_LINE).toContain("tracking profiles")
-    expect(LOG_CONTENTS_LINE).toContain("server host")
-    expect(LOG_CONTENTS_LINE).toContain("Colota writes no coordinates")
-    expect(LOG_CONTENTS_LINE).toMatch(/rejected upload can carry your server/)
+    expect(logContentsLine()).toContain("geofences")
+    expect(logContentsLine()).toContain("tracking profiles")
+    expect(logContentsLine()).toContain("server host")
+    expect(logContentsLine()).toContain("Colota writes no coordinates")
+    expect(logContentsLine()).toMatch(/rejected upload can carry your server/)
   })
 
   it("says the capture continues after a delete, only when it does", () => {

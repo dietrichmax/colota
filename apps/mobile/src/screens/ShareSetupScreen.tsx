@@ -16,11 +16,15 @@ import { logger } from "../utils/logger"
 import { buildSetupConfig, buildSetupLink, type SetupShareParts, type SetupShareSelection } from "../utils/setupLink"
 import { DEFAULT_AUTH_CONFIG, type AuthConfig, type Geofence, type TrackingProfile } from "../types/global"
 import { size, space } from "../constants"
+import { useTranslation } from "../i18n/useTranslation"
+// Handlers and memos use the non-hook t, so no dependency list carries it.
+import { t as translate } from "../i18n/t"
 
 type ShareCategory = keyof SetupShareSelection
 
 export function ShareSetupScreen() {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { settings } = useTracking()
 
   const [auth, setAuth] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG)
@@ -73,12 +77,12 @@ export function ShareSetupScreen() {
   const credentialFields = useMemo(() => {
     const fields: string[] = []
     if (auth.authType === "basic") {
-      if (auth.username) fields.push("username")
-      if (auth.password) fields.push("password")
+      if (auth.username) fields.push(translate("share.cred.username"))
+      if (auth.password) fields.push(translate("share.cred.password"))
     } else if (auth.authType === "bearer") {
-      if (auth.bearerToken) fields.push("bearer token")
+      if (auth.bearerToken) fields.push(translate("share.cred.token"))
     }
-    if (Object.keys(auth.customHeaders).length > 0) fields.push("custom headers")
+    if (Object.keys(auth.customHeaders).length > 0) fields.push(translate("share.cred.headers"))
     return fields
   }, [auth])
 
@@ -92,30 +96,36 @@ export function ShareSetupScreen() {
       await Share.share({ message: buildSetupLink(parts, selection) })
     } catch (err) {
       logger.error("[ShareSetup] Failed to share setup:", err)
-      showAlert("Error", "Failed to share setup.", "error")
+      showAlert(translate("common.error"), translate("share.failed"), "error")
     }
   }, [parts, selection, isEmpty])
 
   const rows: { key: ShareCategory; label: string; sub: string; disabled?: boolean }[] = [
-    { key: "tracking", label: "Tracking", sub: "GPS interval, distance and accuracy filter" },
-    { key: "sync", label: "Sync", sub: "Sync interval, conditions and offline mode" },
-    { key: "api", label: "API", sub: "Endpoint, template and field mapping" },
+    { key: "tracking", label: t("share.tracking"), sub: t("share.tracking.sub") },
+    { key: "sync", label: t("share.sync"), sub: t("share.sync.sub") },
+    { key: "api", label: t("share.api"), sub: t("share.api.sub") },
     {
       key: "geofences",
-      label: "Geofences",
-      sub: geofences.length > 0 ? `${geofences.length} zone${geofences.length === 1 ? "" : "s"}` : "None saved",
+      label: t("share.geofences"),
+      sub:
+        geofences.length > 0
+          ? t("share.zones", { count: geofences.length, n: geofences.length })
+          : t("share.noneSaved"),
       disabled: geofences.length === 0
     },
     {
       key: "profiles",
-      label: "Tracking profiles",
-      sub: profiles.length > 0 ? `${profiles.length} profile${profiles.length === 1 ? "" : "s"}` : "None saved",
+      label: t("share.profilesRow"),
+      sub:
+        profiles.length > 0
+          ? t("share.profiles", { count: profiles.length, n: profiles.length })
+          : t("share.noneSaved"),
       disabled: profiles.length === 0
     },
     {
       key: "credentials",
-      label: "Credentials",
-      sub: hasCredentials ? "Authentication secrets - included only if checked" : "None configured",
+      label: t("share.credentials"),
+      sub: hasCredentials ? t("share.credentials.sub") : t("share.noneConfigured"),
       disabled: !hasCredentials
     }
   ]
@@ -123,13 +133,10 @@ export function ShareSetupScreen() {
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.intro, { color: colors.textSecondary }]}>
-          Choose what to bundle into a setup link, then share it. The recipient opens it to apply the same
-          configuration.
-        </Text>
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>{t("share.intro")}</Text>
 
         <View style={styles.section}>
-          <SectionTitle>Include</SectionTitle>
+          <SectionTitle>{t("share.include")}</SectionTitle>
           <Card rows>
             {rows.map((row, i) => (
               <React.Fragment key={row.key}>
@@ -154,8 +161,7 @@ export function ShareSetupScreen() {
               <View style={styles.headerRow}>
                 <TriangleAlert size={size.icon.md} color={colors.error} />
                 <Text style={[styles.warningText, { color: colors.text }]}>
-                  This link will contain your {credentialFields.join(", ")} in plain text. Anyone who sees the link can
-                  read them - only share it over a trusted channel.
+                  {t("share.warning", { fields: credentialFields.join(", ") })}
                 </Text>
               </View>
             </Card>
@@ -163,12 +169,8 @@ export function ShareSetupScreen() {
         )}
 
         <View style={styles.actions}>
-          <Button title="Share" onPress={handleShare} variant="primary" icon={Share2} disabled={isEmpty} />
-          {isEmpty && (
-            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-              Select at least one category to share.
-            </Text>
-          )}
+          <Button title={t("share.share")} onPress={handleShare} variant="primary" icon={Share2} disabled={isEmpty} />
+          {isEmpty && <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>{t("share.empty")}</Text>}
         </View>
       </ScrollView>
     </Container>

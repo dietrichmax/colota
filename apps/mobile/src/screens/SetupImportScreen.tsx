@@ -34,9 +34,13 @@ import {
 } from "../utils/setupConfig"
 import { decodeConfig } from "../utils/setupLink"
 import { space } from "../constants"
+import { useTranslation } from "../i18n/useTranslation"
+// Handlers and the parse memo use the non-hook t, so no dependency list carries it.
+import { t as translate } from "../i18n/t"
 
 export function SetupImportScreen({ route, navigation }: any) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const { settings: currentSettings, setSettings } = useTracking()
   const [applying, setApplying] = useState(false)
   const [replaceByName, setReplaceByName] = useState(false)
@@ -49,7 +53,7 @@ export function SetupImportScreen({ route, navigation }: any) {
           valid: false,
           config: { settings: {}, auth: null, geofences: [], profiles: [] },
           entries: [],
-          error: "No configuration data in URL"
+          error: translate("setup.err.noData")
         } as ValidationResult
       }
 
@@ -60,7 +64,7 @@ export function SetupImportScreen({ route, navigation }: any) {
         valid: false,
         config: { settings: {}, auth: null, geofences: [], profiles: [] },
         entries: [],
-        error: "Invalid configuration data. The URL may be malformed."
+        error: translate("setup.err.malformed")
       } as ValidationResult
     }
   }, [route.params?.config])
@@ -131,11 +135,11 @@ export function SetupImportScreen({ route, navigation }: any) {
         }
       }
 
-      showAlert("Configuration Applied", "Settings have been updated successfully.", "success")
+      showAlert(translate("setup.applied.title"), translate("setup.applied.message"), "success")
       navigation.navigate("Dashboard")
     } catch (e) {
       logger.error("[SetupImport] Failed to apply config:", e)
-      showAlert("Error", "Failed to apply configuration. Please try again.", "error")
+      showAlert(translate("common.error"), translate("setup.applyFailed"), "error")
     } finally {
       setApplying(false)
     }
@@ -147,10 +151,12 @@ export function SetupImportScreen({ route, navigation }: any) {
     const currentHost = current && current !== entry.value ? (setupEndpointHost(current) ?? current) : null
     return (
       <View style={styles.endpoint}>
-        <Text style={[styles.endpointLabel, { color: colors.textSecondary }]}>Sends locations to</Text>
+        <Text style={[styles.endpointLabel, { color: colors.textSecondary }]}>{t("setup.sendsTo")}</Text>
         <Text style={[styles.endpointHost, { color: colors.text }]}>{setupEndpointHost(entry.value)}</Text>
         <Text style={[type.mono, { color: colors.textSecondary }]}>{entry.value}</Text>
-        {currentHost && <FieldMessage variant="warning">Replaces your current server, {currentHost}</FieldMessage>}
+        {currentHost && (
+          <FieldMessage variant="warning">{t("setup.replacesServer", { host: currentHost })}</FieldMessage>
+        )}
       </View>
     )
   }
@@ -162,9 +168,9 @@ export function SetupImportScreen({ route, navigation }: any) {
         <SectionTitle>{title}</SectionTitle>
         <Card>
           {entries.map((entry, i) => (
-            <React.Fragment key={entry.label}>
+            <React.Fragment key={`${entry.field}:${entry.label}`}>
               {i > 0 && <Divider tight />}
-              {entry.label === "Endpoint" ? renderEndpoint(entry) : <StatRow label={entry.label} value={entry.value} />}
+              {entry.field === "endpoint" ? renderEndpoint(entry) : <StatRow label={entry.label} value={entry.value} />}
             </React.Fragment>
           ))}
         </Card>
@@ -174,10 +180,10 @@ export function SetupImportScreen({ route, navigation }: any) {
 
   const replaceLabel =
     geofenceEntries.length > 0 && profileEntries.length > 0
-      ? "Replace zones and profiles with the same name"
+      ? t("setup.replace.both")
       : profileEntries.length > 0
-        ? "Replace profiles with the same name"
-        : "Replace zones with the same name"
+        ? t("setup.replace.profiles")
+        : t("setup.replace.zones")
 
   const handleCancel = () => {
     navigation.navigate("Dashboard")
@@ -188,8 +194,8 @@ export function SetupImportScreen({ route, navigation }: any) {
     return (
       <Container>
         <ScrollView contentContainerStyle={styles.content}>
-          <EmptyState icon={CircleAlert} title="Invalid configuration" hint={result.error} />
-          <Button title="Go back" onPress={handleCancel} variant="primary" />
+          <EmptyState icon={CircleAlert} title={t("setup.invalid")} hint={result.error} />
+          <Button title={t("setup.goBack")} onPress={handleCancel} variant="primary" />
         </ScrollView>
       </Container>
     )
@@ -200,20 +206,19 @@ export function SetupImportScreen({ route, navigation }: any) {
     <Container>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          A setup link wants to apply {result.entries.length} setting{result.entries.length !== 1 ? "s" : ""}. Apply it
-          only if you trust where it came from.
+          {t("setup.intro", { count: result.entries.length, n: result.entries.length })}
         </Text>
 
-        {renderSection("Tracking", trackingEntries)}
-        {renderSection("API", apiEntries)}
-        {renderSection("Authentication", authEntries)}
-        {renderSection("Geofences", geofenceEntries)}
-        {renderSection("Tracking profiles", profileEntries)}
+        {renderSection(t("setup.section.tracking"), trackingEntries)}
+        {renderSection(t("setup.section.api"), apiEntries)}
+        {renderSection(t("setup.section.auth"), authEntries)}
+        {renderSection(t("setup.section.geofences"), geofenceEntries)}
+        {renderSection(t("setup.section.profiles"), profileEntries)}
 
         {(geofenceEntries.length > 0 || profileEntries.length > 0) && (
           <View style={styles.section}>
             <Card rows>
-              <SettingRow label={replaceLabel} hint="Off: imports are added as new entries">
+              <SettingRow label={replaceLabel} hint={t("setup.replace.hint")}>
                 <Toggle
                   accessibilityLabel={replaceLabel}
                   testID="replace-imports-switch"
@@ -227,14 +232,14 @@ export function SetupImportScreen({ route, navigation }: any) {
 
         <View style={styles.actions}>
           <Button
-            title="Apply configuration"
+            title={t("setup.apply")}
             onPress={handleApply}
             variant="primary"
             icon={Check}
             loading={applying}
             disabled={applying}
           />
-          <Button title="Cancel" onPress={handleCancel} variant="ghost" />
+          <Button title={t("common.cancel")} onPress={handleCancel} variant="ghost" />
         </View>
       </ScrollView>
     </Container>

@@ -11,6 +11,7 @@ import { fontSizes, type } from "../../styles/typography"
 import { space } from "../../constants"
 
 import { Button } from "./Button"
+import { t } from "../../i18n/t"
 
 interface ErrorBoundaryInternalProps {
   children: React.ReactNode
@@ -46,11 +47,11 @@ class ErrorBoundaryInternal extends Component<ErrorBoundaryInternalProps, ErrorB
     if (this.state.hasError) {
       return (
         <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
-          <Text style={[styles.errorTitle, { color: colors.text }]}>Something went wrong</Text>
+          <Text style={[styles.errorTitle, { color: colors.text }]}>{t("error.title")}</Text>
           <Text style={[styles.errorMessage, { color: colors.textSecondary }]}>
-            {this.state.error?.message || "An unexpected error occurred"}
+            {this.state.error?.message || t("error.unexpected")}
           </Text>
-          <Button title="Try again" onPress={this.handleReset} />
+          <Button title={t("error.retry")} onPress={this.handleReset} />
         </View>
       )
     }

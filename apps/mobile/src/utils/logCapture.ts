@@ -9,6 +9,7 @@ import type { LogLevel } from "./logger"
 import type { MergedLogEntry } from "./logExport"
 import { formatBytes } from "./format"
 import { formatTimeIn } from "./geo"
+import { t } from "../i18n/t"
 
 /**
  * What a log capture is worth handing over, in the words the screen prints.
@@ -29,10 +30,9 @@ export const DEFAULT_LOG_FLOOR: LogFloor = "all"
  * that echoes the payload it refused puts coordinates in the file through the back door. An
  * absolute "holds no coordinates" would be false exactly when it mattered.
  */
-export const LOG_CONTENTS_LINE =
-  "The file names your geofences, your tracking profiles and your server host. Colota writes no coordinates into it, but a rejected upload can carry your server's reply. Read it before you attach it."
+export const logContentsLine = () => t("log.contents")
 
-export const CAPTURE_HINT = "Keeps writing until you switch it off, restarts included."
+export const captureHint = () => t("log.captureHint")
 
 export interface CaptureState {
   icon: LucideIcon
@@ -48,20 +48,24 @@ export interface CaptureState {
 export function describeCapture(enabled: boolean, bytes: number, startedAtMs: number): CaptureState {
   if (enabled) {
     if (bytes === 0) {
-      return { icon: FileClock, tone: "recording", label: "Recording", caption: "Nothing written yet" }
+      return { icon: FileClock, tone: "recording", label: t("log.recording"), caption: t("log.nothingWritten") }
     }
-    const since = startedAtMs > 0 ? ` since ${formatTimeIn(Math.floor(startedAtMs / 1000), "24h", false)}` : " written"
-    return { icon: FileClock, tone: "recording", label: "Recording", caption: `${formatBytes(bytes)}${since}` }
+    const size = formatBytes(bytes)
+    const caption =
+      startedAtMs > 0
+        ? t("log.since", { size, time: formatTimeIn(Math.floor(startedAtMs / 1000), "24h", false) })
+        : t("log.written", { size })
+    return { icon: FileClock, tone: "recording", label: t("log.recording"), caption }
   }
   if (bytes > 0) {
     return {
       icon: FileText,
       tone: "idle",
-      label: "Not recording",
-      caption: `${formatBytes(bytes)} kept from an earlier capture`
+      label: t("log.notRecording"),
+      caption: t("log.kept", { size: formatBytes(bytes) })
     }
   }
-  return { icon: FileX, tone: "idle", label: "Not recording", caption: "No log file on this device" }
+  return { icon: FileX, tone: "idle", label: t("log.notRecording"), caption: t("log.noFile") }
 }
 
 /**
@@ -69,23 +73,20 @@ export function describeCapture(enabled: boolean, bytes: number, startedAtMs: nu
  * bridge decides and nothing has ever said out loud.
  */
 export function previewRowSub(enabled: boolean): string {
-  return enabled ? "The log file's most recent lines" : "The system log's last few minutes"
+  return enabled ? t("log.preview.file") : t("log.preview.system")
 }
 
 /** The step that is missing from every bug report: leave it on while you reproduce the problem. */
 export function nextStepLine(enabled: boolean): string {
-  return enabled
-    ? "Nothing written yet. Leave this on while you reproduce the problem, then come back and save the file."
-    : "Switch on Record a log file, reproduce the problem, then come back and save the file."
+  return enabled ? t("log.next.on") : t("log.next.off")
 }
 
 export function deleteSub(bytes: number, enabled: boolean): string {
-  const carries = enabled ? " Recording carries on into a new file." : ""
-  return `Removes ${formatBytes(bytes)}.${carries}`
+  return t(enabled ? "log.delete.subCarries" : "log.delete.sub", { size: formatBytes(bytes) })
 }
 
 export function deleteConfirmMessage(bytes: number): string {
-  return `Deletes ${formatBytes(bytes)} of recorded log. Anything you have not saved is gone for good.`
+  return t("log.delete.confirm", { size: formatBytes(bytes) })
 }
 
 /**
@@ -93,10 +94,9 @@ export function deleteConfirmMessage(bytes: number): string {
  * Never called with no lines at all: the empty state owns that screen, head and count included.
  */
 export function resultLine(shown: number, total: number, fromFile: boolean): string {
-  const source = fromFile ? "log file" : "system log"
-  const noun = total === 1 ? "line" : "lines"
-  if (shown === total) return `${total.toLocaleString()} ${noun} from the ${source}`
-  return `${shown.toLocaleString()} of ${total.toLocaleString()} ${noun} from the ${source}`
+  const n = total.toLocaleString()
+  if (shown === total) return t(fromFile ? "log.result.file" : "log.result.system", { count: total, n })
+  return t(fromFile ? "log.resultOf.file" : "log.resultOf.system", { count: total, n, shown: shown.toLocaleString() })
 }
 
 const FLOOR_RANK: Record<LogFloor, number> = { all: 0, info: 1, warn: 2, error: 3 }
@@ -126,10 +126,10 @@ export function floorOptions(
   counts: Record<LogFloor, number>
 ): readonly { value: LogFloor; label: string; testID: string }[] {
   return [
-    { value: "all", label: `All ${counts.all.toLocaleString()}`, testID: "floor-all" },
-    { value: "info", label: `Info ${counts.info.toLocaleString()}`, testID: "floor-info" },
-    { value: "warn", label: `Warnings ${counts.warn.toLocaleString()}`, testID: "floor-warn" },
-    { value: "error", label: `Errors ${counts.error.toLocaleString()}`, testID: "floor-error" }
+    { value: "all", label: t("log.floor.all", { n: counts.all.toLocaleString() }), testID: "floor-all" },
+    { value: "info", label: t("log.floor.info", { n: counts.info.toLocaleString() }), testID: "floor-info" },
+    { value: "warn", label: t("log.floor.warn", { n: counts.warn.toLocaleString() }), testID: "floor-warn" },
+    { value: "error", label: t("log.floor.error", { n: counts.error.toLocaleString() }), testID: "floor-error" }
   ]
 }
 
@@ -147,7 +147,7 @@ export function levelLetter(level: LogLevel): string {
 }
 
 export function levelWord(level: LogLevel): string {
-  return level.charAt(0) + level.slice(1).toLowerCase()
+  return t(`log.level.${level}`)
 }
 
 /** One node per line for TalkBack, rather than one node holding three thousand lines. */

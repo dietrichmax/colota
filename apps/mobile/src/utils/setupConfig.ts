@@ -22,6 +22,7 @@ import {
   type ProfileConditionType,
   type AuthType
 } from "../types/global"
+import { t } from "../i18n/t"
 
 export type ImportGeofence = Omit<Geofence, "id" | "createdAt">
 export type ImportProfile = Omit<TrackingProfile, "id" | "createdAt">
@@ -34,6 +35,8 @@ export interface ParsedConfig {
 }
 
 export interface ConfigEntry {
+  /** A stable id; `label` is display text and translates, so never compare it. */
+  field: string
   label: string
   value: string
   category: "tracking" | "api" | "auth" | "geofence" | "profile"
@@ -80,7 +83,7 @@ export function validateConfig(raw: unknown): ValidationResult {
       valid: false,
       config: { settings: {}, auth: null, geofences: [], profiles: [] },
       entries: [],
-      error: "Invalid configuration format"
+      error: t("setup.err.format")
     }
   }
 
@@ -93,9 +96,9 @@ export function validateConfig(raw: unknown): ValidationResult {
 
   if ("endpoint" in obj && typeof obj.endpoint === "string" && obj.endpoint.length > 0) {
     const rejection = !isEndpointAllowed(obj.endpoint)
-      ? "HTTP not allowed for public hosts"
+      ? t("setup.err.publicHttp")
       : setupEndpointHost(obj.endpoint) === null
-        ? "The server address must be a plain host, without user@ or a backslash"
+        ? t("setup.err.host")
         : null
     // A link is written by someone else, so one rejected address rejects all of it rather than applying the rest.
     if (rejection) {
@@ -103,66 +106,98 @@ export function validateConfig(raw: unknown): ValidationResult {
         valid: false,
         config: { settings: {}, auth: null, geofences: [], profiles: [] },
         entries: [],
-        error: `${rejection}. Nothing from this link will be applied.`
+        error: t("setup.err.rejected", { reason: rejection })
       }
     }
     settings.endpoint = obj.endpoint
-    entries.push({ label: "Endpoint", value: obj.endpoint, category: "api" })
+    entries.push({ field: "endpoint", label: t("setup.field.endpoint"), value: obj.endpoint, category: "api" })
   }
 
   // --- Tracking settings ---
 
   if ("interval" in obj && typeof obj.interval === "number" && obj.interval > 0) {
     settings.interval = obj.interval
-    entries.push({ label: "Interval", value: `${obj.interval}s`, category: "tracking" })
+    entries.push({
+      field: "interval",
+      label: t("setup.field.interval"),
+      value: `${obj.interval}${t("unit.s")}`,
+      category: "tracking"
+    })
   }
 
   if ("distance" in obj && typeof obj.distance === "number" && obj.distance >= 0) {
     settings.distance = obj.distance
-    entries.push({ label: "Distance threshold", value: `${obj.distance}m`, category: "tracking" })
+    entries.push({
+      field: "distanceThreshold",
+      label: t("setup.field.distanceThreshold"),
+      value: `${obj.distance}m`,
+      category: "tracking"
+    })
   }
 
   if ("syncInterval" in obj && typeof obj.syncInterval === "number" && obj.syncInterval >= 0) {
     settings.syncInterval = obj.syncInterval
     entries.push({
-      label: "Sync interval",
-      value: obj.syncInterval === 0 ? "Instant" : `${obj.syncInterval}s`,
+      field: "syncInterval",
+      label: t("setup.field.syncInterval"),
+      value: obj.syncInterval === 0 ? t("syncInterval.instant") : `${obj.syncInterval}${t("unit.s")}`,
       category: "tracking"
     })
   }
 
   if ("retryInterval" in obj && typeof obj.retryInterval === "number" && obj.retryInterval >= 0) {
     settings.retryInterval = obj.retryInterval
-    entries.push({ label: "Retry interval", value: `${obj.retryInterval}s`, category: "tracking" })
+    entries.push({
+      field: "retryInterval",
+      label: t("setup.field.retryInterval"),
+      value: `${obj.retryInterval}${t("unit.s")}`,
+      category: "tracking"
+    })
   }
 
   if ("accuracyThreshold" in obj && typeof obj.accuracyThreshold === "number" && obj.accuracyThreshold > 0) {
     settings.accuracyThreshold = obj.accuracyThreshold
-    entries.push({ label: "Accuracy threshold", value: `${obj.accuracyThreshold}m`, category: "tracking" })
+    entries.push({
+      field: "accuracyThreshold",
+      label: t("setup.field.accuracyThreshold"),
+      value: `${obj.accuracyThreshold}m`,
+      category: "tracking"
+    })
   }
 
   if ("filterInaccurateLocations" in obj && typeof obj.filterInaccurateLocations === "boolean") {
     settings.filterInaccurateLocations = obj.filterInaccurateLocations
     entries.push({
-      label: "Filter inaccurate",
-      value: obj.filterInaccurateLocations ? "Yes" : "No",
+      field: "filterInaccurate",
+      label: t("setup.field.filterInaccurate"),
+      value: obj.filterInaccurateLocations ? t("common.yes") : t("common.no"),
       category: "tracking"
     })
   }
 
   if ("isOfflineMode" in obj && typeof obj.isOfflineMode === "boolean") {
     settings.isOfflineMode = obj.isOfflineMode
-    entries.push({ label: "Offline mode", value: obj.isOfflineMode ? "Yes" : "No", category: "tracking" })
+    entries.push({
+      field: "offlineMode",
+      label: t("setup.field.offlineMode"),
+      value: obj.isOfflineMode ? t("common.yes") : t("common.no"),
+      category: "tracking"
+    })
   }
 
   if ("syncCondition" in obj && typeof obj.syncCondition === "string") {
     settings.syncCondition = obj.syncCondition as any
-    entries.push({ label: "Sync condition", value: obj.syncCondition, category: "tracking" })
+    entries.push({
+      field: "syncCondition",
+      label: t("setup.field.syncCondition"),
+      value: obj.syncCondition,
+      category: "tracking"
+    })
   }
 
   if ("syncSsid" in obj && typeof obj.syncSsid === "string") {
     settings.syncSsid = obj.syncSsid
-    entries.push({ label: "Sync SSID", value: obj.syncSsid, category: "tracking" })
+    entries.push({ field: "syncSSID", label: t("setup.field.syncSSID"), value: obj.syncSsid, category: "tracking" })
   }
 
   // --- API settings ---
@@ -173,7 +208,7 @@ export function validateConfig(raw: unknown): ValidationResult {
     VALID_API_TEMPLATES.includes(obj.apiTemplate as ApiTemplateName)
   ) {
     settings.apiTemplate = obj.apiTemplate as ApiTemplateName
-    entries.push({ label: "API template", value: obj.apiTemplate, category: "api" })
+    entries.push({ field: "apiTemplate", label: t("setup.field.apiTemplate"), value: obj.apiTemplate, category: "api" })
   }
 
   if (
@@ -182,7 +217,7 @@ export function validateConfig(raw: unknown): ValidationResult {
     VALID_HTTP_METHODS.includes(obj.httpMethod as HttpMethod)
   ) {
     settings.httpMethod = obj.httpMethod as HttpMethod
-    entries.push({ label: "HTTP method", value: obj.httpMethod, category: "api" })
+    entries.push({ field: "httpMethod", label: t("setup.field.httpMethod"), value: obj.httpMethod, category: "api" })
   }
 
   if (
@@ -191,7 +226,12 @@ export function validateConfig(raw: unknown): ValidationResult {
     VALID_DAWARICH_MODES.includes(obj.dawarichMode as DawarichMode)
   ) {
     settings.dawarichMode = obj.dawarichMode as DawarichMode
-    entries.push({ label: "Dawarich mode", value: obj.dawarichMode, category: "api" })
+    entries.push({
+      field: "dawarichMode",
+      label: t("setup.field.dawarichMode"),
+      value: obj.dawarichMode,
+      category: "api"
+    })
   }
 
   if (
@@ -201,7 +241,12 @@ export function validateConfig(raw: unknown): ValidationResult {
     obj.overlandBatchSize <= OVERLAND_BATCH_MAX
   ) {
     settings.overlandBatchSize = Math.floor(obj.overlandBatchSize)
-    entries.push({ label: "Overland batch size", value: String(settings.overlandBatchSize), category: "api" })
+    entries.push({
+      field: "overlandBatchSize",
+      label: t("setup.field.overlandBatchSize"),
+      value: String(settings.overlandBatchSize),
+      category: "api"
+    })
   }
 
   if ("fieldMap" in obj && typeof obj.fieldMap === "object" && obj.fieldMap !== null) {
@@ -216,7 +261,12 @@ export function validateConfig(raw: unknown): ValidationResult {
     }
     if (hasValid) {
       settings.fieldMap = validFieldMap as FieldMap
-      entries.push({ label: "Field mapping", value: `${Object.keys(validFieldMap).length} fields`, category: "api" })
+      entries.push({
+        field: "fieldMapping",
+        label: t("setup.field.fieldMapping"),
+        value: t("setup.fields", { count: Object.keys(validFieldMap).length, n: Object.keys(validFieldMap).length }),
+        category: "api"
+      })
     }
   }
 
@@ -226,7 +276,12 @@ export function validateConfig(raw: unknown): ValidationResult {
     )
     if (validFields.length > 0) {
       settings.customFields = validFields
-      entries.push({ label: "Custom fields", value: `${validFields.length} fields`, category: "api" })
+      entries.push({
+        field: "customFields",
+        label: t("setup.field.customFields"),
+        value: t("setup.fields", { count: validFields.length, n: validFields.length }),
+        category: "api"
+      })
     }
   }
 
@@ -238,17 +293,17 @@ export function validateConfig(raw: unknown): ValidationResult {
 
     if ("type" in authObj && typeof authObj.type === "string" && VALID_AUTH_TYPES.includes(authObj.type as AuthType)) {
       auth.authType = authObj.type as AuthType
-      entries.push({ label: "Auth type", value: authObj.type, category: "auth" })
+      entries.push({ field: "authType", label: t("setup.field.authType"), value: authObj.type, category: "auth" })
     }
 
     if ("username" in authObj && typeof authObj.username === "string" && authObj.username.length > 0) {
       auth.username = authObj.username
-      entries.push({ label: "Username", value: authObj.username, category: "auth" })
+      entries.push({ field: "username", label: t("setup.field.username"), value: authObj.username, category: "auth" })
     }
 
     if ("password" in authObj && typeof authObj.password === "string" && authObj.password.length > 0) {
       auth.password = authObj.password
-      entries.push({ label: "Password", value: "•".repeat(8), category: "auth" })
+      entries.push({ field: "password", label: t("setup.field.password"), value: "•".repeat(8), category: "auth" })
     }
 
     if ("bearerToken" in authObj && typeof authObj.bearerToken === "string" && authObj.bearerToken.length > 0) {
@@ -257,7 +312,7 @@ export function validateConfig(raw: unknown): ValidationResult {
         authObj.bearerToken.length > 8
           ? authObj.bearerToken.slice(0, 4) + "•".repeat(4) + authObj.bearerToken.slice(-4)
           : "•".repeat(authObj.bearerToken.length)
-      entries.push({ label: "Bearer token", value: masked, category: "auth" })
+      entries.push({ field: "bearerToken", label: t("setup.field.bearerToken"), value: masked, category: "auth" })
     }
 
     if (Object.keys(auth).length === 0) auth = null
@@ -274,7 +329,12 @@ export function validateConfig(raw: unknown): ValidationResult {
     if (Object.keys(validHeaders).length > 0) {
       if (!auth) auth = {}
       auth.customHeaders = validHeaders
-      entries.push({ label: "Custom headers", value: `${Object.keys(validHeaders).length} headers`, category: "auth" })
+      entries.push({
+        field: "customHeaders",
+        label: t("setup.field.customHeaders"),
+        value: t("setup.headers", { count: Object.keys(validHeaders).length, n: Object.keys(validHeaders).length }),
+        category: "auth"
+      })
     }
   }
 
@@ -309,7 +369,7 @@ export function validateConfig(raw: unknown): ValidationResult {
         heartbeatEnabled: typeof g.heartbeatEnabled === "boolean" ? g.heartbeatEnabled : false,
         heartbeatIntervalMinutes: typeof g.heartbeatIntervalMinutes === "number" ? g.heartbeatIntervalMinutes : 15
       })
-      entries.push({ label: g.name, value: `${g.radius}m`, category: "geofence" })
+      entries.push({ field: "geofence", label: g.name, value: `${g.radius}m`, category: "geofence" })
     }
   }
 
@@ -360,7 +420,7 @@ export function validateConfig(raw: unknown): ValidationResult {
         enabled: typeof p.enabled === "boolean" ? p.enabled : true,
         condition
       })
-      entries.push({ label: p.name, value: `${p.interval}s`, category: "profile" })
+      entries.push({ field: "profile", label: p.name, value: `${p.interval}${t("unit.s")}`, category: "profile" })
     }
   }
 
@@ -369,7 +429,7 @@ export function validateConfig(raw: unknown): ValidationResult {
       valid: false,
       config: { settings, auth, geofences, profiles },
       entries,
-      error: "No valid settings found in configuration"
+      error: t("setup.err.none")
     }
   }
 

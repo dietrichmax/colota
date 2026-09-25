@@ -41,6 +41,7 @@ import { fonts, fontSizes, lineHeights, type } from "../styles/typography"
 import { HIT_SLOP_MD, LOG_FILTER_DEBOUNCE_MS, size, space, STATE_LAYER_ALPHA } from "../constants"
 import { radius } from "@colota/shared"
 import type { ScreenProps } from "../types/global"
+import { useTranslation } from "../i18n/useTranslation"
 
 function levelColor(level: LogLevel, colors: ThemeColors): string {
   switch (level) {
@@ -72,6 +73,7 @@ function LogLine({ entry }: { entry: MergedLogEntry }) {
 
 export function LogPreviewScreen({ navigation }: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const debounce = useTimeout()
 
   const [entries, setEntries] = useState<MergedLogEntry[]>([])
@@ -114,13 +116,13 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
     () => (
       <HeaderAction
         icon={RefreshCw}
-        label="Refresh"
-        hint="Reads the log again"
+        label={t("preview.refresh")}
+        hint={t("preview.refresh.hint")}
         onPress={load}
         testID="refresh-log-btn"
       />
     ),
-    [load]
+    [load, t]
   )
 
   useLayoutEffect(() => {
@@ -174,7 +176,7 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
   if (entries.length === 0) {
     return (
       <Container>
-        <EmptyState icon={FileSearch} title="Nothing logged yet" hint="Lines appear as the app records and syncs." />
+        <EmptyState icon={FileSearch} title={t("preview.empty.title")} hint={t("preview.empty.hint")} />
       </Container>
     )
   }
@@ -186,8 +188,8 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
           <Search size={size.icon.sm} color={colors.textLight} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            accessibilityLabel="Search the log"
-            placeholder="Search the log"
+            accessibilityLabel={t("preview.search")}
+            placeholder={t("preview.search")}
             placeholderTextColor={colors.textLight}
             value={text}
             onChangeText={handleType}
@@ -198,7 +200,7 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
           {text.length > 0 ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Clear search"
+              accessibilityLabel={t("preview.clear")}
               hitSlop={HIT_SLOP_MD}
               android_ripple={{ color: colors.text + STATE_LAYER_ALPHA, borderless: true, radius: size.icon.md }}
               onPress={clear}
@@ -209,7 +211,7 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
           ) : null}
         </View>
 
-        <ChipGroup accessibilityLabel="Lowest level shown" options={options} selected={floor} onSelect={setFloor} />
+        <ChipGroup accessibilityLabel={t("preview.floor")} options={options} selected={floor} onSelect={setFloor} />
 
         <Text style={[styles.result, { color: colors.textSecondary }]} numberOfLines={1} testID="log-result-line">
           {resultLine(shown.length, entries.length, fromFile)}
@@ -218,7 +220,7 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
       <Divider tight />
 
       {shown.length === 0 ? (
-        <EmptyState icon={FileSearch} title="No lines match" hint="Try a different word, or lower the level." />
+        <EmptyState icon={FileSearch} title={t("preview.noMatch.title")} hint={t("preview.noMatch.hint")} />
       ) : (
         <View style={styles.listArea}>
           <FlatList
@@ -241,7 +243,7 @@ export function LogPreviewScreen({ navigation }: ScreenProps) {
               <MapActionButton
                 anchored={false}
                 accessibilityRole="button"
-                accessibilityLabel="Jump to the newest line"
+                accessibilityLabel={t("preview.jump")}
                 onPress={jumpToNewest}
                 testID="jump-to-newest-btn"
               >

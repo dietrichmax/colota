@@ -7,6 +7,7 @@ import { useState, useCallback } from "react"
 import { useTimeout } from "./useTimeout"
 import { AUTOSAVE_DEBOUNCE_MS, SAVE_SUCCESS_DISPLAY_MS } from "../constants"
 import { logger } from "../utils/logger"
+import { t } from "../i18n/t"
 
 /**
  * The debounced auto-save behind the settings screens.
@@ -35,10 +36,10 @@ export function useAutoSave() {
   const runRestart = useCallback(
     async (restartFn: () => Promise<boolean>) => {
       try {
-        if (await restartFn()) announce("Tracking restarted", false)
+        if (await restartFn()) announce(t("autoSave.restarted"), false)
       } catch (err) {
         logger.error("[useAutoSave] Restart failed:", err)
-        announce("Could not restart tracking", true)
+        announce(t("autoSave.restartFailed"), true)
       } finally {
         setSaving(false)
       }
@@ -59,7 +60,7 @@ export function useAutoSave() {
         } catch (err) {
           setSaving(false)
           logger.error("[useAutoSave] Save failed:", err)
-          announce("Could not save", true)
+          announce(t("autoSave.saveFailed"), true)
           return
         }
         // Restart immediately: the input was already debounced by saveTimeout.
@@ -86,7 +87,7 @@ export function useAutoSave() {
         .catch((err) => {
           setSaving(false)
           logger.error("[useAutoSave] Save failed:", err)
-          announce("Could not save", true)
+          announce(t("autoSave.saveFailed"), true)
         })
     },
     [saveTimeout, restartTimeout, runRestart, announce]

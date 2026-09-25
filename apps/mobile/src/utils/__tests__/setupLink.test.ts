@@ -90,6 +90,8 @@ describe("setupLink", () => {
     expect(result.config.settings.accuracyThreshold).toBe(50)
     expect(result.config.settings.syncInterval).toBe(0)
     expect(result.config.settings.endpoint).toBe("https://example.com/api")
+    // The import screen finds the endpoint by this id to give it its own block; the label translates.
+    expect(result.entries.find((e) => e.field === "endpoint")?.value).toBe("https://example.com/api")
     expect(result.config.settings.apiTemplate).toBe("custom")
     expect(result.config.settings.fieldMap).toEqual({ lat: "latitude" })
     // credentials map authType -> type and keep secrets + headers

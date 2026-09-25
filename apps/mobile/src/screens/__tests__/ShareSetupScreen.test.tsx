@@ -145,6 +145,15 @@ describe("ShareSetupScreen", () => {
     expect(config.auth).toBeUndefined() // credentials not toggled on
   })
 
+  it("counts a single saved zone and profile in the singular", async () => {
+    mockGetGeofences.mockResolvedValue([{ id: 1, name: "Home", lat: 1, lon: 1, radius: 50 }])
+    mockGetProfiles.mockResolvedValue([{ id: 2, name: "Driving" }])
+    const { findByText } = render(<ShareSetupScreen />)
+
+    expect(await findByText("1 zone")).toBeTruthy()
+    expect(await findByText("1 profile")).toBeTruthy()
+  })
+
   it("disables the credentials toggle when none are configured", async () => {
     const { getByTestId } = render(<ShareSetupScreen />)
     await waitFor(() => expect(mockGetAuthConfig).toHaveBeenCalled())

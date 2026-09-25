@@ -179,7 +179,12 @@ describe("SetupImportScreen", () => {
 
     it("parses custom headers", () => {
       const { getByText } = renderScreen(encode({ customHeaders: { "X-Api-Key": "secret" } }))
-      expect(getByText("1 headers")).toBeTruthy()
+      expect(getByText("1 header")).toBeTruthy()
+    })
+
+    it("counts a single mapped field in the singular", () => {
+      const { getByText } = renderScreen(encode({ fieldMap: { lat: "latitude" } }))
+      expect(getByText("1 field")).toBeTruthy()
     })
 
     it("rejects invalid interval (negative)", () => {
@@ -363,6 +368,13 @@ describe("SetupImportScreen", () => {
       const { getByText } = renderScreen(encode({ geofences: [validGeofence] }))
       expect(getByText("Geofences")).toBeTruthy()
       expect(getByText("Home")).toBeTruthy()
+      expect(getByText("100m")).toBeTruthy()
+    })
+
+    it("never shows a zone named Endpoint as the server, because the name is the link writer's text", () => {
+      const { getByText, queryByText } = renderScreen(encode({ geofences: [{ ...validGeofence, name: "Endpoint" }] }))
+      expect(queryByText("Sends locations to")).toBeNull()
+      expect(getByText("Endpoint")).toBeTruthy()
       expect(getByText("100m")).toBeTruthy()
     })
 

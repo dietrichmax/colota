@@ -11,6 +11,7 @@ import { SpinningLoader } from "./SpinningLoader"
 import { useTheme } from "../../hooks/useTheme"
 import { fontSizes, fonts } from "../../styles/typography"
 import { size, space, elevation } from "../../constants"
+import { useTranslation } from "../../i18n/useTranslation"
 
 interface Props {
   saving: boolean
@@ -41,7 +42,8 @@ export const FloatingSaveIndicator: React.FC<Props> = ({ saving, message, isErro
     }
   }, [visible, translateY, opacity])
 
-  const displayText = hasMessage ? message : "Saving..."
+  const { t } = useTranslation()
+  const displayText = hasMessage ? message : t("autoSave.saving")
 
   return (
     <Animated.View

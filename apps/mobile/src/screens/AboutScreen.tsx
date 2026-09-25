@@ -17,15 +17,18 @@ import { fonts, fontSizes, lineHeights, type } from "../styles/typography"
 import { PRIVACY_POLICY_URL, REPO_URL, space } from "../constants"
 import icon from "../assets/icons/icon.png"
 import type { ScreenProps } from "../types/global"
+import { useTranslation } from "../i18n/useTranslation"
+import { t as translate } from "../i18n/t"
 
 export function AboutScreen({}: ScreenProps) {
   const { colors } = useTheme()
+  const { t } = useTranslation()
   const build = NativeLocationService.getBuildConfig()
 
   const openURL = useCallback((url: string) => {
     Linking.openURL(url).catch((err) => {
       logger.error("[AboutScreen] Failed to open URL:", err)
-      showAlert("Error", "Could not open the link.", "error")
+      showAlert(translate("common.error"), translate("about.linkError"), "error")
     })
   }, [])
 
@@ -43,12 +46,12 @@ export function AboutScreen({}: ScreenProps) {
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Legal</SectionTitle>
+          <SectionTitle>{t("about.legal")}</SectionTitle>
           <Card rows>
             <ListItem
               testID="nav-privacy-policy"
               icon={FileText}
-              label="Privacy policy"
+              label={t("about.privacy")}
               sub="colota.app/privacy-policy"
               trailingIcon={ExternalLink}
               accessibilityRole="link"
@@ -58,7 +61,7 @@ export function AboutScreen({}: ScreenProps) {
             <ListItem
               testID="nav-license"
               icon={ScrollText}
-              label="License"
+              label={t("about.license")}
               sub="GNU AGPLv3"
               trailingIcon={ExternalLink}
               accessibilityRole="link"
@@ -68,17 +71,14 @@ export function AboutScreen({}: ScreenProps) {
             <ListItem
               testID="nav-source-code"
               icon={Code}
-              label="Source code"
+              label={t("about.source")}
               sub="github.com/dietrichmax/colota"
               trailingIcon={ExternalLink}
               accessibilityRole="link"
               onPress={() => openURL(REPO_URL)}
             />
           </Card>
-          <Text style={[styles.copyright, { color: colors.textLight }]}>
-            Copyright &copy; 2026 Max Dietrich and contributors. Colota is free software, with no warranty; the License
-            row above has the terms.
-          </Text>
+          <Text style={[styles.copyright, { color: colors.textLight }]}>{t("about.copyright")}</Text>
         </View>
       </ScrollView>
     </Container>
