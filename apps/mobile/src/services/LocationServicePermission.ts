@@ -3,10 +3,11 @@
  * Licensed under the GNU AGPLv3. See LICENSE in the project root for details.
  */
 
-import { Platform, PermissionsAndroid, Alert } from "react-native"
+import { Platform, PermissionsAndroid } from "react-native"
 import NativeLocationService from "./NativeLocationService"
 import { showAlert } from "./modalService"
 import { logger } from "../utils/logger"
+import { t } from "../i18n/t"
 
 /**
  * Permission status for location tracking
@@ -30,7 +31,7 @@ const ANDROID_LOCAL_NETWORK = 37
 
 /**
  * Callback registered by LocationDisclosureModal to show the themed disclosure.
- * Falls back to Alert.alert if no modal is registered (e.g. in tests).
+ * Without one nothing is requested: the reviewed disclosure is the only one Colota shows.
  */
 type DisclosureCallback = () => Promise<boolean>
 let _disclosureCallback: DisclosureCallback | null = null
@@ -69,7 +70,7 @@ export async function ensurePermissions(): Promise<boolean> {
     // Location grants only - including notifications here replays the disclosure on every start
     if (!status.location || !status.background) {
       // Prominent disclosure (required by Google Play User Data policy)
-      const consented = _disclosureCallback ? await _disclosureCallback() : await fallbackDisclosure()
+      const consented = _disclosureCallback ? await _disclosureCallback() : noDisclosure("location")
       if (!consented) return false
 
       // Fine location
@@ -97,26 +98,14 @@ export async function ensurePermissions(): Promise<boolean> {
     return true
   } catch (err) {
     logger.error("[PermissionService] Permission request error:", err)
-    showAlert("Permission Error", "Failed to request permissions. Please try again.", "error")
+    showAlert(t("permission.error.title"), t("permission.error.message"), "error")
     return false
   }
 }
 
-/**
- * Fallback disclosure using Alert (for tests or if modal not mounted).
- */
-function fallbackDisclosure(): Promise<boolean> {
-  return new Promise((resolve) => {
-    Alert.alert(
-      "Location Data Collection",
-      "Colota collects location data in the background to enable continuous GPS tracking, recording your position history and uploading it to your own server, even when the app is closed or not in use.\n\nYour location is sent only to the server you configure. No data is shared with third parties.",
-      [
-        { text: "Not Now", style: "cancel", onPress: () => resolve(false) },
-        { text: "Agree", onPress: () => resolve(true) }
-      ],
-      { cancelable: false }
-    )
-  })
+function noDisclosure(which: string): boolean {
+  logger.warn(`[PermissionService] No ${which} disclosure registered, nothing requested`)
+  return false
 }
 
 /**
@@ -214,7 +203,7 @@ export async function ensureLocalNetworkPermission(): Promise<boolean> {
     // Show themed disclosure modal first
     const consented = _localNetworkDisclosureCallback
       ? await _localNetworkDisclosureCallback()
-      : await fallbackLocalNetworkDisclosure()
+      : noDisclosure("local network")
     if (!consented) return false
 
     const result = await PermissionsAndroid.request("android.permission.ACCESS_LOCAL_NETWORK" as any)
@@ -223,21 +212,4 @@ export async function ensureLocalNetworkPermission(): Promise<boolean> {
     logger.error("[PermissionService] Local network permission request failed:", err)
     return false
   }
-}
-
-/**
- * Fallback disclosure using Alert (for tests or if modal not mounted).
- */
-function fallbackLocalNetworkDisclosure(): Promise<boolean> {
-  return new Promise((resolve) => {
-    Alert.alert(
-      "Local Network Access",
-      "Your server is on the local network. Colota needs local network access permission to reach it.",
-      [
-        { text: "Not Now", style: "cancel", onPress: () => resolve(false) },
-        { text: "Continue", onPress: () => resolve(true) }
-      ],
-      { cancelable: false }
-    )
-  })
 }

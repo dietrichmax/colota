@@ -11,6 +11,7 @@ import { LocationCoords, Settings, LocationTrackingResult } from "../types/globa
 import { ensurePermissions, checkPermissions } from "../services/LocationServicePermission"
 import { SERVICE_RESTART_DELAY_MS, RESTART_DEBOUNCE_MS } from "../constants"
 import { logger } from "../utils/logger"
+import { t } from "../i18n/t"
 
 const { LocationServiceModule } = NativeModules
 const locationEventEmitter = new NativeEventEmitter(LocationServiceModule)
@@ -170,7 +171,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
 
     const granted = await ensurePermissions()
     if (!granted) {
-      showAlert("Permission Required", "Background location permission is required for tracking.", "warning")
+      showAlert(t("permission.required.title"), t("permission.required.message"), "warning")
       return
     }
 
@@ -182,7 +183,7 @@ export function useLocationTracking(settings: Settings, settingsHydrated: boolea
     } catch (error) {
       setTracking(false)
       logger.error("[useLocationTracking] Failed to start:", error)
-      showAlert("Error", "Failed to start location tracking.", "error")
+      showAlert(t("common.error"), t("permission.startFailed"), "error")
     }
   }, [])
 

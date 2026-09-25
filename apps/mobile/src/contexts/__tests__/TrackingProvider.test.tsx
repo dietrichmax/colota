@@ -17,12 +17,20 @@ jest.mock("../../services/SettingsService", () => ({
   updateSetting: jest.fn().mockResolvedValue(true)
 }))
 
+const mockMountedDisclosures: string[] = []
+
 jest.mock("../../components/ui/LocationDisclosureModal", () => ({
-  LocationDisclosureModal: () => null
+  LocationDisclosureModal: () => {
+    mockMountedDisclosures.push("location")
+    return null
+  }
 }))
 
 jest.mock("../../components/ui/LocalNetworkDisclosureModal", () => ({
-  LocalNetworkDisclosureModal: () => null
+  LocalNetworkDisclosureModal: () => {
+    mockMountedDisclosures.push("localNetwork")
+    return null
+  }
 }))
 
 jest.mock("../../components/ui/AppModal", () => ({
@@ -76,6 +84,14 @@ const settleHydration = async () => {
 }
 
 const wrapper = ({ children }: { children: React.ReactNode }) => <TrackingProvider>{children}</TrackingProvider>
+
+// Nothing else shows a disclosure: without these mounts no permission is ever requested on a fresh install.
+it("mounts both permission disclosures", () => {
+  mockMountedDisclosures.length = 0
+  renderHook(() => useTracking(), { wrapper })
+
+  expect(mockMountedDisclosures).toEqual(expect.arrayContaining(["location", "localNetwork"]))
+})
 
 describe("useTracking", () => {
   it("throws when used outside TrackingProvider", () => {

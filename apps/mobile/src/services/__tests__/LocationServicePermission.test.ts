@@ -1,4 +1,4 @@
-import { Platform, PermissionsAndroid, Alert } from "react-native"
+import { Platform, PermissionsAndroid } from "react-native"
 import {
   ensurePermissions,
   checkPermissions,
@@ -24,7 +24,6 @@ import NativeLocationService from "../NativeLocationService"
 const mockIsIgnoring = NativeLocationService.isIgnoringBatteryOptimizations as jest.Mock
 const mockRequestIgnore = NativeLocationService.requestIgnoreBatteryOptimizations as jest.Mock
 
-let alertSpy: jest.SpyInstance
 let requestSpy: jest.SpyInstance
 let checkSpy: jest.SpyInstance
 
@@ -42,7 +41,6 @@ beforeEach(() => {
   requestSpy = jest.spyOn(PermissionsAndroid, "request").mockResolvedValue(PermissionsAndroid.RESULTS.GRANTED)
   // Default: permissions not granted (so disclosure + request flow runs)
   checkSpy = jest.spyOn(PermissionsAndroid, "check").mockResolvedValue(false)
-  alertSpy = jest.spyOn(Alert, "alert").mockImplementation()
   // Register auto-agree disclosure for tests
   registerDisclosureCallback(() => Promise.resolve(true))
 })
@@ -253,28 +251,13 @@ describe("ensurePermissions", () => {
     expect(showAlert).toHaveBeenCalledWith("Permission Error", expect.any(String), "error")
   })
 
-  it("uses fallback Alert disclosure if no callback registered", async () => {
+  // Play reviewed the modal's wording; a stand-in with other text must never reach a user.
+  it("requests nothing when no disclosure is registered", async () => {
     setPlatform("android", 28)
-    // Unregister callback to trigger fallback
     registerDisclosureCallback(undefined as any)
 
-    // ensurePermissions will call fallbackDisclosure() which uses Alert.alert
-    // Alert.alert is mocked so it won't block - we need to simulate the tap
-    alertSpy.mockImplementation((_title: string, _msg: string, buttons: any[]) => {
-      // Auto-tap "Agree"
-      const agreeButton = buttons.find((b: any) => b.text === "Agree")
-      if (agreeButton?.onPress) agreeButton.onPress()
-    })
-
-    const result = await ensurePermissions()
-
-    expect(alertSpy).toHaveBeenCalledWith(
-      "Location Data Collection",
-      expect.stringContaining("location data"),
-      expect.any(Array),
-      expect.any(Object)
-    )
-    expect(result).toBe(true)
+    expect(await ensurePermissions()).toBe(false)
+    expect(requestSpy).not.toHaveBeenCalled()
   })
 
   it("skips already-granted permissions", async () => {
@@ -451,24 +434,12 @@ describe("ensureLocalNetworkPermission", () => {
     expect(result).toBe(false)
   })
 
-  it("uses fallback Alert if no callback registered", async () => {
+  it("requests nothing when no local network disclosure is registered", async () => {
     setPlatform("android", 37)
     registerLocalNetworkDisclosureCallback(undefined as any)
 
-    alertSpy.mockImplementation((_title: string, _msg: string, buttons: any[]) => {
-      const continueBtn = buttons.find((b: any) => b.text === "Continue")
-      if (continueBtn?.onPress) continueBtn.onPress()
-    })
-
-    const result = await ensureLocalNetworkPermission()
-
-    expect(alertSpy).toHaveBeenCalledWith(
-      "Local Network Access",
-      expect.stringContaining("local network"),
-      expect.any(Array),
-      expect.any(Object)
-    )
-    expect(result).toBe(true)
+    expect(await ensureLocalNetworkPermission()).toBe(false)
+    expect(requestSpy).not.toHaveBeenCalled()
   })
 
   it("returns false on unexpected error", async () => {

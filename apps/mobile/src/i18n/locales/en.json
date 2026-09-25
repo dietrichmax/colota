@@ -1241,5 +1241,10 @@
   "about.copyright": "Copyright © 2026 Max Dietrich and contributors. Colota is free software, with no warranty; the License row above has the terms.",
   "log.delete.subCarries": "Removes {{size}}. Recording carries on into a new file.",
   "language.system": "System default",
-  "language.changeFailed": "Could not change the language."
+  "language.changeFailed": "Could not change the language.",
+  "permission.error.title": "Permission Error",
+  "permission.error.message": "Failed to request permissions. Please try again.",
+  "permission.required.title": "Permission Required",
+  "permission.required.message": "Background location permission is required for tracking.",
+  "permission.startFailed": "Failed to start location tracking."
 }
