@@ -1,7 +1,6 @@
-- A tracking profile keeps its deactivation delay when a lower-priority profile starts to match
-- Setup links show the full server address with its host on its own line, name the server they replace and are rejected as a whole when the address hides its host
-- Placing a geofence shows where you are and the locate button puts the zone there
-- A tracking profile's sync interval takes effect as soon as the profile switches
-- Tracking that cannot restart after a reboot because location services are off shows a tap-to-resume notification and resumes by itself within about 10 minutes of turning them on
-- Elevation and a point's accuracy and altitude follow the Units setting, and distances and speeds use your device's decimal separator
-- A Language setting under Appearance picks the app language; translations can now be contributed
+- New Language setting under Appearance; translations are welcome
+- Profiles keep their deactivation delay and apply their sync interval at once
+- Setup links show the full server address and are refused when it hides its host
+- Placing a geofence shows where you are
+- After a reboot with location off, tracking resumes once location is back on
+- Elevation, accuracy and altitude follow the Units setting; numbers use your device's decimal separator
