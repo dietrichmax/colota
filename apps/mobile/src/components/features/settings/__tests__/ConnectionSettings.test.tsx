@@ -290,6 +290,36 @@ describe("ConnectionSettings", () => {
       expect(api.queryByText("Not reachable")).toBeNull()
     })
 
+    it("logs a failed test with its status and scheme only, never the server's words", async () => {
+      const { logger } = require("../../../../utils/logger")
+      mockTestEndpoint.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        errorMessage: "Server returned 401: token abc123"
+      })
+      const api = renderComponent()
+
+      fireEvent.press(api.getByTestId("test-connection-btn"))
+      await api.findByText("Not reachable")
+
+      expect(logger.warn).toHaveBeenCalledWith("[ConnectionSettings] Test failed:", 401, "https")
+      expect(JSON.stringify(logger.warn.mock.calls)).not.toContain("abc123")
+    })
+
+    it("logs a thrown test failure without its message", async () => {
+      const { logger } = require("../../../../utils/logger")
+      mockTestEndpoint.mockRejectedValueOnce(
+        Object.assign(new Error("https://example.com/api?key=abc123"), { code: "E_TEST_ENDPOINT" })
+      )
+      const api = renderComponent()
+
+      fireEvent.press(api.getByTestId("test-connection-btn"))
+      await api.findByText("Not reachable")
+
+      expect(logger.warn).toHaveBeenCalledWith("[ConnectionSettings] Test failed:", "E_TEST_ENDPOINT", "https")
+      expect(JSON.stringify(logger.warn.mock.calls)).not.toContain("abc123")
+    })
+
     it("falls back to the status code when the server sends no sentence", async () => {
       mockTestEndpoint.mockResolvedValue({ ok: false, status: 401 })
       const api = renderComponent()

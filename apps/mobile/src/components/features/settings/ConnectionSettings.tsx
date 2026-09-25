@@ -198,6 +198,8 @@ export function ConnectionSettings({
     Keyboard.dismiss()
     if (testBlocker || !(await commitDraft())) return
     const endpoint = draft.trim()
+    // Log only the scheme, never the endpoint or the server's reply.
+    const scheme = endpoint.toLowerCase().startsWith("https://") ? "https" : "http"
     setTest({ kind: "testing" })
 
     try {
@@ -252,7 +254,7 @@ export function ConnectionSettings({
       }
 
       const result = await NativeLocationService.testEndpoint({ endpoint, method, apiFormat, payload, customFields })
-      if (!result.ok) logger.warn("[ConnectionSettings] Test failed:", result.status, result.errorMessage)
+      if (!result.ok) logger.warn("[ConnectionSettings] Test failed:", result.status, scheme)
       setTest({
         kind: "done",
         ok: result.ok,
@@ -264,7 +266,7 @@ export function ConnectionSettings({
       })
     } catch (err: any) {
       const msg = err?.message || t("common.unknownError")
-      logger.warn("[ConnectionSettings] Test failed:", err?.name, msg)
+      logger.warn("[ConnectionSettings] Test failed:", err?.code, scheme)
       setTest({
         kind: "done",
         ok: false,
