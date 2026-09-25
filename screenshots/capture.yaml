@@ -35,21 +35,7 @@ appId: com.Colota
     visible: "Start tracking"
     timeout: 30000
 - tapOn: "Start tracking"
-- travel:
-    points:
-      - ${TRAVEL_1}
-      - ${TRAVEL_2}
-      - ${TRAVEL_3}
-      - ${TRAVEL_4}
-      - ${TRAVEL_5}
-      - ${TRAVEL_6}
-      - ${TRAVEL_7}
-      - ${TRAVEL_8}
-      - ${TRAVEL_9}
-      - ${TRAVEL_10}
-      - ${TRAVEL_11}
-      - ${TRAVEL_12}
-    speed: 12
+${DRIVE}
 - tapOn: "Settings"
 - scrollUntilVisible:
     element:
@@ -67,6 +53,7 @@ appId: com.Colota
 - extendedWaitUntil:
     notVisible: ".*queued.*"
     timeout: 60000
+- tapOn: "Show today's track"
 - waitForAnimationToEnd:
     timeout: 10000
 - takeScreenshot: Dashboard

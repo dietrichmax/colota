@@ -26,8 +26,8 @@ const PERMISSIONS = [
   "ACCESS_BACKGROUND_LOCATION",
   "POST_NOTIFICATIONS"
 ]
-const TRAVEL_POINTS = 12
-const TRAVEL_FROM = 0.25
+// Where the old evenly thinned track put the Dashboard stretch; keeps the framing the store images use.
+const TRAVEL_FROM = Date.parse("2022-07-12T08:07:10Z")
 const TRAVEL_METERS = 2000
 const TRIP_GAP_MS = 15 * 60 * 1000
 const DEMO_ACCURACY_M = 5
@@ -154,16 +154,27 @@ function demoTimeline(track) {
 }
 
 function travelPoints(track) {
-  const window = [track[Math.floor(track.length * TRAVEL_FROM)]]
+  const from = track.findIndex((p) => p.time >= TRAVEL_FROM)
+  const window = [track[from]]
   let meters = 0
-  for (let i = Math.floor(track.length * TRAVEL_FROM) + 1; i < track.length && meters < TRAVEL_METERS; i++) {
+  for (let i = from + 1; i < track.length && meters < TRAVEL_METERS; i++) {
     meters += distance(track[i - 1], track[i])
     window.push(track[i])
   }
-  return Array.from(
-    { length: TRAVEL_POINTS },
-    (_, i) => window[Math.round((i * (window.length - 1)) / (TRAVEL_POINTS - 1))]
-  )
+  return window
+}
+
+// Maestro's travel ignores its speed, so each point waits out one Driving interval and becomes one fix.
+const DRIVE_STEP_MS = 4500
+
+function drive(points) {
+  return points
+    .map(
+      (p) =>
+        `- setLocation:\n    latitude: ${p.lat}\n    longitude: ${p.lon}\n` +
+        `- extendedWaitUntil:\n    visible: "capture-pause-never-shown"\n    timeout: ${DRIVE_STEP_MS}\n    optional: true`
+    )
+    .join("\n")
 }
 
 function splitPoint(track) {
@@ -252,7 +263,7 @@ const env = {
   START_LAT: travel[0].lat,
   START_LON: travel[0].lon,
   SPLIT_POINT: splitPoint(track),
-  ...Object.fromEntries(travel.map((p, i) => [`TRAVEL_${i + 1}`, `${p.lat},${p.lon}`]))
+  DRIVE: drive(travel)
 }
 const flow = readFileSync(FLOW, "utf8").replace(/\$\{(\w+)\}/g, (_, key) => {
   if (!(key in env)) throw new Error(`capture.yaml uses \${${key}}, which the script does not set`)
