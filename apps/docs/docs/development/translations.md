@@ -18,7 +18,7 @@ Error messages from the tracking service and every log line stay in English, so 
 ## Add a Language
 
 1. Fork and clone [the repository](https://github.com/dietrichmax/colota).
-2. Copy `en.json` to `<code>.json` in the same folder, where `<code>` is the two-letter language code, and translate the values. Keys stay as they are.
+2. Copy `en.json` to `<code>.json` in the same folder, where `<code>` is the two-letter language code, and translate the values. Keys stay as they are and in the same (alphabetical) order.
 3. Copy `res/values/strings.xml` to `res/values-<code>/strings.xml` and translate it.
 4. Optional: run `npx -w @colota/mobile jest src/i18n` after `npm ci` and `npm run build -w @colota/shared`. It checks that your file uses English keys only and keeps every placeholder; the pull request runs the same check.
 5. Optional: to try the translation in the app, register the language:

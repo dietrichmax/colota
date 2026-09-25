@@ -61,6 +61,12 @@ describe("every catalog in locales/", () => {
   const placeholders = (text: string) => (text.match(/\{\{\w+\}\}/g) ?? []).sort()
   const catalogs = fs.readdirSync(dir).filter((f: string) => f.endsWith(".json") && f !== "en.json")
 
+  // New keys land in a predictable place, so a translation lines up with en.json line by line.
+  it.each(["en.json", ...catalogs])("keeps %s in alphabetical key order", (file) => {
+    const keys = Object.keys(JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")))
+    expect(keys).toEqual([...keys].sort())
+  })
+
   it.each(catalogs.length ? catalogs : ["(none yet)"])(
     "%s uses only English keys and keeps their placeholders",
     (file) => {
