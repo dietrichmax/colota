@@ -4,8 +4,9 @@
  */
 
 import en from "./locales/en.json"
+import es from "./locales/es.json"
 
-export const SUPPORTED_LANGUAGES = ["en"] as const
+export const SUPPORTED_LANGUAGES = ["en", "es"] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
 type CatalogKey = keyof typeof en
@@ -17,7 +18,7 @@ export type TranslationKey = CatalogKey | PluralBase<CatalogKey>
 export const FALLBACK_LANGUAGE: SupportedLanguage = "en"
 
 /** Each language in its own words, so a reader finds theirs whatever the app is set to. */
-export const LANGUAGE_NAMES: Record<SupportedLanguage, string> = { en: "English" }
+export const LANGUAGE_NAMES: Record<SupportedLanguage, string> = { en: "English", es: "Español" }
 
 /** The device tag carries a region, the catalogs do not. */
 export function resolveLanguage(tag: string | undefined): SupportedLanguage {
@@ -28,7 +29,10 @@ export function resolveLanguage(tag: string | undefined): SupportedLanguage {
 /** Side-effect free so `jest.setup.js` can share it. Inline resources keep `init()` synchronous. */
 export const I18N_OPTIONS = {
   fallbackLng: FALLBACK_LANGUAGE,
-  resources: { en: { translation: en } },
+  resources: { 
+    en: { translation: en }, 
+    es: { translation: es } 
+  },
   interpolation: { escapeValue: false },
   returnNull: false,
   // An emptied value in a translation shows the English, not a blank label.
