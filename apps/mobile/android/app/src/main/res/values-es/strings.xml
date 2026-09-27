@@ -1,0 +1,85 @@
+<resources>
+    <string name="app_name" translatable="false">Colota</string>
+    <string name="shortcut_start_short">Iniciar</string>
+    <string name="shortcut_start_long">Iniciar seguimiento</string>
+    <string name="shortcut_stop_short">Detener</string>
+    <string name="shortcut_stop_long">Detener seguimiento</string>
+
+    <string name="channel_tracking">Seguimiento de ubicación</string>
+    <string name="channel_tracking_description">Muestra el estado del seguimiento activo y la cola de sincronización</string>
+    <string name="channel_stopped">Seguimiento detenido</string>
+    <string name="channel_stopped_description">Avisa cuando el seguimiento se detiene sin que tú lo pidas</string>
+    <string name="channel_auto_export">Exportación automática</string>
+    <string name="channel_auto_export_description">Notificaciones de las exportaciones automáticas de datos</string>
+    <string name="channel_backup">Copia de seguridad y restauración</string>
+    <string name="channel_backup_description">Se muestra mientras se crea una copia de seguridad o se restaura</string>
+    <string name="channel_battery_recovery">Recuperación de batería</string>
+    <string name="channel_battery_recovery_description">Reanuda el seguimiento tras una detención por batería baja</string>
+
+    <string name="status_location_off">Los servicios de ubicación están desactivados</string>
+    <string name="status_paused">En pausa</string>
+    <string name="status_searching">Buscando GPS</string>
+    <string name="status_tracking">En seguimiento</string>
+    <string name="status_not_recording">Sin registrar</string>
+    <string name="status_stationary">En reposo</string>
+    <string name="status_pause_wifi">WiFi de la zona · se reanuda al salir</string>
+    <string name="status_pause_motionless">Sin movimiento · se reanuda al moverte</string>
+    <string name="status_pause_zone">Dentro de la zona · se reanuda al salir</string>
+    <string name="status_offline">Modo sin conexión</string>
+    <string name="status_all_sent">Todo enviado</string>
+    <plurals name="status_queued">
+        <item quantity="one">%d en cola</item>
+        <item quantity="other">%d en cola</item>
+    </plurals>
+    <string name="status_last_sync">última sincronización %s</string>
+    <string name="sync_just_now">justo ahora</string>
+    <plurals name="sync_minutes_ago">
+        <item quantity="one">hace %d min</item>
+        <item quantity="other">hace %d min</item>
+    </plurals>
+    <plurals name="sync_hours_ago">
+        <item quantity="one">hace %d h</item>
+        <item quantity="other">hace %d h</item>
+    </plurals>
+    <plurals name="sync_days_ago">
+        <item quantity="one">hace %d d</item>
+        <item quantity="other">hace %d d</item>
+    </plurals>
+
+    <string name="stopped_title">Seguimiento detenido</string>
+    <string name="stop_reason_battery" formatted="false">La batería bajó del 5% · se reanuda al cargar</string>
+    <string name="stop_reason_location_off">Los servicios de ubicación están desactivados · toca para reanudar ahora, o se reanuda solo en un máximo de 10 min después de activarlos</string>
+    <string name="stop_reason_permission">Falta el permiso de ubicación</string>
+    <string name="stop_reason_provider">Error del proveedor de ubicación</string>
+    <string name="stop_reason_killed">El servicio de seguimiento fue cerrado - toca para reanudar</string>
+    <string name="stop_reason_shortcut">Detenido desde el acceso directo</string>
+    <string name="stop_reason_automation">Detenido por un intent de automatización</string>
+    <string name="stop_reason_other">Detenido</string>
+
+    <string name="toast_tracking_started">Seguimiento de Colota iniciado</string>
+    <string name="toast_tracking_stopped">Seguimiento de Colota detenido</string>
+
+    <string name="auto_export_title">Exportación automática</string>
+    <string name="auto_export_running">Exportando datos de ubicación...</string>
+    <string name="auto_export_nothing_new">No hay ubicaciones nuevas para exportar.</string>
+    <string name="auto_export_complete">Exportación automática completada</string>
+    <plurals name="auto_export_done">
+        <item quantity="one">Se exportó %1$d ubicación a %2$s</item>
+        <item quantity="other">Se exportaron %1$d ubicaciones a %2$s</item>
+    </plurals>
+    <string name="auto_export_failed">Error en la exportación automática</string>
+    <string name="auto_export_permission_lost">Se perdió el permiso del directorio. Vuelve a seleccionar el directorio de exportación.</string>
+    <string name="auto_export_invalid_config">Configuración de exportación no válida: %s</string>
+    <string name="auto_export_directory_failed">No se pudo acceder al directorio de exportación: %s</string>
+    <string name="auto_export_read_failed">No se pudieron leer las ubicaciones. Se reintentará.</string>
+    <string name="auto_export_save_failed">No se pudo guardar el archivo de exportación. Se reintentará.</string>
+    <string name="auto_export_gave_up">La exportación falló tras varios intentos. Revisa tu configuración.</string>
+
+    <string name="backup_title">Copia de seguridad de Colota</string>
+    <string name="backup_working">Trabajando...</string>
+    <string name="backup_encrypting">Cifrando la copia de seguridad...</string>
+    <string name="backup_restoring">Restaurando la copia de seguridad...</string>
+
+    <string name="battery_recovery_title">Reanudando el seguimiento</string>
+    <string name="battery_recovery_text">Cargador conectado - reiniciando el seguimiento de ubicación</string>
+</resources>
