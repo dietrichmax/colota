@@ -34,7 +34,7 @@ Geofences and tracking profiles can also be shared on their own from the [Geofen
 2. Colota opens and shows a confirmation screen listing all settings that will be applied. The server address is shown in full with its host on a separate line. A link that replaces a configured server names the server it replaces.
 3. Sensitive values (passwords, tokens) are masked in the preview
 4. User taps **Apply Configuration** to save or **Cancel** to discard
-5. Settings are persisted and the app navigates to the Dashboard
+5. Settings are persisted, a running tracking session restarts with them, and the app navigates to the Dashboard
 
 ## URL Format
 

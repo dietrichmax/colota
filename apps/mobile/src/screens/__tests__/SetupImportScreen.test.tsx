@@ -5,6 +5,7 @@ import { DEFAULT_AUTH_CONFIG, TRACKING_PRESETS } from "../../types/global"
 // --- Mocks ---
 
 const mockSetSettings = jest.fn().mockResolvedValue(undefined)
+const mockRestartTracking = jest.fn().mockResolvedValue(true)
 const mockSaveSetting = jest.fn().mockResolvedValue(undefined)
 const mockGetAuthConfig = jest.fn().mockResolvedValue({ ...DEFAULT_AUTH_CONFIG })
 const mockSaveAuthConfig = jest.fn().mockResolvedValue(true)
@@ -42,7 +43,8 @@ jest.mock("../../services/modalService", () => ({
 jest.mock("../../contexts/TrackingProvider", () => ({
   useTracking: () => ({
     settings: { ...require("../../types/global").DEFAULT_SETTINGS, endpoint: mockCurrentEndpoint },
-    setSettings: mockSetSettings
+    setSettings: mockSetSettings,
+    restartTracking: mockRestartTracking
   })
 }))
 
@@ -360,6 +362,19 @@ describe("SetupImportScreen", () => {
       })
     })
 
+    it("restarts tracking after the auth write, because a running service reads its credentials only at start", async () => {
+      const config = { endpoint: "https://test.com", auth: { type: "bearer", bearerToken: "mytoken" } }
+      const { getByText } = renderScreen(encode(config))
+
+      fireEvent.press(getByText("Apply configuration"))
+
+      await waitFor(() => expect(mockRestartTracking).toHaveBeenCalledTimes(1))
+      expect(mockRestartTracking).toHaveBeenCalledWith(expect.objectContaining({ endpoint: "https://test.com" }))
+      expect(mockRestartTracking.mock.invocationCallOrder[0]).toBeGreaterThan(
+        mockSaveAuthConfig.mock.invocationCallOrder[0]
+      )
+    })
+
     it("shows error alert on failure", async () => {
       mockSetSettings.mockRejectedValueOnce(new Error("fail"))
       const { getByText } = renderScreen(encode({ endpoint: "https://test.com" }))
@@ -369,6 +384,7 @@ describe("SetupImportScreen", () => {
       await waitFor(() => {
         expect(mockShowAlert).toHaveBeenCalledWith("Error", "Failed to apply configuration. Please try again.", "error")
       })
+      expect(mockRestartTracking).not.toHaveBeenCalled()
     })
   })
 

@@ -41,7 +41,7 @@ import { t as translate } from "../i18n/t"
 export function SetupImportScreen({ route, navigation }: any) {
   const { colors } = useTheme()
   const { t } = useTranslation()
-  const { settings: currentSettings, setSettings } = useTracking()
+  const { settings: currentSettings, setSettings, restartTracking } = useTracking()
   const [applying, setApplying] = useState(false)
   const [replaceByName, setReplaceByName] = useState(false)
 
@@ -134,6 +134,8 @@ export function SetupImportScreen({ route, navigation }: any) {
           await NativeLocationService.createProfile(p)
         }
       }
+
+      await restartTracking(merged)
 
       showAlert(translate("setup.applied.title"), translate("setup.applied.message"), "success")
       navigation.navigate("Dashboard")

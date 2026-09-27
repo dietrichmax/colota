@@ -2,3 +2,4 @@
 - Profiles no longer skip a pause zone's entry delay
 - The Dashboard no longer cuts off the sync interval and says Offline mode when that is on
 - Sync stops early on a rate limit or an unreachable server instead of trying every queued point
+- A setup link applied while tracking now takes effect at once instead of after the next start
