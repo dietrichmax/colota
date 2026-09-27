@@ -13,6 +13,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.json.JSONException
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
@@ -171,11 +172,7 @@ class SyncManager(
             }
         } finally {
             waitingFlushTotal = null
-            // A pass caps at MAX_BATCHES_PER_SYNC and stops when a batch moves nothing, so the
-            // running count need not reach the queue it started with. Only this event ends the pass,
-            // and a throw or a cancellation, even one while waiting for the lock, must still send it or
-            // the caller waits out its own timeout and reports a failure over an upload that worked.
-            // The totals come from the pass, not from the last progress tick.
+            // Only this event ends the pass for the screen, so it goes out even after a throw or a cancel while waiting
             invalidateQueueCache()
             val remaining = runCatching { dbHelper.getQueuedCount() }.getOrDefault(total - pass.sent)
             LocationServiceModule.sendSyncProgressEvent(pass.sent, pass.failed, pass.sent + pass.failed, remaining)
@@ -197,7 +194,6 @@ class SyncManager(
             return
         }
 
-        // Immediate send mode (syncInterval = 0)
         if ((syncIntervalSeconds == 0 || bypassInterval) && isSyncAllowed()) {
             // Registered before the lock check: a later pass skips this row, a running one may already hold it
             instantInFlight.add(queueId)
@@ -207,21 +203,20 @@ class SyncManager(
                     return
                 }
                 AppLogger.d(TAG, "Instant send")
-                val success = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod, apiFormat)
+                val result = networkManager.sendToEndpoint(payload, endpoint, authHeaders, httpMethod, apiFormat)
 
-                if (success) {
+                if (result == BatchResult.Success) {
                     dbHelper.markLocationsSent(listOf(locationId))
                     dbHelper.removeFromQueueByLocationId(locationId)
                     invalidateQueueCache()
                     markSuccess()
                 } else {
-                    dbHelper.incrementRetryCount(queueId, "Send failed")
+                    retryReason(result)?.let { dbHelper.incrementRetryCount(queueId, it) }
                 }
             } finally {
                 instantInFlight.remove(queueId)
             }
         }
-        // Otherwise the periodic sync job will handle it
     }
 
     fun isSyncAllowed(): Boolean {
@@ -258,7 +253,6 @@ class SyncManager(
         return success
     }
 
-    // Exponential backoff: 30s → 60s → 5min → 15min
     private suspend fun applyBackoffDelay() {
         val backoffSeconds = when (consecutiveFailures) {
             1 -> 30L
@@ -287,6 +281,8 @@ class SyncManager(
         var totalFailed = 0
         var skippedInFlight = 0
         var batchNumber = 1
+        // Rows that failed without a bump stay at the head of the queue, so a later fetch would post them again
+        val keptInPlace = mutableSetOf<Long>()
 
         // Every chunk reports, sent or not: silence reads as a dead service and frees Sync Now mid-pass
         fun reportProgress() {
@@ -297,18 +293,18 @@ class SyncManager(
         while (isActive && batchNumber <= MAX_BATCHES_PER_SYNC) {
             val fetchSize = if (currentApiFormat == ApiFormat.OVERLAND_BATCH) currentBatchSize else 50
             val fetched = dbHelper.getQueuedLocations(fetchSize)
-            val queued = fetched.filterNot { it.queueId in instantInFlight }
-            skippedInFlight += fetched.size - queued.size
+            val queued = fetched.filterNot { it.queueId in instantInFlight || it.queueId in keptInPlace }
+            skippedInFlight += fetched.count { it.queueId in instantInFlight }
             if (queued.isEmpty()) {
                 if (totalProcessed > 0) {
-                    AppLogger.d(TAG, "Sync complete: $totalProcessed items in $batchNumber batches")
+                    val kept = if (keptInPlace.isEmpty()) "" else ", ${keptInPlace.size} kept for the next sync"
+                    AppLogger.d(TAG, "Sync complete: $totalProcessed items in ${batchNumber - 1} batches$kept")
                 }
                 break
             }
 
             AppLogger.d(TAG, "Processing batch $batchNumber/$MAX_BATCHES_PER_SYNC: ${queued.size} items")
 
-            // Chunks of 10 concurrent HTTP requests to avoid flooding the server
             val processedBefore = totalProcessed
 
             if (currentApiFormat == ApiFormat.OVERLAND_BATCH) {
@@ -318,37 +314,45 @@ class SyncManager(
                 totalFailed += result.failed
                 reportProgress()
                 if (result.stop) {
-                    AppLogger.d(TAG, "Sync pass aborted by transport failure")
+                    AppLogger.d(TAG, "Sync pass stopped: the server is unreachable, failing or rate limiting")
                     break
                 }
             } else {
+                var stopped: String? = null
                 for (chunk in queued.chunked(10)) {
                     val successfulIds = mutableListOf<Long>()
 
                     val results = chunk.map { item ->
                         async {
-                            try {
-                                val itemPayload = JSONObject(item.payload)
-                                val success = networkManager.sendToEndpoint(
-                                    itemPayload,
+                            val result = try {
+                                networkManager.sendToEndpoint(
+                                    JSONObject(item.payload),
                                     currentEndpoint,
                                     currentAuthHeaders,
                                     currentHttpMethod,
                                     currentApiFormat
                                 )
-                                item.queueId to success
+                            } catch (e: JSONException) {
+                                AppLogger.e(TAG, "Corrupt queue row ${item.queueId}", e)
+                                null
                             } catch (e: Exception) {
                                 AppLogger.e(TAG, "Failed to send item ${item.queueId}", e)
-                                item.queueId to false
+                                BatchResult.NetworkError
                             }
+                            item.queueId to result
                         }
                     }.awaitAll()
 
-                    results.forEach { (queueId, success) ->
-                        if (success) {
+                    results.forEach { (queueId, result) ->
+                        if (result == BatchResult.Success) {
                             successfulIds.add(queueId)
                         } else {
-                            dbHelper.incrementRetryCount(queueId, "Send failed")
+                            val reason = if (result == null) "Corrupt payload" else retryReason(result)
+                            if (reason != null) {
+                                dbHelper.incrementRetryCount(queueId, reason)
+                            } else {
+                                keptInPlace.add(queueId)
+                            }
                             totalFailed++
                         }
                     }
@@ -363,11 +367,16 @@ class SyncManager(
                     }
                     reportProgress()
 
+                    stopped = stopReason(results.map { it.second }, anySent = successfulIds.isNotEmpty())
+                    if (stopped != null) break
                     yield()
+                }
+                if (stopped != null) {
+                    AppLogger.d(TAG, "Sync pass stopped: $stopped")
+                    break
                 }
             }
 
-            // No items removed from queue. Stop re-fetching the same failing items
             if (totalProcessed == processedBefore) {
                 AppLogger.d(TAG, "No progress in batch $batchNumber, stopping sync pass")
                 break
@@ -389,6 +398,24 @@ class SyncManager(
         SyncPass(totalSucceeded, totalFailed, skippedInFlight)
     }
 
+    /** Only a verdict about the row moves it back in the queue; an outage or a rate limit is the server's. */
+    private fun retryReason(result: BatchResult): String? = when (result) {
+        is BatchResult.ClientError -> "4xx: ${result.code}"
+        is BatchResult.ServerError -> if (result.code in 502..504) null else "5xx: ${result.code}"
+        BatchResult.Success, BatchResult.NetworkError, is BatchResult.RateLimited -> null
+    }
+
+    /** A 429 ends the pass outright; an outage or a 5xx does once a whole chunk got nothing through. */
+    private fun stopReason(results: List<BatchResult?>, anySent: Boolean): String? {
+        results.filterIsInstance<BatchResult.RateLimited>().firstOrNull()?.let { limited ->
+            return "rate limited" + (limited.retryAfterSeconds?.let { ", retry after ${it}s" } ?: "")
+        }
+        if (anySent) return null
+        results.filterIsInstance<BatchResult.ServerError>().firstOrNull()?.let { return "server error ${it.code}" }
+        if (BatchResult.NetworkError in results) return "server unreachable"
+        return null
+    }
+
     private data class BatchSendResult(val processed: Int, val failed: Int, val stop: Boolean)
 
     /**
@@ -402,8 +429,7 @@ class SyncManager(
     ): BatchSendResult {
         if (items.isEmpty()) return BatchSendResult(0, 0, false)
 
-        // Isolate corrupt rows so one bad payload doesn't poison the whole batch
-        // (matches the per-item path's per-item try/catch).
+        // One corrupt payload must not fail the whole batch
         val parsed = items.mapNotNull { item ->
             try {
                 item to JSONObject(item.payload)
@@ -442,6 +468,7 @@ class SyncManager(
                 } else {
                     val mid = parseableItems.size / 2
                     val left = sendBatchRecursive(parseableItems.take(mid), endpoint, authHeaders)
+                    if (left.stop) return BatchSendResult(left.processed, left.failed + corruptedFailed, stop = true)
                     yield()
                     val right = sendBatchRecursive(parseableItems.drop(mid), endpoint, authHeaders)
                     BatchSendResult(
@@ -452,13 +479,13 @@ class SyncManager(
                 }
             }
             is BatchResult.ServerError -> {
-                parseableItems.forEach { dbHelper.incrementRetryCount(it.queueId, "5xx: ${result.code}") }
+                retryReason(result)?.let { reason ->
+                    parseableItems.forEach { dbHelper.incrementRetryCount(it.queueId, reason) }
+                }
                 BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
             }
-            BatchResult.NetworkError -> {
-                parseableItems.forEach { dbHelper.incrementRetryCount(it.queueId, "network") }
+            is BatchResult.RateLimited, BatchResult.NetworkError ->
                 BatchSendResult(processed = 0, failed = parseableItems.size + corruptedFailed, stop = true)
-            }
         }
     }
 

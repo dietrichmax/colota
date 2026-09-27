@@ -244,6 +244,49 @@ class NetworkManagerTest {
         assertEquals("Invalid URL: masked(htps://ha.example.com/api/webhook/abc)", result.errorMessage)
     }
 
+    // --- verdicts ---
+
+    @Test
+    fun `a status maps to the verdict the sync pass acts on`() {
+        assertEquals(BatchResult.Success, verdictFor(204, null))
+        assertEquals(BatchResult.RateLimited(30), verdictFor(429, 30))
+        assertEquals(BatchResult.ClientError(400), verdictFor(400, null))
+        assertEquals(BatchResult.ServerError(503), verdictFor(503, null))
+    }
+
+    @Test
+    fun `a send that never got a response is a network error`() {
+        val result = kotlinx.coroutines.runBlocking { createNetworkManagerViaReflection().sendToEndpoint(JSONObject(), "") }
+
+        assertEquals(BatchResult.NetworkError, result)
+    }
+
+    @Test
+    fun `Retry-After is read as seconds or as an HTTP date`() {
+        val now = java.time.ZonedDateTime.parse(
+            "Sat, 19 Sep 2026 12:00:00 GMT", java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
+        ).toInstant().toEpochMilli()
+
+        assertEquals(120L, parseRetryAfter("120", now))
+        assertEquals(90L, parseRetryAfter("Sat, 19 Sep 2026 12:01:30 GMT", now))
+        assertEquals("a date in the past means now", 0L, parseRetryAfter("Sat, 19 Sep 2026 11:00:00 GMT", now))
+        assertNull(parseRetryAfter("soon", now))
+        assertNull(parseRetryAfter(null, now))
+    }
+
+    @Test
+    fun `a rate-limited batch carries the server's Retry-After`() {
+        val connection = io.mockk.mockk<java.net.HttpURLConnection>(relaxed = true)
+        io.mockk.every { connection.responseCode } returns 429
+        io.mockk.every { connection.getHeaderField("Retry-After") } returns "30"
+        val method = NetworkManager::class.java.getDeclaredMethod(
+            "readBatchResponse", java.net.HttpURLConnection::class.java, Int::class.javaPrimitiveType
+        )
+        method.isAccessible = true
+
+        assertEquals(BatchResult.RateLimited(30), method.invoke(createNetworkManagerViaReflection(), connection, 50))
+    }
+
     private fun invokeReadErrorBody(body: String?): String {
         val connection = io.mockk.mockk<java.net.HttpURLConnection>(relaxed = true)
         io.mockk.every { connection.errorStream } returns body?.byteInputStream()

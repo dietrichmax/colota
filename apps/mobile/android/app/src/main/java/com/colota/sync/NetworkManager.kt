@@ -191,14 +191,14 @@ class NetworkManager(private val context: Context) {
         extraHeaders: Map<String, String> = emptyMap(),
         httpMethod: String = "POST",
         apiFormat: ApiFormat = ApiFormat.FIELD_MAPPED
-    ): Boolean {
+    ): BatchResult {
         val result = runRequest(payload, endpoint, extraHeaders, httpMethod, apiFormat, emptyMap())
         if (result.ok) {
             AppLogger.d(TAG, "Location successfully sent")
         } else if (result.errorMessage != null) {
             AppLogger.e(TAG, result.errorMessage)
         }
-        return result.ok
+        return if (result.httpStatus == 0) BatchResult.NetworkError else verdictFor(result.httpStatus, result.retryAfterSeconds)
     }
 
     private fun buildConnection(
@@ -309,7 +309,7 @@ class NetworkManager(private val context: Context) {
         }
     }
 
-    /** Same as [sendToEndpoint] but returns status + error text instead of Boolean. */
+    /** Same as [sendToEndpoint] but returns status + error text instead of a verdict. */
     suspend fun testEndpoint(
         payload: JSONObject,
         endpoint: String,
@@ -321,7 +321,7 @@ class NetworkManager(private val context: Context) {
 
     /**
      * Shared request implementation. Returns a fully-populated [TestEndpointResult];
-     * production callers project this to Boolean via [sendToEndpoint], while the
+     * production callers project this to a [BatchResult] via [sendToEndpoint], while the
      * Test Connection path exposes it directly via [testEndpoint].
      */
     private suspend fun runRequest(
@@ -376,7 +376,8 @@ class NetworkManager(private val context: Context) {
                 TestEndpointResult(
                     false,
                     httpStatus = responseCode,
-                    errorMessage = "Server returned $responseCode: $errorBody"
+                    errorMessage = "Server returned $responseCode: $errorBody",
+                    retryAfterSeconds = if (responseCode == 429) retryAfterOf(connection) else null
                 )
             }
         } catch (e: SSLHandshakeException) {
@@ -429,6 +430,11 @@ class NetworkManager(private val context: Context) {
                 AppLogger.d(TAG, "Batch of $batchSize sent successfully")
                 BatchResult.Success
             }
+            429 -> {
+                val retryAfter = retryAfterOf(connection)
+                AppLogger.w(TAG, "Batch rate limited (429)" + (retryAfter?.let { ", retry after ${it}s" } ?: ""))
+                BatchResult.RateLimited(retryAfter)
+            }
             in 400..499 -> {
                 val errorBody = readErrorBody(connection)
                 AppLogger.w(TAG, "Batch rejected (4xx): $responseCode - $errorBody")
@@ -445,6 +451,9 @@ class NetworkManager(private val context: Context) {
             }
         }
     }
+
+    private fun retryAfterOf(connection: HttpURLConnection): Long? =
+        parseRetryAfter(connection.getHeaderField("Retry-After"), System.currentTimeMillis())
 
     /**
      * Bounded and single-line. A rate-limited flush logs one of these per rejected point, and an

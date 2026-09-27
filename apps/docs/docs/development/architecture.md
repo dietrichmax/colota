@@ -203,6 +203,7 @@ Orchestrates batch location uploads with:
 
 - Configurable batch size (50 items per batch, 10 concurrent HTTP requests)
 - Exponential backoff on failure
+- A pass stops on a 429, and in the per-point format on a 5xx or a network error once a group of 10 requests got nothing through, so an unreachable server costs one group of requests. A batch upload stops on its first 429, 5xx or network error
 - Periodic sync scheduling. A new interval (a profile switch) applies to the wait already running, measured from when it began; a send or a backoff in progress finishes first
 - Manual flush support
 - One pass at a time: a periodic tick and a manual flush wait for the running pass. An instant send leaves its row queued while a pass runs, and a pass skips rows an instant send is still posting

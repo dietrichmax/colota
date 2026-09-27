@@ -29,6 +29,7 @@ class SyncManagerTest {
         networkManager = mockk(relaxed = true)
         scope = TestScope(UnconfinedTestDispatcher())
         syncManager = SyncManager(dbHelper, networkManager, scope)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.NetworkError
 
         mockkObject(AppLogger)
         every { AppLogger.d(any(), any()) } just Runs
@@ -98,7 +99,7 @@ class SyncManagerTest {
         )
 
         coEvery { networkManager.isNetworkAvailable() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
@@ -122,12 +123,12 @@ class SyncManagerTest {
         )
 
         coEvery { networkManager.isNetworkAvailable() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns false
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.ServerError(500)
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
 
-        verify { dbHelper.incrementRetryCount(42L, "Send failed") }
+        verify { dbHelper.incrementRetryCount(42L, "5xx: 500") }
         verify(exactly = 0) { dbHelper.removeFromQueueByLocationId(any()) }
     }
 
@@ -189,7 +190,7 @@ class SyncManagerTest {
 
         coEvery { networkManager.isNetworkAvailable() } returns true
         every { networkManager.isUnmeteredConnection() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
@@ -234,7 +235,7 @@ class SyncManagerTest {
 
         coEvery { networkManager.isNetworkAvailable() } returns true
         every { networkManager.isConnectedToSsid("HomeNetwork") } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
@@ -279,7 +280,7 @@ class SyncManagerTest {
 
         coEvery { networkManager.isNetworkAvailable() } returns true
         every { networkManager.isVpnConnected() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload)
@@ -326,7 +327,7 @@ class SyncManagerTest {
         )
 
         coEvery { networkManager.isNetworkAvailable() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload, bypassInterval = true)
@@ -373,12 +374,12 @@ class SyncManagerTest {
         )
 
         coEvery { networkManager.isNetworkAvailable() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns false
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.ClientError(400)
 
         val payload = JSONObject().put("lat", 52.0)
         syncManager.queueAndSend(1L, payload, bypassInterval = true)
 
-        verify { dbHelper.incrementRetryCount(42L, "Send failed") }
+        verify { dbHelper.incrementRetryCount(42L, "4xx: 400") }
         verify(exactly = 0) { dbHelper.removeFromQueueByLocationId(any()) }
     }
 
@@ -399,7 +400,7 @@ class SyncManagerTest {
         )
 
         coEvery { networkManager.isNetworkAvailable() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
 
@@ -421,7 +422,7 @@ class SyncManagerTest {
         )
 
         coEvery { networkManager.isNetworkAvailable() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         assertEquals(0L, syncManager.lastSuccessfulSyncTime)
 
@@ -444,7 +445,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
         coEvery { networkManager.isNetworkAvailable() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
 
@@ -488,7 +489,7 @@ class SyncManagerTest {
             QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
         )
         every { dbHelper.getQueuedLocations(50) } returnsMany listOf(queued, emptyList())
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.manualFlush()
 
@@ -511,7 +512,7 @@ class SyncManagerTest {
         val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
         // Always return the same item (it stays in queue after failure)
         every { dbHelper.getQueuedLocations(50) } returns listOf(item)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns false
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.ClientError(400)
 
         syncManager.manualFlush()
 
@@ -596,7 +597,7 @@ class SyncManagerTest {
         // Always return items - loop should still stop at batch 10
         val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
         every { dbHelper.getQueuedLocations(50) } returns listOf(item)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.manualFlush()
 
@@ -618,7 +619,7 @@ class SyncManagerTest {
         // 25 items → 3 chunks (10 + 10 + 5)
         val items = (1L..25L).map { QueuedLocation(it, it + 100, """{"lat":52.0}""", 0) }
         every { dbHelper.getQueuedLocations(50) } returnsMany listOf(items, emptyList())
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.manualFlush()
 
@@ -747,7 +748,7 @@ class SyncManagerTest {
             listOf(QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)),
             emptyList()
         )
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
         every { dbHelper.removeBatchFromQueue(any()) } answers { queuedCount = 0 }
 
         syncManager.startPeriodicSync()
@@ -780,7 +781,7 @@ class SyncManagerTest {
             listOf(QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)),
             emptyList()
         )
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any()) } returns BatchResult.Success
         every { dbHelper.removeBatchFromQueue(any()) } answers { queuedCount = 0 }
 
         syncManager.startPeriodicSync()
@@ -1043,14 +1044,14 @@ class SyncManagerTest {
             listOf(corrupted, valid),
             emptyList()
         )
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.manualFlush()
 
         // Valid item should still be sent despite corrupted sibling
         coVerify(atLeast = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
         // Corrupted item gets retry increment, valid item gets removed
-        verify { dbHelper.incrementRetryCount(1L, "Send failed") }
+        verify { dbHelper.incrementRetryCount(1L, "Corrupt payload") }
         verify { dbHelper.markLocationsSent(listOf(101L)) }
 
         unmockkObject(LocationServiceModule.Companion)
@@ -1075,7 +1076,7 @@ class SyncManagerTest {
         )
 
         coEvery { networkManager.isNetworkAvailable() } returns true
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
 
@@ -1098,7 +1099,7 @@ class SyncManagerTest {
 
         val item = QueuedLocation(1L, 100L, """{"lat":52.0}""", 0)
         every { dbHelper.getQueuedLocations(50) } returnsMany listOf(listOf(item), emptyList())
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.Success
 
         syncManager.manualFlush()
 
@@ -1154,14 +1155,14 @@ class SyncManagerTest {
             QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
         }
         every { dbHelper.getQueuedLocations(50) } returns items
-        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.ServerError(503)
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.ServerError(500)
 
         syncManager.manualFlush()
 
         // Critical: exactly ONE HTTP call. NOT recursive splits, that would amplify the outage.
         coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
         // Each row gets one retry bump
-        items.forEach { verify { dbHelper.incrementRetryCount(it.queueId, "5xx: 503") } }
+        items.forEach { verify { dbHelper.incrementRetryCount(it.queueId, "5xx: 500") } }
     }
 
     @Test
@@ -1187,7 +1188,7 @@ class SyncManagerTest {
         syncManager.manualFlush()
 
         coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
-        items.forEach { verify { dbHelper.incrementRetryCount(it.queueId, "network") } }
+        verify(exactly = 0) { dbHelper.incrementRetryCount(any(), any()) }
     }
 
     @Test
@@ -1361,7 +1362,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
         fakeQueue(20)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); true }
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); BatchResult.Success }
 
         launch { syncManager.manualFlush() }
         launch { syncManager.manualFlush() }
@@ -1384,7 +1385,7 @@ class SyncManagerTest {
         )
         coEvery { networkManager.isNetworkAvailable() } returns true
         fakeQueue(20)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); true }
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); BatchResult.Success }
 
         launch { syncManager.manualFlush() }
         syncManager.startPeriodicSync()
@@ -1409,7 +1410,7 @@ class SyncManagerTest {
         )
         coEvery { networkManager.isNetworkAvailable() } returns true
         fakeQueue(10)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); true }
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); BatchResult.Success }
 
         launch { syncManager.manualFlush() }
         syncManager.queueAndSend(500L, JSONObject().put("lat", 53.0))
@@ -1435,7 +1436,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
         fakeQueue(10)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns false
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.NetworkError
 
         syncManager.manualFlush()
 
@@ -1490,7 +1491,7 @@ class SyncManagerTest {
         )
         coEvery { networkManager.isNetworkAvailable() } returns true
         fakeQueue(20)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); true }
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); BatchResult.Success }
 
         syncManager.startPeriodicSync()
         advanceTimeBy(1_200)
@@ -1519,7 +1520,7 @@ class SyncManagerTest {
         )
         coEvery { networkManager.isNetworkAvailable() } returns true
         fakeQueue(0)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(5_000); true }
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(5_000); BatchResult.Success }
 
         launch { syncManager.queueAndSend(1L, JSONObject().put("lat", 1.0)) }
         advanceTimeBy(1_000)
@@ -1545,7 +1546,7 @@ class SyncManagerTest {
         )
         coEvery { networkManager.isNetworkAvailable() } returns true
         fakeQueue(0)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); true }
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_000); BatchResult.Success }
 
         launch { syncManager.queueAndSend(500L, JSONObject().put("lat", 53.0), bypassInterval = true) }
         launch { syncManager.manualFlush() }
@@ -1571,7 +1572,7 @@ class SyncManagerTest {
             authHeaders = emptyMap()
         )
         fakeQueue(20)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); true }
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(1_500); BatchResult.Success }
 
         launch { syncManager.manualFlush() }
         val waiting = launch { syncManager.manualFlush() }
@@ -1599,7 +1600,7 @@ class SyncManagerTest {
         )
         coEvery { networkManager.isNetworkAvailable() } returns true
         fakeQueue(0)
-        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(3_000); true }
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers { delay(3_000); BatchResult.Success }
 
         launch { syncManager.queueAndSend(500L, JSONObject().put("lat", 53.0)) }
         syncManager.startPeriodicSync()
@@ -1624,6 +1625,203 @@ class SyncManagerTest {
         kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn<Unit> { cont ->
             method.invoke(syncManager, cont)
         }
+    }
+
+    // --- What a failed send tells the pass ---
+
+    private fun configurePerItem() {
+        syncManager.updateConfig(
+            endpoint = "https://example.com",
+            syncIntervalSeconds = 0,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap()
+        )
+    }
+
+    /** A dead host fails every row the same way, so one chunk is enough to know it. */
+    @Test
+    fun `an unreachable server costs one chunk, not a whole batch`() = scope.runTest {
+        configurePerItem()
+        fakeQueue(50)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.NetworkError
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 10) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { dbHelper.incrementRetryCount(any(), any()) }
+    }
+
+    /** A flaky link still delivers, so a chunk that got rows through keeps the pass going. */
+    @Test
+    fun `a chunk that gets some rows through keeps going`() = scope.runTest {
+        configurePerItem()
+        fakeQueue(20)
+        var calls = 0
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers {
+            if (calls++ % 2 == 0) BatchResult.Success else BatchResult.NetworkError
+        }
+
+        syncManager.manualFlush()
+
+        coVerify(atLeast = 20) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { dbHelper.incrementRetryCount(any(), any()) }
+    }
+
+    @Test
+    fun `a chunk with a server error keeps going while rows get through`() = scope.runTest {
+        configurePerItem()
+        fakeQueue(20)
+        var calls = 0
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers {
+            if (calls++ % 2 == 0) BatchResult.Success else BatchResult.ServerError(500)
+        }
+
+        syncManager.manualFlush()
+
+        coVerify(atLeast = 20) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a chunk of server errors with nothing sent ends the pass`() = scope.runTest {
+        configurePerItem()
+        fakeQueue(50)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.ServerError(500)
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 10) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify(exactly = 10) { dbHelper.incrementRetryCount(any(), "5xx: 500") }
+    }
+
+    /** A 502 to 504 is the proxy saying the app behind it is down, which says nothing about the row. */
+    @Test
+    fun `a gateway outage keeps the rows in place`() = scope.runTest {
+        configurePerItem()
+        fakeQueue(50)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.ServerError(503)
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 10) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { dbHelper.incrementRetryCount(any(), any()) }
+    }
+
+    /** A row kept in place stays at the head of the queue, so each later fetch in the pass would post it again. */
+    @Test
+    fun `a row that failed in transport is not posted again in the same pass`() = scope.runTest {
+        configurePerItem()
+        fakeQueue(15)
+        var calls = 0
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers {
+            if (++calls == 1) BatchResult.NetworkError else BatchResult.Success
+        }
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 15) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+    }
+
+    /** One rejected row must not stall the good rows behind it. */
+    @Test
+    fun `rejected rows do not stop the rows behind them`() = scope.runTest {
+        configurePerItem()
+        fakeQueue(20)
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.ClientError(400)
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 20) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify(exactly = 20) { dbHelper.incrementRetryCount(any(), "4xx: 400") }
+    }
+
+    /** A 429 asks the client to slow down, so nothing more goes out in this pass. */
+    @Test
+    fun `a rate limit ends the pass after the chunk that hit it`() = scope.runTest {
+        configurePerItem()
+        fakeQueue(50)
+        var calls = 0
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } coAnswers {
+            if (++calls == 3) BatchResult.RateLimited(30) else BatchResult.Success
+        }
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 10) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify { dbHelper.markLocationsSent(match { it.size == 9 }) }
+        verify(exactly = 0) { dbHelper.incrementRetryCount(any(), any()) }
+    }
+
+    /** An outage is the server's fault, so the row keeps its place and points reach the server in order. */
+    @Test
+    fun `an instant send that cannot connect keeps its place in the queue`() = scope.runTest {
+        configurePerItem()
+        every { dbHelper.addToQueue(any(), any()) } returns 42L
+        coEvery { networkManager.isNetworkAvailable() } returns true
+        coEvery { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) } returns BatchResult.NetworkError
+
+        syncManager.queueAndSend(1L, JSONObject().put("lat", 52.0))
+
+        coVerify(exactly = 1) { networkManager.sendToEndpoint(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { dbHelper.incrementRetryCount(any(), any()) }
+        verify(exactly = 0) { dbHelper.removeFromQueueByLocationId(any()) }
+    }
+
+    /** Splitting a rate-limited batch would turn one refused request into many more. */
+    @Test
+    fun `batch path stops on a rate limit without splitting`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 50
+        )
+        val items = (1L..3L).map {
+            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
+        }
+        every { dbHelper.getQueuedLocations(50) } returns items
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returns BatchResult.RateLimited(null)
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 1) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
+        verify(exactly = 0) { dbHelper.incrementRetryCount(any(), any()) }
+    }
+
+    /** A rate limit met while bisecting ends the pass, so the other half is not sent either. */
+    @Test
+    fun `batch path stops bisecting when a half is rate limited`() = scope.runTest {
+        syncManager.updateConfig(
+            endpoint = "https://dawarich.example/api/v1/overland/batches",
+            syncIntervalSeconds = 300,
+            retryIntervalSeconds = 30,
+            isOfflineMode = false,
+            syncCondition = "any",
+            syncSsid = "",
+            authHeaders = emptyMap(),
+            apiFormat = ApiFormat.OVERLAND_BATCH,
+            overlandBatchSize = 50
+        )
+        val items = (1L..4L).map {
+            QueuedLocation(it, it + 100, """{"lat":52.0,"lon":13.0,"tst":1700000000}""", 0)
+        }
+        every { dbHelper.getQueuedLocations(50) } returns items
+        coEvery { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) } returnsMany listOf(
+            BatchResult.ClientError(400),
+            BatchResult.RateLimited(null),
+            BatchResult.Success
+        )
+
+        syncManager.manualFlush()
+
+        coVerify(exactly = 2) { networkManager.sendBatchToEndpoint(any(), any(), any(), any()) }
     }
 
     /** Rows leave only when a pass or an instant send removes them, so two senders running together see the same rows. */

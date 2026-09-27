@@ -93,7 +93,7 @@ In the default field-mapped format Colota sends **one location per HTTP request*
 
 The Overland format, and Dawarich in batch mode, instead send **an array of locations in a single request**. Batch size is configurable (1 to 500, default 50) and up to 10 batches are sent per cycle, so one cycle can move considerably more than 500 points.
 
-Your server should handle multiple simultaneous POST requests. If you have rate limiting, some requests may fail and be retried.
+Your server should handle multiple simultaneous POST requests. If it rate limits, a 429 stops the sync pass and the remaining points go out on the next sync.
 
 ## Testing with curl
 
@@ -134,12 +134,14 @@ Your server only needs to return a 2xx status code. The response body is not rea
 
 ## Error Handling
 
-| Error Type               | Behavior                                   |
-| ------------------------ | ------------------------------------------ |
-| **Any non-2xx response** | Queued for retry                           |
-| **Network timeout**      | Retried (10s connection, 10s read timeout) |
+| Outcome | Behavior |
+| --- | --- |
+| **429 Too Many Requests** | The sync pass stops. The points stay queued in their place for the next sync |
+| **502, 503, 504 or a network error** | The point stays queued in its place. The pass stops when a group of 10 points got nothing through (10s connection, 10s read timeout) |
+| **Other 5xx** | The point stays queued and moves behind the others. The pass stops when a group of 10 points got nothing through |
+| **Other 4xx** | The point stays queued and moves behind the others |
 
-There is no distinction between 4xx and 5xx in retry behavior - all failures are retried indefinitely, and failed items stay in the queue until they succeed.
+Failed points are retried indefinitely and stay in the queue until they succeed. With a batch API (Overland, Dawarich batch) a rejected batch is split to find the point the server refuses, while a 429, a 5xx or a network error stops the pass instead.
 
 Clearing the queue in **Settings > Data management** deletes those locations outright, not just their place in the queue, so anything not yet sent is lost.
 
