@@ -1,4 +1,4 @@
-name: "Auto-label CI/CD Changes"
+name: "Label PR by area"
 
 on:
   pull_request_target:

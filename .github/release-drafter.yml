@@ -48,7 +48,7 @@ categories:
     labels: [documentation]
     collapse-after: 2
   - title: 'Dependencies'
-    labels: [dependencies, deps]
+    labels: [dependencies]
     collapse-after: 1
   - title: 'Other'
     labels: ['*']
