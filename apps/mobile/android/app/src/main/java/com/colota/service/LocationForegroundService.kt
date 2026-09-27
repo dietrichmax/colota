@@ -438,7 +438,7 @@ class LocationForegroundService : Service() {
                 stopLocationUpdates()
                 syncManager.stopPeriodicSync()
 
-                setupLocationUpdates()
+                setupLocationUpdates(skipEntryDelay = true)
                 syncManager.startPeriodicSync()
 
                 // Start after setup so profile evaluations don't race
@@ -498,7 +498,7 @@ class LocationForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun setupLocationUpdates() {
+    private fun setupLocationUpdates(skipEntryDelay: Boolean = false) {
         if (isWifiPaused || isMotionlessPaused) return  // GPS intentionally stopped by a zone pause hold
 
         // The resume paths reach here without a stop, and the assignment below would orphan the old
@@ -547,7 +547,8 @@ class LocationForegroundService : Service() {
             // A restored pause must be re-checked against a fresh fix: a cached fix can only re-enter,
             // never exit, so a departed user would stay latched. A usable fix resumes only if it places
             // us outside the zone (via recheck); with no usable fix, hold the pause - the watchdog resumes
-            // once a real fix confirms a departure. Cold start latches a pause only from a fresh last-known fix.
+            // once a real fix confirms a departure. Only a full start latches a pause from a fresh last-known fix;
+            // any other restart goes through the entry delay, so the arrival points are still recorded.
             val restoredPause = insidePauseZone
             if (restoredPause) {
                 requestFreshOrLastLocation { location, _ ->
@@ -559,10 +560,12 @@ class LocationForegroundService : Service() {
             } else {
                 locationProvider.getLastLocation(
                     onSuccess = { location ->
+                        if (insidePauseZone) return@getLastLocation
                         if (location != null && isFixFresh(location)) {
                             lastKnownLocation = location
                             geofenceHelper.getPauseZone(location)?.let { zone ->
-                                enterPauseZone(zone)
+                                if (skipEntryDelay) enterPauseZone(zone)
+                                else startEntryDelay(zone)
                             } ?: run {
                                 updateNotification(forceUpdate = true)
                             }
@@ -892,7 +895,7 @@ class LocationForegroundService : Service() {
     private fun applyZoneTransition(zone: GeofenceHelper.Geofence?): Job? {
         return when {
             zone != null && (!insidePauseZone || zone.name != currentZoneName) -> {
-                if (pendingPauseZone?.name != zone.name) startEntryDelay(zone)
+                startEntryDelay(zone)
                 null
             }
             zone == null && pendingPauseZone != null -> { cancelEntryDelay(); null }
@@ -1019,6 +1022,7 @@ class LocationForegroundService : Service() {
      * If the device exits the zone before the delay completes, the delay is cancelled.
      */
     private fun startEntryDelay(geofence: GeofenceHelper.Geofence) {
+        if (pendingPauseZone?.name == geofence.name) return
         entryDelayJob?.cancel()
         pendingPauseZone = geofence
 
@@ -1584,7 +1588,6 @@ class LocationForegroundService : Service() {
         // the old listener firing during an async coroutine window.
         locationRestartJob?.cancel()
         locationRestartJob = null
-        if (pendingPauseZone != null) cancelEntryDelay()
         stopLocationUpdates()
         setupLocationUpdates()
 

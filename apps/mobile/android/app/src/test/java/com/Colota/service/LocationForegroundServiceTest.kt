@@ -1678,6 +1678,18 @@ class LocationForegroundServiceTest {
         assertEquals(officeGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
+    // Every fix inside the zone calls it again.
+    @Test
+    fun `startEntryDelay keeps the running delay when asked again for the same zone`() {
+        invokeStartEntryDelay(homeGeofence)
+        val firstJob: Job? = getField("entryDelayJob")
+
+        invokeStartEntryDelay(homeGeofence)
+
+        assertSame(firstJob, getField<Job?>("entryDelayJob"))
+        assertFalse(firstJob?.isCancelled == true)
+    }
+
     @Test
     fun `cancelEntryDelay clears pendingPauseZone and job`() {
         invokeStartEntryDelay(homeGeofence)
@@ -1746,6 +1758,21 @@ class LocationForegroundServiceTest {
         assertEquals(2000L, config.interval)
         assertEquals(10f, config.minUpdateDistance)
         assertEquals(60, config.syncIntervalSeconds)
+    }
+
+    @Test
+    fun `a profile switch with the last fix inside a zone starts the entry delay instead of pausing at once`() {
+        setField("insidePauseZone", false)
+        val atHome = mockLocation()
+        every { geofenceHelper.getPauseZone(atHome) } returns homeGeofence
+        every { locationProvider.getLastLocation(any(), any()) } answers {
+            firstArg<(Location?) -> Unit>()(atHome)
+        }
+
+        invokeApplyProfileConfig(interval = 300_000L, distance = 0f, syncInterval = 0)
+
+        assertFalse(getField("insidePauseZone"))
+        assertEquals(homeGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
     }
 
     @Test
@@ -1851,15 +1878,51 @@ class LocationForegroundServiceTest {
     }
 
     @Test
-    fun `applyProfileConfig cancels pending entry delay`() {
+    fun `a profile switch keeps a pending entry delay running`() {
         val mockJob = mockk<Job>(relaxed = true)
         setField("entryDelayJob", mockJob)
         setField("pendingPauseZone", homeGeofence)
+        val atHome = mockLocation()
+        every { geofenceHelper.getPauseZone(atHome) } returns homeGeofence
+        every { locationProvider.getLastLocation(any(), any()) } answers { firstArg<(Location?) -> Unit>()(atHome) }
 
         invokeApplyProfileConfig(interval = 2000L, distance = 5f, syncInterval = 30)
+        invokeApplyProfileConfig(interval = 300_000L, distance = 0f, syncInterval = 0)
 
-        verify { mockJob.cancel() }
+        verify(exactly = 0) { mockJob.cancel() }
+        assertSame(mockJob, getField<Job?>("entryDelayJob"))
+        assertEquals(homeGeofence, getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
+        assertFalse(getField("insidePauseZone"))
+    }
+
+    // The GMS last fix can arrive after the delay has already paused.
+    @Test
+    fun `a last fix that lands after the entry delay paused starts no second delay`() {
+        setField("insidePauseZone", false)
+        val atHome = mockLocation()
+        every { geofenceHelper.getPauseZone(atHome) } returns homeGeofence
+        val onSuccess = slot<(Location?) -> Unit>()
+        every { locationProvider.getLastLocation(capture(onSuccess), any()) } just Runs
+
+        invokeApplyProfileConfig(interval = 300_000L, distance = 0f, syncInterval = 0)
+        setField("insidePauseZone", true)
+        setField("pendingPauseZone", null)
+        onSuccess.captured(atHome)
+
         assertNull(getField<GeofenceHelper.Geofence?>("pendingPauseZone"))
+        assertNull(getField<Job?>("entryDelayJob"))
+    }
+
+    @Test
+    fun `a full start with a fresh fix inside a zone pauses at once`() {
+        setField("insidePauseZone", false)
+        val atHome = mockLocation()
+        every { geofenceHelper.getPauseZone(atHome) } returns homeGeofence
+        every { locationProvider.getLastLocation(any(), any()) } answers { firstArg<(Location?) -> Unit>()(atHome) }
+
+        invokeSetupLocationUpdates(skipEntryDelay = true)
+
+        assertTrue(getField("insidePauseZone"))
     }
 
     @Test
@@ -2830,11 +2893,11 @@ class LocationForegroundServiceTest {
         method.invoke(service, geofence, savedActive)
     }
 
-    private fun invokeSetupLocationUpdates() {
+    private fun invokeSetupLocationUpdates(skipEntryDelay: Boolean = false) {
         val method = LocationForegroundService::class.java
-            .getDeclaredMethod("setupLocationUpdates")
+            .getDeclaredMethod("setupLocationUpdates", Boolean::class.javaPrimitiveType)
         method.isAccessible = true
-        method.invoke(service)
+        method.invoke(service, skipEntryDelay)
     }
 
     private fun invokeHandleRecheckProfiles() {

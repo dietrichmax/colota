@@ -1,1 +1,2 @@
 - Colota is now available in Spanish
+- Profiles no longer skip a pause zone's entry delay

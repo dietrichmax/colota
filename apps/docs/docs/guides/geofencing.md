@@ -85,6 +85,7 @@ See the [Deep Link Setup](deep-link-setup.md#geofences) guide for the full paylo
 - The notification shows "Paused" with "Inside zone", "Zone WiFi" or "No movement" and when tracking resumes. The zone name only appears on the Dashboard
 - By default, GPS continues running inside the zone to detect when you leave. If **WiFi pause** or **motionless pause** is enabled, GPS stops entirely inside the zone and zone exit is detected when GPS resumes
 - If you leave before the entry delay completes, the delay is cancelled and tracking continues uninterrupted
+- Switching tracking profiles during the entry delay does not skip or restart it
 - A stationary profile stays active inside a zone, but records nothing while WiFi pause or motionless pause has GPS off
 - When exiting the zone, tracking automatically resumes
 - If GPS goes quiet while paused (for example, indoors for a long stretch), Colota periodically requests a fresh position to check whether you have left
